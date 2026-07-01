@@ -100,6 +100,22 @@ jobs:
                 }
               '
 
+      - name: Check external HTTP and HTTPS entrypoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          for url in \
+            http://cloud.medopl.cn/api/state \
+            https://cloud.medopl.cn/api/state \
+            http://workspace.medopl.cn/ \
+            https://workspace.medopl.cn/
+          do
+            printf '%s ' "$url"
+            curl -k --connect-timeout 8 -sS -o /tmp/opl-cloud-external-check \
+              -w 'code=%{http_code} remote=%{remote_ip} time=%{time_total}\n' "$url" || true
+            rm -f /tmp/opl-cloud-external-check
+          done
+
       - name: Describe control plane pods
         shell: bash
         run: |

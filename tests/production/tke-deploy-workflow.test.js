@@ -142,6 +142,9 @@ test("TKE production diagnostics workflow is read-only and runs on the VPC runne
   assert.match(workflow, /port-forward service\/opl-cloud-control-plane 18787:8787/);
   assert.match(workflow, /http:\/\/127\.0\.0\.1:18787\/api\/state/);
   assert.match(workflow, /http:\/\/127\.0\.0\.1:18787\/api\/production\/readiness/);
+  assert.match(workflow, /Check external HTTP and HTTPS entrypoints/);
+  assert.match(workflow, /https:\/\/cloud\.medopl\.cn\/api\/state/);
+  assert.match(workflow, /https:\/\/workspace\.medopl\.cn\//);
   assert.doesNotMatch(workflow, /kubectl .* apply /);
   assert.doesNotMatch(workflow, /kubectl .* create /);
   assert.doesNotMatch(workflow, /kubectl .* delete /);
