@@ -66,7 +66,7 @@ Both must be reviewed before creating production Workspaces.
 5. Verify Ansible starts one `one-person-lab-app` container.
 6. Verify Caddy serves `https://<workspace-slug>.<domain>/?token=<token>`.
 7. Verify `/etc/caddy/Caddyfile` imports `/etc/caddy/conf.d/*.caddy` and `caddy reload --config /etc/caddy/Caddyfile` succeeds.
-8. Verify the Workspace disk is mounted to `/data`.
+8. Verify the CBS data disk is mounted at `/data/opl` before Docker starts, and that the container maps `/data/opl` to `/data`.
 9. Stop the server and confirm CBS storage remains active.
 10. Restart the server and confirm the Workspace URL/token still works.
 11. Run one billing settlement and confirm OpenMeter receives usage events.

@@ -236,6 +236,7 @@ Delivered:
 - OPL Console displays production launch blockers.
 - `docs/PRODUCTION_RUNBOOK.md` defines launch, recovery, and artifact hygiene checks.
 - Tencent Ansible installs Caddy, imports Workspace routes from `/etc/caddy/conf.d/*.caddy`, and fails deployment when the token-gated route cannot reload.
+- Tencent Ansible mounts the attached CBS data disk at `/data/opl` before starting the `one-person-lab-app` Docker runtime.
 
 Hardening requirements:
 

@@ -35,6 +35,29 @@
 
           import /etc/caddy/conf.d/*.caddy
 
+    - name: Find attached CBS data disk
+      ansible.builtin.shell: |
+        set -euo pipefail
+        lsblk -ndo NAME,TYPE,MOUNTPOINT | awk '$2 == "disk" && $3 == "" && $1 != "vda" { print "/dev/" $1; exit }'
+      args:
+        executable: /bin/bash
+      register: cbs_data_device
+      changed_when: false
+      failed_when: cbs_data_device.stdout == ""
+
+    - name: Format CBS data disk when it has no filesystem
+      ansible.builtin.filesystem:
+        fstype: ext4
+        dev: "{{ cbs_data_device.stdout }}"
+
+    - name: Mount CBS data disk for OPL Workspace data
+      ansible.builtin.mount:
+        path: /data/opl
+        src: "{{ cbs_data_device.stdout }}"
+        fstype: ext4
+        opts: defaults,nofail
+        state: mounted
+
     - name: Write Docker Compose file
       ansible.builtin.copy:
         dest: /opt/opl-cloud/docker-compose.yml
