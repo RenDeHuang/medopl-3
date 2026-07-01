@@ -54,10 +54,13 @@ export class LocalDockerProvider {
   async createWorkspaceRuntime({ workspaceId, workspaceName, packagePlan, token }) {
     const workspaceDir = join(this.rootDir, workspaceId);
     const diskPath = join(workspaceDir, "disk");
+    const dataPath = join(diskPath, "data");
+    const projectsPath = join(diskPath, "projects");
     const slug = workspaceSlug(workspaceName, workspaceId);
     const serviceName = composeServiceName(workspaceId);
 
-    await mkdir(diskPath, { recursive: true });
+    await mkdir(dataPath, { recursive: true });
+    await mkdir(projectsPath, { recursive: true });
     await writeFile(join(workspaceDir, ".env"), [
       `OPL_WORKSPACE_ID=${workspaceId}`,
       `OPL_WORKSPACE_NAME=${workspaceName}`,
@@ -185,15 +188,18 @@ export class LocalDockerProvider {
       `      OPL_SHARE_TOKEN: ${JSON.stringify(token)}`,
       `      OPL_PACKAGE_ID: ${JSON.stringify(packagePlan.id)}`,
       "      DATA_DIR: /data",
+      "      AIONUI_DATA_DIR: /data",
+      "      OPL_PROJECTS_DIR: /projects",
       "      ALLOW_REMOTE: \"true\"",
       "      OPL_WEBUI_AUTH_MODE: none",
       "      HOME: /data",
-      "      OPL_WORKSPACE_ROOT: /data/workspaces",
+      "      OPL_WORKSPACE_ROOT: /projects",
       "      CODEX_HOME: /data/codex",
       "    ports:",
       "      - \"127.0.0.1::3000\"",
       "    volumes:",
-      "      - ./disk:/data",
+      "      - ./disk/data:/data",
+      "      - ./disk/projects:/projects",
       ""
     ].join("\n");
   }

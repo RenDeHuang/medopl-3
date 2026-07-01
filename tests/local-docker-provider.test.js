@@ -45,6 +45,8 @@ test("local Docker provider creates real compose, disk, URL, and preserves disk 
     const workspaceDir = join(root, workspace.id);
     const composePath = join(workspaceDir, "docker-compose.yml");
     const diskPath = join(workspaceDir, "disk");
+    const dataPath = join(diskPath, "data");
+    const projectsPath = join(diskPath, "projects");
     const envPath = join(workspaceDir, ".env");
 
     assert.equal(workspace.provider, "local-docker");
@@ -55,16 +57,20 @@ test("local Docker provider creates real compose, disk, URL, and preserves disk 
     assert.equal(workspace.url, `http://127.0.0.1:8787/workspaces/${workspace.slug}?token=${workspace.access.token}`);
     assert.equal(await exists(composePath), true);
     assert.equal(await exists(diskPath), true);
+    assert.equal(await exists(dataPath), true);
+    assert.equal(await exists(projectsPath), true);
     assert.equal(await exists(envPath), true);
 
     const compose = await readFile(composePath, "utf8");
     assert.match(compose, /ghcr\.io\/gaofeng21cn\/one-person-lab-webui:latest/);
-    assert.match(compose, /\/data/);
-    assert.doesNotMatch(compose, /- \.\/workspace:\/data/);
+    assert.match(compose, /AIONUI_DATA_DIR: \/data/);
+    assert.match(compose, /OPL_PROJECTS_DIR: \/projects/);
+    assert.match(compose, /- \.\/disk\/data:\/data/);
+    assert.match(compose, /- \.\/disk\/projects:\/projects/);
     assert.match(compose, /OPL_WORKSPACE_ID/);
     assert.match(compose, /OPL_WEBUI_AUTH_MODE: none/);
     assert.match(compose, /HOME: \/data/);
-    assert.match(compose, /OPL_WORKSPACE_ROOT: \/data\/workspaces/);
+    assert.match(compose, /OPL_WORKSPACE_ROOT: \/projects/);
     assert.match(compose, /CODEX_HOME: \/data\/codex/);
 
     const destroyed = await service.destroyServer({

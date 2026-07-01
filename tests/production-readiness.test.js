@@ -7,6 +7,9 @@ const productionEnv = {
   OPL_RUNTIME_PROVIDER: "tencent-cvm",
   OPL_HARBOR_REGISTRY: "harbor.oplcloud.cn",
   OPL_WORKSPACE_IMAGE: "harbor.oplcloud.cn/opl/one-person-lab-webui:2026-07-01",
+  OPL_WORKSPACE_WEBUI_PORT: "3000",
+  OPL_WORKSPACE_DATA_DIR: "/data",
+  OPL_WORKSPACE_PROJECTS_DIR: "/projects",
   OPL_WORKSPACE_DOMAIN: "workspaces.oplcloud.cn",
   DATABASE_URL: "postgres://opl:secret@db.example.com:5432/opl_cloud",
   OPENMETER_ENDPOINT: "https://openmeter.example.com",
@@ -35,6 +38,7 @@ test("productionReadiness passes only when production runtime, Harbor image, per
   assert.deepEqual(report.checks.map((check) => `${check.id}:${check.ok}`), [
     "runtime_provider:true",
     "harbor_image:true",
+    "opl_app_contract:true",
     "workspace_domain:true",
     "database_url:true",
     "openmeter:true",
@@ -90,4 +94,24 @@ test("productionReadiness requires the Workspace image to come from the configur
   assert.equal(wrongRegistry.ready, false);
   assert.deepEqual(wrongRegistry.missingEnv, []);
   assert.ok(wrongRegistry.failedChecks.includes("harbor_image"));
+});
+
+test("productionReadiness requires the one-person-lab-app WebUI runtime contract", async () => {
+  const report = await productionReadiness({
+    env: {
+      ...productionEnv,
+      OPL_WORKSPACE_WEBUI_PORT: "8080",
+      OPL_WORKSPACE_DATA_DIR: "/tmp/data",
+      OPL_WORKSPACE_PROJECTS_DIR: "/data/projects"
+    },
+    commandExists: () => true
+  });
+
+  assert.equal(report.ready, false);
+  assert.deepEqual(report.missingEnv, []);
+  assert.ok(report.failedChecks.includes("opl_app_contract"));
+  assert.equal(
+    report.checks.find((check) => check.id === "opl_app_contract").message,
+    "one-person-lab-app WebUI must expose port 3000 and persist /data plus /projects"
+  );
 });

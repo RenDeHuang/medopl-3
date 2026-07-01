@@ -35,6 +35,14 @@ function looksLikeProductionDomain(domain) {
   return Boolean(domain && domain.includes(".") && !domain.includes("localhost") && !domain.startsWith("127."));
 }
 
+function matchesOplAppContract(env) {
+  return (
+    String(env.OPL_WORKSPACE_WEBUI_PORT || "3000") === "3000" &&
+    String(env.OPL_WORKSPACE_DATA_DIR || "/data") === "/data" &&
+    String(env.OPL_WORKSPACE_PROJECTS_DIR || "/projects") === "/projects"
+  );
+}
+
 export async function productionReadiness({ env = process.env, commandExists = async () => false } = {}) {
   const missingEnv = [];
   const missingTools = [];
@@ -63,6 +71,7 @@ export async function productionReadiness({ env = process.env, commandExists = a
       looksLikeHarborImage({ image: env.OPL_WORKSPACE_IMAGE, registry: env.OPL_HARBOR_REGISTRY }),
       "OPL_WORKSPACE_IMAGE must point to the configured Harbor production registry"
     ),
+    check("opl_app_contract", matchesOplAppContract(env), "one-person-lab-app WebUI must expose port 3000 and persist /data plus /projects"),
     check("workspace_domain", looksLikeProductionDomain(env.OPL_WORKSPACE_DOMAIN), "OPL_WORKSPACE_DOMAIN must be a production wildcard domain"),
     check("database_url", Boolean(env.DATABASE_URL), "DATABASE_URL is required for production persistence"),
     check("openmeter", Boolean(env.OPENMETER_ENDPOINT && env.OPENMETER_API_KEY), "OpenMeter endpoint and API key are required"),

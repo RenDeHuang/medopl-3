@@ -39,6 +39,8 @@ OPL_SSH_KEY_ID
 
 `OPL_WORKSPACE_IMAGE` must start with `OPL_HARBOR_REGISTRY/` and point to the Harbor production image, not a public development image.
 
+`one-person-lab-app` WebUI contract is fixed at port `3000` with persistent `/data` and `/projects`. Keep API/model keys out of CLI arguments, environment variables, and Docker Compose; they are entered inside WebUI.
+
 ## Required Host Tools
 
 ```text
@@ -87,7 +89,7 @@ Use a dedicated verification account. If the verifier reports `cleanupErrors`, i
 6. Verify Ansible starts one `one-person-lab-app` container.
 7. Verify Caddy serves `https://<workspace-slug>.<domain>/?token=<token>`.
 8. Verify `/etc/caddy/Caddyfile` imports `/etc/caddy/conf.d/*.caddy` and `caddy reload --config /etc/caddy/Caddyfile` succeeds.
-9. Verify the CBS data disk is mounted at `/data/opl` before Docker starts, and that the container maps `/data/opl` to `/data`.
+9. Verify the CBS data disk is mounted at `/data/opl` before Docker starts, and that the container maps `/data/opl/data` to `/data` plus `/data/opl/projects` to `/projects`.
 10. Stop the server and confirm CBS storage remains active.
 11. Restart the server and confirm the Workspace URL/token still works.
 12. Destroy the server and confirm CBS storage is detached, retained, and still billable.

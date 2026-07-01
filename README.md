@@ -86,7 +86,7 @@ The current app implements the local business-chain loop with the Local Docker p
 - 7-day storage pre-freeze
 - Local Docker Compose workspace artifacts under `.runtime/workspaces`
 - real OPL WebUI image default: `ghcr.io/gaofeng21cn/one-person-lab-webui:latest`
-- bind-mounted Workspace disk path mapped to `/data`
+- bind-mounted Workspace disk paths mapped to `/data` and `/projects`
 - Workspace URL route with token validation
 - optional real local Docker execution with `OPL_LOCAL_DOCKER_EXECUTE=1`
 - hourly billing settlement endpoint
@@ -304,16 +304,27 @@ OPL_VERIFY_RETRY_DELAY_MS=5000
 
 ## OPL WebUI Runtime Boundary
 
-The `one-person-lab-app` Docker runtime should persist data under `/data`. The current templates set:
+OPL Cloud references the One Person Lab repositories only as runtime contracts. `one-person-lab` owns the framework/CLI layer; `one-person-lab-app` owns the Docker/WebUI product entry that OPL Cloud deploys as one Workspace container.
+
+The `one-person-lab-app` Docker/WebUI runtime exposes port `3000` and must persist two mounted paths:
+
+- `/data`: WebUI internal state, configuration, sessions, maintenance logs, and caches.
+- `/projects`: long-lived project files and Workspace deliverables.
+
+The current production templates set:
 
 ```text
 ALLOW_REMOTE=true
 DATA_DIR=/data
+AIONUI_DATA_DIR=/data
+OPL_PROJECTS_DIR=/projects
 OPL_WEBUI_AUTH_MODE=none
 HOME=/data
-OPL_WORKSPACE_ROOT=/data/workspaces
+OPL_WORKSPACE_ROOT=/projects
 CODEX_HOME=/data/codex
 ```
+
+API keys and model credentials must not be injected through CLI arguments, environment variables, or Docker Compose. They are entered inside the WebUI after the Workspace URL is opened.
 
 No-auth mode is acceptable only because OPL Cloud owns the Workspace URL token boundary. Do not expose the container directly without the OPL Workspace URL/token gateway or another trusted proxy boundary.
 

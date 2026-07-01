@@ -239,6 +239,7 @@ Delivered:
 
 - `GET /api/production/readiness` checks production provider, Harbor image, workspace domain, PostgreSQL, OpenMeter, Tencent env, and required host tools.
 - Production readiness requires `OPL_WORKSPACE_IMAGE` to come from the configured `OPL_HARBOR_REGISTRY`.
+- Production readiness also enforces the `one-person-lab-app` Docker/WebUI contract: port `3000`, persistent `/data`, and persistent `/projects`.
 - OPL Console displays production launch blockers.
 - `deploy/production-manifest.example.json` defines the production secretRef handoff contract.
 - `npm run validate:production-manifest` validates required launch variables and fails if sensitive values are inlined.
@@ -251,7 +252,7 @@ Delivered:
 - `npm run reconcile:tencent` provides the Tencent bill reconciliation gate for deployment records without writing smoke artifacts to the repo.
 - `docs/PRODUCTION_RUNBOOK.md` defines launch, recovery, and artifact hygiene checks.
 - Tencent Ansible installs Caddy, imports Workspace routes from `/etc/caddy/conf.d/*.caddy`, and fails deployment when the token-gated route cannot reload.
-- Tencent Ansible mounts the attached CBS data disk at `/data/opl` before starting the `one-person-lab-app` Docker runtime.
+- Tencent Ansible mounts the attached CBS data disk at `/data/opl` before starting the `one-person-lab-app` Docker runtime, then maps `/data/opl/data` to `/data` and `/data/opl/projects` to `/projects`.
 
 Hardening requirements:
 

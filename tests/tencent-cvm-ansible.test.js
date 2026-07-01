@@ -31,3 +31,14 @@ test("Tencent Ansible config mounts the retained CBS disk before starting Docker
   assert.match(playbook, /state: mounted/);
   assert.ok(playbook.indexOf("Find attached CBS data disk") < playbook.indexOf("Start OPL Docker runtime"));
 });
+
+test("Tencent Ansible config preserves one-person-lab-app WebUI data and projects directories", async () => {
+  const playbook = await readFile("infra/tencent-cvm/ansible/workspace.yml", "utf8");
+
+  assert.match(playbook, /AIONUI_DATA_DIR: \/data/);
+  assert.match(playbook, /OPL_PROJECTS_DIR: \/projects/);
+  assert.match(playbook, /- \/data\/opl\/data:\/data/);
+  assert.match(playbook, /- \/data\/opl\/projects:\/projects/);
+  assert.match(playbook, /"127\.0\.0\.1:3000:3000"/);
+  assert.ok(playbook.indexOf("Mount CBS data disk for OPL Workspace data") < playbook.indexOf("Write Docker Compose file"));
+});
