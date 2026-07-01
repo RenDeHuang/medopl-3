@@ -139,7 +139,7 @@ test("Tencent TKE provider applies runtime resources and registers the Workspace
   }
 });
 
-test("Tencent TKE provider maps GPU Workspace packages to GPU pod resources", async () => {
+test("Tencent TKE provider maps future accelerator package plans to GPU pod resources", async () => {
   const stateRootDir = await mkdtemp(join(tmpdir(), "opl-cloud-tke-state-"));
   const runner = async ({ args }) => {
     if (args.join(" ") === "--kubeconfig /tmp/kubeconfig --namespace opl-cloud get ingress/opl-cloud -o json") {
@@ -158,7 +158,7 @@ test("Tencent TKE provider maps GPU Workspace packages to GPU pod resources", as
     await provider.createWorkspaceRuntime({
       workspaceId: "ws-gpu001",
       ownerAccountId: "pi-alpha",
-      workspaceName: "GPU Lab",
+      workspaceName: "Accelerator Lab",
       packagePlan: {
         id: "gpu",
         accelerator: "gpu",

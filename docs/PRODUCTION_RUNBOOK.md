@@ -40,7 +40,6 @@ OPL_WORKSPACE_STORAGE_CLASS
 OPL_BILLING_MARKUP=0.2
 OPL_BASIC_COMPUTE_HOURLY_CNY=0.47
 OPL_PRO_COMPUTE_HOURLY_CNY=1.65
-OPL_GPU_COMPUTE_HOURLY_CNY=11.49
 OPL_STORAGE_GB_MONTH_CNY=0.36
 TENCENT_DEPLOY_KUBECONFIG_REF
 TENCENT_DEPLOY_CLUSTER_ID
@@ -106,18 +105,19 @@ Use a dedicated verification account. If the verifier reports `cleanupErrors`, i
 2. Confirm `GET /api/runtime/readiness` returns `ready: true`.
 3. Confirm `npm run validate:production-manifest -- --manifest <manifest.json>` passes for the deployment manifest.
 4. Create one Basic Workspace from OPL Console.
-5. Verify TKE creates exactly one runtime compute unit and one persistent storage binding for that Workspace.
-6. Verify the runtime starts one `one-person-lab-app` container.
-7. Verify Ingress serves `https://workspace.medopl.cn/w/<workspaceId>?token=<token>`.
-8. Verify the runtime maps persistent storage to `/data` and `/projects`.
-9. Stop runtime compute and confirm workspace storage remains active.
-10. Restart runtime compute and confirm the Workspace URL/token still works.
-11. Destroy runtime compute and confirm storage is retained and still billable.
-12. Recreate the runtime from retained storage and confirm the same Workspace URL/token works.
-13. Confirm Workspace opening created `compute_hold`, `storage_hold`, `compute_debit`, and `storage_debit` ledger entries.
-14. Run one billing settlement and confirm OPL Ledger records internal `compute_debit` and `storage_debit` entries.
-15. Run `npm run verify:production` against the deployed OPL Console and keep the stdout or stderr JSON result in the deployment record, not in git.
-16. Run `npm run reconcile:tencent -- --console-origin https://<console-domain> --account <pi-account-id> --tencent <tencent-bills.json>` so the OPL ledger is read from the deployed Console. Add `--tencent-format raw` for exported Tencent rows carrying a `workspace_id` tag. Use `--ledger <ledger.json>` only for an offline saved OPL ledger export. Keep the stdout result in the deployment record, not in git.
+5. Create one Pro Workspace from OPL Console only after the TKE node pool has enough allocatable CPU and memory.
+6. Verify TKE creates exactly one runtime compute unit and one persistent storage binding for each Workspace.
+7. Verify the runtime starts one `one-person-lab-app` container.
+8. Verify Ingress serves `https://workspace.medopl.cn/w/<workspaceId>?token=<token>`.
+9. Verify the runtime maps persistent storage to `/data` and `/projects`.
+10. Stop runtime compute and confirm workspace storage remains active.
+11. Restart runtime compute and confirm the Workspace URL/token still works.
+12. Destroy runtime compute and confirm storage is retained and still billable.
+13. Recreate the runtime from retained storage and confirm the same Workspace URL/token works.
+14. Confirm Workspace opening created `compute_hold`, `storage_hold`, `compute_debit`, and `storage_debit` ledger entries.
+15. Run one billing settlement and confirm OPL Ledger records internal `compute_debit` and `storage_debit` entries.
+16. Run `npm run verify:production` against the deployed OPL Console and keep the stdout or stderr JSON result in the deployment record, not in git.
+17. Run `npm run reconcile:tencent -- --console-origin https://<console-domain> --account <pi-account-id> --tencent <tencent-bills.json>` so the OPL ledger is read from the deployed Console. Add `--tencent-format raw` for exported Tencent rows carrying a `workspace_id` tag. Use `--ledger <ledger.json>` only for an offline saved OPL ledger export. Keep the stdout result in the deployment record, not in git.
 
 ## Recovery Notes
 

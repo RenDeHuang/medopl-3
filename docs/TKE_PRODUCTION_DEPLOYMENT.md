@@ -105,7 +105,6 @@ Do not commit a filled env file. Real values belong in ignored local files, Kube
 - `OPL_BILLING_MARKUP=0.2`
 - `OPL_BASIC_COMPUTE_HOURLY_CNY=0.47`
 - `OPL_PRO_COMPUTE_HOURLY_CNY=1.65`
-- `OPL_GPU_COMPUTE_HOURLY_CNY=11.49`
 - `OPL_STORAGE_GB_MONTH_CNY=0.36`
 - `DATABASE_URL`, TCR credentials, kubeconfig, and TLS certificate ids are installed as GitHub production environment secrets and Kubernetes Secrets. Do not copy their values into git.
 - `cloud.medopl.cn` and `workspace.medopl.cn` point at the OPL Cloud TKE Ingress CLB.
@@ -173,8 +172,9 @@ Current production defaults were queried from Tencent Cloud in `na-siliconvalley
 
 - Basic compute cost: `S3.MEDIUM4`, `0.47 CNY/hour`; billed user price after markup: `0.564 CNY/hour`.
 - Pro compute cost: `S3.2XLARGE16`, `1.65 CNY/hour`; billed user price after markup: `1.98 CNY/hour`.
-- GPU compute cost: `GN7.5XLARGE80`, `11.49 CNY/hour`; billed user price after markup: `13.788 CNY/hour`.
 - Storage cost: `CLOUD_PREMIUM`, `0.36 CNY/GB-month`; billed user price after markup: `0.432 CNY/GB-month`.
+
+Accelerator pricing is intentionally not part of the current production package set. Accelerator Workspaces require a verified accelerator node pool before they can be exposed without drifting from the OPL Cloud product truth.
 
 The production billing chain is:
 

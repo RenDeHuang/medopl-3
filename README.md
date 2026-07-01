@@ -68,7 +68,8 @@ The token is permanent until the owner deletes or resets it. Opening the URL doe
 | --- | --- | --- |
 | Basic Workspace | 2 CPU / 4GB | 10GB |
 | Pro Workspace | 8 CPU / 16GB | 100GB |
-| GPU Workspace | 16 CPU / 64GB / 1 GPU | 500GB |
+
+Accelerator Workspaces are outside the current production package list. They require a verified accelerator node pool before becoming a product package.
 
 ## Billing Rule
 
@@ -85,7 +86,7 @@ See [PRODUCT_DESIGN.md](./PRODUCT_DESIGN.md) for the frozen v1 product design.
 The current app implements the local business-chain loop with the Local Docker provider:
 
 - OPL Console UI
-- CPU and GPU Workspace creation
+- Basic and Pro CPU Workspace creation
 - permanent workspace URL token
 - compute stop/restart/destroy controls
 - disk destroy with explicit confirmation
@@ -142,7 +143,6 @@ OPL Ledger is the v1 billing truth. External metering systems are not required f
 OPL_BILLING_MARKUP=0.2 \
 OPL_BASIC_COMPUTE_HOURLY_CNY=1 \
 OPL_PRO_COMPUTE_HOURLY_CNY=4 \
-OPL_GPU_COMPUTE_HOURLY_CNY=20 \
 OPL_STORAGE_GB_MONTH_CNY=0.2 \
 PORT=8787 npm start
 ```

@@ -7,8 +7,7 @@ import { MemoryStore } from "../../services/api/src/store.js";
 const TEST_PRICING = {
   computeHourly: {
     basic: 1,
-    pro: 4,
-    gpu: 20
+    pro: 4
   },
   storageGbMonth: 0.2,
   markup: 0.2
@@ -48,7 +47,7 @@ function createTestService(runtimeProvider) {
   });
 }
 
-test("packages expose CPU and GPU choices with 20 percent Tencent markup price snapshots", async () => {
+test("packages expose only production-ready CPU choices with 20 percent Tencent markup price snapshots", async () => {
   const service = createTestService({
     name: "packages-only"
   });
@@ -80,16 +79,6 @@ test("packages expose CPU and GPU choices with 20 percent Tencent markup price s
       memoryGb: 16,
       gpu: 0,
       computeHourly: 4.8,
-      storageGbMonth: 0.24,
-      markup: 0.2
-    },
-    {
-      id: "gpu",
-      accelerator: "gpu",
-      cpu: 16,
-      memoryGb: 64,
-      gpu: 1,
-      computeHourly: 24,
       storageGbMonth: 0.24,
       markup: 0.2
     }
@@ -374,15 +363,15 @@ test("destroying compute and storage releases unused prepaid holds", async () =>
 test("hold calculation uses seven days of Tencent cost plus 20 percent markup", () => {
   const hold = packageHoldAmount({
     packagePlan: {
-      id: "gpu",
-      diskGb: 500
+      id: "pro",
+      diskGb: 100
     },
     pricing: TEST_PRICING
   });
 
   assert.deepEqual(hold, {
-    compute: 4032,
-    storage: 28,
-    total: 4060
+    compute: 806.4,
+    storage: 5.6,
+    total: 812
   });
 });

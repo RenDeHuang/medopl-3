@@ -18,16 +18,6 @@ const PACKAGES = {
     gpu: 0,
     server: "8c16g",
     diskGb: 100
-  },
-  gpu: {
-    id: "gpu",
-    name: "GPU Workspace",
-    accelerator: "gpu",
-    cpu: 16,
-    memoryGb: 64,
-    gpu: 1,
-    server: "16c64g-1gpu",
-    diskGb: 500
   }
 };
 

@@ -32,8 +32,7 @@ export const service = createOplCloud({
   pricing: {
     computeHourly: {
       basic: numberFromEnv("OPL_BASIC_COMPUTE_HOURLY_CNY", 1),
-      pro: numberFromEnv("OPL_PRO_COMPUTE_HOURLY_CNY", 4),
-      gpu: numberFromEnv("OPL_GPU_COMPUTE_HOURLY_CNY", 20)
+      pro: numberFromEnv("OPL_PRO_COMPUTE_HOURLY_CNY", 4)
     },
     storageGbMonth: numberFromEnv("OPL_STORAGE_GB_MONTH_CNY", 0.2),
     markup: numberFromEnv("OPL_BILLING_MARKUP", 0.2)

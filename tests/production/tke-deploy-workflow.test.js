@@ -73,7 +73,7 @@ test("TKE production deploy workflow defaults to current Tencent price snapshot"
   assert.match(workflow, /OPL_BILLING_MARKUP: \$\{\{ vars\.OPL_BILLING_MARKUP \|\| '0\.2' \}\}/);
   assert.match(workflow, /OPL_BASIC_COMPUTE_HOURLY_CNY: \$\{\{ vars\.OPL_BASIC_COMPUTE_HOURLY_CNY \|\| '0\.47' \}\}/);
   assert.match(workflow, /OPL_PRO_COMPUTE_HOURLY_CNY: \$\{\{ vars\.OPL_PRO_COMPUTE_HOURLY_CNY \|\| '1\.65' \}\}/);
-  assert.match(workflow, /OPL_GPU_COMPUTE_HOURLY_CNY: \$\{\{ vars\.OPL_GPU_COMPUTE_HOURLY_CNY \|\| '11\.49' \}\}/);
+  assert.doesNotMatch(workflow, /OPL_GPU_COMPUTE_HOURLY_CNY/);
   assert.match(workflow, /OPL_STORAGE_GB_MONTH_CNY: \$\{\{ vars\.OPL_STORAGE_GB_MONTH_CNY \|\| '0\.36' \}\}/);
 });
 
@@ -94,7 +94,6 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
       OPL_BILLING_MARKUP: "0.2",
       OPL_BASIC_COMPUTE_HOURLY_CNY: "0.47",
       OPL_PRO_COMPUTE_HOURLY_CNY: "1.65",
-      OPL_GPU_COMPUTE_HOURLY_CNY: "11.49",
       OPL_STORAGE_GB_MONTH_CNY: "0.36",
       OPL_CONSOLE_TLS_SECRET_NAME: "opl-cloud-console-medopl-cn-tls",
       OPL_WORKSPACE_TLS_SECRET_NAME: "opl-cloud-workspace-medopl-cn-tls",
@@ -125,7 +124,7 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
   assert.equal(config.data.OPL_BILLING_MARKUP, "0.2");
   assert.equal(config.data.OPL_BASIC_COMPUTE_HOURLY_CNY, "0.47");
   assert.equal(config.data.OPL_PRO_COMPUTE_HOURLY_CNY, "1.65");
-  assert.equal(config.data.OPL_GPU_COMPUTE_HOURLY_CNY, "11.49");
+  assert.equal(config.data.OPL_GPU_COMPUTE_HOURLY_CNY, undefined);
   assert.equal(config.data.OPL_STORAGE_GB_MONTH_CNY, "0.36");
   assert.equal(config.data.TENCENT_DEPLOY_CLUSTER_ID, "cls-oplcloud");
   assert.equal(config.data.TENCENT_TCR_REGISTRY, "uswccr.ccs.tencentyun.com");
