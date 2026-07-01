@@ -183,6 +183,17 @@ export async function verifyProductionChain({
     recreated.access?.token === workspace.access.token
   ));
 
+  const recreatedUrlResult = await requestWorkspaceUrl({
+    fetchImpl,
+    url: workspace.url,
+    attempts: workspaceUrlAttempts,
+    retryDelayMs
+  });
+  addCheck(checks, "workspace_url_after_recreate", true, {
+    url: workspace.url,
+    attempts: recreatedUrlResult.attempts
+  });
+
   const settlement = await requestJson({
     fetchImpl,
     origin: normalizedOrigin,

@@ -93,9 +93,11 @@ test("production verifier exercises the full Workspace cloud lifecycle through t
       server: { ...workspace.server, id: "ins-prod002" },
       disk: { ...workspace.disk, id: "disk-prod001", status: "attached_retained" }
     }],
+    ["GET https://production-verification-lab-prod001.oplcloud.cn/?token=share_prod#2", "<html>OPL Workspace restored</html>"],
     ["POST /api/billing/settle", { entries: [{ type: "server_debit" }, { type: "storage_debit" }], metering: [{ ok: true }] }]
   ]);
   let restartCount = 0;
+  let workspaceUrlCount = 0;
 
   const result = await verifyProductionChain({
     origin: "https://console.oplcloud.cn",
@@ -110,6 +112,10 @@ test("production verifier exercises the full Workspace cloud lifecycle through t
       if (key === "POST /api/workspaces/restart-server") {
         restartCount += 1;
         key = `${key}#${restartCount}`;
+      }
+      if (key === "GET https://production-verification-lab-prod001.oplcloud.cn/?token=share_prod") {
+        workspaceUrlCount += 1;
+        key = workspaceUrlCount === 1 ? key : `${key}#${workspaceUrlCount}`;
       }
       requests.push({ key, body: options.body ? JSON.parse(options.body) : null });
       const payload = responses.get(key);
@@ -129,6 +135,7 @@ test("production verifier exercises the full Workspace cloud lifecycle through t
     "POST /api/workspaces/restart-server#1",
     "POST /api/workspaces/destroy-server",
     "POST /api/workspaces/restart-server#2",
+    "GET https://production-verification-lab-prod001.oplcloud.cn/?token=share_prod#2",
     "POST /api/billing/settle"
   ]);
   assert.equal(requests.find((request) => request.key === "POST /api/workspaces").body.workspaceName, "Production Verification Lab");
@@ -144,6 +151,7 @@ test("production verifier exercises the full Workspace cloud lifecycle through t
     "server_restarted:true",
     "server_destroyed_storage_retained:true",
     "server_recreated_from_retained_disk:true",
+    "workspace_url_after_recreate:true",
     "billing_settlement:true"
   ]);
 });
@@ -194,6 +202,7 @@ test("production verifier retries the Workspace URL while Caddy and Docker becom
     }
   });
 
-  assert.equal(workspaceUrlAttempts, 2);
+  assert.equal(workspaceUrlAttempts, 3);
   assert.equal(result.checks.find((check) => check.name === "workspace_url").attempts, 2);
+  assert.equal(result.checks.find((check) => check.name === "workspace_url_after_recreate").attempts, 1);
 });

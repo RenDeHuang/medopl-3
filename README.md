@@ -240,6 +240,7 @@ stop server while retaining CBS
 restart server
 destroy server while retaining CBS
 recreate server from retained CBS
+open the same Workspace URL again after recreation
 settle billing and emit OpenMeter usage
 ```
 

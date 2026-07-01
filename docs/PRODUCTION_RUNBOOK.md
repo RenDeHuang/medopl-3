@@ -65,7 +65,7 @@ After readiness is green, run:
 OPL_CONSOLE_ORIGIN=https://<console-domain> npm run verify:production
 ```
 
-This command creates a real verification Workspace, opens its URL, stops/restarts/destroys/recreates server compute while retaining CBS storage, and runs one billing settlement. It writes results to stdout only and must not leave smoke outputs in the repository.
+This command creates a real verification Workspace, opens its URL, stops/restarts/destroys/recreates server compute while retaining CBS storage, reopens the same URL after recreation, and runs one billing settlement. It writes results to stdout only and must not leave smoke outputs in the repository.
 
 Use a dedicated verification account and delete the verification disk from OPL Console after inspection to stop storage billing.
 
