@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { verifyProductionChain } from "../tools/production-verifier.js";
+import { runProductionVerifierCli, verifyProductionChain } from "../tools/production-verifier.js";
 
 function jsonResponse(payload, status = 200) {
   return {
@@ -433,4 +433,56 @@ test("production verifier uses a unique default Workspace name for each run", as
     "production_verification_tick:run-a1",
     "production_verification_tick:run-b2"
   ]);
+});
+
+test("production verifier CLI writes structured failure JSON with cleanup errors", async () => {
+  let stdout = "";
+  let stderr = "";
+  const code = await runProductionVerifierCli({
+    argv: ["--origin", "https://console.oplcloud.cn", "--account", "pi-prod", "--run-id", "cli-fail", "--url-attempts", "1", "--retry-delay-ms", "0"],
+    stdout: { write: (chunk) => { stdout += chunk; } },
+    stderr: { write: (chunk) => { stderr += chunk; } },
+    fetchImpl: async (url, options = {}) => {
+      const parsed = new URL(String(url));
+      const method = options.method || "GET";
+      const key = parsed.origin === "https://console.oplcloud.cn"
+        ? `${method} ${parsed.pathname}`
+        : `${method} ${String(url)}`;
+      const workspace = {
+        id: "ws-cli-fail",
+        ownerAccountId: "pi-prod",
+        name: "Production Verification Lab cli-fail",
+        packageId: "basic",
+        state: "running",
+        provider: "tencent-cvm",
+        server: { id: "ins-cli-fail", status: "running", billingStatus: "active" },
+        docker: { id: "docker-cli-fail", status: "running" },
+        disk: { id: "disk-cli-fail", status: "attached_retained", billingStatus: "active", mountPath: "/data" },
+        slug: "production-verification-lab-cli-fail",
+        url: "https://production-verification-lab-cli-fail.oplcloud.cn/?token=share_cli_fail",
+        access: { token: "share_cli_fail", tokenStatus: "active", requiresLogin: false }
+      };
+
+      if (key === "GET /api/production/readiness") return jsonResponse({ ready: true, missingEnv: [], missingTools: [], failedChecks: [], checks: [] });
+      if (key === "GET /api/runtime/readiness") return jsonResponse({ provider: "tencent-cvm", ready: true, missingEnv: [], missingTools: [] });
+      if (key === "POST /api/accounts/credit") return jsonResponse({ id: "pi-prod", balance: 1000, frozen: 0 });
+      if (key === "POST /api/workspaces") return jsonResponse(workspace);
+      if (key === "GET https://production-verification-lab-cli-fail.oplcloud.cn/?token=share_cli_fail") return htmlResponse("bad gateway", 502);
+      if (key === "POST /api/workspaces/destroy-server") return jsonResponse({ error: "destroy_server_failed" }, 500);
+      if (key === "POST /api/workspaces/destroy-disk") return jsonResponse({ error: "destroy_disk_failed" }, 500);
+      throw new Error(`unexpected_request:${key}`);
+    }
+  });
+
+  assert.equal(code, 1);
+  assert.equal(stdout, "");
+  const payload = JSON.parse(stderr);
+  assert.deepEqual(payload, {
+    ok: false,
+    error: "workspace_url_failed:502:bad gateway",
+    cleanupErrors: [
+      "destroy_server:request_failed:POST:/api/workspaces/destroy-server:500:destroy_server_failed",
+      "destroy_disk:request_failed:POST:/api/workspaces/destroy-disk:500:destroy_disk_failed"
+    ]
+  });
 });

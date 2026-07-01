@@ -73,7 +73,7 @@ After readiness is green, run:
 OPL_CONSOLE_ORIGIN=https://<console-domain> npm run verify:production
 ```
 
-This command creates a real verification Workspace, opens its URL, stops/restarts/destroys/recreates server compute while retaining CBS storage, reopens the same URL after recreation, runs one billing settlement, then destroys the verification server and disk. If a check fails after Workspace creation, the verifier still attempts the same server and disk cleanup before returning the original failure. Default Workspace names and verification ledger source events include a unique run id so repeated verifier runs create fresh cloud resources and remain traceable in billing records. It writes results to stdout only and must not leave smoke outputs in the repository.
+This command creates a real verification Workspace, opens its URL, stops/restarts/destroys/recreates server compute while retaining CBS storage, reopens the same URL after recreation, runs one billing settlement, then destroys the verification server and disk. If a check fails after Workspace creation, the verifier still attempts the same server and disk cleanup before returning the original failure. Default Workspace names and verification ledger source events include a unique run id so repeated verifier runs create fresh cloud resources and remain traceable in billing records. Successful runs write structured JSON to stdout; failed runs write structured JSON to stderr, including `cleanupErrors` when cleanup does not fully complete. It must not leave smoke outputs in the repository.
 
 Use a dedicated verification account. If the verifier reports `cleanupErrors`, inspect OPL Console and Tencent Cloud, then explicitly destroy any remaining verification server or disk to stop billing.
 
@@ -93,7 +93,7 @@ Use a dedicated verification account. If the verifier reports `cleanupErrors`, i
 12. Destroy the server and confirm CBS storage is detached, retained, and still billable.
 13. Restart the server-destroyed Workspace and confirm a new CVM is created, the retained CBS disk is attached, Ansible restores the Docker runtime, and the same Workspace URL/token works.
 14. Run one billing settlement and confirm OpenMeter receives usage events.
-15. Run `npm run verify:production` against the deployed OPL Console and keep the stdout result in the deployment record, not in git.
+15. Run `npm run verify:production` against the deployed OPL Console and keep the stdout or stderr JSON result in the deployment record, not in git.
 16. Run `npm run reconcile:tencent -- --console-origin https://<console-domain> --account <pi-account-id> --tencent <tencent-bills.json>` so the OPL ledger is read from the deployed Console. Add `--tencent-format raw` for exported Tencent rows carrying a `workspace_id` tag. Use `--ledger <ledger.json>` only for an offline saved OPL ledger export. Keep the stdout result in the deployment record, not in git.
 
 ## Recovery Notes

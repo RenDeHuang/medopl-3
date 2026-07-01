@@ -315,24 +315,48 @@ function cliArgs(argv) {
   return args;
 }
 
-async function main() {
-  const args = cliArgs(process.argv.slice(2));
-  const result = await verifyProductionChain({
-    origin: args.origin || process.env.OPL_CONSOLE_ORIGIN,
-    accountId: args.account || process.env.OPL_VERIFY_ACCOUNT_ID || DEFAULT_ACCOUNT_ID,
-    workspaceName: args.workspace || process.env.OPL_VERIFY_WORKSPACE_NAME,
-    runId: args["run-id"] || process.env.OPL_VERIFY_RUN_ID,
-    packageId: args.package || process.env.OPL_VERIFY_PACKAGE_ID || DEFAULT_PACKAGE_ID,
-    creditAmount: Number(args.credit || process.env.OPL_VERIFY_CREDIT_AMOUNT || DEFAULT_CREDIT_AMOUNT),
-    workspaceUrlAttempts: Number(args["url-attempts"] || process.env.OPL_VERIFY_URL_ATTEMPTS || DEFAULT_WORKSPACE_URL_ATTEMPTS),
-    retryDelayMs: Number(args["retry-delay-ms"] || process.env.OPL_VERIFY_RETRY_DELAY_MS || DEFAULT_RETRY_DELAY_MS)
-  });
-  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+function verifierOptionsFromArgs({ argv, env = process.env, fetchImpl = globalThis.fetch }) {
+  const args = cliArgs(argv);
+  return {
+    origin: args.origin || env.OPL_CONSOLE_ORIGIN,
+    accountId: args.account || env.OPL_VERIFY_ACCOUNT_ID || DEFAULT_ACCOUNT_ID,
+    workspaceName: args.workspace || env.OPL_VERIFY_WORKSPACE_NAME,
+    runId: args["run-id"] || env.OPL_VERIFY_RUN_ID,
+    packageId: args.package || env.OPL_VERIFY_PACKAGE_ID || DEFAULT_PACKAGE_ID,
+    creditAmount: Number(args.credit || env.OPL_VERIFY_CREDIT_AMOUNT || DEFAULT_CREDIT_AMOUNT),
+    workspaceUrlAttempts: Number(args["url-attempts"] || env.OPL_VERIFY_URL_ATTEMPTS || DEFAULT_WORKSPACE_URL_ATTEMPTS),
+    retryDelayMs: Number(args["retry-delay-ms"] || env.OPL_VERIFY_RETRY_DELAY_MS || DEFAULT_RETRY_DELAY_MS),
+    fetchImpl
+  };
+}
+
+function errorPayload(error) {
+  return {
+    ok: false,
+    error: error.message,
+    ...(error.cleanupErrors ? { cleanupErrors: error.cleanupErrors } : {})
+  };
+}
+
+export async function runProductionVerifierCli({
+  argv = process.argv.slice(2),
+  env = process.env,
+  stdout = process.stdout,
+  stderr = process.stderr,
+  fetchImpl = globalThis.fetch
+} = {}) {
+  try {
+    const result = await verifyProductionChain(verifierOptionsFromArgs({ argv, env, fetchImpl }));
+    stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+    return 0;
+  } catch (error) {
+    stderr.write(`${JSON.stringify(errorPayload(error), null, 2)}\n`);
+    return 1;
+  }
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((error) => {
-    process.stderr.write(`${error.message}\n`);
-    process.exitCode = 1;
+  runProductionVerifierCli().then((code) => {
+    process.exitCode = code;
   });
 }
