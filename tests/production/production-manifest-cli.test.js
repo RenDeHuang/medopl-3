@@ -30,7 +30,7 @@ test("production manifest CLI fails without leaking inline secret values", async
       env: {
         OPL_RUNTIME_PROVIDER: { value: "local-docker" },
         DATABASE_URL: { value: "postgres://opl:secret@db.example.com:5432/opl_cloud" },
-        OPENMETER_API_KEY: { value: "om_secret" }
+        TENCENTCLOUD_SECRET_KEY: { value: "tencent_secret" }
       }
     }));
     let stdout = "";
@@ -45,7 +45,7 @@ test("production manifest CLI fails without leaking inline secret values", async
     assert.equal(code, 1);
     assert.equal(stderr, "production_manifest_invalid\n");
     assert.equal(stdout.includes("postgres://"), false);
-    assert.equal(stdout.includes("om_secret"), false);
+    assert.equal(stdout.includes("tencent_secret"), false);
     assert.equal(JSON.parse(stdout).inlineSecretEnv.includes("DATABASE_URL"), true);
   } finally {
     await rm(root, { recursive: true, force: true });

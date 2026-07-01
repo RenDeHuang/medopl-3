@@ -140,17 +140,9 @@ function assertWorkspaceShape(checks, workspace) {
 
 function assertBillingSettlement(checks, settlement) {
   const entryTypes = new Set((settlement.entries || []).map((entry) => entry.type));
-  const billableDebits = (settlement.entries || []).filter((entry) => [
-    "server_debit",
-    "storage_debit"
-  ].includes(entry.type));
-  const metering = settlement.metering || [];
   addCheck(checks, "billing_settlement", Boolean(
-    entryTypes.has("server_debit") &&
-    entryTypes.has("storage_debit") &&
-    Array.isArray(settlement.metering) &&
-    metering.length >= billableDebits.length &&
-    metering.every((result) => result.ok === true)
+    (entryTypes.has("compute_debit") || entryTypes.has("server_debit")) &&
+    entryTypes.has("storage_debit")
   ));
 }
 

@@ -103,12 +103,11 @@ Receipts:
 Attempt:
 
 - Keep OPL Console as the v1 billing truth.
-- Emit OpenMeter usage events when configured.
-- Preserve operation attempts, billing ledger entries, audit events, verifier output, and Tencent bill reconciliation evidence.
+- Keep OPL Ledger as the v1 billing truth with prepaid compute/storage holds, hourly internal debits from available balance first, frozen-hold consumption after balance exhaustion, hold release, and auto-stop/freeze receipts.
+- Preserve operation attempts, billing ledger entries, audit events, notifications, verifier output, and Tencent bill reconciliation evidence.
 
 Receipts:
 
-- `services/api/src/openmeter.js`
 - `services/api/src/billing-reconciliation.js`
 - `services/api/src/store.js`
 - `tools/reconcile-tencent-bills.js`
@@ -121,7 +120,7 @@ Receipts:
 
 Attempt:
 
-- Fail closed until production runtime provider, Harbor image, workspace domain, PostgreSQL, OpenMeter, Tencent environment, and required host tools are ready.
+- Fail closed until production runtime provider, registry images, workspace domain, PostgreSQL, Tencent environment, and required host tools are ready.
 - Validate the production manifest without leaking secrets.
 - Keep real cloud verification behind an operator-controlled human gate.
 
@@ -176,7 +175,7 @@ The following actions require explicit human approval before execution:
 - Renaming the GitHub repository.
 - Renaming the local folder.
 - Running `npm run verify:production`.
-- Creating real Workspace runtime resources, storage, DNS, or OpenMeter events outside the documented production deploy workflow.
+- Creating real Workspace runtime resources, storage, DNS, or billing side effects outside the documented production deploy workflow.
 - Injecting or confirming production secrets.
 
 ## Current Production Evidence

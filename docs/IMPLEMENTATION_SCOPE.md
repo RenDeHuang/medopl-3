@@ -17,9 +17,9 @@ This repository is responsible for:
 - OPL Fabric handoff through Local Docker, Tencent TKE, TCR, Kubernetes Ingress, persistent workspace storage, and legacy Tencent CVM contracts.
 - Workspace URL and token access.
 - Compute and persistent workspace storage lifecycle separation.
-- OPL Ledger records for billing, storage hold, audit events, metering events, verifier output, and Tencent bill reconciliation.
+- OPL Ledger records for prepaid compute/storage holds, hourly debits, hold releases, audit events, notifications, verifier output, and Tencent bill reconciliation.
 - Runtime readiness, production readiness, and production chain verification.
-- Deployment handoff assets for Tencent TKE, TCR image validation, Kubernetes Ingress, PostgreSQL, OpenMeter, and legacy Tencent CVM.
+- Deployment handoff assets for Tencent TKE, TCR image validation, Kubernetes Ingress, PostgreSQL, and legacy Tencent CVM.
 
 ## Framework Alignment
 

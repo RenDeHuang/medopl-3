@@ -31,11 +31,11 @@ test("local Docker provider creates real compose, disk, URL, and preserves disk 
       pricing: {
         serverHourly: { basic: 1, pro: 4 },
         diskGbMonth: 0.2,
-        markup: 0.1
+        markup: 0.2
       }
     });
 
-    await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+    await service.creditAccount({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
     const workspace = await service.createWorkspace({
       accountId: "pi-alpha",
       workspaceName: "Real Docker Lab",

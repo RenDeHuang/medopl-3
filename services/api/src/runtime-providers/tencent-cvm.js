@@ -20,7 +20,8 @@ const REQUIRED_ENV = [
 const REQUIRED_TOOLS = ["tofu", "ansible-playbook", "tccli"];
 const PACKAGE_INSTANCE_TYPES = {
   basic: "SA5.MEDIUM4",
-  pro: "SA5.2XLARGE16"
+  pro: "SA5.2XLARGE16",
+  gpu: "GN10Xp.4XLARGE40"
 };
 
 function compactId(value) {

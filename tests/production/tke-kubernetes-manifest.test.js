@@ -5,7 +5,6 @@ import test from "node:test";
 test("OPL Cloud TKE manifest declares the control plane, routing, and secret refs", async () => {
   const source = await readFile("deploy/tke/opl-cloud.k8s.json", "utf8");
   assert.equal(source.includes("postgresql://"), false);
-  assert.equal(source.includes("OPENMETER_API_KEY="), false);
 
   const manifest = JSON.parse(source);
   assert.equal(manifest.kind, "List");
@@ -46,8 +45,7 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
   assert.equal(container.readinessProbe.httpGet.path, "/api/production/readiness");
   assert.deepEqual(container.envFrom, [{ configMapRef: { name: "opl-cloud-config" } }]);
   assert.deepEqual(container.env.filter((item) => item.valueFrom).map((item) => `${item.name}->${item.valueFrom.secretKeyRef.name}/${item.valueFrom.secretKeyRef.key}`), [
-    "DATABASE_URL->opl-cloud-database/DATABASE_URL",
-    "OPENMETER_API_KEY->opl-cloud-openmeter/OPENMETER_API_KEY"
+    "DATABASE_URL->opl-cloud-database/DATABASE_URL"
   ]);
   assert.deepEqual(deployment.spec.template.spec.volumes.map((volume) => volume.name), [
     "runtime-state",

@@ -15,8 +15,6 @@ const productionEnv = {
   OPL_WORKSPACE_PROJECTS_DIR: "/projects",
   OPL_WORKSPACE_DOMAIN: "workspaces.oplcloud.cn",
   DATABASE_URL: "postgres://opl:secret@db.example.com:5432/opl_cloud",
-  OPENMETER_ENDPOINT: "https://openmeter.example.com",
-  OPENMETER_API_KEY: "om_secret",
   TENCENTCLOUD_SECRET_ID: "sid",
   TENCENTCLOUD_SECRET_KEY: "skey",
   TENCENTCLOUD_REGION: "ap-guangzhou",
@@ -43,8 +41,6 @@ const tkeProductionEnv = {
   OPL_IMAGE_PULL_SECRET_NAME: "tcr-pull-secret",
   OPL_WORKSPACE_STORAGE_CLASS: "cbs",
   DATABASE_URL: "postgresql://opl:secret@db.example.com:5432/opl_cloud",
-  OPENMETER_ENDPOINT: "http://openmeter.opl-cloud.svc.cluster.local:8888",
-  OPENMETER_API_KEY: "om_secret",
   TENCENT_DEPLOY_KUBECONFIG_REF: "/tmp/kubeconfig",
   TENCENT_DEPLOY_CLUSTER_ID: "cls-123",
   TENCENT_TCR_REGISTRY: "registry.example.com",
@@ -52,7 +48,7 @@ const tkeProductionEnv = {
   TENCENT_TCR_REGION: "ap-guangzhou"
 };
 
-test("productionReadiness passes only when production runtime, Harbor image, persistence, metering, Tencent env, and tools are present", async () => {
+test("productionReadiness passes only when production runtime, image, persistence, Tencent env, and tools are present", async () => {
   const report = await productionReadiness({
     env: productionEnv,
     commandExists: () => true
@@ -68,7 +64,6 @@ test("productionReadiness passes only when production runtime, Harbor image, per
     "opl_app_contract:true",
     "workspace_domain:true",
     "database_url:true",
-    "openmeter:true",
     "provider_env:true",
     "tools:true"
   ]);
@@ -92,7 +87,6 @@ test("productionReadiness supports Tencent TKE without CVM image or SSH key fiel
     "opl_app_contract:true",
     "workspace_domain:true",
     "database_url:true",
-    "openmeter:true",
     "provider_env:true",
     "tools:true"
   ]);
@@ -134,8 +128,6 @@ test("productionReadiness reports concrete production blockers without leaking s
   assert.equal(report.ready, false);
   assert.deepEqual(report.missingTools, ["ansible-playbook", "tccli", "caddy"]);
   assert.ok(report.missingEnv.includes("DATABASE_URL"));
-  assert.ok(report.missingEnv.includes("OPENMETER_ENDPOINT"));
-  assert.ok(report.missingEnv.includes("OPENMETER_API_KEY"));
   assert.ok(report.missingEnv.includes("TENCENTCLOUD_SECRET_KEY"));
   assert.ok(report.failedChecks.includes("provider_env"));
   assert.ok(report.failedChecks.includes("harbor_image"));

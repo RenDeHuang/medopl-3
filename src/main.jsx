@@ -33,12 +33,19 @@ function money(value) {
   return `¥${Number(value || 0).toFixed(2)}`;
 }
 
+function packageSummary(plan) {
+  const gpu = Number(plan.gpu || 0) > 0 ? ` + ${plan.gpu} GPU` : "";
+  return `${plan.cpu} CPU / ${plan.memoryGb}GB${gpu} + ${plan.diskGb}GB storage`;
+}
+
 function statusLabel(workspace) {
   if (!workspace) return "No workspace";
   const labels = {
     running: "Running",
     stopped_server_disk_retained: "Stopped, disk retained",
-    server_destroyed_disk_retained: "Server destroyed, disk retained",
+    server_destroyed_disk_retained: "Compute destroyed, storage retained",
+    storage_hold_exhausted: "Storage hold exhausted",
+    stopped_storage_hold_exhausted: "Stopped, storage hold exhausted",
     destroyed: "Destroyed",
     failed: "Failed"
   };
@@ -99,11 +106,11 @@ function App() {
           <a href="#workspaces">Workspaces</a>
           <a href="#create">Create</a>
           <a href="#access">URL & Token</a>
-          <a href="#resources">Server & Disk</a>
+          <a href="#resources">Compute & Storage</a>
           <a href="#billing">Billing</a>
           <a href="#audit">Audit</a>
         </nav>
-        <div className="sidebarNote">1 Workspace = 1 server + 1 Docker + 1 cloud disk + 1 URL</div>
+        <div className="sidebarNote">1 Workspace = 1 compute unit + 1 Docker runtime + 1 storage volume + 1 URL</div>
       </aside>
 
       <main className="main">
@@ -154,7 +161,7 @@ function App() {
         <section className="metrics">
           <Metric label="Account" value={state.account.id} />
           <Metric label="Balance" value={money(state.account.balance)} />
-          <Metric label="Frozen" value={money(state.account.frozen)} />
+          <Metric label="Frozen holds" value={money(state.account.frozen)} />
           <Metric label="Workspaces" value={state.workspaces.length} />
         </section>
 
@@ -162,20 +169,21 @@ function App() {
           <div className="sectionHeader">
             <div>
               <h2>Create OPL Workspace</h2>
-              <p>Creates one server, one cloud disk, one Docker runtime, and one URL.</p>
+              <p>Creates one compute unit, one persistent storage volume, one Docker runtime, and one URL.</p>
             </div>
           </div>
           <div className="planGrid">
             {state.packages.map((plan) => (
               <article className="plan" key={plan.id}>
-                <span>{plan.id === "basic" ? "Default" : "Larger lab"}</span>
+                <span>{plan.accelerator === "gpu" ? "GPU" : plan.id === "basic" ? "Default" : "CPU"}</span>
                 <h3>{plan.name}</h3>
-                <p>{plan.server} server + {plan.diskGb}GB cloud disk</p>
+                <p>{packageSummary(plan)}</p>
+                <p>{money(plan.price.computeHourly)}/compute hour · {money(plan.price.storageGbMonth)}/GB-month storage</p>
                 <button
                   className="primary"
                   onClick={() => run(() => api("/api/workspaces", {
                     accountId,
-                    workspaceName: plan.id === "basic" ? "Grant Lab" : "Protein Lab",
+                    workspaceName: plan.id === "basic" ? "Grant Lab" : plan.id === "gpu" ? "GPU Lab" : "Protein Lab",
                     packageId: plan.id
                   }))}
                 >
@@ -194,7 +202,7 @@ function App() {
             </div>
           </div>
           <div className="workspaceList">
-            {state.workspaces.length === 0 && <div className="empty">No OPL Workspace yet. Grant balance, then create Basic or Pro.</div>}
+            {state.workspaces.length === 0 && <div className="empty">No OPL Workspace yet. Grant balance, then create a CPU or GPU package.</div>}
             {state.workspaces.map((workspace) => (
               <button
                 className={`workspaceRow ${workspace.id === selected?.id ? "active" : ""}`}
@@ -229,29 +237,29 @@ function App() {
         <section id="resources" className="band">
           <div className="sectionHeader">
             <div>
-              <h2>Server & Disk</h2>
-              <p>Server lifecycle is separate from cloud disk lifecycle.</p>
+              <h2>Compute & Storage</h2>
+              <p>Compute lifecycle is separate from persistent storage lifecycle.</p>
             </div>
             <Server />
           </div>
           {selected ? (
             <>
               <div className="resourceGrid">
-                <ResourceCard icon={<Server />} title="Server" value={`${selected.server.spec} / ${selected.server.status}`} billing={selected.server.billingStatus} />
-                <ResourceCard icon={<HardDrive />} title="Cloud disk" value={`${selected.disk.sizeGb}GB / ${selected.disk.status}`} billing={selected.disk.billingStatus} />
+                <ResourceCard icon={<Server />} title="Compute" value={`${selected.server.spec} / ${selected.server.status}`} billing={selected.server.billingStatus} />
+                <ResourceCard icon={<HardDrive />} title="Storage" value={`${selected.disk.sizeGb}GB / ${selected.disk.status}`} billing={selected.disk.billingStatus} />
                 <ResourceCard icon={<Database />} title="Docker" value={selected.docker.image} billing={selected.docker.status} />
                 <ResourceCard icon={<ShieldCheck />} title="Access" value={selected.access.tokenStatus} billing="No login required" />
               </div>
               <div className="actions">
-                <button onClick={() => run(() => api("/api/workspaces/stop-server", { accountId, workspaceId: selected.id, confirm: true }))}><Square size={16} /> Stop server</button>
+                <button onClick={() => run(() => api("/api/workspaces/stop-server", { accountId, workspaceId: selected.id, confirm: true }))}><Square size={16} /> Stop compute</button>
                 <button onClick={() => run(() => api("/api/workspaces/restart-server", { accountId, workspaceId: selected.id }))}><RotateCw size={16} /> Restart</button>
-                <button className="danger" onClick={() => run(() => api("/api/workspaces/destroy-server", { accountId, workspaceId: selected.id, confirm: true }))}><Trash2 size={16} /> Destroy server</button>
-                <button className="danger strong" onClick={() => run(() => api("/api/workspaces/destroy-disk", { accountId, workspaceId: selected.id, confirmDataLoss: true }))}><Trash2 size={16} /> Destroy disk</button>
+                <button className="danger" onClick={() => run(() => api("/api/workspaces/destroy-server", { accountId, workspaceId: selected.id, confirm: true }))}><Trash2 size={16} /> Destroy compute</button>
+                <button className="danger strong" onClick={() => run(() => api("/api/workspaces/destroy-disk", { accountId, workspaceId: selected.id, confirmDataLoss: true }))}><Trash2 size={16} /> Destroy storage</button>
                 <button onClick={() => run(() => api("/api/billing/settle", {
                   accountId,
                   workspaceId: selected.id,
                   hours: 1,
-                  sourceEventId: `console_meter_tick_${Date.now()}`
+                  sourceEventId: `console_billing_tick_${Date.now()}`
                 }))}><CreditCard size={16} /> Settle 1h</button>
               </div>
             </>
@@ -262,7 +270,7 @@ function App() {
           <div className="sectionHeader">
             <div>
               <h2>Billing Ledger</h2>
-              <p>Hourly server billing, storage billing, and 7-day storage hold.</p>
+              <p>Seven-day prepaid holds, hourly compute and storage debits, and release receipts.</p>
             </div>
           </div>
           <EventList events={state.billingLedger} />

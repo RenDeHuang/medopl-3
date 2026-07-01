@@ -101,5 +101,5 @@ The API host must have `tccli` configured with Tencent credentials from the envi
 - The attached CBS data disk is formatted as ext4 when needed and mounted at `/data/opl` before Docker starts. The `one-person-lab-app` container maps `/data/opl/data` to `/data` and `/data/opl/projects` to `/projects`.
 - The Docker/WebUI contract is port `3000`, persistent `/data`, persistent `/projects`, and no API/model keys passed through CLI, env, or Compose.
 - Caddy owns HTTPS and token URL routing. The Ansible playbook installs Caddy, writes `/etc/caddy/Caddyfile`, imports `/etc/caddy/conf.d/*.caddy`, and fails the run if Caddy cannot reload the Workspace route.
-- OpenMeter receives `server_debit` and `storage_debit` usage events from the API billing settlement path.
+- OPL Ledger is the billing truth. External metering systems are not required for the closed loop.
 - Lago is not required for the current closed loop; use it later for invoices/subscriptions.

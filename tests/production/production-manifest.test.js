@@ -8,8 +8,6 @@ test("production manifest requires deployment secret refs for every launch varia
     env: {
       OPL_RUNTIME_PROVIDER: { value: "tencent-cvm" },
       DATABASE_URL: { secretRef: "opl-cloud/database-url" },
-      OPENMETER_ENDPOINT: { secretRef: "opl-cloud/openmeter-endpoint" },
-      OPENMETER_API_KEY: { secretRef: "opl-cloud/openmeter-api-key" },
       TENCENTCLOUD_SECRET_ID: { secretRef: "opl-cloud/tencent-secret-id" },
       TENCENTCLOUD_SECRET_KEY: { secretRef: "opl-cloud/tencent-secret-key" },
       TENCENTCLOUD_REGION: { value: "ap-guangzhou" },
@@ -42,8 +40,6 @@ test("production manifest validates Tencent TKE fields without CVM image or SSH 
     env: {
       OPL_RUNTIME_PROVIDER: { value: "tencent-tke" },
       DATABASE_URL: { secretRef: "opl-cloud/database-url" },
-      OPENMETER_ENDPOINT: { value: "http://openmeter.opl-cloud.svc.cluster.local:8888" },
-      OPENMETER_API_KEY: { secretRef: "opl-cloud/openmeter-api-key" },
       OPL_PUBLIC_URL: { value: "https://cloud.medopl.cn" },
       OPL_CONSOLE_DOMAIN: { value: "cloud.medopl.cn" },
       OPL_WORKSPACE_DOMAIN: { value: "workspace.medopl.cn" },
@@ -80,7 +76,6 @@ test("production manifest fails closed on missing env and inline secret values",
     env: {
       OPL_RUNTIME_PROVIDER: { value: "tencent-cvm" },
       DATABASE_URL: { value: "postgres://opl:secret@db.example.com:5432/opl_cloud" },
-      OPENMETER_API_KEY: { value: "om_secret" },
       OPL_WORKSPACE_DOMAIN: { value: "localhost" },
       OPL_HARBOR_REGISTRY: { value: "harbor.oplcloud.cn" },
       OPL_WORKSPACE_IMAGE: { value: "registry.example.com/opl/one-person-lab-webui:latest" }
@@ -88,13 +83,11 @@ test("production manifest fails closed on missing env and inline secret values",
   });
 
   assert.equal(report.ok, false);
-  assert.ok(report.missingEnv.includes("OPENMETER_ENDPOINT"));
   assert.ok(report.missingEnv.includes("TENCENTCLOUD_SECRET_KEY"));
-  assert.deepEqual(report.inlineSecretEnv.sort(), ["DATABASE_URL", "OPENMETER_API_KEY"]);
+  assert.deepEqual(report.inlineSecretEnv.sort(), ["DATABASE_URL"]);
   assert.ok(report.failedChecks.includes("required_env"));
   assert.ok(report.failedChecks.includes("secret_refs"));
   assert.ok(report.failedChecks.includes("harbor_image"));
   assert.ok(report.failedChecks.includes("workspace_domain"));
   assert.equal(JSON.stringify(report).includes("postgres://"), false);
-  assert.equal(JSON.stringify(report).includes("om_secret"), false);
 });

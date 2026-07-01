@@ -4,7 +4,6 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { createOplCloud } from "./src/opl-cloud.js";
-import { createMeterFromEnv } from "./src/openmeter.js";
 import { productionReadiness } from "./src/production-readiness.js";
 import { createRuntimeProvider } from "./src/runtime-provider-factory.js";
 import { JsonFileStore, PostgresStore } from "./src/store.js";
@@ -13,6 +12,11 @@ const root = fileURLToPath(new URL("../..", import.meta.url));
 const publicDir = join(root, "dist");
 const port = Number(process.env.PORT ?? 8787);
 const dataPath = process.env.OPL_CLOUD_DATA_PATH ?? join(root, ".runtime", "opl-cloud-state.json");
+
+function numberFromEnv(name, fallback) {
+  const value = Number(process.env[name]);
+  return Number.isFinite(value) ? value : fallback;
+}
 
 export function createStoreFromEnv(env = process.env) {
   if (env.DATABASE_URL) return new PostgresStore({ connectionString: env.DATABASE_URL });
@@ -26,11 +30,14 @@ export const service = createOplCloud({
     rootDir: join(root, ".runtime", "workspaces")
   }),
   pricing: {
-    serverHourly: { basic: 1, pro: 4 },
-    diskGbMonth: 0.2,
-    markup: 0.1
+    computeHourly: {
+      basic: numberFromEnv("OPL_BASIC_COMPUTE_HOURLY_CNY", 1),
+      pro: numberFromEnv("OPL_PRO_COMPUTE_HOURLY_CNY", 4),
+      gpu: numberFromEnv("OPL_GPU_COMPUTE_HOURLY_CNY", 20)
+    },
+    storageGbMonth: numberFromEnv("OPL_STORAGE_GB_MONTH_CNY", 0.2),
+    markup: numberFromEnv("OPL_BILLING_MARKUP", 0.2)
   },
-  meter: createMeterFromEnv(process.env),
   productionReadiness: () => productionReadiness({ env: process.env })
 });
 

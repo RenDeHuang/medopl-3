@@ -18,7 +18,7 @@
     "url": 1
   },
   "access": {
-    "urlPattern": "https://<workspace-slug>.oplcloud.cn/?token=<share-token>",
+    "urlPattern": "https://workspace.medopl.cn/w/<workspaceId>?token=<share-token>",
     "requiresLogin": false,
     "tokenLifetime": "permanent_until_owner_reset_or_delete"
   },
@@ -26,14 +26,32 @@
     {
       "id": "basic",
       "name": "Basic Workspace",
+      "accelerator": "cpu",
+      "cpu": 2,
+      "memoryGb": 4,
+      "gpu": 0,
       "server": "2c4g",
       "diskGb": 10
     },
     {
       "id": "pro",
       "name": "Pro Workspace",
+      "accelerator": "cpu",
+      "cpu": 8,
+      "memoryGb": 16,
+      "gpu": 0,
       "server": "8c16g",
       "diskGb": 100
+    },
+    {
+      "id": "gpu",
+      "name": "GPU Workspace",
+      "accelerator": "gpu",
+      "cpu": 16,
+      "memoryGb": 64,
+      "gpu": 1,
+      "server": "16c64g-1gpu",
+      "diskGb": 500
     }
   ],
   "productionHandoff": {
@@ -45,6 +63,7 @@
     "member_login_for_shared_urls",
     "automatic_cloud_disk_delete_when_server_stops_or_is_destroyed",
     "kubernetes_default_runtime",
-    "external_payment_settlement"
+    "external_payment_settlement",
+    "live_tencent_price_lookup_before_each_workspace_open"
   ]
 }

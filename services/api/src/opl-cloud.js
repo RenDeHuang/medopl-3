@@ -2,14 +2,32 @@ const PACKAGES = {
   basic: {
     id: "basic",
     name: "Basic Workspace",
+    accelerator: "cpu",
+    cpu: 2,
+    memoryGb: 4,
+    gpu: 0,
     server: "2c4g",
     diskGb: 10
   },
   pro: {
     id: "pro",
     name: "Pro Workspace",
+    accelerator: "cpu",
+    cpu: 8,
+    memoryGb: 16,
+    gpu: 0,
     server: "8c16g",
     diskGb: 100
+  },
+  gpu: {
+    id: "gpu",
+    name: "GPU Workspace",
+    accelerator: "gpu",
+    cpu: 16,
+    memoryGb: 64,
+    gpu: 1,
+    server: "16c64g-1gpu",
+    diskGb: 500
   }
 };
 
@@ -61,6 +79,65 @@ function accountAvailable(account) {
   return money(account.balance - account.frozen);
 }
 
+function accountHold(account, holdType) {
+  account.holds ??= {};
+  account.holds[holdType] = money(Number(account.holds[holdType] || 0));
+  account.frozen = money(Object.values(account.holds).reduce((total, amount) => total + Number(amount || 0), 0));
+  return account.holds[holdType];
+}
+
+function addHold(account, holdType, amount) {
+  const current = accountHold(account, holdType);
+  account.holds[holdType] = money(current + amount);
+  account.frozen = money(account.frozen + amount);
+}
+
+function releaseHold(account, holdType, amount = accountHold(account, holdType)) {
+  const current = accountHold(account, holdType);
+  const released = money(Math.min(current, Math.max(0, Number(amount || 0))));
+  if (released <= 0) return 0;
+  account.holds[holdType] = money(current - released);
+  account.frozen = money(account.frozen - released);
+  return released;
+}
+
+function debitAccount(account, holdType, amount) {
+  const debit = money(Math.max(0, Number(amount || 0)));
+  if (debit <= 0) return 0;
+  const currentHold = accountHold(account, holdType);
+  const captured = money(Math.min(currentHold, debit));
+  if (captured <= 0) return 0;
+  account.holds[holdType] = money(currentHold - captured);
+  account.frozen = money(Math.max(0, account.frozen - captured));
+  account.balance = money(account.balance - captured);
+  return captured;
+}
+
+function debitAvailableBalance(account, amount) {
+  const debit = money(Math.max(0, Number(amount || 0)));
+  if (debit <= 0) return 0;
+  const captured = money(Math.min(accountAvailable(account), debit));
+  if (captured <= 0) return 0;
+  account.balance = money(account.balance - captured);
+  return captured;
+}
+
+function chargeAccount(account, holdType, amount) {
+  const requested = money(Math.max(0, Number(amount || 0)));
+  const available = debitAvailableBalance(account, requested);
+  const remainingAfterAvailable = money(requested - available);
+  const hold = debitAccount(account, holdType, remainingAfterAvailable);
+  return {
+    requested,
+    available,
+    hold,
+    charged: money(available + hold),
+    unpaid: money(requested - available - hold),
+    usedHold: hold > 0,
+    exhaustedHold: hold > 0 && accountHold(account, holdType) <= 0
+  };
+}
+
 function latestWorkspaceForAccount(state, accountId, workspaceId) {
   const workspace = state.workspaces[workspaceId];
   if (!workspace || workspace.ownerAccountId !== accountId) {
@@ -74,40 +151,81 @@ function workspaceBySlug(state, slug) {
 }
 
 export function storageHoldAmount({ packagePlan, pricing }) {
-  const gbMonth = pricing.diskGbMonth ?? 0.2;
-  const markup = pricing.markup ?? 0.1;
-  const daily = (packagePlan.diskGb * gbMonth * (1 + markup)) / 30;
-  return money(daily * 7);
+  return packageHoldAmount({ packagePlan, pricing }).storage;
+}
+
+function pricingMarkup(pricing) {
+  return pricing.markup ?? 0.2;
+}
+
+function computeHourlyBase({ packagePlan, pricing }) {
+  return pricing.computeHourly?.[packagePlan.id] ?? pricing.serverHourly?.[packagePlan.id] ?? 0;
+}
+
+function storageGbMonthBase(pricing) {
+  return pricing.storageGbMonth ?? pricing.diskGbMonth ?? 0.2;
+}
+
+function pricedComputeHourly({ packagePlan, pricing }) {
+  return money(computeHourlyBase({ packagePlan, pricing }) * (1 + pricingMarkup(pricing)));
+}
+
+function pricedStorageGbMonth(pricing) {
+  return money(storageGbMonthBase(pricing) * (1 + pricingMarkup(pricing)));
+}
+
+export function packageHoldAmount({ packagePlan, pricing }) {
+  const compute = money(pricedComputeHourly({ packagePlan, pricing }) * 24 * 7);
+  const storage = money((packagePlan.diskGb * pricedStorageGbMonth(pricing) / 30) * 7);
+  return {
+    compute,
+    storage,
+    total: money(compute + storage)
+  };
 }
 
 function hourlyStorageAmount({ packagePlan, pricing, hours }) {
-  const gbMonth = pricing.diskGbMonth ?? 0.2;
-  const markup = pricing.markup ?? 0.1;
+  const gbMonth = storageGbMonthBase(pricing);
+  const markup = pricingMarkup(pricing);
   return money((packagePlan.diskGb * gbMonth * (1 + markup) / 30 / 24) * hours);
 }
 
-function hourlyServerAmount({ packagePlan, pricing, hours }) {
-  const hourly = pricing.serverHourly?.[packagePlan.id] ?? 0;
-  const markup = pricing.markup ?? 0.1;
+function hourlyComputeAmount({ packagePlan, pricing, hours }) {
+  const hourly = computeHourlyBase({ packagePlan, pricing });
+  const markup = pricingMarkup(pricing);
   return money(hourly * (1 + markup) * hours);
 }
 
-export function createOplCloud({ store, runtimeProvider, pricing, meter = null, productionReadiness = null }) {
-  return new OplCloudService({ store, runtimeProvider, pricing, meter, productionReadiness });
+function billableHours(hours) {
+  const value = Number(hours);
+  if (!Number.isFinite(value) || value <= 0) throw new Error("positive_hours_required");
+  return Math.ceil(value);
+}
+
+export function createOplCloud({ store, runtimeProvider, pricing, productionReadiness = null }) {
+  return new OplCloudService({ store, runtimeProvider, pricing, productionReadiness });
 }
 
 export class OplCloudService {
-  constructor({ store, runtimeProvider, pricing, meter = null, productionReadiness = null }) {
+  constructor({ store, runtimeProvider, pricing, productionReadiness = null }) {
     this.store = store;
     this.runtimeProvider = runtimeProvider;
     this.pricing = pricing;
-    this.meter = meter;
     this.productionReadinessCheck = productionReadiness;
     this.runtimeOperationSequence = 0;
   }
 
   packages() {
-    return Object.values(PACKAGES).map(clone);
+    return Object.values(PACKAGES).map((plan) => ({
+      ...clone(plan),
+      price: {
+        currency: "CNY",
+        computeHourly: pricedComputeHourly({ packagePlan: plan, pricing: this.pricing }),
+        storageGbMonth: pricedStorageGbMonth(this.pricing),
+        markup: pricingMarkup(this.pricing),
+        source: "tencent_price_catalog_snapshot"
+      }
+    }));
   }
 
   async creditAccount({ accountId, amount, reason }) {
@@ -118,7 +236,7 @@ export class OplCloudService {
     return this.store.update((state) => {
       const account = ensureAccount(state, accountId);
       account.balance = money(account.balance + credit);
-      const entry = this.ledgerEntry({
+      const entry = this.ledgerEntry({ state,
         workspaceId: "account",
         accountId,
         type: "credit",
@@ -135,67 +253,116 @@ export class OplCloudService {
     const packagePlan = getPackage(packageId);
     const workspaceId = makeId("ws", accountId, workspaceName, packageId);
     const token = makeToken(workspaceId);
-    const holdAmount = storageHoldAmount({ packagePlan, pricing: this.pricing });
-    let runtimeOperationStarted = false;
+    const hold = packageHoldAmount({ packagePlan, pricing: this.pricing });
 
-    try {
-      return await this.store.update(async (state) => {
-        const account = ensureAccount(state, accountId);
-        if (accountAvailable(account) < holdAmount) {
-          throw new Error("insufficient_storage_hold_balance");
+    const reservation = await this.store.update((state) => {
+      const account = ensureAccount(state, accountId);
+      if (state.workspaces[workspaceId]) return { existing: true, workspace: clone(state.workspaces[workspaceId]) };
+      if (accountAvailable(account) < hold.total) {
+        throw new Error("insufficient_prepaid_hold_balance");
+      }
+
+      addHold(account, "compute", hold.compute);
+      addHold(account, "storage", hold.storage);
+      state.billingLedger.push(this.ledgerEntry({ state,
+        workspaceId,
+        accountId,
+        type: "compute_hold",
+        amount: hold.compute,
+        sourceEventId: "open_workspace",
+        holdType: "compute",
+        metadata: {
+          holdDays: 7,
+          baseHourly: computeHourlyBase({ packagePlan, pricing: this.pricing }),
+          markup: pricingMarkup(this.pricing)
         }
-        if (state.workspaces[workspaceId]) return clone(state.workspaces[workspaceId]);
+      }));
+      state.billingLedger.push(this.ledgerEntry({ state,
+        workspaceId,
+        accountId,
+        type: "storage_hold",
+        amount: hold.storage,
+        sourceEventId: "open_workspace",
+        holdType: "storage",
+        metadata: {
+          holdDays: 7,
+          baseGbMonth: storageGbMonthBase(this.pricing),
+          markup: pricingMarkup(this.pricing)
+        }
+      }));
 
-        account.frozen = money(account.frozen + holdAmount);
-        state.billingLedger.push(this.ledgerEntry({
-          workspaceId,
-          accountId,
-          type: "storage_hold",
-          amount: holdAmount,
-          sourceEventId: "open_workspace"
-        }));
+      const operation = this.startRuntimeOperation({ state, accountId, workspaceId, operationType: "create_workspace" });
+      return { existing: false, operationId: operation.id };
+    });
 
-        const operation = this.startRuntimeOperation({ state, accountId, workspaceId, operationType: "create_workspace" });
-        runtimeOperationStarted = true;
-        const runtime = await this.runtimeProvider.createWorkspaceRuntime({
-          workspaceId,
-          ownerAccountId: accountId,
-          workspaceName,
-          packagePlan,
-          token
-        });
-        this.finishRuntimeOperation(operation, "succeeded");
+    if (reservation.existing) return reservation.workspace;
 
-        const workspace = {
-          id: workspaceId,
-          ownerAccountId: accountId,
-          name: workspaceName,
-          packageId,
-          state: "running",
-          provider: runtime.provider,
-          server: runtime.server,
-          docker: runtime.docker,
-          disk: runtime.disk,
-          slug: runtime.slug,
-          url: runtime.url,
-          access: {
-            requiresLogin: false,
-            token,
-            tokenStatus: "active"
-          },
-          createdAt: now(),
-          updatedAt: now()
-        };
-        state.workspaces[workspaceId] = workspace;
-        state.audit.push(this.auditEvent({ accountId, workspaceId, type: "workspace.created", sourceEventId: workspaceId }));
-        return clone(workspace);
+    let runtime;
+    try {
+      runtime = await this.runtimeProvider.createWorkspaceRuntime({
+        workspaceId,
+        ownerAccountId: accountId,
+        workspaceName,
+        packagePlan,
+        token
       });
     } catch (error) {
-      if (runtimeOperationStarted) {
-        await this.recordFailedRuntimeOperation({ accountId, workspaceId, operationType: "create_workspace", error });
-      }
+      await this.recordCreateWorkspaceFailure({ accountId, workspaceId, operationId: reservation.operationId, error });
       throw error;
     }
+
+    return this.store.update((state) => {
+      const account = ensureAccount(state, accountId);
+      const operation = state.runtimeOperations.find((item) => item.id === reservation.operationId);
+      if (operation) this.finishRuntimeOperation(operation, "succeeded");
+
+      const workspace = {
+        id: workspaceId,
+        ownerAccountId: accountId,
+        name: workspaceName,
+        packageId,
+        state: "running",
+        provider: runtime.provider,
+        server: runtime.server,
+        docker: runtime.docker,
+        disk: runtime.disk,
+        slug: runtime.slug,
+        url: runtime.url,
+        access: {
+          requiresLogin: false,
+          token,
+          tokenStatus: "active"
+        },
+        billing: {
+          holdPolicy: "seven_day_prepaid",
+          minimumBillableHours: 1,
+          priceMarkup: pricingMarkup(this.pricing)
+        },
+        createdAt: now(),
+        updatedAt: now()
+      };
+      state.workspaces[workspaceId] = workspace;
+      const firstHourEntries = this.debitWorkspaceUsage({
+        state,
+        account,
+        workspace,
+        packagePlan,
+        hours: 1,
+        sourceEventId: "open_workspace_initial_hour",
+        billableHours: 1
+      });
+      state.audit.push(this.auditEvent({ accountId, workspaceId, type: "workspace.created", sourceEventId: workspaceId }));
+      state.audit.push(this.auditEvent({
+        accountId,
+        workspaceId,
+        type: "billing.first_hour_charged",
+        sourceEventId: "open_workspace_initial_hour"
+      }));
+      return {
+        ...clone(workspace),
+        initialBilling: firstHourEntries.map(clone)
+      };
+    });
   }
 
   async stopServer({ accountId, workspaceId, confirm }) {
@@ -208,16 +375,19 @@ export class OplCloudService {
         workspace.state = "stopping_server";
         workspace.server = await this.runtimeProvider.stopServer({ workspace: clone(workspace) });
         this.finishRuntimeOperation(operation, "succeeded");
-        workspace.state = "stopped_server_disk_retained";
+        workspace.state = workspace.disk.billingStatus === "hold_exhausted"
+          ? "stopped_storage_hold_exhausted"
+          : "stopped_server_disk_retained";
         workspace.disk.status = workspace.disk.status === "destroyed" ? "destroyed" : "attached_retained";
         workspace.updatedAt = now();
-        state.billingLedger.push(this.ledgerEntry({
+        state.billingLedger.push(this.ledgerEntry({ state,
           workspaceId,
           accountId,
           type: "server_billing_stopped",
           amount: 0,
           sourceEventId: "stop_server"
         }));
+        this.releaseHoldToLedger({ state, accountId, workspaceId, holdType: "compute", sourceEventId: "stop_server" });
         state.audit.push(this.auditEvent({ accountId, workspaceId, type: "server.stopped", sourceEventId: "stop_server" }));
         return clone(workspace);
       }
@@ -233,21 +403,9 @@ export class OplCloudService {
       prepare: (state, workspace) => {
         const packagePlan = getPackage(workspace.packageId);
         const account = ensureAccount(state, accountId);
-        const requiredHold = storageHoldAmount({ packagePlan, pricing: this.pricing });
-        if (account.frozen < requiredHold && accountAvailable(account) < requiredHold - account.frozen) {
-          throw new Error("insufficient_storage_hold_balance");
-        }
-        if (account.frozen < requiredHold) {
-          const delta = money(requiredHold - account.frozen);
-          account.frozen = money(account.frozen + delta);
-          state.billingLedger.push(this.ledgerEntry({
-            workspaceId,
-            accountId,
-            type: "storage_hold",
-            amount: delta,
-            sourceEventId: "resume_workspace"
-          }));
-        }
+        const requiredHold = packageHoldAmount({ packagePlan, pricing: this.pricing });
+        this.ensureHold({ state, account, accountId, workspaceId, holdType: "compute", requiredAmount: requiredHold.compute, sourceEventId: "resume_workspace" });
+        this.ensureHold({ state, account, accountId, workspaceId, holdType: "storage", requiredAmount: requiredHold.storage, sourceEventId: "resume_workspace" });
       },
       mutate: async (state, workspace, operation) => {
         const recreate = workspace.server.status === "destroyed" || workspace.state === "server_destroyed_disk_retained";
@@ -261,6 +419,15 @@ export class OplCloudService {
         workspace.disk.billingStatus = "active";
         workspace.state = "running";
         workspace.updatedAt = now();
+        this.debitWorkspaceUsage({
+          state,
+          account: ensureAccount(state, accountId),
+          workspace,
+          packagePlan: getPackage(workspace.packageId),
+          hours: 1,
+          sourceEventId: "resume_workspace_initial_hour",
+          billableHours: 1
+        });
         state.audit.push(this.auditEvent({
           accountId,
           workspaceId,
@@ -294,13 +461,14 @@ export class OplCloudService {
         workspace.disk.status = workspace.disk.status === "destroyed" ? "destroyed" : "detached_retained";
         workspace.state = workspace.disk.status === "destroyed" ? "destroyed" : "server_destroyed_disk_retained";
         workspace.updatedAt = now();
-        state.billingLedger.push(this.ledgerEntry({
+        state.billingLedger.push(this.ledgerEntry({ state,
           workspaceId,
           accountId,
           type: "server_destroyed",
           amount: 0,
           sourceEventId: "destroy_server"
         }));
+        this.releaseHoldToLedger({ state, accountId, workspaceId, holdType: "compute", sourceEventId: "destroy_server" });
         state.audit.push(this.auditEvent({ accountId, workspaceId, type: "server.destroyed", sourceEventId: "destroy_server" }));
         return clone(workspace);
       }
@@ -327,13 +495,15 @@ export class OplCloudService {
         workspace.docker.status = "destroyed";
         workspace.state = "destroyed";
         workspace.updatedAt = now();
-        state.billingLedger.push(this.ledgerEntry({
+        state.billingLedger.push(this.ledgerEntry({ state,
           workspaceId,
           accountId,
           type: "storage_destroyed",
           amount: 0,
           sourceEventId: "destroy_disk"
         }));
+        this.releaseHoldToLedger({ state, accountId, workspaceId, holdType: "compute", sourceEventId: "destroy_disk" });
+        this.releaseHoldToLedger({ state, accountId, workspaceId, holdType: "storage", sourceEventId: "destroy_disk" });
         state.audit.push(this.auditEvent({ accountId, workspaceId, type: "disk.destroyed", sourceEventId: "destroy_disk" }));
         return clone(workspace);
       }
@@ -351,7 +521,7 @@ export class OplCloudService {
         token: workspace.access.token
       });
       workspace.updatedAt = now();
-      state.billingLedger.push(this.ledgerEntry({ workspaceId, accountId, type: "token_reset", amount: 0, sourceEventId: "reset_token" }));
+      state.billingLedger.push(this.ledgerEntry({ state, workspaceId, accountId, type: "token_reset", amount: 0, sourceEventId: "reset_token" }));
       return clone(workspace);
     });
   }
@@ -361,66 +531,50 @@ export class OplCloudService {
       const workspace = latestWorkspaceForAccount(state, accountId, workspaceId);
       workspace.access.tokenStatus = "deleted";
       workspace.updatedAt = now();
-      state.billingLedger.push(this.ledgerEntry({ workspaceId, accountId, type: "token_deleted", amount: 0, sourceEventId: "delete_token" }));
+      state.billingLedger.push(this.ledgerEntry({ state, workspaceId, accountId, type: "token_deleted", amount: 0, sourceEventId: "delete_token" }));
       return clone(workspace);
     });
   }
 
-  async settleBilling({ accountId, workspaceId, hours = 1, sourceEventId = "meter_tick" }) {
-    const billHours = Number(hours);
-    if (!Number.isFinite(billHours) || billHours <= 0) throw new Error("positive_hours_required");
+  async settleBilling({ accountId, workspaceId, hours = 1, sourceEventId = "billing_tick" }) {
+    const requestedBillHours = billableHours(hours);
+    let autoStopRequested = false;
 
     const settlement = await this.store.update((state) => {
       const workspace = latestWorkspaceForAccount(state, accountId, workspaceId);
       const account = ensureAccount(state, accountId);
       const packagePlan = getPackage(workspace.packageId);
-      const entries = [];
-
-      if (workspace.server.status === "running" && workspace.server.billingStatus === "active") {
-        entries.push(this.ledgerEntry({
-          workspaceId,
-          accountId,
-          type: "server_debit",
-          amount: -hourlyServerAmount({ packagePlan, pricing: this.pricing, hours: billHours }),
-          sourceEventId
-        }));
+      const existingEntries = this.existingSettlementEntries({ state, accountId, workspaceId, sourceEventId });
+      if (existingEntries.length > 0) {
+        return {
+          entries: existingEntries.map(clone),
+          account: clone(account)
+        };
       }
-
-      if (workspace.disk.status !== "destroyed" && workspace.disk.billingStatus === "active") {
-        entries.push(this.ledgerEntry({
-          workspaceId,
-          accountId,
-          type: "storage_debit",
-          amount: -hourlyStorageAmount({ packagePlan, pricing: this.pricing, hours: billHours }),
-          sourceEventId
-        }));
-      }
-
-      for (const entry of entries) {
-        account.balance = money(account.balance + entry.amount);
-        state.billingLedger.push(entry);
-      }
+      const entries = this.debitWorkspaceUsage({
+        state,
+        account,
+        workspace,
+        packagePlan,
+        hours: requestedBillHours,
+        sourceEventId,
+        billableHours: requestedBillHours
+      });
+      autoStopRequested = entries.some((entry) => entry.type === "compute_auto_stopped");
       if (entries.length > 0) {
         state.audit.push(this.auditEvent({ accountId, workspaceId, type: "billing.settled", sourceEventId }));
       }
       return {
         entries: entries.map(clone),
-        account: clone(account),
-        meteringEvents: this.usageEventsForSettlement({
-          accountId,
-          workspace,
-          packagePlan,
-          hours: billHours,
-          entries,
-          sourceEventId
-        })
+        account: clone(account)
       };
     });
-    const metering = await this.recordUsageEvents(settlement.meteringEvents);
+    if (autoStopRequested) {
+      await this.stopRuntimeAfterHoldExhausted({ accountId, workspaceId, sourceEventId });
+    }
     return {
       entries: settlement.entries,
-      account: settlement.account,
-      metering
+      account: settlement.account
     };
   }
 
@@ -447,10 +601,11 @@ export class OplCloudService {
         workspace: "OPL Workspace"
       },
       packages: this.packages(),
-      account: clone(state.accounts[accountId] ?? { id: accountId, balance: 0, frozen: 0 }),
+      account: clone(state.accounts[accountId] ?? { id: accountId, balance: 0, frozen: 0, holds: {} }),
       workspaces: Object.values(state.workspaces).filter((workspace) => workspace.ownerAccountId === accountId).map(clone),
       billingLedger: state.billingLedger.filter((entry) => entry.accountId === accountId).map(clone),
       audit: state.audit.filter((entry) => entry.accountId === accountId).map(clone),
+      notifications: (state.notifications || []).filter((entry) => entry.accountId === accountId).map(clone),
       runtimeOperations: state.runtimeOperations.filter((entry) => entry.accountId === accountId).map(clone)
     };
   }
@@ -508,46 +663,264 @@ export class OplCloudService {
     return this.productionReadinessCheck();
   }
 
-  usageEventsForSettlement({ accountId, workspace, packagePlan, hours, entries, sourceEventId }) {
-    const events = [];
-    if (entries.some((entry) => entry.type === "server_debit")) {
-      events.push({
-        event: "workspace.server.running_hours",
-        subject: `account:${accountId}`,
-        value: hours,
-        metadata: {
-          workspaceId: workspace.id,
-          packageId: packagePlan.id,
-          provider: workspace.provider,
-          serverSpec: workspace.server.spec,
-          sourceEventId
-        }
-      });
-    }
-    if (entries.some((entry) => entry.type === "storage_debit")) {
-      events.push({
-        event: "workspace.storage.gb_hours",
-        subject: `account:${accountId}`,
-        value: packagePlan.diskGb * hours,
-        metadata: {
-          workspaceId: workspace.id,
-          packageId: packagePlan.id,
-          provider: workspace.provider,
-          diskGb: packagePlan.diskGb,
-          sourceEventId
-        }
-      });
-    }
-    return events;
+  existingSettlementEntries({ state, accountId, workspaceId, sourceEventId }) {
+    const settlementTypes = new Set(["compute_debit", "storage_debit", "compute_auto_stopped"]);
+    return state.billingLedger.filter((entry) =>
+      entry.accountId === accountId &&
+      entry.workspaceId === workspaceId &&
+      entry.sourceEventId === sourceEventId &&
+      settlementTypes.has(entry.type)
+    );
   }
 
-  async recordUsageEvents(events) {
-    if (!this.meter || events.length === 0) return [];
-    const results = [];
-    for (const event of events) {
-      results.push(await this.meter.recordUsage(event));
+  appendDebitEntries({ state, entries, workspaceId, accountId, type, holdType, charge, sourceEventId, billableHours, metadata }) {
+    const debits = [
+      { amount: charge.available, fundingSource: "available_balance" },
+      { amount: charge.hold, fundingSource: `${holdType}_hold` }
+    ];
+    for (const debit of debits) {
+      if (debit.amount <= 0) continue;
+      const entry = this.ledgerEntry({ state,
+        workspaceId,
+        accountId,
+        type,
+        amount: -debit.amount,
+        sourceEventId,
+        holdType,
+        billableHours,
+        metadata: {
+          ...metadata,
+          fundingSource: debit.fundingSource
+        }
+      });
+      entries.push(entry);
+      state.billingLedger.push(entry);
     }
-    return results;
+  }
+
+  debitWorkspaceUsage({ state, account, workspace, packagePlan, hours, sourceEventId, billableHours: billedHours = billableHours(hours) }) {
+    const entries = [];
+    const workspaceId = workspace.id;
+    const accountId = workspace.ownerAccountId;
+
+    if (workspace.server.status === "running" && workspace.server.billingStatus === "active") {
+      const requestedAmount = hourlyComputeAmount({ packagePlan, pricing: this.pricing, hours: billedHours });
+      const charge = chargeAccount(account, "compute", requestedAmount);
+      this.appendDebitEntries({
+        state,
+        entries,
+        workspaceId,
+        accountId,
+        type: "compute_debit",
+        holdType: "compute",
+        charge,
+        sourceEventId,
+        billableHours: billedHours,
+        metadata: {
+          requestedHours: billedHours,
+          baseHourly: computeHourlyBase({ packagePlan, pricing: this.pricing }),
+          markup: pricingMarkup(this.pricing)
+        }
+      });
+      if (charge.usedHold) {
+        this.notify({
+          state,
+          accountId,
+          workspaceId,
+          type: "account.available_balance_exhausted",
+          severity: "warning",
+          message: "available_balance_exhausted_using_frozen_hold",
+          sourceEventId
+        });
+      }
+    }
+
+    if (workspace.disk.status !== "destroyed" && workspace.disk.billingStatus === "active") {
+      const requestedStorageAmount = hourlyStorageAmount({ packagePlan, pricing: this.pricing, hours: billedHours });
+      const charge = chargeAccount(account, "storage", requestedStorageAmount);
+      this.appendDebitEntries({
+        state,
+        entries,
+        workspaceId,
+        accountId,
+        type: "storage_debit",
+        holdType: "storage",
+        charge,
+        sourceEventId,
+        billableHours: billedHours,
+        metadata: {
+          requestedHours: billedHours,
+          baseGbMonth: storageGbMonthBase(this.pricing),
+          markup: pricingMarkup(this.pricing)
+        }
+      });
+      if (charge.usedHold && !entries.some((entry) =>
+        entry.type === "compute_debit" &&
+        entry.sourceEventId === sourceEventId &&
+        entry.metadata?.fundingSource === "compute_hold"
+      )) {
+        this.notify({
+          state,
+          accountId,
+          workspaceId,
+          type: "account.available_balance_exhausted",
+          severity: "warning",
+          message: "available_balance_exhausted_using_frozen_hold",
+          sourceEventId
+        });
+      }
+      if (charge.unpaid > 0 || charge.exhaustedHold) {
+        workspace.state = workspace.server.status === "running" ? "storage_hold_exhausted" : "stopped_storage_hold_exhausted";
+        workspace.disk.billingStatus = "hold_exhausted";
+        workspace.updatedAt = now();
+        this.notify({
+          state,
+          accountId,
+          workspaceId,
+          type: "workspace.storage_hold_exhausted",
+          severity: "warning",
+          message: "storage_hold_exhausted",
+          sourceEventId
+        });
+      }
+    }
+
+    if (workspace.server.status === "running" && workspace.server.billingStatus === "active") {
+      if (accountHold(account, "compute") <= 0) {
+        const autoStopEntry = this.ledgerEntry({ state,
+          workspaceId,
+          accountId,
+          type: "compute_auto_stopped",
+          amount: 0,
+          sourceEventId,
+          holdType: "compute",
+          metadata: { reason: "compute_hold_exhausted", requestedHours: billedHours }
+        });
+        entries.push(autoStopEntry);
+        state.billingLedger.push(autoStopEntry);
+        state.audit.push(this.auditEvent({ accountId, workspaceId, type: "compute.auto_stop_requested", sourceEventId }));
+        this.notify({
+          state,
+          accountId,
+          workspaceId,
+          type: "workspace.compute_auto_stopped",
+          severity: "warning",
+          message: "compute_hold_exhausted",
+          sourceEventId
+        });
+      }
+    }
+
+    return entries;
+  }
+
+  ensureHold({ state, account, accountId, workspaceId, holdType, requiredAmount, sourceEventId }) {
+    const current = accountHold(account, holdType);
+    if (current >= requiredAmount) return;
+    const delta = money(requiredAmount - current);
+    if (accountAvailable(account) < delta) throw new Error("insufficient_prepaid_hold_balance");
+    addHold(account, holdType, delta);
+    state.billingLedger.push(this.ledgerEntry({ state,
+      workspaceId,
+      accountId,
+      type: holdType === "compute" ? "compute_hold" : "storage_hold",
+      amount: delta,
+      sourceEventId,
+      holdType,
+      metadata: { holdDays: 7 }
+    }));
+  }
+
+  releaseHoldToLedger({ state, accountId, workspaceId, holdType, sourceEventId }) {
+    const account = ensureAccount(state, accountId);
+    const released = releaseHold(account, holdType);
+    if (released <= 0) return null;
+    const entry = this.ledgerEntry({ state,
+      workspaceId,
+      accountId,
+      type: holdType === "compute" ? "compute_hold_released" : "storage_hold_released",
+      amount: -released,
+      sourceEventId,
+      holdType
+    });
+    state.billingLedger.push(entry);
+    return entry;
+  }
+
+  async releaseWorkspaceHoldsAfterCreateFailure({ accountId, workspaceId, error }) {
+    return this.store.update((state) => {
+      this.releaseHoldToLedger({ state, accountId, workspaceId, holdType: "compute", sourceEventId: "create_workspace_failed" });
+      this.releaseHoldToLedger({ state, accountId, workspaceId, holdType: "storage", sourceEventId: "create_workspace_failed" });
+      this.notify({
+        state,
+        accountId,
+        workspaceId,
+        type: "workspace.create_failed",
+        severity: "error",
+        message: error.message,
+        sourceEventId: "create_workspace_failed"
+      });
+      return true;
+    });
+  }
+
+  async recordCreateWorkspaceFailure({ accountId, workspaceId, operationId, error }) {
+    return this.store.update((state) => {
+      this.releaseHoldToLedger({ state, accountId, workspaceId, holdType: "compute", sourceEventId: "create_workspace_failed" });
+      this.releaseHoldToLedger({ state, accountId, workspaceId, holdType: "storage", sourceEventId: "create_workspace_failed" });
+      const operation = state.runtimeOperations.find((item) => item.id === operationId);
+      if (operation) this.finishRuntimeOperation(operation, "failed", error);
+      this.notify({
+        state,
+        accountId,
+        workspaceId,
+        type: "workspace.create_failed",
+        severity: "error",
+        message: error.message,
+        sourceEventId: "create_workspace_failed"
+      });
+      return true;
+    });
+  }
+
+  async stopRuntimeAfterHoldExhausted({ accountId, workspaceId, sourceEventId }) {
+    return this.runRuntimeOperation({
+      accountId,
+      workspaceId,
+      operationType: "auto_stop_compute",
+      mutate: async (state, workspace, operation) => {
+        if (workspace.server.status !== "running") {
+          this.finishRuntimeOperation(operation, "succeeded");
+          return clone(workspace);
+        }
+        workspace.state = "stopping_server";
+        workspace.server = await this.runtimeProvider.stopServer({ workspace: clone(workspace) });
+        this.finishRuntimeOperation(operation, "succeeded");
+        workspace.state = workspace.disk.billingStatus === "hold_exhausted"
+          ? "stopped_storage_hold_exhausted"
+          : "stopped_server_disk_retained";
+        workspace.disk.status = workspace.disk.status === "destroyed" ? "destroyed" : "attached_retained";
+        workspace.updatedAt = now();
+        state.audit.push(this.auditEvent({ accountId, workspaceId, type: "server.auto_stopped", sourceEventId }));
+        return clone(workspace);
+      }
+    });
+  }
+
+  notify({ state, accountId, workspaceId, type, severity, message, sourceEventId }) {
+    state.notifications ??= [];
+    const event = {
+      id: makeId("notification", accountId, workspaceId, type, sourceEventId, String(state.notifications.length)),
+      accountId,
+      workspaceId,
+      type,
+      severity,
+      message,
+      sourceEventId,
+      createdAt: now()
+    };
+    state.notifications.push(event);
+    return event;
   }
 
   async runRuntimeOperation({ accountId, workspaceId, operationType, prepare = null, mutate }) {
@@ -603,15 +976,19 @@ export class OplCloudService {
     });
   }
 
-  ledgerEntry({ workspaceId, accountId, type, amount, sourceEventId }) {
+  ledgerEntry({ state, workspaceId, accountId, type, amount, sourceEventId, holdType, billableHours, metadata }) {
+    const sequence = state?.billingLedger?.length ?? 0;
     return {
-      id: makeId("ledger", accountId, workspaceId, type, sourceEventId, String(Date.now())),
+      id: makeId("ledger", accountId, workspaceId, type, sourceEventId, String(sequence)),
       workspaceId,
       accountId,
       type,
       amount: money(Number(amount)),
       currency: "CNY",
       sourceEventId,
+      ...(holdType ? { holdType } : {}),
+      ...(billableHours ? { billableHours } : {}),
+      ...(metadata ? { metadata: clone(metadata) } : {}),
       createdAt: now()
     };
   }

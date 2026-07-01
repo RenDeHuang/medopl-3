@@ -26,9 +26,9 @@ function ensureWorkspace(workspaces, workspaceId) {
 }
 
 function addLedgerEntry(workspaces, entry) {
-  if (entry.type !== "server_debit" && entry.type !== "storage_debit") return;
+  if (entry.type !== "server_debit" && entry.type !== "compute_debit" && entry.type !== "storage_debit") return;
   const row = ensureWorkspace(workspaces, entry.workspaceId);
-  if (entry.type === "server_debit") row.ledgerServer = money(row.ledgerServer + absDebit(entry));
+  if (entry.type === "server_debit" || entry.type === "compute_debit") row.ledgerServer = money(row.ledgerServer + absDebit(entry));
   if (entry.type === "storage_debit") row.ledgerStorage = money(row.ledgerStorage + absDebit(entry));
 }
 
@@ -133,7 +133,7 @@ function summarizeWorkspace(row, { markup, tolerance }) {
 export function reconcileTencentBills({
   ledgerEntries = [],
   tencentBills = [],
-  markup = 0.1,
+  markup = 0.2,
   tolerance = 0.01
 } = {}) {
   const currency = assertSingleCurrency([...ledgerEntries, ...tencentBills]);

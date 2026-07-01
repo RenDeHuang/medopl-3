@@ -45,10 +45,8 @@ test("TKE production deploy workflow installs secrets without command-line secre
   const workflow = await readFile(".github/workflows/deploy-tke-production.yml", "utf8");
 
   assert.doesNotMatch(workflow, /--from-literal=DATABASE_URL/);
-  assert.doesNotMatch(workflow, /--from-literal=OPENMETER_API_KEY/);
   assert.doesNotMatch(workflow, /--docker-password/);
   assert.match(workflow, /--from-file=DATABASE_URL="\$secret_dir\/database-url"/);
-  assert.match(workflow, /--from-file=OPENMETER_API_KEY="\$secret_dir\/openmeter-api-key"/);
   assert.match(workflow, /--from-file=\.dockerconfigjson="\$docker_config"/);
   assert.match(workflow, /--from-file=kubeconfig="\$KUBECONFIG"/);
   assert.match(workflow, /install_qcloud_cert_secret\(\)/);
@@ -83,10 +81,14 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
       OPL_WORKSPACE_IMAGE: "uswccr.ccs.tencentyun.com/oplcloud/one-person-lab-app:latest",
       OPL_IMAGE_PULL_SECRET_NAME: "tcr-pull-secret",
       OPL_WORKSPACE_STORAGE_CLASS: "cbs",
+      OPL_BILLING_MARKUP: "0.2",
+      OPL_BASIC_COMPUTE_HOURLY_CNY: "1",
+      OPL_PRO_COMPUTE_HOURLY_CNY: "4",
+      OPL_GPU_COMPUTE_HOURLY_CNY: "20",
+      OPL_STORAGE_GB_MONTH_CNY: "0.2",
       OPL_CONSOLE_TLS_SECRET_NAME: "opl-cloud-console-medopl-cn-tls",
       OPL_WORKSPACE_TLS_SECRET_NAME: "opl-cloud-workspace-medopl-cn-tls",
       OPL_INGRESS_CLASS: "qcloud",
-      OPENMETER_ENDPOINT: "http://openmeter.opl-cloud.svc.cluster.local:8888",
       TENCENT_DEPLOY_CLUSTER_ID: "cls-oplcloud",
       TENCENT_TCR_REGISTRY: "uswccr.ccs.tencentyun.com",
       TENCENT_TCR_NAMESPACE: "oplcloud",
@@ -99,7 +101,6 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
   assert.equal(text.includes("registry.example.com"), false);
   assert.equal(text.includes("cls-xxxxxxxx"), false);
   assert.equal(text.includes("postgresql://"), false);
-  assert.equal(text.includes("OPENMETER_API_KEY"), true);
 
   const items = rendered.items;
   const namespace = items.find((item) => item.kind === "Namespace");
@@ -111,6 +112,11 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
   assert.equal(config.metadata.namespace, "opl-cloud");
   assert.equal(config.data.OPL_CLOUD_IMAGE, "uswccr.ccs.tencentyun.com/oplcloud/opl-cloud:test");
   assert.equal(config.data.OPL_WORKSPACE_IMAGE, "uswccr.ccs.tencentyun.com/oplcloud/one-person-lab-app:latest");
+  assert.equal(config.data.OPL_BILLING_MARKUP, "0.2");
+  assert.equal(config.data.OPL_BASIC_COMPUTE_HOURLY_CNY, "1");
+  assert.equal(config.data.OPL_PRO_COMPUTE_HOURLY_CNY, "4");
+  assert.equal(config.data.OPL_GPU_COMPUTE_HOURLY_CNY, "20");
+  assert.equal(config.data.OPL_STORAGE_GB_MONTH_CNY, "0.2");
   assert.equal(config.data.TENCENT_DEPLOY_CLUSTER_ID, "cls-oplcloud");
   assert.equal(config.data.TENCENT_TCR_REGISTRY, "uswccr.ccs.tencentyun.com");
   assert.equal(deployment.spec.template.spec.containers[0].image, "uswccr.ccs.tencentyun.com/oplcloud/opl-cloud:test");

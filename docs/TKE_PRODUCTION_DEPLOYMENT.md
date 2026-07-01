@@ -102,8 +102,12 @@ Do not commit a filled env file. Real values belong in ignored local files, Kube
 - `OPL_K8S_NAMESPACE=opl-cloud`
 - `OPL_IMAGE_PULL_SECRET_NAME=tcr-pull-secret`
 - `OPL_WORKSPACE_STORAGE_CLASS=cbs`
-- `OPENMETER_ENDPOINT=http://openmeter.opl-cloud.svc.cluster.local:8888`
-- `DATABASE_URL`, `OPENMETER_API_KEY`, TCR credentials, kubeconfig, and TLS certificate ids are installed as GitHub production environment secrets and Kubernetes Secrets. Do not copy their values into git.
+- `OPL_BILLING_MARKUP=0.2`
+- `OPL_BASIC_COMPUTE_HOURLY_CNY=1`
+- `OPL_PRO_COMPUTE_HOURLY_CNY=4`
+- `OPL_GPU_COMPUTE_HOURLY_CNY=20`
+- `OPL_STORAGE_GB_MONTH_CNY=0.2`
+- `DATABASE_URL`, TCR credentials, kubeconfig, and TLS certificate ids are installed as GitHub production environment secrets and Kubernetes Secrets. Do not copy their values into git.
 - `cloud.medopl.cn` and `workspace.medopl.cn` point at the OPL Cloud TKE Ingress CLB.
 
 ## Verified Entrypoints
@@ -143,7 +147,7 @@ Use three locations:
 | Value type | Local dry-run location | Cluster/runtime location | Git-tracked reference |
 | --- | --- | --- | --- |
 | Non-secret config such as domains, namespace, ingress class, image refs, storage class | ignored `.env.production` | ConfigMap or Deployment env | `deploy/tke/opl-cloud-production.env.example` and `deploy/production-manifest.example.json` |
-| Secret references such as `DATABASE_URL`, `OPENMETER_API_KEY`, kubeconfig ref, TCR credentials | ignored `.env.production` only if needed locally | Kubernetes Secret, GitHub environment secret, or secret manager | only `secretRef` names in `deploy/production-manifest.example.json` |
+| Secret references such as `DATABASE_URL`, kubeconfig ref, TCR credentials | ignored `.env.production` only if needed locally | Kubernetes Secret, GitHub environment secret, or secret manager | only `secretRef` names in `deploy/production-manifest.example.json` |
 | DNS record values | not known until Ingress exists | Tencent DNS console | documented in this file only |
 
 Recommended Kubernetes Secret keys:
@@ -151,9 +155,6 @@ Recommended Kubernetes Secret keys:
 ```text
 Secret opl-cloud-database
   DATABASE_URL
-
-Secret opl-cloud-openmeter
-  OPENMETER_API_KEY
 
 Secret opl-cloud-deploy
   TENCENT_DEPLOY_KUBECONFIG_REF
@@ -164,12 +165,14 @@ Secret tcr-pull-secret
 
 The tracked production manifest is a contract, not the live secret payload. Keep real secret values outside git.
 
-## OpenMeter
+## Billing
 
-Default production setting:
+OPL Ledger is the v1 billing truth. Workspace pricing uses a local Tencent price catalog snapshot and applies `OPL_BILLING_MARKUP`, defaulting to `0.2`.
+
+The production billing chain is:
 
 ```text
-OPENMETER_ENDPOINT=http://openmeter.opl-cloud.svc.cluster.local:8888
+Workspace open/resume -> 7-day compute and storage holds -> hourly internal debits from available balance -> frozen hold consumption only after available balance is exhausted -> hold release or auto-stop/freeze -> Tencent bill reconciliation
 ```
 
-This assumes OpenMeter runs in the same cluster and is not public. If OpenMeter is external, replace the endpoint with its HTTPS URL and keep only the API key secret.
+External metering systems are not required for production billing. OPL Ledger remains the v1 billing truth.

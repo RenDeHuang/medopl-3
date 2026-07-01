@@ -24,9 +24,9 @@ One OPL Workspace maps to exactly:
 
 ```text
 1 OPL Workspace
-= 1 server
+= 1 runtime compute unit
 = 1 one-person-lab-app Docker container
-= 1 cloud disk
+= 1 persistent workspace storage volume
 = 1 URL
 ```
 
@@ -53,7 +53,7 @@ PI Account
      -> URL 3
 ```
 
-Servers and cloud disks have separate lifecycles. Stopping or destroying a server must not destroy the cloud disk. The cloud disk is destroyed only after an explicit user action and confirmation.
+Compute and persistent storage have separate lifecycles. Stopping or destroying compute must not destroy persistent storage. Storage is destroyed only after an explicit user action and confirmation.
 
 ## Product Responsibilities
 
@@ -61,7 +61,7 @@ OPL Cloud owns the online hosted product experience.
 
 The fixed OPL Cloud product layers are:
 
-- OPL Gateway: AI capability gateway, provider routing, token policy, and usage-metering boundary.
+- OPL Gateway: AI capability gateway, provider routing, token policy, and usage policy boundary.
 - OPL Workspace: the URL-delivered working environment running `one-person-lab-app`.
 - OPL Console: the account, billing, access, settings, and lifecycle control surface.
 - OPL Fabric: the compute, storage, image, route, and infrastructure handoff layer.
@@ -70,11 +70,11 @@ The fixed OPL Cloud product layers are:
 OPL Console owns:
 
 - workspace creation
-- server and disk configuration
+- compute and storage package configuration
 - workspace URL issuance
 - URL copy/reset/delete actions
-- server stop/restart/destroy actions
-- cloud disk destroy action
+- compute stop/restart/destroy actions
+- storage destroy action
 - billing, pre-freeze, and cost records
 - resource status and audit receipts
 
@@ -82,7 +82,7 @@ OPL Workspace owns:
 
 - the actual `one-person-lab-app` WebUI
 - the lab working environment
-- files, project outputs, and runtime data stored on the mounted cloud disk
+- files, project outputs, and runtime data stored on mounted persistent storage
 
 ## Workspace Creation Flow
 
@@ -91,13 +91,12 @@ The default creation flow is:
 ```text
 PI signs in to OPL Console
 -> Create OPL Workspace
--> Choose server package
--> Choose cloud disk package
--> Confirm hourly billing and 7-day storage pre-freeze
--> OPL Cloud creates the server
--> OPL Cloud creates the cloud disk
+-> Choose compute and storage package
+-> Confirm hourly billing and 7-day compute plus storage pre-freeze
+-> OPL Cloud creates the runtime compute unit
+-> OPL Cloud creates the persistent workspace storage volume
 -> OPL Cloud deploys one-person-lab-app Docker
--> OPL Cloud mounts the cloud disk into the Docker runtime
+-> OPL Cloud mounts persistent storage into the Docker runtime
 -> OPL Cloud configures the workspace URL
 -> OPL Console shows the URL
 -> PI copies the URL and shares it with members
@@ -108,10 +107,10 @@ The URL is the delivery artifact.
 
 ## URL and Access Model
 
-Workspace URLs use a workspace subdomain plus token:
+Workspace URLs use the shared Workspace gateway host plus token:
 
 ```text
-https://<workspace-slug>.oplcloud.cn/?token=<share-token>
+https://workspace.medopl.cn/w/<workspaceId>?token=<share-token>
 ```
 
 The token is permanent by default. It remains valid until the workspace owner deletes or resets it.
@@ -129,29 +128,30 @@ After restart, stop, or server recreation, the Workspace URL should remain stabl
 
 ## Default Packages
 
-OPL Cloud v1 provides two default packages:
+OPL Cloud v1 provides three default packages:
 
-| Package | Server | Cloud disk |
+| Package | Compute | Cloud disk |
 | --- | --- | --- |
-| Basic Workspace | 2c / 4GB | 10GB |
-| Pro Workspace | 8c / 16GB | 100GB |
+| Basic Workspace | 2 CPU / 4GB | 10GB |
+| Pro Workspace | 8 CPU / 16GB | 100GB |
+| GPU Workspace | 16 CPU / 64GB / 1 GPU | 500GB |
 
-Custom server and disk configuration can be added later, but v1 should lead with these two packages.
+Custom compute and disk configuration can be added later, but v1 should lead with these CPU and GPU packages.
 
 ## Billing Rules
 
 Billing is hourly.
 
-The user-facing price is based on Tencent Cloud resource cost plus a 10% platform markup.
+The user-facing price is based on Tencent Cloud resource cost plus a 20% platform markup.
 
 ```text
-user price = Tencent Cloud hourly cost * 1.10
+user price = Tencent Cloud cost * 1.20
 ```
 
 Workspace billing has two parts:
 
-- server hourly cost
-- cloud disk storage cost
+- compute hourly cost
+- persistent storage cost
 
 Cloud disk cost is shown in a user-friendly monthly form when helpful, but the system may internally convert it to hourly cost for ledger and pre-freeze calculations.
 
@@ -159,87 +159,91 @@ OPL Console must show:
 
 - current package
 - current hourly estimate
-- server billing status
-- cloud disk billing status
+- compute billing status
+- storage billing status
 - frozen amount
 - current balance or credit
 - recent billing events
 
-## Storage Pre-Freeze Rule
+## Prepaid Hold Rule
 
-Storage must not enter unpaid operation.
+Compute and storage must not enter unpaid operation.
 
-Before opening or continuing a Workspace, OPL Cloud freezes enough balance to cover 7 days of cloud disk storage.
+Before opening or resuming a Workspace, OPL Cloud freezes enough balance to cover 7 days of compute and persistent storage.
 
-If there is not enough balance for the 7-day storage freeze, the Workspace cannot be opened or resumed.
+If there is not enough balance for the 7-day prepaid hold, the Workspace cannot be opened or resumed.
 
-Stopping the server does not release the storage freeze. The cloud disk remains billable and protected because it still holds Workspace data.
+Hourly debits charge available balance first. If available balance is exhausted, OPL Cloud notifies the operator and starts consuming the relevant frozen hold.
 
-Destroying the cloud disk releases future storage billing after the destroy action completes.
+If compute hold is exhausted, OPL Cloud stops compute. If storage hold is exhausted, OPL Cloud preserves storage and freezes the Workspace state until the user adds balance or explicitly destroys storage.
 
-## Server and Storage Lifecycle
+Stopping compute releases unused compute hold. Storage hold remains because persistent storage still holds Workspace data.
 
-The server and cloud disk are independent resources.
+Destroying storage releases unused storage hold and stops future storage billing after the destroy action completes.
+
+## Compute and Storage Lifecycle
+
+Compute and storage are independent resources.
 
 ### Running
 
-The server is active, the Docker runtime is running, the cloud disk is mounted, and the URL is usable.
+Compute is active, the Docker runtime is running, persistent storage is mounted, and the URL is usable.
 
 Billing:
 
-- server billing active
+- compute billing active
 - storage billing active
 
 Allowed actions:
 
 - copy URL
-- stop server
-- restart server
-- destroy server
-- destroy cloud disk with confirmation
+- stop compute
+- restart compute
+- destroy compute
+- destroy storage with confirmation
 
 ### Stopped
 
-The server is stopped and server billing stops. The cloud disk is retained.
+Compute is stopped and compute billing stops. Storage is retained.
 
 Billing:
 
-- server billing stopped
+- compute billing stopped
 - storage billing active
 
 Allowed actions:
 
-- restart server
-- destroy server
-- destroy cloud disk with confirmation
+- restart compute
+- destroy compute
+- destroy storage with confirmation
 - copy URL, but opening the URL should show that the Workspace is stopped or unavailable until restored
 
-### Server Destroyed, Disk Retained
+### Compute Destroyed, Storage Retained
 
-The server has been deleted. The cloud disk remains.
+Compute has been deleted. Storage remains.
 
 Billing:
 
-- server billing stopped
+- compute billing stopped
 - storage billing active
 
 Allowed actions:
 
-- recreate server from the retained disk
-- destroy cloud disk with confirmation
+- recreate compute from retained storage
+- destroy storage with confirmation
 
-### Disk Destroyed
+### Storage Destroyed
 
-The cloud disk has been explicitly destroyed.
+Storage has been explicitly destroyed.
 
 Billing:
 
-- server billing stopped
+- compute billing stopped
 - storage billing stopped
 
 Allowed actions:
 
-- no restore from this disk
+- no restore from this storage
 - create a new Workspace if needed
 
 ## Workspace State Model
@@ -254,7 +258,8 @@ Running
 Stopping
 Stopped
 Restarting
-Server destroyed, storage retained
+Compute destroyed, storage retained
+Storage hold exhausted
 Destroying storage
 Destroyed
 Failed
@@ -264,7 +269,7 @@ Internal states:
 
 ```text
 draft
-freezing_storage_balance
+freezing_prepaid_hold
 creating_server
 creating_disk
 deploying_docker
@@ -272,6 +277,8 @@ configuring_url
 running
 stopping_server
 stopped_server_disk_retained
+storage_hold_exhausted
+stopped_storage_hold_exhausted
 restarting_server
 destroying_server
 server_destroyed_disk_retained
@@ -281,23 +288,23 @@ failed
 cleanup_required
 ```
 
-The state model prevents invalid actions. For example, OPL Console must not allow storage destruction without confirmation, and it must not treat server destruction as storage destruction.
+The state model prevents invalid actions. For example, OPL Console must not allow storage destruction without confirmation, and it must not treat compute destruction as storage destruction.
 
 ## Destructive Action Protection
 
-Server stop requires confirmation.
+Compute stop requires confirmation.
 
-Server destroy requires confirmation and must clearly say that the cloud disk remains.
+Compute destroy requires confirmation and must clearly say that storage remains.
 
-Cloud disk destroy requires a stronger confirmation because it deletes Workspace data. The user must explicitly confirm that Workspace data will be lost.
+Storage destroy requires a stronger confirmation because it deletes Workspace data. The user must explicitly confirm that Workspace data will be lost.
 
-Cloud disk destroy is the only action that stops storage billing.
+Storage destroy is the only action that stops storage billing.
 
 ## OPL Workspace Data
 
-`one-person-lab-app` stores Workspace data on the mounted cloud disk.
+`one-person-lab-app` stores Workspace data on mounted persistent storage.
 
-The cloud disk is the primary persistence layer for:
+Persistent storage is the primary persistence layer for:
 
 - uploaded files
 - project files
@@ -311,8 +318,8 @@ For v1, the default assumption is:
 
 ```text
 one-person-lab-app Docker
--> mounted cloud disk at /workspace or /data
--> application data persists on the disk
+-> mounted persistent storage at /data and /projects
+-> application data persists on storage
 ```
 
 ## OPL Console Pages
@@ -323,7 +330,7 @@ V1 OPL Console should include:
 - Create Workspace
 - Workspace detail
 - Workspace URL and token controls
-- Server controls
+- Compute controls
 - Storage controls
 - Billing and freeze details
 - Audit receipts
@@ -336,7 +343,7 @@ Open Workspace URL
 -> enter OPL Workspace
 ```
 
-Members do not see server controls, cloud resource configuration, billing, or audit pages.
+Members do not see compute controls, cloud resource configuration, billing, or audit pages.
 
 ## Non-Goals for V1
 
@@ -347,7 +354,7 @@ V1 does not include:
 - arbitrary custom package marketplace
 - Kubernetes as the default runtime
 - multi-server Workspace clusters
-- automatic cloud disk deletion when server is stopped or destroyed
+- automatic storage deletion when compute is stopped or destroyed
 - unpaid storage grace operation
 - external payment provider settlement unless separately scoped
 
@@ -357,14 +364,14 @@ The product design is satisfied when OPL Console can support this flow:
 
 ```text
 PI creates Workspace
--> selects Basic or Pro package
--> confirms billing and storage pre-freeze
+-> selects a CPU or GPU package
+-> confirms billing and compute/storage prepaid hold
 -> receives a stable URL with token
 -> shares URL with members
 -> members enter OPL Workspace without login
--> PI can stop server while retaining storage
+-> PI can stop compute while retaining storage
 -> PI can restart from retained storage
--> PI can destroy server without destroying disk
--> PI can explicitly destroy disk with confirmation
+-> PI can destroy compute without destroying storage
+-> PI can explicitly destroy storage with confirmation
 -> OPL Console shows billing and audit receipts
 ```

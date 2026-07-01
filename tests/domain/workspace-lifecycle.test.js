@@ -14,7 +14,7 @@ const TEST_PRICING = {
     pro: 4
   },
   diskGbMonth: 0.2,
-  markup: 0.1
+  markup: 0.2
 };
 
 function runtimeFixture({ workspaceId, workspaceName, packagePlan, token, provider = "test-provider" }) {
@@ -73,7 +73,7 @@ test("creates one workspace with one server, one Docker runtime, one disk, and o
   try {
     await service.creditAccount({
       accountId: "pi-alpha",
-      amount: 200,
+      amount: 250,
       reason: "owner_credit"
     });
 
@@ -114,7 +114,7 @@ test("records failed runtime operations for retry and audit", async () => {
     }
   });
 
-  await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+  await service.creditAccount({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
   await assert.rejects(
     service.createWorkspace({
       accountId: "pi-alpha",
@@ -187,7 +187,7 @@ test("records failed lifecycle runtime operations without mutating the Workspace
     };
     const service = createTestService(runtimeProvider);
 
-    await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+    await service.creditAccount({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
     const workspace = await service.createWorkspace({
       accountId: "pi-alpha",
       workspaceName: `${scenario.operationType} Lab`,
@@ -210,7 +210,7 @@ test("records failed lifecycle runtime operations without mutating the Workspace
 test("does not record runtime operations for lifecycle validation failures", async () => {
   const { service, cleanup } = await createService();
   try {
-    await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+    await service.creditAccount({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
     const workspace = await service.createWorkspace({
       accountId: "pi-alpha",
       workspaceName: "Validation Lab",
@@ -249,7 +249,7 @@ test("records separate runtime operation ids for rapid retries of the same actio
 
   try {
     Date.now = () => 1777777777777;
-    await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+    await service.creditAccount({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
     const workspace = await service.createWorkspace({
       accountId: "pi-alpha",
       workspaceName: "Retry Lab",
@@ -276,7 +276,7 @@ test("records separate runtime operation ids for rapid retries of the same actio
 test("stopping and destroying the server never destroys the cloud disk or URL", async () => {
   const { service, cleanup } = await createService();
   try {
-    await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+    await service.creditAccount({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
     const workspace = await service.createWorkspace({
       accountId: "pi-alpha",
       workspaceName: "Disk Safe Lab",
@@ -331,7 +331,7 @@ test("stopping and destroying the server never destroys the cloud disk or URL", 
 test("destroying disk requires explicit confirmation and is the only action that stops storage billing", async () => {
   const { service, cleanup } = await createService();
   try {
-    await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+    await service.creditAccount({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
     const workspace = await service.createWorkspace({
       accountId: "pi-alpha",
       workspaceName: "Archive Lab",
@@ -377,7 +377,7 @@ test("destroying disk from a running Workspace releases server compute before de
     }
   });
 
-  await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+  await service.creditAccount({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
   const workspace = await service.createWorkspace({
     accountId: "pi-alpha",
     workspaceName: "Immediate Archive Lab",
@@ -429,7 +429,7 @@ test("restarting a server-destroyed Workspace recreates compute from the retaine
     }
   });
 
-  await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+  await service.creditAccount({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
   const workspace = await service.createWorkspace({
     accountId: "pi-alpha",
     workspaceName: "Recreate Lab",
@@ -461,10 +461,10 @@ test("opening and restarting require a seven-day storage hold and preserve token
         workspaceName: "No Hold Lab",
         packageId: "pro"
       }),
-      /insufficient_storage_hold_balance/
+      /insufficient_prepaid_hold_balance/
     );
 
-    await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+    await service.creditAccount({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
     const workspace = await service.createWorkspace({
       accountId: "pi-alpha",
       workspaceName: "Token Lab",
@@ -505,7 +505,7 @@ test("opening and restarting require a seven-day storage hold and preserve token
 test("hourly billing settlement debits server only while running and storage until disk destroy", async () => {
   const { service, cleanup } = await createService();
   try {
-    await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+    await service.creditAccount({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
     const workspace = await service.createWorkspace({
       accountId: "pi-alpha",
       workspaceName: "Billing Lab",
@@ -516,28 +516,28 @@ test("hourly billing settlement debits server only while running and storage unt
       accountId: "pi-alpha",
       workspaceId: workspace.id,
       hours: 2,
-      sourceEventId: "meter_tick_1"
+      sourceEventId: "billing_tick_1"
     });
     assert.equal(first.entries.length, 2);
-    assert.equal(first.entries.find((entry) => entry.type === "server_debit").amount, -2.2);
-    assert.equal(first.entries.find((entry) => entry.type === "storage_debit").amount, -0.0061);
+    assert.equal(first.entries.find((entry) => entry.type === "compute_debit").amount, -2.4);
+    assert.equal(first.entries.find((entry) => entry.type === "storage_debit").amount, -0.0067);
 
     await service.stopServer({ accountId: "pi-alpha", workspaceId: workspace.id, confirm: true });
     const second = await service.settleBilling({
       accountId: "pi-alpha",
       workspaceId: workspace.id,
       hours: 2,
-      sourceEventId: "meter_tick_2"
+      sourceEventId: "billing_tick_2"
     });
     assert.deepEqual(second.entries.map((entry) => entry.type), ["storage_debit"]);
-    assert.equal(second.entries[0].amount, -0.0061);
+    assert.equal(second.entries[0].amount, -0.0067);
 
     await service.destroyDisk({ accountId: "pi-alpha", workspaceId: workspace.id, confirmDataLoss: true });
     const third = await service.settleBilling({
       accountId: "pi-alpha",
       workspaceId: workspace.id,
       hours: 2,
-      sourceEventId: "meter_tick_3"
+      sourceEventId: "billing_tick_3"
     });
     assert.deepEqual(third.entries, []);
   } finally {

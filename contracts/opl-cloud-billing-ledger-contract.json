@@ -1,12 +1,16 @@
 {
   "schemaVersion": 1,
   "billingUnit": "hour",
-  "markup": 0.1,
+  "markup": 0.2,
   "ledgerEntryTypes": [
     "credit",
+    "compute_hold",
     "storage_hold",
-    "server_debit",
+    "compute_debit",
     "storage_debit",
+    "compute_hold_released",
+    "storage_hold_released",
+    "compute_auto_stopped",
     "server_billing_stopped",
     "server_destroyed",
     "storage_destroyed",
@@ -22,21 +26,33 @@
     "sourceEventId",
     "createdAt"
   ],
-  "storagePreFreeze": {
+  "prepaidHoldPolicy": {
     "days": 7,
+    "resources": [
+      "compute",
+      "storage"
+    ],
+    "chargeOrder": [
+      "available_balance",
+      "resource_hold"
+    ],
     "requiredBefore": [
       "open_workspace",
       "resume_workspace"
     ],
+    "unpaidComputeOperationAllowed": false,
     "unpaidStorageOperationAllowed": false
   },
   "tencentBillReconciliation": {
     "command": "npm run reconcile:tencent -- --ledger <ledger.json> --tencent <tencent-bills.json>",
-    "markup": 0.1,
+    "markup": 0.2,
     "defaultToleranceCny": 0.01,
     "ledgerUsageTypes": [
-      "server_debit",
+      "compute_debit",
       "storage_debit"
+    ],
+    "legacyLedgerUsageTypes": [
+      "server_debit"
     ],
     "tencentBillFields": [
       "workspaceId",

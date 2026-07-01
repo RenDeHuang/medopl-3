@@ -482,6 +482,7 @@ export class TencentTkeProvider {
                       { name: "OPL_WORKSPACE_NAME", value: workspaceName },
                       { name: "OPL_OWNER_ACCOUNT_ID", value: ownerAccountId },
                       { name: "OPL_PACKAGE_ID", value: packagePlan.id },
+                      { name: "OPL_ACCELERATOR", value: packagePlan.accelerator || "cpu" },
                       { name: "DATA_DIR", value: "/data" },
                       { name: "AIONUI_DATA_DIR", value: "/data" },
                       { name: "OPL_PROJECTS_DIR", value: "/projects" },
@@ -495,6 +496,7 @@ export class TencentTkeProvider {
                       { name: "workspace-data", mountPath: "/data", subPath: "data" },
                       { name: "workspace-data", mountPath: "/projects", subPath: "projects" }
                     ],
+                    resources: workspaceContainerResources(packagePlan),
                     readinessProbe: {
                       httpGet: { path: "/", port: 3000 },
                       initialDelaySeconds: 10,
@@ -526,6 +528,27 @@ export class TencentTkeProvider {
 
 function resourceName(resourceId) {
   return String(resourceId || "").split("/").pop();
+}
+
+function workspaceContainerResources(packagePlan) {
+  const cpu = packagePlan.cpu ? String(packagePlan.cpu) : undefined;
+  const memory = packagePlan.memoryGb ? `${packagePlan.memoryGb}Gi` : undefined;
+  const gpu = packagePlan.gpu ? String(packagePlan.gpu) : undefined;
+  const requests = {};
+  const limits = {};
+  if (cpu) {
+    requests.cpu = cpu;
+    limits.cpu = cpu;
+  }
+  if (memory) {
+    requests.memory = memory;
+    limits.memory = memory;
+  }
+  if (gpu) {
+    requests["nvidia.com/gpu"] = gpu;
+    limits["nvidia.com/gpu"] = gpu;
+  }
+  return Object.keys(requests).length ? { requests, limits } : undefined;
 }
 
 function findKubernetesItem(items, kind, name) {

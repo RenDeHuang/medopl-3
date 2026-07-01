@@ -10,6 +10,8 @@
     "running",
     "stopping_server",
     "stopped_server_disk_retained",
+    "storage_hold_exhausted",
+    "stopped_storage_hold_exhausted",
     "restarting_server",
     "destroying_server",
     "server_destroyed_disk_retained",

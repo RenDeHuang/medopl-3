@@ -67,7 +67,7 @@ export async function runReconciliationCli({
   const report = reconcileTencentBills({
     ledgerEntries,
     tencentBills,
-    markup: args.markup === undefined ? 0.1 : Number(args.markup),
+    markup: args.markup === undefined ? 0.2 : Number(args.markup),
     tolerance: args.tolerance === undefined ? 0.01 : Number(args.tolerance)
   });
 

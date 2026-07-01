@@ -52,12 +52,16 @@
         "OPL_WORKSPACE_PROJECTS_DIR": "/projects",
         "OPL_CONSOLE_TLS_SECRET_NAME": "opl-cloud-console-medopl-cn-tls",
         "OPL_WORKSPACE_TLS_SECRET_NAME": "opl-cloud-workspace-medopl-cn-tls",
-        "OPENMETER_ENDPOINT": "http://openmeter.opl-cloud.svc.cluster.local:8888",
         "TENCENT_DEPLOY_CLUSTER_ID": "cls-xxxxxxxx",
         "TENCENT_TCR_REGISTRY": "registry.example.com",
         "TENCENT_TCR_NAMESPACE": "opl",
         "TENCENT_TCR_REGION": "ap-guangzhou",
-        "TENCENT_DEPLOY_KUBECONFIG_REF": "/var/run/opl-cloud/kubeconfig/kubeconfig"
+        "TENCENT_DEPLOY_KUBECONFIG_REF": "/var/run/opl-cloud/kubeconfig/kubeconfig",
+        "OPL_BILLING_MARKUP": "0.2",
+        "OPL_BASIC_COMPUTE_HOURLY_CNY": "1",
+        "OPL_PRO_COMPUTE_HOURLY_CNY": "4",
+        "OPL_GPU_COMPUTE_HOURLY_CNY": "20",
+        "OPL_STORAGE_GB_MONTH_CNY": "0.2"
       }
     },
     {
@@ -125,15 +129,6 @@
                       "secretKeyRef": {
                         "name": "opl-cloud-database",
                         "key": "DATABASE_URL"
-                      }
-                    }
-                  },
-                  {
-                    "name": "OPENMETER_API_KEY",
-                    "valueFrom": {
-                      "secretKeyRef": {
-                        "name": "opl-cloud-openmeter",
-                        "key": "OPENMETER_API_KEY"
                       }
                     }
                   }

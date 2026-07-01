@@ -9,6 +9,7 @@ function createFakePool() {
     workspaces: new Map(),
     billing_ledger: [],
     audit_events: [],
+    notifications: [],
     runtime_operations: []
   };
   const statements = [];
@@ -26,11 +27,12 @@ function createFakePool() {
       if (normalized.startsWith("CREATE TABLE IF NOT EXISTS")) {
         return { rows: [] };
       }
-      if (normalized.startsWith("TRUNCATE accounts, workspaces, billing_ledger, audit_events, runtime_operations")) {
+      if (normalized.startsWith("TRUNCATE accounts, workspaces, billing_ledger, audit_events, notifications, runtime_operations")) {
         tables.accounts.clear();
         tables.workspaces.clear();
         tables.billing_ledger = [];
         tables.audit_events = [];
+        tables.notifications = [];
         tables.runtime_operations = [];
         return { rows: [] };
       }
@@ -45,6 +47,9 @@ function createFakePool() {
       }
       if (normalized.startsWith("SELECT state FROM audit_events")) {
         return { rows: tables.audit_events.map((state) => ({ state })) };
+      }
+      if (normalized.startsWith("SELECT state FROM notifications")) {
+        return { rows: tables.notifications.map((state) => ({ state })) };
       }
       if (normalized.startsWith("SELECT state FROM runtime_operations")) {
         return { rows: tables.runtime_operations.map((state) => ({ state })) };
@@ -63,6 +68,10 @@ function createFakePool() {
       }
       if (normalized.startsWith("INSERT INTO audit_events")) {
         tables.audit_events.push(params[3]);
+        return { rows: [] };
+      }
+      if (normalized.startsWith("INSERT INTO notifications")) {
+        tables.notifications.push(params[3]);
         return { rows: [] };
       }
       if (normalized.startsWith("INSERT INTO runtime_operations")) {
@@ -99,6 +108,9 @@ test("PostgresStore persists OPL Cloud state into control-plane tables", async (
     audit: [
       { id: "audit-1", workspaceId: "ws-alpha", accountId: "pi-alpha", type: "workspace.created" }
     ],
+    notifications: [
+      { id: "notification-1", workspaceId: "ws-alpha", accountId: "pi-alpha", type: "workspace.created" }
+    ],
     runtimeOperations: [
       {
         id: "op-1",
@@ -118,6 +130,7 @@ test("PostgresStore persists OPL Cloud state into control-plane tables", async (
   assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE TABLE IF NOT EXISTS workspaces")));
   assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE TABLE IF NOT EXISTS billing_ledger")));
   assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE TABLE IF NOT EXISTS audit_events")));
+  assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE TABLE IF NOT EXISTS notifications")));
   assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE TABLE IF NOT EXISTS runtime_operations")));
 });
 

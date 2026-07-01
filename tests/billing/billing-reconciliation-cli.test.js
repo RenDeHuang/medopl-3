@@ -12,7 +12,7 @@ test("Tencent reconciliation CLI writes JSON to stdout and returns non-zero on m
   const tencentPath = join(root, "tencent.json");
   try {
     await writeFile(ledgerPath, JSON.stringify([
-      { workspaceId: "ws-alpha", type: "server_debit", amount: -10.5, currency: "CNY" }
+      { workspaceId: "ws-alpha", type: "compute_debit", amount: -10.5, currency: "CNY" }
     ]));
     await writeFile(tencentPath, JSON.stringify([
       { workspaceId: "ws-alpha", resourceType: "server", amount: 10, currency: "CNY" }
@@ -29,7 +29,7 @@ test("Tencent reconciliation CLI writes JSON to stdout and returns non-zero on m
     const report = JSON.parse(stdout);
     assert.equal(code, 1);
     assert.equal(report.ok, false);
-    assert.equal(report.mismatches[0].serverDelta, -0.5);
+    assert.equal(report.mismatches[0].serverDelta, -1.5);
     assert.equal(stderr, "tencent_bill_reconciliation_failed\n");
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -42,8 +42,8 @@ test("Tencent reconciliation CLI can normalize raw Tencent export rows before re
   const tencentPath = join(root, "tencent-raw.json");
   try {
     await writeFile(ledgerPath, JSON.stringify([
-      { workspaceId: "ws-alpha", type: "server_debit", amount: -11, currency: "CNY" },
-      { workspaceId: "ws-alpha", type: "storage_debit", amount: -2.2, currency: "CNY" }
+      { workspaceId: "ws-alpha", type: "compute_debit", amount: -12, currency: "CNY" },
+      { workspaceId: "ws-alpha", type: "storage_debit", amount: -2.4, currency: "CNY" }
     ]));
     await writeFile(tencentPath, JSON.stringify({
       rows: [
@@ -64,12 +64,12 @@ test("Tencent reconciliation CLI can normalize raw Tencent export rows before re
     assert.equal(code, 0);
     assert.equal(report.ok, true);
     assert.deepEqual(report.totals, {
-      ledgerServer: 11,
-      ledgerStorage: 2.2,
+      ledgerServer: 12,
+      ledgerStorage: 2.4,
       tencentServer: 10,
       tencentStorage: 2,
-      expectedServer: 11,
-      expectedStorage: 2.2,
+      expectedServer: 12,
+      expectedStorage: 2.4,
       serverDelta: 0,
       storageDelta: 0
     });
@@ -109,8 +109,8 @@ test("Tencent reconciliation CLI can read the OPL ledger from a deployed Console
           status: 200,
           json: async () => ({
             billingLedger: [
-              { workspaceId: "ws-alpha", type: "server_debit", amount: -11, currency: "CNY" },
-              { workspaceId: "ws-alpha", type: "storage_debit", amount: -2.2, currency: "CNY" }
+              { workspaceId: "ws-alpha", type: "compute_debit", amount: -12, currency: "CNY" },
+              { workspaceId: "ws-alpha", type: "storage_debit", amount: -2.4, currency: "CNY" }
             ]
           })
         };

@@ -34,12 +34,12 @@ test("workspace URL route validates token and returns OPL Workspace entry page",
     pricing: {
       serverHourly: { basic: 1, pro: 4 },
       diskGbMonth: 0.2,
-      markup: 0.1
+      markup: 0.2
     }
   });
   const { origin, close } = await listen(createRequestHandler({ appService }));
   try {
-    await appService.creditAccount({ accountId: "pi-route", amount: 200, reason: "route_test_credit" });
+    await appService.creditAccount({ accountId: "pi-route", amount: 250, reason: "route_test_credit" });
     const workspace = await appService.createWorkspace({
       accountId: "pi-route",
       workspaceName: "Route Lab",

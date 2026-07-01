@@ -11,9 +11,7 @@ const REQUIRED_COMMON_ENV = [
   "OPL_RUNTIME_PROVIDER",
   "OPL_WORKSPACE_IMAGE",
   "OPL_WORKSPACE_DOMAIN",
-  "DATABASE_URL",
-  "OPENMETER_ENDPOINT",
-  "OPENMETER_API_KEY"
+  "DATABASE_URL"
 ];
 
 const REQUIRED_CVM_ENV = [
@@ -142,7 +140,6 @@ export async function productionReadiness({ env = process.env, commandExists = (
     check("opl_app_contract", matchesOplAppContract(env), "one-person-lab-app WebUI must expose port 3000 and persist /data plus /projects"),
     check("workspace_domain", looksLikeProductionDomain(env.OPL_WORKSPACE_DOMAIN), "OPL_WORKSPACE_DOMAIN must be a production wildcard domain"),
     check("database_url", Boolean(env.DATABASE_URL), "DATABASE_URL is required for production persistence"),
-    check("openmeter", Boolean(env.OPENMETER_ENDPOINT && env.OPENMETER_API_KEY), "OpenMeter endpoint and API key are required"),
     check("provider_env", providerConfig.requiredEnv.every((key) => Boolean(env[key])), "Runtime provider environment is incomplete"),
     check("tools", missingTools.length === 0, "Required production tools are missing")
   ];

@@ -65,7 +65,7 @@ test("Tencent TKE provider applies runtime resources and registers the Workspace
       workspaceId: "ws-tke001",
       ownerAccountId: "pi-alpha",
       workspaceName: "Grant Lab",
-      packagePlan: { id: "basic", server: "2c4g", diskGb: 10 },
+      packagePlan: { id: "basic", accelerator: "cpu", cpu: 2, memoryGb: 4, gpu: 0, server: "2c4g", diskGb: 10 },
       token: "share_tke_secret"
     });
 
@@ -105,6 +105,10 @@ test("Tencent TKE provider applies runtime resources and registers the Workspace
     const service = manifest.items.find((item) => item.kind === "Service");
     const container = deployment.spec.template.spec.containers[0];
     assert.equal(container.image, requiredEnv.OPL_WORKSPACE_IMAGE);
+    assert.deepEqual(container.resources, {
+      requests: { cpu: "2", memory: "4Gi" },
+      limits: { cpu: "2", memory: "4Gi" }
+    });
     assert.deepEqual(deployment.spec.template.spec.imagePullSecrets, [{ name: "tcr-pull-secret" }]);
     assert.deepEqual(deployment.spec.template.spec.nodeSelector, { "medopl.cn/workload": "medopl" });
     assert.equal(container.ports[0].containerPort, 3000);
@@ -130,6 +134,51 @@ test("Tencent TKE provider applies runtime resources and registers the Workspace
       "/w/ws-tke001->opl-ws-tke001:3000",
       "/->opl-cloud-control-plane:8787"
     ]);
+  } finally {
+    await rm(stateRootDir, { recursive: true, force: true });
+  }
+});
+
+test("Tencent TKE provider maps GPU Workspace packages to GPU pod resources", async () => {
+  const stateRootDir = await mkdtemp(join(tmpdir(), "opl-cloud-tke-state-"));
+  const runner = async ({ args }) => {
+    if (args.join(" ") === "--kubeconfig /tmp/kubeconfig --namespace opl-cloud get ingress/opl-cloud -o json") {
+      return JSON.stringify(sharedIngressFixture());
+    }
+    return "";
+  };
+  const provider = new TencentTkeProvider({
+    env: requiredEnv,
+    runner,
+    commandExists: () => true,
+    stateRootDir
+  });
+
+  try {
+    await provider.createWorkspaceRuntime({
+      workspaceId: "ws-gpu001",
+      ownerAccountId: "pi-alpha",
+      workspaceName: "GPU Lab",
+      packagePlan: {
+        id: "gpu",
+        accelerator: "gpu",
+        cpu: 16,
+        memoryGb: 64,
+        gpu: 1,
+        server: "16c64g-1gpu",
+        diskGb: 500
+      },
+      token: "share_gpu_secret"
+    });
+
+    const manifest = JSON.parse(await readFile(join(stateRootDir, "ws-gpu001", "workspace.k8s.json"), "utf8"));
+    const deployment = manifest.items.find((item) => item.kind === "Deployment");
+    const container = deployment.spec.template.spec.containers[0];
+    assert.deepEqual(container.resources, {
+      requests: { cpu: "16", memory: "64Gi", "nvidia.com/gpu": "1" },
+      limits: { cpu: "16", memory: "64Gi", "nvidia.com/gpu": "1" }
+    });
+    assert.equal(container.env.find((item) => item.name === "OPL_ACCELERATOR").value, "gpu");
   } finally {
     await rm(stateRootDir, { recursive: true, force: true });
   }

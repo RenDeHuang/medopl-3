@@ -10,6 +10,7 @@ export function emptyState() {
     workspaces: {},
     billingLedger: [],
     audit: [],
+    notifications: [],
     runtimeOperations: []
   };
 }
@@ -78,11 +79,12 @@ export class PostgresStore {
   async read(client = this.pool) {
     await this.ensureSchema(client);
     const state = emptyState();
-    const [accounts, workspaces, billingLedger, audit, runtimeOperations] = await Promise.all([
+    const [accounts, workspaces, billingLedger, audit, notifications, runtimeOperations] = await Promise.all([
       client.query("SELECT id, state FROM accounts ORDER BY id"),
       client.query("SELECT id, state FROM workspaces ORDER BY id"),
       client.query("SELECT state FROM billing_ledger ORDER BY created_at, id"),
       client.query("SELECT state FROM audit_events ORDER BY created_at, id"),
+      client.query("SELECT state FROM notifications ORDER BY created_at, id"),
       client.query("SELECT state FROM runtime_operations ORDER BY created_at, id")
     ]);
 
@@ -90,13 +92,14 @@ export class PostgresStore {
     for (const row of workspaces.rows) state.workspaces[row.id] = row.state;
     state.billingLedger = billingLedger.rows.map((row) => row.state);
     state.audit = audit.rows.map((row) => row.state);
+    state.notifications = notifications.rows.map((row) => row.state);
     state.runtimeOperations = runtimeOperations.rows.map((row) => row.state);
     return clone(state);
   }
 
   async write(nextState, client = this.pool) {
     await this.ensureSchema(client);
-    await client.query("TRUNCATE accounts, workspaces, billing_ledger, audit_events, runtime_operations");
+    await client.query("TRUNCATE accounts, workspaces, billing_ledger, audit_events, notifications, runtime_operations");
 
     for (const account of Object.values(nextState.accounts || {})) {
       await client.query(
@@ -121,6 +124,15 @@ export class PostgresStore {
     }
     for (const entry of nextState.audit || []) {
       await client.query("INSERT INTO audit_events (id, account_id, workspace_id, state, created_at) VALUES ($1, $2, $3, $4, $5)", [
+        entry.id,
+        entry.accountId,
+        entry.workspaceId,
+        entry,
+        entry.createdAt || new Date().toISOString()
+      ]);
+    }
+    for (const entry of nextState.notifications || []) {
+      await client.query("INSERT INTO notifications (id, account_id, workspace_id, state, created_at) VALUES ($1, $2, $3, $4, $5)", [
         entry.id,
         entry.accountId,
         entry.workspaceId,
@@ -195,6 +207,15 @@ export class PostgresStore {
     `);
     await client.query(`
       CREATE TABLE IF NOT EXISTS audit_events (
+        id text PRIMARY KEY,
+        account_id text NOT NULL,
+        workspace_id text NOT NULL,
+        state jsonb NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
         id text PRIMARY KEY,
         account_id text NOT NULL,
         workspace_id text NOT NULL,

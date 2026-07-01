@@ -9,11 +9,11 @@ Implementation scope is fixed in [docs/IMPLEMENTATION_SCOPE.md](./docs/IMPLEMENT
 ## Product Names
 
 - `OPL Cloud`: the external product name.
-- `OPL Gateway`: the AI capability gateway and usage-metering boundary owned by the Cloud product architecture.
+- `OPL Gateway`: the AI capability gateway, provider routing, and usage policy boundary owned by the Cloud product architecture.
 - `OPL Console`: the management entry for opening workspaces, billing, access, and settings.
 - `OPL Workspace`: the actual working environment delivered as a URL.
 - `OPL Fabric`: the controlled compute and storage provisioning boundary.
-- `OPL Ledger`: receipts, billing ledger, audit events, metering, reconciliation, and verifier evidence.
+- `OPL Ledger`: receipts, billing ledger, audit events, reconciliation, and verifier evidence.
 
 Use only these OPL Cloud names in product copy, UI, and design documents.
 
@@ -22,13 +22,13 @@ Use only these OPL Cloud names in product copy, UI, and design documents.
 ```text
 PI signs in to OPL Console
 -> creates an OPL Workspace
--> chooses one of the default server/disk packages
--> confirms hourly billing and 7-day storage pre-freeze
--> OPL Cloud creates one server
--> OPL Cloud creates one cloud disk
+-> chooses one of the default compute/storage packages
+-> confirms hourly billing and 7-day compute plus storage pre-freeze
+-> OPL Cloud creates one runtime compute unit
+-> OPL Cloud creates one persistent workspace storage volume
 -> OPL Cloud deploys one one-person-lab-app Docker container
--> OPL Cloud mounts the cloud disk into the Docker runtime
--> OPL Cloud creates a stable workspace subdomain URL with a permanent token
+-> OPL Cloud mounts persistent storage into the Docker runtime
+-> OPL Cloud creates a stable workspace URL with a permanent token
 -> OPL Console shows the URL
 -> PI copies and shares the URL
 -> members open the URL and enter the OPL Workspace without login
@@ -38,9 +38,9 @@ PI signs in to OPL Console
 
 ```text
 1 OPL Workspace
-= 1 server
+= 1 runtime compute unit
 = 1 one-person-lab-app Docker container
-= 1 cloud disk
+= 1 persistent workspace storage volume
 = 1 URL
 ```
 
@@ -48,32 +48,33 @@ One PI account can own multiple OPL Workspaces.
 
 ## Critical Lifecycle Rule
 
-Server and cloud disk lifecycles are separate.
+Compute and persistent storage lifecycles are separate.
 
-Stopping or destroying a server must not destroy the cloud disk. The cloud disk is destroyed only after an explicit user confirmation. Storage billing continues until cloud disk destruction completes.
+Stopping or destroying compute must not destroy persistent storage. Storage is destroyed only after an explicit user confirmation. Storage billing continues until storage destruction completes.
 
 ## Access Rule
 
 Workspace URLs use:
 
 ```text
-https://<workspace-slug>.oplcloud.cn/?token=<share-token>
+https://workspace.medopl.cn/w/<workspaceId>?token=<share-token>
 ```
 
 The token is permanent until the owner deletes or resets it. Opening the URL does not require login.
 
 ## Default Packages
 
-| Package | Server | Cloud disk |
+| Package | Compute | Persistent storage |
 | --- | --- | --- |
-| Basic Workspace | 2c / 4GB | 10GB |
-| Pro Workspace | 8c / 16GB | 100GB |
+| Basic Workspace | 2 CPU / 4GB | 10GB |
+| Pro Workspace | 8 CPU / 16GB | 100GB |
+| GPU Workspace | 16 CPU / 64GB / 1 GPU | 500GB |
 
 ## Billing Rule
 
-Billing is hourly. The user-facing price is Tencent Cloud resource cost plus a 10% platform markup.
+Billing is hourly. The user-facing price is Tencent Cloud resource cost plus a 20% platform markup.
 
-Storage must not operate unpaid. OPL Cloud freezes enough balance for 7 days of cloud disk storage before opening or resuming a Workspace.
+Compute and storage must not operate unpaid. OPL Cloud freezes enough balance for 7 days of compute and persistent storage before opening or resuming a Workspace. Opening a Workspace charges the first hour immediately from available balance. Later settlements round up to full hours and charge available balance first, then the relevant frozen hold. If available balance is exhausted, OPL Cloud records a notification. If compute hold is exhausted, OPL Cloud stops compute and notifies the operator. Storage hold exhaustion freezes the Workspace state until the user adds balance or explicitly destroys storage.
 
 ## Product Design
 
@@ -84,11 +85,11 @@ See [PRODUCT_DESIGN.md](./PRODUCT_DESIGN.md) for the frozen v1 product design.
 The current app implements the local business-chain loop with the Local Docker provider:
 
 - OPL Console UI
-- Basic and Pro Workspace creation
+- CPU and GPU Workspace creation
 - permanent workspace URL token
-- server stop/restart/destroy controls
+- compute stop/restart/destroy controls
 - disk destroy with explicit confirmation
-- 7-day storage pre-freeze
+- 7-day compute and storage prepaid holds
 - Local Docker Compose workspace artifacts under `.runtime/workspaces`
 - real OPL WebUI image default: `ghcr.io/gaofeng21cn/one-person-lab-webui:latest`
 - bind-mounted Workspace disk paths mapped to `/data` and `/projects`
@@ -114,7 +115,7 @@ Production launch readiness is exposed at:
 GET /api/production/readiness
 ```
 
-It checks the production runtime provider, Harbor image, workspace domain, PostgreSQL, OpenMeter, Tencent environment, and required host tools before launch.
+It checks the production runtime provider, image registry, workspace domain, PostgreSQL, Tencent environment, and required host tools before launch.
 
 ## Run Locally
 
@@ -135,25 +136,18 @@ PORT=8787 npm start
 
 When `DATABASE_URL` is set, OPL Console stores accounts, Workspaces, billing ledger entries, audit events, and runtime operation scaffolding in PostgreSQL tables.
 
-For OpenMeter usage events, set:
+OPL Ledger is the v1 billing truth. External metering systems are not required for production billing.
 
 ```bash
-OPENMETER_ENDPOINT=https://openmeter.example.com \
-OPENMETER_API_KEY=om_... \
+OPL_BILLING_MARKUP=0.2 \
+OPL_BASIC_COMPUTE_HOURLY_CNY=1 \
+OPL_PRO_COMPUTE_HOURLY_CNY=4 \
+OPL_GPU_COMPUTE_HOURLY_CNY=20 \
+OPL_STORAGE_GB_MONTH_CNY=0.2 \
 PORT=8787 npm start
 ```
 
-When configured, each billing settlement emits:
-
-- `workspace.server.running_hours`
-- `workspace.storage.gb_hours`
-
-`openMeterDefinitions()` in `services/api/src/openmeter.js` declares the matching production meter definitions:
-
-- `opl_workspace_server_running_hours`
-- `opl_workspace_storage_gb_hours`
-
-OpenMeter is a usage meter. OPL Console remains the v1 billing ledger and user-facing balance source.
+OPL Console remains the v1 billing ledger and user-facing balance source.
 
 To reconcile OPL ledger debits against normalized Tencent Cloud bill totals from a deployed OPL Console:
 
@@ -166,7 +160,7 @@ npm run reconcile:tencent -- \
 
 The command reads:
 
-- OPL `server_debit` / `storage_debit` ledger entries from `GET /api/state?accountId=<pi-account-id>`
+- OPL `compute_debit` / `storage_debit` ledger entries from `GET /api/state?accountId=<pi-account-id>`
 - Tencent bill rows from the provided local export file
 
 For offline reconciliation against a saved OPL ledger export:
@@ -187,7 +181,7 @@ For raw Tencent billing export rows, include the Workspace identity as a `worksp
 npm run reconcile:tencent -- --ledger ledger.json --tencent tencent-export.json --tencent-format raw
 ```
 
-It compares Tencent cost plus the configured 10% markup against OPL ledger debits and exits non-zero on mismatch. It writes JSON to stdout only and should not leave deployment or smoke artifacts in the repository.
+It compares Tencent cost plus the configured 20% markup against OPL ledger debits and exits non-zero on mismatch. It writes JSON to stdout only and should not leave deployment or smoke artifacts in the repository.
 
 To also start the local OPL Docker container when a Workspace is created:
 
@@ -266,7 +260,7 @@ Server actions intentionally retain CBS storage. `TerminateDisks` is used only b
 
 ## Production Verification
 
-After deploying OPL Console to Tencent TKE with PostgreSQL, OpenMeter, TCR images, TLS, DNS, and HTTPS readiness configured, run the real chain verifier from an operator shell only after explicit approval:
+After deploying OPL Console to Tencent TKE with PostgreSQL, TCR images, TLS, DNS, and HTTPS readiness configured, run the real chain verifier from an operator shell only after explicit approval:
 
 ```bash
 OPL_CONSOLE_ORIGIN=https://<console-domain> npm run verify:production
@@ -289,7 +283,7 @@ restart runtime compute
 destroy runtime compute while retaining workspace storage
 recreate runtime compute from retained workspace storage
 open the same Workspace URL again after recreation
-settle billing and emit OpenMeter usage
+settle internal ledger billing
 destroy verification runtime compute
 destroy verification workspace storage
 ```

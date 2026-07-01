@@ -12,7 +12,7 @@ Production uses:
 - Persistent workspace storage through the TKE storage class
 - TCR-hosted OPL Cloud and one-person-lab-app images
 - PostgreSQL control-plane persistence
-- OpenMeter usage events
+- OPL Ledger internal prepaid billing
 - Kubernetes Ingress for `cloud.medopl.cn` and `workspace.medopl.cn`
 
 Current production entrypoint status:
@@ -27,8 +27,6 @@ Inject values through a deployment secret manager or host environment. Do not co
 
 ```text
 DATABASE_URL
-OPENMETER_ENDPOINT
-OPENMETER_API_KEY
 OPL_RUNTIME_PROVIDER=tencent-tke
 OPL_PUBLIC_URL=https://cloud.medopl.cn
 OPL_CONSOLE_DOMAIN=cloud.medopl.cn
@@ -39,6 +37,11 @@ OPL_K8S_NAMESPACE
 OPL_INGRESS_CLASS
 OPL_IMAGE_PULL_SECRET_NAME
 OPL_WORKSPACE_STORAGE_CLASS
+OPL_BILLING_MARKUP=0.2
+OPL_BASIC_COMPUTE_HOURLY_CNY
+OPL_PRO_COMPUTE_HOURLY_CNY
+OPL_GPU_COMPUTE_HOURLY_CNY
+OPL_STORAGE_GB_MONTH_CNY
 TENCENT_DEPLOY_KUBECONFIG_REF
 TENCENT_DEPLOY_CLUSTER_ID
 TENCENT_TCR_REGISTRY
@@ -111,7 +114,8 @@ Use a dedicated verification account. If the verifier reports `cleanupErrors`, i
 10. Restart runtime compute and confirm the Workspace URL/token still works.
 11. Destroy runtime compute and confirm storage is retained and still billable.
 12. Recreate the runtime from retained storage and confirm the same Workspace URL/token works.
-14. Run one billing settlement and confirm OpenMeter receives usage events.
+13. Confirm Workspace opening created `compute_hold`, `storage_hold`, `compute_debit`, and `storage_debit` ledger entries.
+14. Run one billing settlement and confirm OPL Ledger records internal `compute_debit` and `storage_debit` entries.
 15. Run `npm run verify:production` against the deployed OPL Console and keep the stdout or stderr JSON result in the deployment record, not in git.
 16. Run `npm run reconcile:tencent -- --console-origin https://<console-domain> --account <pi-account-id> --tencent <tencent-bills.json>` so the OPL ledger is read from the deployed Console. Add `--tencent-format raw` for exported Tencent rows carrying a `workspace_id` tag. Use `--ledger <ledger.json>` only for an offline saved OPL ledger export. Keep the stdout result in the deployment record, not in git.
 
@@ -121,7 +125,8 @@ Use a dedicated verification account. If the verifier reports `cleanupErrors`, i
 - Storage destruction is a separate user-confirmed action. When invoked while runtime compute still exists, OPL Console must destroy compute first, mark storage retained, and then destroy storage so compute and storage billing both stop.
 - Check `runtime_operations` first when a Workspace action fails. It records operation type, status, attempt count, timestamps, and error message.
 - If runtime compute is lost but storage remains, restart the compute-destroyed Workspace from OPL Console. The API should record `recreate_server`, recreate the runtime, reattach retained storage, and keep the existing Workspace URL/token.
-- If OpenMeter rejects usage events, settlement fails so the operator can retry without silently splitting usage and billing records.
+- If compute prepaid hold is exhausted, OPL Console should stop compute and record `compute_auto_stopped`.
+- If storage prepaid hold is exhausted, OPL Console should preserve storage and freeze the Workspace state until the user adds balance or explicitly destroys storage.
 - If Tencent bill reconciliation fails, inspect the mismatch before issuing invoices or increasing account balances.
 - If PostgreSQL is unavailable, stop provisioning new Workspaces until control-plane persistence is restored.
 
