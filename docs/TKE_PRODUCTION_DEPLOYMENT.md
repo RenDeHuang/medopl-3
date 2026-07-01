@@ -103,10 +103,10 @@ Do not commit a filled env file. Real values belong in ignored local files, Kube
 - `OPL_IMAGE_PULL_SECRET_NAME=tcr-pull-secret`
 - `OPL_WORKSPACE_STORAGE_CLASS=cbs`
 - `OPL_BILLING_MARKUP=0.2`
-- `OPL_BASIC_COMPUTE_HOURLY_CNY=1`
-- `OPL_PRO_COMPUTE_HOURLY_CNY=4`
-- `OPL_GPU_COMPUTE_HOURLY_CNY=20`
-- `OPL_STORAGE_GB_MONTH_CNY=0.2`
+- `OPL_BASIC_COMPUTE_HOURLY_CNY=0.47`
+- `OPL_PRO_COMPUTE_HOURLY_CNY=1.65`
+- `OPL_GPU_COMPUTE_HOURLY_CNY=11.49`
+- `OPL_STORAGE_GB_MONTH_CNY=0.36`
 - `DATABASE_URL`, TCR credentials, kubeconfig, and TLS certificate ids are installed as GitHub production environment secrets and Kubernetes Secrets. Do not copy their values into git.
 - `cloud.medopl.cn` and `workspace.medopl.cn` point at the OPL Cloud TKE Ingress CLB.
 
@@ -168,6 +168,13 @@ The tracked production manifest is a contract, not the live secret payload. Keep
 ## Billing
 
 OPL Ledger is the v1 billing truth. Workspace pricing uses a local Tencent price catalog snapshot and applies `OPL_BILLING_MARKUP`, defaulting to `0.2`.
+
+Current production defaults were queried from Tencent Cloud in `na-siliconvalley-2` on 2026-07-02 using CVM `InquiryPriceRunInstances` and CBS `InquiryPriceCreateDisks`:
+
+- Basic compute cost: `S3.MEDIUM4`, `0.47 CNY/hour`; billed user price after markup: `0.564 CNY/hour`.
+- Pro compute cost: `S3.2XLARGE16`, `1.65 CNY/hour`; billed user price after markup: `1.98 CNY/hour`.
+- GPU compute cost: `GN7.5XLARGE80`, `11.49 CNY/hour`; billed user price after markup: `13.788 CNY/hour`.
+- Storage cost: `CLOUD_PREMIUM`, `0.36 CNY/GB-month`; billed user price after markup: `0.432 CNY/GB-month`.
 
 The production billing chain is:
 

@@ -58,10 +58,10 @@
         "TENCENT_TCR_REGION": "ap-guangzhou",
         "TENCENT_DEPLOY_KUBECONFIG_REF": "/var/run/opl-cloud/kubeconfig/kubeconfig",
         "OPL_BILLING_MARKUP": "0.2",
-        "OPL_BASIC_COMPUTE_HOURLY_CNY": "1",
-        "OPL_PRO_COMPUTE_HOURLY_CNY": "4",
-        "OPL_GPU_COMPUTE_HOURLY_CNY": "20",
-        "OPL_STORAGE_GB_MONTH_CNY": "0.2"
+        "OPL_BASIC_COMPUTE_HOURLY_CNY": "0.47",
+        "OPL_PRO_COMPUTE_HOURLY_CNY": "1.65",
+        "OPL_GPU_COMPUTE_HOURLY_CNY": "11.49",
+        "OPL_STORAGE_GB_MONTH_CNY": "0.36"
       }
     },
     {
