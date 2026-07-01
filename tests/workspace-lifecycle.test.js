@@ -8,6 +8,49 @@ import { createOplCloud } from "../services/api/src/opl-cloud.js";
 import { MemoryStore } from "../services/api/src/store.js";
 import { LocalDockerProvider } from "../services/api/src/runtime-providers/local-docker.js";
 
+const TEST_PRICING = {
+  serverHourly: {
+    basic: 1,
+    pro: 4
+  },
+  diskGbMonth: 0.2,
+  markup: 0.1
+};
+
+function runtimeFixture({ workspaceId, workspaceName, packagePlan, token, provider = "test-provider" }) {
+  return {
+    provider,
+    server: {
+      id: `server-${workspaceId}`,
+      status: "running",
+      billingStatus: "active",
+      spec: packagePlan.server
+    },
+    docker: {
+      id: `docker-${workspaceId}`,
+      image: "test-image",
+      status: "running"
+    },
+    disk: {
+      id: `disk-${workspaceId}`,
+      status: "attached_retained",
+      billingStatus: "active",
+      sizeGb: packagePlan.diskGb,
+      mountPath: "/data"
+    },
+    url: `http://127.0.0.1:8787/workspaces/${workspaceName}?token=${token}`,
+    slug: workspaceName
+  };
+}
+
+function createTestService(runtimeProvider) {
+  return createOplCloud({
+    store: new MemoryStore(),
+    runtimeProvider,
+    pricing: TEST_PRICING
+  });
+}
+
 async function createService() {
   const root = await mkdtemp(join(tmpdir(), "opl-cloud-lifecycle-"));
   const service = createOplCloud({
@@ -17,14 +60,7 @@ async function createService() {
       baseUrl: "http://127.0.0.1:8787",
       execute: false
     }),
-    pricing: {
-      serverHourly: {
-        basic: 1,
-        pro: 4
-      },
-      diskGbMonth: 0.2,
-      markup: 0.1
-    }
+    pricing: TEST_PRICING
   });
   return {
     service,
@@ -62,8 +98,178 @@ test("creates one workspace with one server, one Docker runtime, one disk, and o
     const state = await service.getState("pi-alpha");
     assert.equal(state.workspaces.length, 1);
     assert.equal(state.workspaces[0].id, workspace.id);
+    assert.deepEqual(state.runtimeOperations.map((operation) => `${operation.operationType}:${operation.status}`), [
+      "create_workspace:succeeded"
+    ]);
   } finally {
     await cleanup();
+  }
+});
+
+test("records failed runtime operations for retry and audit", async () => {
+  const service = createTestService({
+    name: "failing-provider",
+    async createWorkspaceRuntime() {
+      throw new Error("runtime_create_failed");
+    }
+  });
+
+  await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+  await assert.rejects(
+    service.createWorkspace({
+      accountId: "pi-alpha",
+      workspaceName: "Failure Lab",
+      packageId: "basic"
+    }),
+    /runtime_create_failed/
+  );
+
+  const state = await service.getState("pi-alpha");
+  assert.equal(state.runtimeOperations.length, 1);
+  assert.equal(state.runtimeOperations[0].operationType, "create_workspace");
+  assert.equal(state.runtimeOperations[0].status, "failed");
+  assert.equal(state.runtimeOperations[0].error, "runtime_create_failed");
+});
+
+test("records failed lifecycle runtime operations without mutating the Workspace", async () => {
+  const scenarios = [
+    {
+      operationType: "stop_server",
+      error: "runtime_stop_failed",
+      invoke: (service, workspaceId) => service.stopServer({ accountId: "pi-alpha", workspaceId, confirm: true }),
+      providerMethod: "stopServer"
+    },
+    {
+      operationType: "restart_server",
+      error: "runtime_restart_failed",
+      invoke: async (service, workspaceId) => {
+        await service.stopServer({ accountId: "pi-alpha", workspaceId, confirm: true });
+        return service.restartServer({ accountId: "pi-alpha", workspaceId });
+      },
+      providerMethod: "restartServer"
+    },
+    {
+      operationType: "destroy_server",
+      error: "runtime_destroy_server_failed",
+      invoke: (service, workspaceId) => service.destroyServer({ accountId: "pi-alpha", workspaceId, confirm: true }),
+      providerMethod: "destroyServer"
+    },
+    {
+      operationType: "destroy_disk",
+      error: "runtime_destroy_disk_failed",
+      invoke: (service, workspaceId) => service.destroyDisk({ accountId: "pi-alpha", workspaceId, confirmDataLoss: true }),
+      providerMethod: "destroyDisk"
+    }
+  ];
+
+  for (const scenario of scenarios) {
+    const runtimeProvider = {
+      name: "partial-failing-provider",
+      async createWorkspaceRuntime(input) {
+        return runtimeFixture({ ...input, provider: "partial-failing-provider" });
+      },
+      async stopServer({ workspace }) {
+        if (scenario.providerMethod === "stopServer") throw new Error(scenario.error);
+        return { ...workspace.server, status: "stopped", billingStatus: "stopped" };
+      },
+      async restartServer({ workspace }) {
+        if (scenario.providerMethod === "restartServer") throw new Error(scenario.error);
+        return { ...workspace.server, status: "running", billingStatus: "active" };
+      },
+      async destroyServer({ workspace }) {
+        if (scenario.providerMethod === "destroyServer") throw new Error(scenario.error);
+        return { ...workspace.server, status: "destroyed", billingStatus: "stopped" };
+      },
+      async destroyDisk({ workspace }) {
+        if (scenario.providerMethod === "destroyDisk") throw new Error(scenario.error);
+        return { ...workspace.disk, status: "destroyed", billingStatus: "stopped" };
+      }
+    };
+    const service = createTestService(runtimeProvider);
+
+    await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+    const workspace = await service.createWorkspace({
+      accountId: "pi-alpha",
+      workspaceName: `${scenario.operationType} Lab`,
+      packageId: "basic"
+    });
+
+    await assert.rejects(
+      scenario.invoke(service, workspace.id),
+      new RegExp(scenario.error)
+    );
+
+    const state = await service.getState("pi-alpha");
+    assert.notEqual(state.workspaces[0].state, "failed");
+    assert.equal(state.runtimeOperations.at(-1).operationType, scenario.operationType);
+    assert.equal(state.runtimeOperations.at(-1).status, "failed");
+    assert.equal(state.runtimeOperations.at(-1).error, scenario.error);
+  }
+});
+
+test("does not record runtime operations for lifecycle validation failures", async () => {
+  const { service, cleanup } = await createService();
+  try {
+    await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+    const workspace = await service.createWorkspace({
+      accountId: "pi-alpha",
+      workspaceName: "Validation Lab",
+      packageId: "basic"
+    });
+
+    await assert.rejects(
+      service.stopServer({ accountId: "pi-alpha", workspaceId: workspace.id, confirm: false }),
+      /server_stop_confirmation_required/
+    );
+    await assert.rejects(
+      service.restartServer({ accountId: "pi-alpha", workspaceId: "ws-missing" }),
+      /workspace_not_found/
+    );
+
+    const state = await service.getState("pi-alpha");
+    assert.deepEqual(state.runtimeOperations.map((operation) => `${operation.operationType}:${operation.status}`), [
+      "create_workspace:succeeded"
+    ]);
+  } finally {
+    await cleanup();
+  }
+});
+
+test("records separate runtime operation ids for rapid retries of the same action", async () => {
+  const service = createTestService({
+    name: "retry-failing-provider",
+    async createWorkspaceRuntime(input) {
+      return runtimeFixture({ ...input, provider: "retry-failing-provider" });
+    },
+    async stopServer() {
+      throw new Error("runtime_stop_failed");
+    }
+  });
+  const originalNow = Date.now;
+
+  try {
+    Date.now = () => 1777777777777;
+    await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+    const workspace = await service.createWorkspace({
+      accountId: "pi-alpha",
+      workspaceName: "Retry Lab",
+      packageId: "basic"
+    });
+
+    await assert.rejects(
+      service.stopServer({ accountId: "pi-alpha", workspaceId: workspace.id, confirm: true }),
+      /runtime_stop_failed/
+    );
+    await assert.rejects(
+      service.stopServer({ accountId: "pi-alpha", workspaceId: workspace.id, confirm: true }),
+      /runtime_stop_failed/
+    );
+
+    const failedOperations = (await service.getState("pi-alpha")).runtimeOperations.filter((operation) => operation.operationType === "stop_server");
+    assert.equal(failedOperations.length, 2);
+    assert.notEqual(failedOperations[0].id, failedOperations[1].id);
+  } finally {
+    Date.now = originalNow;
   }
 });
 
@@ -102,6 +308,13 @@ test("stopping and destroying the server never destroys the cloud disk or URL", 
     assert.equal(serverDestroyed.disk.billingStatus, "active");
     assert.equal(serverDestroyed.url, workspace.url);
 
+    const state = await service.getState("pi-alpha");
+    assert.deepEqual(state.runtimeOperations.map((operation) => `${operation.operationType}:${operation.status}`), [
+      "create_workspace:succeeded",
+      "stop_server:succeeded",
+      "destroy_server:succeeded"
+    ]);
+
     await assert.rejects(
       service.destroyDisk({
         accountId: "pi-alpha",
@@ -139,6 +352,9 @@ test("destroying disk requires explicit confirmation and is the only action that
     const ledger = await service.billingLedger("pi-alpha");
     assert.ok(ledger.some((entry) => entry.type === "storage_destroyed"));
     assert.ok(ledger.some((entry) => entry.type === "server_destroyed"));
+
+    const state = await service.getState("pi-alpha");
+    assert.ok(state.runtimeOperations.some((operation) => `${operation.operationType}:${operation.status}` === "destroy_disk:succeeded"));
   } finally {
     await cleanup();
   }
@@ -175,6 +391,7 @@ test("opening and restarting require a seven-day storage hold and preserve token
     assert.equal(restarted.state, "running");
     assert.equal(restarted.url, originalUrl);
     assert.equal(restarted.access.token, originalToken);
+    assert.ok((await service.getState("pi-alpha")).runtimeOperations.some((operation) => `${operation.operationType}:${operation.status}` === "restart_server:succeeded"));
 
     const reset = await service.resetWorkspaceToken({
       accountId: "pi-alpha",

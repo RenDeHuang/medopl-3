@@ -9,7 +9,8 @@ export function emptyState() {
     accounts: {},
     workspaces: {},
     billingLedger: [],
-    audit: []
+    audit: [],
+    runtimeOperations: []
   };
 }
 
@@ -77,17 +78,19 @@ export class PostgresStore {
   async read(client = this.pool) {
     await this.ensureSchema(client);
     const state = emptyState();
-    const [accounts, workspaces, billingLedger, audit] = await Promise.all([
+    const [accounts, workspaces, billingLedger, audit, runtimeOperations] = await Promise.all([
       client.query("SELECT id, state FROM accounts ORDER BY id"),
       client.query("SELECT id, state FROM workspaces ORDER BY id"),
       client.query("SELECT state FROM billing_ledger ORDER BY created_at, id"),
-      client.query("SELECT state FROM audit_events ORDER BY created_at, id")
+      client.query("SELECT state FROM audit_events ORDER BY created_at, id"),
+      client.query("SELECT state FROM runtime_operations ORDER BY created_at, id")
     ]);
 
     for (const row of accounts.rows) state.accounts[row.id] = row.state;
     for (const row of workspaces.rows) state.workspaces[row.id] = row.state;
     state.billingLedger = billingLedger.rows.map((row) => row.state);
     state.audit = audit.rows.map((row) => row.state);
+    state.runtimeOperations = runtimeOperations.rows.map((row) => row.state);
     return clone(state);
   }
 
@@ -123,6 +126,16 @@ export class PostgresStore {
         entry.workspaceId,
         entry,
         entry.createdAt || new Date().toISOString()
+      ]);
+    }
+    for (const operation of nextState.runtimeOperations || []) {
+      await client.query("INSERT INTO runtime_operations (id, workspace_id, operation_type, state, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6)", [
+        operation.id,
+        operation.workspaceId,
+        operation.operationType,
+        operation,
+        operation.createdAt || new Date().toISOString(),
+        operation.updatedAt || operation.createdAt || new Date().toISOString()
       ]);
     }
     return this.read(client);

@@ -103,6 +103,7 @@ export class OplCloudService {
     this.pricing = pricing;
     this.meter = meter;
     this.productionReadinessCheck = productionReadiness;
+    this.runtimeOperationSequence = 0;
   }
 
   packages() {
@@ -135,152 +136,185 @@ export class OplCloudService {
     const workspaceId = makeId("ws", accountId, workspaceName, packageId);
     const token = makeToken(workspaceId);
     const holdAmount = storageHoldAmount({ packagePlan, pricing: this.pricing });
+    let runtimeOperationStarted = false;
 
-    return this.store.update(async (state) => {
-      const account = ensureAccount(state, accountId);
-      if (accountAvailable(account) < holdAmount) {
-        throw new Error("insufficient_storage_hold_balance");
-      }
-      if (state.workspaces[workspaceId]) return clone(state.workspaces[workspaceId]);
+    try {
+      return await this.store.update(async (state) => {
+        const account = ensureAccount(state, accountId);
+        if (accountAvailable(account) < holdAmount) {
+          throw new Error("insufficient_storage_hold_balance");
+        }
+        if (state.workspaces[workspaceId]) return clone(state.workspaces[workspaceId]);
 
-      account.frozen = money(account.frozen + holdAmount);
-      state.billingLedger.push(this.ledgerEntry({
-        workspaceId,
-        accountId,
-        type: "storage_hold",
-        amount: holdAmount,
-        sourceEventId: "open_workspace"
-      }));
-
-      const runtime = await this.runtimeProvider.createWorkspaceRuntime({
-        workspaceId,
-        ownerAccountId: accountId,
-        workspaceName,
-        packagePlan,
-        token
-      });
-
-      const workspace = {
-        id: workspaceId,
-        ownerAccountId: accountId,
-        name: workspaceName,
-        packageId,
-        state: "running",
-        provider: runtime.provider,
-        server: runtime.server,
-        docker: runtime.docker,
-        disk: runtime.disk,
-        slug: runtime.slug,
-        url: runtime.url,
-        access: {
-          requiresLogin: false,
-          token,
-          tokenStatus: "active"
-        },
-        createdAt: now(),
-        updatedAt: now()
-      };
-      state.workspaces[workspaceId] = workspace;
-      state.audit.push(this.auditEvent({ accountId, workspaceId, type: "workspace.created", sourceEventId: workspaceId }));
-      return clone(workspace);
-    });
-  }
-
-  async stopServer({ accountId, workspaceId, confirm }) {
-    if (confirm !== true) throw new Error("server_stop_confirmation_required");
-    return this.store.update(async (state) => {
-      const workspace = latestWorkspaceForAccount(state, accountId, workspaceId);
-      workspace.state = "stopping_server";
-      workspace.server = await this.runtimeProvider.stopServer({ workspace: clone(workspace) });
-      workspace.state = "stopped_server_disk_retained";
-      workspace.disk.status = workspace.disk.status === "destroyed" ? "destroyed" : "attached_retained";
-      workspace.updatedAt = now();
-      state.billingLedger.push(this.ledgerEntry({
-        workspaceId,
-        accountId,
-        type: "server_billing_stopped",
-        amount: 0,
-        sourceEventId: "stop_server"
-      }));
-      state.audit.push(this.auditEvent({ accountId, workspaceId, type: "server.stopped", sourceEventId: "stop_server" }));
-      return clone(workspace);
-    });
-  }
-
-  async restartServer({ accountId, workspaceId }) {
-    return this.store.update(async (state) => {
-      const workspace = latestWorkspaceForAccount(state, accountId, workspaceId);
-      const packagePlan = getPackage(workspace.packageId);
-      const account = ensureAccount(state, accountId);
-      const requiredHold = storageHoldAmount({ packagePlan, pricing: this.pricing });
-      if (account.frozen < requiredHold && accountAvailable(account) < requiredHold - account.frozen) {
-        throw new Error("insufficient_storage_hold_balance");
-      }
-      if (account.frozen < requiredHold) {
-        const delta = money(requiredHold - account.frozen);
-        account.frozen = money(account.frozen + delta);
+        account.frozen = money(account.frozen + holdAmount);
         state.billingLedger.push(this.ledgerEntry({
           workspaceId,
           accountId,
           type: "storage_hold",
-          amount: delta,
-          sourceEventId: "resume_workspace"
+          amount: holdAmount,
+          sourceEventId: "open_workspace"
         }));
+
+        const operation = this.startRuntimeOperation({ state, accountId, workspaceId, operationType: "create_workspace" });
+        runtimeOperationStarted = true;
+        const runtime = await this.runtimeProvider.createWorkspaceRuntime({
+          workspaceId,
+          ownerAccountId: accountId,
+          workspaceName,
+          packagePlan,
+          token
+        });
+        this.finishRuntimeOperation(operation, "succeeded");
+
+        const workspace = {
+          id: workspaceId,
+          ownerAccountId: accountId,
+          name: workspaceName,
+          packageId,
+          state: "running",
+          provider: runtime.provider,
+          server: runtime.server,
+          docker: runtime.docker,
+          disk: runtime.disk,
+          slug: runtime.slug,
+          url: runtime.url,
+          access: {
+            requiresLogin: false,
+            token,
+            tokenStatus: "active"
+          },
+          createdAt: now(),
+          updatedAt: now()
+        };
+        state.workspaces[workspaceId] = workspace;
+        state.audit.push(this.auditEvent({ accountId, workspaceId, type: "workspace.created", sourceEventId: workspaceId }));
+        return clone(workspace);
+      });
+    } catch (error) {
+      if (runtimeOperationStarted) {
+        await this.recordFailedRuntimeOperation({ accountId, workspaceId, operationType: "create_workspace", error });
       }
-      workspace.state = "restarting_server";
-      workspace.server = await this.runtimeProvider.restartServer({ workspace: clone(workspace) });
-      workspace.docker.status = "running";
-      workspace.disk.status = "attached_retained";
-      workspace.disk.billingStatus = "active";
-      workspace.state = "running";
-      workspace.updatedAt = now();
-      state.audit.push(this.auditEvent({ accountId, workspaceId, type: "server.restarted", sourceEventId: "restart_server" }));
-      return clone(workspace);
+      throw error;
+    }
+  }
+
+  async stopServer({ accountId, workspaceId, confirm }) {
+    if (confirm !== true) throw new Error("server_stop_confirmation_required");
+    return this.runRuntimeOperation({
+      accountId,
+      workspaceId,
+      operationType: "stop_server",
+      mutate: async (state, workspace, operation) => {
+        workspace.state = "stopping_server";
+        workspace.server = await this.runtimeProvider.stopServer({ workspace: clone(workspace) });
+        this.finishRuntimeOperation(operation, "succeeded");
+        workspace.state = "stopped_server_disk_retained";
+        workspace.disk.status = workspace.disk.status === "destroyed" ? "destroyed" : "attached_retained";
+        workspace.updatedAt = now();
+        state.billingLedger.push(this.ledgerEntry({
+          workspaceId,
+          accountId,
+          type: "server_billing_stopped",
+          amount: 0,
+          sourceEventId: "stop_server"
+        }));
+        state.audit.push(this.auditEvent({ accountId, workspaceId, type: "server.stopped", sourceEventId: "stop_server" }));
+        return clone(workspace);
+      }
+    });
+  }
+
+  async restartServer({ accountId, workspaceId }) {
+    return this.runRuntimeOperation({
+      accountId,
+      workspaceId,
+      operationType: "restart_server",
+      prepare: (state, workspace) => {
+        const packagePlan = getPackage(workspace.packageId);
+        const account = ensureAccount(state, accountId);
+        const requiredHold = storageHoldAmount({ packagePlan, pricing: this.pricing });
+        if (account.frozen < requiredHold && accountAvailable(account) < requiredHold - account.frozen) {
+          throw new Error("insufficient_storage_hold_balance");
+        }
+        if (account.frozen < requiredHold) {
+          const delta = money(requiredHold - account.frozen);
+          account.frozen = money(account.frozen + delta);
+          state.billingLedger.push(this.ledgerEntry({
+            workspaceId,
+            accountId,
+            type: "storage_hold",
+            amount: delta,
+            sourceEventId: "resume_workspace"
+          }));
+        }
+      },
+      mutate: async (state, workspace, operation) => {
+        workspace.state = "restarting_server";
+        workspace.server = await this.runtimeProvider.restartServer({ workspace: clone(workspace) });
+        this.finishRuntimeOperation(operation, "succeeded");
+        workspace.docker.status = "running";
+        workspace.disk.status = "attached_retained";
+        workspace.disk.billingStatus = "active";
+        workspace.state = "running";
+        workspace.updatedAt = now();
+        state.audit.push(this.auditEvent({ accountId, workspaceId, type: "server.restarted", sourceEventId: "restart_server" }));
+        return clone(workspace);
+      }
     });
   }
 
   async destroyServer({ accountId, workspaceId, confirm }) {
     if (confirm !== true) throw new Error("server_destroy_confirmation_required");
-    return this.store.update(async (state) => {
-      const workspace = latestWorkspaceForAccount(state, accountId, workspaceId);
-      workspace.state = "destroying_server";
-      workspace.server = await this.runtimeProvider.destroyServer({ workspace: clone(workspace) });
-      workspace.docker.status = "destroyed";
-      workspace.disk.status = workspace.disk.status === "destroyed" ? "destroyed" : "detached_retained";
-      workspace.state = workspace.disk.status === "destroyed" ? "destroyed" : "server_destroyed_disk_retained";
-      workspace.updatedAt = now();
-      state.billingLedger.push(this.ledgerEntry({
-        workspaceId,
-        accountId,
-        type: "server_destroyed",
-        amount: 0,
-        sourceEventId: "destroy_server"
-      }));
-      state.audit.push(this.auditEvent({ accountId, workspaceId, type: "server.destroyed", sourceEventId: "destroy_server" }));
-      return clone(workspace);
+    return this.runRuntimeOperation({
+      accountId,
+      workspaceId,
+      operationType: "destroy_server",
+      mutate: async (state, workspace, operation) => {
+        workspace.state = "destroying_server";
+        workspace.server = await this.runtimeProvider.destroyServer({ workspace: clone(workspace) });
+        this.finishRuntimeOperation(operation, "succeeded");
+        workspace.docker.status = "destroyed";
+        workspace.disk.status = workspace.disk.status === "destroyed" ? "destroyed" : "detached_retained";
+        workspace.state = workspace.disk.status === "destroyed" ? "destroyed" : "server_destroyed_disk_retained";
+        workspace.updatedAt = now();
+        state.billingLedger.push(this.ledgerEntry({
+          workspaceId,
+          accountId,
+          type: "server_destroyed",
+          amount: 0,
+          sourceEventId: "destroy_server"
+        }));
+        state.audit.push(this.auditEvent({ accountId, workspaceId, type: "server.destroyed", sourceEventId: "destroy_server" }));
+        return clone(workspace);
+      }
     });
   }
 
   async destroyDisk({ accountId, workspaceId, confirmDataLoss }) {
     if (confirmDataLoss !== true) throw new Error("disk_destroy_confirmation_required");
-    return this.store.update(async (state) => {
-      const workspace = latestWorkspaceForAccount(state, accountId, workspaceId);
-      workspace.state = "destroying_disk";
-      workspace.disk = await this.runtimeProvider.destroyDisk({ workspace: clone(workspace) });
-      workspace.server.status = "destroyed";
-      workspace.server.billingStatus = "stopped";
-      workspace.docker.status = "destroyed";
-      workspace.state = "destroyed";
-      workspace.updatedAt = now();
-      state.billingLedger.push(this.ledgerEntry({
-        workspaceId,
-        accountId,
-        type: "storage_destroyed",
-        amount: 0,
-        sourceEventId: "destroy_disk"
-      }));
-      state.audit.push(this.auditEvent({ accountId, workspaceId, type: "disk.destroyed", sourceEventId: "destroy_disk" }));
-      return clone(workspace);
+    return this.runRuntimeOperation({
+      accountId,
+      workspaceId,
+      operationType: "destroy_disk",
+      mutate: async (state, workspace, operation) => {
+        workspace.state = "destroying_disk";
+        workspace.disk = await this.runtimeProvider.destroyDisk({ workspace: clone(workspace) });
+        this.finishRuntimeOperation(operation, "succeeded");
+        workspace.server.status = "destroyed";
+        workspace.server.billingStatus = "stopped";
+        workspace.docker.status = "destroyed";
+        workspace.state = "destroyed";
+        workspace.updatedAt = now();
+        state.billingLedger.push(this.ledgerEntry({
+          workspaceId,
+          accountId,
+          type: "storage_destroyed",
+          amount: 0,
+          sourceEventId: "destroy_disk"
+        }));
+        state.audit.push(this.auditEvent({ accountId, workspaceId, type: "disk.destroyed", sourceEventId: "destroy_disk" }));
+        return clone(workspace);
+      }
     });
   }
 
@@ -393,7 +427,8 @@ export class OplCloudService {
       account: clone(state.accounts[accountId] ?? { id: accountId, balance: 0, frozen: 0 }),
       workspaces: Object.values(state.workspaces).filter((workspace) => workspace.ownerAccountId === accountId).map(clone),
       billingLedger: state.billingLedger.filter((entry) => entry.accountId === accountId).map(clone),
-      audit: state.audit.filter((entry) => entry.accountId === accountId).map(clone)
+      audit: state.audit.filter((entry) => entry.accountId === accountId).map(clone),
+      runtimeOperations: state.runtimeOperations.filter((entry) => entry.accountId === accountId).map(clone)
     };
   }
 
@@ -462,6 +497,59 @@ export class OplCloudService {
       results.push(await this.meter.recordUsage(event));
     }
     return results;
+  }
+
+  async runRuntimeOperation({ accountId, workspaceId, operationType, prepare = null, mutate }) {
+    let runtimeOperationStarted = false;
+    try {
+      return await this.store.update(async (state) => {
+        const workspace = latestWorkspaceForAccount(state, accountId, workspaceId);
+        if (prepare) prepare(state, workspace);
+        const operation = this.startRuntimeOperation({ state, accountId, workspaceId, operationType });
+        runtimeOperationStarted = true;
+        try {
+          return await mutate(state, workspace, operation);
+        } catch (error) {
+          this.finishRuntimeOperation(operation, "failed", error);
+          throw error;
+        }
+      });
+    } catch (error) {
+      if (runtimeOperationStarted) {
+        await this.recordFailedRuntimeOperation({ accountId, workspaceId, operationType, error });
+      }
+      throw error;
+    }
+  }
+
+  startRuntimeOperation({ state, accountId, workspaceId, operationType }) {
+    this.runtimeOperationSequence += 1;
+    const operation = {
+      id: makeId("op", accountId, workspaceId, operationType, String(Date.now()), String(this.runtimeOperationSequence)),
+      accountId,
+      workspaceId,
+      operationType,
+      status: "running",
+      attempts: 1,
+      createdAt: now(),
+      updatedAt: now()
+    };
+    state.runtimeOperations.push(operation);
+    return operation;
+  }
+
+  finishRuntimeOperation(operation, status, error = null) {
+    operation.status = status;
+    operation.updatedAt = now();
+    if (error) operation.error = error.message;
+    return operation;
+  }
+
+  async recordFailedRuntimeOperation({ accountId, workspaceId, operationType, error }) {
+    return this.store.update((state) => {
+      const operation = this.startRuntimeOperation({ state, accountId, workspaceId, operationType });
+      return clone(this.finishRuntimeOperation(operation, "failed", error));
+    });
   }
 
   ledgerEntry({ workspaceId, accountId, type, amount, sourceEventId }) {

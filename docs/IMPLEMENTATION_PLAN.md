@@ -158,7 +158,8 @@ Delivered:
 - API selects PostgreSQL automatically when `DATABASE_URL` is configured.
 - Schema creation is owned by the API startup path.
 - Accounts, Workspaces, billing ledger entries, and audit events persist to dedicated PostgreSQL tables with JSONB state payloads.
-- `runtime_operations` table exists for retry-aware cloud operations.
+- `runtime_operations` persists runtime operation attempts for create, stop, restart, server destroy, and disk destroy.
+- Failed runtime provider calls are recorded as failed operations for retry and audit.
 
 Requirements:
 

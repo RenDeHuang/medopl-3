@@ -73,6 +73,7 @@ Both must be reviewed before creating production Workspaces.
 
 - Server stop or destroy must never destroy the CBS disk.
 - Disk destruction is a separate user-confirmed action.
+- Check `runtime_operations` first when a Workspace action fails. It records operation type, status, attempt count, timestamps, and error message.
 - If CVM is lost but CBS remains, recreate server from the retained Workspace record and reattach storage.
 - If OpenMeter rejects usage events, settlement fails so the operator can retry without silently splitting usage and billing records.
 - If PostgreSQL is unavailable, stop provisioning new Workspaces until control-plane persistence is restored.

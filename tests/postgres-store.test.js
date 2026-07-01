@@ -46,6 +46,9 @@ function createFakePool() {
       if (normalized.startsWith("SELECT state FROM audit_events")) {
         return { rows: tables.audit_events.map((state) => ({ state })) };
       }
+      if (normalized.startsWith("SELECT state FROM runtime_operations")) {
+        return { rows: tables.runtime_operations.map((state) => ({ state })) };
+      }
       if (normalized.startsWith("INSERT INTO accounts")) {
         tables.accounts.set(params[0], params[1]);
         return { rows: [] };
@@ -60,6 +63,10 @@ function createFakePool() {
       }
       if (normalized.startsWith("INSERT INTO audit_events")) {
         tables.audit_events.push(params[3]);
+        return { rows: [] };
+      }
+      if (normalized.startsWith("INSERT INTO runtime_operations")) {
+        tables.runtime_operations.push(params[3]);
         return { rows: [] };
       }
       throw new Error(`unexpected_sql:${normalized}`);
@@ -91,6 +98,15 @@ test("PostgresStore persists OPL Cloud state into control-plane tables", async (
     ],
     audit: [
       { id: "audit-1", workspaceId: "ws-alpha", accountId: "pi-alpha", type: "workspace.created" }
+    ],
+    runtimeOperations: [
+      {
+        id: "op-1",
+        workspaceId: "ws-alpha",
+        operationType: "create_workspace",
+        status: "succeeded",
+        attempts: 1
+      }
     ]
   };
 
