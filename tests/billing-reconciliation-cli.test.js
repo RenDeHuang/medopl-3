@@ -78,3 +78,69 @@ test("Tencent reconciliation CLI can normalize raw Tencent export rows before re
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("Tencent reconciliation CLI can read the OPL ledger from a deployed Console state endpoint", async () => {
+  const root = await mkdtemp(join(tmpdir(), "opl-cloud-reconcile-"));
+  const tencentPath = join(root, "tencent.json");
+  try {
+    await writeFile(tencentPath, JSON.stringify([
+      { workspaceId: "ws-alpha", resourceType: "server", amount: 10, currency: "CNY" },
+      { workspaceId: "ws-alpha", resourceType: "storage", amount: 2, currency: "CNY" }
+    ]));
+    let stdout = "";
+    let stderr = "";
+    const requestedUrls = [];
+
+    const code = await runReconciliationCli({
+      argv: [
+        "--console-origin",
+        "https://console.oplcloud.example",
+        "--account",
+        "pi-alpha",
+        "--tencent",
+        tencentPath
+      ],
+      stdout: { write: (chunk) => { stdout += chunk; } },
+      stderr: { write: (chunk) => { stderr += chunk; } },
+      fetchImpl: async (url) => {
+        requestedUrls.push(String(url));
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            billingLedger: [
+              { workspaceId: "ws-alpha", type: "server_debit", amount: -11, currency: "CNY" },
+              { workspaceId: "ws-alpha", type: "storage_debit", amount: -2.2, currency: "CNY" }
+            ]
+          })
+        };
+      }
+    });
+
+    const report = JSON.parse(stdout);
+    assert.equal(code, 0);
+    assert.equal(report.ok, true);
+    assert.deepEqual(requestedUrls, ["https://console.oplcloud.example/api/state?accountId=pi-alpha"]);
+    assert.equal(stderr, "");
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("Tencent reconciliation CLI fails closed when no ledger source is provided", async () => {
+  const root = await mkdtemp(join(tmpdir(), "opl-cloud-reconcile-"));
+  const tencentPath = join(root, "tencent.json");
+  try {
+    await writeFile(tencentPath, JSON.stringify([]));
+    await assert.rejects(
+      () => runReconciliationCli({
+        argv: ["--tencent", tencentPath],
+        stdout: { write: () => {} },
+        stderr: { write: () => {} }
+      }),
+      /ledger_or_console_origin_required/
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

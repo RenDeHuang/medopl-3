@@ -150,13 +150,27 @@ When configured, each billing settlement emits:
 
 OpenMeter is a usage meter. OPL Console remains the v1 billing ledger and user-facing balance source.
 
-To reconcile OPL ledger debits against normalized Tencent Cloud bill totals:
+To reconcile OPL ledger debits against normalized Tencent Cloud bill totals from a deployed OPL Console:
+
+```bash
+npm run reconcile:tencent -- \
+  --console-origin https://<console-domain> \
+  --account <pi-account-id> \
+  --tencent tencent-bills.json
+```
+
+The command reads:
+
+- OPL `server_debit` / `storage_debit` ledger entries from `GET /api/state?accountId=<pi-account-id>`
+- Tencent bill rows from the provided local export file
+
+For offline reconciliation against a saved OPL ledger export:
 
 ```bash
 npm run reconcile:tencent -- --ledger ledger.json --tencent tencent-bills.json
 ```
 
-The command expects OPL `server_debit` / `storage_debit` ledger entries and normalized Tencent bill rows shaped like:
+Tencent bill rows should be normalized as:
 
 ```json
 { "workspaceId": "ws-alpha", "resourceType": "server", "amount": 10, "currency": "CNY" }
@@ -168,7 +182,7 @@ For raw Tencent billing export rows, include the Workspace identity as a `worksp
 npm run reconcile:tencent -- --ledger ledger.json --tencent tencent-export.json --tencent-format raw
 ```
 
-It compares Tencent cost plus the configured 10% markup against OPL ledger debits and exits non-zero on mismatch. It writes JSON to stdout only.
+It compares Tencent cost plus the configured 10% markup against OPL ledger debits and exits non-zero on mismatch. It writes JSON to stdout only and should not leave deployment or smoke artifacts in the repository.
 
 To also start the local OPL Docker container when a Workspace is created:
 

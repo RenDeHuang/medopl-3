@@ -94,7 +94,7 @@ Use a dedicated verification account and delete the verification disk from OPL C
 13. Restart the server-destroyed Workspace and confirm a new CVM is created, the retained CBS disk is attached, Ansible restores the Docker runtime, and the same Workspace URL/token works.
 14. Run one billing settlement and confirm OpenMeter receives usage events.
 15. Run `npm run verify:production` against the deployed OPL Console and keep the stdout result in the deployment record, not in git.
-16. Run `npm run reconcile:tencent -- --ledger <ledger.json> --tencent <tencent-bills.json>` with normalized Tencent bill rows, or add `--tencent-format raw` for exported Tencent rows carrying a `workspace_id` tag. Keep the stdout result in the deployment record, not in git.
+16. Run `npm run reconcile:tencent -- --console-origin https://<console-domain> --account <pi-account-id> --tencent <tencent-bills.json>` so the OPL ledger is read from the deployed Console. Add `--tencent-format raw` for exported Tencent rows carrying a `workspace_id` tag. Use `--ledger <ledger.json>` only for an offline saved OPL ledger export. Keep the stdout result in the deployment record, not in git.
 
 ## Recovery Notes
 
