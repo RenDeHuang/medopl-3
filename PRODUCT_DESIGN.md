@@ -84,6 +84,20 @@ OPL Workspace owns:
 - the lab working environment
 - files, project outputs, and runtime data stored on mounted persistent storage
 
+## Repository Decoupling Boundary
+
+This repository is the OPL Console control-plane implementation workspace. It may keep adapter code for OPL Workspace delivery, OPL Fabric handoff, and OPL Ledger v1 receipts while those interfaces are still small, but it must preserve service boundaries so they can move into separate repositories without rewriting product behavior.
+
+The intended repository split is:
+
+| Repository | Owns | This repository should depend on |
+| --- | --- | --- |
+| OPL Console | PI-facing management surface, Workspace lifecycle, billing display, readiness gates, deployment handoff | Workspace, Fabric, and Ledger contracts |
+| OPL Workspace | `one-person-lab-app` runtime image, WebUI behavior, mounted data/project semantics, app-level token behavior | Workspace runtime contract |
+| OPL Ledger | holds, debits, releases, audit receipts, notifications, reconciliation, verifier evidence | Ledger API or event contract |
+
+OPL Fabric adapters can remain inside Console for v1 because TKE, TCR, PVC/CBS, Service, and Ingress are currently deployment handoff details. If Fabric grows into connector, environment, compute, or agent-package orchestration, move it behind a Fabric service contract instead of expanding Console into a general infrastructure platform.
+
 ## Workspace Creation Flow
 
 The default creation flow is:
@@ -128,15 +142,16 @@ After restart, stop, or server recreation, the Workspace URL should remain stabl
 
 ## Default Packages
 
-OPL Cloud v1 provides three default packages:
+OPL Cloud v1 production currently provides two CPU packages:
 
 | Package | Compute | Cloud disk |
 | --- | --- | --- |
 | Basic Workspace | 2 CPU / 4GB | 10GB |
 | Pro Workspace | 8 CPU / 16GB | 100GB |
-| GPU Workspace | 16 CPU / 64GB / 1 GPU | 500GB |
 
-Custom compute and disk configuration can be added later, but v1 should lead with these CPU and GPU packages.
+GPU Workspaces are a future product package. They must not be exposed until a GPU node pool, image compatibility, scheduler behavior, pricing, billing holds, and production verifier evidence are all confirmed.
+
+Custom compute and disk configuration can be added later, but the current production package list should stay narrow until the lifecycle, billing, and Workspace usability proofs are stable.
 
 ## Billing Rules
 
@@ -352,7 +367,8 @@ V1 does not include:
 - member login for shared URLs
 - per-member roles inside OPL Console
 - arbitrary custom package marketplace
-- Kubernetes as the default runtime
+- exposing Kubernetes primitives to ordinary users
+- GPU Workspace packages before a verified GPU node pool exists
 - multi-server Workspace clusters
 - automatic storage deletion when compute is stopped or destroyed
 - unpaid storage grace operation
@@ -364,7 +380,7 @@ The product design is satisfied when OPL Console can support this flow:
 
 ```text
 PI creates Workspace
--> selects a CPU or GPU package
+-> selects a Basic or Pro CPU package
 -> confirms billing and compute/storage prepaid hold
 -> receives a stable URL with token
 -> shares URL with members
