@@ -288,12 +288,13 @@ destroy verification server
 destroy verification disk
 ```
 
-This command creates billable Tencent Cloud resources and lifecycle events, then attempts to clean up the verification server and disk on both success and post-creation failure paths. Use a dedicated verification account. If the verifier reports cleanup errors, inspect OPL Console and Tencent Cloud and explicitly destroy any remaining verification resources. The command writes no smoke report or generated artifact into the repository.
+This command creates billable Tencent Cloud resources and lifecycle events, then attempts to clean up the verification server and disk on both success and post-creation failure paths. By default, the Workspace name includes a unique run id so repeated verification runs create fresh cloud resources instead of reusing a previously destroyed Workspace record. Use a dedicated verification account. If the verifier reports cleanup errors, inspect OPL Console and Tencent Cloud and explicitly destroy any remaining verification resources. The command writes no smoke report or generated artifact into the repository.
 
 Optional verifier controls:
 
 ```bash
 OPL_VERIFY_ACCOUNT_ID=pi-production-verifier
+OPL_VERIFY_RUN_ID=20260701-preprod-a
 OPL_VERIFY_WORKSPACE_NAME="Production Verification Lab"
 OPL_VERIFY_PACKAGE_ID=basic
 OPL_VERIFY_CREDIT_AMOUNT=1000

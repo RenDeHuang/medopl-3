@@ -73,7 +73,7 @@ After readiness is green, run:
 OPL_CONSOLE_ORIGIN=https://<console-domain> npm run verify:production
 ```
 
-This command creates a real verification Workspace, opens its URL, stops/restarts/destroys/recreates server compute while retaining CBS storage, reopens the same URL after recreation, runs one billing settlement, then destroys the verification server and disk. If a check fails after Workspace creation, the verifier still attempts the same server and disk cleanup before returning the original failure. It writes results to stdout only and must not leave smoke outputs in the repository.
+This command creates a real verification Workspace, opens its URL, stops/restarts/destroys/recreates server compute while retaining CBS storage, reopens the same URL after recreation, runs one billing settlement, then destroys the verification server and disk. If a check fails after Workspace creation, the verifier still attempts the same server and disk cleanup before returning the original failure. Default Workspace names include a unique run id so repeated verifier runs create fresh cloud resources instead of reusing a destroyed Workspace record. It writes results to stdout only and must not leave smoke outputs in the repository.
 
 Use a dedicated verification account. If the verifier reports `cleanupErrors`, inspect OPL Console and Tencent Cloud, then explicitly destroy any remaining verification server or disk to stop billing.
 

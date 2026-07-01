@@ -356,3 +356,65 @@ test("production verifier reports cleanup failures without hiding the original v
     "destroy_disk:request_failed:POST:/api/workspaces/destroy-disk:500:destroy_disk_failed"
   ]);
 });
+
+test("production verifier uses a unique default Workspace name for each run", async () => {
+  const workspaceNames = [];
+  const cleanupWorkspace = (workspace) => ({
+    ...workspace,
+    state: "destroyed",
+    server: { ...workspace.server, status: "destroyed", billingStatus: "stopped" },
+    docker: { ...workspace.docker, status: "destroyed" },
+    disk: { ...workspace.disk, status: "destroyed", billingStatus: "stopped" }
+  });
+
+  async function runVerifier(runSuffix) {
+    const workspace = {
+      id: `ws-${runSuffix}`,
+      ownerAccountId: "pi-prod",
+      name: `Production Verification Lab ${runSuffix}`,
+      packageId: "basic",
+      state: "running",
+      provider: "tencent-cvm",
+      server: { id: `ins-${runSuffix}`, status: "running", billingStatus: "active" },
+      docker: { id: `docker-${runSuffix}`, status: "running" },
+      disk: { id: `disk-${runSuffix}`, status: "attached_retained", billingStatus: "active", mountPath: "/data" },
+      slug: `production-verification-lab-${runSuffix}`,
+      url: `https://production-verification-lab-${runSuffix}.oplcloud.cn/?token=share_${runSuffix}`,
+      access: { token: `share_${runSuffix}`, tokenStatus: "active", requiresLogin: false }
+    };
+
+    await verifyProductionChain({
+      origin: "https://console.oplcloud.cn",
+      accountId: "pi-prod",
+      runId: runSuffix,
+      retryDelayMs: 0,
+      fetchImpl: async (url, options = {}) => {
+        const parsed = new URL(String(url));
+        const method = options.method || "GET";
+        if (parsed.origin !== "https://console.oplcloud.cn") return htmlResponse("<html>OPL Workspace</html>");
+        if (`${method} ${parsed.pathname}` === "GET /api/production/readiness") return jsonResponse({ ready: true, missingEnv: [], missingTools: [], failedChecks: [], checks: [] });
+        if (`${method} ${parsed.pathname}` === "GET /api/runtime/readiness") return jsonResponse({ provider: "tencent-cvm", ready: true, missingEnv: [], missingTools: [] });
+        if (`${method} ${parsed.pathname}` === "POST /api/accounts/credit") return jsonResponse({ id: "pi-prod", balance: 1000, frozen: 0 });
+        if (`${method} ${parsed.pathname}` === "POST /api/workspaces") {
+          const body = JSON.parse(options.body);
+          workspaceNames.push(body.workspaceName);
+          return jsonResponse({ ...workspace, name: body.workspaceName });
+        }
+        if (`${method} ${parsed.pathname}` === "POST /api/workspaces/stop-server") return jsonResponse({ ...workspace, state: "stopped_server_disk_retained", server: { ...workspace.server, status: "stopped", billingStatus: "stopped" } });
+        if (`${method} ${parsed.pathname}` === "POST /api/workspaces/restart-server") return jsonResponse(workspace);
+        if (`${method} ${parsed.pathname}` === "POST /api/workspaces/destroy-server") return jsonResponse({ ...workspace, state: "server_destroyed_disk_retained", server: { ...workspace.server, status: "destroyed", billingStatus: "stopped" }, disk: { ...workspace.disk, status: "detached_retained" } });
+        if (`${method} ${parsed.pathname}` === "POST /api/billing/settle") return jsonResponse({ entries: [{ type: "server_debit" }, { type: "storage_debit" }], metering: [{ ok: true }] });
+        if (`${method} ${parsed.pathname}` === "POST /api/workspaces/destroy-disk") return jsonResponse(cleanupWorkspace(workspace));
+        throw new Error(`unexpected_request:${method} ${parsed.pathname}`);
+      }
+    });
+  }
+
+  await runVerifier("run-a1");
+  await runVerifier("run-b2");
+
+  assert.deepEqual(workspaceNames, [
+    "Production Verification Lab run-a1",
+    "Production Verification Lab run-b2"
+  ]);
+});

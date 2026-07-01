@@ -5,6 +5,12 @@ const DEFAULT_CREDIT_AMOUNT = 1000;
 const DEFAULT_WORKSPACE_URL_ATTEMPTS = 12;
 const DEFAULT_RETRY_DELAY_MS = 5000;
 
+function defaultRunId() {
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "Z");
+  const suffix = Math.random().toString(36).slice(2, 8);
+  return `${stamp}-${suffix}`;
+}
+
 function normalizeOrigin(origin) {
   if (!origin) throw new Error("origin_required");
   return origin.replace(/\/$/, "");
@@ -128,7 +134,8 @@ async function cleanupVerificationWorkspace({ fetchImpl, origin, accountId, work
 export async function verifyProductionChain({
   origin,
   accountId = DEFAULT_ACCOUNT_ID,
-  workspaceName = DEFAULT_WORKSPACE_NAME,
+  workspaceName,
+  runId = defaultRunId(),
   packageId = DEFAULT_PACKAGE_ID,
   creditAmount = DEFAULT_CREDIT_AMOUNT,
   workspaceUrlAttempts = DEFAULT_WORKSPACE_URL_ATTEMPTS,
@@ -138,6 +145,7 @@ export async function verifyProductionChain({
   if (typeof fetchImpl !== "function") throw new Error("fetch_required");
   const checks = [];
   const normalizedOrigin = normalizeOrigin(origin);
+  const effectiveWorkspaceName = workspaceName || `${DEFAULT_WORKSPACE_NAME} ${runId}`;
   let workspace = null;
 
   try {
@@ -160,7 +168,7 @@ export async function verifyProductionChain({
       origin: normalizedOrigin,
       path: "/api/workspaces",
       method: "POST",
-      body: { accountId, workspaceName, packageId }
+      body: { accountId, workspaceName: effectiveWorkspaceName, packageId }
     });
     assertWorkspaceShape(checks, workspace);
 
@@ -273,7 +281,9 @@ export async function verifyProductionChain({
     return {
       ok: true,
       accountId,
+      runId,
       workspaceId: workspace.id,
+      workspaceName: effectiveWorkspaceName,
       url: workspace.url,
       checks
     };
@@ -308,7 +318,8 @@ async function main() {
   const result = await verifyProductionChain({
     origin: args.origin || process.env.OPL_CONSOLE_ORIGIN,
     accountId: args.account || process.env.OPL_VERIFY_ACCOUNT_ID || DEFAULT_ACCOUNT_ID,
-    workspaceName: args.workspace || process.env.OPL_VERIFY_WORKSPACE_NAME || DEFAULT_WORKSPACE_NAME,
+    workspaceName: args.workspace || process.env.OPL_VERIFY_WORKSPACE_NAME,
+    runId: args["run-id"] || process.env.OPL_VERIFY_RUN_ID,
     packageId: args.package || process.env.OPL_VERIFY_PACKAGE_ID || DEFAULT_PACKAGE_ID,
     creditAmount: Number(args.credit || process.env.OPL_VERIFY_CREDIT_AMOUNT || DEFAULT_CREDIT_AMOUNT),
     workspaceUrlAttempts: Number(args["url-attempts"] || process.env.OPL_VERIFY_URL_ATTEMPTS || DEFAULT_WORKSPACE_URL_ATTEMPTS),
