@@ -5,7 +5,7 @@ import test from "node:test";
 import { renderTkeManifest } from "../../tools/render-tke-manifest.js";
 
 test("TKE production deploy workflow runs only on the VPC self-hosted runner", async () => {
-  const workflow = await readFile(".github/workflows/deploy-tke-preproduction.yml", "utf8");
+  const workflow = await readFile(".github/workflows/deploy-tke-production.yml", "utf8");
 
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /environment: production/);
@@ -35,7 +35,7 @@ test("TKE production deploy workflow runs only on the VPC self-hosted runner", a
 });
 
 test("TKE production deploy workflow installs secrets without command-line secret values", async () => {
-  const workflow = await readFile(".github/workflows/deploy-tke-preproduction.yml", "utf8");
+  const workflow = await readFile(".github/workflows/deploy-tke-production.yml", "utf8");
 
   assert.doesNotMatch(workflow, /--from-literal=DATABASE_URL/);
   assert.doesNotMatch(workflow, /--from-literal=OPENMETER_API_KEY/);
@@ -105,6 +105,8 @@ test("TKE production diagnostics workflow is read-only and runs on the VPC runne
   assert.match(workflow, /TENCENT_DEPLOY_KUBECONFIG_PATH: \$\{\{ vars\.TENCENT_DEPLOY_KUBECONFIG_PATH \|\| '\/home\/actions\/\.secrets\/medopl\/v22\/kubeconfig-package-d-deploy' \}\}/);
   assert.match(workflow, /kubectl --kubeconfig "\$KUBECONFIG" -n "\$OPL_K8S_NAMESPACE" get deploy,rs,pod,svc,ingress -o wide/);
   assert.match(workflow, /describe deployment opl-cloud-control-plane/);
+  assert.match(workflow, /describe ingress opl-cloud/);
+  assert.match(workflow, /get endpoints opl-cloud-control-plane -o wide/);
   assert.match(workflow, /get events --sort-by=\.lastTimestamp/);
   assert.match(workflow, /logs deploy\/opl-cloud-control-plane --all-containers=true --tail=200/);
   assert.match(workflow, /port-forward service\/opl-cloud-control-plane 18787:8787/);
