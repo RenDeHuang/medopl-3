@@ -146,6 +146,12 @@ test("TKE production diagnostics workflow is read-only and runs on the VPC runne
   assert.match(workflow, /runs-on: \[self-hosted, tencent-cloud, opl-cloud, tke-vpc\]/);
   assert.match(workflow, /TENCENT_DEPLOY_KUBECONFIG_PATH: \$\{\{ vars\.TENCENT_DEPLOY_KUBECONFIG_PATH \|\| '\/home\/actions\/\.secrets\/medopl\/v22\/kubeconfig-package-d-deploy' \}\}/);
   assert.match(workflow, /kubectl --kubeconfig "\$KUBECONFIG" -n "\$OPL_K8S_NAMESPACE" get deploy,rs,pod,svc,ingress -o wide/);
+  assert.match(workflow, /Show cluster node capacity/);
+  assert.match(workflow, /get nodes -o wide/);
+  assert.match(workflow, /allocatable/);
+  assert.match(workflow, /Show namespace resource requests/);
+  assert.match(workflow, /Describe pending workspace pods/);
+  assert.match(workflow, /STATUS:Pending/);
   assert.match(workflow, /describe deployment opl-cloud-control-plane/);
   assert.match(workflow, /describe ingress opl-cloud/);
   assert.match(workflow, /get endpoints opl-cloud-control-plane -o wide/);
