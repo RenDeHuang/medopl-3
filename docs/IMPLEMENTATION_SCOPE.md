@@ -5,7 +5,7 @@ This repository implements the OPL Cloud control-plane slice for OPL Console and
 ## Source Of Truth
 
 - [`one-person-lab`](https://github.com/gaofeng21cn/one-person-lab) is the development framework source. Its framework concepts guide how this repository models runtime providers, attempts, readiness, receipts, recovery, contracts, and human-visible gates.
-- [`one-person-lab-cloud`](https://github.com/gaofeng21cn/one-person-lab-cloud) is the OPL Cloud product definition. Its product matrix defines the Cloud product boundary: OPL Gateway, OPL Console, OPL Workspace, and planned Evidence Services.
+- [`one-person-lab-cloud`](https://github.com/gaofeng21cn/one-person-lab-cloud) is the OPL Cloud product definition. Its product matrix defines the Cloud product boundary: OPL Gateway, OPL Workspace, OPL Console, OPL Fabric, and OPL Ledger.
 - This repository is the implementation workspace for the OPL Console and OPL Workspace control-plane subset of OPL Cloud.
 
 ## Implemented Product Slice
@@ -14,9 +14,10 @@ This repository is responsible for:
 
 - OPL Console workspace provisioning and management.
 - OPL Workspace lifecycle control for local Docker and Tencent CVM runtimes.
+- OPL Fabric handoff through Local Docker, Tencent CVM, OpenTofu, Ansible, Caddy, and Harbor image contracts.
 - Workspace URL and token access.
 - Server and cloud disk lifecycle separation.
-- Billing ledger, storage hold, metering events, and Tencent bill reconciliation.
+- OPL Ledger records for billing, storage hold, audit events, metering events, verifier output, and Tencent bill reconciliation.
 - Runtime readiness, production readiness, and production chain verification.
 - Deployment handoff assets for Tencent CVM, CBS, Caddy, Harbor image validation, PostgreSQL, and OpenMeter.
 
@@ -41,7 +42,7 @@ This repository should not become the owner of:
 - OPL Gateway internals.
 - One Person Lab framework internals.
 - one-person-lab-app desktop or WebUI product internals.
-- Evidence Services beyond control-plane references, receipts, and future integration boundaries.
+- OPL Ledger services beyond control-plane receipts, reconciliation references, and future integration boundaries.
 - Capability pack marketplaces or domain-agent implementation details.
 
 If a future change primarily belongs to one of those areas, keep this repository to the integration contract and move the implementation to the owning repository or service.

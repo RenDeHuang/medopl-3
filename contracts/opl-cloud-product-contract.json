@@ -1,6 +1,13 @@
 {
   "schemaVersion": 1,
   "product": "OPL Cloud",
+  "layers": {
+    "gateway": "OPL Gateway",
+    "workspace": "OPL Workspace",
+    "console": "OPL Console",
+    "fabric": "OPL Fabric",
+    "ledger": "OPL Ledger"
+  },
   "console": "OPL Console",
   "workspace": "OPL Workspace",
   "resourceMapping": {

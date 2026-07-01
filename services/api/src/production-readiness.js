@@ -1,3 +1,7 @@
+import { access } from "node:fs/promises";
+import { constants } from "node:fs";
+import { delimiter, join } from "node:path";
+
 const REQUIRED_TENCENT_ENV = [
   "TENCENTCLOUD_SECRET_ID",
   "TENCENTCLOUD_SECRET_KEY",
@@ -43,7 +47,20 @@ function matchesOplAppContract(env) {
   );
 }
 
-export async function productionReadiness({ env = process.env, commandExists = async () => false } = {}) {
+async function commandExistsInPath(command, env) {
+  const pathValue = env.PATH || process.env.PATH || "";
+  for (const dir of pathValue.split(delimiter).filter(Boolean)) {
+    try {
+      await access(join(dir, command), constants.X_OK);
+      return true;
+    } catch {
+      // Keep scanning PATH.
+    }
+  }
+  return false;
+}
+
+export async function productionReadiness({ env = process.env, commandExists = (command) => commandExistsInPath(command, env) } = {}) {
   const missingEnv = [];
   const missingTools = [];
 

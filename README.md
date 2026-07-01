@@ -2,17 +2,20 @@
 
 OPL Cloud is the online hosted version of OPL.
 
-This repository holds the v1 product design and a compact OPL Console implementation for the Workspace provisioning flow.
+This repository is the OPL Cloud implementation workspace for the OPL Console and OPL Workspace control-plane flow.
 
-Implementation scope is fixed in [docs/IMPLEMENTATION_SCOPE.md](./docs/IMPLEMENTATION_SCOPE.md): `one-person-lab` provides the development framework concepts, `one-person-lab-cloud` provides the Cloud product definition, and this repository implements the OPL Console / OPL Workspace control-plane slice.
+Implementation scope is fixed in [docs/IMPLEMENTATION_SCOPE.md](./docs/IMPLEMENTATION_SCOPE.md): [`one-person-lab`](https://github.com/gaofeng21cn/one-person-lab) provides the development framework concepts, [`one-person-lab-cloud`](https://github.com/gaofeng21cn/one-person-lab-cloud) provides the Cloud product definition, and this repository implements the OPL Console / OPL Workspace control-plane slice.
 
 ## Product Names
 
 - `OPL Cloud`: the external product name.
+- `OPL Gateway`: the AI capability gateway and usage-metering boundary owned by the Cloud product architecture.
 - `OPL Console`: the management entry for opening workspaces, billing, access, and settings.
 - `OPL Workspace`: the actual working environment delivered as a URL.
+- `OPL Fabric`: the controlled compute and storage provisioning boundary.
+- `OPL Ledger`: receipts, billing ledger, audit events, metering, reconciliation, and verifier evidence.
 
-Do not use the old internal product name in product copy, UI, or design documents.
+Use only these OPL Cloud names in product copy, UI, and design documents.
 
 ## Confirmed Business Flow
 
@@ -330,16 +333,20 @@ API keys and model credentials must not be injected through CLI arguments, envir
 
 No-auth mode is acceptable only because OPL Cloud owns the Workspace URL token boundary. Do not expose the container directly without the OPL Workspace URL/token gateway or another trusted proxy boundary.
 
-## Seven Phases
+## Implementation Goal Ledger
 
-See [docs/IMPLEMENTATION_PLAN.md](./docs/IMPLEMENTATION_PLAN.md) for the current 7-phase plan:
+See [docs/IMPLEMENTATION_PLAN.md](./docs/IMPLEMENTATION_PLAN.md) for the current goal ledger. Work in this repository follows the One Person Lab development frame:
 
-1. Product and local runtime loop
-2. Tencent IaC scaffold
-3. Real Tencent CVM Workspace creation
-4. Cloud lifecycle controls
-5. PostgreSQL persistence
-6. OpenMeter metering
-7. Production hardening
+- goal
+- attempt
+- readiness
+- receipt
+- blocker
+- next step
+- human gate
+- recovery
+- evidence
+
+The goal ledger preserves the delivered Console, Workspace, Fabric, and Ledger capabilities while keeping real cloud verification behind an explicit human gate.
 
 For the production launch checklist and recovery notes, see [docs/PRODUCTION_RUNBOOK.md](./docs/PRODUCTION_RUNBOOK.md).

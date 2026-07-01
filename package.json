@@ -1,7 +1,8 @@
 {
-  "name": "opl-cloud",
+  "name": "one-person-lab-cloud-implementation",
   "version": "0.1.0",
   "private": true,
+  "description": "OPL Cloud implementation workspace for OPL Console and OPL Workspace control plane.",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",

@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { chmod, mkdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import { productionReadiness } from "../../services/api/src/production-readiness.js";
@@ -114,4 +117,29 @@ test("productionReadiness requires the one-person-lab-app WebUI runtime contract
     report.checks.find((check) => check.id === "opl_app_contract").message,
     "one-person-lab-app WebUI must expose port 3000 and persist /data plus /projects"
   );
+});
+
+test("productionReadiness default command probe checks required tools from PATH", async () => {
+  const binDir = join(tmpdir(), `opl-cloud-tools-${Date.now()}`);
+  await mkdir(binDir, { recursive: true });
+  try {
+    for (const tool of ["tofu", "ansible-playbook", "tccli", "caddy"]) {
+      const toolPath = join(binDir, tool);
+      await writeFile(toolPath, "#!/bin/sh\nexit 0\n");
+      await chmod(toolPath, 0o755);
+    }
+
+    const report = await productionReadiness({
+      env: {
+        ...productionEnv,
+        PATH: binDir
+      }
+    });
+
+    assert.equal(report.ready, true);
+    assert.deepEqual(report.missingTools, []);
+    assert.ok(report.checks.find((check) => check.id === "tools").ok);
+  } finally {
+    await rm(binDir, { recursive: true, force: true });
+  }
 });

@@ -1,266 +1,205 @@
-# OPL Cloud Seven-Phase Implementation Plan
+# OPL Cloud Implementation Goal Ledger
 
-This plan tracks the v1 business chain:
+This repository is the OPL Cloud implementation workspace for the OPL Console and OPL Workspace control-plane slice.
+
+## Product Truth
+
+[`one-person-lab-cloud`](https://github.com/gaofeng21cn/one-person-lab-cloud) owns the Cloud product definition and fixed product layers:
+
+- OPL Gateway
+- OPL Workspace
+- OPL Console
+- OPL Fabric
+- OPL Ledger
+
+This repository currently implements the OPL Console / OPL Workspace control plane, with early OPL Fabric and OPL Ledger boundaries.
+
+## Development Truth
+
+[`one-person-lab`](https://github.com/gaofeng21cn/one-person-lab) owns the development framework concepts. Work here is organized by:
+
+- goal
+- attempt
+- readiness
+- receipt
+- blocker
+- next step
+- human gate
+- recovery
+- evidence
+
+The repository should not accumulate phase-only smoke files, temporary reports, or broad staged narratives that outlive the actual implementation evidence.
+
+## Goal
+
+Support this business chain:
 
 ```text
-PI opens OPL Console
+PI signs in to OPL Console
 -> creates an OPL Workspace
 -> OPL Cloud creates one server, one cloud disk, one one-person-lab-app Docker runtime, and one URL
 -> PI shares the URL
 -> members enter the OPL Workspace without login
--> OPL Console manages lifecycle, billing, and audit
+-> OPL Console manages lifecycle, billing, audit, readiness, recovery, and evidence
 ```
 
-Development discipline follows the One Person Lab style: small durable contracts, focused diffs, no phase-only smoke artifacts in git, and machine-readable behavior tests instead of prose assertions.
-
-## Phase 1: Product and Local Runtime Loop
-
-Status: implemented.
-
-Delivered:
-
-- OPL Cloud, OPL Console, and OPL Workspace naming.
-- Product design freeze in `PRODUCT_DESIGN.md`.
-- Console UI for Workspace creation, URL access, server/disk lifecycle, billing, and audit.
-- Local Docker provider that writes real Docker Compose runtime artifacts under ignored `.runtime/workspaces`.
-- Optional local execution with `OPL_LOCAL_DOCKER_EXECUTE=1`.
-- Permanent URL token and no-login Workspace access rule.
-- Server and disk lifecycle separation.
-- 7-day storage pre-freeze.
-
-Durable checks:
-
-- `tests/workspace-lifecycle.test.js`
-- `tests/local-docker-provider.test.js`
-- `tests/workspace-url-route.test.js`
-
-## Phase 2: Tencent IaC Scaffold
-
-Status: implemented.
-
-Delivered:
-
-- OpenTofu scaffold in `infra/tencent-cvm`.
-- Tencent CVM server resource.
-- Tencent CBS cloud disk resource.
-- Server and disk attachment.
-- Cloud-init bootstrapping.
-- Ansible deployment for Docker Compose, Caddy route, and `one-person-lab-app`.
-- Sensitive Workspace URL output.
-
-Durable checks:
-
-- `tofu init -backend=false -input=false`
-- `tofu validate`
-
-Cleanup rule:
-
-- Remove `infra/tencent-cvm/.terraform/` after validation.
-- Do not commit `.terraform/`, tfstate, plan files, or cloud credentials.
-
-## Phase 3: Real Tencent CVM Workspace Creation
-
-Status: active.
-
-Delivered:
-
-- `tencent-cvm` runtime provider selectable with `OPL_RUNTIME_PROVIDER=tencent-cvm`.
-- Provider runs `tofu init`, `tofu apply`, `tofu output -json`, and `ansible-playbook`.
-- Provider maps server ID, disk ID, public IP, Docker image, URL, and disk mount back into the OPL Workspace record.
-- Provider fails closed until required Tencent environment and tools are present.
-- Provider exposes readiness data through `GET /api/runtime/readiness`.
-- OpenTofu state is isolated per Workspace under ignored `.runtime/tencent-cvm/<workspaceId>/`.
-
-Required environment:
+Resource invariant:
 
 ```text
-TENCENTCLOUD_SECRET_ID
-TENCENTCLOUD_SECRET_KEY
-TENCENTCLOUD_REGION
-OPL_WORKSPACE_DOMAIN
-OPL_VPC_ID
-OPL_SUBNET_ID
-OPL_SECURITY_GROUP_ID
-OPL_AVAILABILITY_ZONE
-OPL_IMAGE_ID
-OPL_SSH_KEY_ID
-OPL_WORKSPACE_IMAGE
+1 OPL Workspace
+= 1 server
+= 1 one-person-lab-app Docker container
+= 1 cloud disk
+= 1 URL
 ```
 
-Required tools on the API host:
+Server and cloud disk lifecycles stay separate. Server stop or destroy must not destroy the cloud disk. Disk destruction is explicit and is the only action that stops storage billing.
+
+## Current Attempts And Receipts
+
+### Console And Workspace Control Plane
+
+Attempt:
+
+- Implement the PI-facing OPL Console for workspace distribution.
+- Keep Workspace URLs token-gated and usable without member login.
+- Preserve one PI account to many Workspaces.
+
+Receipts:
+
+- `src/main.jsx`
+- `services/api/src/opl-cloud.js`
+- `tests/domain/workspace-lifecycle.test.js`
+- `tests/domain/workspace-url-route.test.js`
+- `contracts/opl-cloud-product-contract.json`
+- `contracts/opl-cloud-workspace-lifecycle-contract.json`
+
+### OPL Fabric Runtime Providers
+
+Attempt:
+
+- Keep Local Docker as the local runtime loop.
+- Keep Tencent CVM as the cloud runtime provider.
+- Hand off cloud provisioning through OpenTofu, Ansible, Caddy, Harbor image contracts, and Tencent CLI boundaries.
+
+Receipts:
+
+- `services/api/src/runtime-provider-factory.js`
+- `services/api/src/runtime-providers/local-docker.js`
+- `services/api/src/runtime-providers/tencent-cvm.js`
+- `infra/tencent-cvm/`
+- `tests/providers/local-docker-provider.test.js`
+- `tests/providers/tencent-cvm-provider.test.js`
+- `tests/providers/tencent-cvm-ansible.test.js`
+- `tests/providers/server-provider-config.test.js`
+
+### OPL Ledger And Evidence
+
+Attempt:
+
+- Keep OPL Console as the v1 billing truth.
+- Emit OpenMeter usage events when configured.
+- Preserve operation attempts, billing ledger entries, audit events, verifier output, and Tencent bill reconciliation evidence.
+
+Receipts:
+
+- `services/api/src/openmeter.js`
+- `services/api/src/billing-reconciliation.js`
+- `services/api/src/store.js`
+- `tools/reconcile-tencent-bills.js`
+- `tools/production-verifier.js`
+- `tests/billing/`
+- `tests/persistence/postgres-store.test.js`
+- `tests/production/production-verifier.test.js`
+
+### Production Readiness And Handoff
+
+Attempt:
+
+- Fail closed until production runtime provider, Harbor image, workspace domain, PostgreSQL, OpenMeter, Tencent environment, and required host tools are ready.
+- Validate the production manifest without leaking secrets.
+- Keep real cloud verification behind an operator-controlled human gate.
+
+Receipts:
+
+- `services/api/src/production-readiness.js`
+- `services/api/src/production-manifest.js`
+- `deploy/production-manifest.example.json`
+- `docs/PRODUCTION_RUNBOOK.md`
+- `tools/validate-production-manifest.js`
+- `tests/production/production-readiness.test.js`
+- `tests/production/production-manifest.test.js`
+- `tests/production/production-manifest-cli.test.js`
+
+## Readiness Gates
+
+Local readiness:
 
 ```text
-tofu
-ansible-playbook
-tccli
+GET /api/runtime/readiness
 ```
 
-Next real-cloud verification:
+Production readiness:
 
-1. Inject the environment through shell env, CI secrets, or a deployment secret manager.
-2. Start API with `OPL_RUNTIME_PROVIDER=tencent-cvm`.
-3. Open OPL Console and confirm runtime readiness is ready.
-4. Credit the PI account.
-5. Create one Basic Workspace.
-6. Verify Tencent creates one CVM, one CBS disk, one Docker runtime, and one URL.
-7. Verify the URL reaches the OPL WebUI and the disk is mounted to `/data`.
+```text
+GET /api/production/readiness
+```
 
-Do not copy secret files from older projects into this repo.
+Manifest readiness:
 
-## Phase 4: Cloud Lifecycle Controls
+```bash
+npm run validate:production-manifest -- --manifest deploy/production-manifest.example.json
+```
 
-Status: implemented at the Tencent CLI command boundary; real Tencent account verification is pending environment injection.
+Structural readiness:
 
-Goal:
+```bash
+sentrux check .
+```
 
-- Stop server billing without destroying CBS storage.
-- Restart or recreate the server while preserving the disk, token, and URL.
-- Destroy the server while retaining disk.
-- Destroy the disk only after explicit data-loss confirmation.
+Development verification:
 
-Delivered:
+```bash
+npm test
+npm run build
+```
 
-- `stopServer` runs `tccli cvm StopInstances --StoppedMode STOP_CHARGING` and keeps CBS storage active.
-- `restartServer` runs `tccli cvm StartInstances` for stopped servers and preserves the Workspace URL/token.
-- `recreateServer` runs `tccli cvm RunInstances`, attaches the retained CBS disk, describes the new public IP, then reruns Ansible when the previous server was destroyed.
-- `destroyServer` stops the CVM if needed, detaches CBS storage, then runs `tccli cvm TerminateInstances`.
-- `destroyDisk` is the only action that runs `tccli cbs TerminateDisks`.
-- `destroyDisk` first releases server compute when a user destroys storage from a running Workspace, then destroys the retained disk.
-- Tests assert that server lifecycle actions never call disk termination.
+## Human Gates
 
-Next real-cloud verification:
+The following actions require explicit human approval before execution:
 
-1. Inject Tencent env and make `tccli` available on the API host.
-2. Create a real Tencent Workspace.
-3. Stop server and verify server billing status stops while CBS remains billable and retained.
-4. Restart server and verify URL/token still point to the Workspace.
-5. Destroy server and verify CBS remains detached and billable.
-6. Restart the server-destroyed Workspace and verify Tencent creates a new CVM, attaches the retained CBS disk, reruns Ansible, and keeps the same URL/token.
-7. Destroy disk explicitly and verify storage billing stops.
+- Renaming the GitHub repository.
+- Renaming the local folder.
+- Running `npm run verify:production`.
+- Creating real Tencent CVM, CBS, DNS, or OpenMeter events.
+- Injecting or confirming production secrets.
 
-## Phase 5: PostgreSQL Persistence
+## Active Blockers
 
-Status: implemented and verified against a temporary real PostgreSQL container.
+Preproduction launch remains blocked until the operator provides or confirms:
 
-Goal:
+Required missing inputs:
 
-- Replace JSON file state with PostgreSQL as the durable control-plane database.
-- Keep JSON store only for local development if useful.
+- `DATABASE_URL`
+- `OPENMETER_ENDPOINT`
+- `OPENMETER_API_KEY`
+- `OPL_IMAGE_ID`
+- `OPL_SSH_KEY_ID`
 
-Tables to introduce:
+Needs human confirmation:
 
-- `accounts`
-- `workspaces`
-- `billing_ledger`
-- `audit_events`
-- `runtime_operations`
+- `OPL_HARBOR_REGISTRY`
+- `OPL_WORKSPACE_IMAGE`
+- `OPL_WORKSPACE_DOMAIN`
+- `TENCENTCLOUD_SECRET_ID`
+- `TENCENTCLOUD_SECRET_KEY`
+- `OPL_VPC_ID`
+- `OPL_SUBNET_ID`
+- `OPL_SECURITY_GROUP_ID`
+- `OPL_AVAILABILITY_ZONE`
 
-Delivered:
+Do not print secret values. Do not commit `.env.preproduction*`.
 
-- `PostgresStore` uses the same store interface as local JSON storage.
-- API selects PostgreSQL automatically when `DATABASE_URL` is configured.
-- Schema creation is owned by the API startup path.
-- Accounts, Workspaces, billing ledger entries, and audit events persist to dedicated PostgreSQL tables with JSONB state payloads.
-- `runtime_operations` persists runtime operation attempts for create, stop, restart, server destroy, and disk destroy.
-- Failed runtime provider calls are recorded as failed operations for retry and audit.
+## Next Step
 
-Requirements:
-
-- Workspace state must survive API restart.
-- Workspace URL/token state must remain stable.
-- Runtime operations should be auditable and retry-aware.
-
-Verification:
-
-1. `tests/postgres-store.test.js` verifies the table contract and transaction path.
-2. A temporary `postgres:16-alpine` container verified real `PostgresStore` read/write behavior.
-3. The temporary container and files are removed after verification.
-
-Next production step:
-
-- Provide a managed production `DATABASE_URL` and run the same create/restart/readback workflow against the deployed API.
-
-## Phase 6: OpenMeter Metering
-
-Status: implemented at the event sink boundary.
-
-Goal:
-
-- Send server runtime and storage usage events to OpenMeter.
-- Keep OPL Console ledger as the product billing truth for v1.
-- Keep Lago for later invoice or subscription workflows.
-
-Event families:
-
-- `workspace.server.running_hours`
-- `workspace.storage.gb_hours`
-- `workspace.storage.hold`
-- `workspace.lifecycle.action`
-
-Delivered:
-
-- `OpenMeterClient` posts CloudEvents-style JSON usage events to `OPENMETER_ENDPOINT`.
-- API enables OpenMeter only when both `OPENMETER_ENDPOINT` and `OPENMETER_API_KEY` are configured.
-- `openMeterDefinitions()` declares the production meter definitions for server running hours and storage GB-hours.
-- Billing settlement emits:
-  - `workspace.server.running_hours`
-  - `workspace.storage.gb_hours`
-- OpenMeter rejection fails the settlement request instead of silently splitting ledger and usage events.
-- `npm run reconcile:tencent` compares OPL ledger debits to Tencent bill totals plus the 10% markup and fails non-zero on mismatches.
-- `npm run reconcile:tencent -- --console-origin <url> --account <id>` reads the OPL ledger from a deployed OPL Console state endpoint, so production reconciliation does not require a temporary `ledger.json` file in the repository.
-- `npm run reconcile:tencent -- --tencent-format raw` normalizes Tencent billing export rows when they carry a `workspace_id` tag.
-
-Not yet delivered:
-
-- OpenMeter dashboards.
-- Lago invoice/subscription integration.
-- Direct Tencent billing API download. The current reconciliation boundary accepts normalized JSON or raw exported rows and can pair them with the live deployed OPL Console ledger.
-
-Billing rules remain:
-
-- Hourly server billing.
-- Storage billing until disk destruction.
-- Tencent cost plus 10% platform markup.
-- 7-day storage pre-freeze before opening or resuming.
-
-## Phase 7: Production Hardening
-
-Status: partially implemented; production readiness gate and runbook are in place, while real launch verification is pending production environment injection.
-
-Goal:
-
-- Use Harbor as the production image registry.
-- Use Caddy for HTTPS Workspace URL routing.
-- Move secrets into a deployment secret manager.
-- Add audit/recovery runbooks.
-- Add cloud cost reconciliation against Tencent billing.
-
-Delivered:
-
-- `GET /api/production/readiness` checks production provider, Harbor image, workspace domain, PostgreSQL, OpenMeter, Tencent env, and required host tools.
-- Production readiness requires `OPL_WORKSPACE_IMAGE` to come from the configured `OPL_HARBOR_REGISTRY`.
-- Production readiness also enforces the `one-person-lab-app` Docker/WebUI contract: port `3000`, persistent `/data`, and persistent `/projects`.
-- OPL Console displays production launch blockers.
-- `deploy/production-manifest.example.json` defines the production secretRef handoff contract.
-- `npm run validate:production-manifest` validates required launch variables and fails if sensitive values are inlined.
-- `npm run verify:production` runs the deployed API business-chain verifier without writing smoke artifacts to the repo.
-- The production verifier appends a unique run id to the default verification Workspace name, preventing repeated runs from reusing a previously destroyed Workspace record.
-- The production verifier also includes the run id in credit and billing settlement source event ids, making verification ledger entries traceable during reconciliation.
-- The production verifier now destroys its verification server and disk after the lifecycle and billing checks complete, reducing the chance of validation resources continuing to bill after a successful run.
-- If the production verifier fails after Workspace creation, it still attempts verification server and disk cleanup before returning the original failure, and attaches cleanup errors for operator recovery.
-- The production verifier CLI emits structured JSON on both success and failure, so deployment records can capture `cleanupErrors` without writing smoke files into the repo.
-- `npm run reconcile:tencent` provides the Tencent bill reconciliation gate for deployment records without writing smoke artifacts to the repo.
-- `docs/PRODUCTION_RUNBOOK.md` defines launch, recovery, and artifact hygiene checks.
-- Tencent Ansible installs Caddy, imports Workspace routes from `/etc/caddy/conf.d/*.caddy`, and fails deployment when the token-gated route cannot reload.
-- Tencent Ansible mounts the attached CBS data disk at `/data/opl` before starting the `one-person-lab-app` Docker runtime, then maps `/data/opl/data` to `/data` and `/data/opl/projects` to `/projects`.
-
-Hardening requirements:
-
-- No committed secrets.
-- No public no-auth container without token gateway or trusted proxy boundary.
-- No untracked runtime artifacts left in the repo after verification.
-- Workspace URL contains a permanent owner-controlled token until reset or deletion.
-
-## Current Blocker For Real Phase 3
-
-The repository is ready to attempt real Tencent creation once the required Tencent environment variables are injected. Without those values, `tencent-cvm` intentionally reports readiness gaps and refuses to create cloud resources.
+Close the implementation repository around the current product truth, fix production readiness correctness, rerun safe verification, and leave real cloud verification gated for the operator.

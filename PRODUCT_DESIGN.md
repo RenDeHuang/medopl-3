@@ -10,7 +10,7 @@ OPL Console is the management entry. It handles workspace creation, configuratio
 
 OPL Workspace is the real working environment users access. It is delivered as a URL and runs one dedicated `one-person-lab-app` Docker instance.
 
-The old internal product name must not be used in product copy, user-facing UI, or future design documents.
+Product copy, user-facing UI, and future design documents must use only the fixed OPL Cloud names.
 
 ## Target User
 
@@ -58,6 +58,14 @@ Servers and cloud disks have separate lifecycles. Stopping or destroying a serve
 ## Product Responsibilities
 
 OPL Cloud owns the online hosted product experience.
+
+The fixed OPL Cloud product layers are:
+
+- OPL Gateway: AI capability gateway, provider routing, token policy, and usage-metering boundary.
+- OPL Workspace: the URL-delivered working environment running `one-person-lab-app`.
+- OPL Console: the account, billing, access, settings, and lifecycle control surface.
+- OPL Fabric: the compute, storage, image, route, and infrastructure handoff layer.
+- OPL Ledger: billing ledger, audit events, usage receipts, verifier output, and reconciliation evidence.
 
 OPL Console owns:
 
