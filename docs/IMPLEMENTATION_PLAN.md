@@ -77,7 +77,7 @@ destroyDisk()
 
 Goal: implement route A with real Tencent Cloud resources.
 
-Status: production handoff scaffold exists in `infra/tencent-cvm`. The API provider currently fails closed unless a real cloud execution runner is configured and writes OpenTofu/Ansible outputs back to the Workspace record.
+Status: provider runner is wired and fails closed unless required tools and environment variables are present. The provider runs OpenTofu, reads outputs, runs Ansible, and maps server/disk/URL outputs back to the Workspace runtime record.
 
 Expected tools:
 
@@ -126,6 +126,13 @@ Handoff files:
 - `infra/tencent-cvm/cloud-init.yml`
 - `infra/tencent-cvm/ansible/workspace.yml`
 - `infra/tencent-cvm/ansible/Caddyfile.j2`
+
+Required API host tools:
+
+- `tofu`
+- `ansible-playbook`
+
+Required secret/config variables are documented in `.env.example`. Do not copy secret files from older projects into this repo.
 
 ## Phase 4: Billing and Audit Closure
 

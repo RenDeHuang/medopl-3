@@ -20,6 +20,15 @@ test("unknown provider is not selectable for runtime execution", () => {
   );
 });
 
+test("Tencent CVM provider is selectable for cloud runtime execution", () => {
+  const provider = createRuntimeProvider({
+    env: { OPL_RUNTIME_PROVIDER: "tencent-cvm" },
+    rootDir: ".runtime/test-provider"
+  });
+
+  assert.equal(provider.name, "tencent-cvm");
+});
+
 test("Tencent CVM provider fails closed until required cloud environment is present", async () => {
   const provider = new TencentCvmProvider({ env: {} });
   await assert.rejects(

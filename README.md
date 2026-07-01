@@ -95,6 +95,8 @@ The current app implements the local business-chain loop with the Local Docker p
 
 Production Tencent CVM handoff files are in [infra/tencent-cvm](./infra/tencent-cvm). They define the OpenTofu, Ansible, and Caddy shape for route A, but the cloud execution runner still needs to apply the plan, run Ansible, and write outputs back to the API.
 
+The Tencent CVM provider now has the runner boundary wired into the API. It remains fail-closed unless the required environment variables and tools are present.
+
 ## Run Locally
 
 ```bash
@@ -124,3 +126,32 @@ Then open:
 ```text
 http://127.0.0.1:5173
 ```
+
+## Tencent CVM Provider
+
+Install OpenTofu and Ansible on the API host, then inject this repo's environment variables from your secret manager:
+
+```bash
+cp .env.example .env
+```
+
+Do not copy secret files from older projects into this repository. Use `.env.example` as the variable contract and provide real values through local shell env, CI secrets, or a deployment secret manager.
+
+Run with Tencent CVM provisioning enabled:
+
+```bash
+OPL_RUNTIME_PROVIDER=tencent-cvm \
+OPL_WORKSPACE_IMAGE=<harbor-image> \
+PORT=8787 npm start
+```
+
+On Workspace creation, the provider runs:
+
+```text
+tofu init
+tofu apply
+tofu output -json
+ansible-playbook ansible/workspace.yml
+```
+
+Then it maps OpenTofu outputs back into the OPL Workspace record: server ID, disk ID, public IP, Docker image, stable URL, and token access state.

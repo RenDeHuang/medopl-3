@@ -152,6 +152,7 @@ export class OplCloudService {
 
       const runtime = await this.runtimeProvider.createWorkspaceRuntime({
         workspaceId,
+        ownerAccountId: accountId,
         workspaceName,
         packagePlan,
         token
