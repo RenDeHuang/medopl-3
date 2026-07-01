@@ -209,6 +209,32 @@ Verified external entrypoints:
 - `https://cloud.medopl.cn/api/production/readiness` returns HTTP 200 with `ready: true`.
 - `https://workspace.medopl.cn/` returns HTTP 200.
 
+Verified production Workspace lifecycle:
+
+- Run id: `20260701T234830Z-console-decoupling`.
+- Verification Workspace: `ws-17j7ziq`.
+- Receipt path: `.runtime/verification/20260701T234830Z-console-decoupling.stdout.json` (ignored, not committed).
+- Result: `ok: true`.
+- Runtime status passed on first attempt:
+  - `deployment_ready`
+  - `workspace_image_pulled`
+  - `pvc_bound`
+  - `deployment_uses_retained_pvc`
+  - `service_targets_workspace`
+  - `service_endpoints_ready`
+  - `ingress_routes_workspace_url`
+- Workspace URL opened on first attempt before and after compute recreation.
+- Lifecycle checks passed:
+  - stop compute while retaining storage
+  - restart compute
+  - destroy compute while retaining storage
+  - recreate compute from retained storage
+  - settle billing
+  - destroy verification compute
+  - destroy verification storage
+- Cleanup errors: none.
+- Console state after cleanup: `state=destroyed`, `server.billingStatus=stopped`, `disk.billingStatus=stopped`, `account.frozen=0`.
+
 Legacy CVM-only inputs are no longer production blockers for the TKE route:
 
 - `OPL_IMAGE_ID`
@@ -218,4 +244,4 @@ Do not print secret values. Do not commit `.env.production*` or legacy `.env.pre
 
 ## Next Step
 
-Close the Workspace usability proof behind the operator gate: run the production verifier only after explicit approval, keep its JSON receipt outside git, and use the result to prove that a real TKE Workspace creates one runtime compute unit, one PVC, one one-person-lab-app container, and one token-gated URL.
+Close the remaining v1 semantics around destroyed Workspaces: when storage is destroyed, the URL/token state should become unavailable or revoked in the Console record even if historical audit data remains. After that, prepare the external tutorial screenshot refresh as a separate documentation task owned by the Gateway/App tutorial surface, not by the OPL Console control-plane implementation.
