@@ -5,6 +5,7 @@ import { productionReadiness } from "../services/api/src/production-readiness.js
 
 const productionEnv = {
   OPL_RUNTIME_PROVIDER: "tencent-cvm",
+  OPL_HARBOR_REGISTRY: "harbor.oplcloud.cn",
   OPL_WORKSPACE_IMAGE: "harbor.oplcloud.cn/opl/one-person-lab-webui:2026-07-01",
   OPL_WORKSPACE_DOMAIN: "workspaces.oplcloud.cn",
   DATABASE_URL: "postgres://opl:secret@db.example.com:5432/opl_cloud",
@@ -63,4 +64,30 @@ test("productionReadiness reports concrete production blockers without leaking s
   assert.ok(report.failedChecks.includes("harbor_image"));
   assert.ok(report.failedChecks.includes("workspace_domain"));
   assert.equal(JSON.stringify(report).includes("sid"), false);
+});
+
+test("productionReadiness requires the Workspace image to come from the configured Harbor registry", async () => {
+  const missingRegistry = await productionReadiness({
+    env: {
+      ...productionEnv,
+      OPL_HARBOR_REGISTRY: ""
+    },
+    commandExists: () => true
+  });
+  assert.equal(missingRegistry.ready, false);
+  assert.ok(missingRegistry.missingEnv.includes("OPL_HARBOR_REGISTRY"));
+  assert.ok(missingRegistry.failedChecks.includes("harbor_image"));
+
+  const wrongRegistry = await productionReadiness({
+    env: {
+      ...productionEnv,
+      OPL_HARBOR_REGISTRY: "harbor.oplcloud.cn",
+      OPL_WORKSPACE_IMAGE: "registry.example.com/opl/one-person-lab-webui:2026-07-01"
+    },
+    commandExists: () => true
+  });
+
+  assert.equal(wrongRegistry.ready, false);
+  assert.deepEqual(wrongRegistry.missingEnv, []);
+  assert.ok(wrongRegistry.failedChecks.includes("harbor_image"));
 });

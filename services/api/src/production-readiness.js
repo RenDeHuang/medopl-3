@@ -16,8 +16,19 @@ function check(id, ok, message) {
   return { id, ok, message };
 }
 
-function looksLikeHarborImage(image) {
-  return Boolean(image && !image.startsWith("ghcr.io/") && image.includes("/") && image.includes(":"));
+function normalizeRegistry(registry) {
+  return String(registry || "").replace(/^https?:\/\//, "").replace(/\/$/, "");
+}
+
+function looksLikeHarborImage({ image, registry }) {
+  const normalizedRegistry = normalizeRegistry(registry);
+  return Boolean(
+    image &&
+    normalizedRegistry &&
+    image.startsWith(`${normalizedRegistry}/`) &&
+    image.includes("/") &&
+    image.includes(":")
+  );
 }
 
 function looksLikeProductionDomain(domain) {
@@ -30,6 +41,7 @@ export async function productionReadiness({ env = process.env, commandExists = a
 
   const requiredEnv = [
     "OPL_RUNTIME_PROVIDER",
+    "OPL_HARBOR_REGISTRY",
     "OPL_WORKSPACE_IMAGE",
     "OPL_WORKSPACE_DOMAIN",
     "DATABASE_URL",
@@ -46,7 +58,11 @@ export async function productionReadiness({ env = process.env, commandExists = a
 
   const checks = [
     check("runtime_provider", env.OPL_RUNTIME_PROVIDER === "tencent-cvm", "OPL_RUNTIME_PROVIDER must be tencent-cvm"),
-    check("harbor_image", looksLikeHarborImage(env.OPL_WORKSPACE_IMAGE), "OPL_WORKSPACE_IMAGE must point to the Harbor production image"),
+    check(
+      "harbor_image",
+      looksLikeHarborImage({ image: env.OPL_WORKSPACE_IMAGE, registry: env.OPL_HARBOR_REGISTRY }),
+      "OPL_WORKSPACE_IMAGE must point to the configured Harbor production registry"
+    ),
     check("workspace_domain", looksLikeProductionDomain(env.OPL_WORKSPACE_DOMAIN), "OPL_WORKSPACE_DOMAIN must be a production wildcard domain"),
     check("database_url", Boolean(env.DATABASE_URL), "DATABASE_URL is required for production persistence"),
     check("openmeter", Boolean(env.OPENMETER_ENDPOINT && env.OPENMETER_API_KEY), "OpenMeter endpoint and API key are required"),

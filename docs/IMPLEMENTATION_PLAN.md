@@ -232,6 +232,7 @@ Goal:
 Delivered:
 
 - `GET /api/production/readiness` checks production provider, Harbor image, workspace domain, PostgreSQL, OpenMeter, Tencent env, and required host tools.
+- Production readiness requires `OPL_WORKSPACE_IMAGE` to come from the configured `OPL_HARBOR_REGISTRY`.
 - OPL Console displays production launch blockers.
 - `docs/PRODUCTION_RUNBOOK.md` defines launch, recovery, and artifact hygiene checks.
 - Tencent Ansible installs Caddy, imports Workspace routes from `/etc/caddy/conf.d/*.caddy`, and fails deployment when the token-gated route cannot reload.

@@ -26,6 +26,7 @@ TENCENTCLOUD_SECRET_ID
 TENCENTCLOUD_SECRET_KEY
 TENCENTCLOUD_REGION
 OPL_RUNTIME_PROVIDER=tencent-cvm
+OPL_HARBOR_REGISTRY
 OPL_WORKSPACE_DOMAIN
 OPL_WORKSPACE_IMAGE
 OPL_VPC_ID
@@ -36,7 +37,7 @@ OPL_IMAGE_ID
 OPL_SSH_KEY_ID
 ```
 
-`OPL_WORKSPACE_IMAGE` must point to the Harbor production image, not a public development image.
+`OPL_WORKSPACE_IMAGE` must start with `OPL_HARBOR_REGISTRY/` and point to the Harbor production image, not a public development image.
 
 ## Required Host Tools
 
