@@ -4,7 +4,7 @@ import test from "node:test";
 
 import { renderTkeManifest } from "../../tools/render-tke-manifest.js";
 
-test("TKE preproduction deploy workflow runs only on the VPC self-hosted runner", async () => {
+test("TKE production deploy workflow runs only on the VPC self-hosted runner", async () => {
   const workflow = await readFile(".github/workflows/deploy-tke-preproduction.yml", "utf8");
 
   assert.match(workflow, /workflow_dispatch:/);
@@ -21,9 +21,15 @@ test("TKE preproduction deploy workflow runs only on the VPC self-hosted runner"
   assert.match(workflow, /kubectl --kubeconfig "\$KUBECONFIG"/);
   assert.match(workflow, /rollout status deployment\/opl-cloud-control-plane/);
   assert.match(workflow, /get ingress opl-cloud/);
+
+  const localKubeconfigCheck = workflow.indexOf('if [ -f "$TENCENT_DEPLOY_KUBECONFIG_PATH" ]; then');
+  const base64KubeconfigCheck = workflow.indexOf('if [ -n "${TENCENT_DEPLOY_KUBECONFIG_B64:-}" ]; then');
+  assert.ok(localKubeconfigCheck > -1);
+  assert.ok(base64KubeconfigCheck > -1);
+  assert.ok(localKubeconfigCheck < base64KubeconfigCheck);
 });
 
-test("TKE preproduction deploy workflow installs secrets without command-line secret values", async () => {
+test("TKE production deploy workflow installs secrets without command-line secret values", async () => {
   const workflow = await readFile(".github/workflows/deploy-tke-preproduction.yml", "utf8");
 
   assert.doesNotMatch(workflow, /--from-literal=DATABASE_URL/);

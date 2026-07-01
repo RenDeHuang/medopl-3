@@ -65,12 +65,12 @@ jobs:
           secret_dir="$(mktemp -d)"
           chmod 700 "$secret_dir"
           kubeconfig="$secret_dir/kubeconfig"
-          if [ -n "${TENCENT_DEPLOY_KUBECONFIG_B64:-}" ]; then
+          if [ -f "$TENCENT_DEPLOY_KUBECONFIG_PATH" ]; then
+            cp "$TENCENT_DEPLOY_KUBECONFIG_PATH" "$kubeconfig"
+          elif [ -n "${TENCENT_DEPLOY_KUBECONFIG_B64:-}" ]; then
             printf '%s' "$TENCENT_DEPLOY_KUBECONFIG_B64" | base64 -d > "$kubeconfig"
           elif [ -n "${TENCENT_DEPLOY_KUBECONFIG:-}" ]; then
             printf '%s' "$TENCENT_DEPLOY_KUBECONFIG" > "$kubeconfig"
-          elif [ -f "$TENCENT_DEPLOY_KUBECONFIG_PATH" ]; then
-            cp "$TENCENT_DEPLOY_KUBECONFIG_PATH" "$kubeconfig"
           else
             echo "No deploy kubeconfig was provided." >&2
             exit 1
