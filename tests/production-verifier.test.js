@@ -359,6 +359,8 @@ test("production verifier reports cleanup failures without hiding the original v
 
 test("production verifier uses a unique default Workspace name for each run", async () => {
   const workspaceNames = [];
+  const creditReasons = [];
+  const settlementSourceEventIds = [];
   const cleanupWorkspace = (workspace) => ({
     ...workspace,
     state: "destroyed",
@@ -394,7 +396,10 @@ test("production verifier uses a unique default Workspace name for each run", as
         if (parsed.origin !== "https://console.oplcloud.cn") return htmlResponse("<html>OPL Workspace</html>");
         if (`${method} ${parsed.pathname}` === "GET /api/production/readiness") return jsonResponse({ ready: true, missingEnv: [], missingTools: [], failedChecks: [], checks: [] });
         if (`${method} ${parsed.pathname}` === "GET /api/runtime/readiness") return jsonResponse({ provider: "tencent-cvm", ready: true, missingEnv: [], missingTools: [] });
-        if (`${method} ${parsed.pathname}` === "POST /api/accounts/credit") return jsonResponse({ id: "pi-prod", balance: 1000, frozen: 0 });
+        if (`${method} ${parsed.pathname}` === "POST /api/accounts/credit") {
+          creditReasons.push(JSON.parse(options.body).reason);
+          return jsonResponse({ id: "pi-prod", balance: 1000, frozen: 0 });
+        }
         if (`${method} ${parsed.pathname}` === "POST /api/workspaces") {
           const body = JSON.parse(options.body);
           workspaceNames.push(body.workspaceName);
@@ -403,7 +408,10 @@ test("production verifier uses a unique default Workspace name for each run", as
         if (`${method} ${parsed.pathname}` === "POST /api/workspaces/stop-server") return jsonResponse({ ...workspace, state: "stopped_server_disk_retained", server: { ...workspace.server, status: "stopped", billingStatus: "stopped" } });
         if (`${method} ${parsed.pathname}` === "POST /api/workspaces/restart-server") return jsonResponse(workspace);
         if (`${method} ${parsed.pathname}` === "POST /api/workspaces/destroy-server") return jsonResponse({ ...workspace, state: "server_destroyed_disk_retained", server: { ...workspace.server, status: "destroyed", billingStatus: "stopped" }, disk: { ...workspace.disk, status: "detached_retained" } });
-        if (`${method} ${parsed.pathname}` === "POST /api/billing/settle") return jsonResponse({ entries: [{ type: "server_debit" }, { type: "storage_debit" }], metering: [{ ok: true }] });
+        if (`${method} ${parsed.pathname}` === "POST /api/billing/settle") {
+          settlementSourceEventIds.push(JSON.parse(options.body).sourceEventId);
+          return jsonResponse({ entries: [{ type: "server_debit" }, { type: "storage_debit" }], metering: [{ ok: true }] });
+        }
         if (`${method} ${parsed.pathname}` === "POST /api/workspaces/destroy-disk") return jsonResponse(cleanupWorkspace(workspace));
         throw new Error(`unexpected_request:${method} ${parsed.pathname}`);
       }
@@ -416,5 +424,13 @@ test("production verifier uses a unique default Workspace name for each run", as
   assert.deepEqual(workspaceNames, [
     "Production Verification Lab run-a1",
     "Production Verification Lab run-b2"
+  ]);
+  assert.deepEqual(creditReasons, [
+    "production_verification_credit:run-a1",
+    "production_verification_credit:run-b2"
+  ]);
+  assert.deepEqual(settlementSourceEventIds, [
+    "production_verification_tick:run-a1",
+    "production_verification_tick:run-b2"
   ]);
 });

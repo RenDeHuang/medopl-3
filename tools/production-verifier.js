@@ -146,6 +146,8 @@ export async function verifyProductionChain({
   const checks = [];
   const normalizedOrigin = normalizeOrigin(origin);
   const effectiveWorkspaceName = workspaceName || `${DEFAULT_WORKSPACE_NAME} ${runId}`;
+  const creditSourceEventId = `production_verification_credit:${runId}`;
+  const settlementSourceEventId = `production_verification_tick:${runId}`;
   let workspace = null;
 
   try {
@@ -160,7 +162,7 @@ export async function verifyProductionChain({
       origin: normalizedOrigin,
       path: "/api/accounts/credit",
       method: "POST",
-      body: { accountId, amount: creditAmount, reason: "production_verification_credit" }
+      body: { accountId, amount: creditAmount, reason: creditSourceEventId }
     });
 
     workspace = await requestJson({
@@ -256,7 +258,7 @@ export async function verifyProductionChain({
       origin: normalizedOrigin,
       path: "/api/billing/settle",
       method: "POST",
-      body: { accountId, workspaceId: workspace.id, hours: 1, sourceEventId: "production_verification_tick" }
+      body: { accountId, workspaceId: workspace.id, hours: 1, sourceEventId: settlementSourceEventId }
     });
     addCheck(checks, "billing_settlement", Boolean(
       Array.isArray(settlement.entries) &&

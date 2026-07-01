@@ -288,7 +288,7 @@ destroy verification server
 destroy verification disk
 ```
 
-This command creates billable Tencent Cloud resources and lifecycle events, then attempts to clean up the verification server and disk on both success and post-creation failure paths. By default, the Workspace name includes a unique run id so repeated verification runs create fresh cloud resources instead of reusing a previously destroyed Workspace record. Use a dedicated verification account. If the verifier reports cleanup errors, inspect OPL Console and Tencent Cloud and explicitly destroy any remaining verification resources. The command writes no smoke report or generated artifact into the repository.
+This command creates billable Tencent Cloud resources and lifecycle events, then attempts to clean up the verification server and disk on both success and post-creation failure paths. By default, the Workspace name and verification ledger source events include a unique run id so repeated verification runs create fresh cloud resources and remain traceable in billing records. Use a dedicated verification account. If the verifier reports cleanup errors, inspect OPL Console and Tencent Cloud and explicitly destroy any remaining verification resources. The command writes no smoke report or generated artifact into the repository.
 
 Optional verifier controls:
 
