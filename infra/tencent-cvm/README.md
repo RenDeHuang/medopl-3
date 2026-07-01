@@ -62,10 +62,12 @@ ansible-playbook -i "<public_ip>," ansible/workspace.yml \
 
 ## Lifecycle Boundary
 
-- `stopServer`: stop CVM/server billing only. Keep CBS disk.
-- `restartServer`: start or recreate CVM, reattach CBS disk, preserve URL/token.
-- `destroyServer`: destroy CVM. Keep CBS disk.
-- `destroyDisk`: destroy CBS disk after explicit data-loss confirmation. This is the only operation that stops storage billing.
+- `stopServer`: runs `tccli cvm StopInstances --StoppedMode STOP_CHARGING`. Keep CBS disk.
+- `restartServer`: runs `tccli cvm StartInstances`. Preserve URL/token.
+- `destroyServer`: stops CVM if needed, runs `tccli cbs DetachDisks`, then `tccli cvm TerminateInstances`. Keep CBS disk.
+- `destroyDisk`: runs `tccli cbs TerminateDisks` after explicit data-loss confirmation. This is the only operation that stops storage billing.
+
+The API host must have `tccli` configured with Tencent credentials from the environment or a deployment secret manager.
 
 ## Production Notes
 

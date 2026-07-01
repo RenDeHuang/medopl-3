@@ -92,6 +92,7 @@ Required tools on the API host:
 ```text
 tofu
 ansible-playbook
+tccli
 ```
 
 Next real-cloud verification:
@@ -108,7 +109,7 @@ Do not copy secret files from older projects into this repo.
 
 ## Phase 4: Cloud Lifecycle Controls
 
-Status: not implemented.
+Status: implemented at the Tencent CLI command boundary; real Tencent account verification is pending environment injection.
 
 Goal:
 
@@ -117,11 +118,22 @@ Goal:
 - Destroy the server while retaining disk.
 - Destroy the disk only after explicit data-loss confirmation.
 
-Implementation direction:
+Delivered:
 
-- Prefer Tencent Cloud APIs or OpenTofu state-aware operations that preserve the separate server/disk lifecycle.
-- Keep per-Workspace state isolated under `.runtime/tencent-cvm/<workspaceId>/`.
-- Never implement destructive fallbacks that can delete storage when only server lifecycle was requested.
+- `stopServer` runs `tccli cvm StopInstances --StoppedMode STOP_CHARGING` and keeps CBS storage active.
+- `restartServer` runs `tccli cvm StartInstances` and preserves the Workspace URL/token.
+- `destroyServer` stops the CVM if needed, detaches CBS storage, then runs `tccli cvm TerminateInstances`.
+- `destroyDisk` is the only action that runs `tccli cbs TerminateDisks`.
+- Tests assert that server lifecycle actions never call disk termination.
+
+Next real-cloud verification:
+
+1. Inject Tencent env and make `tccli` available on the API host.
+2. Create a real Tencent Workspace.
+3. Stop server and verify server billing status stops while CBS remains billable and retained.
+4. Restart server and verify URL/token still point to the Workspace.
+5. Destroy server and verify CBS remains.
+6. Destroy disk explicitly and verify storage billing stops.
 
 ## Phase 5: PostgreSQL Persistence
 

@@ -189,6 +189,18 @@ Then it maps OpenTofu outputs back into the OPL Workspace record: server ID, dis
 
 Each Workspace gets isolated OpenTofu state under ignored `.runtime/tencent-cvm/<workspaceId>/`. Do not commit tfstate, `.terraform/`, `.runtime/`, plans, or credentials.
 
+Cloud lifecycle controls use Tencent Cloud CLI on the API host:
+
+```text
+tccli cvm StopInstances --StoppedMode STOP_CHARGING
+tccli cvm StartInstances
+tccli cbs DetachDisks
+tccli cvm TerminateInstances
+tccli cbs TerminateDisks
+```
+
+Server actions intentionally retain CBS storage. `TerminateDisks` is used only by the explicit disk destruction action.
+
 ## OPL WebUI Runtime Boundary
 
 The `one-person-lab-app` Docker runtime should persist data under `/data`. The current templates set:

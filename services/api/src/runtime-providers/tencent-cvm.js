@@ -17,7 +17,7 @@ const REQUIRED_ENV = [
   "OPL_SSH_KEY_ID",
   "OPL_WORKSPACE_IMAGE"
 ];
-const REQUIRED_TOOLS = ["tofu", "ansible-playbook"];
+const REQUIRED_TOOLS = ["tofu", "ansible-playbook", "tccli"];
 
 function compactId(value) {
   return String(value)
@@ -206,20 +206,68 @@ export class TencentCvmProvider {
     };
   }
 
-  async stopServer() {
-    throw new Error("tencent_cvm_provider_not_configured");
+  async stopServer({ workspace }) {
+    await this.runTccli("cvm", "StopInstances", [
+      "--InstanceIds",
+      JSON.stringify([workspace.server.id]),
+      "--StoppedMode",
+      "STOP_CHARGING"
+    ]);
+    return {
+      ...workspace.server,
+      status: "stopped",
+      billingStatus: "stopped"
+    };
   }
 
-  async restartServer() {
-    throw new Error("tencent_cvm_provider_not_configured");
+  async restartServer({ workspace }) {
+    await this.runTccli("cvm", "StartInstances", [
+      "--InstanceIds",
+      JSON.stringify([workspace.server.id])
+    ]);
+    return {
+      ...workspace.server,
+      status: "running",
+      billingStatus: "active"
+    };
   }
 
-  async destroyServer() {
-    throw new Error("tencent_cvm_provider_not_configured");
+  async destroyServer({ workspace }) {
+    if (workspace.server.status !== "stopped") {
+      await this.runTccli("cvm", "StopInstances", [
+        "--InstanceIds",
+        JSON.stringify([workspace.server.id]),
+        "--StoppedMode",
+        "STOP_CHARGING"
+      ]);
+    }
+    if (workspace.disk?.id && workspace.disk.status !== "detached_retained" && workspace.disk.status !== "destroyed") {
+      await this.runTccli("cbs", "DetachDisks", [
+        "--DiskIds",
+        JSON.stringify([workspace.disk.id])
+      ]);
+    }
+    await this.runTccli("cvm", "TerminateInstances", [
+      "--InstanceIds",
+      JSON.stringify([workspace.server.id])
+    ]);
+    return {
+      ...workspace.server,
+      status: "destroyed",
+      billingStatus: "stopped"
+    };
   }
 
-  async destroyDisk() {
-    throw new Error("tencent_cvm_provider_not_configured");
+  async destroyDisk({ workspace }) {
+    await this.runTccli("cbs", "TerminateDisks", [
+      "--DiskIds",
+      JSON.stringify([workspace.disk.id])
+    ]);
+    return {
+      ...workspace.disk,
+      status: "destroyed",
+      billingStatus: "stopped"
+    };
   }
 
   requireExecutionBoundary() {
@@ -242,6 +290,23 @@ export class TencentCvmProvider {
       stateFile: join(stateDir, "terraform.tfstate"),
       backupFile: join(stateDir, "terraform.tfstate.backup")
     };
+  }
+
+  async runTccli(service, action, args) {
+    this.requireExecutionBoundary();
+    await this.requireTools(["tccli"]);
+    return this.runner({
+      command: "tccli",
+      args: [
+        service,
+        action,
+        "--region",
+        this.env.TENCENTCLOUD_REGION,
+        ...args
+      ],
+      cwd: this.infraDir,
+      env: this.env
+    });
   }
 
   async requireTools(commands) {

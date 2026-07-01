@@ -96,7 +96,7 @@ test("Tencent CVM provider fails closed when required tools are missing", async 
       packagePlan: { id: "basic", server: "2c4g", diskGb: 10 },
       token: "share_no_tools"
     }),
-    /tencent_cvm_provider_missing_tools:tofu,ansible-playbook/
+    /tencent_cvm_provider_missing_tools:tofu,ansible-playbook,tccli/
   );
 });
 
@@ -124,7 +124,7 @@ test("Tencent CVM provider reports complete readiness gaps before cloud executio
       "OPL_SSH_KEY_ID",
       "OPL_WORKSPACE_IMAGE"
     ],
-    missingTools: ["ansible-playbook"]
+    missingTools: ["ansible-playbook", "tccli"]
   });
 });
 
@@ -205,4 +205,84 @@ test("Tencent CVM provider isolates OpenTofu state outside infra source for each
   } finally {
     await rm(stateRootDir, { recursive: true, force: true });
   }
+});
+
+test("Tencent CVM provider stops and starts server billing without touching retained disk", async () => {
+  const calls = [];
+  const provider = new TencentCvmProvider({
+    env: requiredEnv,
+    runner: async ({ command, args }) => {
+      calls.push({ command, args });
+      return "";
+    },
+    commandExists: () => true
+  });
+  const workspace = {
+    server: { id: "ins-opl101", status: "running", billingStatus: "active", spec: "2c4g" },
+    disk: { id: "disk-opl101", status: "attached_retained", billingStatus: "active" }
+  };
+
+  const stopped = await provider.stopServer({ workspace });
+  const restarted = await provider.restartServer({ workspace: { ...workspace, server: stopped } });
+
+  assert.deepEqual(calls.map((call) => `${call.command} ${call.args.join(" ")}`), [
+    'tccli cvm StopInstances --region ap-guangzhou --InstanceIds ["ins-opl101"] --StoppedMode STOP_CHARGING',
+    'tccli cvm StartInstances --region ap-guangzhou --InstanceIds ["ins-opl101"]'
+  ]);
+  assert.equal(stopped.status, "stopped");
+  assert.equal(stopped.billingStatus, "stopped");
+  assert.equal(restarted.status, "running");
+  assert.equal(restarted.billingStatus, "active");
+});
+
+test("Tencent CVM provider destroys server while retaining CBS disk", async () => {
+  const calls = [];
+  const provider = new TencentCvmProvider({
+    env: requiredEnv,
+    runner: async ({ command, args }) => {
+      calls.push({ command, args });
+      return "";
+    },
+    commandExists: () => true
+  });
+
+  const server = await provider.destroyServer({
+    workspace: {
+      server: { id: "ins-opl201", status: "running", billingStatus: "active", spec: "8c16g" },
+      disk: { id: "disk-opl201", status: "attached_retained", billingStatus: "active" }
+    }
+  });
+
+  assert.deepEqual(calls.map((call) => `${call.command} ${call.args.join(" ")}`), [
+    'tccli cvm StopInstances --region ap-guangzhou --InstanceIds ["ins-opl201"] --StoppedMode STOP_CHARGING',
+    'tccli cbs DetachDisks --region ap-guangzhou --DiskIds ["disk-opl201"]',
+    'tccli cvm TerminateInstances --region ap-guangzhou --InstanceIds ["ins-opl201"]'
+  ]);
+  assert.equal(server.status, "destroyed");
+  assert.equal(server.billingStatus, "stopped");
+});
+
+test("Tencent CVM provider destroys CBS disk only through explicit disk lifecycle action", async () => {
+  const calls = [];
+  const provider = new TencentCvmProvider({
+    env: requiredEnv,
+    runner: async ({ command, args }) => {
+      calls.push({ command, args });
+      return "";
+    },
+    commandExists: () => true
+  });
+
+  const disk = await provider.destroyDisk({
+    workspace: {
+      server: { id: "ins-opl301", status: "destroyed", billingStatus: "stopped" },
+      disk: { id: "disk-opl301", status: "detached_retained", billingStatus: "active", sizeGb: 100 }
+    }
+  });
+
+  assert.deepEqual(calls.map((call) => `${call.command} ${call.args.join(" ")}`), [
+    'tccli cbs TerminateDisks --region ap-guangzhou --DiskIds ["disk-opl301"]'
+  ]);
+  assert.equal(disk.status, "destroyed");
+  assert.equal(disk.billingStatus, "stopped");
 });
