@@ -46,20 +46,26 @@ Recommended TTL: `600`.
 
 ## TLS
 
-Use one Kubernetes TLS secret covering both domains:
+Use one Kubernetes Secret for the Tencent Cloud SSL certificate id:
 
 ```text
 opl-cloud-medopl-cn-tls
 ```
 
-The certificate should include these SANs:
+For TKE qcloud Ingress, the Secret must be in the `opl-cloud` namespace, must be type `Opaque`, and must contain this key:
+
+```text
+qcloud_cert_id
+```
+
+The referenced Tencent Cloud SSL certificate must cover these domains:
 
 ```text
 cloud.medopl.cn
 workspace.medopl.cn
 ```
 
-If cert-manager is used instead of a pre-created TLS secret, the issuer name must be added to the TKE manifest before live deploy.
+In GitHub production environment, provide the certificate id as `OPL_TLS_CERT_ID`, or set `OPL_TLS_SOURCE_NAMESPACE` and `OPL_TLS_SOURCE_SECRET_NAME` to copy an existing qcloud certificate Secret into `opl-cloud`.
 
 ## Preproduction Env Template
 
@@ -95,7 +101,7 @@ Do not commit a filled env file. Real values belong in ignored local files, Kube
 - `DATABASE_URL`: install the real value as a secret; do not commit the password.
 - `OPENMETER_API_KEY`: generate and install as a secret.
 - `OPL_WORKSPACE_STORAGE_CLASS`: confirm with `kubectl get storageclass`.
-- TLS secret or cert-manager issuer for `cloud.medopl.cn` and `workspace.medopl.cn`.
+- Tencent Cloud SSL `OPL_TLS_CERT_ID` for `cloud.medopl.cn` and `workspace.medopl.cn`, or an existing qcloud certificate Secret to copy.
 - The Ingress/CLB address after deploy, then create the DNS records.
 - Confirmation that `opl-cloud` is the target namespace and `tcr-pull-secret` is the image pull secret name.
 

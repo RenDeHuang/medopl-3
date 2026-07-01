@@ -62,25 +62,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          kubectl --kubeconfig "$KUBECONFIG" get secrets -A -o custom-columns='NAMESPACE:.metadata.namespace,NAME:.metadata.name,TYPE:.type' | grep 'kubernetes.io/tls' || true
-          tmp_dir="$(mktemp -d)"
           kubectl --kubeconfig "$KUBECONFIG" get secrets -A -o json \
-            | TMP_DIR="$tmp_dir" node -e '
+            | node -e '
                 const fs = require("node:fs");
-                const path = require("node:path");
-                const tmp = process.env.TMP_DIR;
                 const payload = JSON.parse(fs.readFileSync(0, "utf8"));
+                console.log("NAMESPACE NAME TYPE HAS_QCLOUD_CERT_ID");
                 for (const item of payload.items || []) {
-                  if (item.type !== "kubernetes.io/tls" || !item.data?.["tls.crt"]) continue;
-                  const safeName = `${item.metadata.namespace}__${item.metadata.name}`.replace(/[^a-zA-Z0-9_.-]/g, "_");
-                  fs.writeFileSync(path.join(tmp, `${safeName}.crt`), Buffer.from(item.data["tls.crt"], "base64"));
+                  const hasQcloudCertId = Boolean(item.data?.qcloud_cert_id);
+                  if (item.type !== "Opaque" && !hasQcloudCertId) continue;
+                  console.log(`${item.metadata.namespace} ${item.metadata.name} ${item.type} ${hasQcloudCertId}`);
                 }
               '
-          for crt in "$tmp_dir"/*.crt; do
-            [ -e "$crt" ] || continue
-            echo "=== $(basename "$crt" .crt) ==="
-            openssl x509 -in "$crt" -noout -subject -ext subjectAltName || true
-          done
 
       - name: Describe control plane pods
         shell: bash
