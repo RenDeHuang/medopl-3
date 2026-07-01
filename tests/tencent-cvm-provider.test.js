@@ -262,6 +262,49 @@ test("Tencent CVM provider destroys server while retaining CBS disk", async () =
   assert.equal(server.billingStatus, "stopped");
 });
 
+test("Tencent CVM provider recreates a destroyed server and reattaches the retained CBS disk", async () => {
+  const calls = [];
+  const runner = async ({ command, args }) => {
+    calls.push({ command, args });
+    if (command === "tccli" && args[1] === "RunInstances") {
+      return JSON.stringify({ InstanceIdSet: ["ins-opl202"] });
+    }
+    if (command === "tccli" && args[1] === "DescribeInstances") {
+      return JSON.stringify({ InstanceSet: [{ InstanceId: "ins-opl202", PublicIpAddresses: ["203.0.113.202"] }] });
+    }
+    return "";
+  };
+  const provider = new TencentCvmProvider({
+    env: requiredEnv,
+    runner,
+    commandExists: () => true
+  });
+
+  const server = await provider.recreateServer({
+    workspace: {
+      id: "ws-cloud202",
+      ownerAccountId: "pi-alpha",
+      packageId: "pro",
+      slug: "recreate-lab-cloud202",
+      access: { token: "share_recreate" },
+      server: { id: "ins-old202", status: "destroyed", billingStatus: "stopped", spec: "8c16g" },
+      docker: { image: requiredEnv.OPL_WORKSPACE_IMAGE },
+      disk: { id: "disk-opl202", status: "detached_retained", billingStatus: "active" }
+    }
+  });
+
+  assert.deepEqual(calls.map((call) => `${call.command} ${call.args.join(" ")}`), [
+    'tccli cvm RunInstances --region ap-guangzhou --Placement {"Zone":"ap-guangzhou-6"} --ImageId img-123 --InstanceType SA5.2XLARGE16 --InstanceChargeType POSTPAID_BY_HOUR --VirtualPrivateCloud {"VpcId":"vpc-123","SubnetId":"subnet-123"} --SecurityGroupIds ["sg-123"] --InternetAccessible {"InternetMaxBandwidthOut":5,"PublicIpAssigned":true} --SystemDisk {"DiskType":"CLOUD_BSSD","DiskSize":50} --InstanceName opl-recreate-lab-cloud202 --LoginSettings {"KeyIds":["skey-123"]}',
+    'tccli cbs AttachDisks --region ap-guangzhou --DiskIds ["disk-opl202"] --InstanceId ins-opl202',
+    'tccli cvm DescribeInstances --region ap-guangzhou --InstanceIds ["ins-opl202"]',
+    'ansible-playbook -i 203.0.113.202, ansible/workspace.yml -u root --extra-vars workspace_id=ws-cloud202 workspace_slug=recreate-lab-cloud202 workspace_token=share_recreate workspace_domain=oplcloud.cn opl_image=harbor.example.com/opl/one-person-lab-webui:latest'
+  ]);
+  assert.equal(server.id, "ins-opl202");
+  assert.equal(server.status, "running");
+  assert.equal(server.billingStatus, "active");
+  assert.equal(server.publicIp, "203.0.113.202");
+});
+
 test("Tencent CVM provider destroys CBS disk only through explicit disk lifecycle action", async () => {
   const calls = [];
   const provider = new TencentCvmProvider({

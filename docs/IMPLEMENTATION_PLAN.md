@@ -121,7 +121,8 @@ Goal:
 Delivered:
 
 - `stopServer` runs `tccli cvm StopInstances --StoppedMode STOP_CHARGING` and keeps CBS storage active.
-- `restartServer` runs `tccli cvm StartInstances` and preserves the Workspace URL/token.
+- `restartServer` runs `tccli cvm StartInstances` for stopped servers and preserves the Workspace URL/token.
+- `recreateServer` runs `tccli cvm RunInstances`, attaches the retained CBS disk, describes the new public IP, then reruns Ansible when the previous server was destroyed.
 - `destroyServer` stops the CVM if needed, detaches CBS storage, then runs `tccli cvm TerminateInstances`.
 - `destroyDisk` is the only action that runs `tccli cbs TerminateDisks`.
 - Tests assert that server lifecycle actions never call disk termination.
@@ -132,8 +133,9 @@ Next real-cloud verification:
 2. Create a real Tencent Workspace.
 3. Stop server and verify server billing status stops while CBS remains billable and retained.
 4. Restart server and verify URL/token still point to the Workspace.
-5. Destroy server and verify CBS remains.
-6. Destroy disk explicitly and verify storage billing stops.
+5. Destroy server and verify CBS remains detached and billable.
+6. Restart the server-destroyed Workspace and verify Tencent creates a new CVM, attaches the retained CBS disk, reruns Ansible, and keeps the same URL/token.
+7. Destroy disk explicitly and verify storage billing stops.
 
 ## Phase 5: PostgreSQL Persistence
 

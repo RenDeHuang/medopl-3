@@ -63,7 +63,8 @@ ansible-playbook -i "<public_ip>," ansible/workspace.yml \
 ## Lifecycle Boundary
 
 - `stopServer`: runs `tccli cvm StopInstances --StoppedMode STOP_CHARGING`. Keep CBS disk.
-- `restartServer`: runs `tccli cvm StartInstances`. Preserve URL/token.
+- `restartServer`: runs `tccli cvm StartInstances` for stopped servers. Preserve URL/token.
+- `recreateServer`: after server destruction, runs `tccli cvm RunInstances`, `tccli cbs AttachDisks`, `tccli cvm DescribeInstances`, then Ansible to restore Docker/Caddy on the new CVM with the retained CBS disk. Preserve URL/token.
 - `destroyServer`: stops CVM if needed, runs `tccli cbs DetachDisks`, then `tccli cvm TerminateInstances`. Keep CBS disk.
 - `destroyDisk`: runs `tccli cbs TerminateDisks` after explicit data-loss confirmation. This is the only operation that stops storage billing.
 

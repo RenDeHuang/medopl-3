@@ -225,10 +225,11 @@ export class OplCloudService {
   }
 
   async restartServer({ accountId, workspaceId }) {
+    const operationType = await this.restartOperationType({ accountId, workspaceId });
     return this.runRuntimeOperation({
       accountId,
       workspaceId,
-      operationType: "restart_server",
+      operationType,
       prepare: (state, workspace) => {
         const packagePlan = getPackage(workspace.packageId);
         const account = ensureAccount(state, accountId);
@@ -249,18 +250,34 @@ export class OplCloudService {
         }
       },
       mutate: async (state, workspace, operation) => {
-        workspace.state = "restarting_server";
-        workspace.server = await this.runtimeProvider.restartServer({ workspace: clone(workspace) });
+        const recreate = workspace.server.status === "destroyed" || workspace.state === "server_destroyed_disk_retained";
+        workspace.state = recreate ? "recreating_server" : "restarting_server";
+        workspace.server = recreate
+          ? await this.runtimeProvider.recreateServer({ workspace: clone(workspace) })
+          : await this.runtimeProvider.restartServer({ workspace: clone(workspace) });
         this.finishRuntimeOperation(operation, "succeeded");
         workspace.docker.status = "running";
         workspace.disk.status = "attached_retained";
         workspace.disk.billingStatus = "active";
         workspace.state = "running";
         workspace.updatedAt = now();
-        state.audit.push(this.auditEvent({ accountId, workspaceId, type: "server.restarted", sourceEventId: "restart_server" }));
+        state.audit.push(this.auditEvent({
+          accountId,
+          workspaceId,
+          type: recreate ? "server.recreated" : "server.restarted",
+          sourceEventId: operationType
+        }));
         return clone(workspace);
       }
     });
+  }
+
+  async restartOperationType({ accountId, workspaceId }) {
+    const state = await this.store.read();
+    const workspace = latestWorkspaceForAccount(state, accountId, workspaceId);
+    return workspace.server.status === "destroyed" || workspace.state === "server_destroyed_disk_retained"
+      ? "recreate_server"
+      : "restart_server";
   }
 
   async destroyServer({ accountId, workspaceId, confirm }) {

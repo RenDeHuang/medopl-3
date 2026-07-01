@@ -360,6 +360,52 @@ test("destroying disk requires explicit confirmation and is the only action that
   }
 });
 
+test("restarting a server-destroyed Workspace recreates compute from the retained disk and preserves URL", async () => {
+  const calls = [];
+  const service = createTestService({
+    name: "recreate-provider",
+    async createWorkspaceRuntime(input) {
+      return runtimeFixture({ ...input, provider: "recreate-provider" });
+    },
+    async destroyServer({ workspace }) {
+      return { ...workspace.server, status: "destroyed", billingStatus: "stopped" };
+    },
+    async restartServer() {
+      throw new Error("restart_should_not_start_destroyed_server");
+    },
+    async recreateServer({ workspace }) {
+      calls.push(`recreate:${workspace.id}:${workspace.disk.id}`);
+      return {
+        ...workspace.server,
+        id: `server-recreated-${workspace.id}`,
+        status: "running",
+        billingStatus: "active"
+      };
+    }
+  });
+
+  await service.creditAccount({ accountId: "pi-alpha", amount: 200, reason: "owner_credit" });
+  const workspace = await service.createWorkspace({
+    accountId: "pi-alpha",
+    workspaceName: "Recreate Lab",
+    packageId: "basic"
+  });
+  const destroyed = await service.destroyServer({ accountId: "pi-alpha", workspaceId: workspace.id, confirm: true });
+
+  const recreated = await service.restartServer({ accountId: "pi-alpha", workspaceId: workspace.id });
+
+  assert.equal(destroyed.state, "server_destroyed_disk_retained");
+  assert.equal(recreated.state, "running");
+  assert.equal(recreated.server.id, `server-recreated-${workspace.id}`);
+  assert.equal(recreated.disk.id, workspace.disk.id);
+  assert.equal(recreated.disk.status, "attached_retained");
+  assert.equal(recreated.docker.status, "running");
+  assert.equal(recreated.url, workspace.url);
+  assert.equal(recreated.access.token, workspace.access.token);
+  assert.deepEqual(calls, [`recreate:${workspace.id}:${workspace.disk.id}`]);
+  assert.ok((await service.getState("pi-alpha")).runtimeOperations.some((operation) => `${operation.operationType}:${operation.status}` === "recreate_server:succeeded"));
+});
+
 test("opening and restarting require a seven-day storage hold and preserve token until reset or delete", async () => {
   const { service, cleanup } = await createService();
   try {

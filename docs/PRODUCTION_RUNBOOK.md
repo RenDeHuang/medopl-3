@@ -69,14 +69,16 @@ Both must be reviewed before creating production Workspaces.
 8. Verify the CBS data disk is mounted at `/data/opl` before Docker starts, and that the container maps `/data/opl` to `/data`.
 9. Stop the server and confirm CBS storage remains active.
 10. Restart the server and confirm the Workspace URL/token still works.
-11. Run one billing settlement and confirm OpenMeter receives usage events.
+11. Destroy the server and confirm CBS storage is detached, retained, and still billable.
+12. Restart the server-destroyed Workspace and confirm a new CVM is created, the retained CBS disk is attached, Ansible restores the Docker runtime, and the same Workspace URL/token works.
+13. Run one billing settlement and confirm OpenMeter receives usage events.
 
 ## Recovery Notes
 
 - Server stop or destroy must never destroy the CBS disk.
 - Disk destruction is a separate user-confirmed action.
 - Check `runtime_operations` first when a Workspace action fails. It records operation type, status, attempt count, timestamps, and error message.
-- If CVM is lost but CBS remains, recreate server from the retained Workspace record and reattach storage.
+- If CVM is lost but CBS remains, restart the server-destroyed Workspace from OPL Console. The API should record `recreate_server`, call `RunInstances`, attach the retained CBS disk, rerun Ansible, and keep the existing Workspace URL/token.
 - If OpenMeter rejects usage events, settlement fails so the operator can retry without silently splitting usage and billing records.
 - If PostgreSQL is unavailable, stop provisioning new Workspaces until control-plane persistence is restored.
 

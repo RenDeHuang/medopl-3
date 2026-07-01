@@ -134,6 +134,17 @@ export class LocalDockerProvider {
     };
   }
 
+  async recreateServer({ workspace }) {
+    if (this.execute) {
+      await runCommand("docker", ["compose", "up", "-d"], workspace.server.localPath);
+    }
+    return {
+      ...workspace.server,
+      status: "running",
+      billingStatus: "active"
+    };
+  }
+
   async destroyServer({ workspace }) {
     if (this.execute) {
       await runCommand("docker", ["compose", "down"], workspace.server.localPath);

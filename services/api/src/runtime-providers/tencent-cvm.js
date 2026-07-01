@@ -18,6 +18,10 @@ const REQUIRED_ENV = [
   "OPL_WORKSPACE_IMAGE"
 ];
 const REQUIRED_TOOLS = ["tofu", "ansible-playbook", "tccli"];
+const PACKAGE_INSTANCE_TYPES = {
+  basic: "SA5.MEDIUM4",
+  pro: "SA5.2XLARGE16"
+};
 
 function compactId(value) {
   return String(value)
@@ -145,24 +149,14 @@ export class TencentCvmProvider {
       throw new Error("tencent_cvm_provider_incomplete_outputs");
     }
 
-    await this.runner({
-      command: "ansible-playbook",
-      args: [
-        "-i",
-        `${publicIp},`,
-        "ansible/workspace.yml",
-        "-u",
-        "root",
-        "--extra-vars",
-        [
-          `workspace_id=${workspaceId}`,
-          `workspace_slug=${slug}`,
-          `workspace_token=${token}`,
-          `workspace_domain=${this.env.OPL_WORKSPACE_DOMAIN}`,
-          `opl_image=${oplImage}`
-        ].join(" ")
-      ],
-      ...common
+    await this.runAnsibleWorkspace({
+      publicIp,
+      workspaceId,
+      slug,
+      token,
+      oplImage,
+      cwd: common.cwd,
+      env: common.env
     });
 
     return {
@@ -229,6 +223,73 @@ export class TencentCvmProvider {
       ...workspace.server,
       status: "running",
       billingStatus: "active"
+    };
+  }
+
+  async recreateServer({ workspace }) {
+    this.requireExecutionBoundary();
+    await this.requireTools(["tccli", "ansible-playbook"]);
+    if (!workspace.disk?.id || workspace.disk.status === "destroyed") {
+      throw new Error("retained_disk_required");
+    }
+
+    const instanceType = PACKAGE_INSTANCE_TYPES[workspace.packageId];
+    if (!instanceType) throw new Error("unknown_package");
+
+    const runOutput = await this.runTccli("cvm", "RunInstances", [
+      "--Placement",
+      JSON.stringify({ Zone: this.env.OPL_AVAILABILITY_ZONE }),
+      "--ImageId",
+      this.env.OPL_IMAGE_ID,
+      "--InstanceType",
+      instanceType,
+      "--InstanceChargeType",
+      "POSTPAID_BY_HOUR",
+      "--VirtualPrivateCloud",
+      JSON.stringify({ VpcId: this.env.OPL_VPC_ID, SubnetId: this.env.OPL_SUBNET_ID }),
+      "--SecurityGroupIds",
+      JSON.stringify([this.env.OPL_SECURITY_GROUP_ID]),
+      "--InternetAccessible",
+      JSON.stringify({ InternetMaxBandwidthOut: 5, PublicIpAssigned: true }),
+      "--SystemDisk",
+      JSON.stringify({ DiskType: "CLOUD_BSSD", DiskSize: 50 }),
+      "--InstanceName",
+      `opl-${workspace.slug}`,
+      "--LoginSettings",
+      JSON.stringify({ KeyIds: [this.env.OPL_SSH_KEY_ID] })
+    ]);
+    const newInstanceId = this.parseRunInstanceId(runOutput);
+
+    await this.runTccli("cbs", "AttachDisks", [
+      "--DiskIds",
+      JSON.stringify([workspace.disk.id]),
+      "--InstanceId",
+      newInstanceId
+    ]);
+
+    const describeOutput = await this.runTccli("cvm", "DescribeInstances", [
+      "--InstanceIds",
+      JSON.stringify([newInstanceId])
+    ]);
+    const publicIp = this.parseInstancePublicIp(describeOutput, newInstanceId);
+    const oplImage = workspace.docker?.image || this.env.OPL_WORKSPACE_IMAGE;
+
+    await this.runAnsibleWorkspace({
+      publicIp,
+      workspaceId: workspace.id,
+      slug: workspace.slug,
+      token: workspace.access.token,
+      oplImage,
+      cwd: this.infraDir,
+      env: this.env
+    });
+
+    return {
+      ...workspace.server,
+      id: newInstanceId,
+      status: "running",
+      billingStatus: "active",
+      publicIp
     };
   }
 
@@ -317,5 +378,43 @@ export class TencentCvmProvider {
     if (missing.length > 0) {
       throw new Error(`tencent_cvm_provider_missing_tools:${missing.join(",")}`);
     }
+  }
+
+  async runAnsibleWorkspace({ publicIp, workspaceId, slug, token, oplImage, cwd, env }) {
+    return this.runner({
+      command: "ansible-playbook",
+      args: [
+        "-i",
+        `${publicIp},`,
+        "ansible/workspace.yml",
+        "-u",
+        "root",
+        "--extra-vars",
+        [
+          `workspace_id=${workspaceId}`,
+          `workspace_slug=${slug}`,
+          `workspace_token=${token}`,
+          `workspace_domain=${this.env.OPL_WORKSPACE_DOMAIN}`,
+          `opl_image=${oplImage}`
+        ].join(" ")
+      ],
+      cwd,
+      env
+    });
+  }
+
+  parseRunInstanceId(output) {
+    const parsed = JSON.parse(output || "{}");
+    const instanceId = parsed.InstanceIdSet?.[0];
+    if (!instanceId) throw new Error("tencent_cvm_provider_missing_instance_id");
+    return instanceId;
+  }
+
+  parseInstancePublicIp(output, instanceId) {
+    const parsed = JSON.parse(output || "{}");
+    const instance = parsed.InstanceSet?.find((item) => item.InstanceId === instanceId) || parsed.InstanceSet?.[0];
+    const publicIp = instance?.PublicIpAddresses?.[0];
+    if (!publicIp) throw new Error("tencent_cvm_provider_missing_public_ip");
+    return publicIp;
   }
 }
