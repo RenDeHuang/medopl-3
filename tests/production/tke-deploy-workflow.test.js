@@ -61,6 +61,12 @@ test("TKE production deploy workflow installs secrets without command-line secre
   assert.match(workflow, /verify_qcloud_cert_secret "\$OPL_WORKSPACE_TLS_SECRET_NAME"/);
   assert.match(workflow, /jsonpath='\{\.data\.qcloud_cert_id\}'/);
   assert.match(workflow, /Missing TKE TLS certificate input/);
+
+  const tlsInputCheck = workflow.indexOf("Check TLS certificate inputs");
+  const secretInstall = workflow.indexOf("Install Kubernetes secrets");
+  assert.notEqual(tlsInputCheck, -1);
+  assert.notEqual(secretInstall, -1);
+  assert.ok(tlsInputCheck < secretInstall, "TLS certificate inputs must be checked before mutating Kubernetes secrets");
 });
 
 test("TKE manifest renderer replaces deploy-time values without rendering secrets", async () => {
