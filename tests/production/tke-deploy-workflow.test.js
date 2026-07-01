@@ -90,3 +90,19 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
   assert.equal(ingress.spec.tls[0].secretName, "opl-cloud-medopl-cn-tls");
   assert.deepEqual(ingress.spec.rules.map((rule) => rule.host), ["cloud.medopl.cn", "workspace.medopl.cn"]);
 });
+
+test("TKE production diagnostics workflow is read-only and runs on the VPC runner", async () => {
+  const workflow = await readFile(".github/workflows/diagnose-tke-production.yml", "utf8");
+
+  assert.match(workflow, /workflow_dispatch:/);
+  assert.match(workflow, /environment: production/);
+  assert.match(workflow, /runs-on: \[self-hosted, tencent-cloud, opl-cloud, tke-vpc\]/);
+  assert.match(workflow, /TENCENT_DEPLOY_KUBECONFIG_PATH: \$\{\{ vars\.TENCENT_DEPLOY_KUBECONFIG_PATH \|\| '\/home\/actions\/\.secrets\/medopl\/v22\/kubeconfig-package-d-deploy' \}\}/);
+  assert.match(workflow, /kubectl --kubeconfig "\$KUBECONFIG" -n "\$OPL_K8S_NAMESPACE" get deploy,rs,pod,svc,ingress -o wide/);
+  assert.match(workflow, /describe deployment opl-cloud-control-plane/);
+  assert.match(workflow, /get events --sort-by=\.lastTimestamp/);
+  assert.match(workflow, /logs deploy\/opl-cloud-control-plane --all-containers=true --tail=200/);
+  assert.doesNotMatch(workflow, /kubectl .* apply /);
+  assert.doesNotMatch(workflow, /kubectl .* create /);
+  assert.doesNotMatch(workflow, /kubectl .* delete /);
+});
