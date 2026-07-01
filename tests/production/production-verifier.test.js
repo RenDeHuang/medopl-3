@@ -338,6 +338,144 @@ test("production verifier accepts Tencent TKE Workspace resources and proves app
   ]);
 });
 
+test("production verifier retries TKE runtime status while pods and endpoints become ready", async () => {
+  const requests = [];
+  const workspace = {
+    id: "ws-tke-slow001",
+    ownerAccountId: "pi-prod",
+    name: "Production Verification Lab",
+    packageId: "basic",
+    state: "running",
+    provider: "tencent-tke",
+    server: { id: "deployment/opl-ws-tke-slow001", status: "running", billingStatus: "active", namespace: "opl-cloud", spec: "2c4g" },
+    docker: {
+      id: "deployment/opl-ws-tke-slow001",
+      image: "uswccr.ccs.tencentyun.com/oplcloud/one-person-lab-app:latest",
+      status: "running",
+      service: "service/opl-ws-tke-slow001"
+    },
+    disk: {
+      id: "pvc/opl-ws-tke-slow001-data",
+      status: "attached_retained",
+      billingStatus: "active",
+      sizeGb: 10,
+      mountPath: "/data",
+      storageClass: "cbs"
+    },
+    slug: "production-verification-lab-slow001",
+    url: "https://workspace.medopl.cn/w/ws-tke-slow001?token=share_tke_slow",
+    access: { token: "share_tke_slow", tokenStatus: "active", requiresLogin: false }
+  };
+  let runtimeStatusAttempts = 0;
+  let restartCount = 0;
+  let workspaceUrlCount = 0;
+  let destroyServerCount = 0;
+
+  const result = await verifyProductionChain({
+    origin: "https://cloud.medopl.cn",
+    accountId: "pi-prod",
+    workspaceName: "Production Verification Lab",
+    packageId: "basic",
+    retryDelayMs: 0,
+    fetchImpl: async (url, options = {}) => {
+      const parsed = new URL(String(url));
+      const method = options.method || "GET";
+      const pathname = parsed.origin === "https://cloud.medopl.cn" ? parsed.pathname : String(url);
+      let key = `${method} ${pathname}`;
+      if (key === "POST /api/workspaces/runtime-status") {
+        runtimeStatusAttempts += 1;
+        key = `${key}#${runtimeStatusAttempts}`;
+      }
+      if (key === "POST /api/workspaces/restart-server") {
+        restartCount += 1;
+        key = `${key}#${restartCount}`;
+      }
+      if (key === "POST /api/workspaces/destroy-server") {
+        destroyServerCount += 1;
+        key = destroyServerCount === 1 ? key : `${key}#${destroyServerCount}`;
+      }
+      if (key === "GET https://workspace.medopl.cn/w/ws-tke-slow001?token=share_tke_slow") {
+        workspaceUrlCount += 1;
+        key = workspaceUrlCount === 1 ? key : `${key}#${workspaceUrlCount}`;
+      }
+      requests.push({ key, body: options.body ? JSON.parse(options.body) : null });
+      const responses = {
+        "GET /api/production/readiness": { ready: true, missingEnv: [], missingTools: [], failedChecks: [], checks: [] },
+        "GET /api/runtime/readiness": { provider: "tencent-tke", ready: true, missingEnv: [], missingTools: [] },
+        "POST /api/accounts/credit": { id: "pi-prod", balance: 1000, frozen: 0 },
+        "POST /api/workspaces": workspace,
+        "POST /api/workspaces/runtime-status#1": {
+          provider: "tencent-tke",
+          workspaceId: "ws-tke-slow001",
+          ready: false,
+          checks: [
+            { name: "deployment_ready", ok: false },
+            { name: "pvc_bound", ok: true },
+            { name: "service_endpoints_ready", ok: false }
+          ]
+        },
+        "POST /api/workspaces/runtime-status#2": {
+          provider: "tencent-tke",
+          workspaceId: "ws-tke-slow001",
+          ready: true,
+          checks: [
+            { name: "deployment_ready", ok: true },
+            { name: "workspace_image_pulled", ok: true },
+            { name: "pvc_bound", ok: true },
+            { name: "deployment_uses_retained_pvc", ok: true },
+            { name: "service_targets_workspace", ok: true },
+            { name: "service_endpoints_ready", ok: true },
+            { name: "ingress_routes_workspace_url", ok: true }
+          ]
+        },
+        "GET https://workspace.medopl.cn/w/ws-tke-slow001?token=share_tke_slow": "<html>OPL Workspace</html>",
+        "POST /api/workspaces/stop-server": {
+          ...workspace,
+          state: "stopped_server_disk_retained",
+          server: { ...workspace.server, status: "stopped", billingStatus: "stopped" }
+        },
+        "POST /api/workspaces/restart-server#1": workspace,
+        "POST /api/workspaces/destroy-server": {
+          ...workspace,
+          state: "server_destroyed_disk_retained",
+          server: { ...workspace.server, status: "destroyed", billingStatus: "stopped" },
+          disk: { ...workspace.disk, status: "detached_retained" }
+        },
+        "POST /api/workspaces/restart-server#2": workspace,
+        "GET https://workspace.medopl.cn/w/ws-tke-slow001?token=share_tke_slow#2": "<html>OPL Workspace restored</html>",
+        "POST /api/billing/settle": { entries: [{ type: "server_debit" }, { type: "storage_debit" }], metering: [{ ok: true }, { ok: true }] },
+        "POST /api/workspaces/destroy-server#2": {
+          ...workspace,
+          state: "server_destroyed_disk_retained",
+          server: { ...workspace.server, status: "destroyed", billingStatus: "stopped" },
+          disk: { ...workspace.disk, status: "detached_retained" }
+        },
+        "POST /api/workspaces/destroy-disk": {
+          ...workspace,
+          state: "destroyed",
+          server: { ...workspace.server, status: "destroyed", billingStatus: "stopped" },
+          disk: { ...workspace.disk, status: "destroyed", billingStatus: "stopped" }
+        }
+      };
+      const payload = responses[key];
+      if (typeof payload === "string") return htmlResponse(payload);
+      if (payload) return jsonResponse(payload);
+      throw new Error(`unexpected_request:${key}`);
+    }
+  });
+
+  assert.equal(runtimeStatusAttempts, 2);
+  assert.equal(result.checks.find((check) => check.name === "workspace_runtime_status").attempts, 2);
+  assert.deepEqual(requests.slice(0, 6).map((request) => request.key), [
+    "GET /api/production/readiness",
+    "GET /api/runtime/readiness",
+    "POST /api/accounts/credit",
+    "POST /api/workspaces",
+    "POST /api/workspaces/runtime-status#1",
+    "POST /api/workspaces/runtime-status#2"
+  ]);
+});
+
 test("production verifier retries the Workspace URL while Caddy and Docker become ready", async () => {
   const workspace = {
     id: "ws-prod002",

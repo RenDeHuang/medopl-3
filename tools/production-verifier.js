@@ -57,6 +57,30 @@ async function requestWorkspaceUrl({ fetchImpl, url, attempts, retryDelayMs }) {
   throw lastError;
 }
 
+async function requestRuntimeStatus({ fetchImpl, origin, accountId, workspaceId, attempts, retryDelayMs }) {
+  let lastStatus = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const status = await requestJson({
+      fetchImpl,
+      origin,
+      path: "/api/workspaces/runtime-status",
+      method: "POST",
+      body: { accountId, workspaceId }
+    });
+    lastStatus = { ...status, attempts: attempt };
+    if (
+      status?.ready === true &&
+      Array.isArray(status.checks) &&
+      status.checks.length > 0 &&
+      status.checks.every((check) => check.ok === true)
+    ) {
+      return lastStatus;
+    }
+    if (attempt < attempts) await sleep(retryDelayMs);
+  }
+  return lastStatus;
+}
+
 function addCheck(checks, name, ok, details = {}) {
   const check = { name, ok: Boolean(ok), ...details };
   checks.push(check);
@@ -137,7 +161,8 @@ function assertRuntimeStatus(checks, runtimeStatus) {
     runtimeStatus.checks.length > 0 &&
     runtimeStatus.checks.every((check) => check.ok === true)
   ), {
-    runtimeChecks: (runtimeStatus?.checks || []).map((check) => check.name)
+    runtimeChecks: (runtimeStatus?.checks || []).map((check) => check.name),
+    attempts: runtimeStatus?.attempts
   });
 }
 
@@ -232,12 +257,13 @@ export async function verifyProductionChain({
     assertWorkspaceShape(checks, workspace);
 
     if (workspace.provider === "tencent-tke") {
-      const runtimeStatus = await requestJson({
+      const runtimeStatus = await requestRuntimeStatus({
         fetchImpl,
         origin: normalizedOrigin,
-        path: "/api/workspaces/runtime-status",
-        method: "POST",
-        body: { accountId, workspaceId: workspace.id }
+        accountId,
+        workspaceId: workspace.id,
+        attempts: workspaceUrlAttempts,
+        retryDelayMs
       });
       assertRuntimeStatus(checks, runtimeStatus);
     }
