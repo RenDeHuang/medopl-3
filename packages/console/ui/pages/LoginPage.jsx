@@ -1,6 +1,16 @@
 import React, { useState } from "react";
 import { ArrowLeft, LogIn, ShieldCheck } from "lucide-react";
 
+function errorLabel(value) {
+  const labels = {
+    login_failed: "登录失败",
+    invalid_credentials: "邮箱或密码不正确",
+    not_authenticated: "请先登录",
+    csrf_token_invalid: "页面安全令牌已失效，请重新登录"
+  };
+  return labels[value] || value;
+}
+
 export default function LoginPage({ onLogin }) {
   const [email, setEmail] = useState("pi@opl.local");
   const [password, setPassword] = useState("");
@@ -34,27 +44,27 @@ export default function LoginPage({ onLogin }) {
         <div className="loginBrand">
           <div className="brandIcon">OPL</div>
           <div>
-            <p className="eyebrow">Commercial Console</p>
-            <h1>Sign in</h1>
+            <p className="eyebrow">商业版 OPL Console</p>
+            <h1>登录</h1>
           </div>
         </div>
         <form onSubmit={submit}>
           <label>
-            Email
+            邮箱
             <input value={email} onChange={(event) => setEmail(event.target.value)} type="email" autoComplete="email" required />
           </label>
           <label>
-            Password
+            密码
             <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" autoComplete="current-password" required />
           </label>
-          {error && <div className="error">{error}</div>}
+          {error && <div className="error">{errorLabel(error)}</div>}
           <button className="primary wide" disabled={submitting}>
-            <LogIn size={16} /> {submitting ? "Signing in..." : "Sign in"}
+            <LogIn size={16} /> {submitting ? "登录中..." : "登录"}
           </button>
         </form>
         <div className="securityNote">
           <ShieldCheck size={16} />
-          <span>Session uses an HttpOnly cookie and CSRF token for Console actions.</span>
+          <span>会话使用 HttpOnly Cookie 和 CSRF 令牌保护 OPL Console 操作。</span>
         </div>
       </main>
     </div>

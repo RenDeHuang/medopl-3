@@ -62,8 +62,30 @@ async function readJson(request) {
 }
 
 async function handleWorkspaceUrl(request, response, pathname, searchParams, appService) {
+  function statusText(value) {
+    const labels = {
+      running: "运行中",
+      stopped: "已停止",
+      destroyed: "已销毁",
+      failed: "失败",
+      active: "有效",
+      attached_retained: "已挂载并保留",
+      detached_retained: "已卸载并保留"
+    };
+    return labels[value] || value;
+  }
+
+  function workspaceErrorText(value) {
+    const labels = {
+      workspace_not_found: "未找到 OPL Workspace。",
+      workspace_token_inactive: "OPL Workspace 访问令牌已失效。",
+      workspace_token_invalid: "OPL Workspace 访问令牌无效。"
+    };
+    return labels[value] || value;
+  }
+
   if (request.method !== "GET") {
-    return sendHtml(response, 405, "<!doctype html><title>Method not allowed</title><h1>Method not allowed</h1>");
+    return sendHtml(response, 405, "<!doctype html><title>方法不允许</title><h1>方法不允许</h1>");
   }
 
   const slug = pathname.split("/").filter(Boolean)[1];
@@ -77,7 +99,7 @@ async function handleWorkspaceUrl(request, response, pathname, searchParams, app
       response.writeHead(302, { location: workspace.docker.localUrl });
       return response.end();
     }
-    const runtimeTarget = workspace.docker?.localUrl || workspace.docker?.composePath || "runtime target pending";
+    const runtimeTarget = workspace.docker?.localUrl || workspace.docker?.composePath || "运行时目标待生成";
     return sendHtml(response, isRunning ? 200 : 409, `<!doctype html>
 <html lang="en">
   <head>
@@ -98,19 +120,19 @@ async function handleWorkspaceUrl(request, response, pathname, searchParams, app
   <body>
     <main>
       <h1>${workspace.name}</h1>
-      <p>This URL token is valid. Local Docker mode has provisioned the OPL Workspace runtime assets below. Production mode connects this entry to Caddy and proxies directly to the running one-person-lab-app container.</p>
+      <p>此 URL 令牌有效。Local Docker 模式已生成下方 OPL Workspace 运行时资产。生产模式会把这个入口连接到 Caddy，并代理到正在运行的 one-person-lab-app 容器。</p>
       <dl>
-        <dt>Status</dt><dd>${workspace.state}</dd>
-        <dt>Server</dt><dd>${workspace.server.status}</dd>
-        <dt>Docker</dt><dd>${workspace.docker.status}</dd>
-        <dt>Disk</dt><dd>${workspace.disk.status} / ${workspace.disk.mountPath}</dd>
-        <dt>Runtime</dt><dd><code>${runtimeTarget}</code></dd>
+        <dt>状态</dt><dd>${statusText(workspace.state)}</dd>
+        <dt>计算</dt><dd>${statusText(workspace.server.status)}</dd>
+        <dt>Docker</dt><dd>${statusText(workspace.docker.status)}</dd>
+        <dt>存储</dt><dd>${statusText(workspace.disk.status)} / ${workspace.disk.mountPath}</dd>
+        <dt>运行时</dt><dd><code>${runtimeTarget}</code></dd>
       </dl>
     </main>
   </body>
 </html>`);
   } catch (error) {
-    return sendHtml(response, 403, `<!doctype html><title>OPL Workspace unavailable</title><h1>OPL Workspace unavailable</h1><p>${error.message}</p>`);
+    return sendHtml(response, 403, `<!doctype html><title>OPL Workspace 不可用</title><h1>OPL Workspace 不可用</h1><p>${workspaceErrorText(error.message)}</p>`);
   }
 }
 
@@ -259,7 +281,7 @@ async function serveStatic(response, pathname, staticDir = publicDir) {
     response.end(content);
   } catch {
     response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
-    response.end("Not found\n");
+    response.end("未找到\n");
   }
 }
 

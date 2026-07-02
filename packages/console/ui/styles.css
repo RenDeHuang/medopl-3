@@ -507,11 +507,35 @@ h2 {
   margin-bottom: 0;
 }
 
+.workspaceBand {
+  padding-bottom: 20px;
+}
+
+.workspaceLayout {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.42fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
 .planGrid,
-.resourceGrid {
+.resourceGrid,
+.splitGrid,
+.adminMetrics,
+.accountSummary,
+.evidenceGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.adminMetrics {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.accountSummary,
+.evidenceGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .plan,
@@ -520,6 +544,12 @@ h2 {
   border-radius: 8px;
   padding: 14px;
   background: #fbfcfd;
+}
+
+.plan {
+  display: grid;
+  gap: 12px;
+  align-content: start;
 }
 
 .plan span {
@@ -532,6 +562,30 @@ h2 {
   color: #61717f;
 }
 
+.planFacts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.planFacts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #e5ebf0;
+  padding-top: 8px;
+}
+
+.planFacts dt {
+  color: #667684;
+}
+
+.planFacts dd {
+  margin: 0;
+  font-weight: 800;
+  text-align: right;
+}
+
 .workspaceList,
 .eventList {
   display: grid;
@@ -539,9 +593,15 @@ h2 {
 }
 
 .workspaceRow {
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  justify-content: initial;
+  text-align: left;
   width: 100%;
   background: #fbfcfd;
+  min-height: 70px;
+  align-content: center;
+  row-gap: 5px;
 }
 
 .workspaceRow.active {
@@ -549,11 +609,111 @@ h2 {
   background: #effbf7;
 }
 
+.workspaceRow small {
+  grid-column: 1 / -1;
+  color: #667684;
+  overflow-wrap: anywhere;
+}
+
+.workspaceDetail {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.detailHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  border: 1px solid #e1e8ee;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fbfcfd;
+}
+
+.detailHeader h3 {
+  font-size: 22px;
+  margin-bottom: 8px;
+}
+
+.detailMeta {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  color: #667684;
+  font-size: 13px;
+  text-align: right;
+}
+
+.detailMeta span {
+  overflow-wrap: anywhere;
+}
+
+.detailMeta strong {
+  color: #17232e;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: #eef2f6;
+  color: #526372;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pill.ok {
+  background: #e7f6ef;
+  color: #0c6f50;
+}
+
+.pill.danger {
+  background: #fff0f0;
+  color: #a13333;
+}
+
+.pill.muted {
+  background: #eef2f6;
+  color: #526372;
+}
+
+.panel {
+  border: 1px solid #e1e8ee;
+  border-radius: 8px;
+  background: #fff;
+  padding: 14px;
+  min-width: 0;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+
+.panelHeader svg {
+  color: #0e766f;
+}
+
+.panelHeader h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
 .urlBox {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
   gap: 10px;
   align-items: center;
+}
+
+.urlBox.compact {
+  grid-template-columns: minmax(220px, 1fr) repeat(4, auto);
 }
 
 code {
@@ -584,6 +744,21 @@ code {
   margin-top: 5px;
 }
 
+.metric.ok svg,
+.metric.ok strong {
+  color: #0c6f50;
+}
+
+.metric.danger svg,
+.metric.danger strong {
+  color: #a13333;
+}
+
+.metric.muted svg,
+.metric.muted strong {
+  color: #526372;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -596,6 +771,16 @@ code {
   grid-template-columns: minmax(160px, 1fr) minmax(120px, 0.6fr) minmax(160px, 1fr) auto;
   gap: 12px;
   align-items: end;
+}
+
+.adminStack {
+  display: grid;
+  gap: 12px;
+}
+
+.readinessBlock {
+  display: grid;
+  gap: 12px;
 }
 
 .event {
@@ -657,9 +842,18 @@ code {
   .policyGrid,
   .planGrid,
   .resourceGrid,
+  .workspaceLayout,
+  .splitGrid,
+  .adminMetrics,
+  .accountSummary,
+  .evidenceGrid,
   .adminForm,
   .urlBox,
   .event {
+    grid-template-columns: 1fr;
+  }
+
+  .urlBox.compact {
     grid-template-columns: 1fr;
   }
 
@@ -703,6 +897,15 @@ code {
 
   .sectionHeader {
     flex-direction: column;
+  }
+
+  .detailHeader {
+    flex-direction: column;
+  }
+
+  .detailMeta {
+    justify-items: start;
+    text-align: left;
   }
 
   .actions button,
