@@ -219,6 +219,7 @@ test("billing settlement rounds up to full hours, consumes available balance fir
   assert.equal(state.workspaces[0].server.status, "stopped");
   assert.equal(state.workspaces[0].disk.billingStatus, "hold_exhausted");
   assert.equal(state.workspaces[0].state, "stopped_storage_hold_exhausted");
+  assert.deepEqual(state.resourceUsageLogs.filter((log) => log.sourceEventId === "billing_tick_hold_exhausted").map((log) => log.resourceType), ["compute", "storage"]);
   const persisted = await service.store.read();
   const usageLogs = persisted.resourceUsageLogs.filter((log) => log.sourceEventId === "billing_tick_hold_exhausted");
   assert.deepEqual(usageLogs.map((log) => log.resourceType), ["compute", "storage"]);
@@ -377,6 +378,8 @@ test("request usage charges the user wallet and records request logs", async () 
   const persisted = await service.store.read();
   assert.equal(usage.userId, "usr-pi-alpha");
   assert.equal(state.wallet.balance, 248.5467);
+  assert.equal(state.requestUsageLogs.length, 1);
+  assert.equal(state.requestUsageLogs[0].requestId, "req-alpha");
   assert.deepEqual(persisted.requestUsageLogs.map((log) => ({
     requestId: log.requestId,
     userId: log.userId,

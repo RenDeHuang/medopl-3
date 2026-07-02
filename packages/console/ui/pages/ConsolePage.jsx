@@ -172,6 +172,22 @@ function costRunwayDays(account, plan) {
   return `${Math.max(0, Number(account.balance || 0) / daily).toFixed(1)} 天`;
 }
 
+function usageAmount(logs, resourceType = "") {
+  return (logs || [])
+    .filter((log) => !resourceType || log.resourceType === resourceType)
+    .reduce((sum, log) => sum + Number(log.amount || 0), 0);
+}
+
+function usageQuantity(logs, resourceType) {
+  return (logs || [])
+    .filter((log) => log.resourceType === resourceType)
+    .reduce((sum, log) => sum + Number(log.quantity || 0), 0);
+}
+
+function usageCount(logs) {
+  return (logs || []).length;
+}
+
 export default function ConsolePage({ session, onLogout }) {
   const [state, setState] = useState(null);
   const [selectedId, setSelectedId] = useState("");
@@ -234,6 +250,9 @@ export default function ConsolePage({ session, onLogout }) {
   const selectedBackups = useMemo(() => backupForWorkspace(state?.storageBackups, selected?.id), [state, selected]);
   const selectedEvents = useMemo(() => workspaceEvents(state || {}, selected?.id), [state, selected]);
   const latestBackup = selectedBackups.find((backup) => backup.status === "available") || selectedBackups[0];
+  const wallet = state?.wallet || state?.account || { balance: 0, frozen: 0, available: 0, holds: {} };
+  const resourceUsageLogs = state?.resourceUsageLogs || [];
+  const requestUsageLogs = state?.requestUsageLogs || [];
 
   if (!state) {
     return (
@@ -279,8 +298,8 @@ export default function ConsolePage({ session, onLogout }) {
         {error && <div className="error">{errorLabel(error)}</div>}
 
         <section className="metrics">
-          <Metric icon={<WalletCards />} label="余额" value={money(state.account.balance)} />
-          <Metric icon={<CreditCard />} label="冻结金额" value={money(state.account.frozen)} />
+          <Metric icon={<WalletCards />} label="用户钱包" value={money(wallet.balance)} />
+          <Metric icon={<CreditCard />} label="冻结金额" value={money(wallet.frozen)} />
           <Metric icon={<Server />} label="OPL Workspace" value={state.workspaces.length} />
           <Metric icon={<AlertTriangle />} label="告警" value={state.notifications.length} />
         </section>
@@ -364,7 +383,20 @@ export default function ConsolePage({ session, onLogout }) {
             <Database />
           </div>
           <PolicyGrid policy={state.billingPolicy} />
+          <div className="accountSummary">
+            <ResourceCard icon={<WalletCards />} title="用户钱包" value={money(wallet.balance)} detail={`可用 ${money(wallet.available ?? (Number(wallet.balance || 0) - Number(wallet.frozen || 0)))}`} />
+            <ResourceCard icon={<CreditCard />} title="冻结金额" value={money(wallet.frozen)} detail={`累计充值 ${money(wallet.totalRecharged || 0)}`} />
+            <ResourceCard icon={<Server />} title="Compute 小时" value={`${usageQuantity(resourceUsageLogs, "compute").toFixed(0)} 小时`} detail={`${money(usageAmount(resourceUsageLogs, "compute"))} 已扣费`} />
+            <ResourceCard icon={<HardDrive />} title="Storage GB-hour" value={`${usageQuantity(resourceUsageLogs, "storage").toFixed(0)} GB-hour`} detail={`${money(usageAmount(resourceUsageLogs, "storage"))} 已扣费`} />
+            <ResourceCard icon={<Activity />} title="请求用量" value={`${usageCount(requestUsageLogs)} 条`} detail={`${money(usageAmount(requestUsageLogs))} 已扣费`} />
+          </div>
           <div className="splitGrid">
+            <Panel title="资源用量" icon={<Server />}>
+              <UsageList events={resourceUsageLogs} />
+            </Panel>
+            <Panel title="请求用量" icon={<Activity />}>
+              <RequestUsageList events={requestUsageLogs} />
+            </Panel>
             <Panel title="OPL Ledger 事件" icon={<History />}>
               <EventList events={state.billingLedger} />
             </Panel>
@@ -593,6 +625,36 @@ function ReadinessBlock({ readiness }) {
         ...(readiness.missingTools || []).map((name) => ({ id: `tool-${name}`, type: "missing.tool", accountId: name })),
         ...(readiness.failedChecks || []).map((name) => ({ id: `check-${name}`, type: "failed.check", accountId: name }))
       ]} />
+    </div>
+  );
+}
+
+function UsageList({ events }) {
+  if (!events.length) return <div className="empty">暂无资源用量。</div>;
+  return (
+    <div className="eventList">
+      {events.slice().reverse().slice(0, 12).map((event) => (
+        <article className="event" key={event.id}>
+          <strong>{event.resourceType === "compute" ? "Compute 小时" : "Storage GB-hour"}</strong>
+          <span>{event.workspaceId}</span>
+          <em>{Number(event.quantity || 0).toFixed(2)} {event.unit} · {money(event.amount)}</em>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function RequestUsageList({ events }) {
+  if (!events.length) return <div className="empty">暂无请求用量。</div>;
+  return (
+    <div className="eventList">
+      {events.slice().reverse().slice(0, 12).map((event) => (
+        <article className="event" key={event.id}>
+          <strong>{event.model || event.provider || "请求用量"}</strong>
+          <span>{event.requestId}</span>
+          <em>{Number(event.inputTokens || 0) + Number(event.outputTokens || 0)} tokens · {money(event.amount)}</em>
+        </article>
+      ))}
     </div>
   );
 }

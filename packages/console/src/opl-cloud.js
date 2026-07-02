@@ -1279,6 +1279,8 @@ export class OplCloudService {
       wallet,
       workspaces: Object.values(state.workspaces).filter((workspace) => workspace.ownerAccountId === accountId).map(clone),
       billingLedger: state.billingLedger.filter((entry) => entry.accountId === accountId).map(clone),
+      resourceUsageLogs: (state.resourceUsageLogs || []).filter((entry) => entry.accountId === accountId).map(clone),
+      requestUsageLogs: (state.requestUsageLogs || []).filter((entry) => entry.accountId === accountId).map(clone),
       storageBackups: (state.storageBackups || []).filter((entry) => entry.accountId === accountId).map(clone),
       billingReconciliation: {
         latestReport: clone(latestBillingReconciliationReport(state)),

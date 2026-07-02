@@ -18,4 +18,8 @@ test("OPL Console navigation fixes Workspace delivery as the primary commercial 
 
   assert.match(source, /id="workspaces"[\s\S]*OPL Workspace URL[\s\S]*计算[\s\S]*存储[\s\S]*备份/);
   assert.match(source, /id="admin"[\s\S]*账号[\s\S]*手工充值[\s\S]*生产就绪/);
+  assert.match(source, /用户钱包/);
+  assert.match(source, /Compute 小时/);
+  assert.match(source, /Storage GB-hour/);
+  assert.match(source, /请求用量/);
 });
