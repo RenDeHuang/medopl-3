@@ -94,15 +94,19 @@ Attempt:
 - Keep Local Docker as the local runtime loop.
 - Keep Tencent TKE as the production runtime provider.
 - Keep Tencent CVM as a legacy fallback/debug provider.
+- Keep Fabric resource catalog ownership in `packages/fabric`, with Console opening only `available=true` Workspace packages.
 - Hand off cloud provisioning through TKE, TCR, Kubernetes Ingress, persistent workspace storage, and legacy CVM contracts.
 - Hand off retained Workspace storage backup and restore through TKE/CBS `VolumeSnapshot` and PVC `dataSource` contracts.
+- Keep GPU packages unavailable until a GPU node pool is verified.
 
 Receipts:
 
 - `packages/fabric/src/runtime-provider-factory.js`
+- `packages/fabric/src/resource-catalog.js`
 - `packages/fabric/src/runtime-providers/local-docker.js`
 - `packages/fabric/src/runtime-providers/tencent-tke.js`
 - `packages/fabric/src/runtime-providers/tencent-cvm.js`
+- `packages/contracts/opl-cloud-fabric-resource-catalog-contract.json`
 - `deploy/tke/opl-cloud.k8s.json`
 - `deploy/tke/opl-cloud-production.env.example`
 - `docs/TKE_PRODUCTION_DEPLOYMENT.md`

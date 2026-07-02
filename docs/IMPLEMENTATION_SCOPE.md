@@ -16,6 +16,7 @@ This repository is responsible for:
 - Minimal OPL Console commercial management model for users, organizations, memberships, billing accounts, packages, balances, and holds.
 - OPL Workspace lifecycle control for local Docker, Tencent TKE, and legacy Tencent CVM runtimes.
 - OPL Fabric handoff through Local Docker, Tencent TKE, TCR, Kubernetes Ingress, persistent workspace storage, and legacy Tencent CVM contracts.
+- OPL Fabric resource catalog for compute profiles, storage classes, Workspace runtime image, Ingress domain, environment template, and placeholder connector/agent registries.
 - Long-lived Workspace URL token access. Tokens are permanent until the owner resets or deletes them after leakage.
 - Compute and persistent workspace storage lifecycle separation.
 - Workspace storage backup, restore-to-new-Workspace, and retention through TKE/CBS VolumeSnapshot contracts.
@@ -29,7 +30,7 @@ This repository is responsible for:
 The implementation is staged for future repository extraction under `packages/`:
 
 - `packages/console`: OPL Console API, control-plane service, management model, store, readiness, manifest validation, and UI.
-- `packages/fabric`: runtime provider factory and Local Docker / Tencent TKE / legacy Tencent CVM adapters.
+- `packages/fabric`: resource catalog, runtime provider factory, and Local Docker / Tencent TKE / legacy Tencent CVM adapters.
 - `packages/ledger`: billing reconciliation helpers, evidence receipt helpers, and future Ledger extraction boundary.
 - `packages/contracts`: machine-readable product, lifecycle, management, billing, storage backup, and evidence contracts.
 
@@ -41,7 +42,7 @@ The implementation should map Cloud behavior back to One Person Lab framework co
 
 | One Person Lab concept | This repository |
 | --- | --- |
-| Runtime provider | Local Docker provider, Tencent TKE production target, and Tencent CVM legacy fallback |
+| Runtime provider / Fabric resource | resource catalog, Local Docker provider, Tencent TKE production target, and Tencent CVM legacy fallback |
 | Attempt / operation ledger | `runtime_operations` |
 | Readiness gate | `/api/runtime/readiness` and `/api/production/readiness` |
 | Receipt / audit trail | billing ledger, evidence ledger, audit events, verifier output, reconciliation output |

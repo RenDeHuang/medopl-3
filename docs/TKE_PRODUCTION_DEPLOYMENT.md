@@ -206,6 +206,8 @@ Current production defaults were queried from Tencent Cloud in `na-siliconvalley
 
 GPU pricing is intentionally not part of the current production package set. GPU Workspaces require a verified GPU node pool before they can be exposed without drifting from the OPL Cloud product truth.
 
+The Fabric resource catalog is exposed in `GET /api/runtime/readiness` under `resourceCatalog`. Console package selection uses only catalog entries where `available=true`; the GPU package remains visible in the catalog as unavailable with reason `gpu_node_pool_not_verified`.
+
 The production billing chain is:
 
 ```text

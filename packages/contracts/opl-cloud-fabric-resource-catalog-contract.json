@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "owner": "OPL Fabric",
+  "purpose": "Expose productized resource choices to OPL Console without making Console own cloud resource inventory.",
+  "catalogSections": [
+    "workspacePackages",
+    "computeProfiles",
+    "storageClasses",
+    "workspaceImages",
+    "ingressDomains",
+    "environmentTemplates",
+    "connectors",
+    "agentPackages"
+  ],
+  "workspacePackageRules": {
+    "consoleSelectableOnlyWhen": "available=true",
+    "gpuPackageDefault": "unavailable_until_gpu_node_pool_verified",
+    "unavailableError": "package_unavailable:<packageId>:<reason>"
+  },
+  "currentAvailablePackages": [
+    "basic",
+    "pro"
+  ],
+  "currentUnavailablePackages": [
+    {
+      "id": "gpu",
+      "reason": "gpu_node_pool_not_verified"
+    }
+  ],
+  "readinessSurface": {
+    "endpoint": "GET /api/runtime/readiness",
+    "field": "resourceCatalog"
+  },
+  "nonGoals": [
+    "full OPL Connect implementation",
+    "full OPL Environments service",
+    "full OPL Agent Registry service",
+    "GPU package exposure before verified node pool capacity"
+  ]
+}

@@ -5,31 +5,14 @@ import {
   managementSnapshot,
   resolveWorkspaceOwner
 } from "./management-model.js";
+import {
+  availableWorkspacePackages,
+  defaultFabricResourceCatalog,
+  fabricCatalogReadiness,
+  selectWorkspacePackage
+} from "../../fabric/src/resource-catalog.js";
 import { appendEvidenceReceipt, createEvidenceReceipt } from "../../ledger/src/evidence-ledger.js";
 import { billingReconciliationGuard } from "../../ledger/src/billing-reconciliation.js";
-
-const PACKAGES = {
-  basic: {
-    id: "basic",
-    name: "Basic Workspace",
-    accelerator: "cpu",
-    cpu: 2,
-    memoryGb: 4,
-    gpu: 0,
-    server: "2c4g",
-    diskGb: 10
-  },
-  pro: {
-    id: "pro",
-    name: "Pro Workspace",
-    accelerator: "cpu",
-    cpu: 8,
-    memoryGb: 16,
-    gpu: 0,
-    server: "8c16g",
-    diskGb: 100
-  }
-};
 
 function now() {
   return new Date().toISOString();
@@ -57,12 +40,6 @@ function money(value) {
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
-}
-
-function getPackage(packageId) {
-  const packagePlan = PACKAGES[packageId];
-  if (!packagePlan) throw new Error("unknown_package");
-  return packagePlan;
 }
 
 function ensureAccount(state, accountId) {
@@ -252,21 +229,30 @@ function operatorNotificationInScope(event, accountId) {
   return event.accountId === "billing" && event.workspaceId === "billing";
 }
 
-export function createOplCloud({ store, runtimeProvider, pricing, productionReadiness = null }) {
-  return new OplCloudService({ store, runtimeProvider, pricing, productionReadiness });
+export function createOplCloud({ store, runtimeProvider, pricing, productionReadiness = null, fabricCatalog = defaultFabricResourceCatalog() }) {
+  return new OplCloudService({ store, runtimeProvider, pricing, productionReadiness, fabricCatalog });
 }
 
 export class OplCloudService {
-  constructor({ store, runtimeProvider, pricing, productionReadiness = null }) {
+  constructor({ store, runtimeProvider, pricing, productionReadiness = null, fabricCatalog = defaultFabricResourceCatalog() }) {
     this.store = store;
     this.runtimeProvider = runtimeProvider;
     this.pricing = pricing;
     this.productionReadinessCheck = productionReadiness;
+    this.fabricCatalog = clone(fabricCatalog);
     this.runtimeOperationSequence = 0;
   }
 
+  resourceCatalog() {
+    return clone(this.fabricCatalog);
+  }
+
+  getPackage(packageId, { requireAvailable = true } = {}) {
+    return selectWorkspacePackage(this.fabricCatalog, packageId, { requireAvailable });
+  }
+
   packages() {
-    return Object.values(PACKAGES).map((plan) => ({
+    return availableWorkspacePackages(this.fabricCatalog).map((plan) => ({
       ...clone(plan),
       price: {
         currency: "CNY",
@@ -358,7 +344,7 @@ export class OplCloudService {
   }
 
   async createWorkspace({ accountId, organizationId, userId, workspaceName, packageId }) {
-    const packagePlan = getPackage(packageId);
+    const packagePlan = this.getPackage(packageId);
     const hold = packageHoldAmount({ packagePlan, pricing: this.pricing });
     let workspaceId = null;
     let token = null;
@@ -546,7 +532,7 @@ export class OplCloudService {
 
   async restoreWorkspaceFromBackup({ accountId, backupId, workspaceName, packageId }) {
     if (typeof this.runtimeProvider.createWorkspaceRuntime !== "function") throw new Error("runtime_provider_missing_create");
-    const packagePlan = getPackage(packageId);
+    const packagePlan = this.getPackage(packageId);
     const hold = packageHoldAmount({ packagePlan, pricing: this.pricing });
     let workspaceId = null;
     let token = null;
@@ -792,7 +778,7 @@ export class OplCloudService {
       workspaceId,
       operationType,
       prepare: (state, workspace) => {
-        const packagePlan = getPackage(workspace.packageId);
+        const packagePlan = this.getPackage(workspace.packageId);
         const account = ensureAccount(state, accountId);
         const requiredHold = packageHoldAmount({ packagePlan, pricing: this.pricing });
         this.ensureHold({ state, account, accountId, workspaceId, holdType: "compute", requiredAmount: requiredHold.compute, sourceEventId: "resume_workspace" });
@@ -814,7 +800,7 @@ export class OplCloudService {
           state,
           account: ensureAccount(state, accountId),
           workspace,
-          packagePlan: getPackage(workspace.packageId),
+          packagePlan: this.getPackage(workspace.packageId),
           hours: 1,
           sourceEventId: "resume_workspace_initial_hour",
           billableHours: 1
@@ -971,7 +957,7 @@ export class OplCloudService {
     const settlement = await this.store.update((state) => {
       const workspace = latestWorkspaceForAccount(state, accountId, workspaceId);
       const account = ensureAccount(state, accountId);
-      const packagePlan = getPackage(workspace.packageId);
+      const packagePlan = this.getPackage(workspace.packageId);
       const existingEntries = this.existingSettlementEntries({ state, accountId, workspaceId, sourceEventId });
       if (existingEntries.length > 0) {
         return {
@@ -1163,14 +1149,21 @@ export class OplCloudService {
   }
 
   async runtimeReadiness() {
+    const resourceCatalog = fabricCatalogReadiness(this.fabricCatalog);
     if (typeof this.runtimeProvider.readiness === "function") {
-      return this.runtimeProvider.readiness();
+      const providerReadiness = await this.runtimeProvider.readiness();
+      return {
+        ...providerReadiness,
+        ready: Boolean(providerReadiness.ready && resourceCatalog.ready),
+        resourceCatalog
+      };
     }
     return {
       provider: this.runtimeProvider.name,
-      ready: true,
+      ready: resourceCatalog.ready,
       missingEnv: [],
-      missingTools: []
+      missingTools: [],
+      resourceCatalog
     };
   }
 
@@ -1546,7 +1539,7 @@ export class OplCloudService {
   }
 
   recordEvidence({ state, type, accountId, workspace, packagePlan = null, billingRefs = [], continuation = null }) {
-    const effectivePackagePlan = packagePlan || getPackage(workspace.packageId);
+    const effectivePackagePlan = packagePlan || this.getPackage(workspace.packageId);
     const receipt = createEvidenceReceipt({
       state,
       type,

@@ -33,7 +33,8 @@
       "memoryGb": 4,
       "gpu": 0,
       "server": "2c4g",
-      "diskGb": 10
+      "diskGb": 10,
+      "available": true
     },
     {
       "id": "pro",
@@ -43,7 +44,8 @@
       "memoryGb": 16,
       "gpu": 0,
       "server": "8c16g",
-      "diskGb": 100
+      "diskGb": 100,
+      "available": true
     },
     {
       "id": "gpu",
@@ -53,9 +55,16 @@
       "memoryGb": 64,
       "gpu": 1,
       "server": "16c64g-1gpu",
-      "diskGb": 500
+      "diskGb": 500,
+      "available": false,
+      "unavailableReason": "gpu_node_pool_not_verified"
     }
   ],
+  "fabricResourceCatalog": {
+    "contract": "packages/contracts/opl-cloud-fabric-resource-catalog-contract.json",
+    "runtimeReadinessField": "resourceCatalog",
+    "consoleSelectableRule": "workspace package must be available=true"
+  },
   "productionHandoff": {
     "manifestExample": "deploy/production-manifest.example.json",
     "validateCommand": "npm run validate:production-manifest -- --manifest <manifest.json>",
