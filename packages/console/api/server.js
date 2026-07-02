@@ -4,6 +4,7 @@ import { extname, join, normalize } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { createRuntimeProvider } from "../../fabric/src/runtime-provider-factory.js";
+import { createAuthController } from "./auth.js";
 import { createOplCloud } from "../src/opl-cloud.js";
 import { productionReadiness } from "../src/production-readiness.js";
 import { JsonFileStore, PostgresStore } from "../src/store.js";
@@ -12,6 +13,9 @@ const root = fileURLToPath(new URL("../../..", import.meta.url));
 const publicDir = join(root, "dist");
 const port = Number(process.env.PORT ?? 8787);
 const dataPath = process.env.OPL_CLOUD_DATA_PATH ?? join(root, ".runtime", "opl-cloud-state.json");
+const defaultAuth = createAuthController({ env: process.env });
+
+export { createAuthController };
 
 function numberFromEnv(name, fallback) {
   const value = Number(process.env[name]);
@@ -110,28 +114,74 @@ async function handleWorkspaceUrl(request, response, pathname, searchParams, app
   }
 }
 
-async function handleApi(request, response, pathname, appService, operatorSummaryToken = process.env.OPL_OPERATOR_SUMMARY_TOKEN) {
+function errorStatus(error) {
+  return Number.isInteger(error.status) ? error.status : 400;
+}
+
+function scopedAccountId(auth, session, requestedAccountId) {
+  return auth ? auth.accountIdFor(session.user, requestedAccountId) : requestedAccountId;
+}
+
+function scopedWorkspaceInput(auth, session, body) {
+  return auth ? auth.workspaceInputFor(session.user, body) : body;
+}
+
+function requireAdmin(auth, session) {
+  if (auth) auth.requireAdmin(session.user);
+}
+
+async function handleApi(request, response, pathname, appService, operatorSummaryToken = process.env.OPL_OPERATOR_SUMMARY_TOKEN, auth = null) {
   try {
+    if (auth && request.method === "POST" && pathname === "/api/auth/login") {
+      return sendJson(response, 200, await auth.login(await readJson(request), { request, response }));
+    }
+    if (auth && request.method === "POST" && pathname === "/api/auth/logout") {
+      await auth.requireSession(request, { requireCsrf: true });
+      return sendJson(response, 200, await auth.logout(request, response));
+    }
+    if (auth && request.method === "GET" && pathname === "/api/auth/me") {
+      const session = await auth.requireSession(request);
+      return sendJson(response, 200, {
+        user: session.user,
+        csrfToken: session.csrfToken
+      });
+    }
+    if (!auth && pathname.startsWith("/api/auth/")) {
+      return sendJson(response, 404, { ok: false, error: "route_not_found" });
+    }
+
+    const session = auth
+      ? await auth.requireSession(request, { requireCsrf: request.method !== "GET" && request.method !== "HEAD" })
+      : null;
+
     if (request.method === "GET" && pathname === "/api/state") {
       const url = new URL(request.url, "http://localhost");
-      return sendJson(response, 200, await appService.getState(url.searchParams.get("accountId") ?? "pi-alpha"));
+      const requestedAccountId = url.searchParams.get("accountId") || (auth ? "" : "pi-alpha");
+      const accountId = scopedAccountId(auth, session, requestedAccountId);
+      return sendJson(response, 200, await appService.getState(accountId));
     }
     if (request.method === "GET" && pathname === "/api/runtime/readiness") {
+      requireAdmin(auth, session);
       return sendJson(response, 200, await appService.runtimeReadiness());
     }
     if (request.method === "GET" && pathname === "/api/production/readiness") {
+      requireAdmin(auth, session);
       return sendJson(response, 200, await appService.productionReadiness());
     }
     if (request.method === "GET" && pathname === "/api/operator/summary") {
       const url = new URL(request.url, "http://localhost");
       const providedToken = request.headers["x-opl-operator-token"] || url.searchParams.get("operatorToken") || "";
-      if (!operatorSummaryToken) return sendJson(response, 403, { ok: false, error: "operator_summary_token_not_configured" });
-      if (providedToken !== operatorSummaryToken) return sendJson(response, 403, { ok: false, error: "operator_summary_token_invalid" });
+      const adminSession = auth && auth.isAdmin(session.user);
+      if (!adminSession) {
+        if (!operatorSummaryToken) return sendJson(response, 403, { ok: false, error: "operator_summary_token_not_configured" });
+        if (providedToken !== operatorSummaryToken) return sendJson(response, 403, { ok: false, error: "operator_summary_token_invalid" });
+      }
       return sendJson(response, 200, await appService.operatorSummary({
         accountId: url.searchParams.get("accountId") || null
       }));
     }
     if (request.method === "GET" && pathname === "/api/management/state") {
+      requireAdmin(auth, session);
       const url = new URL(request.url, "http://localhost");
       return sendJson(response, 200, await appService.managementState({
         organizationId: url.searchParams.get("organizationId") || ""
@@ -140,7 +190,7 @@ async function handleApi(request, response, pathname, appService, operatorSummar
     if (request.method === "GET" && pathname === "/api/ledger/task-receipts") {
       const url = new URL(request.url, "http://localhost");
       return sendJson(response, 200, await appService.taskEvidenceReceipts({
-        accountId: url.searchParams.get("accountId") || "",
+        accountId: scopedAccountId(auth, session, url.searchParams.get("accountId") || ""),
         workspaceId: url.searchParams.get("workspaceId") || null,
         taskId: url.searchParams.get("taskId") || null
       }));
@@ -148,30 +198,48 @@ async function handleApi(request, response, pathname, appService, operatorSummar
 
     const body = await readJson(request);
     const routes = {
-      "POST /api/accounts/credit": () => appService.creditAccount(body),
-      "POST /api/organizations": () => appService.createOrganization(body),
-      "POST /api/users": () => appService.createUser(body),
-      "POST /api/organizations/members": () => appService.addOrganizationMember(body),
-      "POST /api/workspaces": () => appService.createWorkspace(body),
-      "POST /api/workspaces/stop-server": () => appService.stopServer(body),
-      "POST /api/workspaces/restart-server": () => appService.restartServer(body),
-      "POST /api/workspaces/destroy-server": () => appService.destroyServer(body),
-      "POST /api/workspaces/destroy-disk": () => appService.destroyDisk(body),
-      "POST /api/workspaces/runtime-status": () => appService.runtimeStatus(body),
-      "POST /api/workspaces/storage-backups": () => appService.createStorageBackup(body),
-      "POST /api/workspaces/restore-storage-backup": () => appService.restoreWorkspaceFromBackup(body),
-      "POST /api/workspaces/prune-storage-backups": () => appService.pruneStorageBackups(body),
-      "POST /api/workspaces/reset-token": () => appService.resetWorkspaceToken(body),
-      "POST /api/workspaces/delete-token": () => appService.deleteWorkspaceToken(body),
-      "POST /api/billing/settle": () => appService.settleBilling(body),
-      "POST /api/billing/reconciliation": () => appService.recordBillingReconciliation(body),
-      "POST /api/ledger/task-receipts": () => appService.recordTaskEvidenceReceipt(body)
+      "POST /api/accounts/credit": () => {
+        requireAdmin(auth, session);
+        return appService.creditAccount(body);
+      },
+      "POST /api/organizations": () => {
+        requireAdmin(auth, session);
+        return appService.createOrganization(body);
+      },
+      "POST /api/users": () => {
+        requireAdmin(auth, session);
+        return appService.createUser(body);
+      },
+      "POST /api/organizations/members": () => {
+        requireAdmin(auth, session);
+        return appService.addOrganizationMember(body);
+      },
+      "POST /api/workspaces": () => appService.createWorkspace(scopedWorkspaceInput(auth, session, body)),
+      "POST /api/workspaces/stop-server": () => appService.stopServer(scopedWorkspaceInput(auth, session, body)),
+      "POST /api/workspaces/restart-server": () => appService.restartServer(scopedWorkspaceInput(auth, session, body)),
+      "POST /api/workspaces/destroy-server": () => appService.destroyServer(scopedWorkspaceInput(auth, session, body)),
+      "POST /api/workspaces/destroy-disk": () => appService.destroyDisk(scopedWorkspaceInput(auth, session, body)),
+      "POST /api/workspaces/runtime-status": () => {
+        requireAdmin(auth, session);
+        return appService.runtimeStatus(body);
+      },
+      "POST /api/workspaces/storage-backups": () => appService.createStorageBackup(scopedWorkspaceInput(auth, session, body)),
+      "POST /api/workspaces/restore-storage-backup": () => appService.restoreWorkspaceFromBackup(scopedWorkspaceInput(auth, session, body)),
+      "POST /api/workspaces/prune-storage-backups": () => appService.pruneStorageBackups(scopedWorkspaceInput(auth, session, body)),
+      "POST /api/workspaces/reset-token": () => appService.resetWorkspaceToken(scopedWorkspaceInput(auth, session, body)),
+      "POST /api/workspaces/delete-token": () => appService.deleteWorkspaceToken(scopedWorkspaceInput(auth, session, body)),
+      "POST /api/billing/settle": () => appService.settleBilling(scopedWorkspaceInput(auth, session, body)),
+      "POST /api/billing/reconciliation": () => {
+        requireAdmin(auth, session);
+        return appService.recordBillingReconciliation(body);
+      },
+      "POST /api/ledger/task-receipts": () => appService.recordTaskEvidenceReceipt(scopedWorkspaceInput(auth, session, body))
     };
     const handler = routes[`${request.method} ${pathname}`];
     if (!handler) return sendJson(response, 404, { ok: false, error: "route_not_found" });
     return sendJson(response, 200, await handler());
   } catch (error) {
-    return sendJson(response, 400, { ok: false, error: error.message });
+    return sendJson(response, errorStatus(error), { ok: false, error: error.message });
   }
 }
 
@@ -195,10 +263,10 @@ async function serveStatic(response, pathname, staticDir = publicDir) {
   }
 }
 
-export function createRequestHandler({ appService = service, staticDir = publicDir, operatorSummaryToken = process.env.OPL_OPERATOR_SUMMARY_TOKEN } = {}) {
+export function createRequestHandler({ appService = service, staticDir = publicDir, operatorSummaryToken = process.env.OPL_OPERATOR_SUMMARY_TOKEN, auth = appService === service ? defaultAuth : null } = {}) {
   return (request, response) => {
     const url = new URL(request.url, "http://localhost");
-    if (url.pathname.startsWith("/api/")) return handleApi(request, response, url.pathname, appService, operatorSummaryToken);
+    if (url.pathname.startsWith("/api/")) return handleApi(request, response, url.pathname, appService, operatorSummaryToken, auth);
     if (url.pathname.startsWith("/workspaces/")) {
       return handleWorkspaceUrl(request, response, url.pathname, url.searchParams, appService);
     }
