@@ -16,7 +16,9 @@ function createFakePool() {
     billing_ledger: [],
     audit_events: [],
     notifications: [],
-    runtime_operations: []
+    runtime_operations: [],
+    resource_usage_logs: [],
+    request_usage_logs: []
   };
   const statements = [];
 
@@ -33,7 +35,7 @@ function createFakePool() {
       if (normalized.startsWith("CREATE TABLE IF NOT EXISTS")) {
         return { rows: [] };
       }
-      if (normalized.startsWith("TRUNCATE accounts, organizations, users, memberships, workspaces, storage_backups, billing_reconciliation_reports, evidence_ledger, billing_ledger, audit_events, notifications, runtime_operations")) {
+      if (normalized.startsWith("TRUNCATE accounts, organizations, users, memberships, workspaces, storage_backups, billing_reconciliation_reports, evidence_ledger, billing_ledger, audit_events, notifications, runtime_operations, resource_usage_logs, request_usage_logs")) {
         tables.accounts.clear();
         tables.organizations.clear();
         tables.users.clear();
@@ -46,6 +48,8 @@ function createFakePool() {
         tables.audit_events = [];
         tables.notifications = [];
         tables.runtime_operations = [];
+        tables.resource_usage_logs = [];
+        tables.request_usage_logs = [];
         return { rows: [] };
       }
       if (normalized.startsWith("SELECT id, state FROM accounts")) {
@@ -83,6 +87,12 @@ function createFakePool() {
       }
       if (normalized.startsWith("SELECT state FROM runtime_operations")) {
         return { rows: tables.runtime_operations.map((state) => ({ state })) };
+      }
+      if (normalized.startsWith("SELECT state FROM resource_usage_logs")) {
+        return { rows: tables.resource_usage_logs.map((state) => ({ state })) };
+      }
+      if (normalized.startsWith("SELECT state FROM request_usage_logs")) {
+        return { rows: tables.request_usage_logs.map((state) => ({ state })) };
       }
       if (normalized.startsWith("INSERT INTO accounts")) {
         tables.accounts.set(params[0], params[1]);
@@ -130,6 +140,14 @@ function createFakePool() {
       }
       if (normalized.startsWith("INSERT INTO runtime_operations")) {
         tables.runtime_operations.push(params[3]);
+        return { rows: [] };
+      }
+      if (normalized.startsWith("INSERT INTO resource_usage_logs")) {
+        tables.resource_usage_logs.push(params[5]);
+        return { rows: [] };
+      }
+      if (normalized.startsWith("INSERT INTO request_usage_logs")) {
+        tables.request_usage_logs.push(params[5]);
         return { rows: [] };
       }
       throw new Error(`unexpected_sql:${normalized}`);
@@ -209,6 +227,39 @@ test("PostgresStore persists OPL Cloud state into control-plane tables", async (
         status: "succeeded",
         attempts: 1
       }
+    ],
+    resourceUsageLogs: [
+      {
+        id: "usage-resource-1",
+        userId: "usr-ada",
+        accountId: "pi-alpha",
+        workspaceId: "ws-alpha",
+        resourceType: "compute",
+        quantity: 1,
+        unit: "hour",
+        unitPrice: 1.2,
+        amount: 1.2,
+        currency: "CNY",
+        sourceEventId: "billing_tick_1",
+        createdAt: "2026-07-01T03:00:00.000Z"
+      }
+    ],
+    requestUsageLogs: [
+      {
+        id: "usage-request-1",
+        userId: "usr-ada",
+        accountId: "pi-alpha",
+        workspaceId: "ws-alpha",
+        requestId: "req-1",
+        provider: "openai",
+        model: "gpt-5",
+        inputTokens: 100,
+        outputTokens: 20,
+        amount: 0.1,
+        currency: "CNY",
+        sourceEventId: "gateway_req_1",
+        createdAt: "2026-07-01T03:01:00.000Z"
+      }
     ]
   };
 
@@ -228,6 +279,8 @@ test("PostgresStore persists OPL Cloud state into control-plane tables", async (
   assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE TABLE IF NOT EXISTS audit_events")));
   assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE TABLE IF NOT EXISTS notifications")));
   assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE TABLE IF NOT EXISTS runtime_operations")));
+  assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE TABLE IF NOT EXISTS resource_usage_logs")));
+  assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE TABLE IF NOT EXISTS request_usage_logs")));
 });
 
 test("PostgresStore update reads, mutates, and writes state transactionally", async () => {

@@ -17,7 +17,9 @@ export function emptyState() {
     billingLedger: [],
     audit: [],
     notifications: [],
-    runtimeOperations: []
+    runtimeOperations: [],
+    resourceUsageLogs: [],
+    requestUsageLogs: []
   };
 }
 
@@ -85,7 +87,22 @@ export class PostgresStore {
   async read(client = this.pool) {
     await this.ensureSchema(client);
     const state = emptyState();
-    const [accounts, organizations, users, memberships, workspaces, storageBackups, billingReconciliationReports, evidenceLedger, billingLedger, audit, notifications, runtimeOperations] = await Promise.all([
+    const [
+      accounts,
+      organizations,
+      users,
+      memberships,
+      workspaces,
+      storageBackups,
+      billingReconciliationReports,
+      evidenceLedger,
+      billingLedger,
+      audit,
+      notifications,
+      runtimeOperations,
+      resourceUsageLogs,
+      requestUsageLogs
+    ] = await Promise.all([
       client.query("SELECT id, state FROM accounts ORDER BY id"),
       client.query("SELECT id, state FROM organizations ORDER BY id"),
       client.query("SELECT id, state FROM users ORDER BY id"),
@@ -97,7 +114,9 @@ export class PostgresStore {
       client.query("SELECT state FROM billing_ledger ORDER BY created_at, id"),
       client.query("SELECT state FROM audit_events ORDER BY created_at, id"),
       client.query("SELECT state FROM notifications ORDER BY created_at, id"),
-      client.query("SELECT state FROM runtime_operations ORDER BY created_at, id")
+      client.query("SELECT state FROM runtime_operations ORDER BY created_at, id"),
+      client.query("SELECT state FROM resource_usage_logs ORDER BY created_at, id"),
+      client.query("SELECT state FROM request_usage_logs ORDER BY created_at, id")
     ]);
 
     for (const row of accounts.rows) state.accounts[row.id] = row.state;
@@ -112,12 +131,14 @@ export class PostgresStore {
     state.audit = audit.rows.map((row) => row.state);
     state.notifications = notifications.rows.map((row) => row.state);
     state.runtimeOperations = runtimeOperations.rows.map((row) => row.state);
+    state.resourceUsageLogs = resourceUsageLogs.rows.map((row) => row.state);
+    state.requestUsageLogs = requestUsageLogs.rows.map((row) => row.state);
     return clone(state);
   }
 
   async write(nextState, client = this.pool) {
     await this.ensureSchema(client);
-    await client.query("TRUNCATE accounts, organizations, users, memberships, workspaces, storage_backups, billing_reconciliation_reports, evidence_ledger, billing_ledger, audit_events, notifications, runtime_operations");
+    await client.query("TRUNCATE accounts, organizations, users, memberships, workspaces, storage_backups, billing_reconciliation_reports, evidence_ledger, billing_ledger, audit_events, notifications, runtime_operations, resource_usage_logs, request_usage_logs");
 
     for (const account of Object.values(nextState.accounts || {})) {
       await client.query(
@@ -217,6 +238,28 @@ export class PostgresStore {
         operation,
         operation.createdAt || new Date().toISOString(),
         operation.updatedAt || operation.createdAt || new Date().toISOString()
+      ]);
+    }
+    for (const usage of nextState.resourceUsageLogs || []) {
+      await client.query("INSERT INTO resource_usage_logs (id, user_id, account_id, workspace_id, resource_type, state, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)", [
+        usage.id,
+        usage.userId,
+        usage.accountId,
+        usage.workspaceId,
+        usage.resourceType,
+        usage,
+        usage.createdAt || new Date().toISOString()
+      ]);
+    }
+    for (const usage of nextState.requestUsageLogs || []) {
+      await client.query("INSERT INTO request_usage_logs (id, user_id, account_id, workspace_id, request_id, state, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)", [
+        usage.id,
+        usage.userId,
+        usage.accountId,
+        usage.workspaceId,
+        usage.requestId,
+        usage,
+        usage.createdAt || new Date().toISOString()
       ]);
     }
     return this.read(client);
@@ -350,6 +393,28 @@ export class PostgresStore {
         state jsonb NOT NULL,
         created_at timestamptz NOT NULL DEFAULT now(),
         updated_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS resource_usage_logs (
+        id text PRIMARY KEY,
+        user_id text NOT NULL,
+        account_id text NOT NULL,
+        workspace_id text NOT NULL,
+        resource_type text NOT NULL,
+        state jsonb NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS request_usage_logs (
+        id text PRIMARY KEY,
+        user_id text NOT NULL,
+        account_id text NOT NULL,
+        workspace_id text NOT NULL,
+        request_id text NOT NULL,
+        state jsonb NOT NULL,
+        created_at timestamptz NOT NULL DEFAULT now()
       )
     `);
     this.initialized = true;
