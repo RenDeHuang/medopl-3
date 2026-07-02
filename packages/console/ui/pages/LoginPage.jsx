@@ -12,7 +12,7 @@ function errorLabel(value) {
 }
 
 export default function LoginPage({ onLogin }) {
-  const [email, setEmail] = useState("pi@opl.local");
+  const [email, setEmail] = useState("pi-demo@opl.local");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
