@@ -293,6 +293,16 @@ async function serveStatic(response, pathname, staticDir = publicDir) {
     response.writeHead(200, { "content-type": contentTypes[extname(fullPath)] ?? "application/octet-stream" });
     response.end(content);
   } catch {
+    if (!extname(pathname)) {
+      try {
+        const content = await readFile(join(staticDir, "index.html"));
+        response.writeHead(200, { "content-type": contentTypes[".html"] });
+        response.end(content);
+        return;
+      } catch {
+        // fall through to plain 404
+      }
+    }
     response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
     response.end("未找到\n");
   }
