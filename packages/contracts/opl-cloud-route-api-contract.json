@@ -1,7 +1,13 @@
 {
   "schemaVersion": 1,
   "owner": "OPL Console",
-  "purpose": "Route, page, API client, server route, service, and future repo ownership boundary.",
+  "purpose": "Commercial route, permission, page, API client, server route, and service boundary map.",
+  "state": "current",
+  "machineBoundary": "Route entries, route ownership, auth/admin requirements, current status, page module, API client, API routes, and service boundary.",
+  "lifecycle": {
+    "type": "long_term_contract",
+    "removalCondition": "Replace only with a newer current contract for the same boundary."
+  },
   "productTruth": "one-person-lab-cloud",
   "frameworkTruth": "one-person-lab",
   "currentSlice": "OPL Console / OPL Workspace control-plane",
@@ -13,13 +19,15 @@
   "statuses": [
     "implemented",
     "folded_into_parent",
-    "placeholder_hidden"
+    "reserved"
   ],
   "boundaryRules": [
     "Console may call Fabric only through package boundary exports or future service APIs.",
     "Console may call Ledger only through package boundary exports or future service APIs.",
     "Implemented route means page + domain API client + server route + service boundary are all named.",
-    "Folded routes may share a parent page until a domain API exists; they must not claim implemented status."
+    "Folded routes may share a parent page until a domain API exists; they must not claim implemented status.",
+    "Reserved routes are product route space, not implemented business capability.",
+    "Do not add compatibility routes for retired APIs; move active callers to the current route and delete the old route."
   ],
   "publicRoutes": [
     {
@@ -63,7 +71,7 @@
       "label": "Terms",
       "area": "public",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": false,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -72,7 +80,7 @@
       "label": "Privacy",
       "area": "public",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": false,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -81,7 +89,7 @@
       "label": "Setup",
       "area": "public",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": false,
       "reason": "reserved_route_not_api_backed_yet"
     }
@@ -106,7 +114,7 @@
       "label": "Register",
       "area": "auth",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": false,
       "reason": "feature_gate:registration"
     },
@@ -115,7 +123,7 @@
       "label": "Accept Invite",
       "area": "auth",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": false,
       "reason": "feature_gate:invites"
     },
@@ -124,7 +132,7 @@
       "label": "Email Verification",
       "area": "auth",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": false,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -133,7 +141,7 @@
       "label": "Forgot Password",
       "area": "auth",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": false,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -142,7 +150,7 @@
       "label": "Reset Password",
       "area": "auth",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": false,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -151,7 +159,7 @@
       "label": "Auth Callback",
       "area": "auth",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": false,
       "reason": "feature_gate:sso"
     },
@@ -160,7 +168,7 @@
       "label": "Logout",
       "area": "auth",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     }
@@ -297,7 +305,7 @@
       "label": "Access Keys",
       "area": "console",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -306,7 +314,7 @@
       "label": "Gateway Usage",
       "area": "console",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -315,7 +323,7 @@
       "label": "Gateway Quotas",
       "area": "console",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -338,7 +346,7 @@
       "label": "Wallet and Holds",
       "area": "console",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -347,7 +355,7 @@
       "label": "Billing Usage",
       "area": "console",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -356,7 +364,7 @@
       "label": "Top-up and Order Records",
       "area": "console",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -365,7 +373,7 @@
       "label": "Invoices",
       "area": "console",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -388,7 +396,7 @@
       "label": "Profile",
       "area": "console",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -397,7 +405,7 @@
       "label": "Login Security",
       "area": "console",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -406,7 +414,7 @@
       "label": "Lab Ownership and Policy",
       "area": "console",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -415,7 +423,7 @@
       "label": "Notification Preferences",
       "area": "console",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -433,7 +441,7 @@
       "label": "New Ticket",
       "area": "console",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "local_ticket_ui_not_server_backed_yet"
     },
@@ -465,7 +473,7 @@
       "label": "Approved Connectors",
       "area": "console",
       "ownerRepo": "opl-fabric",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -474,7 +482,7 @@
       "label": "Approved Environments",
       "area": "console",
       "ownerRepo": "opl-fabric",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -483,7 +491,7 @@
       "label": "Approved Agent Packages",
       "area": "console",
       "ownerRepo": "opl-fabric",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -571,7 +579,7 @@
       "apiClient": "packages/console/ui/api/billing-api.js",
       "apiRoutes": [
         "GET /api/state",
-        "POST /api/accounts/credit"
+        "POST /api/billing/topups"
       ],
       "serviceBoundary": "BillingService"
     },
@@ -580,7 +588,7 @@
       "label": "Create User",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -650,7 +658,7 @@
       "label": "Organizations and Labs",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -660,7 +668,7 @@
       "label": "Teams",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -670,7 +678,7 @@
       "label": "Roles and Permissions",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -680,7 +688,7 @@
       "label": "Quota Approval and Audit Policies",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -700,7 +708,7 @@
       "label": "Admin Workspace Detail",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -725,7 +733,7 @@
       "label": "Plan Management",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -735,7 +743,7 @@
       "label": "Manual Top-up Records",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -745,7 +753,7 @@
       "label": "Wallet Transactions",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -755,7 +763,7 @@
       "label": "Reconciliation",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -785,7 +793,7 @@
       "label": "Compute Resources",
       "area": "admin",
       "ownerRepo": "opl-fabric",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "fabric_admin_ui_shell_pending_fabric_service_api"
@@ -795,7 +803,7 @@
       "label": "Storage Resources",
       "area": "admin",
       "ownerRepo": "opl-fabric",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "fabric_admin_ui_shell_pending_fabric_service_api"
@@ -805,7 +813,7 @@
       "label": "Connector Approval",
       "area": "admin",
       "ownerRepo": "opl-fabric",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "fabric_admin_ui_shell_pending_fabric_service_api"
@@ -815,7 +823,7 @@
       "label": "Environment Templates",
       "area": "admin",
       "ownerRepo": "opl-fabric",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "fabric_admin_ui_shell_pending_fabric_service_api"
@@ -825,7 +833,7 @@
       "label": "Agent Package Approval",
       "area": "admin",
       "ownerRepo": "opl-fabric",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "fabric_admin_ui_shell_pending_fabric_service_api"
@@ -851,7 +859,7 @@
       "label": "Receipts",
       "area": "admin",
       "ownerRepo": "opl-ledger",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -861,7 +869,7 @@
       "label": "Raw Ledger Events",
       "area": "admin",
       "ownerRepo": "opl-ledger",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -871,7 +879,7 @@
       "label": "Retention and Review Policies",
       "area": "admin",
       "ownerRepo": "opl-ledger",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -897,7 +905,7 @@
       "label": "Runtime Readiness",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -907,7 +915,7 @@
       "label": "Kubernetes",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -917,7 +925,7 @@
       "label": "Workspace Images",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -927,7 +935,7 @@
       "label": "Domains and Ingress",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -977,7 +985,7 @@
       "label": "Global Alerts",
       "area": "admin",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": true,
       "requiresAdmin": true,
       "reason": "reserved_route_not_api_backed_yet"
@@ -989,7 +997,7 @@
       "label": "Forbidden",
       "area": "error",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": false,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -998,7 +1006,7 @@
       "label": "Not Found",
       "area": "error",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": false,
       "reason": "reserved_route_not_api_backed_yet"
     },
@@ -1007,7 +1015,7 @@
       "label": "Error",
       "area": "error",
       "ownerRepo": "opl-console",
-      "status": "placeholder_hidden",
+      "status": "reserved",
       "requiresAuth": false,
       "reason": "reserved_route_not_api_backed_yet"
     }

@@ -36,11 +36,12 @@ test("OPL Cloud route/API contract is the long-term Console boundary map", async
 
   assert.equal(contract.schemaVersion, 1);
   assert.equal(contract.owner, "OPL Console");
-  assert.equal(contract.purpose, "Route, page, API client, server route, service, and future repo ownership boundary.");
+  assert.equal(contract.purpose, "Commercial route, permission, page, API client, server route, and service boundary map.");
   assert.deepEqual(contract.futureRepos, ["opl-console", "opl-fabric", "opl-ledger"]);
-  assert.deepEqual(contract.statuses, ["implemented", "folded_into_parent", "placeholder_hidden"]);
+  assert.deepEqual(contract.statuses, ["implemented", "folded_into_parent", "reserved"]);
   assert.ok(contract.boundaryRules.includes("Console may call Fabric only through package boundary exports or future service APIs."));
   assert.ok(contract.boundaryRules.includes("Console may call Ledger only through package boundary exports or future service APIs."));
+  assert.ok(contract.boundaryRules.includes("Reserved routes are product route space, not implemented business capability."));
 });
 
 test("every UI route is represented in the route/API contract with ownership and status", async () => {
