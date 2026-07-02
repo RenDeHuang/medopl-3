@@ -85,6 +85,69 @@ test("packages expose only production-ready CPU choices with 20 percent Tencent 
   ]);
 });
 
+test("manual top-up writes wallet transaction and top-up audit records", async () => {
+  const service = createTestService({
+    name: "manual-topup-provider"
+  });
+
+  const account = await service.creditAccount({
+    accountId: "pi-alpha",
+    amount: 250,
+    reason: "owner_credit",
+    operatorUserId: "usr-admin",
+    operatorAccountId: "admin"
+  });
+
+  const persisted = await service.store.read();
+  assert.equal(account.balance, 250);
+  assert.equal(persisted.manualTopups.length, 1);
+  assert.equal(persisted.walletTransactions.length, 1);
+  assert.deepEqual(persisted.manualTopups.map((topup) => ({
+    operatorUserId: topup.operatorUserId,
+    operatorAccountId: topup.operatorAccountId,
+    targetUserId: topup.targetUserId,
+    targetAccountId: topup.targetAccountId,
+    amount: topup.amount,
+    reason: topup.reason,
+    status: topup.status,
+    balanceBefore: topup.balanceBefore,
+    balanceAfter: topup.balanceAfter
+  })), [
+    {
+      operatorUserId: "usr-admin",
+      operatorAccountId: "admin",
+      targetUserId: "usr-pi-alpha",
+      targetAccountId: "pi-alpha",
+      amount: 250,
+      reason: "owner_credit",
+      status: "completed",
+      balanceBefore: 0,
+      balanceAfter: 250
+    }
+  ]);
+  assert.deepEqual(persisted.walletTransactions.map((transaction) => ({
+    userId: transaction.userId,
+    accountId: transaction.accountId,
+    type: transaction.type,
+    amount: transaction.amount,
+    balanceBefore: transaction.balanceBefore,
+    balanceAfter: transaction.balanceAfter,
+    sourceEventId: transaction.sourceEventId
+  })), [
+    {
+      userId: "usr-pi-alpha",
+      accountId: "pi-alpha",
+      type: "credit",
+      amount: 250,
+      balanceBefore: 0,
+      balanceAfter: 250,
+      sourceEventId: "owner_credit"
+    }
+  ]);
+  assert.equal(persisted.billingLedger.some((entry) => entry.type === "credit" && entry.userId === "usr-pi-alpha"), true);
+  assert.equal(persisted.audit.some((entry) => entry.type === "account.credit_granted"), true);
+});
+
 test("opening a Workspace freezes seven days of compute and storage and charges the first hour from available balance", async () => {
   const service = createTestService({
     name: "billing-provider",

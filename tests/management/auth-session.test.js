@@ -194,7 +194,13 @@ test("PI sessions are account scoped and cannot top up balances", async () => {
     assert.equal(adminCredit.response.status, 200);
     assert.deepEqual(calls, [
       ["getState", "pi-alpha"],
-      ["creditAccount", { accountId: "pi-alpha", amount: 200, reason: "manual_top_up" }]
+      ["creditAccount", {
+        accountId: "pi-alpha",
+        amount: 200,
+        reason: "manual_top_up",
+        operatorUserId: "usr-admin",
+        operatorAccountId: "admin"
+      }]
     ]);
   } finally {
     await close();

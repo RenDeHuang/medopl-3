@@ -50,6 +50,9 @@ function clone(value) {
 function ensureBillingCollections(state) {
   state.resourceUsageLogs ??= [];
   state.requestUsageLogs ??= [];
+  state.walletTransactions ??= [];
+  state.manualTopups ??= [];
+  state.requestUsageDedup ??= [];
 }
 
 function userIdForAccount(state, accountId) {
@@ -205,6 +208,46 @@ function chargeAccount(account, holdType, amount) {
   };
 }
 
+function appendWalletTransaction(state, {
+  user,
+  accountId,
+  workspaceId = "account",
+  type,
+  amount,
+  sourceEventId,
+  ledgerEntryId = "",
+  usageLogId = "",
+  fundingSource = "",
+  balanceBefore,
+  balanceAfter,
+  frozenBefore,
+  frozenAfter,
+  metadata = null
+}) {
+  ensureBillingCollections(state);
+  const transaction = {
+    id: makeId("wallet-tx", user.id, accountId, workspaceId, type, sourceEventId, String(state.walletTransactions.length)),
+    userId: user.id,
+    accountId,
+    workspaceId,
+    type,
+    amount: money(Number(amount || 0)),
+    currency: "CNY",
+    balanceBefore: money(Number(balanceBefore || 0)),
+    balanceAfter: money(Number(balanceAfter || 0)),
+    frozenBefore: money(Number(frozenBefore || 0)),
+    frozenAfter: money(Number(frozenAfter || 0)),
+    sourceEventId,
+    ...(ledgerEntryId ? { ledgerEntryId } : {}),
+    ...(usageLogId ? { usageLogId } : {}),
+    ...(fundingSource ? { fundingSource } : {}),
+    ...(metadata ? { metadata: clone(metadata) } : {}),
+    createdAt: now()
+  };
+  state.walletTransactions.push(transaction);
+  return transaction;
+}
+
 function latestWorkspaceForAccount(state, accountId, workspaceId) {
   const workspace = state.workspaces[workspaceId];
   if (!workspace || workspace.ownerAccountId !== accountId) {
@@ -358,13 +401,17 @@ export class OplCloudService {
     }));
   }
 
-  async creditAccount({ accountId, amount, reason }) {
+  async creditAccount({ accountId, amount, reason, operatorUserId = "", operatorAccountId = "" }) {
     if (!accountId) throw new Error("account_required");
     const credit = Number(amount);
     if (!Number.isFinite(credit) || credit <= 0) throw new Error("positive_credit_required");
 
     return this.store.update((state) => {
+      ensureBillingCollections(state);
       const account = ensureAccount(state, accountId);
+      const sourceEventId = reason || "owner_credit";
+      const balanceBefore = money(Number(account.balance || 0));
+      const frozenBefore = money(Number(account.frozen || 0));
       account.balance = money(account.balance + credit);
       account.totalRecharged = money(Number(account.totalRecharged || 0) + credit);
       syncAccountWallet(state, account);
@@ -373,10 +420,47 @@ export class OplCloudService {
         accountId,
         type: "credit",
         amount: credit,
-        sourceEventId: reason || "owner_credit"
+        sourceEventId,
+        metadata: {
+          operatorUserId,
+          operatorAccountId
+        }
       });
       state.billingLedger.push(entry);
-      state.audit.push(this.auditEvent({ accountId, type: "account.credit_granted", sourceEventId: entry.id }));
+      const transaction = appendWalletTransaction(state, {
+        user: account,
+        accountId,
+        type: "credit",
+        amount: credit,
+        sourceEventId,
+        ledgerEntryId: entry.id,
+        balanceBefore,
+        balanceAfter: account.balance,
+        frozenBefore,
+        frozenAfter: account.frozen,
+        metadata: {
+          operatorUserId,
+          operatorAccountId
+        }
+      });
+      const topup = {
+        id: makeId("manual-topup", account.id, accountId, sourceEventId, String(state.manualTopups.length)),
+        operatorUserId,
+        operatorAccountId,
+        targetUserId: account.id,
+        targetAccountId: accountId,
+        amount: money(credit),
+        currency: "CNY",
+        reason: sourceEventId,
+        status: "completed",
+        balanceBefore,
+        balanceAfter: money(Number(account.balance || 0)),
+        ledgerEntryId: entry.id,
+        walletTransactionId: transaction.id,
+        createdAt: now()
+      };
+      state.manualTopups.push(topup);
+      state.audit.push(this.auditEvent({ accountId, type: "account.credit_granted", sourceEventId: topup.id }));
       return accountSnapshotForState(state, accountId);
     });
   }

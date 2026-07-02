@@ -228,7 +228,13 @@ async function handleApi(request, response, pathname, appService, operatorSummar
     const routes = {
       "POST /api/accounts/credit": () => {
         requireAdmin(auth, session);
-        return appService.creditAccount(body);
+        return appService.creditAccount(auth
+          ? {
+            ...body,
+            operatorUserId: session.user.id,
+            operatorAccountId: session.user.accountId
+          }
+          : body);
       },
       "POST /api/organizations": () => {
         requireAdmin(auth, session);
