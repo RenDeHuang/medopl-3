@@ -253,6 +253,8 @@ export default function ConsolePage({ session, onLogout }) {
   const wallet = state?.wallet || state?.account || { balance: 0, frozen: 0, available: 0, holds: {} };
   const resourceUsageLogs = state?.resourceUsageLogs || [];
   const requestUsageLogs = state?.requestUsageLogs || [];
+  const walletTransactions = state?.walletTransactions || [];
+  const manualTopups = state?.manualTopups || [];
 
   if (!state) {
     return (
@@ -396,6 +398,12 @@ export default function ConsolePage({ session, onLogout }) {
             </Panel>
             <Panel title="请求用量" icon={<Activity />}>
               <RequestUsageList events={requestUsageLogs} />
+            </Panel>
+            <Panel title="钱包流水" icon={<WalletCards />}>
+              <WalletTransactionList events={walletTransactions} />
+            </Panel>
+            <Panel title="充值审计" icon={<CreditCard />}>
+              <ManualTopupList events={manualTopups} />
             </Panel>
             <Panel title="OPL Ledger 事件" icon={<History />}>
               <EventList events={state.billingLedger} />
@@ -653,6 +661,36 @@ function RequestUsageList({ events }) {
           <strong>{event.model || event.provider || "请求用量"}</strong>
           <span>{event.requestId}</span>
           <em>{Number(event.inputTokens || 0) + Number(event.outputTokens || 0)} tokens · {money(event.amount)}</em>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function WalletTransactionList({ events }) {
+  if (!events.length) return <div className="empty">暂无钱包流水。</div>;
+  return (
+    <div className="eventList">
+      {events.slice().reverse().slice(0, 12).map((event) => (
+        <article className="event" key={event.id}>
+          <strong>{eventTitle(event.type)}</strong>
+          <span>{event.workspaceId || event.accountId}</span>
+          <em>{money(event.amount)} · {money(event.balanceAfter)} 余额</em>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function ManualTopupList({ events }) {
+  if (!events.length) return <div className="empty">暂无充值审计。</div>;
+  return (
+    <div className="eventList">
+      {events.slice().reverse().slice(0, 12).map((event) => (
+        <article className="event" key={event.id}>
+          <strong>{event.reason || "手工充值"}</strong>
+          <span>{event.targetAccountId}</span>
+          <em>{money(event.amount)} · {valueLabel(event.status)}</em>
         </article>
       ))}
     </div>

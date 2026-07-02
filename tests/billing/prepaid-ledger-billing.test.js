@@ -459,6 +459,101 @@ test("request usage charges the user wallet and records request logs", async () 
   assert.equal(state.billingLedger.some((entry) => entry.type === "request_debit" && entry.userId === "usr-pi-alpha"), true);
 });
 
+test("request usage deduplicates same fingerprint and rejects conflicting replay", async () => {
+  const service = createTestService({
+    name: "request-dedup-provider",
+    async createWorkspaceRuntime(input) {
+      return runtimeFixture(input);
+    }
+  });
+
+  await service.creditAccount({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
+  const workspace = await service.createWorkspace({
+    accountId: "pi-alpha",
+    workspaceName: "Request Dedup Lab",
+    packageId: "basic"
+  });
+
+  const input = {
+    accountId: "pi-alpha",
+    workspaceId: workspace.id,
+    requestId: "req-dedup",
+    provider: "openai",
+    model: "gpt-5",
+    inputTokens: 1000,
+    outputTokens: 500,
+    amount: 0.25,
+    sourceEventId: "gateway_req_dedup"
+  };
+  const first = await service.recordRequestUsage(input);
+  const replay = await service.recordRequestUsage(input);
+  assert.equal(replay.id, first.id);
+
+  const afterReplay = await service.getState("pi-alpha");
+  assert.equal(afterReplay.requestUsageLogs.length, 1);
+  assert.equal(afterReplay.requestUsageDedup.length, 1);
+  assert.equal(afterReplay.walletTransactions.filter((transaction) => transaction.type === "request_debit").length, 1);
+  assert.equal(afterReplay.billingLedger.filter((entry) => entry.type === "request_debit").length, 1);
+  assert.equal(afterReplay.requestUsageLogs[0].requestFingerprint, first.requestFingerprint);
+
+  await assert.rejects(
+    () => service.recordRequestUsage({ ...input, amount: 0.5 }),
+    /request_usage_fingerprint_conflict/
+  );
+
+  const afterConflict = await service.getState("pi-alpha");
+  assert.equal(afterConflict.requestUsageLogs.length, 1);
+  assert.equal(afterConflict.walletTransactions.filter((transaction) => transaction.type === "request_debit").length, 1);
+});
+
+test("request usage quota rejects billing before wallet mutation", async () => {
+  const service = createTestService({
+    name: "request-quota-provider",
+    async createWorkspaceRuntime(input) {
+      return runtimeFixture(input);
+    }
+  });
+
+  await service.creditAccount({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
+  const workspace = await service.createWorkspace({
+    accountId: "pi-alpha",
+    workspaceName: "Request Quota Lab",
+    packageId: "basic"
+  });
+  await service.store.update((state) => {
+    state.users["usr-pi-alpha"].requestQuota = {
+      limit: 1,
+      used: 1,
+      windowLimit: 1,
+      windowUsed: 1,
+      windowSeconds: 3600,
+      windowStartedAt: "2026-07-02T00:00:00.000Z"
+    };
+  });
+  const before = await service.getState("pi-alpha");
+
+  await assert.rejects(
+    () => service.recordRequestUsage({
+      accountId: "pi-alpha",
+      workspaceId: workspace.id,
+      requestId: "req-quota",
+      provider: "openai",
+      model: "gpt-5",
+      inputTokens: 100,
+      outputTokens: 50,
+      amount: 0.1,
+      sourceEventId: "gateway_req_quota"
+    }),
+    /request_quota_exceeded/
+  );
+
+  const after = await service.getState("pi-alpha");
+  assert.equal(after.wallet.balance, before.wallet.balance);
+  assert.equal(after.requestUsageLogs.length, 0);
+  assert.equal(after.requestUsageDedup.length, 0);
+  assert.equal(after.walletTransactions.filter((transaction) => transaction.type === "request_debit").length, 0);
+});
+
 test("destroying compute and storage releases unused prepaid holds", async () => {
   const service = createTestService({
     name: "destroy-provider",

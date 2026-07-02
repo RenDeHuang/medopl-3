@@ -248,6 +248,57 @@ function appendWalletTransaction(state, {
   return transaction;
 }
 
+function requestUsageFingerprint({
+  provider = "",
+  model = "",
+  inputTokens = 0,
+  outputTokens = 0,
+  requestedAmount = 0,
+  sourceEventId = ""
+}) {
+  return `fp-${stableHash(JSON.stringify({
+    provider,
+    model,
+    inputTokens: Number(inputTokens || 0),
+    outputTokens: Number(outputTokens || 0),
+    requestedAmount: money(Number(requestedAmount || 0)),
+    sourceEventId
+  }))}`;
+}
+
+function requestQuotaWindowExpired(quota) {
+  const windowSeconds = Number(quota.windowSeconds || 0);
+  if (!windowSeconds || !quota.windowStartedAt) return false;
+  const startedAt = Date.parse(quota.windowStartedAt);
+  if (!Number.isFinite(startedAt)) return false;
+  return Date.now() - startedAt >= windowSeconds * 1000;
+}
+
+function incrementRequestQuota(user, units = 1) {
+  const quota = user.requestQuota;
+  if (!quota) return null;
+  const amount = Number(units || 0);
+  if (!Number.isFinite(amount) || amount <= 0) return clone(quota);
+  quota.used = Number(quota.used || 0);
+  if (quota.limit !== undefined && Number(quota.limit) >= 0 && quota.used + amount > Number(quota.limit)) {
+    throw new Error("request_quota_exceeded");
+  }
+  if (requestQuotaWindowExpired(quota)) {
+    quota.windowUsed = 0;
+    quota.windowStartedAt = now();
+  }
+  if (quota.windowLimit !== undefined) {
+    quota.windowUsed = Number(quota.windowUsed || 0);
+    if (Number(quota.windowLimit) >= 0 && quota.windowUsed + amount > Number(quota.windowLimit)) {
+      throw new Error("request_quota_exceeded");
+    }
+    quota.windowUsed = money(quota.windowUsed + amount);
+    quota.windowStartedAt ||= now();
+  }
+  quota.used = money(quota.used + amount);
+  return clone(quota);
+}
+
 function latestWorkspaceForAccount(state, accountId, workspaceId) {
   const workspace = state.workspaces[workspaceId];
   if (!workspace || workspace.ownerAccountId !== accountId) {
@@ -1209,21 +1260,48 @@ export class OplCloudService {
       if (!workspace) throw new Error("workspace_not_found");
       const resolvedAccountId = accountId || workspace.ownerAccountId;
       const eventId = sourceEventId || `gateway_request:${requestId}`;
+      const requestedAmount = money(Math.max(0, Number(amount || 0)));
+      const normalizedInputTokens = Number(inputTokens || 0);
+      const normalizedOutputTokens = Number(outputTokens || 0);
+      const fingerprint = requestUsageFingerprint({
+        provider,
+        model,
+        inputTokens: normalizedInputTokens,
+        outputTokens: normalizedOutputTokens,
+        requestedAmount,
+        sourceEventId: eventId
+      });
       const existing = state.requestUsageLogs.find((log) =>
         log.workspaceId === workspaceId &&
         (log.sourceEventId === eventId || log.requestId === requestId)
       );
+      const existingDedup = state.requestUsageDedup.find((dedup) =>
+        dedup.workspaceId === workspaceId &&
+        (dedup.sourceEventId === eventId || dedup.requestId === requestId)
+      );
+      const existingFingerprint = existing?.requestFingerprint || existingDedup?.requestFingerprint;
+      if (existingFingerprint && existingFingerprint !== fingerprint) {
+        throw new Error("request_usage_fingerprint_conflict");
+      }
       if (existing) return clone(existing);
+      if (existingDedup?.usageLogId) {
+        const existingLog = state.requestUsageLogs.find((log) => log.id === existingDedup.usageLogId);
+        if (existingLog) return clone(existingLog);
+      }
 
       const user = ensureUserWallet(state, {
         accountId: resolvedAccountId,
         userId: userId || workspace.ownerUserId || workspace.owner?.userId
       });
-      const requestedAmount = money(Math.max(0, Number(amount || 0)));
+      const quota = incrementRequestQuota(user, 1);
+      const balanceBefore = money(Number(user.balance || 0));
+      const frozenBefore = money(Number(user.frozen || 0));
       const charged = debitAvailableBalance(user, requestedAmount);
       syncAccountWallet(state, user);
+      const logId = makeId("usage-request", resolvedAccountId, workspaceId, requestId, eventId, String(state.requestUsageLogs.length));
+      let ledgerEntry = null;
       if (charged > 0) {
-        state.billingLedger.push(this.ledgerEntry({ state,
+        ledgerEntry = this.ledgerEntry({ state,
           workspaceId,
           accountId: resolvedAccountId,
           type: "request_debit",
@@ -1233,31 +1311,72 @@ export class OplCloudService {
             requestId,
             provider,
             model,
-            inputTokens: Number(inputTokens || 0),
-            outputTokens: Number(outputTokens || 0),
+            inputTokens: normalizedInputTokens,
+            outputTokens: normalizedOutputTokens,
             requestedAmount,
-            fundingSource: "available_balance"
+            fundingSource: "available_balance",
+            requestFingerprint: fingerprint,
+            usageLogId: logId
           }
-        }));
+        });
+        state.billingLedger.push(ledgerEntry);
       }
       const log = {
-        id: makeId("usage-request", resolvedAccountId, workspaceId, requestId, eventId, String(state.requestUsageLogs.length)),
+        id: logId,
         userId: user.id,
         accountId: resolvedAccountId,
         workspaceId,
         requestId,
         provider,
         model,
-        inputTokens: Number(inputTokens || 0),
-        outputTokens: Number(outputTokens || 0),
+        inputTokens: normalizedInputTokens,
+        outputTokens: normalizedOutputTokens,
         amount: charged,
         requestedAmount,
         unpaid: money(requestedAmount - charged),
         currency: "CNY",
         sourceEventId: eventId,
+        requestFingerprint: fingerprint,
+        ...(ledgerEntry ? { ledgerEntryId: ledgerEntry.id } : {}),
+        ...(quota ? { quota } : {}),
         createdAt: now()
       };
       state.requestUsageLogs.push(log);
+      if (charged > 0) {
+        appendWalletTransaction(state, {
+          user,
+          accountId: resolvedAccountId,
+          workspaceId,
+          type: "request_debit",
+          amount: -charged,
+          sourceEventId: eventId,
+          ledgerEntryId: ledgerEntry.id,
+          usageLogId: log.id,
+          fundingSource: "available_balance",
+          balanceBefore,
+          balanceAfter: user.balance,
+          frozenBefore,
+          frozenAfter: user.frozen,
+          metadata: {
+            requestId,
+            provider,
+            model,
+            requestFingerprint: fingerprint
+          }
+        });
+      }
+      const dedup = {
+        id: makeId("dedup", resolvedAccountId, workspaceId, eventId, requestId),
+        userId: user.id,
+        accountId: resolvedAccountId,
+        workspaceId,
+        requestId,
+        sourceEventId: eventId,
+        requestFingerprint: fingerprint,
+        usageLogId: log.id,
+        createdAt: now()
+      };
+      state.requestUsageDedup.push(dedup);
       state.audit.push(this.auditEvent({
         accountId: resolvedAccountId,
         workspaceId,
@@ -1365,6 +1484,9 @@ export class OplCloudService {
       billingLedger: state.billingLedger.filter((entry) => entry.accountId === accountId).map(clone),
       resourceUsageLogs: (state.resourceUsageLogs || []).filter((entry) => entry.accountId === accountId).map(clone),
       requestUsageLogs: (state.requestUsageLogs || []).filter((entry) => entry.accountId === accountId).map(clone),
+      walletTransactions: (state.walletTransactions || []).filter((entry) => entry.accountId === accountId).map(clone),
+      manualTopups: (state.manualTopups || []).filter((entry) => entry.targetAccountId === accountId).map(clone),
+      requestUsageDedup: (state.requestUsageDedup || []).filter((entry) => entry.accountId === accountId).map(clone),
       storageBackups: (state.storageBackups || []).filter((entry) => entry.accountId === accountId).map(clone),
       billingReconciliation: {
         latestReport: clone(latestBillingReconciliationReport(state)),

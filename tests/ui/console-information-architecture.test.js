@@ -22,4 +22,6 @@ test("OPL Console navigation fixes Workspace delivery as the primary commercial 
   assert.match(source, /Compute 小时/);
   assert.match(source, /Storage GB-hour/);
   assert.match(source, /请求用量/);
+  assert.match(source, /钱包流水/);
+  assert.match(source, /充值审计/);
 });
