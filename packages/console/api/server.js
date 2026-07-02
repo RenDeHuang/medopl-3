@@ -257,6 +257,7 @@ async function handleApi(request, response, pathname, appService, operatorSummar
       "POST /api/workspaces/reset-token": () => appService.resetWorkspaceToken(scopedWorkspaceInput(auth, session, body)),
       "POST /api/workspaces/delete-token": () => appService.deleteWorkspaceToken(scopedWorkspaceInput(auth, session, body)),
       "POST /api/billing/settle": () => appService.settleBilling(scopedWorkspaceInput(auth, session, body)),
+      "POST /api/billing/request-usage": () => appService.recordRequestUsage(scopedWorkspaceInput(auth, session, body)),
       "POST /api/billing/reconciliation": () => {
         requireAdmin(auth, session);
         return appService.recordBillingReconciliation(body);

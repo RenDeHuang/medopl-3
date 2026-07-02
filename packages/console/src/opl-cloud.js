@@ -257,6 +257,10 @@ function hourlyStorageAmount({ packagePlan, pricing, hours }) {
   return money((packagePlan.diskGb * gbMonth * (1 + markup) / 30 / 24) * hours);
 }
 
+function storageGbHourPrice(pricing) {
+  return money(storageGbMonthBase(pricing) * (1 + pricingMarkup(pricing)) / 30 / 24);
+}
+
 function hourlyComputeAmount({ packagePlan, pricing, hours }) {
   const hourly = computeHourlyBase({ packagePlan, pricing });
   const markup = pricingMarkup(pricing);
@@ -1099,6 +1103,87 @@ export class OplCloudService {
     return state.billingLedger.filter((entry) => entry.accountId === accountId).map(clone);
   }
 
+  async recordRequestUsage({
+    accountId = "",
+    userId = "",
+    workspaceId,
+    requestId,
+    provider,
+    model,
+    inputTokens = 0,
+    outputTokens = 0,
+    amount = 0,
+    sourceEventId = ""
+  }) {
+    if (!workspaceId) throw new Error("workspace_required");
+    if (!requestId) throw new Error("request_required");
+    return this.store.update((state) => {
+      ensureBillingCollections(state);
+      const workspace = accountId
+        ? latestWorkspaceForAccount(state, accountId, workspaceId)
+        : state.workspaces[workspaceId];
+      if (!workspace) throw new Error("workspace_not_found");
+      const resolvedAccountId = accountId || workspace.ownerAccountId;
+      const eventId = sourceEventId || `gateway_request:${requestId}`;
+      const existing = state.requestUsageLogs.find((log) =>
+        log.workspaceId === workspaceId &&
+        (log.sourceEventId === eventId || log.requestId === requestId)
+      );
+      if (existing) return clone(existing);
+
+      const user = ensureUserWallet(state, {
+        accountId: resolvedAccountId,
+        userId: userId || workspace.ownerUserId || workspace.owner?.userId
+      });
+      const requestedAmount = money(Math.max(0, Number(amount || 0)));
+      const charged = debitAvailableBalance(user, requestedAmount);
+      syncAccountWallet(state, user);
+      if (charged > 0) {
+        state.billingLedger.push(this.ledgerEntry({ state,
+          workspaceId,
+          accountId: resolvedAccountId,
+          type: "request_debit",
+          amount: -charged,
+          sourceEventId: eventId,
+          metadata: {
+            requestId,
+            provider,
+            model,
+            inputTokens: Number(inputTokens || 0),
+            outputTokens: Number(outputTokens || 0),
+            requestedAmount,
+            fundingSource: "available_balance"
+          }
+        }));
+      }
+      const log = {
+        id: makeId("usage-request", resolvedAccountId, workspaceId, requestId, eventId, String(state.requestUsageLogs.length)),
+        userId: user.id,
+        accountId: resolvedAccountId,
+        workspaceId,
+        requestId,
+        provider,
+        model,
+        inputTokens: Number(inputTokens || 0),
+        outputTokens: Number(outputTokens || 0),
+        amount: charged,
+        requestedAmount,
+        unpaid: money(requestedAmount - charged),
+        currency: "CNY",
+        sourceEventId: eventId,
+        createdAt: now()
+      };
+      state.requestUsageLogs.push(log);
+      state.audit.push(this.auditEvent({
+        accountId: resolvedAccountId,
+        workspaceId,
+        type: "billing.request_usage_recorded",
+        sourceEventId: eventId
+      }));
+      return clone(log);
+    });
+  }
+
   async recordTaskEvidenceReceipt(input) {
     return this.store.update((state) => {
       if (input.workspaceId) latestWorkspaceForAccount(state, input.accountId, input.workspaceId);
@@ -1362,6 +1447,46 @@ export class OplCloudService {
     );
   }
 
+  recordResourceUsage({
+    state,
+    account,
+    workspace,
+    resourceType,
+    quantity,
+    unit,
+    unitPrice,
+    amount,
+    requestedAmount,
+    sourceEventId,
+    metadata = {}
+  }) {
+    ensureBillingCollections(state);
+    const existing = state.resourceUsageLogs.find((log) =>
+      log.workspaceId === workspace.id &&
+      log.resourceType === resourceType &&
+      log.sourceEventId === sourceEventId
+    );
+    if (existing) return existing;
+    const log = {
+      id: makeId("usage-resource", workspace.ownerAccountId, workspace.id, resourceType, sourceEventId, String(state.resourceUsageLogs.length)),
+      userId: account.id,
+      accountId: workspace.ownerAccountId,
+      workspaceId: workspace.id,
+      resourceType,
+      quantity: money(Number(quantity || 0)),
+      unit,
+      unitPrice: money(Number(unitPrice || 0)),
+      amount: money(Number(amount || 0)),
+      requestedAmount: money(Number(requestedAmount ?? amount ?? 0)),
+      currency: "CNY",
+      sourceEventId,
+      metadata: clone(metadata),
+      createdAt: now()
+    };
+    state.resourceUsageLogs.push(log);
+    return log;
+  }
+
   appendDebitEntries({ state, entries, workspaceId, accountId, type, holdType, charge, sourceEventId, billableHours, metadata }) {
     const debits = [
       { amount: charge.available, fundingSource: "available_balance" },
@@ -1395,6 +1520,11 @@ export class OplCloudService {
     if (workspace.server.status === "running" && workspace.server.billingStatus === "active") {
       const requestedAmount = hourlyComputeAmount({ packagePlan, pricing: this.pricing, hours: billedHours });
       const charge = chargeAccount(account, "compute", requestedAmount);
+      const metadata = {
+        requestedHours: billedHours,
+        baseHourly: computeHourlyBase({ packagePlan, pricing: this.pricing }),
+        markup: pricingMarkup(this.pricing)
+      };
       this.appendDebitEntries({
         state,
         entries,
@@ -1405,11 +1535,20 @@ export class OplCloudService {
         charge,
         sourceEventId,
         billableHours: billedHours,
-        metadata: {
-          requestedHours: billedHours,
-          baseHourly: computeHourlyBase({ packagePlan, pricing: this.pricing }),
-          markup: pricingMarkup(this.pricing)
-        }
+        metadata
+      });
+      this.recordResourceUsage({
+        state,
+        account,
+        workspace,
+        resourceType: "compute",
+        quantity: billedHours,
+        unit: "hour",
+        unitPrice: pricedComputeHourly({ packagePlan, pricing: this.pricing }),
+        amount: charge.charged,
+        requestedAmount,
+        sourceEventId,
+        metadata
       });
       if (charge.usedHold) {
         this.notify({
@@ -1427,6 +1566,12 @@ export class OplCloudService {
     if (workspace.disk.status !== "destroyed" && workspace.disk.billingStatus === "active") {
       const requestedStorageAmount = hourlyStorageAmount({ packagePlan, pricing: this.pricing, hours: billedHours });
       const charge = chargeAccount(account, "storage", requestedStorageAmount);
+      const metadata = {
+        requestedHours: billedHours,
+        diskGb: packagePlan.diskGb,
+        baseGbMonth: storageGbMonthBase(this.pricing),
+        markup: pricingMarkup(this.pricing)
+      };
       this.appendDebitEntries({
         state,
         entries,
@@ -1437,11 +1582,20 @@ export class OplCloudService {
         charge,
         sourceEventId,
         billableHours: billedHours,
-        metadata: {
-          requestedHours: billedHours,
-          baseGbMonth: storageGbMonthBase(this.pricing),
-          markup: pricingMarkup(this.pricing)
-        }
+        metadata
+      });
+      this.recordResourceUsage({
+        state,
+        account,
+        workspace,
+        resourceType: "storage",
+        quantity: packagePlan.diskGb * billedHours,
+        unit: "gb_hour",
+        unitPrice: storageGbHourPrice(this.pricing),
+        amount: charge.charged,
+        requestedAmount: requestedStorageAmount,
+        sourceEventId,
+        metadata
       });
       if (charge.usedHold && !entries.some((entry) =>
         entry.type === "compute_debit" &&

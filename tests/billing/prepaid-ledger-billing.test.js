@@ -219,6 +219,12 @@ test("billing settlement rounds up to full hours, consumes available balance fir
   assert.equal(state.workspaces[0].server.status, "stopped");
   assert.equal(state.workspaces[0].disk.billingStatus, "hold_exhausted");
   assert.equal(state.workspaces[0].state, "stopped_storage_hold_exhausted");
+  const persisted = await service.store.read();
+  const usageLogs = persisted.resourceUsageLogs.filter((log) => log.sourceEventId === "billing_tick_hold_exhausted");
+  assert.deepEqual(usageLogs.map((log) => log.resourceType), ["compute", "storage"]);
+  assert.equal(usageLogs[0].unit, "hour");
+  assert.equal(usageLogs[1].unit, "gb_hour");
+  assert.equal(usageLogs.every((log) => log.userId === "usr-pi-alpha"), true);
   assert.deepEqual(state.notifications.map((event) => event.type), [
     "account.available_balance_exhausted",
     "workspace.storage_hold_exhausted",
@@ -338,6 +344,53 @@ test("billing settlement is idempotent for the same source event", async () => {
     afterRetry.billingLedger.filter((entry) => entry.sourceEventId === "billing_tick_retry_safe").length,
     2
   );
+});
+
+test("request usage charges the user wallet and records request logs", async () => {
+  const service = createTestService({
+    name: "request-usage-provider",
+    async createWorkspaceRuntime(input) {
+      return runtimeFixture(input);
+    }
+  });
+
+  await service.creditAccount({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
+  const workspace = await service.createWorkspace({
+    accountId: "pi-alpha",
+    workspaceName: "Request Usage Lab",
+    packageId: "basic"
+  });
+
+  const usage = await service.recordRequestUsage({
+    accountId: "pi-alpha",
+    workspaceId: workspace.id,
+    requestId: "req-alpha",
+    provider: "openai",
+    model: "gpt-5",
+    inputTokens: 1000,
+    outputTokens: 500,
+    amount: 0.25,
+    sourceEventId: "gateway_req_alpha"
+  });
+
+  const state = await service.getState("pi-alpha");
+  const persisted = await service.store.read();
+  assert.equal(usage.userId, "usr-pi-alpha");
+  assert.equal(state.wallet.balance, 248.5467);
+  assert.deepEqual(persisted.requestUsageLogs.map((log) => ({
+    requestId: log.requestId,
+    userId: log.userId,
+    amount: log.amount,
+    sourceEventId: log.sourceEventId
+  })), [
+    {
+      requestId: "req-alpha",
+      userId: "usr-pi-alpha",
+      amount: 0.25,
+      sourceEventId: "gateway_req_alpha"
+    }
+  ]);
+  assert.equal(state.billingLedger.some((entry) => entry.type === "request_debit" && entry.userId === "usr-pi-alpha"), true);
 });
 
 test("destroying compute and storage releases unused prepaid holds", async () => {
