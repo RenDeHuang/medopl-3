@@ -75,6 +75,10 @@ function b64(value) {
   return Buffer.from(String(value), "utf8").toString("base64");
 }
 
+function isKubernetesNotFound(error) {
+  return /not\s+found|NotFound/i.test(String(error?.message || error));
+}
+
 export class TencentTkeProvider {
   constructor({
     env = process.env,
@@ -218,7 +222,11 @@ export class TencentTkeProvider {
         }
       }
     };
-    await this.runKubectl(["patch", `deployment/${computeName}`, "--type=merge", "-p", JSON.stringify(patch)]);
+    try {
+      await this.runKubectl(["patch", `deployment/${computeName}`, "--type=strategic", "-p", JSON.stringify(patch)]);
+    } catch (error) {
+      if (!isKubernetesNotFound(error)) throw error;
+    }
     return {
       providerAttachmentId: attachment.providerAttachmentId,
       status: "detached"

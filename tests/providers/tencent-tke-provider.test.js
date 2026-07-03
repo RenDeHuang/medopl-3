@@ -202,7 +202,7 @@ test("Tencent TKE provider detaches and destroys split resources in Kubernetes",
     });
 
     assert.deepEqual(calls.map((call) => `${call.command} ${call.args.join(" ")}`), [
-      `kubectl --kubeconfig /tmp/kubeconfig --namespace opl-cloud patch deployment/opl-compute-tke001 --type=merge -p ${detachPatch}`,
+      `kubectl --kubeconfig /tmp/kubeconfig --namespace opl-cloud patch deployment/opl-compute-tke001 --type=strategic -p ${detachPatch}`,
       "kubectl --kubeconfig /tmp/kubeconfig --namespace opl-cloud get ingress/opl-cloud -o json",
       `kubectl --kubeconfig /tmp/kubeconfig --namespace opl-cloud apply -f ${routePath}`,
       "kubectl --kubeconfig /tmp/kubeconfig --namespace opl-cloud delete deployment/opl-compute-tke001 service/opl-compute-tke001 secret/opl-compute-tke001-env --ignore-not-found=true",
@@ -214,6 +214,34 @@ test("Tencent TKE provider detaches and destroys split resources in Kubernetes",
   } finally {
     await rm(stateRootDir, { recursive: true, force: true });
   }
+});
+
+test("Tencent TKE provider treats detach as idempotent when compute deployment is already gone", async () => {
+  const calls = [];
+  const provider = new TencentTkeProvider({
+    env: requiredEnv,
+    runner: async ({ command, args }) => {
+      calls.push({ command, args });
+      if (args.includes("patch")) throw new Error('deployments.apps "opl-compute-gone" not found');
+      return "";
+    },
+    commandExists: () => true
+  });
+  const detached = await provider.detachStorage({
+    attachment: {
+      id: "attach-gone",
+      computeId: "compute-gone",
+      providerAttachmentId: "deployment/opl-compute-gone:pvc/opl-storage-gone-data:/data"
+    }
+  });
+
+  assert.deepEqual(calls.map((call) => `${call.command} ${call.args.join(" ")}`), [
+    'kubectl --kubeconfig /tmp/kubeconfig --namespace opl-cloud patch deployment/opl-compute-gone --type=strategic -p {"spec":{"template":{"spec":{"containers":[{"name":"workspace","volumeMounts":null}],"volumes":null}}}}'
+  ]);
+  assert.deepEqual(detached, {
+    providerAttachmentId: "deployment/opl-compute-gone:pvc/opl-storage-gone-data:/data",
+    status: "detached"
+  });
 });
 
 test("Tencent TKE provider applies runtime resources behind the shared Workspace gateway", async () => {
