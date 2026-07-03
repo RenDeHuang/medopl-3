@@ -36,7 +36,7 @@ export default function LoginPage({ route, onLogin }) {
   if (mode !== "/login" && mode !== "/logout") {
     return (
       <div className="loginShell">
-        <a className="backLink" href="/"><ArrowLeft size={16} /> OPL Cloud</a>
+        <a className="backLink" href="/"><ArrowLeft size={16} /> OPL Console</a>
         <main className="loginPanel compactAuth">
           <div className="loginBrand">
             <div className="brandIcon">OPL</div>
@@ -57,7 +57,7 @@ export default function LoginPage({ route, onLogin }) {
 
   return (
     <div className="loginShell">
-      <a className="backLink" href="/"><ArrowLeft size={16} /> OPL Cloud</a>
+      <a className="backLink" href="/"><ArrowLeft size={16} /> OPL Console</a>
       <main className="loginPanel">
         <div className="loginBrand">
           <div className="brandIcon">OPL</div>

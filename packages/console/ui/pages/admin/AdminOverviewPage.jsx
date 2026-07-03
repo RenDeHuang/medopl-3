@@ -153,7 +153,6 @@ export function AdminFabricPage() {
         items={[
           { label: "计算", value: "Standard CPU", meta: "GPU remains backlog until verified", status: "available", tone: "good" },
           { label: "存储", value: "Workspace volume", meta: "retained disk lifecycle", status: "available", tone: "good" },
-          { label: "连接器", value: "Backlog", meta: "approval queue not in current launch", status: "reserved", tone: "warn" },
           { label: "环境", value: "one-person-lab-app", meta: "current WebUI runtime", status: "current", tone: "info" }
         ]}
       />

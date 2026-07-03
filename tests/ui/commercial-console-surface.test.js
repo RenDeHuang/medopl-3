@@ -54,3 +54,15 @@ test("authenticated shell is branded as OPL Console", async () => {
   assert.match(shellSource, /title="OPL Console"/, "authenticated app shell must use OPL Console product naming");
   assert.doesNotMatch(shellSource, /title="OPL Cloud"/, "authenticated app shell must not retain old OPL Cloud naming");
 });
+
+test("visible app chrome does not retain old Cloud or reserved backlog copy", async () => {
+  for (const page of [
+    "packages/console/ui/main.jsx",
+    "packages/console/ui/pages/LoginPage.jsx",
+    "packages/console/ui/pages/admin/AdminOverviewPage.jsx"
+  ]) {
+    const pageSource = await source(page);
+    assert.doesNotMatch(pageSource, /Loading OPL Cloud|> OPL Cloud</, `${page} must use OPL Console in visible chrome`);
+    assert.doesNotMatch(pageSource, /status: "reserved"|value: "Backlog"|not in current launch/, `${page} must not show reserved/backlog product copy`);
+  }
+});
