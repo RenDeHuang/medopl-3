@@ -21,6 +21,8 @@ Human docs explain the system. They do not replace contracts or tests.
 - [product/console-workspace-v1.md](./product/console-workspace-v1.md): OPL Console commercial workspace product.
 - [runtime/production-runbook.md](./runtime/production-runbook.md): production operations.
 - [runtime/tke-production-deployment.md](./runtime/tke-production-deployment.md): Tencent TKE deployment contract.
+- [policies/docs-lifecycle-policy.md](./policies/docs-lifecycle-policy.md): active documentation, contract, and test lifecycle.
+- [policies/development-worktree-policy.md](./policies/development-worktree-policy.md): worktree, branch, stash, and repository size rules.
 
 ## History
 
