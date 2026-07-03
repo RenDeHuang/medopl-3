@@ -71,8 +71,13 @@ test("workspace gateway validates URL token, sets scoped cookie, and proxies Web
       return;
     }
     if (request.url === "/assets/app.js") {
-      response.writeHead(200, { "content-type": "text/javascript; charset=utf-8" });
-      response.end("window.__OPL_WORKSPACE_LOADED__ = true;");
+      const body = "window.__OPL_WORKSPACE_LOADED__ = true;";
+      response.writeHead(200, {
+        "content-type": "text/javascript; charset=utf-8",
+        "content-encoding": "identity",
+        "content-length": String(Buffer.byteLength(body))
+      });
+      response.end(body);
       return;
     }
     if (request.url === "/api/chat?model=gpt") {
@@ -116,6 +121,8 @@ test("workspace gateway validates URL token, sets scoped cookie, and proxies Web
     });
     assert.equal(assetResponse.status, 200);
     assert.equal(assetResponse.headers.get("content-type"), "text/javascript; charset=utf-8");
+    assert.equal(assetResponse.headers.get("content-encoding"), null);
+    assert.equal(assetResponse.headers.get("content-length"), null);
     assert.match(await assetResponse.text(), /OPL_WORKSPACE_LOADED/);
 
     const apiResponse = await fetch(`${origin}/w/ws-gateway001/api/chat?model=gpt`, {

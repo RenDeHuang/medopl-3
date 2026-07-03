@@ -220,6 +220,7 @@ function proxyResponseHeaders(upstreamResponse) {
   upstreamResponse.headers.forEach((value, name) => {
     const key = name.toLowerCase();
     if (hopByHopHeaders.has(key)) return;
+    if (key === "content-encoding" || key === "content-length") return;
     headers[name] = value;
   });
   return headers;
