@@ -624,7 +624,7 @@ export class PostgresStore {
     await client.query("CREATE UNIQUE INDEX IF NOT EXISTS resource_usage_logs_workspace_resource_source_idx ON resource_usage_logs (workspace_id, resource_type, ((state->>'sourceEventId')))");
     await client.query("DROP INDEX IF EXISTS billing_ledger_dedup_idx");
     await client.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS billing_ledger_dedup_idx
+      CREATE INDEX IF NOT EXISTS billing_ledger_event_lookup_idx
       ON billing_ledger (
         account_id,
         workspace_id,

@@ -39,7 +39,7 @@ function createFakePool() {
       if (normalized === "BEGIN" || normalized === "COMMIT" || normalized === "ROLLBACK") {
         return { rows: [] };
       }
-      if (normalized.startsWith("CREATE TABLE IF NOT EXISTS") || normalized.startsWith("CREATE UNIQUE INDEX IF NOT EXISTS") || normalized.startsWith("DROP INDEX IF EXISTS")) {
+      if (normalized.startsWith("CREATE TABLE IF NOT EXISTS") || normalized.startsWith("CREATE UNIQUE INDEX IF NOT EXISTS") || normalized.startsWith("CREATE INDEX IF NOT EXISTS") || normalized.startsWith("DROP INDEX IF EXISTS")) {
         return { rows: [] };
       }
       if (normalized.startsWith("TRUNCATE accounts, organizations, users, memberships, workspaces, storage_backups, billing_reconciliation_reports, support_tickets, evidence_ledger, billing_ledger, audit_events, notifications, runtime_operations")) {
@@ -479,7 +479,8 @@ test("PostgresStore persists OPL Cloud state into control-plane tables", async (
   assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE UNIQUE INDEX IF NOT EXISTS request_usage_logs_workspace_request_idx")));
   assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE UNIQUE INDEX IF NOT EXISTS request_usage_dedup_workspace_source_idx")));
   assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE UNIQUE INDEX IF NOT EXISTS resource_usage_logs_workspace_resource_source_idx")));
-  assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE UNIQUE INDEX IF NOT EXISTS billing_ledger_dedup_idx")));
+  assert.ok(pool.statements.some((statement) => statement.sql.includes("DROP INDEX IF EXISTS billing_ledger_dedup_idx")));
+  assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE INDEX IF NOT EXISTS billing_ledger_event_lookup_idx")));
 });
 
 test("PostgresStore update reads, mutates, and writes state transactionally", async () => {
@@ -510,18 +511,19 @@ test("PostgresStore update reads, mutates, and writes state transactionally", as
   );
 });
 
-test("PostgresStore billing ledger dedup index excludes repeatable credit and hold entries", async () => {
+test("PostgresStore billing ledger event index excludes repeatable credit and hold entries without blocking legacy duplicates", async () => {
   const pool = createFakePool();
   const store = new PostgresStore({ pool });
 
   await store.read();
 
   const indexStatement = pool.statements.find((statement) =>
-    statement.sql.startsWith("CREATE UNIQUE INDEX IF NOT EXISTS billing_ledger_dedup_idx")
+    statement.sql.startsWith("CREATE INDEX IF NOT EXISTS billing_ledger_event_lookup_idx")
   )?.sql || "";
   assert.match(indexStatement, /WHERE/);
   assert.match(indexStatement, /state->>'sourceEventId'/);
   assert.match(indexStatement, /state->>'type'\) IN \('compute_debit', 'storage_debit', 'compute_auto_stopped', 'request_debit'\)/);
+  assert.doesNotMatch(indexStatement, /CREATE UNIQUE INDEX/);
   assert.doesNotMatch(indexStatement, /credit/);
   assert.doesNotMatch(indexStatement, /compute_hold/);
   assert.doesNotMatch(indexStatement, /storage_hold/);
