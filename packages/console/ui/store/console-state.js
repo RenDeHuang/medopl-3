@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Form, message } from "antd";
 import {
   getConsoleState,
+  getManagementState,
   getOperatorSummary,
   getProductionReadiness,
   getRuntimeReadiness
@@ -10,6 +11,7 @@ import { useTickets } from "../pages/support/useTickets.js";
 
 export function useConsoleState({ isAdmin, path, csrfToken }) {
   const [state, setState] = useState(null);
+  const [managementState, setManagementState] = useState({ users: [], accounts: [] });
   const [adminOps, setAdminOps] = useState({ operator: null, runtime: null, launch: null, error: "" });
   const [topUpOpen, setTopUpOpen] = useState(false);
   const [topUpForm] = Form.useForm();
@@ -17,8 +19,12 @@ export function useConsoleState({ isAdmin, path, csrfToken }) {
   const tickets = useTickets({ csrfToken, all: isAdmin && path.startsWith("/admin/support") });
 
   async function refresh() {
-    const next = await getConsoleState();
+    const [next, management] = await Promise.all([
+      getConsoleState(),
+      isAdmin ? getManagementState() : Promise.resolve(null)
+    ]);
     setState(next);
+    if (management) setManagementState(management);
   }
 
   async function refreshAdminOps() {
@@ -79,6 +85,7 @@ export function useConsoleState({ isAdmin, path, csrfToken }) {
     selectedCreatePlan,
     setCreatePackageId,
     adminOps,
+    managementState,
     tickets,
     topUpOpen,
     setTopUpOpen,

@@ -1,7 +1,8 @@
 import React from "react";
-import { Alert, Button, Drawer, Form, Input, InputNumber, Tooltip, Typography } from "antd";
+import { Alert, Button, Drawer, Form, Input, InputNumber, Select, Typography } from "antd";
 import { Plus } from "lucide-react";
 import { manualTopUp } from "../../api/billing-api.js";
+import { createUser } from "../../api/console-read-api.js";
 import {
   ActionGroup,
   ConsoleSurface,
@@ -54,26 +55,31 @@ export function AdminOverviewPage({ state, adminOps }) {
   );
 }
 
-export function AdminUsersPage({ state, wallet, topUpOpen, setTopUpOpen, topUpForm, session, runAction }) {
+export function AdminUsersPage({ managementState, topUpOpen, setTopUpOpen, topUpForm, session, runAction }) {
+  const [createOpen, setCreateOpen] = React.useState(false);
+  const [createForm] = Form.useForm();
+  const accountsById = new Map((managementState.accounts || []).map((account) => [account.id, account]));
+  const users = (managementState.users || []).map((user) => {
+    const account = accountsById.get(user.accountId) || {};
+    return {
+      ...user,
+      balance: account.balance ?? user.balance ?? 0,
+      frozen: account.frozen ?? user.frozen ?? 0,
+      totalRecharged: account.totalRecharged ?? user.totalRecharged ?? 0
+    };
+  });
   return (
     <ConsoleSurface
       title="Users"
       eyebrow="Admin"
-      subtitle="Current commercial user and wallet operations"
-      extra={<Tooltip title="当前商业版先通过环境种子或后台数据接入用户，新建用户页在 backlog。"><Button icon={<Plus size={15} />} disabled>新建用户</Button></Tooltip>}
+      subtitle="Login users, billing accounts, and wallet operations"
+      extra={<Button type="primary" icon={<Plus size={15} />} onClick={() => setCreateOpen(true)}>新建用户</Button>}
     >
-      <InsightPanel title="用户钱包" eyebrow="Current">
+      <InsightPanel title="用户钱包" eyebrow="Management">
         <ObjectTable
           rowKey="id"
-          data={[{
-            id: session.user.id,
-            email: session.user.email,
-            role: session.user.role,
-            accountId: state.account.id,
-            balance: wallet.balance,
-            frozen: wallet.frozen,
-            status: "active"
-          }]}
+          data={users}
+          emptyText="暂无用户"
           columns={[
             { title: "用户", dataIndex: "email" },
             { title: "角色", dataIndex: "role", render: (value) => <StatusPill label={value} tone={value === "admin" ? "info" : "good"} /> },
@@ -86,7 +92,6 @@ export function AdminUsersPage({ state, wallet, topUpOpen, setTopUpOpen, topUpFo
               valueType: "option",
               render: (_, row) => (
                 <ActionGroup actions={[
-                  <Tooltip key="wallet" title="独立用户钱包详情页在 backlog，当前从本表直接充值。"><Button disabled>钱包</Button></Tooltip>,
                   { label: "充值", type: "primary", onClick: () => {
                     topUpForm.setFieldsValue({ accountId: row.accountId, amount: 200, reason: "commercial top-up" });
                     setTopUpOpen(true);
@@ -97,8 +102,56 @@ export function AdminUsersPage({ state, wallet, topUpOpen, setTopUpOpen, topUpFo
           ]}
         />
       </InsightPanel>
+      <CreateUserDrawer open={createOpen} setOpen={setCreateOpen} form={createForm} session={session} runAction={runAction} />
       <TopUpDrawer open={topUpOpen} setOpen={setTopUpOpen} form={topUpForm} session={session} runAction={runAction} />
     </ConsoleSurface>
+  );
+}
+
+function CreateUserDrawer({ open, setOpen, form, session, runAction }) {
+  return (
+    <Drawer title="新建登录用户" open={open} onClose={() => setOpen(false)} width={480}>
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{ role: "pi", initialBalance: 0 }}
+        onFinish={async (values) => {
+          const created = await runAction(
+            () => createUser(values, session.csrfToken),
+            "用户已创建"
+          );
+          if (created) {
+            form.resetFields();
+            setOpen(false);
+          }
+        }}
+      >
+        <Form.Item name="email" label="登录邮箱" rules={[{ required: true, message: "请输入邮箱" }, { type: "email", message: "邮箱格式不正确" }]}>
+          <Input placeholder="owner@example.com" />
+        </Form.Item>
+        <Form.Item name="password" label="初始密码" rules={[{ required: true, message: "请输入初始密码" }]}>
+          <Input.Password />
+        </Form.Item>
+        <Form.Item name="name" label="姓名">
+          <Input placeholder="Lab Owner" />
+        </Form.Item>
+        <Form.Item name="role" label="角色" rules={[{ required: true, message: "请选择角色" }]}>
+          <Select
+            options={[
+              { label: "Lab Owner", value: "pi" },
+              { label: "Admin", value: "admin" }
+            ]}
+          />
+        </Form.Item>
+        <Form.Item name="accountId" label="账号 ID" rules={[{ required: true, message: "请输入账号 ID" }]}>
+          <Input placeholder="acct-lab-alpha" />
+        </Form.Item>
+        <Form.Item name="initialBalance" label="初始余额">
+          <InputNumber min={0} className="fullWidth" />
+        </Form.Item>
+        <Button type="primary" htmlType="submit">创建用户</Button>
+      </Form>
+    </Drawer>
   );
 }
 

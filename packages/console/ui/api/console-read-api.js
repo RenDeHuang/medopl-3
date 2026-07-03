@@ -1,4 +1,4 @@
-import { getJson } from "./console-api.js";
+import { getJson, postJson } from "./console-api.js";
 
 export function getConsoleState() {
   return getJson("/api/state");
@@ -17,6 +17,12 @@ export function getProductionReadiness() {
 }
 
 export function getManagementState(organizationId) {
-  const params = new URLSearchParams({ organizationId });
-  return getJson(`/api/management/state?${params.toString()}`);
+  const params = new URLSearchParams();
+  if (organizationId) params.set("organizationId", organizationId);
+  const query = params.toString();
+  return getJson(`/api/management/state${query ? `?${query}` : ""}`);
+}
+
+export function createUser(input, csrfToken) {
+  return postJson("/api/users", input, csrfToken);
 }

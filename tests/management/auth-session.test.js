@@ -7,7 +7,17 @@ import { join } from "node:path";
 import test from "node:test";
 
 import { createAuthController, createRequestHandler } from "../../packages/console/api/server.js";
+import { createOplCloud } from "../../packages/console/src/opl-cloud.js";
 import { emptyState, MemoryStore } from "../../packages/console/src/store.js";
+
+const TEST_PRICING = {
+  serverHourly: {
+    basic: 1,
+    pro: 4
+  },
+  diskGbMonth: 0.2,
+  markup: 0.2
+};
 
 async function listen(handler) {
   const server = createServer(handler);
@@ -308,6 +318,144 @@ test("PI sessions are account scoped and cannot top up balances", async () => {
         operatorAccountId: "admin"
       }]
     ]);
+  } finally {
+    await close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("admin resource writes default to the admin account when no accountId is submitted", async () => {
+  const root = await mkdtemp(join(tmpdir(), "opl-auth-admin-resource-"));
+  const calls = [];
+  const appService = {
+    async createComputeResource(input) {
+      calls.push(["createComputeResource", input]);
+      return { id: "compute-admin", ownerAccountId: input.accountId, status: "running" };
+    },
+    async createStorageVolume(input) {
+      calls.push(["createStorageVolume", input]);
+      return { id: "storage-admin", ownerAccountId: input.accountId, status: "available" };
+    }
+  };
+  const auth = createAuthController({
+    usersPath: join(root, "users.json"),
+    seedUsers: [
+      {
+        id: "usr-admin",
+        email: "admin@example.com",
+        password: "secret-admin",
+        name: "Admin",
+        role: "admin",
+        accountId: "admin"
+      }
+    ]
+  });
+  const { origin, close } = await listen(createRequestHandler({ appService, auth }));
+  try {
+    const adminLogin = await postJson(origin, "/api/auth/login", {
+      email: "admin@example.com",
+      password: "secret-admin"
+    });
+    const headers = {
+      cookie: cookieFrom(adminLogin.response),
+      "x-opl-csrf": adminLogin.payload.csrfToken
+    };
+
+    const compute = await postJson(origin, "/api/compute-resources", {
+      packageId: "basic",
+      name: "Admin compute"
+    }, headers);
+    assert.equal(compute.response.status, 200);
+    assert.equal(compute.payload.ownerAccountId, "admin");
+
+    const storage = await postJson(origin, "/api/storage-volumes", {
+      packageId: "basic",
+      name: "Admin storage",
+      sizeGb: 10
+    }, headers);
+    assert.equal(storage.response.status, 200);
+    assert.equal(storage.payload.ownerAccountId, "admin");
+
+    assert.deepEqual(calls, [
+      ["createComputeResource", {
+        accountId: "admin",
+        userId: "usr-admin",
+        packageId: "basic",
+        name: "Admin compute"
+      }],
+      ["createStorageVolume", {
+        accountId: "admin",
+        userId: "usr-admin",
+        packageId: "basic",
+        name: "Admin storage",
+        sizeGb: 10
+      }]
+    ]);
+  } finally {
+    await close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("admin can create a login user with an account wallet", async () => {
+  const root = await mkdtemp(join(tmpdir(), "opl-auth-create-user-"));
+  const store = new MemoryStore();
+  const appService = createOplCloud({
+    store,
+    runtimeProvider: { name: "test-provider" },
+    pricing: TEST_PRICING
+  });
+  const auth = createAuthController({
+    store,
+    usersPath: join(root, "users.json"),
+    seedUsers: [
+      {
+        id: "usr-admin",
+        email: "admin@example.com",
+        password: "secret-admin",
+        name: "Admin",
+        role: "admin",
+        accountId: "admin",
+        balance: 100
+      }
+    ]
+  });
+  const { origin, close } = await listen(createRequestHandler({ appService, auth }));
+  try {
+    const adminLogin = await postJson(origin, "/api/auth/login", {
+      email: "admin@example.com",
+      password: "secret-admin"
+    });
+
+    const created = await postJson(origin, "/api/users", {
+      userId: "usr-owner",
+      email: "owner@example.com",
+      password: "OwnerPass2026!",
+      name: "Owner",
+      role: "pi",
+      accountId: "acct-owner",
+      initialBalance: 500
+    }, {
+      cookie: cookieFrom(adminLogin.response),
+      "x-opl-csrf": adminLogin.payload.csrfToken
+    });
+    assert.equal(created.response.status, 200);
+    assert.equal(created.payload.email, "owner@example.com");
+    assert.equal(created.payload.accountId, "acct-owner");
+    assert.equal(created.payload.passwordHash, undefined);
+
+    const ownerLogin = await postJson(origin, "/api/auth/login", {
+      email: "owner@example.com",
+      password: "OwnerPass2026!"
+    });
+    assert.equal(ownerLogin.response.status, 200);
+    assert.equal(ownerLogin.payload.user.accountId, "acct-owner");
+
+    const ownerState = await fetch(`${origin}/api/state`, {
+      headers: { cookie: cookieFrom(ownerLogin.response) }
+    });
+    const ownerPayload = await ownerState.json();
+    assert.equal(ownerPayload.wallet.balance, 500);
   } finally {
     await close();
     await rm(root, { recursive: true, force: true });

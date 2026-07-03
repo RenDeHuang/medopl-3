@@ -836,6 +836,7 @@
       "apiClient": "packages/console/ui/api/console-read-api.js",
       "apiRoutes": [
         "GET /api/management/state",
+        "POST /api/users",
         "POST /api/billing/topups"
       ],
       "serviceBoundary": "ManagementModel",

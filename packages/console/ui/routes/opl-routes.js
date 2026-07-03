@@ -479,7 +479,7 @@ export const oplRoutes = Object.freeze([
     objectKind: "User",
     pageModule: "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
     apiClient: "packages/console/ui/api/console-read-api.js",
-    apiRoutes: ["GET /api/management/state", "POST /api/billing/topups"],
+    apiRoutes: ["GET /api/management/state", "POST /api/users", "POST /api/billing/topups"],
     serviceBoundary: "ManagementModel",
     capabilities: ["list", "read", "action", "audit"]
   }),

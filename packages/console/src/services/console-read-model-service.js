@@ -6,10 +6,13 @@ import {
   managementSnapshot
 } from "../management-model.js";
 import { fabricCatalogReadiness } from "../../../fabric/src/index.js";
+import { hashPassword, normalizeEmail } from "../auth-credentials.js";
 import { clone, makeId, money, now } from "./core-utils.js";
 import {
   accountSnapshotForState,
+  appendWalletTransaction,
   ensureAccount,
+  ensureUserWallet,
   publicWalletUser,
   userIdForAccount,
   walletSnapshot
@@ -91,14 +94,105 @@ export class ConsoleReadModelService extends OplDomainService {
   }
 
   async createUser(input) {
+    const email = normalizeEmail(input.email);
+    const loginUserRequested = Boolean(input.accountId || input.password || input.passwordHash || input.initialBalance);
+    if (loginUserRequested && !input.accountId) throw new Error("account_required");
+    if (loginUserRequested && !input.passwordHash && !input.password) throw new Error("user_password_required");
+    const normalized = {
+      ...input,
+      email,
+      role: input.role || "pi",
+      passwordHash: input.passwordHash || (input.password ? await hashPassword(input.password) : "")
+    };
     return this.store.update((state) => {
-      const user = createUserRecord(state, input);
+      const targetUserId = normalized.userId || makeId("usr", email || normalized.name || "user");
+      const duplicateEmail = Object.values(state.users || {}).find((user) =>
+        normalizeEmail(user.email) === email &&
+        user.id !== targetUserId
+      );
+      if (duplicateEmail) throw new Error("user_email_exists");
+      const user = createUserRecord(state, normalized);
+      const persisted = state.users[user.id];
+      if (normalized.accountId) {
+        const account = ensureUserWallet(state, {
+          userId: user.id,
+          accountId: normalized.accountId,
+          email
+        });
+        Object.assign(account, {
+          email,
+          name: normalized.name || account.name || "",
+          role: normalized.role || account.role || "pi",
+          accountId: normalized.accountId,
+          organizationId: normalized.organizationId || account.organizationId || null,
+          status: normalized.status || account.status || "active",
+          passwordHash: normalized.passwordHash,
+          updatedAt: now()
+        });
+        const credit = money(Number(normalized.initialBalance || 0));
+        const sourceEventId = `user_initial_balance:${user.id}`;
+        const alreadyCredited = (state.manualTopups || []).some((topup) =>
+          topup.targetAccountId === normalized.accountId &&
+          topup.reason === sourceEventId
+        );
+        if (credit > 0 && !alreadyCredited) {
+          const balanceBefore = money(Number(account.balance || 0));
+          const frozenBefore = money(Number(account.frozen || 0));
+          account.balance = money(balanceBefore + credit);
+          account.totalRecharged = money(Number(account.totalRecharged || 0) + credit);
+          const entry = this.ledgerEntry({
+            state,
+            workspaceId: "account",
+            accountId: normalized.accountId,
+            type: "credit",
+            amount: credit,
+            sourceEventId,
+            metadata: {
+              operatorUserId: normalized.operatorUserId || "",
+              operatorAccountId: normalized.operatorAccountId || ""
+            }
+          });
+          state.billingLedger.push(entry);
+          const transaction = appendWalletTransaction(state, {
+            user: account,
+            accountId: normalized.accountId,
+            type: "credit",
+            amount: credit,
+            sourceEventId,
+            ledgerEntryId: entry.id,
+            balanceBefore,
+            balanceAfter: account.balance,
+            frozenBefore,
+            frozenAfter: account.frozen,
+            metadata: {
+              operatorUserId: normalized.operatorUserId || "",
+              operatorAccountId: normalized.operatorAccountId || ""
+            }
+          });
+          state.manualTopups.push({
+            id: makeId("manual-topup", account.id, normalized.accountId, sourceEventId, String(state.manualTopups.length)),
+            operatorUserId: normalized.operatorUserId || "",
+            operatorAccountId: normalized.operatorAccountId || "",
+            targetUserId: account.id,
+            targetAccountId: normalized.accountId,
+            amount: credit,
+            currency: "CNY",
+            reason: sourceEventId,
+            status: "completed",
+            balanceBefore,
+            balanceAfter: money(Number(account.balance || 0)),
+            ledgerEntryId: entry.id,
+            walletTransactionId: transaction.id,
+            createdAt: now()
+          });
+        }
+      }
       state.audit.push(this.auditEvent({
-        accountId: "management",
+        accountId: normalized.accountId || "management",
         type: "user.created",
         sourceEventId: user.id
       }));
-      return user;
+      return publicWalletUser(persisted);
     });
   }
 
@@ -115,8 +209,24 @@ export class ConsoleReadModelService extends OplDomainService {
     });
   }
 
-  async managementState({ organizationId }) {
+  async managementState({ organizationId } = {}) {
     const state = await this.store.read();
+    if (!organizationId) {
+      const accountIds = [...new Set(Object.values(state.users || {}).map((user) => user.accountId).filter(Boolean))];
+      return {
+        organization: null,
+        users: Object.values(state.users || {}).map(publicWalletUser),
+        memberships: (state.memberships || []).map(clone),
+        accounts: accountIds.map((accountId) => accountSnapshotForState(state, accountId)),
+        packages: this.packages(),
+        workspaces: Object.values(state.workspaces || {}).map(clone),
+        computeResources: (state.computeResources || []).map(clone),
+        storageVolumes: (state.storageVolumes || []).map(clone),
+        storageAttachments: (state.storageAttachments || []).map(clone),
+        walletTransactions: (state.walletTransactions || []).map(clone),
+        manualTopups: (state.manualTopups || []).map(clone)
+      };
+    }
     const organization = state.organizations?.[organizationId];
     if (!organization) throw new Error("organization_not_found");
     const billingAccount = accountSnapshotForState(state, organization.billingAccountId);

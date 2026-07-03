@@ -89,6 +89,22 @@ test("resource provisioning pages call resource APIs instead of disabled placeho
   assert.doesNotMatch(resourceSource, /disabled: true/, "resource creation actions must not remain disabled placeholders");
 });
 
+test("Admin users surface is backed by management state and can create login users", async () => {
+  const adminSource = await source("packages/console/ui/pages/admin/AdminOverviewPage.jsx");
+  const stateSource = await source("packages/console/ui/store/console-state.js");
+  const apiSource = await source("packages/console/ui/api/console-read-api.js");
+  const routesSource = await source("packages/console/ui/routes/opl-routes.js");
+
+  assert.match(stateSource, /getManagementState/, "admin state hook must load the management read model");
+  assert.match(apiSource, /createUser/, "admin API client must expose user creation");
+  assert.match(apiSource, /"\/api\/users"/, "user creation client must call POST /api/users");
+  assert.match(adminSource, /managementState\.users/, "Admin Users must list management users, not only session.user");
+  assert.match(adminSource, /createUser\(/, "Admin Users must submit the new user form");
+  assert.doesNotMatch(adminSource, /data=\{\[\{\s*id: session\.user\.id/, "Admin Users must not render only the current session user");
+  assert.doesNotMatch(adminSource, /新建用户<\/Button><\/Tooltip>|disabled>新建用户/, "new user action must not remain disabled");
+  assert.match(routesSource, /"POST \/api\/users"/, "admin.users route contract must declare user creation");
+});
+
 test("Workspace detail links to first-class resources and excludes retired compute lifecycle controls", async () => {
   const listSource = await source("packages/console/ui/pages/workspaces/WorkspacesPage.jsx");
   const detailSource = await source("packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx");

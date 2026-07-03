@@ -1,10 +1,9 @@
-import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { promisify } from "node:util";
+import { hashPassword, normalizeEmail, verifyPassword } from "../src/auth-credentials.js";
 
-const scrypt = promisify(scryptCallback);
 const root = fileURLToPath(new URL("../../..", import.meta.url));
 const defaultUsersPath = join(root, ".runtime", "opl-console-users.json");
 const sessionCookieName = "opl_console_session";
@@ -22,10 +21,6 @@ function authError(status, message) {
   const error = new Error(message);
   error.status = status;
   return error;
-}
-
-function normalizeEmail(email) {
-  return String(email || "").trim().toLowerCase();
 }
 
 function publicUser(user) {
@@ -98,19 +93,6 @@ function serializeSessionCookie(value, { request, env, maxAgeSeconds }) {
 
 function randomToken(bytes = 32) {
   return randomBytes(bytes).toString("base64url");
-}
-
-async function hashPassword(password, salt = randomBytes(16).toString("hex")) {
-  const derived = await scrypt(String(password), salt, 64);
-  return `scrypt:${salt}:${derived.toString("hex")}`;
-}
-
-async function verifyPassword(password, storedHash) {
-  const [scheme, salt, hash] = String(storedHash || "").split(":");
-  if (scheme !== "scrypt" || !salt || !hash) return false;
-  const derived = await scrypt(String(password), salt, 64);
-  const expected = Buffer.from(hash, "hex");
-  return expected.length === derived.length && timingSafeEqual(expected, derived);
 }
 
 function stableIdPart(value) {
@@ -322,7 +304,15 @@ export function createAuthController({
     },
 
     workspaceInputFor(user, input) {
-      if (user?.role === "admin") return input;
+      if (user?.role === "admin") {
+        const scoped = {
+          ...input,
+          accountId: input.accountId || user.accountId,
+          userId: input.userId || user.id
+        };
+        if (input.organizationId) scoped.organizationId = input.organizationId;
+        return scoped;
+      }
       return {
         ...input,
         accountId: user.accountId,

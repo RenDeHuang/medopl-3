@@ -40,7 +40,16 @@ export function createOrganizationRecord(state, { organizationId, name, billingA
   return clone(state.organizations[id]);
 }
 
-export function createUserRecord(state, { userId, email, name = "" }) {
+export function createUserRecord(state, {
+  userId,
+  email,
+  name = "",
+  role = "pi",
+  accountId = "",
+  organizationId = null,
+  status = "active",
+  passwordHash = ""
+}) {
   ensureManagementCollections(state);
   const id = userId || makeId("usr", email || name || "user");
   if (!id) throw new Error("user_required");
@@ -49,10 +58,22 @@ export function createUserRecord(state, { userId, email, name = "" }) {
     id,
     email,
     name,
-    status: "active",
+    role,
+    accountId,
+    organizationId,
+    status,
     createdAt: now(),
     updatedAt: now()
   };
+  const user = state.users[id];
+  user.email = email;
+  user.name = name || user.name || "";
+  user.role = role || user.role || "pi";
+  if (accountId) user.accountId = accountId;
+  user.organizationId = organizationId || user.organizationId || null;
+  user.status = status || user.status || "active";
+  if (passwordHash) user.passwordHash = passwordHash;
+  user.updatedAt = now();
   return clone(state.users[id]);
 }
 

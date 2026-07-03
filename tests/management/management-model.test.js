@@ -115,6 +115,73 @@ test("Console management model links users, organizations, memberships, billing 
   assert.deepEqual(management.workspaces.map((item) => item.id), [workspace.id]);
 });
 
+test("admin management state lists every login user and account wallet without organization scope", async () => {
+  const service = createTestService();
+
+  await service.store.update((state) => {
+    state.users["usr-admin"] = {
+      id: "usr-admin",
+      email: "admin@example.com",
+      name: "Admin",
+      role: "admin",
+      accountId: "admin",
+      status: "active",
+      balance: 100,
+      frozen: 0,
+      holds: {},
+      totalRecharged: 100,
+      passwordHash: "scrypt:redacted"
+    };
+    state.users["usr-owner"] = {
+      id: "usr-owner",
+      email: "owner@example.com",
+      name: "Owner",
+      role: "pi",
+      accountId: "acct-owner",
+      status: "active",
+      balance: 500,
+      frozen: 20,
+      holds: { compute: 20 },
+      totalRecharged: 500,
+      passwordHash: "scrypt:redacted"
+    };
+  });
+
+  const management = await service.managementState({});
+
+  assert.equal(management.organization, null);
+  assert.deepEqual(management.users.map((user) => ({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    accountId: user.accountId,
+    passwordHash: user.passwordHash
+  })), [
+    {
+      id: "usr-admin",
+      email: "admin@example.com",
+      role: "admin",
+      accountId: "admin",
+      passwordHash: undefined
+    },
+    {
+      id: "usr-owner",
+      email: "owner@example.com",
+      role: "pi",
+      accountId: "acct-owner",
+      passwordHash: undefined
+    }
+  ]);
+  assert.deepEqual(management.accounts.map((account) => ({
+    id: account.id,
+    balance: account.balance,
+    frozen: account.frozen
+  })), [
+    { id: "admin", balance: 100, frozen: 0 },
+    { id: "acct-owner", balance: 500, frozen: 20 }
+  ]);
+});
+
 test("organization Workspace creation fails closed unless the user is an active organization member", async () => {
   const service = createTestService();
   await service.createOrganization({ organizationId: "org-lab", name: "OPL Lab" });
