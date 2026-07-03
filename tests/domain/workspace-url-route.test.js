@@ -1,18 +1,20 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import { createServer } from "node:http";
+import { connect } from "node:net";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { createRequestHandler } from "../../packages/console/api/server.js";
+import { createRequestHandler, createUpgradeHandler } from "../../packages/console/api/server.js";
 import { createOplCloud } from "../../packages/console/src/opl-cloud.js";
 import { LocalDockerProvider } from "../../packages/fabric/src/runtime-providers/local-docker.js";
 import { MemoryStore } from "../../packages/console/src/store.js";
 
-async function listen(handler) {
+async function listen(handler, upgradeHandler = null) {
   const server = createServer(handler);
+  if (upgradeHandler) server.on("upgrade", upgradeHandler);
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   const address = server.address();
@@ -20,6 +22,33 @@ async function listen(handler) {
     origin: `http://127.0.0.1:${address.port}`,
     close: () => new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()))
   };
+}
+
+function cookieHeaderFrom(response) {
+  return response.headers.getSetCookie()
+    .map((cookie) => cookie.split(";")[0])
+    .join("; ");
+}
+
+function rawUpgrade({ origin, path, cookie }) {
+  const target = new URL(origin);
+  const socket = connect(Number(target.port), target.hostname);
+  const chunks = [];
+  socket.on("data", (chunk) => chunks.push(chunk));
+  return once(socket, "connect").then(() => {
+    socket.write([
+      `GET ${path} HTTP/1.1`,
+      `Host: ${target.host}`,
+      "Connection: Upgrade",
+      "Upgrade: websocket",
+      "Sec-WebSocket-Version: 13",
+      "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==",
+      `Cookie: ${cookie}`,
+      "",
+      ""
+    ].join("\r\n"));
+    return once(socket, "close");
+  }).then(() => Buffer.concat(chunks).toString("utf8"));
 }
 
 test("workspace URL route validates token and returns OPL Workspace entry page", async () => {
@@ -61,10 +90,10 @@ test("workspace URL route validates token and returns OPL Workspace entry page",
   }
 });
 
-test("workspace gateway validates URL token, sets scoped cookie, and proxies WebUI assets", async () => {
+test("workspace gateway validates URL token, sets scoped cookies, and proxies WebUI backend paths", async () => {
   const upstreamRequests = [];
   const upstream = await listen((request, response) => {
-    upstreamRequests.push(request.url);
+    upstreamRequests.push({ url: request.url, cookie: request.headers.cookie || "" });
     if (request.url === "/") {
       response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
       response.end('<!doctype html><script type="module" src="./assets/app.js"></script>');
@@ -81,7 +110,13 @@ test("workspace gateway validates URL token, sets scoped cookie, and proxies Web
       return;
     }
     if (request.url === "/api/chat?model=gpt") {
-      response.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+      response.writeHead(200, {
+        "content-type": "application/json; charset=utf-8",
+        "set-cookie": [
+          "app_session=runtime; Path=/; HttpOnly; SameSite=Lax",
+          "app_theme=dark; Path=/; SameSite=Lax"
+        ]
+      });
       response.end(JSON.stringify({ ok: true }));
       return;
     }
@@ -107,9 +142,11 @@ test("workspace gateway validates URL token, sets scoped cookie, and proxies Web
     assert.equal(blockedAsset.status, 403);
 
     const redirect = await fetch(`${origin}/w/ws-gateway001?token=share_gateway`, { redirect: "manual" });
-    const cookie = redirect.headers.get("set-cookie").split(";")[0];
+    const cookie = cookieHeaderFrom(redirect);
     assert.equal(redirect.status, 308);
     assert.equal(redirect.headers.get("location"), "/w/ws-gateway001/?token=share_gateway");
+    assert.match(cookie, /opl_ws_active=ws-gateway001/);
+    assert.match(cookie, /opl_ws_ws-gateway001=share_gateway/);
 
     const htmlResponse = await fetch(`${origin}/w/ws-gateway001/?token=share_gateway`);
     const html = await htmlResponse.text();
@@ -125,15 +162,69 @@ test("workspace gateway validates URL token, sets scoped cookie, and proxies Web
     assert.equal(assetResponse.headers.get("content-length"), null);
     assert.match(await assetResponse.text(), /OPL_WORKSPACE_LOADED/);
 
-    const apiResponse = await fetch(`${origin}/w/ws-gateway001/api/chat?model=gpt`, {
-      headers: { cookie }
+    const apiResponse = await fetch(`${origin}/api/chat?model=gpt`, {
+      headers: { cookie: `${cookie}; app_session=runtime` }
     });
     assert.equal(apiResponse.status, 200);
     assert.deepEqual(await apiResponse.json(), { ok: true });
-    assert.deepEqual(upstreamRequests, ["/", "/assets/app.js", "/api/chat?model=gpt"]);
+    assert.deepEqual(apiResponse.headers.getSetCookie().map((item) => item.split(";")[0]), [
+      "app_session=runtime",
+      "app_theme=dark"
+    ]);
+    assert.deepEqual(upstreamRequests, [
+      { url: "/", cookie: "" },
+      { url: "/assets/app.js", cookie: "" },
+      { url: "/api/chat?model=gpt", cookie: "app_session=runtime" }
+    ]);
   } finally {
     await close();
     await upstream.close();
+  }
+});
+
+test("workspace gateway proxies active workspace websocket upgrades without leaking gateway cookies", async () => {
+  let upstreamUpgrade = null;
+  const upstreamServer = createServer();
+  upstreamServer.on("upgrade", (request, socket) => {
+    upstreamUpgrade = { url: request.url, cookie: request.headers.cookie || "" };
+    socket.write("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n");
+    socket.write("runtime-ws-ok");
+    socket.end();
+  });
+  upstreamServer.listen(0, "127.0.0.1");
+  await once(upstreamServer, "listening");
+  const upstreamAddress = upstreamServer.address();
+  const upstreamOrigin = `http://127.0.0.1:${upstreamAddress.port}`;
+
+  const appService = {
+    async resolveWorkspaceAccess({ workspaceId, token }) {
+      if (workspaceId !== "ws-gateway001") throw new Error("workspace_not_found");
+      if (token !== "share_gateway") throw new Error("workspace_token_invalid");
+      return {
+        id: workspaceId,
+        state: "running",
+        server: { status: "running" },
+        access: { tokenStatus: "active" },
+        docker: { localUrl: upstreamOrigin }
+      };
+    }
+  };
+  const { origin, close } = await listen(
+    createRequestHandler({ appService }),
+    createUpgradeHandler({ appService })
+  );
+  try {
+    const cookie = "opl_ws_active=ws-gateway001; opl_ws_ws-gateway001=share_gateway; app_session=runtime";
+    const response = await rawUpgrade({ origin, path: "/ws?room=e2e", cookie });
+    assert.match(response, /^HTTP\/1\.1 101 Switching Protocols/);
+    assert.match(response, /runtime-ws-ok/);
+    assert.deepEqual(upstreamUpgrade, {
+      url: "/ws?room=e2e",
+      cookie: "app_session=runtime"
+    });
+  } finally {
+    await close();
+    await new Promise((resolve, reject) => upstreamServer.close((error) => error ? reject(error) : resolve()));
   }
 });
 

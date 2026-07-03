@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
+import { connect } from "node:net";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -61,6 +62,7 @@ const publicApiRoutes = new Set([
   "GET /api/runtime/readiness",
   "GET /api/production/readiness"
 ]);
+const activeWorkspaceCookieName = "opl_ws_active";
 const hopByHopHeaders = new Set([
   "connection",
   "keep-alive",
@@ -185,15 +187,34 @@ function parseCookies(header = "") {
     }));
 }
 
-function workspaceAccessCookie({ workspaceId, token }) {
+function serializeCookie({ name, value, path = "/" }) {
   return [
-    `${workspaceAccessCookieName(workspaceId)}=${encodeURIComponent(token)}`,
-    `Path=/w/${encodeURIComponent(workspaceId)}`,
+    `${name}=${encodeURIComponent(value)}`,
+    `Path=${path}`,
     "HttpOnly",
     "Secure",
     "SameSite=Lax",
     "Max-Age=2592000"
   ].join("; ");
+}
+
+function workspaceAccessCookies({ workspaceId, token }) {
+  return [
+    serializeCookie({ name: activeWorkspaceCookieName, value: workspaceId }),
+    serializeCookie({ name: workspaceAccessCookieName(workspaceId), value: token })
+  ];
+}
+
+function runtimeCookieHeader(header = "") {
+  return String(header)
+    .split(";")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .filter((part) => {
+      const name = part.split("=")[0];
+      return name !== activeWorkspaceCookieName && !name.startsWith("opl_ws_");
+    })
+    .join("; ");
 }
 
 function headerEntries(headers) {
@@ -211,6 +232,8 @@ function proxyRequestHeaders(request) {
     if (key === "host" || key === "cookie" || key === "accept-encoding") continue;
     headers[name] = value;
   }
+  const runtimeCookies = runtimeCookieHeader(request.headers.cookie || "");
+  if (runtimeCookies) headers.cookie = runtimeCookies;
   headers["accept-encoding"] = "identity";
   return headers;
 }
@@ -221,9 +244,22 @@ function proxyResponseHeaders(upstreamResponse) {
     const key = name.toLowerCase();
     if (hopByHopHeaders.has(key)) return;
     if (key === "content-encoding" || key === "content-length") return;
+    if (key === "set-cookie") return;
     headers[name] = value;
   });
+  const setCookie = upstreamResponse.headers.getSetCookie?.() || [];
+  if (setCookie.length) headers["set-cookie"] = setCookie;
   return headers;
+}
+
+function appendSetCookie(headers, cookies) {
+  const nextCookies = Array.isArray(cookies) ? cookies : [cookies].filter(Boolean);
+  if (!nextCookies.length) return;
+  const existing = headers["set-cookie"];
+  headers["set-cookie"] = [
+    ...(Array.isArray(existing) ? existing : existing ? [existing] : []),
+    ...nextCookies
+  ];
 }
 
 function serviceNameFromRef(value = "") {
@@ -239,9 +275,15 @@ function workspaceRuntimeBaseUrl(workspace) {
 }
 
 function workspaceGatewayPath(pathname, workspaceId) {
+  if (!pathname.startsWith("/w/")) return pathname || "/";
   const prefix = `/w/${workspaceId}`;
   const stripped = pathname.slice(prefix.length);
   return stripped && stripped !== "/" ? stripped : "/";
+}
+
+function workspaceGatewayId(url, request) {
+  if (url.pathname.startsWith("/w/")) return url.pathname.split("/").filter(Boolean)[1] || "";
+  return parseCookies(request.headers.cookie || "")[activeWorkspaceCookieName] || "";
 }
 
 function cleanWorkspaceSearch(searchParams) {
@@ -270,7 +312,7 @@ function workspaceErrorText(value) {
 
 async function handleWorkspaceGateway(request, response, url, appService) {
   const parts = url.pathname.split("/").filter(Boolean);
-  const workspaceId = parts[1];
+  const workspaceId = workspaceGatewayId(url, request);
   if (!workspaceId) return sendHtml(response, 404, "<!doctype html><title>OPL Workspace 不可用</title><h1>OPL Workspace 不可用</h1>");
 
   const queryToken = url.searchParams.get("token") || "";
@@ -292,8 +334,9 @@ async function handleWorkspaceGateway(request, response, url, appService) {
     return sendHtml(response, unavailableStatus, "<!doctype html><title>OPL Workspace 不可用</title><h1>OPL Workspace 尚未运行</h1>");
   }
 
-  const setCookie = queryToken ? workspaceAccessCookie({ workspaceId, token: queryToken }) : "";
-  if ((request.method === "GET" || request.method === "HEAD") && parts.length === 2 && !url.pathname.endsWith("/")) {
+  const setCookie = queryToken ? workspaceAccessCookies({ workspaceId, token: queryToken }) : null;
+  const isWorkspaceEntryPath = url.pathname.startsWith("/w/") && parts.length === 2;
+  if ((request.method === "GET" || request.method === "HEAD") && isWorkspaceEntryPath && !url.pathname.endsWith("/")) {
     response.writeHead(308, {
       location: `${url.pathname}/${url.search}`,
       ...(setCookie ? { "set-cookie": setCookie } : {})
@@ -315,7 +358,7 @@ async function handleWorkspaceGateway(request, response, url, appService) {
     }
     const upstream = await fetch(upstreamUrl, init);
     const headers = proxyResponseHeaders(upstream);
-    if (setCookie) headers["set-cookie"] = setCookie;
+    appendSetCookie(headers, setCookie);
     response.writeHead(upstream.status, headers);
     if (request.method === "HEAD" || !upstream.body) return response.end();
     for await (const chunk of upstream.body) {
@@ -325,6 +368,64 @@ async function handleWorkspaceGateway(request, response, url, appService) {
   } catch (error) {
     return sendHtml(response, 502, `<!doctype html><title>OPL Workspace 网关错误</title><h1>OPL Workspace 网关错误</h1><p>${workspaceErrorText(error.message)}</p>`);
   }
+}
+
+function isWorkspaceBackendPath(pathname) {
+  return pathname.startsWith("/api/") || pathname === "/ws" || pathname.startsWith("/ws/") || pathname.startsWith("/assets/");
+}
+
+function shouldProxyWorkspaceBackend(request, url) {
+  if (!isWorkspaceBackendPath(url.pathname)) return false;
+  return Boolean(parseCookies(request.headers.cookie || "")[activeWorkspaceCookieName]);
+}
+
+function writeUpgradeError(socket, status, message) {
+  socket.write(`HTTP/1.1 ${status} ${message}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n`);
+  socket.destroy();
+}
+
+function upgradeHeaders(request, target) {
+  const headers = [];
+  for (const [name, value] of headerEntries(request.headers)) {
+    const key = name.toLowerCase();
+    if (key === "host") {
+      headers.push(`Host: ${target.host}`);
+      continue;
+    }
+    if (key === "cookie") {
+      const runtimeCookies = runtimeCookieHeader(value);
+      if (runtimeCookies) headers.push(`Cookie: ${runtimeCookies}`);
+      continue;
+    }
+    headers.push(`${name}: ${value}`);
+  }
+  return headers;
+}
+
+export function createUpgradeHandler({ appService = service } = {}) {
+  return async (request, socket, head) => {
+    const url = new URL(request.url, "http://localhost");
+    if (!shouldProxyWorkspaceBackend(request, url)) return writeUpgradeError(socket, 404, "Not Found");
+    const workspaceId = workspaceGatewayId(url, request);
+    const cookies = parseCookies(request.headers.cookie || "");
+    const token = cookies[workspaceAccessCookieName(workspaceId)] || "";
+    try {
+      const workspace = await appService.resolveWorkspaceAccess({ workspaceId, slug: workspaceId, token });
+      const unavailableStatus = workspaceUnavailableStatus(workspace);
+      if (unavailableStatus) return writeUpgradeError(socket, unavailableStatus, "Workspace Unavailable");
+      const target = new URL(workspaceRuntimeBaseUrl(workspace));
+      const upstream = connect(Number(target.port || 80), target.hostname);
+      upstream.on("connect", () => {
+        upstream.write(`${request.method} ${url.pathname}${url.search} HTTP/${request.httpVersion}\r\n`);
+        upstream.write(`${upgradeHeaders(request, target).join("\r\n")}\r\n\r\n`);
+        if (head?.length) upstream.write(head);
+        socket.pipe(upstream).pipe(socket);
+      });
+      upstream.on("error", () => writeUpgradeError(socket, 502, "Bad Gateway"));
+    } catch {
+      writeUpgradeError(socket, 403, "Forbidden");
+    }
+  };
 }
 
 function errorStatus(error) {
@@ -430,6 +531,7 @@ async function serveStatic(response, pathname, staticDir = publicDir) {
 export function createRequestHandler({ appService = service, staticDir = publicDir, operatorSummaryToken = process.env.OPL_OPERATOR_SUMMARY_TOKEN, auth = appService === service ? defaultAuth : null } = {}) {
   return (request, response) => {
     const url = new URL(request.url, "http://localhost");
+    if (shouldProxyWorkspaceBackend(request, url)) return handleWorkspaceGateway(request, response, url, appService);
     if (url.pathname.startsWith("/api/")) return handleApi(request, response, url.pathname, appService, operatorSummaryToken, auth);
     if (url.pathname.startsWith("/w/")) return handleWorkspaceGateway(request, response, url, appService);
     if (url.pathname.startsWith("/workspaces/")) {
@@ -441,6 +543,7 @@ export function createRequestHandler({ appService = service, staticDir = publicD
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const server = createServer(createRequestHandler());
+  server.on("upgrade", createUpgradeHandler());
   server.listen(port, () => {
     console.log(`OPL Cloud API listening on http://127.0.0.1:${port}`);
     console.log(`State file: ${dataPath}`);
