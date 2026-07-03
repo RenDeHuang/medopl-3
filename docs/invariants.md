@@ -16,7 +16,7 @@ One Lab Owner can own multiple compute resources, storage volumes, attachments, 
 Workspace URLs are long-lived token URLs:
 
 ```text
-https://workspace.medopl.cn/w/<workspaceId>?token=<share-token>
+https://workspace.medopl.cn/w/<workspaceId>/?token=<share-token>
 ```
 
 Opening a Workspace URL does not require member login. The token remains valid until the owner resets or deletes it.

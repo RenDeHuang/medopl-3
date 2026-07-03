@@ -26,7 +26,7 @@
     "url": 1
   },
   "access": {
-    "urlPattern": "https://workspace.medopl.cn/w/<workspaceId>?token=<share-token>",
+    "urlPattern": "https://workspace.medopl.cn/w/<workspaceId>/?token=<share-token>",
     "mode": "long_lived_url_token",
     "requiresLogin": false,
     "tokenLifetime": "permanent_until_owner_reset_or_delete",

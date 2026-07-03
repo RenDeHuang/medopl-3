@@ -19,7 +19,7 @@ import {
   latestStorageBackupForAccount,
   latestWorkspaceForAccount,
   storageDestroyed,
-  workspaceBySlug
+  workspaceByIdOrSlug
 } from "./workspace-service.js";
 import { OplDomainService } from "./opl-domain-service.js";
 
@@ -852,9 +852,9 @@ export class WorkspaceLifecycleService extends OplDomainService {
     });
   }
 
-  async resolveWorkspaceAccess({ slug, token }) {
+  async resolveWorkspaceAccess({ slug, workspaceId, token }) {
     const state = await this.store.read();
-    const workspace = workspaceBySlug(state, slug);
+    const workspace = workspaceByIdOrSlug(state, workspaceId || slug);
     if (!workspace) throw new Error("workspace_not_found");
     if (workspace.access.tokenStatus !== "active") throw new Error("workspace_token_inactive");
     if (workspace.access.token !== token) throw new Error("workspace_token_invalid");

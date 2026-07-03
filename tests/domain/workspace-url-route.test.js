@@ -61,6 +61,75 @@ test("workspace URL route validates token and returns OPL Workspace entry page",
   }
 });
 
+test("workspace gateway validates URL token, sets scoped cookie, and proxies WebUI assets", async () => {
+  const upstreamRequests = [];
+  const upstream = await listen((request, response) => {
+    upstreamRequests.push(request.url);
+    if (request.url === "/") {
+      response.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+      response.end('<!doctype html><script type="module" src="./assets/app.js"></script>');
+      return;
+    }
+    if (request.url === "/assets/app.js") {
+      response.writeHead(200, { "content-type": "text/javascript; charset=utf-8" });
+      response.end("window.__OPL_WORKSPACE_LOADED__ = true;");
+      return;
+    }
+    if (request.url === "/api/chat?model=gpt") {
+      response.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+      response.end(JSON.stringify({ ok: true }));
+      return;
+    }
+    response.writeHead(404, { "content-type": "text/plain; charset=utf-8" });
+    response.end("missing");
+  });
+  const appService = {
+    async resolveWorkspaceAccess({ workspaceId, token }) {
+      if (workspaceId !== "ws-gateway001") throw new Error("workspace_not_found");
+      if (token !== "share_gateway") throw new Error("workspace_token_invalid");
+      return {
+        id: workspaceId,
+        state: "running",
+        server: { status: "running" },
+        access: { tokenStatus: "active" },
+        docker: { localUrl: upstream.origin }
+      };
+    }
+  };
+  const { origin, close } = await listen(createRequestHandler({ appService }));
+  try {
+    const blockedAsset = await fetch(`${origin}/w/ws-gateway001/assets/app.js`);
+    assert.equal(blockedAsset.status, 403);
+
+    const redirect = await fetch(`${origin}/w/ws-gateway001?token=share_gateway`, { redirect: "manual" });
+    const cookie = redirect.headers.get("set-cookie").split(";")[0];
+    assert.equal(redirect.status, 308);
+    assert.equal(redirect.headers.get("location"), "/w/ws-gateway001/?token=share_gateway");
+
+    const htmlResponse = await fetch(`${origin}/w/ws-gateway001/?token=share_gateway`);
+    const html = await htmlResponse.text();
+    assert.equal(htmlResponse.status, 200);
+    assert.match(html, /assets\/app\.js/);
+
+    const assetResponse = await fetch(`${origin}/w/ws-gateway001/assets/app.js`, {
+      headers: { cookie }
+    });
+    assert.equal(assetResponse.status, 200);
+    assert.equal(assetResponse.headers.get("content-type"), "text/javascript; charset=utf-8");
+    assert.match(await assetResponse.text(), /OPL_WORKSPACE_LOADED/);
+
+    const apiResponse = await fetch(`${origin}/w/ws-gateway001/api/chat?model=gpt`, {
+      headers: { cookie }
+    });
+    assert.equal(apiResponse.status, 200);
+    assert.deepEqual(await apiResponse.json(), { ok: true });
+    assert.deepEqual(upstreamRequests, ["/", "/assets/app.js", "/api/chat?model=gpt"]);
+  } finally {
+    await close();
+    await upstream.close();
+  }
+});
+
 test("runtime readiness route reports provider execution gaps without creating resources", async () => {
   const appService = {
     runtimeReadiness: async () => ({
@@ -127,7 +196,7 @@ test("runtime status route returns structured Workspace resource evidence withou
         checks: [
           { name: "deployment_ready", ok: true },
           { name: "pvc_bound", ok: true },
-          { name: "ingress_routes_workspace_url", ok: true }
+          { name: "ingress_routes_workspace_gateway", ok: true }
         ]
       };
     }
@@ -150,7 +219,7 @@ test("runtime status route returns structured Workspace resource evidence withou
       checks: [
         { name: "deployment_ready", ok: true },
         { name: "pvc_bound", ok: true },
-        { name: "ingress_routes_workspace_url", ok: true }
+        { name: "ingress_routes_workspace_gateway", ok: true }
       ]
     });
   } finally {

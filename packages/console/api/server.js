@@ -61,6 +61,16 @@ const publicApiRoutes = new Set([
   "GET /api/runtime/readiness",
   "GET /api/production/readiness"
 ]);
+const hopByHopHeaders = new Set([
+  "connection",
+  "keep-alive",
+  "proxy-authenticate",
+  "proxy-authorization",
+  "te",
+  "trailer",
+  "transfer-encoding",
+  "upgrade"
+]);
 
 function sendJson(response, status, payload) {
   response.writeHead(status, { "content-type": "application/json; charset=utf-8" });
@@ -151,6 +161,168 @@ async function handleWorkspaceUrl(request, response, pathname, searchParams, app
 </html>`);
   } catch (error) {
     return sendHtml(response, 403, `<!doctype html><title>OPL Workspace 不可用</title><h1>OPL Workspace 不可用</h1><p>${workspaceErrorText(error.message)}</p>`);
+  }
+}
+
+function workspaceAccessCookieName(workspaceId) {
+  return `opl_ws_${String(workspaceId).replace(/[^A-Za-z0-9_-]/g, "_")}`;
+}
+
+function parseCookies(header = "") {
+  return Object.fromEntries(String(header)
+    .split(";")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const separator = part.indexOf("=");
+      const key = separator >= 0 ? part.slice(0, separator) : part;
+      const value = separator >= 0 ? part.slice(separator + 1) : "";
+      try {
+        return [key, decodeURIComponent(value)];
+      } catch {
+        return [key, value];
+      }
+    }));
+}
+
+function workspaceAccessCookie({ workspaceId, token }) {
+  return [
+    `${workspaceAccessCookieName(workspaceId)}=${encodeURIComponent(token)}`,
+    `Path=/w/${encodeURIComponent(workspaceId)}`,
+    "HttpOnly",
+    "Secure",
+    "SameSite=Lax",
+    "Max-Age=2592000"
+  ].join("; ");
+}
+
+function headerEntries(headers) {
+  return Object.entries(headers || {}).flatMap(([name, value]) => {
+    if (Array.isArray(value)) return value.map((item) => [name, item]);
+    return value === undefined ? [] : [[name, value]];
+  });
+}
+
+function proxyRequestHeaders(request) {
+  const headers = {};
+  for (const [name, value] of headerEntries(request.headers)) {
+    const key = name.toLowerCase();
+    if (hopByHopHeaders.has(key)) continue;
+    if (key === "host" || key === "cookie" || key === "accept-encoding") continue;
+    headers[name] = value;
+  }
+  headers["accept-encoding"] = "identity";
+  return headers;
+}
+
+function proxyResponseHeaders(upstreamResponse) {
+  const headers = {};
+  upstreamResponse.headers.forEach((value, name) => {
+    const key = name.toLowerCase();
+    if (hopByHopHeaders.has(key)) return;
+    headers[name] = value;
+  });
+  return headers;
+}
+
+function serviceNameFromRef(value = "") {
+  return String(value || "").split("/").pop();
+}
+
+function workspaceRuntimeBaseUrl(workspace) {
+  if (workspace.docker?.localUrl) return workspace.docker.localUrl;
+  const serviceName = serviceNameFromRef(workspace.docker?.service || workspace.server?.id);
+  if (!serviceName) throw new Error("workspace_runtime_service_missing");
+  const port = Number(process.env.OPL_WORKSPACE_WEBUI_PORT || 3000);
+  return `http://${serviceName}:${port}`;
+}
+
+function workspaceGatewayPath(pathname, workspaceId) {
+  const prefix = `/w/${workspaceId}`;
+  const stripped = pathname.slice(prefix.length);
+  return stripped && stripped !== "/" ? stripped : "/";
+}
+
+function cleanWorkspaceSearch(searchParams) {
+  const next = new URLSearchParams(searchParams);
+  next.delete("token");
+  const value = next.toString();
+  return value ? `?${value}` : "";
+}
+
+function workspaceUnavailableStatus(workspace) {
+  if (workspace.state !== "running") return 409;
+  if (workspace.server?.status !== "running") return 409;
+  if (workspace.access?.tokenStatus !== "active") return 403;
+  return 0;
+}
+
+function workspaceErrorText(value) {
+  const labels = {
+    workspace_not_found: "未找到 OPL Workspace。",
+    workspace_token_inactive: "OPL Workspace 访问令牌已失效。",
+    workspace_token_invalid: "OPL Workspace 访问令牌无效。",
+    workspace_runtime_service_missing: "OPL Workspace 运行时服务未登记。"
+  };
+  return labels[value] || value;
+}
+
+async function handleWorkspaceGateway(request, response, url, appService) {
+  const parts = url.pathname.split("/").filter(Boolean);
+  const workspaceId = parts[1];
+  if (!workspaceId) return sendHtml(response, 404, "<!doctype html><title>OPL Workspace 不可用</title><h1>OPL Workspace 不可用</h1>");
+
+  const queryToken = url.searchParams.get("token") || "";
+  const cookies = parseCookies(request.headers.cookie || "");
+  const token = queryToken || cookies[workspaceAccessCookieName(workspaceId)] || "";
+  let workspace;
+  try {
+    workspace = await appService.resolveWorkspaceAccess({
+      workspaceId,
+      slug: workspaceId,
+      token
+    });
+  } catch (error) {
+    return sendHtml(response, 403, `<!doctype html><title>OPL Workspace 不可用</title><h1>OPL Workspace 不可用</h1><p>${workspaceErrorText(error.message)}</p>`);
+  }
+
+  const unavailableStatus = workspaceUnavailableStatus(workspace);
+  if (unavailableStatus) {
+    return sendHtml(response, unavailableStatus, "<!doctype html><title>OPL Workspace 不可用</title><h1>OPL Workspace 尚未运行</h1>");
+  }
+
+  const setCookie = queryToken ? workspaceAccessCookie({ workspaceId, token: queryToken }) : "";
+  if ((request.method === "GET" || request.method === "HEAD") && parts.length === 2 && !url.pathname.endsWith("/")) {
+    response.writeHead(308, {
+      location: `${url.pathname}/${url.search}`,
+      ...(setCookie ? { "set-cookie": setCookie } : {})
+    });
+    return response.end();
+  }
+
+  try {
+    const upstreamPath = workspaceGatewayPath(url.pathname, workspaceId);
+    const upstreamUrl = new URL(`${upstreamPath}${cleanWorkspaceSearch(url.searchParams)}`, workspaceRuntimeBaseUrl(workspace));
+    const init = {
+      method: request.method,
+      headers: proxyRequestHeaders(request),
+      redirect: "manual"
+    };
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      init.body = request;
+      init.duplex = "half";
+    }
+    const upstream = await fetch(upstreamUrl, init);
+    const headers = proxyResponseHeaders(upstream);
+    if (setCookie) headers["set-cookie"] = setCookie;
+    response.writeHead(upstream.status, headers);
+    if (request.method === "HEAD" || !upstream.body) return response.end();
+    for await (const chunk of upstream.body) {
+      response.write(Buffer.from(chunk));
+    }
+    response.end();
+  } catch (error) {
+    return sendHtml(response, 502, `<!doctype html><title>OPL Workspace 网关错误</title><h1>OPL Workspace 网关错误</h1><p>${workspaceErrorText(error.message)}</p>`);
   }
 }
 
@@ -258,6 +430,7 @@ export function createRequestHandler({ appService = service, staticDir = publicD
   return (request, response) => {
     const url = new URL(request.url, "http://localhost");
     if (url.pathname.startsWith("/api/")) return handleApi(request, response, url.pathname, appService, operatorSummaryToken, auth);
+    if (url.pathname.startsWith("/w/")) return handleWorkspaceGateway(request, response, url, appService);
     if (url.pathname.startsWith("/workspaces/")) {
       return handleWorkspaceUrl(request, response, url.pathname, url.searchParams, appService);
     }

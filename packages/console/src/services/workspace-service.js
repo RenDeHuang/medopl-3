@@ -10,6 +10,10 @@ export function workspaceBySlug(state, slug) {
   return Object.values(state.workspaces).find((workspace) => workspace.slug === slug);
 }
 
+export function workspaceByIdOrSlug(state, value) {
+  return state.workspaces[value] || workspaceBySlug(state, value);
+}
+
 export function storageDestroyed(workspace) {
   return workspace?.state === "destroyed" || workspace?.disk?.status === "destroyed";
 }

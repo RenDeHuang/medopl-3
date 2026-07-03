@@ -120,7 +120,7 @@ export function defaultFabricResourceCatalog({ env = process.env } = {}) {
       {
         id: "workspace",
         host: workspaceDomain,
-        pathPattern: "/w/<workspaceId>",
+        pathPattern: "/w/<workspaceId>/",
         available: true
       }
     ],

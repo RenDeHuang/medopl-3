@@ -23,7 +23,7 @@ function htmlResponse(html, status = 200) {
   };
 }
 
-function tkeChain({ workspaceUrl = "https://workspace.medopl.cn/w/ws-tke-prod001?token=share_tke_prod" } = {}) {
+function tkeChain({ workspaceUrl = "https://workspace.medopl.cn/w/ws-tke-prod001/?token=share_tke_prod" } = {}) {
   const compute = {
     id: "compute-prod001",
     ownerAccountId: "pi-prod",
@@ -89,7 +89,7 @@ function readyRuntimeStatus(workspace) {
       { name: "deployment_uses_retained_pvc", ok: true },
       { name: "service_targets_workspace", ok: true },
       { name: "service_endpoints_ready", ok: true },
-      { name: "ingress_routes_workspace_url", ok: true }
+      { name: "ingress_routes_workspace_gateway", ok: true }
     ]
   };
 }

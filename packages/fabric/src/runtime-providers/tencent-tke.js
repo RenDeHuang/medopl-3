@@ -15,6 +15,8 @@ const REQUIRED_ENV = [
 ];
 const REQUIRED_TOOLS = ["kubectl"];
 const SHARED_INGRESS_NAME = "opl-cloud";
+const WORKSPACE_GATEWAY_SERVICE_NAME = "opl-cloud-control-plane";
+const WORKSPACE_GATEWAY_SERVICE_PORT = 8787;
 const WORKSPACE_ROUTE_MANIFEST = "shared-ingress-route.k8s.json";
 const VOLUME_SNAPSHOT_API_GROUP = "snapshot.storage.k8s.io";
 const DEFAULT_WORKSPACE_READY_TIMEOUT_MS = 300000;
@@ -105,7 +107,6 @@ export class TencentTkeProvider {
     });
     try {
       await this.runKubectl(["apply", "-f", manifestPath]);
-      await this.addWorkspaceRoute({ workspaceId, serviceName: name });
       await this.waitForWorkspaceRuntimeReady({
         workspace: this.runtimeFixture({
           name,
@@ -119,7 +120,6 @@ export class TencentTkeProvider {
         })
       });
     } catch (error) {
-      await this.cleanupWorkspaceRoute({ workspaceId });
       await this.cleanupCreatedWorkspaceResources({ name, deleteStorage: true });
       throw error;
     }
@@ -204,6 +204,69 @@ export class TencentTkeProvider {
     };
   }
 
+  async detachStorage({ attachment }) {
+    this.requireExecutionBoundary();
+    await this.requireTools(REQUIRED_TOOLS);
+    const computeName = computeNameFromAttachment(attachment);
+    const patch = {
+      spec: {
+        template: {
+          spec: {
+            containers: [{ name: "workspace", volumeMounts: null }],
+            volumes: null
+          }
+        }
+      }
+    };
+    await this.runKubectl(["patch", `deployment/${computeName}`, "--type=merge", "-p", JSON.stringify(patch)]);
+    return {
+      providerAttachmentId: attachment.providerAttachmentId,
+      status: "detached"
+    };
+  }
+
+  async destroyComputeResource({ compute }) {
+    this.requireExecutionBoundary();
+    await this.requireTools(REQUIRED_TOOLS);
+    const name = resourceName(compute.providerResourceId || compute.server?.id || `deployment/${k8sName(compute.id)}`);
+    let routeCleanupError = null;
+    try {
+      await this.removeWorkspaceRoutesForService({ serviceName: name });
+    } catch (error) {
+      routeCleanupError = error;
+    }
+    await this.runKubectl([
+      "delete",
+      `deployment/${name}`,
+      `service/${name}`,
+      `secret/${name}-env`,
+      "--ignore-not-found=true"
+    ]);
+    return {
+      providerResourceId: `deployment/${name}`,
+      status: "destroyed",
+      billingStatus: "stopped",
+      ...(routeCleanupError
+        ? {
+          routeCleanupStatus: "failed",
+          routeCleanupError: routeCleanupError.message
+        }
+        : {})
+    };
+  }
+
+  async destroyStorageVolume({ storage }) {
+    this.requireExecutionBoundary();
+    await this.requireTools(REQUIRED_TOOLS);
+    const name = resourceName(storage.providerResourceId || `pvc/${k8sName(storage.id)}-data`);
+    await this.runKubectl(["delete", `pvc/${name}`, "--ignore-not-found=true"]);
+    return {
+      providerResourceId: `pvc/${name}`,
+      status: "destroyed",
+      billingStatus: "stopped"
+    };
+  }
+
   async createWorkspaceEntry({ workspaceId, ownerAccountId = "unknown", workspaceName, token, compute, packagePlan }) {
     this.requireExecutionBoundary();
     await this.requireTools(REQUIRED_TOOLS);
@@ -217,7 +280,6 @@ export class TencentTkeProvider {
       token
     });
     await this.runKubectl(["apply", "-f", secretPath]);
-    await this.addWorkspaceRoute({ workspaceId, serviceName: computeName });
     return {
       provider: this.name,
       slug: workspaceSlug(workspaceName, workspaceId),
@@ -259,7 +321,7 @@ export class TencentTkeProvider {
 
   workspaceUrl({ workspaceId, token }) {
     const domain = String(this.env.OPL_WORKSPACE_DOMAIN || "").replace(/^https?:\/\//, "").replace(/\/$/, "");
-    return `https://${domain}/w/${workspaceId}?token=${token}`;
+    return `https://${domain}/w/${workspaceId}/?token=${token}`;
   }
 
   async readiness() {
@@ -287,10 +349,6 @@ export class TencentTkeProvider {
 
   async restartServer({ workspace }) {
     await this.runKubectl(["scale", workspace.server.id, "--replicas=1"]);
-    await this.addWorkspaceRoute({
-      workspaceId: workspace.id,
-      serviceName: resourceName(workspace.server.id)
-    });
     await this.waitForWorkspaceRuntimeReady({ workspace });
     return {
       ...workspace.server,
@@ -318,7 +376,6 @@ export class TencentTkeProvider {
       token: workspace.access.token
     });
     await this.runKubectl(["apply", "-f", manifestPath]);
-    await this.addWorkspaceRoute({ workspaceId: workspace.id, serviceName: name });
     await this.waitForWorkspaceRuntimeReady({
       workspace: {
         ...workspace,
@@ -470,7 +527,7 @@ export class TencentTkeProvider {
       deployment?.spec?.template?.spec?.containers?.[0];
     const deploymentPvc = (deployment?.spec?.template?.spec?.volumes || [])
       .find((volume) => volume.persistentVolumeClaim?.claimName === pvcName);
-    const ingressPath = findIngressPath({ ingress, host: this.workspaceHost(), path: `/w/${workspace.id}` });
+    const ingressPath = findIngressPath({ ingress, host: this.workspaceHost(), path: "/" });
     const readyAddresses = (endpoints?.subsets || []).reduce((count, subset) => count + (subset.addresses || []).length, 0);
     const deploymentReady = Number(deployment?.status?.readyReplicas || 0) > 0 &&
       Number(deployment?.status?.availableReplicas || 0) > 0;
@@ -482,11 +539,11 @@ export class TencentTkeProvider {
       { name: "service_targets_workspace", ok: selectorMatchesLabels(selector, podLabels) },
       { name: "service_endpoints_ready", ok: readyAddresses > 0 },
       {
-        name: "ingress_routes_workspace_url",
+        name: "ingress_routes_workspace_gateway",
         ok: Boolean(
           ingressPath &&
-          ingressPath.backend?.service?.name === serviceName &&
-          Number(ingressPath.backend?.service?.port?.number) === 3000
+          ingressPath.backend?.service?.name === WORKSPACE_GATEWAY_SERVICE_NAME &&
+          Number(ingressPath.backend?.service?.port?.number) === WORKSPACE_GATEWAY_SERVICE_PORT
         )
       }
     ];
@@ -667,6 +724,21 @@ export class TencentTkeProvider {
       workspaceId,
       mutate: (paths, routePath) => paths.filter((candidate) => candidate.path !== routePath)
     });
+  }
+
+  async removeWorkspaceRoutesForService({ serviceName }) {
+    const ingress = await this.readSharedIngress();
+    const nextIngress = sanitizeKubernetesApplyManifest(ingress);
+    const rule = ensureIngressRule(nextIngress, this.workspaceHost());
+    const currentPaths = Array.isArray(rule.http?.paths) ? rule.http.paths : [];
+    const nextPaths = currentPaths.filter((candidate) => candidate.backend?.service?.name !== serviceName);
+    if (nextPaths.length === currentPaths.length) return;
+    rule.http.paths = sortWorkspacePaths(nextPaths);
+    const manifestPath = await this.writeSharedIngressRouteManifest({
+      workspaceId: serviceName,
+      ingress: nextIngress
+    });
+    await this.runKubectl(["apply", "-f", manifestPath]);
   }
 
   async cleanupCreatedWorkspaceResources({ name, deleteStorage }) {
@@ -1020,6 +1092,11 @@ export class TencentTkeProvider {
 
 function resourceName(resourceId) {
   return String(resourceId || "").split("/").pop();
+}
+
+function computeNameFromAttachment(attachment) {
+  const providerRef = String(attachment.providerAttachmentId || "").split(":")[0];
+  return resourceName(providerRef || `deployment/${k8sName(attachment.computeId)}`);
 }
 
 function workspaceContainerResources(packagePlan) {
