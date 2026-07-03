@@ -40,6 +40,9 @@
       "OPL_BASIC_COMPUTE_HOURLY_CNY",
       "OPL_PRO_COMPUTE_HOURLY_CNY",
       "OPL_STORAGE_GB_MONTH_CNY",
+      "OPL_CODEX_MODEL",
+      "OPL_CODEX_REASONING_EFFORT",
+      "OPL_CODEX_BASE_URL",
       "TENCENT_DEPLOY_CLUSTER_ID",
       "TENCENT_TCR_REGISTRY",
       "TENCENT_TCR_NAMESPACE",
@@ -54,6 +57,7 @@
       "DATABASE_URL",
       "OPL_CONSOLE_USERS_JSON",
       "OPL_OPERATOR_SUMMARY_TOKEN",
+      "OPL_CODEX_API_KEY",
       "TCR_USERNAME",
       "TCR_PASSWORD",
       "TENCENT_DEPLOY_KUBECONFIG_B64",
@@ -94,6 +98,7 @@
       "Install Kubernetes secrets": [
         "--from-file=DATABASE_URL=\"$secret_dir/database-url\"",
         "--from-file=OPL_CONSOLE_USERS_JSON=\"$secret_dir/auth-users-json\"",
+        "--from-file=OPL_CODEX_API_KEY=\"$secret_dir/codex-api-key\"",
         "--from-file=.dockerconfigjson=\"$docker_config\"",
         "--from-file=kubeconfig=\"$KUBECONFIG\""
       ],

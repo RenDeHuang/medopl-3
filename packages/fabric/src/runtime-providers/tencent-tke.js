@@ -18,6 +18,12 @@ const SHARED_INGRESS_NAME = "opl-cloud";
 const WORKSPACE_GATEWAY_SERVICE_NAME = "opl-cloud-control-plane";
 const WORKSPACE_GATEWAY_SERVICE_PORT = 8787;
 const WORKSPACE_ROUTE_MANIFEST = "shared-ingress-route.k8s.json";
+const WORKSPACE_CODEX_SECRET_KEYS = [
+  "OPL_CODEX_MODEL",
+  "OPL_CODEX_REASONING_EFFORT",
+  "OPL_CODEX_BASE_URL",
+  "OPL_CODEX_API_KEY"
+];
 const VOLUME_SNAPSHOT_API_GROUP = "snapshot.storage.k8s.io";
 const DEFAULT_WORKSPACE_READY_TIMEOUT_MS = 300000;
 const DEFAULT_WORKSPACE_READY_POLL_MS = 5000;
@@ -804,7 +810,8 @@ export class TencentTkeProvider {
           metadata: { name: `${name}-env`, labels },
           type: "Opaque",
           data: {
-            OPL_SHARE_TOKEN: b64(token)
+            OPL_SHARE_TOKEN: b64(token),
+            ...this.workspaceCodexSecretData()
           }
         },
         {
@@ -1033,9 +1040,17 @@ export class TencentTkeProvider {
         OPL_WORKSPACE_ID: b64(workspaceId),
         OPL_WORKSPACE_NAME: b64(workspaceName || ""),
         OPL_OWNER_ACCOUNT_ID: b64(ownerAccountId || ""),
-        OPL_PACKAGE_ID: b64(packagePlan?.id || "")
+        OPL_PACKAGE_ID: b64(packagePlan?.id || ""),
+        ...this.workspaceCodexSecretData()
       }
     };
+  }
+
+  workspaceCodexSecretData() {
+    return Object.fromEntries(WORKSPACE_CODEX_SECRET_KEYS.flatMap((key) => {
+      const value = String(this.env[key] || "").trim();
+      return value ? [[key, b64(value)]] : [];
+    }));
   }
 
   workspacePvcSpec({ packagePlan, restoreFromBackup = null }) {

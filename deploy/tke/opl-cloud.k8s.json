@@ -61,7 +61,10 @@
         "OPL_BILLING_MARKUP": "0.2",
         "OPL_BASIC_COMPUTE_HOURLY_CNY": "0.39",
         "OPL_PRO_COMPUTE_HOURLY_CNY": "3.09",
-        "OPL_STORAGE_GB_MONTH_CNY": "0.36"
+        "OPL_STORAGE_GB_MONTH_CNY": "0.36",
+        "OPL_CODEX_MODEL": "gpt-5.5",
+        "OPL_CODEX_REASONING_EFFORT": "xhigh",
+        "OPL_CODEX_BASE_URL": "https://gflabtoken.cn/v1"
       }
     },
     {
@@ -147,6 +150,16 @@
                       "secretKeyRef": {
                         "name": "opl-cloud-operator",
                         "key": "OPL_OPERATOR_SUMMARY_TOKEN",
+                        "optional": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "OPL_CODEX_API_KEY",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "opl-cloud-workspace-codex",
+                        "key": "OPL_CODEX_API_KEY",
                         "optional": true
                       }
                     }

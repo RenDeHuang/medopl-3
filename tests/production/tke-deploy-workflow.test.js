@@ -150,6 +150,9 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
       OPL_BASIC_COMPUTE_HOURLY_CNY: env.OPL_BASIC_COMPUTE_HOURLY_CNY,
       OPL_PRO_COMPUTE_HOURLY_CNY: env.OPL_PRO_COMPUTE_HOURLY_CNY,
       OPL_STORAGE_GB_MONTH_CNY: env.OPL_STORAGE_GB_MONTH_CNY,
+      OPL_CODEX_MODEL: "gpt-5.5",
+      OPL_CODEX_REASONING_EFFORT: "xhigh",
+      OPL_CODEX_BASE_URL: "https://gflabtoken.cn/v1",
       OPL_CONSOLE_TLS_SECRET_NAME: "opl-cloud-console-medopl-cn-tls",
       OPL_WORKSPACE_TLS_SECRET_NAME: "opl-cloud-workspace-medopl-cn-tls",
       OPL_INGRESS_CLASS: "qcloud",
@@ -182,6 +185,9 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
   assert.equal(config.data.OPL_PRO_COMPUTE_HOURLY_CNY, env.OPL_PRO_COMPUTE_HOURLY_CNY);
   assert.equal(config.data.OPL_GPU_COMPUTE_HOURLY_CNY, undefined);
   assert.equal(config.data.OPL_STORAGE_GB_MONTH_CNY, env.OPL_STORAGE_GB_MONTH_CNY);
+  assert.equal(config.data.OPL_CODEX_MODEL, "gpt-5.5");
+  assert.equal(config.data.OPL_CODEX_REASONING_EFFORT, "xhigh");
+  assert.equal(config.data.OPL_CODEX_BASE_URL, "https://gflabtoken.cn/v1");
   assert.equal(config.data.OPL_WORKSPACE_VOLUME_SNAPSHOT_CLASS, "cbs-snapshot");
   assert.equal(config.data.TENCENT_DEPLOY_CLUSTER_ID, "cls-oplcloud");
   assert.equal(config.data.TENCENT_TCR_REGISTRY, "uswccr.ccs.tencentyun.com");
@@ -220,6 +226,9 @@ test("TKE manifest renderer can skip the shared Ingress during deploy so Workspa
       OPL_BASIC_COMPUTE_HOURLY_CNY: env.OPL_BASIC_COMPUTE_HOURLY_CNY,
       OPL_PRO_COMPUTE_HOURLY_CNY: env.OPL_PRO_COMPUTE_HOURLY_CNY,
       OPL_STORAGE_GB_MONTH_CNY: env.OPL_STORAGE_GB_MONTH_CNY,
+      OPL_CODEX_MODEL: "gpt-5.5",
+      OPL_CODEX_REASONING_EFFORT: "xhigh",
+      OPL_CODEX_BASE_URL: "https://gflabtoken.cn/v1",
       OPL_CONSOLE_TLS_SECRET_NAME: "opl-cloud-console-medopl-cn-tls",
       OPL_WORKSPACE_TLS_SECRET_NAME: "opl-cloud-workspace-medopl-cn-tls",
       OPL_INGRESS_CLASS: "qcloud",

@@ -35,6 +35,9 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
   assert.equal(config.data.TENCENT_TCR_REGISTRY, "registry.example.com");
   assert.equal(config.data.TENCENT_TCR_NAMESPACE, "opl");
   assert.equal(config.data.TENCENT_TCR_REGION, "ap-guangzhou");
+  assert.equal(config.data.OPL_CODEX_MODEL, "gpt-5.5");
+  assert.equal(config.data.OPL_CODEX_REASONING_EFFORT, "xhigh");
+  assert.equal(config.data.OPL_CODEX_BASE_URL, "https://gflabtoken.cn/v1");
 
   const deployment = items.find((item) => item.kind === "Deployment");
   assert.equal(deployment.metadata.name, "opl-cloud-control-plane");
@@ -50,9 +53,11 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
   assert.deepEqual(container.env.filter((item) => item.valueFrom).map((item) => `${item.name}->${item.valueFrom.secretKeyRef.name}/${item.valueFrom.secretKeyRef.key}`), [
     "DATABASE_URL->opl-cloud-database/DATABASE_URL",
     "OPL_CONSOLE_USERS_JSON->opl-cloud-auth/OPL_CONSOLE_USERS_JSON",
-    "OPL_OPERATOR_SUMMARY_TOKEN->opl-cloud-operator/OPL_OPERATOR_SUMMARY_TOKEN"
+    "OPL_OPERATOR_SUMMARY_TOKEN->opl-cloud-operator/OPL_OPERATOR_SUMMARY_TOKEN",
+    "OPL_CODEX_API_KEY->opl-cloud-workspace-codex/OPL_CODEX_API_KEY"
   ]);
   assert.equal(container.env.find((item) => item.name === "OPL_OPERATOR_SUMMARY_TOKEN").valueFrom.secretKeyRef.optional, true);
+  assert.equal(container.env.find((item) => item.name === "OPL_CODEX_API_KEY").valueFrom.secretKeyRef.optional, true);
   assert.deepEqual(deployment.spec.template.spec.volumes.map((volume) => volume.name), [
     "runtime-state",
     "deploy-kubeconfig",

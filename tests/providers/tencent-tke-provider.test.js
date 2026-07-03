@@ -18,6 +18,13 @@ const requiredEnv = {
   TENCENT_DEPLOY_KUBECONFIG_REF: "/tmp/kubeconfig"
 };
 
+function decodedSecretData(secret) {
+  return Object.fromEntries(Object.entries(secret.data || {}).map(([key, value]) => [
+    key,
+    Buffer.from(value, "base64").toString("utf8")
+  ]));
+}
+
 test("Tencent TKE provider reports readiness gaps before Kubernetes execution", async () => {
   const provider = new TencentTkeProvider({
     env: {},
@@ -40,6 +47,53 @@ test("Tencent TKE provider reports readiness gaps before Kubernetes execution", 
     ],
     missingTools: ["kubectl"]
   });
+});
+
+test("Tencent TKE provider passes Codex provider settings through workspace secrets", () => {
+  const provider = new TencentTkeProvider({
+    env: {
+      ...requiredEnv,
+      OPL_CODEX_MODEL: "gpt-5.5",
+      OPL_CODEX_REASONING_EFFORT: "xhigh",
+      OPL_CODEX_BASE_URL: "https://gflabtoken.cn/v1",
+      OPL_CODEX_API_KEY: "secret-codex-key"
+    },
+    commandExists: () => true
+  });
+  const computeManifest = provider.computeResourceManifest({
+    name: "opl-compute-codex",
+    computeId: "compute-codex",
+    accountId: "pi-alpha",
+    compute: { id: "compute-codex", name: "Codex node", token: "share_compute" },
+    packagePlan: { id: "basic", accelerator: "cpu", cpu: 2, memoryGb: 4, server: "2c4g", diskGb: 10 }
+  });
+  const workspaceManifest = provider.workspaceManifest({
+    name: "opl-ws-codex",
+    workspaceId: "ws-codex",
+    ownerAccountId: "pi-alpha",
+    workspaceName: "Codex Workspace",
+    packagePlan: { id: "basic", accelerator: "cpu", cpu: 2, memoryGb: 4, server: "2c4g", diskGb: 10 },
+    token: "share_workspace"
+  });
+
+  const computeSecret = decodedSecretData(computeManifest.items.find((item) => item.kind === "Secret"));
+  const workspaceSecret = decodedSecretData(workspaceManifest.items.find((item) => item.kind === "Secret"));
+  assert.deepEqual({
+    OPL_CODEX_MODEL: computeSecret.OPL_CODEX_MODEL,
+    OPL_CODEX_REASONING_EFFORT: computeSecret.OPL_CODEX_REASONING_EFFORT,
+    OPL_CODEX_BASE_URL: computeSecret.OPL_CODEX_BASE_URL,
+    OPL_CODEX_API_KEY: computeSecret.OPL_CODEX_API_KEY
+  }, {
+    OPL_CODEX_MODEL: "gpt-5.5",
+    OPL_CODEX_REASONING_EFFORT: "xhigh",
+    OPL_CODEX_BASE_URL: "https://gflabtoken.cn/v1",
+    OPL_CODEX_API_KEY: "secret-codex-key"
+  });
+  assert.equal(workspaceSecret.OPL_CODEX_API_KEY, "secret-codex-key");
+
+  const computeEnv = computeManifest.items.find((item) => item.kind === "Deployment")
+    .spec.template.spec.containers[0].env;
+  assert.equal(JSON.stringify(computeEnv).includes("secret-codex-key"), false);
 });
 
 test("Tencent TKE provider exposes split compute, storage, attachment, and Workspace entry operations", async () => {
