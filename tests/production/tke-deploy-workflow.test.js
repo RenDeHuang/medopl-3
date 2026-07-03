@@ -95,6 +95,29 @@ test("TKE production deploy workflow matches the deployment contract", async () 
   assertWorkflowContract(workflow, contract.deployWorkflow, contract);
 });
 
+test("TKE deploy can roll forward with an existing auth seed secret", async () => {
+  const contract = await readJson(deploymentContractPath);
+  const workflow = await readWorkflow(contract.deployWorkflow.file);
+  const currentJob = job(workflow, contract.deployWorkflow.job);
+  const stepMap = stepsByName(currentJob);
+
+  assert.doesNotMatch(
+    serializedStep(stepMap.get("Check deployment inputs")),
+    /OPL_CONSOLE_USERS_JSON/,
+    "deploy input guard must not require a fresh auth seed when a persisted K8s auth secret already exists"
+  );
+  assert.match(
+    serializedStep(stepMap.get("Install Kubernetes secrets")),
+    /get secret "?\$?OPL_AUTH_SECRET_NAME"?|get secret opl-cloud-auth/,
+    "deploy must verify an existing auth seed secret before reusing it"
+  );
+  assert.match(
+    serializedStep(stepMap.get("Install Kubernetes secrets")),
+    /if \[ -n "\$\{OPL_CONSOLE_USERS_JSON:-\}" \]/,
+    "deploy must still install a provided production auth seed without printing it"
+  );
+});
+
 test("TKE production deploy workflow defaults to the versioned pricing contract", async () => {
   const deploymentContract = await readJson(deploymentContractPath);
   const workflow = await readWorkflow(deploymentContract.deployWorkflow.file);
@@ -210,4 +233,17 @@ test("TKE production diagnostics workflow is read-only and matches the deploymen
   const contract = await readJson(deploymentContractPath);
   const workflow = await readWorkflow(contract.diagnosticsWorkflow.file);
   assertWorkflowContract(workflow, contract.diagnosticsWorkflow, contract);
+});
+
+test("TKE diagnostics do not print account state or Workspace URL tokens", async () => {
+  const contract = await readJson(deploymentContractPath);
+  const workflow = await readWorkflow(contract.diagnosticsWorkflow.file);
+  const currentJob = job(workflow, contract.diagnosticsWorkflow.job);
+  const step = stepsByName(currentJob).get("Check control plane API through port-forward");
+  const text = serializedStep(step);
+
+  assert.match(text, /\/api\/state/, "diagnostics may check state reachability");
+  assert.match(text, /\/api\/production\/readiness/, "diagnostics must still check production readiness");
+  assert.doesNotMatch(text, /cat \/tmp\/opl-cloud-state\.json/, "diagnostics must not print /api/state payloads");
+  assert.doesNotMatch(text, /printf 'state='/, "diagnostics must not label and dump account state");
 });
