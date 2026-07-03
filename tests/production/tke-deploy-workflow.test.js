@@ -171,6 +171,7 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
   const config = items.find((item) => item.kind === "ConfigMap");
   const deployment = items.find((item) => item.kind === "Deployment");
   const ingress = items.find((item) => item.kind === "Ingress");
+  const serviceConfig = items.find((item) => item.kind === "TkeServiceConfig");
 
   assert.equal(namespace.metadata.name, "opl-cloud");
   assert.equal(config.metadata.namespace, "opl-cloud");
@@ -187,11 +188,15 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
   assert.equal(deployment.spec.template.spec.containers[0].image, "uswccr.ccs.tencentyun.com/oplcloud/opl-cloud:test");
   assert.deepEqual(deployment.spec.template.spec.imagePullSecrets, [{ name: "tcr-pull-secret" }]);
   assert.equal(ingress.spec.ingressClassName, "qcloud");
+  assert.equal(ingress.metadata.annotations["ingress.cloud.tencent.com/tke-service-config"], "opl-cloud-ingress-config");
   assert.deepEqual(ingress.spec.tls, [
     { hosts: ["cloud.medopl.cn"], secretName: "opl-cloud-console-medopl-cn-tls" },
     { hosts: ["workspace.medopl.cn"], secretName: "opl-cloud-workspace-medopl-cn-tls" }
   ]);
   assert.deepEqual(ingress.spec.rules.map((rule) => rule.host), ["cloud.medopl.cn", "workspace.medopl.cn"]);
+  assert.equal(serviceConfig.metadata.namespace, "opl-cloud");
+  assert.equal(serviceConfig.spec.loadBalancer.l7Listeners[0].domains[0].domain, "workspace.medopl.cn");
+  assert.equal(serviceConfig.spec.loadBalancer.l7Listeners[0].domains[0].http2, false);
 });
 
 test("TKE manifest renderer can skip the shared Ingress during deploy so Workspace routes are not overwritten", async () => {
@@ -227,6 +232,18 @@ test("TKE manifest renderer can skip the shared Ingress during deploy so Workspa
   });
 
   assert.equal(rendered.items.some((item) => item.kind === "Ingress" && item.metadata.name === "opl-cloud"), false);
+  assert.equal(rendered.items.some((item) => item.kind === "TkeServiceConfig" && item.metadata.name === "opl-cloud-ingress-config"), true);
+});
+
+test("TKE production deploy patches shared Ingress config without overwriting Workspace routes", async () => {
+  const workflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
+  const currentJob = job(workflow, "deploy");
+  const step = stepsByName(currentJob).get("Render and apply manifest");
+  const text = serializedStep(step);
+
+  assert.match(text, /apply -f "\$OPL_DEPLOY_SECRET_DIR\/opl-cloud\.rendered\.json"/);
+  assert.match(text, /annotate ingress opl-cloud ingress\.cloud\.tencent\.com\/tke-service-config=opl-cloud-ingress-config --overwrite/);
+  assert.doesNotMatch(text, /kubectl .*apply -f "\$OPL_DEPLOY_SECRET_DIR\/opl-cloud\.ingress-bootstrap\.json"[\s\S]*kubectl .*apply -f "\$OPL_DEPLOY_SECRET_DIR\/opl-cloud\.ingress-bootstrap\.json"/);
 });
 
 test("TKE production diagnostics workflow is read-only and matches the deployment contract", async () => {

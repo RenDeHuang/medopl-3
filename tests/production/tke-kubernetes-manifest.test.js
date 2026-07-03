@@ -16,6 +16,7 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
     "Deployment",
     "Service",
     "NetworkPolicy",
+    "TkeServiceConfig",
     "Ingress"
   ]);
 
@@ -61,9 +62,26 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
   const ingress = items.find((item) => item.kind === "Ingress");
   assert.equal(ingress.spec.ingressClassName, "qcloud");
   assert.equal(ingress.metadata.annotations["ingress.cloud.tencent.com/direct-access"], "true");
+  assert.equal(ingress.metadata.annotations["ingress.cloud.tencent.com/tke-service-config"], "opl-cloud-ingress-config");
   assert.deepEqual(ingress.spec.tls, [
     { hosts: ["cloud.medopl.cn"], secretName: "opl-cloud-console-medopl-cn-tls" },
     { hosts: ["workspace.medopl.cn"], secretName: "opl-cloud-workspace-medopl-cn-tls" }
   ]);
   assert.deepEqual(ingress.spec.rules.map((rule) => rule.host), ["cloud.medopl.cn", "workspace.medopl.cn"]);
+
+  const serviceConfig = items.find((item) => item.kind === "TkeServiceConfig");
+  assert.equal(serviceConfig.metadata.name, "opl-cloud-ingress-config");
+  assert.deepEqual(serviceConfig.spec.loadBalancer.l7Listeners, [
+    {
+      protocol: "HTTPS",
+      port: 443,
+      domains: [
+        {
+          domain: "workspace.medopl.cn",
+          http2: false,
+          rules: [{ url: "/", forwardType: "HTTP" }]
+        }
+      ]
+    }
+  ]);
 });

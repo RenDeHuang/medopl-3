@@ -277,6 +277,39 @@
       }
     },
     {
+      "apiVersion": "cloud.tencent.com/v1alpha1",
+      "kind": "TkeServiceConfig",
+      "metadata": {
+        "name": "opl-cloud-ingress-config",
+        "namespace": "opl-cloud",
+        "labels": {
+          "app.kubernetes.io/name": "opl-cloud"
+        }
+      },
+      "spec": {
+        "loadBalancer": {
+          "l7Listeners": [
+            {
+              "protocol": "HTTPS",
+              "port": 443,
+              "domains": [
+                {
+                  "domain": "workspace.medopl.cn",
+                  "http2": false,
+                  "rules": [
+                    {
+                      "url": "/",
+                      "forwardType": "HTTP"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
       "apiVersion": "networking.k8s.io/v1",
       "kind": "Ingress",
       "metadata": {
@@ -286,7 +319,8 @@
           "ingress.cloud.tencent.com/listen-ports": "[{\"HTTP\":80},{\"HTTPS\":443}]",
           "ingress.cloud.tencent.com/auto-rewrite": "true",
           "ingress.cloud.tencent.com/direct-access": "true",
-          "ingress.cloud.tencent.com/rewrite-support": "true"
+          "ingress.cloud.tencent.com/rewrite-support": "true",
+          "ingress.cloud.tencent.com/tke-service-config": "opl-cloud-ingress-config"
         }
       },
       "spec": {
