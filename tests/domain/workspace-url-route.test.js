@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import { createServer } from "node:http";
+import { request as httpRequest } from "node:http";
 import { connect } from "node:net";
+import { gunzipSync } from "node:zlib";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -28,6 +30,29 @@ function cookieHeaderFrom(response) {
   return response.headers.getSetCookie()
     .map((cookie) => cookie.split(";")[0])
     .join("; ");
+}
+
+function rawGet(url, headers = {}) {
+  const target = new URL(url);
+  return new Promise((resolve, reject) => {
+    const request = httpRequest({
+      hostname: target.hostname,
+      port: target.port,
+      path: `${target.pathname}${target.search}`,
+      method: "GET",
+      headers
+    }, (response) => {
+      const chunks = [];
+      response.on("data", (chunk) => chunks.push(chunk));
+      response.on("end", () => resolve({
+        statusCode: response.statusCode,
+        headers: response.headers,
+        body: Buffer.concat(chunks)
+      }));
+    });
+    request.on("error", reject);
+    request.end();
+  });
 }
 
 function rawUpgrade({ origin, path, cookie }) {
@@ -154,14 +179,26 @@ test("workspace gateway validates URL token, sets scoped cookies, and proxies We
     assert.match(html, /assets\/app\.js/);
 
     const assetResponse = await fetch(`${origin}/w/ws-gateway001/assets/app.js`, {
-      headers: { cookie }
+      headers: { cookie, "accept-encoding": "identity" }
     });
     assert.equal(assetResponse.status, 200);
     assert.equal(assetResponse.headers.get("content-type"), "text/javascript; charset=utf-8");
     assert.equal(assetResponse.headers.get("content-encoding"), null);
     const assetBody = await assetResponse.text();
     assert.equal(assetResponse.headers.get("content-length"), String(Buffer.byteLength(assetBody)));
+    assert.match(assetResponse.headers.get("cache-control"), /no-transform/);
     assert.match(assetBody, /OPL_WORKSPACE_LOADED/);
+
+    const gzipAsset = await rawGet(`${origin}/w/ws-gateway001/assets/app.js`, {
+      cookie,
+      "accept-encoding": "gzip"
+    });
+    assert.equal(gzipAsset.statusCode, 200);
+    assert.equal(gzipAsset.headers["content-encoding"], "gzip");
+    assert.match(gzipAsset.headers["cache-control"], /no-transform/);
+    assert.match(gzipAsset.headers.vary, /accept-encoding/i);
+    assert.equal(gzipAsset.headers["content-length"], String(gzipAsset.body.byteLength));
+    assert.match(gunzipSync(gzipAsset.body).toString("utf8"), /OPL_WORKSPACE_LOADED/);
 
     const apiResponse = await fetch(`${origin}/api/chat?model=gpt`, {
       headers: { cookie: `${cookie}; app_session=runtime` }
@@ -174,6 +211,7 @@ test("workspace gateway validates URL token, sets scoped cookies, and proxies We
     ]);
     assert.deepEqual(upstreamRequests, [
       { url: "/", cookie: "" },
+      { url: "/assets/app.js", cookie: "" },
       { url: "/assets/app.js", cookie: "" },
       { url: "/api/chat?model=gpt", cookie: "app_session=runtime" }
     ]);
