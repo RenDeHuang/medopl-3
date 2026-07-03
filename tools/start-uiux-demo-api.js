@@ -1,10 +1,11 @@
 import { createServer } from "node:http";
 import { mkdir, writeFile } from "node:fs/promises";
+import { networkInterfaces } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { emptyState } from "../packages/console/src/store.js";
-import { uiuxDemoAccounts, uiuxDemoAuthSeedJson } from "./uiux-demo-fixture.js";
+import { uiuxDemoAccounts, uiuxDemoAuthSeedJson, uiuxDemoPublicUrl } from "./uiux-demo-fixture.js";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
 const port = String(process.env.PORT || "8791");
@@ -16,7 +17,7 @@ const admin = uiuxDemoAccounts.find((account) => account.role === "admin");
 process.env.PORT = port;
 process.env.OPL_CLOUD_DATA_PATH = dataPath;
 process.env.OPL_CONSOLE_USERS_JSON ||= uiuxDemoAuthSeedJson();
-process.env.OPL_PUBLIC_URL ||= `http://127.0.0.1:${port}`;
+process.env.OPL_PUBLIC_URL ||= uiuxDemoPublicUrl({ env: process.env, port, networkInterfaces: networkInterfaces() });
 
 if (resetState) {
   await mkdir(dirname(dataPath), { recursive: true });
@@ -93,6 +94,7 @@ await seedBusinessChain();
 const server = createServer(createRequestHandler({ auth }));
 server.listen(Number(port), () => {
   console.log(`OPL Console demo API listening on http://127.0.0.1:${port}`);
+  console.log(`Workspace public URL origin: ${process.env.OPL_PUBLIC_URL}`);
   console.log(`State file: ${dataPath}`);
   console.log("Demo accounts:");
   for (const account of uiuxDemoAccounts) {

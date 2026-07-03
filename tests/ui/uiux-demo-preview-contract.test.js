@@ -4,7 +4,8 @@ import test from "node:test";
 
 import {
   uiuxDemoAccounts,
-  uiuxDemoAuthSeedJson
+  uiuxDemoAuthSeedJson,
+  uiuxDemoPublicUrl
 } from "../../tools/uiux-demo-fixture.js";
 
 const repoRoot = new URL("../../", import.meta.url);
@@ -34,4 +35,19 @@ test("login page keeps one credential form without role shortcuts", async () => 
   assert.doesNotMatch(demoUiSource, /VITE_OPL_DEMO_ACCOUNTS_JSON|VITE_OPL_DEMO_MODE/, "demo UI must not inject account choices into the browser");
   assert.equal(packageSource.scripts["demo:api"], "node tools/start-uiux-demo-api.js");
   assert.equal(packageSource.scripts["demo:ui"], "node tools/start-uiux-demo-ui.js");
+});
+
+test("UIUX demo Workspace URLs default to a network-reachable API origin", () => {
+  const url = uiuxDemoPublicUrl({
+    env: {},
+    port: "8791",
+    networkInterfaces: {
+      lo: [{ family: "IPv4", address: "127.0.0.1", internal: true }],
+      eth0: [{ family: "IPv4", address: "172.30.55.158", internal: false }]
+    }
+  });
+
+  assert.equal(url, "http://172.30.55.158:8791");
+  assert.equal(uiuxDemoPublicUrl({ env: { OPL_PUBLIC_URL: "https://workspace.example.com" }, port: "8791" }), "https://workspace.example.com");
+  assert.equal(uiuxDemoPublicUrl({ env: {}, port: "8791", networkInterfaces: {} }), "http://127.0.0.1:8791");
 });
