@@ -1,0 +1,56 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const repoRoot = new URL("../../", import.meta.url);
+
+async function source(relativePath) {
+  return readFile(new URL(relativePath, repoRoot), "utf8");
+}
+
+test("commercial Console UI is built from the maintained surface component layer", async () => {
+  const surfaceSource = await source("packages/console/ui/pages/shared/commercial-console.jsx");
+
+  for (const exportName of [
+    "ConsoleSurface",
+    "MetricStrip",
+    "InsightPanel",
+    "StatusPill",
+    "ResourceSplit",
+    "ActionGroup",
+    "TimelineList",
+    "ObjectTable"
+  ]) {
+    assert.match(surfaceSource, new RegExp(`export function ${exportName}\\b`), `${exportName} must be exported by the commercial UI layer`);
+  }
+});
+
+test("business-chain pages use the commercial surface instead of old card stacks", async () => {
+  for (const page of [
+    "packages/console/ui/pages/OverviewPage.jsx",
+    "packages/console/ui/pages/workspaces/WorkspacesPage.jsx",
+    "packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx",
+    "packages/console/ui/pages/workspaces/CreateWorkspacePage.jsx",
+    "packages/console/ui/pages/billing/BillingPage.jsx",
+    "packages/console/ui/pages/gateway/GatewayPage.jsx",
+    "packages/console/ui/pages/account/AccountPage.jsx",
+    "packages/console/ui/pages/support/SupportPage.jsx",
+    "packages/console/ui/pages/admin/AdminOverviewPage.jsx"
+  ]) {
+    const pageSource = await source(page);
+    assert.match(pageSource, /shared\/commercial-console\.jsx/, `${page} must import the commercial Console surface`);
+    assert.doesNotMatch(pageSource, /StatisticCard/, `${page} must not use the old metric card layer directly`);
+  }
+});
+
+test("public entry is Console-first and does not use the retired marketing hero shell", async () => {
+  const homeSource = await source("packages/console/ui/pages/HomePage.jsx");
+  assert.match(homeSource, /publicConsole/, "public home should present the Console product surface");
+  assert.doesNotMatch(homeSource, /homeHero|heroPreview|chainPreview/, "retired marketing hero classes must stay removed");
+});
+
+test("authenticated shell is branded as OPL Console", async () => {
+  const shellSource = await source("packages/console/ui/pages/ConsolePage.jsx");
+  assert.match(shellSource, /title="OPL Console"/, "authenticated app shell must use OPL Console product naming");
+  assert.doesNotMatch(shellSource, /title="OPL Cloud"/, "authenticated app shell must not retain old OPL Cloud naming");
+});

@@ -34,14 +34,6 @@ export default function LoginPage({ route, onLogin }) {
 
   const mode = route?.path || "/login";
   if (mode !== "/login" && mode !== "/logout") {
-    const title = {
-      "/register": "注册",
-      "/invite/accept": "接受邀请",
-      "/email/verify": "邮箱验证",
-      "/forgot-password": "忘记密码",
-      "/reset-password": "重置密码",
-      "/auth/callback": "SSO 回调"
-    }[mode] || "账号";
     return (
       <div className="loginShell">
         <a className="backLink" href="/"><ArrowLeft size={16} /> OPL Cloud</a>
@@ -49,13 +41,13 @@ export default function LoginPage({ route, onLogin }) {
           <div className="loginBrand">
             <div className="brandIcon">OPL</div>
             <div>
-              <p className="eyebrow">Account</p>
-              <h1>{title}</h1>
+              <p className="eyebrow">OPL Console</p>
+              <h1>无法访问</h1>
             </div>
           </div>
           <div className="emptyState">
-            <strong>已预留路由</strong>
-            <span>商业账号流程将接入身份服务。</span>
+            <strong>当前入口不可用</strong>
+            <span>请使用已开通的 Console 账号登录。</span>
           </div>
           <a className="primaryLink" href="/login">返回登录</a>
         </main>
@@ -88,10 +80,6 @@ export default function LoginPage({ route, onLogin }) {
             <LogIn size={16} /> {submitting ? "登录中..." : "登录"}
           </button>
         </form>
-        <div className="authLinks">
-          <a href="/forgot-password">忘记密码</a>
-          <a href="/reset-password">重置密码</a>
-        </div>
         <div className="securityNote">
           <ShieldCheck size={16} />
           <span>Secure cookie + CSRF</span>

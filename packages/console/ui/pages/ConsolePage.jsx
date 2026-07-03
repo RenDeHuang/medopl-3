@@ -52,7 +52,7 @@ export default function ConsolePage({ route, session, onLogout }) {
 
   return (
     <ProLayout
-      title="OPL Cloud"
+      title="OPL Console"
       logo={<div className="proLogo">OPL</div>}
       location={{ pathname: path }}
       layout="mix"
@@ -69,7 +69,7 @@ export default function ConsolePage({ route, session, onLogout }) {
         <Button key="logout" icon={<LogOut size={15} />} onClick={logout}>退出</Button>
       ]}
       avatarProps={{
-        title: session.user.email,
+        title: <span className="shellEmail">{session.user.email}</span>,
         size: "small",
         icon: <UserRound size={16} />
       }}

@@ -120,3 +120,16 @@ test("route table and routeTo do not expose reserved routes in visible owner or 
   assert.equal(routeTo("workspace.detail", { id: "ws_demo" }), "/console/workspaces/ws_demo");
   assert.equal(routeTo("support.detail", { id: "ticket_demo" }), "/console/support/ticket_demo");
 });
+
+test("current auth UI does not link to reserved account flows", async () => {
+  const source = await readFile(new URL("../../packages/console/ui/pages/LoginPage.jsx", import.meta.url), "utf8");
+
+  for (const path of [
+    "/register",
+    "/invite/accept",
+    "/forgot-password",
+    "/reset-password"
+  ]) {
+    assert.equal(source.includes(`href="${path}"`), false, `${path} must not be linked from current auth UI`);
+  }
+});
