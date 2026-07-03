@@ -135,6 +135,8 @@
       "Describe control plane pods",
       "Show recent namespace events",
       "Show control plane logs",
+      "Show previous control plane crash logs",
+      "Show control plane container status",
       "Check control plane API through port-forward"
     ],
     "requiredCommandsByStep": {
@@ -148,6 +150,14 @@
       "Show TLS secret inventory": [
         "qcloud_cert_id",
         "HAS_QCLOUD_CERT_ID"
+      ],
+      "Show previous control plane crash logs": [
+        "logs \"$pod\" --all-containers=true --previous",
+        "--tail=300"
+      ],
+      "Show control plane container status": [
+        "containerStatuses",
+        "lastState"
       ],
       "Check control plane API through port-forward": [
         "port-forward service/opl-cloud-control-plane 18787:8787",

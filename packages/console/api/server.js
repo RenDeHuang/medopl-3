@@ -411,6 +411,10 @@ function writeUpgradeError(socket, status, message) {
   socket.destroy();
 }
 
+function destroySocketQuietly(socket) {
+  if (!socket?.destroyed) socket.destroy();
+}
+
 function upgradeHeaders(request, target) {
   const headers = [];
   for (const [name, value] of headerEntries(request.headers)) {
@@ -442,13 +446,21 @@ export function createUpgradeHandler({ appService = service } = {}) {
       if (unavailableStatus) return writeUpgradeError(socket, unavailableStatus, "Workspace Unavailable");
       const target = new URL(workspaceRuntimeBaseUrl(workspace));
       const upstream = connect(Number(target.port || 80), target.hostname);
+      let tunnelEstablished = false;
+      socket.on("error", () => destroySocketQuietly(upstream));
+      socket.on("close", () => destroySocketQuietly(upstream));
       upstream.on("connect", () => {
+        tunnelEstablished = true;
         upstream.write(`${request.method} ${url.pathname}${url.search} HTTP/${request.httpVersion}\r\n`);
         upstream.write(`${upgradeHeaders(request, target).join("\r\n")}\r\n\r\n`);
         if (head?.length) upstream.write(head);
         socket.pipe(upstream).pipe(socket);
       });
-      upstream.on("error", () => writeUpgradeError(socket, 502, "Bad Gateway"));
+      upstream.on("error", () => {
+        if (!tunnelEstablished && !socket.destroyed) return writeUpgradeError(socket, 502, "Bad Gateway");
+        destroySocketQuietly(socket);
+      });
+      upstream.on("close", () => destroySocketQuietly(socket));
     } catch {
       writeUpgradeError(socket, 403, "Forbidden");
     }

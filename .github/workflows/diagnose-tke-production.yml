@@ -246,16 +246,19 @@ jobs:
           trap 'kill "$port_forward_pid" 2>/dev/null || true' EXIT
           state_code="000"
           for attempt in 1 2 3 4 5; do
-            state_code="$(curl -fsS -o /tmp/opl-cloud-state.json -w '%{http_code}' http://127.0.0.1:18787/api/state || true)"
-            if [ "$state_code" = "200" ]; then
+            state_code="$(curl -sS -o /tmp/opl-cloud-state.json -w '%{http_code}' http://127.0.0.1:18787/api/state || true)"
+            if [ "$state_code" != "000" ]; then
               break
             fi
             sleep 2
           done
           printf 'state_code=%s\n' "$state_code"
           printf 'readiness='
-          curl -fsS http://127.0.0.1:18787/api/production/readiness \
-            | node -e '
+          readiness_payload="$(curl -fsS http://127.0.0.1:18787/api/production/readiness || true)"
+          if [ -z "$readiness_payload" ]; then
+            printf '{"ready":false,"failedChecks":["port_forward_unavailable"]}'
+          else
+            printf '%s' "$readiness_payload" | node -e '
                 const fs = require("node:fs");
                 const payload = JSON.parse(fs.readFileSync(0, "utf8"));
                 process.stdout.write(JSON.stringify({
@@ -263,4 +266,5 @@ jobs:
                   failedChecks: payload.failedChecks || []
                 }));
               '
+          fi
           printf '\n'

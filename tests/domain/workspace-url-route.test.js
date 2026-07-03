@@ -3,6 +3,7 @@ import { once } from "node:events";
 import { createServer } from "node:http";
 import { request as httpRequest } from "node:http";
 import { connect } from "node:net";
+import { PassThrough } from "node:stream";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -261,6 +262,61 @@ test("workspace gateway proxies active workspace websocket upgrades without leak
     });
   } finally {
     await close();
+    await new Promise((resolve, reject) => upstreamServer.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test("workspace websocket upgrade tolerates client socket reset without crashing control plane", async () => {
+  const upstreamSockets = new Set();
+  const upstreamServer = createServer();
+  upstreamServer.on("upgrade", (_request, socket) => {
+    upstreamSockets.add(socket);
+    socket.on("close", () => upstreamSockets.delete(socket));
+    socket.write("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n");
+  });
+  upstreamServer.listen(0, "127.0.0.1");
+  await once(upstreamServer, "listening");
+  const upstreamAddress = upstreamServer.address();
+  const upstreamOrigin = `http://127.0.0.1:${upstreamAddress.port}`;
+
+  const appService = {
+    async resolveWorkspaceAccess({ workspaceId, token }) {
+      if (workspaceId !== "ws-gateway001") throw new Error("workspace_not_found");
+      if (token !== "share_gateway") throw new Error("workspace_token_invalid");
+      return {
+        id: workspaceId,
+        state: "running",
+        server: { status: "running" },
+        access: { tokenStatus: "active" },
+        docker: { localUrl: upstreamOrigin }
+      };
+    }
+  };
+  const request = new PassThrough();
+  request.method = "GET";
+  request.url = "/ws";
+  request.httpVersion = "1.1";
+  request.headers = {
+    host: "workspace.medopl.cn",
+    connection: "Upgrade",
+    upgrade: "websocket",
+    cookie: "opl_ws_active=ws-gateway001; opl_ws_ws-gateway001=share_gateway"
+  };
+  const clientSocket = new PassThrough();
+
+  try {
+    createUpgradeHandler({ appService })(request, clientSocket, Buffer.alloc(0));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    assert.doesNotThrow(() => {
+      clientSocket.emit("error", Object.assign(new Error("read ECONNRESET"), {
+        code: "ECONNRESET",
+        syscall: "read"
+      }));
+    });
+  } finally {
+    clientSocket.destroy();
+    for (const socket of upstreamSockets) socket.destroy();
     await new Promise((resolve, reject) => upstreamServer.close((error) => error ? reject(error) : resolve()));
   }
 });
