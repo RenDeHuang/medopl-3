@@ -836,6 +836,7 @@ export class TencentTkeProvider {
                       { name: "OPL_PROJECTS_DIR", value: "/projects" },
                       { name: "ALLOW_REMOTE", value: "true" },
                       { name: "OPL_WEBUI_AUTH_MODE", value: "none" },
+                      { name: "AIONUI_WEBUI_AUTH_MODE", value: "none" },
                       { name: "HOME", value: "/data" },
                       { name: "OPL_WORKSPACE_ROOT", value: "/projects" },
                       { name: "CODEX_HOME", value: "/data/codex" }
@@ -956,6 +957,7 @@ export class TencentTkeProvider {
                       { name: "OPL_PROJECTS_DIR", value: "/projects" },
                       { name: "ALLOW_REMOTE", value: "true" },
                       { name: "OPL_WEBUI_AUTH_MODE", value: "none" },
+                      { name: "AIONUI_WEBUI_AUTH_MODE", value: "none" },
                       { name: "HOME", value: "/data" },
                       { name: "OPL_WORKSPACE_ROOT", value: "/projects" },
                       { name: "CODEX_HOME", value: "/data/codex" }

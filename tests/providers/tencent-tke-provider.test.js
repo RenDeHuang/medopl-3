@@ -133,6 +133,21 @@ test("Tencent TKE provider exposes split compute, storage, attachment, and Works
       "/data:data",
       "/projects:projects"
     ]);
+    assert.deepEqual(Object.fromEntries(attachmentContainer.env.map((item) => [item.name, item.value])), {
+      OPL_COMPUTE_ID: "compute-tke001",
+      OPL_OWNER_ACCOUNT_ID: "pi-alpha",
+      OPL_PACKAGE_ID: "basic",
+      OPL_ACCELERATOR: "cpu",
+      DATA_DIR: "/data",
+      AIONUI_DATA_DIR: "/data",
+      OPL_PROJECTS_DIR: "/projects",
+      ALLOW_REMOTE: "true",
+      OPL_WEBUI_AUTH_MODE: "none",
+      AIONUI_WEBUI_AUTH_MODE: "none",
+      HOME: "/data",
+      OPL_WORKSPACE_ROOT: "/projects",
+      CODEX_HOME: "/data/codex"
+    });
   } finally {
     await rm(stateRootDir, { recursive: true, force: true });
   }
@@ -283,6 +298,22 @@ test("Tencent TKE provider applies runtime resources behind the shared Workspace
       "/data:data",
       "/projects:projects"
     ]);
+    assert.deepEqual(Object.fromEntries(container.env.map((item) => [item.name, item.value])), {
+      OPL_WORKSPACE_ID: "ws-tke001",
+      OPL_WORKSPACE_NAME: "Grant Lab",
+      OPL_OWNER_ACCOUNT_ID: "pi-alpha",
+      OPL_PACKAGE_ID: "basic",
+      OPL_ACCELERATOR: "cpu",
+      DATA_DIR: "/data",
+      AIONUI_DATA_DIR: "/data",
+      OPL_PROJECTS_DIR: "/projects",
+      ALLOW_REMOTE: "true",
+      OPL_WEBUI_AUTH_MODE: "none",
+      AIONUI_WEBUI_AUTH_MODE: "none",
+      HOME: "/data",
+      OPL_WORKSPACE_ROOT: "/projects",
+      CODEX_HOME: "/data/codex"
+    });
     assert.deepEqual(service.spec.selector, deployment.spec.template.metadata.labels);
     assert.equal(service.spec.ports[0].targetPort, "http");
   } finally {

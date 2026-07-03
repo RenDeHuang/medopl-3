@@ -287,6 +287,7 @@ export class LocalDockerProvider {
       "      OPL_PROJECTS_DIR: /projects",
       "      ALLOW_REMOTE: \"true\"",
       "      OPL_WEBUI_AUTH_MODE: none",
+      "      AIONUI_WEBUI_AUTH_MODE: none",
       "      HOME: /data",
       "      OPL_WORKSPACE_ROOT: /projects",
       "      CODEX_HOME: /data/codex",
