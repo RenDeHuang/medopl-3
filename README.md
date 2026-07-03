@@ -217,8 +217,8 @@ npm run demo:ui
 
 Then open `http://127.0.0.1:5178`. The demo API resets only `.runtime/uiux-demo-state.json` by default and seeds:
 
-- Lab Owner: `owner@opl.local` / `owner-demo-2026`
-- Admin: `admin@opl.local` / `admin-demo-2026`
+- Lab Owner: `owner@opl.local` / `OplOwnerPass2026!`
+- Admin: `admin@opl.local` / `OplAdminPass2026!`
 
 ## Production Deployment Contract
 
