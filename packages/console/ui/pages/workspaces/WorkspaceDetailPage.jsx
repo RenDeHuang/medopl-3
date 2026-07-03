@@ -10,6 +10,7 @@ import {
   restartWorkspaceServer,
   stopWorkspaceServer
 } from "../../api/workspaces-api.js";
+import { defaultLaunchConfig, isFeatureEnabled } from "../../config/launch-config.js";
 import { navigate, routeTo } from "../../consoleRoutes.js";
 import {
   ActionGroup,
@@ -38,6 +39,7 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
     );
   }
   const backups = (state.storageBackups || []).filter((backup) => backup.workspaceId === selected.id);
+  const storageBackupsEnabled = isFeatureEnabled("storageBackups", defaultLaunchConfig);
   return (
     <ConsoleSurface
       title={selected.name}
@@ -69,7 +71,8 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
               { label: "状态", value: statusLabel(selected), meta: selected.state, status: "Workspace", tone: toneForStatus(selected.state) },
               { label: "套餐", value: selectedPlan?.name || "-", meta: packageText(selectedPlan), status: "plan", tone: "info" },
               { label: "计算", value: selected.server?.spec || "-", meta: valueLabel(selected.server?.status), status: "hourly", tone: toneForStatus(selected.server?.status) },
-              { label: "存储", value: `${selected.disk?.sizeGb || 0}GB`, meta: valueLabel(selected.disk?.status), status: "retained", tone: toneForStatus(selected.disk?.status) }
+              { label: "存储", value: `${selected.disk?.sizeGb || 0}GB`, meta: valueLabel(selected.disk?.status), status: "retained", tone: toneForStatus(selected.disk?.status) },
+              { label: "挂载关系", value: "当前 Workspace", meta: "保留存储只挂载到当前 Workspace 的计算资源", status: "1:1", tone: "info" }
             ]}
           />
         </InsightPanel>
@@ -80,28 +83,30 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
           <ActionGroup
             actions={[
               { label: "停止计算", icon: <Square size={15} />, onClick: () => runAction(() => stopWorkspaceServer({ workspaceId: selected.id, confirm: true }, session.csrfToken), "计算已停止") },
-              { label: "启动计算", icon: <RotateCw size={15} />, onClick: () => runAction(() => restartWorkspaceServer({ workspaceId: selected.id }, session.csrfToken), "计算已启动") },
+              { label: "启动计算并挂载存储", icon: <RotateCw size={15} />, onClick: () => runAction(() => restartWorkspaceServer({ workspaceId: selected.id }, session.csrfToken), "计算已启动并挂载存储") },
               { label: "销毁计算", danger: true, icon: <Trash2 size={15} />, onClick: () => runAction(() => destroyWorkspaceServer({ workspaceId: selected.id, confirm: true }, session.csrfToken), "计算已销毁") },
               { label: "销毁存储", danger: true, icon: <HardDrive size={15} />, onClick: () => runAction(() => destroyWorkspaceDisk({ workspaceId: selected.id, confirmDataLoss: true }, session.csrfToken), "存储已销毁") }
             ]}
           />
         </InsightPanel>
 
-        <InsightPanel
-          title="备份"
-          eyebrow="Storage"
-          actions={<Button icon={<Database size={15} />} onClick={() => runAction(() => createStorageBackup({ workspaceId: selected.id, reason: "console", retentionPolicy: { retainLast: 2 } }, session.csrfToken), "备份已创建")}>创建备份</Button>}
-        >
-          <TimelineList
-            emptyText="暂无备份"
-            items={backups.slice(-5).reverse().map((backup) => ({
-              title: backup.id,
-              description: valueLabel(backup.status),
-              meta: backup.createdAt,
-              tone: String(backup.status).includes("failed") ? "danger" : "good"
-            }))}
-          />
-        </InsightPanel>
+        {storageBackupsEnabled && (
+          <InsightPanel
+            title="备份"
+            eyebrow="Storage"
+            actions={<Button icon={<Database size={15} />} onClick={() => runAction(() => createStorageBackup({ workspaceId: selected.id, reason: "console", retentionPolicy: { retainLast: 2 } }, session.csrfToken), "备份已创建")}>创建备份</Button>}
+          >
+            <TimelineList
+              emptyText="暂无备份"
+              items={backups.slice(-5).reverse().map((backup) => ({
+                title: backup.id,
+                description: valueLabel(backup.status),
+                meta: backup.createdAt,
+                tone: String(backup.status).includes("failed") ? "danger" : "good"
+              }))}
+            />
+          </InsightPanel>
+        )}
       </div>
     </ConsoleSurface>
   );

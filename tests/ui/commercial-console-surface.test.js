@@ -66,3 +66,29 @@ test("visible app chrome does not retain old Cloud or reserved backlog copy", as
     assert.doesNotMatch(pageSource, /status: "reserved"|value: "Backlog"|not in current launch/, `${page} must not show reserved/backlog product copy`);
   }
 });
+
+test("create Workspace flow is a single commercial submit action", async () => {
+  const createSource = await source("packages/console/ui/pages/workspaces/CreateWorkspacePage.jsx");
+  const stateSource = await source("packages/console/ui/store/console-state.js");
+
+  assert.doesNotMatch(createSource, /StepsForm/, "create flow must not hide provisioning behind a multi-step wizard");
+  assert.match(createSource, /htmlType="submit"/, "create flow must expose one clear submit button");
+  assert.match(createSource, /const created = await runAction/, "create flow must inspect action success before navigating");
+  assert.match(createSource, /if \(created\) navigate/, "create flow must not navigate away after failed provisioning");
+  assert.match(stateSource, /return true/, "runAction must report successful actions");
+  assert.match(stateSource, /return false/, "runAction must report failed actions");
+});
+
+test("Workspace resource lifecycle is visible from list and detail", async () => {
+  const listSource = await source("packages/console/ui/pages/workspaces/WorkspacesPage.jsx");
+  const detailSource = await source("packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx");
+
+  assert.match(listSource, /资源/, "Workspace list must expose a resource-management entry");
+  assert.match(listSource, /routeTo\("workspace.detail"/, "Workspace list resource entry must route to Workspace detail");
+  for (const label of ["停止计算", "启动计算并挂载存储", "销毁计算", "销毁存储"]) {
+    assert.match(detailSource, new RegExp(label), `Workspace detail must expose ${label}`);
+  }
+  assert.match(detailSource, /保留存储只挂载到当前 Workspace 的计算资源/, "detail must explain the storage attach model");
+  assert.match(detailSource, /isFeatureEnabled\("storageBackups"/, "storage backup UI must be feature-gated");
+  assert.match(detailSource, /storageBackupsEnabled &&/, "storage backup controls must not be visible in the default commercial slice");
+});

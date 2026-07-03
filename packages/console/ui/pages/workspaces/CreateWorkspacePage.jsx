@@ -1,6 +1,6 @@
 import React from "react";
-import { ProFormSelect, ProFormText, StepsForm } from "@ant-design/pro-components";
-import { Alert } from "antd";
+import { Alert, Button, Form, Input, Select } from "antd";
+import { Plus } from "lucide-react";
 import { createWorkspace } from "../../api/workspaces-api.js";
 import { navigate, routeTo } from "../../consoleRoutes.js";
 import { ConsoleSurface, InsightPanel, ResourceSplit, StatusPill } from "../shared/commercial-console.jsx";
@@ -8,41 +8,42 @@ import { available, money, packageText, planHold } from "../shared/formatters.js
 
 export function CreateWorkspacePage({ state, wallet, selectedCreatePlan, setCreatePackageId, session, runAction }) {
   const enough = available(wallet) >= planHold(selectedCreatePlan);
+  const initialPackageId = selectedCreatePlan?.id || "basic";
   return (
     <ConsoleSurface title="Create Workspace" eyebrow="Provision" subtitle="Package, URL, compute and storage hold" compact>
       <div className="consoleGrid">
         <InsightPanel title="开通流程" eyebrow="Workspace">
-          <StepsForm
+          <Form
+            layout="vertical"
+            initialValues={{ workspaceName: "Lab Workspace", packageId: initialPackageId }}
+            onValuesChange={(_, values) => {
+              if (values.packageId) setCreatePackageId(values.packageId);
+            }}
             onFinish={async (values) => {
-              await runAction(
+              const created = await runAction(
                 () => createWorkspace({
                   workspaceName: values.workspaceName,
                   packageId: values.packageId
                 }, session.csrfToken),
                 "Workspace 已创建"
               );
-              navigate(routeTo("workspace.list"));
-              return true;
+              if (created) navigate(routeTo("workspace.list"));
             }}
           >
-            <StepsForm.StepForm name="name" title="Name">
-              <ProFormText name="workspaceName" label="名称" initialValue="Lab Workspace" rules={[{ required: true }]} />
-            </StepsForm.StepForm>
-            <StepsForm.StepForm name="package" title="Package">
-              <ProFormSelect
-                name="packageId"
-                label="套餐"
-                initialValue={selectedCreatePlan?.id || "basic"}
+            <Form.Item name="workspaceName" label="名称" rules={[{ required: true, message: "请输入 Workspace 名称" }]}>
+              <Input placeholder="Lab Workspace" />
+            </Form.Item>
+            <Form.Item name="packageId" label="套餐" rules={[{ required: true, message: "请选择套餐" }]}>
+              <Select
                 options={(state.packages || []).map((plan) => ({ label: `${plan.name} · ${packageText(plan)}`, value: plan.id }))}
-                fieldProps={{ onChange: setCreatePackageId }}
-                rules={[{ required: true }]}
               />
-            </StepsForm.StepForm>
-            <StepsForm.StepForm name="confirm" title="Confirm">
-              {!enough && <Alert type="warning" showIcon message="余额不足，无法完成预冻结。" />}
-              {enough && <Alert type="success" showIcon message="余额满足 7 天计算与存储预冻结。" />}
-            </StepsForm.StepForm>
-          </StepsForm>
+            </Form.Item>
+            {!enough && <Alert type="warning" showIcon message="余额不足，无法完成 7 天计算与存储预冻结。" />}
+            {enough && <Alert type="success" showIcon message="创建后会生成计算资源、保留存储和 Workspace URL。" />}
+            <Button className="formSubmit" type="primary" htmlType="submit" icon={<Plus size={15} />} disabled={!enough}>
+              创建 Workspace
+            </Button>
+          </Form>
         </InsightPanel>
 
         <InsightPanel

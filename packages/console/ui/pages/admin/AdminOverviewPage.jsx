@@ -105,7 +105,10 @@ export function AdminUsersPage({ state, wallet, topUpOpen, setTopUpOpen, topUpFo
 function TopUpDrawer({ open, setOpen, form, session, runAction }) {
   return (
     <Drawer title="用户钱包充值" open={open} onClose={() => setOpen(false)} width={420}>
-      <Form form={form} layout="vertical" onFinish={(values) => runAction(() => manualTopUp(values, session.csrfToken), "充值已记录").then(() => setOpen(false))}>
+      <Form form={form} layout="vertical" onFinish={async (values) => {
+        const toppedUp = await runAction(() => manualTopUp(values, session.csrfToken), "充值已记录");
+        if (toppedUp) setOpen(false);
+      }}>
         <Form.Item name="accountId" label="账号" rules={[{ required: true }]}><Input /></Form.Item>
         <Form.Item name="amount" label="金额" rules={[{ required: true }]}><InputNumber min={1} className="fullWidth" /></Form.Item>
         <Form.Item name="reason" label="原因"><Input /></Form.Item>

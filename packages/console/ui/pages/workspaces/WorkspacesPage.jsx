@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Typography } from "antd";
-import { Link as LinkIcon, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Link as LinkIcon, Plus, RefreshCw, Settings2, Trash2 } from "lucide-react";
 import { deleteWorkspaceToken, resetWorkspaceToken } from "../../api/workspaces-api.js";
 import { navigate, routeTo } from "../../consoleRoutes.js";
 import {
@@ -61,6 +61,8 @@ export function WorkspacesPage({ state, wallet, runAction, session }) {
               render: (_, row) => <StatusPill label={statusLabel(row)} tone={statusTone(row.state)} />
             },
             { title: "套餐", dataIndex: "packageId", render: (value) => packageText(planById[value]) },
+            { title: "计算", render: (_, row) => row.server?.status || "-" },
+            { title: "存储", render: (_, row) => row.disk?.status || "-" },
             {
               title: "Workspace URL",
               dataIndex: "url",
@@ -73,6 +75,7 @@ export function WorkspacesPage({ state, wallet, runAction, session }) {
               render: (_, row) => (
                 <ActionGroup
                   actions={[
+                    { label: "资源", icon: <Settings2 size={14} />, onClick: () => navigate(routeTo("workspace.detail", { id: row.id })) },
                     { label: "打开", icon: <LinkIcon size={14} />, disabled: row.access?.tokenStatus !== "active", onClick: () => window.open(row.url, "_blank", "noopener,noreferrer") },
                     { label: "重置", icon: <RefreshCw size={14} />, disabled: row.access?.tokenStatus !== "active", onClick: () => runAction(() => resetWorkspaceToken({ workspaceId: row.id }, session.csrfToken), "URL 已重置") },
                     { label: "停用", danger: true, icon: <Trash2 size={14} />, disabled: row.access?.tokenStatus !== "active", onClick: () => runAction(() => deleteWorkspaceToken({ workspaceId: row.id }, session.csrfToken), "URL 已停用") }
