@@ -159,8 +159,9 @@ test("workspace gateway validates URL token, sets scoped cookies, and proxies We
     assert.equal(assetResponse.status, 200);
     assert.equal(assetResponse.headers.get("content-type"), "text/javascript; charset=utf-8");
     assert.equal(assetResponse.headers.get("content-encoding"), null);
-    assert.equal(assetResponse.headers.get("content-length"), null);
-    assert.match(await assetResponse.text(), /OPL_WORKSPACE_LOADED/);
+    const assetBody = await assetResponse.text();
+    assert.equal(assetResponse.headers.get("content-length"), String(Buffer.byteLength(assetBody)));
+    assert.match(assetBody, /OPL_WORKSPACE_LOADED/);
 
     const apiResponse = await fetch(`${origin}/api/chat?model=gpt`, {
       headers: { cookie: `${cookie}; app_session=runtime` }

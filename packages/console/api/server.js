@@ -252,6 +252,10 @@ function proxyResponseHeaders(upstreamResponse) {
   return headers;
 }
 
+function shouldBufferWorkspaceResponse({ request, upstreamPath }) {
+  return request.method === "GET" && (upstreamPath === "/" || upstreamPath.startsWith("/assets/"));
+}
+
 function appendSetCookie(headers, cookies) {
   const nextCookies = Array.isArray(cookies) ? cookies : [cookies].filter(Boolean);
   if (!nextCookies.length) return;
@@ -359,6 +363,13 @@ async function handleWorkspaceGateway(request, response, url, appService) {
     const upstream = await fetch(upstreamUrl, init);
     const headers = proxyResponseHeaders(upstream);
     appendSetCookie(headers, setCookie);
+    if (shouldBufferWorkspaceResponse({ request, upstreamPath })) {
+      const body = Buffer.from(await upstream.arrayBuffer());
+      headers["content-length"] = String(body.byteLength);
+      response.writeHead(upstream.status, headers);
+      response.end(body);
+      return;
+    }
     response.writeHead(upstream.status, headers);
     if (request.method === "HEAD" || !upstream.body) return response.end();
     for await (const chunk of upstream.body) {
