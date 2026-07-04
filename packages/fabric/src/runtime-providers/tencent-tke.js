@@ -55,6 +55,7 @@ function computeNodeSelector(computeId) {
 }
 
 async function defaultRunner({ command, args, cwd, env }) {
+  if (env?.HOME) await mkdir(env.HOME, { recursive: true });
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, { cwd, env: { ...process.env, ...env }, stdio: "pipe" });
     let stdout = "";
@@ -457,12 +458,16 @@ export class TencentTkeProvider {
   async runTccli(args) {
     this.requireExecutionBoundary();
     await this.requireTools(REQUIRED_TOOLS);
+    const cliHome = this.env.OPL_TKE_CLI_HOME || "/tmp/opl-cloud-cli";
     const raw = await this.runner({
       command: "tccli",
       args: this.tccliArgs(args),
       cwd: repoRoot,
       env: {
         ...this.env,
+        HOME: cliHome,
+        XDG_CACHE_HOME: join(cliHome, ".cache"),
+        XDG_CONFIG_HOME: join(cliHome, ".config"),
         TENCENTCLOUD_SECRET_ID: this.env.TENCENT_MUTATION_SECRET_ID,
         TENCENTCLOUD_SECRET_KEY: this.env.TENCENT_MUTATION_SECRET_KEY
       }

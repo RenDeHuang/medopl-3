@@ -193,8 +193,8 @@ test("Tencent TKE runtime manifest bootstraps Codex settings without exposing se
 test("Tencent TKE provider provisions node pool compute, PVC storage, runtime attachment, URL entry, and explicit cleanup", async () => {
   const stateRootDir = await mkdtemp(join(tmpdir(), "opl-cloud-tke-resource-state-"));
   const calls = [];
-  const runner = async ({ command, args }) => {
-    calls.push({ command, args });
+  const runner = async ({ command, args, env }) => {
+    calls.push({ command, args, env });
     const commandLine = `${command} ${args.join(" ")}`;
     if (command === "tccli" && args.includes("CreateClusterNodePool")) {
       return JSON.stringify({ Response: { NodePoolId: "np-compute-tke001", RequestId: "req-create-nodepool" } });
@@ -281,6 +281,13 @@ test("Tencent TKE provider provisions node pool compute, PVC storage, runtime at
     assert.equal(commandLines.some((line) => line.includes("tccli tke CreateClusterNodePool")), true);
     assert.equal(commandLines.some((line) => line.includes("tccli tke DescribeClusterNodePoolDetail")), true);
     assert.equal(commandLines.some((line) => line.includes("tccli tke DeleteClusterNodePool")), true);
+    for (const call of calls.filter((item) => item.command === "tccli")) {
+      assert.equal(call.env.HOME, "/tmp/opl-cloud-cli");
+      assert.equal(call.env.XDG_CACHE_HOME, "/tmp/opl-cloud-cli/.cache");
+      assert.equal(call.env.XDG_CONFIG_HOME, "/tmp/opl-cloud-cli/.config");
+      assert.equal(call.env.TENCENTCLOUD_SECRET_ID, requiredEnv.TENCENT_MUTATION_SECRET_ID);
+      assert.equal(call.env.TENCENTCLOUD_SECRET_KEY, requiredEnv.TENCENT_MUTATION_SECRET_KEY);
+    }
     assert.equal(commandLines.some((line) => line.includes("compute.k8s.json")), false);
     assert.equal(commandLines.includes(`kubectl --kubeconfig /tmp/kubeconfig --namespace opl-cloud apply -f ${attachmentManifestPath}`), true);
     assert.equal(commandLines.includes(`kubectl --kubeconfig /tmp/kubeconfig --namespace opl-cloud apply -f ${entrySecretPath}`), true);
