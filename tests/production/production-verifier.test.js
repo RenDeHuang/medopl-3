@@ -112,7 +112,7 @@ function chainResponses(chain) {
       requestId: "production-verification-request",
       amount: 0.42
     },
-    "GET /api/state": {
+    "GET /api/state?accountId=pi-prod": {
       wallet: { accountId: "pi-prod", balance: 999, frozen: 10 },
       billingLedger: [
         { id: "ledger-compute", accountId: "pi-prod", computeAllocationId: chain.compute.id, type: "compute_hold" },
@@ -141,7 +141,7 @@ function keyedFetch({ responses, requests = [], responseHeaders = null, consoleO
   return async (url, options = {}) => {
     const parsed = new URL(String(url));
     const method = options.method || "GET";
-    let key = parsed.origin === consoleOrigin ? `${method} ${parsed.pathname}` : `${method} ${String(url)}`;
+    let key = parsed.origin === consoleOrigin ? `${method} ${parsed.pathname}${parsed.search}` : `${method} ${String(url)}`;
     if (key === "POST /api/workspaces/runtime-status") {
       runtimeStatusCount += 1;
       key = runtimeStatusCount === 1 ? key : `${key}#${runtimeStatusCount}`;
@@ -262,7 +262,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "POST /api/workspaces/runtime-status",
     `GET ${chain.workspace.url}`,
     "POST /api/billing/request-usage",
-    "GET /api/state",
+    "GET /api/state?accountId=pi-prod",
     "POST /api/storage-attachments/detach",
     `POST /api/compute-allocations/${chain.compute.id}/destroy`,
     "POST /api/storage-volumes/destroy"
