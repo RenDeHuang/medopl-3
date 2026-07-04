@@ -37,7 +37,7 @@ function createFakePool() {
       if (normalized === "BEGIN" || normalized === "COMMIT" || normalized === "ROLLBACK") {
         return { rows: [] };
       }
-      if (normalized.startsWith("CREATE TABLE IF NOT EXISTS") || normalized.startsWith("CREATE UNIQUE INDEX IF NOT EXISTS") || normalized.startsWith("CREATE INDEX IF NOT EXISTS") || normalized.startsWith("DROP INDEX IF EXISTS")) {
+      if (normalized.startsWith("CREATE TABLE IF NOT EXISTS") || normalized.startsWith("ALTER TABLE") || normalized.startsWith("CREATE UNIQUE INDEX IF NOT EXISTS") || normalized.startsWith("CREATE INDEX IF NOT EXISTS") || normalized.startsWith("DROP INDEX IF EXISTS")) {
         return { rows: [] };
       }
       if (normalized.startsWith("TRUNCATE organizations, users, memberships, workspaces, billing_reconciliation_reports, support_tickets, evidence_ledger, billing_ledger, audit_events, notifications, runtime_operations")) {
@@ -452,6 +452,33 @@ test("PostgresStore persists OPL Cloud state into control-plane tables", async (
   assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE UNIQUE INDEX IF NOT EXISTS resource_usage_logs_workspace_resource_source_idx")));
   assert.ok(pool.statements.some((statement) => statement.sql.includes("DROP INDEX IF EXISTS billing_ledger_dedup_idx")));
   assert.ok(pool.statements.some((statement) => statement.sql.includes("CREATE INDEX IF NOT EXISTS billing_ledger_event_lookup_idx")));
+});
+
+test("PostgresStore schema setup upgrades existing commercial tables in place", async () => {
+  const pool = createFakePool();
+  const store = new PostgresStore({ pool });
+
+  await store.read();
+
+  const alterStatements = pool.statements
+    .map((statement) => statement.sql)
+    .filter((sql) => sql.startsWith("ALTER TABLE"));
+  assert.ok(
+    alterStatements.some((sql) => sql.includes("ALTER TABLE storage_attachments ADD COLUMN IF NOT EXISTS compute_allocation_id")),
+    "existing storage_attachments tables must gain compute_allocation_id before writes"
+  );
+  assert.ok(
+    alterStatements.some((sql) => sql.includes("ALTER TABLE storage_attachments ADD COLUMN IF NOT EXISTS storage_id")),
+    "existing storage_attachments tables must gain storage_id before writes"
+  );
+  assert.ok(
+    alterStatements.some((sql) => sql.includes("ALTER TABLE compute_allocations ADD COLUMN IF NOT EXISTS account_id")),
+    "existing compute allocation tables must gain account_id before writes"
+  );
+  assert.ok(
+    alterStatements.some((sql) => sql.includes("ALTER TABLE request_usage_dedup ADD COLUMN IF NOT EXISTS request_fingerprint")),
+    "existing request dedup tables must gain request_fingerprint before writes"
+  );
 });
 
 test("PostgresStore update reads, mutates, and writes state transactionally", async () => {

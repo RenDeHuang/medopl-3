@@ -563,6 +563,7 @@ export class PostgresStore {
         created_at timestamptz NOT NULL DEFAULT now()
       )
     `);
+    await this.ensureCurrentColumns(client);
     await client.query("CREATE UNIQUE INDEX IF NOT EXISTS request_usage_logs_workspace_request_idx ON request_usage_logs (workspace_id, request_id)");
     await client.query("CREATE UNIQUE INDEX IF NOT EXISTS request_usage_dedup_workspace_source_idx ON request_usage_dedup (workspace_id, source_event_id)");
     await client.query("CREATE UNIQUE INDEX IF NOT EXISTS resource_usage_logs_workspace_resource_source_idx ON resource_usage_logs (workspace_id, resource_type, ((state->>'sourceEventId')))");
@@ -582,5 +583,113 @@ export class PostgresStore {
         AND (state->>'type') IN ('compute_debit', 'storage_debit', 'compute_hold_exhausted', 'request_debit')
     `);
     this.initialized = true;
+  }
+
+  async ensureCurrentColumns(client) {
+    const migrations = {
+      memberships: {
+        organization_id: "text NOT NULL DEFAULT ''",
+        user_id: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()",
+        updated_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      workspaces: {
+        owner_account_id: "text NOT NULL DEFAULT ''",
+        updated_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      support_tickets: {
+        account_id: "text NOT NULL DEFAULT ''",
+        user_id: "text NOT NULL DEFAULT ''",
+        workspace_id: "text NOT NULL DEFAULT ''",
+        status: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()",
+        updated_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      evidence_ledger: {
+        account_id: "text NOT NULL DEFAULT ''",
+        workspace_id: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      billing_ledger: {
+        account_id: "text NOT NULL DEFAULT ''",
+        workspace_id: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      audit_events: {
+        account_id: "text NOT NULL DEFAULT ''",
+        workspace_id: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      notifications: {
+        account_id: "text NOT NULL DEFAULT ''",
+        workspace_id: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      runtime_operations: {
+        workspace_id: "text NOT NULL DEFAULT ''",
+        operation_type: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()",
+        updated_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      compute_allocations: {
+        account_id: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()",
+        updated_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      storage_volumes: {
+        account_id: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()",
+        updated_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      storage_attachments: {
+        account_id: "text NOT NULL DEFAULT ''",
+        compute_allocation_id: "text NOT NULL DEFAULT ''",
+        storage_id: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()",
+        updated_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      resource_usage_logs: {
+        user_id: "text NOT NULL DEFAULT ''",
+        account_id: "text NOT NULL DEFAULT ''",
+        workspace_id: "text NOT NULL DEFAULT ''",
+        resource_type: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      request_usage_logs: {
+        user_id: "text NOT NULL DEFAULT ''",
+        account_id: "text NOT NULL DEFAULT ''",
+        workspace_id: "text NOT NULL DEFAULT ''",
+        request_id: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      wallet_transactions: {
+        user_id: "text NOT NULL DEFAULT ''",
+        account_id: "text NOT NULL DEFAULT ''",
+        workspace_id: "text NOT NULL DEFAULT ''",
+        transaction_type: "text NOT NULL DEFAULT ''",
+        source_event_id: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      manual_topups: {
+        operator_user_id: "text NOT NULL DEFAULT ''",
+        target_user_id: "text NOT NULL DEFAULT ''",
+        target_account_id: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()"
+      },
+      request_usage_dedup: {
+        workspace_id: "text NOT NULL DEFAULT ''",
+        source_event_id: "text NOT NULL DEFAULT ''",
+        request_id: "text NOT NULL DEFAULT ''",
+        request_fingerprint: "text NOT NULL DEFAULT ''",
+        usage_log_id: "text NOT NULL DEFAULT ''",
+        created_at: "timestamptz NOT NULL DEFAULT now()"
+      }
+    };
+
+    for (const [table, columns] of Object.entries(migrations)) {
+      for (const [column, definition] of Object.entries(columns)) {
+        await client.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${definition}`);
+      }
+    }
   }
 }
