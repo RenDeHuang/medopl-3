@@ -529,6 +529,39 @@ test("Tencent TKE provider reports runtime status from Kubernetes resources with
   assert.equal(status.resources.endpoints.readyAddresses, 1);
 });
 
+test("Tencent TKE provider checks runtime deployment when compute provider resource is a node pool", async () => {
+  const calls = [];
+  const provider = new TencentTkeProvider({
+    env: requiredEnv,
+    runner: async ({ command, args }) => {
+      calls.push({ command, args });
+      return JSON.stringify(runtimeStatusFixture({
+        name: "opl-compute-tke404",
+        workspaceId: "ws-tke404",
+        image: requiredEnv.OPL_WORKSPACE_IMAGE,
+        ready: true
+      }));
+    },
+    commandExists: () => true,
+    stateRootDir: ".runtime/test-tke"
+  });
+  const workspace = {
+    id: "ws-tke404",
+    server: { id: "nodepool/np-basic" },
+    docker: { id: "runtime-ws-tke404", image: requiredEnv.OPL_WORKSPACE_IMAGE, service: "service/opl-compute-tke404" },
+    disk: { id: "pvc/opl-compute-tke404-data", storageClass: "cbs" },
+    access: { token: "share_runtime_status" },
+    url: "https://workspace.medopl.cn/w/ws-tke404/?token=share_runtime_status"
+  };
+
+  const status = await provider.runtimeStatus({ workspace });
+
+  assert.deepEqual(calls.map((call) => `${call.command} ${call.args.join(" ")}`), [
+    "kubectl --kubeconfig /tmp/kubeconfig --namespace opl-cloud get deployment/opl-compute-tke404 pvc/opl-compute-tke404-data service/opl-compute-tke404 ingress/opl-cloud endpoints/opl-compute-tke404 -o json"
+  ]);
+  assert.equal(status.ready, true);
+});
+
 function sharedIngressFixture({ workspacePaths = [] } = {}) {
   return {
     apiVersion: "networking.k8s.io/v1",

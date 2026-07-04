@@ -336,9 +336,9 @@ export class TencentTkeProvider {
   }
 
   async runtimeStatus({ workspace }) {
-    const name = resourceName(workspace.server.id);
+    const serviceName = resourceName(workspace.docker.service || workspace.runtime?.serviceName || workspace.server.id);
+    const name = resourceName(workspace.runtime?.serviceName || workspace.docker.service || workspace.server.id);
     const pvcName = resourceName(workspace.disk.id);
-    const serviceName = resourceName(workspace.docker.service || `service/${name}`);
     const raw = await this.runKubectl([
       "get",
       `deployment/${name}`,
