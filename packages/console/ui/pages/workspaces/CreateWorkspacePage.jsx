@@ -13,25 +13,25 @@ export function CreateWorkspacePage({ state, session, runAction }) {
   const storageById = new Map((state.storageVolumes || []).map((item) => [item.id, item]));
   const ready = attachments.length > 0;
   return (
-    <ConsoleSurface title="Create Workspace" eyebrow="Workspace entry" subtitle="Create a URL entry from an attached compute and storage pair" compact>
+    <ConsoleSurface title="创建工作区入口" eyebrow="入口" subtitle="从已挂载的计算和存储创建访问 URL" compact>
       <div className="consoleGrid">
-        <InsightPanel title="创建 Workspace URL" eyebrow="Workspace">
+        <InsightPanel title="创建访问 URL" eyebrow="工作区入口">
           <Form
             layout="vertical"
-            initialValues={{ workspaceName: "Lab Workspace", attachmentId: initialAttachmentId }}
+            initialValues={{ workspaceName: "实验工作区", attachmentId: initialAttachmentId }}
             onFinish={async (values) => {
               const created = await runAction(
                 () => createWorkspace({
                   workspaceName: values.workspaceName,
                   attachmentId: values.attachmentId
                 }, session.csrfToken),
-                "Workspace 已创建"
+                "工作区入口已创建"
               );
               if (created) navigate(routeTo("workspace.list"));
             }}
           >
-            <Form.Item name="workspaceName" label="名称" rules={[{ required: true, message: "请输入 Workspace 名称" }]}>
-              <Input placeholder="Lab Workspace" />
+            <Form.Item name="workspaceName" label="名称" rules={[{ required: true, message: "请输入工作区名称" }]}>
+              <Input placeholder="实验工作区" />
             </Form.Item>
             <Form.Item name="attachmentId" label="挂载关系" rules={[{ required: true, message: "请选择挂载关系" }]}>
               <Select
@@ -47,17 +47,17 @@ export function CreateWorkspacePage({ state, session, runAction }) {
               />
             </Form.Item>
             {!ready && <Alert type="warning" showIcon message="需要先开通计算、开通存储，并完成挂载。" />}
-            {ready && <Alert type="success" showIcon message="Workspace 只生成 URL token 和 WebUI 入口，不再开新计算或新存储。" />}
+            {ready && <Alert type="success" showIcon message="工作区入口只生成访问 URL，不再开新计算或新存储。" />}
             <Button className="formSubmit" type="primary" htmlType="submit" icon={<Plus size={15} />} disabled={!ready}>
-              创建 Workspace
+              创建工作区入口
             </Button>
           </Form>
         </InsightPanel>
 
         <InsightPanel
           title="入口检查"
-          eyebrow="Attachment"
-          actions={<StatusPill label={ready ? "Ready" : "Blocked"} tone={ready ? "good" : "warn"} />}
+          eyebrow="挂载"
+          actions={<StatusPill label={ready ? "可创建" : "缺少资源"} tone={ready ? "good" : "warn"} />}
         >
           <ResourceSplit
             items={(ready ? attachments : [{ id: "missing", status: "missing" }]).slice(0, 3).map((attachment) => {
@@ -66,8 +66,8 @@ export function CreateWorkspacePage({ state, session, runAction }) {
               const storage = storageById.get(attachment.storageId);
               return {
                 label: attachment.id === "missing" ? "挂载关系" : "可用挂载",
-                value: attachment.id === "missing" ? "None" : (compute?.name || computeAllocationId),
-                meta: attachment.id === "missing" ? "create compute + storage + attachment first" : `${storage?.name || attachment.storageId} · ${attachment.mountPath || "/data"}`,
+                value: attachment.id === "missing" ? "无" : (compute?.name || computeAllocationId),
+                meta: attachment.id === "missing" ? "请先开通计算、开通存储并完成挂载" : `${storage?.name || attachment.storageId} · ${attachment.mountPath || "/data"}`,
                 status: valueLabel(attachment.status),
                 tone: attachment.status === "attached" ? "good" : "warn"
               };

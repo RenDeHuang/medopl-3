@@ -1,6 +1,6 @@
 import React from "react";
 import { PageContainer, ProTable } from "@ant-design/pro-components";
-import { Alert, Button, Empty, List, Space, Tag, Typography } from "antd";
+import { Alert, Button, Empty, List, Popconfirm, Space, Tag, Typography } from "antd";
 
 function toneClass(tone = "neutral") {
   return ["good", "warn", "danger", "info"].includes(tone) ? tone : "neutral";
@@ -14,6 +14,25 @@ function tagColor(tone = "neutral") {
     info: "blue",
     neutral: "default"
   }[toneClass(tone)];
+}
+
+function statusText(value = "") {
+  return {
+    submitted: "已提交",
+    running: "处理中",
+    provisioning: "创建中",
+    creating: "创建中",
+    attaching: "挂载中",
+    detaching: "解除中",
+    destroying: "删除中",
+    completed: "已完成",
+    available: "可用",
+    attached: "已挂载",
+    detached: "已解除",
+    destroyed: "已删除",
+    failed: "失败",
+    pending: "等待中"
+  }[value] || value || "等待中";
 }
 
 export function ConsoleSurface({ title, eyebrow, subtitle, extra, children, compact = false }) {
@@ -110,6 +129,62 @@ export function ActionGroup({ actions = [] }) {
   );
 }
 
+export function OperationConfirmButton({
+  label,
+  title,
+  description,
+  confirmText,
+  strong = false,
+  danger = false,
+  type,
+  icon,
+  disabled = false,
+  loading = false,
+  onConfirm
+}) {
+  const body = strong && confirmText
+    ? `${description || "请确认此操作。"} 需要确认：${confirmText}`
+    : description || "请确认此操作。";
+  return (
+    <Popconfirm
+      title={title || label}
+      description={body}
+      okText="确认"
+      cancelText="取消"
+      okButtonProps={{ danger }}
+      disabled={disabled || loading}
+      onConfirm={onConfirm}
+    >
+      <Button type={type} danger={danger} icon={icon} disabled={disabled} loading={loading}>
+        {label}
+      </Button>
+    </Popconfirm>
+  );
+}
+
+export function OperationResultPanel({ result, pending = false }) {
+  if (pending) {
+    return (
+      <Alert
+        type="info"
+        showIcon
+        message="操作已提交"
+        description="正在处理云资源，请等待页面刷新状态。"
+      />
+    );
+  }
+  if (!result) return null;
+  const failed = result.ok === false || result.status === "failed" || Boolean(result.failureReason);
+  return (
+    <Alert
+      type={failed ? "error" : "success"}
+      showIcon
+      message={failed ? "操作失败" : "操作完成"}
+      description={failed ? result.failureReason || "请查看失败原因后重试。" : `资源 ${result.resourceId || result.id || "-"} 已更新。`}
+    />
+  );
+}
+
 export function TimelineList({ items = [], emptyText = "暂无记录" }) {
   if (!items.length) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={emptyText} />;
@@ -161,9 +236,14 @@ export function OperationTimeline({ operations = [], resourceId = "", emptyText 
     .slice(-8)
     .reverse()
     .map((operation) => ({
-      title: operation.operationType || operation.type || "operation",
-      description: operation.error || operation.providerRequestId || operation.resourceId || operation.workspaceId,
-      meta: operation.status || operation.updatedAt || operation.createdAt,
+      title: {
+        create_compute_allocation: "开通计算资源",
+        create_storage_volume: "开通存储资源",
+        attach_storage: "挂载存储资源",
+        create_workspace: "创建工作区入口"
+      }[operation.operationType || operation.type] || "资源操作",
+      description: operation.safeMessage || operation.error || operation.resourceId || operation.workspaceId,
+      meta: statusText(operation.status) || operation.updatedAt || operation.createdAt,
       tone: operation.status === "failed" ? "danger" : operation.status === "completed" ? "good" : "info"
     }));
   return <TimelineList items={scoped} emptyText={emptyText} />;

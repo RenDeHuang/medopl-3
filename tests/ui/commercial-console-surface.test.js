@@ -23,6 +23,8 @@ test("commercial Console UI is built from the maintained surface component layer
     "PriceImpactPanel",
     "OperationTimeline",
     "FailureRecoveryPanel",
+    "OperationConfirmButton",
+    "OperationResultPanel",
     "CleanupResourceTable"
   ]) {
     assert.match(surfaceSource, new RegExp(`export function ${exportName}\\b`), `${exportName} must be exported by the commercial UI layer`);
@@ -114,6 +116,54 @@ test("resource provisioning UI shows price, hold, balance impact, and operation 
   assert.match(resourceSource, /PriceImpactPanel/, "resource creation must use the maintained pricing impact component");
   assert.match(resourceSource, /OperationTimeline/, "resource detail must show operation timeline evidence");
   assert.match(resourceSource, /FailureRecoveryPanel/, "resource detail must expose failed-operation recovery guidance");
+});
+
+test("resource mutations use confirmation, waiting state, result receipts, and concise Chinese copy", async () => {
+  const resourceSource = await source("packages/console/ui/pages/resources/ResourceProvisioningPages.jsx");
+  const surfaceSource = await source("packages/console/ui/pages/shared/commercial-console.jsx");
+  const actionsSource = await source("packages/console/ui/routes/opl-actions.js");
+  const routesSource = await source("packages/console/ui/routes/opl-routes.js");
+  const apiSource = await source("packages/console/ui/api/resources-api.js");
+
+  assert.match(surfaceSource, /Popconfirm/, "confirmed operation buttons must use Ant Design confirmation");
+  assert.match(surfaceSource, /confirmText/, "strong destructive operations must show required confirmation text");
+  assert.match(surfaceSource, /操作已提交|操作失败|操作完成/, "operation result copy must be Chinese");
+
+  for (const marker of [
+    "OperationConfirmButton",
+    "OperationResultPanel",
+    "operationPending",
+    "operationResult",
+    "确认开通计算资源",
+    "确认开通存储资源",
+    "确认挂载存储资源",
+    "确认销毁计算资源",
+    "确认销毁存储资源",
+    "确认删除数据",
+    "/data"
+  ]) {
+    assert.match(resourceSource, new RegExp(marker.replace("/", "\\/")), `resource page must include ${marker}`);
+  }
+
+  assert.doesNotMatch(resourceSource, /title="Create Compute"|title="Create Storage"|title="Attach Storage"|eyebrow="Provision"|eyebrow="Mount"/, "resource pages must not expose English operation titles");
+  assert.doesNotMatch(resourceSource, /meta: "operationId"|meta: "providerRequestId"|meta: "safeMessage"|status: "after hold"|status: "billable"|status: "required"|status: "verified"|meta: "one-person-lab-app persistent state"/, "Lab Owner resource pages must not lead with implementation jargon");
+
+  for (const actionId of [
+    "compute-allocations.create",
+    "compute-allocations.destroy",
+    "storage.create",
+    "storage.destroy",
+    "attachment.create",
+    "attachment.detach"
+  ]) {
+    assert.match(actionsSource, new RegExp(`id: "${actionId}"[\\s\\S]*mutation: true`), `${actionId} must declare mutation`);
+    assert.match(actionsSource, new RegExp(`id: "${actionId}"[\\s\\S]*confirmation:`), `${actionId} must declare confirmation`);
+    assert.match(actionsSource, new RegExp(`id: "${actionId}"[\\s\\S]*failureVisible: true`), `${actionId} must expose failures`);
+  }
+
+  assert.match(actionsSource, /requiredConfirmText: "确认删除数据"/, "storage destroy action must require strong Chinese confirmation");
+  assert.match(routesSource, /operationProtocol/, "route registry must expose operation protocol metadata");
+  assert.match(apiSource, /operationEnvelope/, "resource API client must normalize mutation responses");
 });
 
 test("Admin cleanup route exposes orphan URL cleanup without redesigning the Console shell", async () => {

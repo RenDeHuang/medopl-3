@@ -19,28 +19,28 @@ import { money } from "../shared/formatters.js";
 export function AdminOverviewPage({ state, adminOps }) {
   const failed = adminOps.operator?.runtimeOperations?.failed ?? 0;
   return (
-    <ConsoleSurface title="Admin Overview" eyebrow="Operations" subtitle="Accounts, Workspaces, runtime evidence">
+    <ConsoleSurface title="管理概览" eyebrow="运营" subtitle="账号、工作区入口、运行证据">
       <MetricStrip
         items={[
-          { label: "账号", value: adminOps.operator?.accounts?.total ?? 1, caption: "managed billing accounts", tone: "info" },
-          { label: "Workspace", value: adminOps.operator?.workspaces?.total ?? state.workspaces.length, caption: `${adminOps.operator?.workspaces?.running ?? 0} running`, tone: "good" },
-          { label: "失败操作", value: failed, caption: "runtime operation failures", tone: failed ? "danger" : "good" },
-          { label: "冻结总额", value: money(adminOps.operator?.accounts?.frozen), caption: "all accounts", tone: "warn" },
-          { label: "告警", value: adminOps.operator?.notifications?.total ?? 0, caption: "operator visible", tone: adminOps.operator?.notifications?.error ? "danger" : "neutral" }
+          { label: "账号", value: adminOps.operator?.accounts?.total ?? 1, caption: "托管计费账号", tone: "info" },
+          { label: "工作区入口", value: adminOps.operator?.workspaces?.total ?? state.workspaces.length, caption: `${adminOps.operator?.workspaces?.running ?? 0} 个运行中`, tone: "good" },
+          { label: "失败操作", value: failed, caption: "运行操作失败", tone: failed ? "danger" : "good" },
+          { label: "冻结总额", value: money(adminOps.operator?.accounts?.frozen), caption: "全部账号", tone: "warn" },
+          { label: "告警", value: adminOps.operator?.notifications?.total ?? 0, caption: "管理员可见", tone: adminOps.operator?.notifications?.error ? "danger" : "neutral" }
         ]}
       />
       <div className="consoleGrid equal">
-        <InsightPanel title="运行态" eyebrow="Runtime">
+        <InsightPanel title="运行态" eyebrow="运行">
           <ResourceSplit
             items={[
-              { label: "Ready", value: adminOps.runtime?.ready ? "Ready" : "Blocked", meta: "runtime readiness", status: adminOps.runtime?.ready ? "pass" : "check", tone: adminOps.runtime?.ready ? "good" : "warn" },
-              { label: "Launch", value: adminOps.launch?.ready ? "Ready" : "Blocked", meta: "production launch gates", status: adminOps.launch?.ready ? "pass" : "check", tone: adminOps.launch?.ready ? "good" : "warn" },
-              { label: "失败操作", value: failed, meta: "runtime operation queue", status: failed ? "needs triage" : "clear", tone: failed ? "danger" : "good" },
-              { label: "计算分配", value: adminOps.operator?.computeAllocations?.total ?? adminOps.operator?.compute?.total ?? 0, meta: "CVM allocation evidence", status: "tracked", tone: "info" }
+              { label: "运行就绪", value: adminOps.runtime?.ready ? "就绪" : "阻塞", meta: "运行检查", status: adminOps.runtime?.ready ? "通过" : "检查", tone: adminOps.runtime?.ready ? "good" : "warn" },
+              { label: "上线就绪", value: adminOps.launch?.ready ? "就绪" : "阻塞", meta: "生产门禁", status: adminOps.launch?.ready ? "通过" : "检查", tone: adminOps.launch?.ready ? "good" : "warn" },
+              { label: "失败操作", value: failed, meta: "运行操作队列", status: failed ? "待处理" : "清空", tone: failed ? "danger" : "good" },
+              { label: "计算分配", value: adminOps.operator?.computeAllocations?.total ?? adminOps.operator?.compute?.total ?? 0, meta: "CVM 分配证据", status: "已跟踪", tone: "info" }
             ]}
           />
         </InsightPanel>
-        <InsightPanel title="最近告警" eyebrow="Signals">
+        <InsightPanel title="最近告警" eyebrow="信号">
           <TimelineList
             emptyText="暂无运营告警"
             items={(adminOps.operator?.notifications?.recent || []).map((item) => ({
@@ -71,12 +71,12 @@ export function AdminUsersPage({ managementState, topUpOpen, setTopUpOpen, topUp
   });
   return (
     <ConsoleSurface
-      title="Users"
-      eyebrow="Admin"
-      subtitle="Login users, billing accounts, and wallet operations"
+      title="用户"
+      eyebrow="管理"
+      subtitle="登录用户、计费账号、钱包操作"
       extra={<Button type="primary" icon={<Plus size={15} />} onClick={() => setCreateOpen(true)}>新建用户</Button>}
     >
-      <InsightPanel title="用户钱包" eyebrow="Management">
+      <InsightPanel title="用户钱包" eyebrow="管理">
         <ObjectTable
           rowKey="id"
           data={users}
@@ -134,13 +134,13 @@ function CreateUserDrawer({ open, setOpen, form, session, runAction }) {
           <Input.Password />
         </Form.Item>
         <Form.Item name="name" label="姓名">
-          <Input placeholder="Lab Owner" />
+          <Input placeholder="实验室负责人" />
         </Form.Item>
         <Form.Item name="role" label="角色" rules={[{ required: true, message: "请选择角色" }]}>
           <Select
             options={[
-              { label: "Lab Owner", value: "pi" },
-              { label: "Admin", value: "admin" }
+              { label: "实验室负责人", value: "pi" },
+              { label: "管理员", value: "admin" }
             ]}
           />
         </Form.Item>
@@ -174,9 +174,9 @@ function TopUpDrawer({ open, setOpen, form, session, runAction }) {
 
 export function AdminBillingPage({ state }) {
   return (
-    <ConsoleSurface title="Billing Ops" eyebrow="Admin" subtitle="Manual top-ups and wallet transaction evidence">
+    <ConsoleSurface title="账单运营" eyebrow="管理" subtitle="人工充值和钱包流水证据">
       <div className="consoleGrid equal">
-        <InsightPanel title="手工充值记录" eyebrow="Top-ups">
+        <InsightPanel title="手工充值记录" eyebrow="充值">
           <TimelineList
             emptyText="暂无充值记录"
             items={(state.manualTopups || []).slice(-8).reverse().map((event) => ({
@@ -187,7 +187,7 @@ export function AdminBillingPage({ state }) {
             }))}
           />
         </InsightPanel>
-        <InsightPanel title="钱包流水" eyebrow="Transactions">
+        <InsightPanel title="钱包流水" eyebrow="流水">
           <TimelineList
             emptyText="暂无钱包流水"
             items={(state.walletTransactions || []).slice(-8).reverse().map((event) => ({
@@ -205,12 +205,12 @@ export function AdminBillingPage({ state }) {
 
 export function AdminFabricPage() {
   return (
-    <ConsoleSurface title="OPL Fabric" eyebrow="Admin" subtitle="Runtime resource boundary">
+    <ConsoleSurface title="OPL Fabric" eyebrow="管理" subtitle="运行资源边界">
       <ResourceSplit
         items={[
-          { label: "计算", value: "Standard CPU", meta: "GPU remains backlog until verified", status: "available", tone: "good" },
-          { label: "存储", value: "StorageVolume", meta: "account-scoped volume resource", status: "available", tone: "good" },
-          { label: "环境", value: "one-person-lab-app", meta: "current WebUI runtime", status: "current", tone: "info" }
+          { label: "计算", value: "标准 CPU", meta: "GPU 验证前不进入当前上线范围", status: "可用", tone: "good" },
+          { label: "存储", value: "存储资源", meta: "账号范围数据盘", status: "可用", tone: "good" },
+          { label: "环境", value: "one-person-lab-app", meta: "当前 WebUI 运行时", status: "当前", tone: "info" }
         ]}
       />
     </ConsoleSurface>
@@ -219,8 +219,8 @@ export function AdminFabricPage() {
 
 export function AdminLedgerPage({ state }) {
   return (
-    <ConsoleSurface title="Ledger" eyebrow="Admin" subtitle="Billing ledger evidence">
-      <InsightPanel title="账务事件" eyebrow="Evidence">
+    <ConsoleSurface title="账本" eyebrow="管理" subtitle="账单证据">
+      <InsightPanel title="账务事件" eyebrow="证据">
         <ObjectTable
           rowKey="id"
           pagination={{ pageSize: 8 }}
@@ -229,7 +229,7 @@ export function AdminLedgerPage({ state }) {
           columns={[
             { title: "事件", dataIndex: "type" },
             { title: "账号", dataIndex: "accountId", ellipsis: true },
-            { title: "Workspace", dataIndex: "workspaceId", ellipsis: true },
+            { title: "工作区", dataIndex: "workspaceId", ellipsis: true },
             { title: "金额", dataIndex: "amount", render: (value) => money(value) }
           ]}
         />
@@ -248,25 +248,25 @@ export function AdminRuntimePage({ adminOps }) {
     ...(adminOps.launch?.failedChecks || [])
   ];
   return (
-    <ConsoleSurface title="Runtime" eyebrow="Admin" subtitle="Readiness gates and launch blockers">
+    <ConsoleSurface title="运行状态" eyebrow="管理" subtitle="就绪门禁和上线阻塞">
       {adminOps.error && <Alert type="error" showIcon message={adminOps.error} />}
       <div className="consoleGrid equal">
-        <InsightPanel title="Readiness" eyebrow="Runtime">
+        <InsightPanel title="就绪状态" eyebrow="运行">
           <ResourceSplit
             items={[
-              { label: "Fabric", value: adminOps.runtime?.ready ? "Ready" : "Blocked", meta: "runtime provider", status: adminOps.runtime?.ready ? "pass" : "check", tone: adminOps.runtime?.ready ? "good" : "warn" },
-              { label: "Launch", value: adminOps.launch?.ready ? "Ready" : "Blocked", meta: "production gates", status: adminOps.launch?.ready ? "pass" : "check", tone: adminOps.launch?.ready ? "good" : "warn" },
-              { label: "Env", value: (adminOps.launch?.missingEnv || []).length, meta: "missing environment inputs", status: "env", tone: (adminOps.launch?.missingEnv || []).length ? "warn" : "good" },
-              { label: "Tools", value: (adminOps.launch?.missingTools || []).length, meta: "host tool checks", status: "tools", tone: (adminOps.launch?.missingTools || []).length ? "warn" : "good" }
+              { label: "Fabric", value: adminOps.runtime?.ready ? "就绪" : "阻塞", meta: "运行提供方", status: adminOps.runtime?.ready ? "通过" : "检查", tone: adminOps.runtime?.ready ? "good" : "warn" },
+              { label: "上线", value: adminOps.launch?.ready ? "就绪" : "阻塞", meta: "生产门禁", status: adminOps.launch?.ready ? "通过" : "检查", tone: adminOps.launch?.ready ? "good" : "warn" },
+              { label: "环境", value: (adminOps.launch?.missingEnv || []).length, meta: "缺少环境输入", status: "环境", tone: (adminOps.launch?.missingEnv || []).length ? "warn" : "good" },
+              { label: "工具", value: (adminOps.launch?.missingTools || []).length, meta: "主机工具检查", status: "工具", tone: (adminOps.launch?.missingTools || []).length ? "warn" : "good" }
             ]}
           />
         </InsightPanel>
-        <InsightPanel title="Blockers" eyebrow="Checks">
+        <InsightPanel title="阻塞项" eyebrow="检查">
           <TimelineList
-            emptyText="No blockers"
+            emptyText="暂无阻塞项"
             items={blockers.map((item) => ({
               title: item,
-              description: "readiness check",
+              description: "就绪检查",
               tone: "warn"
             }))}
           />
@@ -282,24 +282,24 @@ export function AdminCleanupPage({ managementState, session, runAction }) {
   const destroyedStorage = (managementState.storageVolumes || []).filter((item) => item.status === "destroyed").length;
   const detachedAttachments = (managementState.storageAttachments || []).filter((item) => item.status === "detached").length;
   return (
-    <ConsoleSurface title="Cleanup" eyebrow="Admin" subtitle="Workspace URL cleanup for destroyed or detached backing resources">
+    <ConsoleSurface title="入口清理" eyebrow="管理" subtitle="清理已失效资源对应的访问 URL">
       <MetricStrip
         items={[
-          { label: "Active URLs", value: activeWorkspaces.length, caption: "candidate Workspace entries", tone: activeWorkspaces.length ? "warn" : "good" },
-          { label: "Destroyed compute", value: destroyedCompute, caption: "stopped allocations", tone: destroyedCompute ? "info" : "neutral" },
-          { label: "Destroyed storage", value: destroyedStorage, caption: "released volumes", tone: destroyedStorage ? "info" : "neutral" },
-          { label: "Detached mounts", value: detachedAttachments, caption: "inactive attachments", tone: detachedAttachments ? "info" : "neutral" }
+          { label: "可用 URL", value: activeWorkspaces.length, caption: "候选工作区入口", tone: activeWorkspaces.length ? "warn" : "good" },
+          { label: "已销毁计算", value: destroyedCompute, caption: "已停止分配", tone: destroyedCompute ? "info" : "neutral" },
+          { label: "已销毁存储", value: destroyedStorage, caption: "已释放数据盘", tone: destroyedStorage ? "info" : "neutral" },
+          { label: "已解除挂载", value: detachedAttachments, caption: "非活跃挂载", tone: detachedAttachments ? "info" : "neutral" }
         ]}
       />
       <InsightPanel
-        title="Workspace URL cleanup"
-        eyebrow="Operator cleanup"
+        title="访问 URL 清理"
+        eyebrow="运营清理"
         actions={(
           <Button
             danger
             onClick={() => runAction(
               () => cleanupWorkspaceAccess({ reason: "operator_cleanup_all" }, session.csrfToken),
-              "无效 Workspace URL 已清理"
+              "无效访问 URL 已清理"
             )}
           >
             清理全部无效 URL
@@ -313,16 +313,16 @@ export function AdminCleanupPage({ managementState, session, runAction }) {
           storageAttachments={managementState.storageAttachments || []}
           onCleanup={(row) => runAction(
             () => cleanupWorkspaceAccess({ workspaceIds: [row.id], reason: "operator_cleanup_single" }, session.csrfToken),
-            "Workspace URL 已清理"
+            "访问 URL 已清理"
           )}
         />
       </InsightPanel>
-      <InsightPanel title="清理边界" eyebrow="Safety">
+      <InsightPanel title="清理边界" eyebrow="安全">
         <ResourceSplit
           items={[
-            { label: "不删除", value: "Compute / Storage / Ledger", meta: "只处理 Workspace URL access.tokenStatus", status: "guarded", tone: "good" },
-            { label: "清理条件", value: "资源已销毁或挂载已解除", meta: "active URL becomes unavailable", status: "current", tone: "info" },
-            { label: "证据", value: "workspace_access_cleaned", meta: "billing ledger amount 0", status: "audit", tone: "info" }
+            { label: "不删除", value: "计算 / 存储 / 账本", meta: "只处理访问状态", status: "已保护", tone: "good" },
+            { label: "清理条件", value: "资源已销毁或挂载已解除", meta: "可用 URL 变为不可用", status: "当前", tone: "info" },
+            { label: "证据", value: "workspace_access_cleaned", meta: "账本金额 0", status: "审计", tone: "info" }
           ]}
         />
       </InsightPanel>
@@ -332,8 +332,8 @@ export function AdminCleanupPage({ managementState, session, runAction }) {
 
 export function AdminSupportPage({ tickets }) {
   return (
-    <ConsoleSurface title="Support Ops" eyebrow="Admin" subtitle="All visible support tickets">
-      <InsightPanel title="工单队列" eyebrow="Support">
+    <ConsoleSurface title="工单运营" eyebrow="管理" subtitle="全部可见工单">
+      <InsightPanel title="工单队列" eyebrow="支持">
         <ObjectTable
           rowKey="id"
           data={tickets.tickets}

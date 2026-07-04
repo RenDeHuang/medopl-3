@@ -1,5 +1,38 @@
 import { defaultLaunchConfig, isFeatureEnabled } from "../config/launch-config.js";
 
+const paidMutationProtocol = Object.freeze({
+  mutation: true,
+  confirmation: "normal",
+  costImpact: "required",
+  operationTimeline: true,
+  failureVisible: true
+});
+
+const normalMutationProtocol = Object.freeze({
+  mutation: true,
+  confirmation: "normal",
+  operationTimeline: true,
+  failureVisible: true
+});
+
+const destructiveMutationProtocol = Object.freeze({
+  mutation: true,
+  confirmation: "normal",
+  destructive: true,
+  operationTimeline: true,
+  failureVisible: true
+});
+
+const storageDestroyProtocol = Object.freeze({
+  mutation: true,
+  confirmation: "strong",
+  destructive: true,
+  dataLoss: true,
+  confirmText: "确认删除数据",
+  operationTimeline: true,
+  failureVisible: true
+});
+
 function currentRoute(route) {
   return Object.freeze({
     status: "implemented",
@@ -16,7 +49,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "public.home",
     path: "/",
-    label: "Public Home",
+    label: "首页",
     area: "public",
     role: "public",
     requiresAuth: false,
@@ -27,7 +60,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "public.pricing",
     path: "/pricing",
-    label: "Pricing",
+    label: "价格",
     area: "public",
     role: "public",
     status: "folded_into_parent",
@@ -39,7 +72,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "public.docs",
     path: "/docs",
-    label: "Docs",
+    label: "文档",
     area: "public",
     role: "public",
     status: "folded_into_parent",
@@ -51,7 +84,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "public.status",
     path: "/status",
-    label: "Service Status",
+    label: "服务状态",
     area: "public",
     role: "public",
     status: "folded_into_parent",
@@ -63,7 +96,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "auth.login",
     path: "/login",
-    label: "Login",
+    label: "登录",
     area: "auth",
     role: "public",
     requiresAuth: false,
@@ -77,7 +110,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "auth.logout",
     path: "/logout",
-    label: "Logout",
+    label: "退出登录",
     area: "auth",
     role: "lab_owner",
     hiddenInMenu: true,
@@ -91,7 +124,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "console.root",
     path: "/console",
-    label: "Console",
+    label: "控制台",
     area: "console",
     role: "lab_owner",
     redirectRouteId: "console.overview",
@@ -104,7 +137,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "console.overview",
     path: "/console/overview",
-    label: "Overview",
+    label: "概览",
     area: "console",
     role: "lab_owner",
     menu: true,
@@ -118,7 +151,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "compute-pools.list",
     path: "/console/compute/pools",
-    label: "Compute Pools",
+    label: "计算资源池",
     area: "console",
     role: "admin",
     hiddenInMenu: true,
@@ -134,7 +167,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "compute-allocations.list",
     path: "/console/compute",
-    label: "Compute",
+    label: "计算资源",
     area: "console",
     role: "lab_owner",
     menu: true,
@@ -150,7 +183,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "compute-allocations.create",
     path: "/console/compute/new",
-    label: "Create Compute Allocation",
+    label: "开通计算资源",
     area: "console",
     role: "lab_owner",
     hiddenInMenu: true,
@@ -161,12 +194,13 @@ export const oplRoutes = Object.freeze([
     apiClient: "packages/console/ui/api/resources-api.js",
     apiRoutes: ["GET /api/compute-pools", "POST /api/compute-allocations"],
     serviceBoundary: "ComputeAllocationService",
-    capabilities: ["read", "write", "action", "evidence"]
+    capabilities: ["read", "write", "action", "evidence"],
+    operationProtocol: paidMutationProtocol
   }),
   currentRoute({
     id: "compute-allocations.detail",
     path: "/console/compute/:id",
-    label: "Compute Allocation Detail",
+    label: "计算资源详情",
     area: "console",
     role: "lab_owner",
     hiddenInMenu: true,
@@ -177,12 +211,13 @@ export const oplRoutes = Object.freeze([
     apiClient: "packages/console/ui/api/resources-api.js",
     apiRoutes: ["GET /api/compute-allocations/:id", "POST /api/compute-allocations/:id/destroy"],
     serviceBoundary: "ComputeAllocationService",
-    capabilities: ["detail", "read", "action", "evidence"]
+    capabilities: ["detail", "read", "action", "evidence"],
+    operationProtocol: destructiveMutationProtocol
   }),
   currentRoute({
     id: "storage.list",
     path: "/console/storage",
-    label: "Storage",
+    label: "存储资源",
     area: "console",
     role: "lab_owner",
     menu: true,
@@ -198,7 +233,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "storage.create",
     path: "/console/storage/new",
-    label: "Create Storage",
+    label: "开通存储资源",
     area: "console",
     role: "lab_owner",
     hiddenInMenu: true,
@@ -209,12 +244,13 @@ export const oplRoutes = Object.freeze([
     apiClient: "packages/console/ui/api/resources-api.js",
     apiRoutes: ["GET /api/state", "POST /api/storage-volumes"],
     serviceBoundary: "ResourceProvisioningService",
-    capabilities: ["read", "write", "action", "evidence"]
+    capabilities: ["read", "write", "action", "evidence"],
+    operationProtocol: paidMutationProtocol
   }),
   currentRoute({
     id: "storage.detail",
     path: "/console/storage/:id",
-    label: "Storage Detail",
+    label: "存储资源详情",
     area: "console",
     role: "lab_owner",
     hiddenInMenu: true,
@@ -225,12 +261,13 @@ export const oplRoutes = Object.freeze([
     apiClient: "packages/console/ui/api/resources-api.js",
     apiRoutes: ["GET /api/state", "POST /api/storage-volumes/destroy"],
     serviceBoundary: "ResourceProvisioningService",
-    capabilities: ["detail", "read", "action", "evidence"]
+    capabilities: ["detail", "read", "action", "evidence"],
+    operationProtocol: storageDestroyProtocol
   }),
   currentRoute({
     id: "attachment.list",
     path: "/console/attachments",
-    label: "Attachments",
+    label: "挂载关系",
     area: "console",
     role: "lab_owner",
     menu: true,
@@ -246,7 +283,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "attachment.create",
     path: "/console/attachments/new",
-    label: "Attach Storage",
+    label: "挂载存储",
     area: "console",
     role: "lab_owner",
     hiddenInMenu: true,
@@ -257,12 +294,13 @@ export const oplRoutes = Object.freeze([
     apiClient: "packages/console/ui/api/resources-api.js",
     apiRoutes: ["GET /api/state", "POST /api/storage-attachments"],
     serviceBoundary: "ResourceProvisioningService",
-    capabilities: ["read", "write", "action", "evidence"]
+    capabilities: ["read", "write", "action", "evidence"],
+    operationProtocol: normalMutationProtocol
   }),
   currentRoute({
     id: "attachment.detail",
     path: "/console/attachments/:id",
-    label: "Attachment Detail",
+    label: "挂载详情",
     area: "console",
     role: "lab_owner",
     hiddenInMenu: true,
@@ -273,12 +311,13 @@ export const oplRoutes = Object.freeze([
     apiClient: "packages/console/ui/api/resources-api.js",
     apiRoutes: ["GET /api/state", "POST /api/storage-attachments/detach"],
     serviceBoundary: "ResourceProvisioningService",
-    capabilities: ["detail", "read", "action", "evidence"]
+    capabilities: ["detail", "read", "action", "evidence"],
+    operationProtocol: destructiveMutationProtocol
   }),
   currentRoute({
     id: "workspace.list",
     path: "/console/workspaces",
-    label: "Workspaces",
+    label: "工作区入口",
     area: "console",
     role: "lab_owner",
     menu: true,
@@ -294,7 +333,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "workspace.create",
     path: "/console/workspaces/new",
-    label: "Create Workspace",
+    label: "创建工作区入口",
     area: "console",
     role: "lab_owner",
     hiddenInMenu: true,
@@ -305,12 +344,13 @@ export const oplRoutes = Object.freeze([
     apiClient: "packages/console/ui/api/workspaces-api.js",
     apiRoutes: ["GET /api/state", "POST /api/workspaces"],
     serviceBoundary: "WorkspaceEntryService",
-    capabilities: ["read", "write"]
+    capabilities: ["read", "write"],
+    operationProtocol: normalMutationProtocol
   }),
   currentRoute({
     id: "workspace.detail",
     path: "/console/workspaces/:id",
-    label: "Workspace Detail",
+    label: "工作区入口详情",
     area: "console",
     role: "lab_owner",
     hiddenInMenu: true,
@@ -326,12 +366,13 @@ export const oplRoutes = Object.freeze([
       "POST /api/workspaces/runtime-status"
     ],
     serviceBoundary: "WorkspaceEntryService",
-    capabilities: ["detail", "read", "action", "evidence"]
+    capabilities: ["detail", "read", "action", "evidence"],
+    operationProtocol: destructiveMutationProtocol
   }),
   currentRoute({
     id: "gateway.external",
     path: "/console/gateway",
-    label: "Gateway",
+    label: "网关",
     area: "console",
     role: "lab_owner",
     menu: true,
@@ -347,7 +388,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "billing.overview",
     path: "/console/billing",
-    label: "Billing",
+    label: "账单",
     area: "console",
     role: "lab_owner",
     menu: true,
@@ -363,7 +404,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "billing.wallet",
     path: "/console/billing/wallet",
-    label: "Wallet and Holds",
+    label: "钱包与冻结",
     area: "console",
     role: "lab_owner",
     hiddenInMenu: true,
@@ -381,7 +422,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "account.overview",
     path: "/console/account",
-    label: "Account & Lab",
+    label: "账号与实验室",
     area: "console",
     role: "lab_owner",
     menu: true,
@@ -396,7 +437,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "support.list",
     path: "/console/support",
-    label: "Support",
+    label: "工单",
     area: "console",
     role: "lab_owner",
     menu: true,
@@ -412,7 +453,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "support.create",
     path: "/console/support/new",
-    label: "New Ticket",
+    label: "新建工单",
     area: "console",
     role: "lab_owner",
     hiddenInMenu: true,
@@ -428,7 +469,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "support.detail",
     path: "/console/support/:id",
-    label: "Ticket Detail",
+    label: "工单详情",
     area: "console",
     role: "lab_owner",
     hiddenInMenu: true,
@@ -444,7 +485,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "alerts.list",
     path: "/console/alerts",
-    label: "Alerts",
+    label: "提醒",
     area: "console",
     role: "lab_owner",
     menu: true,
@@ -460,7 +501,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "admin.root",
     path: "/admin",
-    label: "Admin",
+    label: "管理",
     area: "admin",
     role: "admin",
     redirectRouteId: "admin.overview",
@@ -473,7 +514,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "admin.overview",
     path: "/admin/overview",
-    label: "Admin Overview",
+    label: "管理概览",
     area: "admin",
     role: "admin",
     adminMenu: true,
@@ -487,7 +528,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "admin.users",
     path: "/admin/users",
-    label: "Users",
+    label: "用户",
     area: "admin",
     role: "admin",
     adminMenu: true,
@@ -502,7 +543,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "admin.billing",
     path: "/admin/billing",
-    label: "Billing Ops",
+    label: "账单运营",
     area: "admin",
     role: "admin",
     adminMenu: true,
@@ -518,7 +559,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "admin.ledger",
     path: "/admin/ledger",
-    label: "Ledger",
+    label: "账本",
     area: "admin",
     role: "admin",
     ownerRepo: "opl-ledger",
@@ -535,7 +576,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "admin.runtime",
     path: "/admin/runtime",
-    label: "Runtime",
+    label: "运行状态",
     area: "admin",
     role: "admin",
     adminMenu: true,
@@ -551,7 +592,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "admin.cleanup",
     path: "/admin/cleanup",
-    label: "Cleanup",
+    label: "入口清理",
     area: "admin",
     role: "admin",
     adminMenu: true,
@@ -562,12 +603,13 @@ export const oplRoutes = Object.freeze([
     apiClient: "packages/console/ui/api/console-read-api.js",
     apiRoutes: ["GET /api/management/state", "GET /api/operator/summary", "POST /api/operator/cleanup-workspace-access"],
     serviceBoundary: "WorkspaceEntryService",
-    capabilities: ["read", "list", "action", "audit"]
+    capabilities: ["read", "list", "action", "audit"],
+    operationProtocol: destructiveMutationProtocol
   }),
   currentRoute({
     id: "admin.support",
     path: "/admin/support",
-    label: "Support Ops",
+    label: "工单运营",
     area: "admin",
     role: "admin",
     adminMenu: true,
@@ -583,7 +625,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "error.forbidden",
     path: "/403",
-    label: "Forbidden",
+    label: "无权限",
     area: "error",
     role: "public",
     hiddenInMenu: true,
@@ -594,7 +636,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "error.notFound",
     path: "/404",
-    label: "Not Found",
+    label: "未找到",
     area: "error",
     role: "public",
     hiddenInMenu: true,
@@ -605,7 +647,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "error.server",
     path: "/500",
-    label: "Error",
+    label: "错误",
     area: "error",
     role: "public",
     hiddenInMenu: true,

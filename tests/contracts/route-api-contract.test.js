@@ -176,3 +176,31 @@ test("implemented commercial object routes declare object kind and object capabi
     );
   }
 });
+
+test("paid and destructive route mutations declare commercial operation protocol", async () => {
+  const contract = await readJson(contractPath);
+  const routes = expectedRoutesFromContract(contract);
+  const byId = new Map(routes.map((route) => [route.id, route]));
+
+  for (const id of [
+    "compute-allocations.create",
+    "compute-allocations.detail",
+    "storage.create",
+    "storage.detail",
+    "attachment.create",
+    "attachment.detail",
+    "workspace.create",
+    "workspace.detail",
+    "admin.cleanup"
+  ]) {
+    const route = byId.get(id);
+    assert.ok(route, `missing route ${id}`);
+    assert.equal(route.operationProtocol?.mutation, true, `${id} must declare mutation protocol`);
+    assert.ok(["normal", "strong"].includes(route.operationProtocol?.confirmation), `${id} must declare confirmation level`);
+    assert.equal(route.operationProtocol?.operationTimeline, true, `${id} must expose operation timeline`);
+    assert.equal(route.operationProtocol?.failureVisible, true, `${id} must expose operation failures`);
+  }
+
+  assert.equal(byId.get("storage.detail").operationProtocol.dataLoss, true, "storage destroy route must declare data-loss risk");
+  assert.equal(byId.get("storage.detail").operationProtocol.confirmText, "确认删除数据", "storage destroy must require strong Chinese confirmation text");
+});

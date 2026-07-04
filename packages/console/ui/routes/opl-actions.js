@@ -1,15 +1,19 @@
 export const consoleActions = Object.freeze([
   {
     id: "workspace.create",
-    label: "Create Workspace",
+    label: "创建工作区入口",
     type: "route",
     role: "lab_owner",
     objectKind: "Workspace",
-    routeId: "workspace.create"
+    routeId: "workspace.create",
+    mutation: true,
+    confirmation: "normal",
+    operationTimeline: true,
+    failureVisible: true
   },
   {
     id: "workspace.detail",
-    label: "Open Workspace Detail",
+    label: "查看工作区入口",
     type: "route",
     role: "lab_owner",
     objectKind: "Workspace",
@@ -17,7 +21,7 @@ export const consoleActions = Object.freeze([
   },
   {
     id: "workspace.openUrl",
-    label: "Open Workspace URL",
+    label: "打开工作区入口",
     type: "external",
     role: "lab_owner",
     objectKind: "WorkspaceAccess",
@@ -25,7 +29,7 @@ export const consoleActions = Object.freeze([
   },
   {
     id: "workspace.copyUrl",
-    label: "Copy Workspace URL",
+    label: "复制工作区入口",
     type: "copy",
     role: "lab_owner",
     objectKind: "WorkspaceAccess",
@@ -33,35 +37,48 @@ export const consoleActions = Object.freeze([
   },
   {
     id: "workspace.resetUrl",
-    label: "Reset Workspace URL",
+    label: "重置工作区入口",
     type: "api",
     role: "lab_owner",
     objectKind: "WorkspaceAccess",
     apiClient: "packages/console/ui/api/workspaces-api.js",
     apiName: "resetWorkspaceToken",
-    requires: ["workspace.url.active"]
+    requires: ["workspace.url.active"],
+    mutation: true,
+    confirmation: "normal",
+    operationTimeline: true,
+    failureVisible: true
   },
   {
     id: "workspace.deleteUrl",
-    label: "Disable Workspace URL",
+    label: "停用工作区入口",
     type: "api",
     role: "lab_owner",
     objectKind: "WorkspaceAccess",
     apiClient: "packages/console/ui/api/workspaces-api.js",
     apiName: "deleteWorkspaceToken",
-    requires: ["workspace.url.active"]
+    requires: ["workspace.url.active"],
+    mutation: true,
+    confirmation: "normal",
+    operationTimeline: true,
+    failureVisible: true
   },
   {
     id: "compute-allocations.create",
-    label: "Create Compute",
+    label: "开通计算资源",
     type: "route",
     role: "lab_owner",
     objectKind: "ComputeAllocation",
-    routeId: "compute-allocations.create"
+    routeId: "compute-allocations.create",
+    mutation: true,
+    confirmation: "normal",
+    costImpact: "required",
+    operationTimeline: true,
+    failureVisible: true
   },
   {
     id: "compute-allocations.detail",
-    label: "Open Compute Detail",
+    label: "查看计算资源",
     type: "route",
     role: "lab_owner",
     objectKind: "ComputeAllocation",
@@ -69,24 +86,34 @@ export const consoleActions = Object.freeze([
   },
   {
     id: "compute-allocations.destroy",
-    label: "Destroy Compute",
+    label: "销毁计算资源",
     type: "api",
     role: "lab_owner",
     objectKind: "ComputeAllocation",
     apiClient: "packages/console/ui/api/resources-api.js",
-    apiName: "destroyComputeAllocation"
+    apiName: "destroyComputeAllocation",
+    mutation: true,
+    destructive: true,
+    confirmation: "normal",
+    operationTimeline: true,
+    failureVisible: true
   },
   {
     id: "storage.create",
-    label: "Create Storage",
+    label: "开通存储资源",
     type: "route",
     role: "lab_owner",
     objectKind: "StorageVolume",
-    routeId: "storage.create"
+    routeId: "storage.create",
+    mutation: true,
+    confirmation: "normal",
+    costImpact: "required",
+    operationTimeline: true,
+    failureVisible: true
   },
   {
     id: "storage.detail",
-    label: "Open Storage Detail",
+    label: "查看存储资源",
     type: "route",
     role: "lab_owner",
     objectKind: "StorageVolume",
@@ -94,24 +121,35 @@ export const consoleActions = Object.freeze([
   },
   {
     id: "storage.destroy",
-    label: "Destroy Storage",
+    label: "销毁存储资源",
     type: "api",
     role: "lab_owner",
     objectKind: "StorageVolume",
     apiClient: "packages/console/ui/api/resources-api.js",
-    apiName: "destroyStorageVolume"
+    apiName: "destroyStorageVolume",
+    mutation: true,
+    destructive: true,
+    dataLoss: true,
+    confirmation: "strong",
+    requiredConfirmText: "确认删除数据",
+    operationTimeline: true,
+    failureVisible: true
   },
   {
     id: "attachment.create",
-    label: "Attach Storage",
+    label: "挂载存储资源",
     type: "route",
     role: "lab_owner",
     objectKind: "StorageAttachment",
-    routeId: "attachment.create"
+    routeId: "attachment.create",
+    mutation: true,
+    confirmation: "normal",
+    operationTimeline: true,
+    failureVisible: true
   },
   {
     id: "attachment.detail",
-    label: "Open Attachment Detail",
+    label: "查看挂载关系",
     type: "route",
     role: "lab_owner",
     objectKind: "StorageAttachment",
@@ -119,16 +157,21 @@ export const consoleActions = Object.freeze([
   },
   {
     id: "attachment.detach",
-    label: "Detach Storage",
+    label: "解除挂载",
     type: "api",
     role: "lab_owner",
     objectKind: "StorageAttachment",
     apiClient: "packages/console/ui/api/resources-api.js",
-    apiName: "detachStorage"
+    apiName: "detachStorage",
+    mutation: true,
+    destructive: true,
+    confirmation: "normal",
+    operationTimeline: true,
+    failureVisible: true
   },
   {
     id: "billing.wallet",
-    label: "Wallet and Holds",
+    label: "钱包与冻结",
     type: "route",
     role: "lab_owner",
     objectKind: "Wallet",
@@ -136,7 +179,7 @@ export const consoleActions = Object.freeze([
   },
   {
     id: "support.create",
-    label: "Create Support Ticket",
+    label: "提交工单",
     type: "route",
     role: "lab_owner",
     objectKind: "SupportTicket",
@@ -144,7 +187,7 @@ export const consoleActions = Object.freeze([
   },
   {
     id: "support.detail",
-    label: "Open Support Ticket",
+    label: "查看工单",
     type: "route",
     role: "lab_owner",
     objectKind: "SupportTicket",
@@ -152,7 +195,7 @@ export const consoleActions = Object.freeze([
   },
   {
     id: "gateway.openExternal",
-    label: "Open OPL Gateway",
+    label: "打开网关",
     type: "route",
     role: "lab_owner",
     objectKind: "GatewayIntegration",
@@ -160,7 +203,7 @@ export const consoleActions = Object.freeze([
   },
   {
     id: "admin.manualTopup",
-    label: "Manual Top-up",
+    label: "人工充值",
     type: "api",
     role: "admin",
     objectKind: "Wallet",
@@ -169,7 +212,7 @@ export const consoleActions = Object.freeze([
   },
   {
     id: "admin.userCreate",
-    label: "Create User",
+    label: "新建用户",
     type: "api",
     role: "admin",
     objectKind: "User",
@@ -178,10 +221,10 @@ export const consoleActions = Object.freeze([
   },
   {
     id: "admin.userWallet.disabled",
-    label: "User Wallet Detail",
+    label: "用户钱包详情",
     type: "disabled",
     role: "admin",
     objectKind: "Wallet",
-    disabledReason: "Use Manual Top-up in the Users table; standalone wallet detail route is backlog."
+    disabledReason: "请在用户表使用人工充值；独立钱包详情不在当前上线范围。"
   }
 ]);

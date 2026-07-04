@@ -43,53 +43,53 @@ export function OverviewPage({ state, wallet, tickets }) {
 
   return (
     <ConsoleSurface
-      title="Overview"
+      title="概览"
       eyebrow="OPL Console"
-      subtitle="Wallet, Workspace delivery, Gateway usage, Support"
-      extra={<Button type="primary" icon={<Plus size={15} />} onClick={() => navigate(routeTo("workspace.create"))}>创建 Workspace</Button>}
+      subtitle="钱包、工作区入口、网关请求、工单"
+      extra={<Button type="primary" icon={<Plus size={15} />} onClick={() => navigate(routeTo("workspace.create"))}>创建工作区入口</Button>}
     >
       <MetricStrip
         items={[
-          { label: "可用余额", value: money(usable), caption: `${money(wallet.frozen)} frozen`, icon: <WalletCards size={16} />, tone: usable > 0 ? "good" : "warn" },
-          { label: "Workspace", value: state.workspaces.length, caption: `${computeRunning} compute running`, icon: <Server size={16} />, tone: computeRunning ? "good" : "neutral" },
-          { label: "存储资源", value: storageAvailable, caption: "StorageVolume", icon: <HardDrive size={16} />, tone: storageAvailable ? "info" : "neutral" },
+          { label: "可用余额", value: money(usable), caption: `${money(wallet.frozen)} 已冻结`, icon: <WalletCards size={16} />, tone: usable > 0 ? "good" : "warn" },
+          { label: "工作区入口", value: state.workspaces.length, caption: `${computeRunning} 个计算运行中`, icon: <Server size={16} />, tone: computeRunning ? "good" : "neutral" },
+          { label: "存储资源", value: storageAvailable, caption: "可保留数据盘", icon: <HardDrive size={16} />, tone: storageAvailable ? "info" : "neutral" },
           { label: "Gateway 请求", value: state.requestUsageLogs?.length || 0, caption: "gflabtoken.cn", icon: <LinkIcon size={16} />, tone: "info" },
-          { label: "工单", value: activeTickets, caption: `${tickets.tickets.length} total`, icon: <Headphones size={16} />, tone: activeTickets ? "warn" : "neutral" },
-          { label: "告警", value: needsAttention, caption: "owner visible", icon: <AlertTriangle size={16} />, tone: needsAttention ? "danger" : "good" }
+          { label: "工单", value: activeTickets, caption: `共 ${tickets.tickets.length} 个`, icon: <Headphones size={16} />, tone: activeTickets ? "warn" : "neutral" },
+          { label: "告警", value: needsAttention, caption: "用户可见", icon: <AlertTriangle size={16} />, tone: needsAttention ? "danger" : "good" }
         ]}
       />
 
       <div className="consoleGrid">
         <InsightPanel
           title="业务链"
-          eyebrow="Launch loop"
+          eyebrow="业务闭环"
           actions={<ActionGroup actions={[
-            { label: "Workspace", type: "primary", icon: <Plus size={15} />, onClick: () => navigate(routeTo("workspace.create")) },
+            { label: "工作区入口", type: "primary", icon: <Plus size={15} />, onClick: () => navigate(routeTo("workspace.create")) },
             { label: "钱包", icon: <WalletCards size={15} />, onClick: () => navigate(routeTo("billing.wallet")) },
             { label: "工单", icon: <Headphones size={15} />, onClick: () => navigate(routeTo("support.create")) }
           ]} />}
         >
           <ResourceSplit
             items={[
-              { label: "充值与冻结", value: `${money(wallet.balance)} / ${money(wallet.frozen)}`, meta: "Balance / frozen hold", status: `${Math.round(freezeRatio)}% frozen`, tone: freezeRatio > 70 ? "warn" : "info" },
-              { label: "计算交付", value: `${computeRunning}/${computeAllocations.length}`, meta: "Running compute allocations", status: computeRunning ? "active" : "idle", tone: computeRunning ? "good" : "neutral" },
-              { label: "存储资源", value: storageAvailable, meta: "StorageVolume persistent data", status: storageAvailable ? "available" : "empty", tone: storageAvailable ? "good" : "neutral" },
-              { label: "URL 分发", value: `${state.workspaces.filter((workspace) => workspace.access?.tokenStatus === "active").length}`, meta: "Active Workspace URLs", status: "scoped", tone: "info" },
-              { label: "支持闭环", value: activeTickets, meta: "Open support tickets", status: activeTickets ? "open" : "clear", tone: activeTickets ? "warn" : "good" }
+              { label: "充值与冻结", value: `${money(wallet.balance)} / ${money(wallet.frozen)}`, meta: "余额 / 冻结", status: `${Math.round(freezeRatio)}% 已冻结`, tone: freezeRatio > 70 ? "warn" : "info" },
+              { label: "计算交付", value: `${computeRunning}/${computeAllocations.length}`, meta: "运行中的计算资源", status: computeRunning ? "可用" : "空闲", tone: computeRunning ? "good" : "neutral" },
+              { label: "存储资源", value: storageAvailable, meta: "持久数据盘", status: storageAvailable ? "可用" : "空", tone: storageAvailable ? "good" : "neutral" },
+              { label: "URL 分发", value: `${state.workspaces.filter((workspace) => workspace.access?.tokenStatus === "active").length}`, meta: "可用工作区入口", status: "当前账号", tone: "info" },
+              { label: "支持闭环", value: activeTickets, meta: "处理中工单", status: activeTickets ? "处理中" : "清空", tone: activeTickets ? "warn" : "good" }
             ]}
           />
         </InsightPanel>
 
-        <InsightPanel title="最近信号" eyebrow="Attention">
+        <InsightPanel title="最近信号" eyebrow="关注">
           <TimelineList items={recentSignals} emptyText="当前没有告警或待处理工单" />
         </InsightPanel>
       </div>
 
-      <InsightPanel title="最近 Workspace" eyebrow="Delivery">
+      <InsightPanel title="最近工作区入口" eyebrow="交付">
         <ObjectTable
           rowKey="id"
           data={latestWorkspaces}
-          emptyText="暂无 Workspace"
+          emptyText="暂无工作区入口"
           columns={[
             {
               title: "名称",

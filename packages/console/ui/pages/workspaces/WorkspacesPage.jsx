@@ -29,26 +29,26 @@ export function WorkspacesPage({ state, wallet, runAction, session }) {
 
   return (
     <ConsoleSurface
-      title="Workspaces"
-      eyebrow="Delivery"
-      subtitle="Compute allocation, storage volume, URL token, billing hold"
-      extra={<Button type="primary" icon={<Plus size={15} />} onClick={() => navigate(routeTo("workspace.create"))}>创建 Workspace</Button>}
+      title="工作区入口"
+      eyebrow="交付"
+      subtitle="计算资源、存储资源、访问 URL、账单冻结"
+      extra={<Button type="primary" icon={<Plus size={15} />} onClick={() => navigate(routeTo("workspace.create"))}>创建工作区入口</Button>}
     >
       <MetricStrip
         items={[
-          { label: "总数", value: state.workspaces.length, caption: "owned by this lab", tone: state.workspaces.length ? "info" : "neutral" },
-          { label: "运行中", value: running, caption: "Workspace URL entries", tone: running ? "good" : "neutral" },
-          { label: "URL 可用", value: activeUrls, caption: "shareable links", tone: activeUrls ? "good" : "warn" },
-          { label: "已挂载", value: attachedEntries, caption: "attachment-backed entries", tone: attachedEntries ? "info" : "neutral" },
-          { label: "可用余额", value: money(available(wallet)), caption: "after frozen hold", tone: available(wallet) > 0 ? "good" : "warn" }
+          { label: "总数", value: state.workspaces.length, caption: "当前实验室", tone: state.workspaces.length ? "info" : "neutral" },
+          { label: "运行中", value: running, caption: "可访问入口", tone: running ? "good" : "neutral" },
+          { label: "URL 可用", value: activeUrls, caption: "可分享链接", tone: activeUrls ? "good" : "warn" },
+          { label: "已挂载", value: attachedEntries, caption: "已绑定计算和存储", tone: attachedEntries ? "info" : "neutral" },
+          { label: "可用余额", value: money(available(wallet)), caption: "扣除冻结后", tone: available(wallet) > 0 ? "good" : "warn" }
         ]}
       />
 
-      <InsightPanel title="Workspace 对象" eyebrow="Current">
+      <InsightPanel title="工作区入口" eyebrow="当前">
         <ObjectTable
           rowKey="id"
           data={state.workspaces}
-          emptyText="暂无 Workspace"
+          emptyText="暂无工作区入口"
           columns={[
             {
               title: "名称",
@@ -64,7 +64,7 @@ export function WorkspacesPage({ state, wallet, runAction, session }) {
             { title: "计算分配", render: (_, row) => <Typography.Text ellipsis>{row.computeAllocationId || row.server?.id || "-"}</Typography.Text> },
             { title: "存储卷", render: (_, row) => <Typography.Text ellipsis>{row.storageId || row.disk?.id || "-"}</Typography.Text> },
             {
-              title: "Workspace URL",
+              title: "访问 URL",
               dataIndex: "url",
               ellipsis: true,
               render: (_, row) => <Typography.Text copyable={row.access?.tokenStatus === "active"} className="inlineCode">{row.url}</Typography.Text>

@@ -18,22 +18,22 @@ export function SupportPage({ tickets }) {
   const highPriority = tickets.tickets.filter((ticket) => ticket.priority === "high").length;
   return (
     <ConsoleSurface
-      title="Support"
-      eyebrow="Tickets"
-      subtitle="Account, billing and Workspace support"
+      title="工单"
+      eyebrow="支持"
+      subtitle="账号、账单和工作区入口支持"
       extra={<Button type="primary" icon={<Plus size={15} />} onClick={() => navigate(routeTo("support.create"))}>提交工单</Button>}
     >
       <MetricStrip
         items={[
-          { label: "全部工单", value: tickets.tickets.length, caption: "account scoped", tone: tickets.tickets.length ? "info" : "neutral" },
-          { label: "处理中", value: openTickets.length, caption: "not closed", tone: openTickets.length ? "warn" : "good" },
-          { label: "高优先级", value: highPriority, caption: "needs attention", tone: highPriority ? "danger" : "neutral" },
-          { label: "Workspace", value: tickets.tickets.filter((ticket) => ticket.workspaceId).length, caption: "linked tickets", tone: "info" },
-          { label: "状态", value: tickets.loading ? "Sync" : "Ready", caption: "ticket API", tone: tickets.loading ? "warn" : "good" }
+          { label: "全部工单", value: tickets.tickets.length, caption: "账号范围", tone: tickets.tickets.length ? "info" : "neutral" },
+          { label: "处理中", value: openTickets.length, caption: "未关闭", tone: openTickets.length ? "warn" : "good" },
+          { label: "高优先级", value: highPriority, caption: "需要关注", tone: highPriority ? "danger" : "neutral" },
+          { label: "关联工作区", value: tickets.tickets.filter((ticket) => ticket.workspaceId).length, caption: "已关联工单", tone: "info" },
+          { label: "状态", value: tickets.loading ? "同步中" : "就绪", caption: "工单接口", tone: tickets.loading ? "warn" : "good" }
         ]}
       />
 
-      <InsightPanel title="工单列表" eyebrow="Queue">
+      <InsightPanel title="工单列表" eyebrow="队列">
         <ObjectTable
           rowKey="id"
           loading={tickets.loading}
@@ -54,31 +54,31 @@ export function SupportPage({ tickets }) {
 export function NewSupportTicketPage({ state, tickets }) {
   const [form] = Form.useForm();
   return (
-    <ConsoleSurface title="New Ticket" eyebrow="Support" subtitle="Account, billing, Workspace" compact>
-      <InsightPanel title="提交工单" eyebrow="Case">
+    <ConsoleSurface title="新建工单" eyebrow="支持" subtitle="账号、账单、工作区入口" compact>
+      <InsightPanel title="提交工单" eyebrow="工单">
         <Form form={form} layout="vertical" onFinish={async (values) => {
           const ticket = await tickets.createTicket(values);
           message.success("工单已提交");
           navigate(routeTo("support.detail", { id: ticket.id }));
         }}>
           <Form.Item name="title" label="标题" rules={[{ required: true }]}>
-            <Input placeholder="Workspace 无法打开" />
+            <Input placeholder="工作区入口无法打开" />
           </Form.Item>
           <Form.Item name="category" label="分类" initialValue="Workspace">
             <Select options={[
-              { label: "Workspace", value: "Workspace" },
-              { label: "Billing", value: "Billing" },
-              { label: "Gateway", value: "Gateway" },
-              { label: "Account", value: "Account" }
+              { label: "工作区", value: "Workspace" },
+              { label: "账单", value: "Billing" },
+              { label: "网关", value: "Gateway" },
+              { label: "账号", value: "Account" }
             ]} />
           </Form.Item>
           <Form.Item name="priority" label="优先级" initialValue="normal">
             <Select options={[
-              { label: "normal", value: "normal" },
-              { label: "high", value: "high" }
+              { label: "普通", value: "normal" },
+              { label: "高", value: "high" }
             ]} />
           </Form.Item>
-          <Form.Item name="workspaceId" label="关联 Workspace">
+          <Form.Item name="workspaceId" label="关联工作区">
             <Select
               allowClear
               options={state.workspaces.map((workspace) => ({ label: workspace.name, value: workspace.id }))}
@@ -99,25 +99,25 @@ export function SupportTicketPage({ tickets }) {
   const ticket = tickets.tickets.find((item) => item.id === id);
   if (!ticket) {
     return (
-      <ConsoleSurface title="Ticket" eyebrow="Support">
+      <ConsoleSurface title="工单" eyebrow="支持">
         <Empty description="未找到工单" />
       </ConsoleSurface>
     );
   }
   return (
-    <ConsoleSurface title={ticket.title} eyebrow="Ticket" subtitle={ticket.id}>
+    <ConsoleSurface title={ticket.title} eyebrow="工单" subtitle={ticket.id}>
       <div className="consoleGrid">
-        <InsightPanel title="状态" eyebrow="Case">
+        <InsightPanel title="状态" eyebrow="工单">
           <ResourceSplit
             items={[
-              { label: "分类", value: ticket.category, meta: "support queue", status: "category", tone: "info" },
-              { label: "优先级", value: ticket.priority, meta: "triage level", status: ticket.priority, tone: ticket.priority === "high" ? "danger" : "info" },
-              { label: "状态", value: ticket.status, meta: "current handling state", status: ticket.status, tone: ticket.status === "closed" ? "neutral" : "good" },
-              { label: "Workspace", value: ticket.workspaceId || "-", meta: "linked object", status: ticket.workspaceId ? "linked" : "none", tone: ticket.workspaceId ? "info" : "neutral" }
+              { label: "分类", value: ticket.category, meta: "支持队列", status: "分类", tone: "info" },
+              { label: "优先级", value: ticket.priority, meta: "分诊等级", status: ticket.priority, tone: ticket.priority === "high" ? "danger" : "info" },
+              { label: "状态", value: ticket.status, meta: "当前处理状态", status: ticket.status, tone: ticket.status === "closed" ? "neutral" : "good" },
+              { label: "工作区", value: ticket.workspaceId || "-", meta: "关联对象", status: ticket.workspaceId ? "已关联" : "无", tone: ticket.workspaceId ? "info" : "neutral" }
             ]}
           />
         </InsightPanel>
-        <InsightPanel title="对话" eyebrow="Messages">
+        <InsightPanel title="对话" eyebrow="消息">
           <TimelineList
             items={ticket.messages.map((item) => ({
               title: item.author,

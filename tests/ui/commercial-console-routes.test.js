@@ -69,16 +69,16 @@ test("commercial Console route contract covers current public, auth, owner, and 
 
 test("Lab Owner menu is commercial and excludes operator surfaces", () => {
   assert.deepEqual(ownerMenuRoutes.map((route) => route.label), [
-    "Overview",
-    "Compute",
-    "Storage",
-    "Attachments",
-    "Workspaces",
-    "Gateway",
-    "Billing",
-    "Account & Lab",
-    "Support",
-    "Alerts"
+    "概览",
+    "计算资源",
+    "存储资源",
+    "挂载关系",
+    "工作区入口",
+    "网关",
+    "账单",
+    "账号与实验室",
+    "工单",
+    "提醒"
   ]);
 
   for (const route of ownerMenuRoutes) {
@@ -93,13 +93,13 @@ test("Lab Owner menu is commercial and excludes operator surfaces", () => {
 
 test("Admin menu owns operator surfaces behind admin permission", () => {
   assert.deepEqual(adminMenuRoutes.map((route) => route.label), [
-    "Admin Overview",
-    "Users",
-    "Billing Ops",
-    "Ledger",
-    "Runtime",
-    "Cleanup",
-    "Support Ops"
+    "管理概览",
+    "用户",
+    "账单运营",
+    "账本",
+    "运行状态",
+    "入口清理",
+    "工单运营"
   ]);
 
   for (const route of adminMenuRoutes) {

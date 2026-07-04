@@ -25,13 +25,13 @@ function toneForStatus(value) {
 
 function WorkspaceLifecyclePanel({ workspace, compute, storage, attachment }) {
   return (
-    <InsightPanel title="访问生命周期" eyebrow="Workspace lifecycle">
+    <InsightPanel title="访问生命周期" eyebrow="生命周期">
       <ResourceSplit
         items={[
-          { label: "URL token", value: workspace.access?.tokenStatus || "-", meta: "tokenStatus", status: workspace.access?.tokenStatus || "unknown", tone: workspace.access?.tokenStatus === "active" ? "good" : "warn" },
-          { label: "计算资源", value: compute?.status || "missing", meta: workspace.computeAllocationId, status: "ComputeAllocation", tone: toneForStatus(compute?.status) },
-          { label: "存储资源", value: storage?.status || "missing", meta: workspace.storageId, status: "StorageVolume", tone: toneForStatus(storage?.status) },
-          { label: "挂载状态", value: attachment?.status || "missing", meta: attachment?.mountPath || "/data", status: "StorageAttachment", tone: toneForStatus(attachment?.status) }
+          { label: "URL 状态", value: workspace.access?.tokenStatus || "-", meta: "访问状态", status: workspace.access?.tokenStatus || "未知", tone: workspace.access?.tokenStatus === "active" ? "good" : "warn" },
+          { label: "计算资源", value: compute?.status || "缺失", meta: workspace.computeAllocationId, status: "计算", tone: toneForStatus(compute?.status) },
+          { label: "存储资源", value: storage?.status || "缺失", meta: workspace.storageId, status: "存储", tone: toneForStatus(storage?.status) },
+          { label: "挂载状态", value: attachment?.status || "缺失", meta: attachment?.mountPath || "/data", status: "挂载", tone: toneForStatus(attachment?.status) }
         ]}
       />
     </InsightPanel>
@@ -41,8 +41,8 @@ function WorkspaceLifecyclePanel({ workspace, compute, storage, attachment }) {
 export function WorkspaceDetailPage({ selected, selectedPlan, state, session, runAction }) {
   if (!selected) {
     return (
-      <ConsoleSurface title="Workspace" eyebrow="Delivery">
-        <Empty description="暂无 Workspace" />
+      <ConsoleSurface title="工作区入口" eyebrow="交付">
+        <Empty description="暂无工作区入口" />
       </ConsoleSurface>
     );
   }
@@ -53,14 +53,14 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
   return (
     <ConsoleSurface
       title={selected.name}
-      eyebrow="Workspace detail"
-      subtitle="URL entry linked to compute, storage, and attachment"
+      eyebrow="工作区详情"
+      subtitle="访问 URL 已绑定计算、存储和挂载关系"
       extra={<Button onClick={() => navigate(routeTo("workspace.list"))}>返回列表</Button>}
     >
       <div className="consoleGrid equal">
         <InsightPanel
-          title="Workspace URL"
-          eyebrow="Access"
+          title="访问 URL"
+          eyebrow="访问"
           actions={<StatusPill label={valueLabel(selected.access?.tokenStatus)} tone={selected.access?.tokenStatus === "active" ? "good" : "warn"} />}
         >
           <div className="stackList">
@@ -75,21 +75,21 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
           </div>
         </InsightPanel>
 
-        <InsightPanel title="计算与存储" eyebrow="Resources">
+        <InsightPanel title="计算与存储" eyebrow="资源">
           <ResourceSplit
             items={[
-              { label: "状态", value: statusLabel(selected), meta: selected.state, status: "Workspace", tone: toneForStatus(selected.state) },
-              { label: "套餐", value: selectedPlan?.name || "-", meta: packageText(selectedPlan), status: "plan", tone: "info" },
-              { label: "计算", value: compute?.name || computeAllocationId || "-", meta: valueLabel(compute?.status || selected.server?.status), status: "ComputeAllocation", tone: toneForStatus(compute?.status || selected.server?.status) },
-              { label: "存储", value: storage?.name || selected.storageId || "-", meta: `${selected.disk?.sizeGb || storage?.sizeGb || 0}GB`, status: "StorageVolume", tone: toneForStatus(storage?.status || selected.disk?.status) },
-              { label: "挂载关系", value: attachment?.id || selected.attachmentId || "-", meta: attachment?.mountPath || selected.disk?.mountPath || "/data", status: "StorageAttachment", tone: toneForStatus(attachment?.status) }
+              { label: "状态", value: statusLabel(selected), meta: selected.state, status: "工作区", tone: toneForStatus(selected.state) },
+              { label: "套餐", value: selectedPlan?.name || "-", meta: packageText(selectedPlan), status: "套餐", tone: "info" },
+              { label: "计算", value: compute?.name || computeAllocationId || "-", meta: valueLabel(compute?.status || selected.server?.status), status: "计算", tone: toneForStatus(compute?.status || selected.server?.status) },
+              { label: "存储", value: storage?.name || selected.storageId || "-", meta: `${selected.disk?.sizeGb || storage?.sizeGb || 0}GB`, status: "存储", tone: toneForStatus(storage?.status || selected.disk?.status) },
+              { label: "挂载关系", value: attachment?.id || selected.attachmentId || "-", meta: attachment?.mountPath || selected.disk?.mountPath || "/data", status: "挂载", tone: toneForStatus(attachment?.status) }
             ]}
           />
         </InsightPanel>
       </div>
 
       <div className="consoleGrid equal">
-        <InsightPanel title="资源对象" eyebrow="Allocation, storage, attachment">
+        <InsightPanel title="资源对象" eyebrow="计算、存储、挂载">
           <ActionGroup
             actions={[
               { label: "查看计算分配", icon: <Server size={15} />, disabled: !computeAllocationId, onClick: () => navigate(routeTo("compute-allocations.detail", { id: computeAllocationId })) },
