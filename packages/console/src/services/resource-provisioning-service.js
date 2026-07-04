@@ -162,22 +162,9 @@ export class ResourceProvisioningService extends OplDomainService {
     return this.store.update((state) => {
       const current = findOwnedResource(state.computeResources, accountId, computeId, "compute_resource_not_found");
       const account = ensureUserWallet(state, { accountId, userId: current.ownerUserId });
-      const released = releaseHold(account, "compute");
-      const sourceEventId = `compute_resource:${computeId}:destroyed`;
-      if (released > 0) {
-        state.billingLedger.push(addResourceIds(this.ledgerEntry({
-          state,
-          workspaceId: "resource",
-          accountId,
-          type: "compute_hold_released",
-          amount: -released,
-          sourceEventId,
-          holdType: "compute",
-          metadata: { computeId }
-        }), { computeId }));
-      }
+      releaseHold(account, "compute");
       current.status = "destroyed";
-      current.billingStatus = "closed";
+      current.billingStatus = "stopped";
       current.destroyedAt = now();
       current.updatedAt = now();
       state.billingLedger.push(addResourceIds(this.ledgerEntry({
@@ -186,7 +173,7 @@ export class ResourceProvisioningService extends OplDomainService {
         accountId,
         type: "compute_destroyed",
         amount: 0,
-        sourceEventId,
+        sourceEventId: "destroy_compute",
         metadata: { computeId }
       }), { computeId }));
       return clone(current);
@@ -313,22 +300,9 @@ export class ResourceProvisioningService extends OplDomainService {
     return this.store.update((state) => {
       const current = findOwnedResource(state.storageVolumes, accountId, storageId, "storage_volume_not_found");
       const account = ensureUserWallet(state, { accountId, userId: current.ownerUserId });
-      const released = releaseHold(account, "storage");
-      const sourceEventId = `storage_volume:${storageId}:destroyed`;
-      if (released > 0) {
-        state.billingLedger.push(addResourceIds(this.ledgerEntry({
-          state,
-          workspaceId: "resource",
-          accountId,
-          type: "storage_hold_released",
-          amount: -released,
-          sourceEventId,
-          holdType: "storage",
-          metadata: { storageId }
-        }), { storageId }));
-      }
+      releaseHold(account, "storage");
       current.status = "destroyed";
-      current.billingStatus = "closed";
+      current.billingStatus = "stopped";
       current.destroyedAt = now();
       current.updatedAt = now();
       state.billingLedger.push(addResourceIds(this.ledgerEntry({
@@ -337,7 +311,7 @@ export class ResourceProvisioningService extends OplDomainService {
         accountId,
         type: "storage_destroyed",
         amount: 0,
-        sourceEventId,
+        sourceEventId: "destroy_storage",
         metadata: { storageId }
       }), { storageId }));
       return clone(current);

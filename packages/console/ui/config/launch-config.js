@@ -17,7 +17,8 @@ export const defaultLaunchConfig = {
     sso: false,
     fabricAdmin: false,
     governanceAdmin: false,
-    adminSettings: false
+    adminSettings: false,
+    storageBackups: false
   }
 };
 
@@ -39,7 +40,8 @@ export const FeatureFlags = {
   sso: defineFlag({ key: "sso", mode: "opt-in", label: "SSO" }),
   fabricAdmin: defineFlag({ key: "fabricAdmin", mode: "opt-in", label: "Fabric admin" }),
   governanceAdmin: defineFlag({ key: "governanceAdmin", mode: "opt-in", label: "Governance admin" }),
-  adminSettings: defineFlag({ key: "adminSettings", mode: "opt-in", label: "Admin settings" })
+  adminSettings: defineFlag({ key: "adminSettings", mode: "opt-in", label: "Admin settings" }),
+  storageBackups: defineFlag({ key: "storageBackups", mode: "opt-in", label: "Storage backups" })
 };
 
 export function isFeatureEnabled(flagKey, config = defaultLaunchConfig) {

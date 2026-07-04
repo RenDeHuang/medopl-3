@@ -79,7 +79,7 @@ test("local Docker provider exposes split compute, storage, attachment, and Work
   }
 });
 
-test("local Docker provider runs the current split resource chain and cleans resources explicitly", async () => {
+test("local Docker provider creates real compose, disk, URL, and preserves disk after server destroy", async () => {
   const root = await mkdtemp(join(tmpdir(), "opl-cloud-local-docker-"));
   try {
     const provider = new LocalDockerProvider({
@@ -98,38 +98,18 @@ test("local Docker provider runs the current split resource chain and cleans res
     });
 
     await service.manualTopUp({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
-    const compute = await service.createComputeResource({
-      accountId: "pi-alpha",
-      userId: "usr-alpha",
-      packageId: "basic",
-      name: "Local node"
-    });
-    const storage = await service.createStorageVolume({
-      accountId: "pi-alpha",
-      userId: "usr-alpha",
-      packageId: "basic",
-      sizeGb: 10,
-      name: "Local storage"
-    });
-    const attachment = await service.attachStorage({
-      accountId: "pi-alpha",
-      computeId: compute.id,
-      storageId: storage.id,
-      mountPath: "/data"
-    });
     const workspace = await service.createWorkspace({
       accountId: "pi-alpha",
-      userId: "usr-alpha",
       workspaceName: "Real Docker Lab",
-      attachmentId: attachment.id
+      packageId: "basic"
     });
 
-    const computeDir = join(root, compute.id);
-    const composePath = join(computeDir, "docker-compose.yml");
-    const diskPath = join(root, storage.id, "disk");
+    const workspaceDir = join(root, workspace.id);
+    const composePath = join(workspaceDir, "docker-compose.yml");
+    const diskPath = join(workspaceDir, "disk");
     const dataPath = join(diskPath, "data");
     const projectsPath = join(diskPath, "projects");
-    const envPath = join(computeDir, ".env");
+    const envPath = join(workspaceDir, ".env");
 
     assert.equal(workspace.provider, "local-docker");
     assert.equal(workspace.server.status, "running");
@@ -162,33 +142,24 @@ test("local Docker provider runs the current split resource chain and cleans res
       CODEX_HOME: "/data/codex"
     });
     assert.deepEqual(composeService.ports, ["127.0.0.1::3000"]);
-    assert.deepEqual(composeService.volumes, [
-      `${join(diskPath, "data")}:/data`,
-      `${join(diskPath, "projects")}:/projects`
-    ]);
+    assert.deepEqual(composeService.volumes, ["./disk/data:/data", "./disk/projects:/projects"]);
 
-    const detached = await service.detachStorage({
+    const destroyed = await service.destroyServer({
       accountId: "pi-alpha",
-      attachmentId: attachment.id,
+      workspaceId: workspace.id,
       confirm: true
     });
-    assert.equal(detached.status, "detached");
+
+    assert.equal(destroyed.server.status, "destroyed");
+    assert.equal(destroyed.disk.status, "detached_retained");
     assert.equal(await exists(diskPath), true);
 
-    const destroyedCompute = await service.destroyComputeResource({
+    const diskDestroyed = await service.destroyDisk({
       accountId: "pi-alpha",
-      computeId: compute.id,
-      confirm: true
-    });
-    assert.equal(destroyedCompute.status, "destroyed");
-    assert.equal(await exists(computeDir), false);
-
-    const destroyedStorage = await service.destroyStorageVolume({
-      accountId: "pi-alpha",
-      storageId: storage.id,
+      workspaceId: workspace.id,
       confirmDataLoss: true
     });
-    assert.equal(destroyedStorage.status, "destroyed");
+    assert.equal(diskDestroyed.disk.status, "destroyed");
     assert.equal(await exists(diskPath), false);
   } finally {
     await rm(root, { recursive: true, force: true });

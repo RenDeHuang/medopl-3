@@ -18,12 +18,10 @@
     "storage_debit",
     "compute_hold_released",
     "storage_hold_released",
-    "compute_hold_exhausted",
-    "compute_destroyed",
+    "compute_auto_stopped",
+    "server_billing_stopped",
+    "server_destroyed",
     "storage_destroyed",
-    "storage_attached",
-    "storage_detached",
-    "workspace_entry_created",
     "token_reset",
     "token_deleted",
     "request_debit",
@@ -50,8 +48,8 @@
       "resource_hold"
     ],
     "requiredBefore": [
-      "create_compute_resource",
-      "create_storage_volume"
+      "open_workspace",
+      "resume_workspace"
     ],
     "unpaidComputeOperationAllowed": false,
     "unpaidStorageOperationAllowed": false
@@ -76,18 +74,19 @@
       "cliFlag": "--tencent-format raw"
     },
     "resourceTypes": [
-      "compute",
+      "server",
       "storage"
     ],
     "guard": {
       "storedIn": "billing_reconciliation_reports",
       "blocks": [
-        "create_compute_resource",
-        "create_storage_volume"
+        "open_workspace",
+        "restore_workspace_from_backup"
       ],
       "doesNotBlock": [
         "resolve_workspace_access",
         "settle_billing",
+        "stop_compute",
         "destroy_compute",
         "destroy_storage"
       ],

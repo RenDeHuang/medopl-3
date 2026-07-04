@@ -1,14 +1,45 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-  createCurrentTestService,
-  provisionWorkspace
-} from "../helpers/current-resource-chain.js";
+import { createOplCloud } from "../../packages/console/src/opl-cloud.js";
+import { MemoryStore } from "../../packages/console/src/store.js";
 
-test("Console blocks new resource provisioning while billing reconciliation guard is active", async () => {
-  const service = createCurrentTestService();
-  await service.manualTopUp({ accountId: "pi-alpha", amount: 300, reason: "owner_credit" });
+const TEST_PRICING = {
+  serverHourly: {
+    basic: 1,
+    pro: 4
+  },
+  diskGbMonth: 0.2,
+  markup: 0.2
+};
+
+function runtimeFixture({ workspaceId, workspaceName, packagePlan, token }) {
+  return {
+    provider: "test-provider",
+    server: { id: `server-${workspaceId}`, status: "running", billingStatus: "active", spec: packagePlan.server },
+    docker: { id: `docker-${workspaceId}`, image: "test-image", status: "running" },
+    disk: { id: `disk-${workspaceId}`, status: "attached_retained", billingStatus: "active", sizeGb: packagePlan.diskGb, mountPath: "/data" },
+    url: `http://127.0.0.1:8787/workspaces/${workspaceName}?token=${token}`,
+    slug: workspaceName
+  };
+}
+
+function createService() {
+  return createOplCloud({
+    store: new MemoryStore(),
+    runtimeProvider: {
+      name: "test-provider",
+      async createWorkspaceRuntime(input) {
+        return runtimeFixture(input);
+      }
+    },
+    pricing: TEST_PRICING
+  });
+}
+
+test("Console blocks new Workspace provisioning while billing reconciliation guard is active", async () => {
+  const service = createService();
+  await service.manualTopUp({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
 
   const failedReport = await service.recordBillingReconciliation({
     report: {
@@ -20,10 +51,9 @@ test("Console blocks new resource provisioning while billing reconciliation guar
 
   assert.equal(failedReport.guard.blockNewWorkspaces, true);
   await assert.rejects(
-    service.createComputeResource({
+    service.createWorkspace({
       accountId: "pi-alpha",
-      userId: "usr-alpha",
-      name: "Blocked node",
+      workspaceName: "Blocked Lab",
       packageId: "basic"
     }),
     /billing_reconciliation_guard_blocked:tencent_bill_reconciliation_failed/
@@ -43,9 +73,8 @@ test("Console blocks new resource provisioning while billing reconciliation guar
   });
   assert.equal(okReport.guard.blockNewWorkspaces, false);
 
-  const { workspace } = await provisionWorkspace(service, {
+  const workspace = await service.createWorkspace({
     accountId: "pi-alpha",
-    userId: "usr-alpha",
     workspaceName: "Unblocked Lab",
     packageId: "basic"
   });

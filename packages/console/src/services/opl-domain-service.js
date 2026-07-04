@@ -88,6 +88,10 @@ export class OplDomainService {
     return this.root.assertBillingReconciliationAllowsProvisioning(...args);
   }
 
+  stopRuntimeAfterHoldExhausted(...args) {
+    return this.root.stopRuntimeAfterHoldExhausted(...args);
+  }
+
   recordCreateWorkspaceFailure(...args) {
     return this.root.recordCreateWorkspaceFailure(...args);
   }

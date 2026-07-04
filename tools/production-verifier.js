@@ -187,11 +187,10 @@ function assertComputeShape(checks, compute) {
   addCheck(checks, "compute_created", Boolean(
     compute?.id &&
     compute?.provider === "tencent-tke" &&
-    compute?.providerResourceId?.startsWith("nodepool/") &&
-    compute?.nodePoolId &&
+    compute?.providerResourceId?.startsWith("deployment/") &&
     compute?.status === "running" &&
     compute?.billingStatus === "active" &&
-    compute?.runtime?.nodeSelector?.["oplcloud.cn/compute-id"] === compute.id
+    compute?.image
   ), { computeId: compute?.id });
 }
 
@@ -319,7 +318,7 @@ async function cleanupVerificationResources({ fetchImpl, origin, accountId, comp
       if (checks) {
         addCheck(checks, "verification_compute_destroyed", Boolean(
           destroyed?.status === "destroyed" &&
-          destroyed?.billingStatus === "closed"
+          destroyed?.billingStatus === "stopped"
         ));
       }
     } catch (error) {
@@ -340,7 +339,7 @@ async function cleanupVerificationResources({ fetchImpl, origin, accountId, comp
       if (checks) {
         addCheck(checks, "verification_storage_destroyed", Boolean(
           destroyed?.status === "destroyed" &&
-          destroyed?.billingStatus === "closed"
+          destroyed?.billingStatus === "stopped"
         ));
       }
     } catch (error) {
@@ -485,7 +484,7 @@ export async function verifyProductionChain({
     const state = await requestJson({
       fetchImpl,
       origin: normalizedOrigin,
-      path: `/api/state?accountId=${encodeURIComponent(accountId)}`,
+      path: "/api/state",
       auth
     });
     assertLedgerAndUsage(checks, state, { accountId, compute, storage, attachment, workspace, requestUsage });

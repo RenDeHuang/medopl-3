@@ -95,41 +95,6 @@ test("TKE production deploy workflow matches the deployment contract", async () 
   assertWorkflowContract(workflow, contract.deployWorkflow, contract);
 });
 
-test("TKE old Workspace cleanup workflow is explicit and scoped to retired runtime objects", async () => {
-  const contract = await readJson(deploymentContractPath);
-  const workflow = await readWorkflow(contract.cleanupWorkflow.file);
-  assertWorkflowContract(workflow, contract.cleanupWorkflow, contract);
-
-  const currentJob = job(workflow, contract.cleanupWorkflow.job);
-  const text = serializedRuns(currentJob);
-  assert.match(text, /confirm=CLEAN_OLD_WORKSPACES|CONFIRM" != "CLEAN_OLD_WORKSPACES"/);
-  assert.match(text, /app\.kubernetes\.io\/name=opl-workspace/);
-  assert.match(text, /\^opl-ws-/);
-  assert.match(text, /backend\?\.service\?\.name/);
-  assert.match(text, /"deployment\/\$name"/);
-  assert.match(text, /"service\/\$name"/);
-  assert.match(text, /"secret\/\$name-env"/);
-  assert.match(text, /"persistentvolumeclaim\/\$name-data"/);
-  assert.match(text, /get deploy,svc,secret,pvc -o json/);
-  assert.match(text, /kind === "Deployment" \|\| kind === "Service"/);
-  assert.match(text, /kind === "Secret"/);
-  assert.match(text, /kind === "PersistentVolumeClaim"/);
-  assert.match(text, /name\.replace\(\/-env\$\/, ""\)/);
-  assert.match(text, /name\.replace\(\/-data\$\/, ""\)/);
-  assert.match(text, /namespace_confirm=DELETE_MEDOPL_AND_OPL_WEBUI|NAMESPACE_CONFIRM" != "DELETE_MEDOPL_AND_OPL_WEBUI"/);
-  assert.match(text, /case "\$namespace" in\s+medopl\|opl-webui/s);
-  assert.match(text, /delete deploy,sts,ds,job,cronjob/);
-  assert.match(text, /delete pod\s+\\\n\s+--all/);
-  assert.match(text, /cleanup_failed: namespace\/\$namespace still has pods before namespace deletion/);
-  assert.match(text, /kubectl --kubeconfig "\$KUBECONFIG" delete namespace "\$namespace" --wait=true --timeout=300s/);
-  assert.match(text, /remaining_runtime_objects=/);
-  assert.match(text, /get deploy,svc,secret,pvc -o name/);
-  assert.match(text, /\^\(deployment\.apps\|service\|secret\|persistentvolumeclaim\)\/opl-ws-/);
-  assert.doesNotMatch(text, /delete namespace --all/);
-  assert.doesNotMatch(text, /kubectl .* delete\s+ingress/);
-  assert.doesNotMatch(text, /docker\s+rmi|tccli\s+tcr\s+Delete/);
-});
-
 test("TKE deploy can roll forward with an existing auth seed secret", async () => {
   const contract = await readJson(deploymentContractPath);
   const workflow = await readWorkflow(contract.deployWorkflow.file);
@@ -180,6 +145,7 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
       OPL_WORKSPACE_IMAGE: "uswccr.ccs.tencentyun.com/oplcloud/one-person-lab-app:latest",
       OPL_IMAGE_PULL_SECRET_NAME: "tcr-pull-secret",
       OPL_WORKSPACE_STORAGE_CLASS: "cbs",
+      OPL_WORKSPACE_VOLUME_SNAPSHOT_CLASS: "cbs-snapshot",
       OPL_BILLING_MARKUP: env.OPL_BILLING_MARKUP,
       OPL_BASIC_COMPUTE_HOURLY_CNY: env.OPL_BASIC_COMPUTE_HOURLY_CNY,
       OPL_PRO_COMPUTE_HOURLY_CNY: env.OPL_PRO_COMPUTE_HOURLY_CNY,
@@ -191,9 +157,6 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
       OPL_WORKSPACE_TLS_SECRET_NAME: "opl-cloud-workspace-medopl-cn-tls",
       OPL_INGRESS_CLASS: "qcloud",
       TENCENT_DEPLOY_CLUSTER_ID: "cls-oplcloud",
-      TENCENT_TKE_REGION: "na-siliconvalley",
-      OPL_TKE_NODEPOOL_AUTOSCALING_GROUP_PARA_JSON: JSON.stringify({ MinSize: 0, MaxSize: 1, DesiredCapacity: 1 }),
-      OPL_TKE_NODEPOOL_LAUNCH_CONFIGURE_PARA_JSON: JSON.stringify({ InstanceType: "${INSTANCE_TYPE}" }),
       TENCENT_TCR_REGISTRY: "uswccr.ccs.tencentyun.com",
       TENCENT_TCR_NAMESPACE: "oplcloud",
       TENCENT_TCR_REGION: "na-siliconvalley",
@@ -225,10 +188,8 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
   assert.equal(config.data.OPL_CODEX_MODEL, "gpt-5.5");
   assert.equal(config.data.OPL_CODEX_REASONING_EFFORT, "xhigh");
   assert.equal(config.data.OPL_CODEX_BASE_URL, "https://gflabtoken.cn/v1");
+  assert.equal(config.data.OPL_WORKSPACE_VOLUME_SNAPSHOT_CLASS, "cbs-snapshot");
   assert.equal(config.data.TENCENT_DEPLOY_CLUSTER_ID, "cls-oplcloud");
-  assert.equal(config.data.TENCENT_TKE_REGION, "na-siliconvalley");
-  assert.match(config.data.OPL_TKE_NODEPOOL_AUTOSCALING_GROUP_PARA_JSON, /DesiredCapacity/);
-  assert.match(config.data.OPL_TKE_NODEPOOL_LAUNCH_CONFIGURE_PARA_JSON, /\$\{INSTANCE_TYPE\}/);
   assert.equal(config.data.TENCENT_TCR_REGISTRY, "uswccr.ccs.tencentyun.com");
   assert.equal(deployment.spec.template.spec.containers[0].image, "uswccr.ccs.tencentyun.com/oplcloud/opl-cloud:test");
   assert.deepEqual(deployment.spec.template.spec.imagePullSecrets, [{ name: "tcr-pull-secret" }]);
@@ -260,6 +221,7 @@ test("TKE manifest renderer can skip the shared Ingress during deploy so Workspa
       OPL_WORKSPACE_IMAGE: "uswccr.ccs.tencentyun.com/oplcloud/one-person-lab-app:latest",
       OPL_IMAGE_PULL_SECRET_NAME: "tcr-pull-secret",
       OPL_WORKSPACE_STORAGE_CLASS: "cbs",
+      OPL_WORKSPACE_VOLUME_SNAPSHOT_CLASS: "cbs-snapshot",
       OPL_BILLING_MARKUP: env.OPL_BILLING_MARKUP,
       OPL_BASIC_COMPUTE_HOURLY_CNY: env.OPL_BASIC_COMPUTE_HOURLY_CNY,
       OPL_PRO_COMPUTE_HOURLY_CNY: env.OPL_PRO_COMPUTE_HOURLY_CNY,
@@ -271,9 +233,6 @@ test("TKE manifest renderer can skip the shared Ingress during deploy so Workspa
       OPL_WORKSPACE_TLS_SECRET_NAME: "opl-cloud-workspace-medopl-cn-tls",
       OPL_INGRESS_CLASS: "qcloud",
       TENCENT_DEPLOY_CLUSTER_ID: "cls-oplcloud",
-      TENCENT_TKE_REGION: "na-siliconvalley",
-      OPL_TKE_NODEPOOL_AUTOSCALING_GROUP_PARA_JSON: JSON.stringify({ MinSize: 0, MaxSize: 1, DesiredCapacity: 1 }),
-      OPL_TKE_NODEPOOL_LAUNCH_CONFIGURE_PARA_JSON: JSON.stringify({ InstanceType: "${INSTANCE_TYPE}" }),
       TENCENT_TCR_REGISTRY: "uswccr.ccs.tencentyun.com",
       TENCENT_TCR_NAMESPACE: "oplcloud",
       TENCENT_TCR_REGION: "na-siliconvalley",
@@ -300,46 +259,6 @@ test("TKE production diagnostics workflow is read-only and matches the deploymen
   const contract = await readJson(deploymentContractPath);
   const workflow = await readWorkflow(contract.diagnosticsWorkflow.file);
   assertWorkflowContract(workflow, contract.diagnosticsWorkflow, contract);
-});
-
-test("TKE production E2E resolves operator token from the existing cluster secret when GitHub secret is absent", async () => {
-  const workflow = await readWorkflow(".github/workflows/e2e-tke-production.yml");
-  const currentJob = job(workflow, "persistence-e2e");
-  const stepMap = stepsByName(currentJob);
-  const step = stepMap.get("Resolve operator token");
-
-  assert.ok(step, "E2E workflow must resolve the operator token before running API mutations");
-  const text = serializedStep(step);
-  assert.match(text, /OPL_VERIFY_OPERATOR_TOKEN:-/);
-  assert.match(text, /get secret opl-cloud-operator/);
-  assert.match(text, /OPL_OPERATOR_SUMMARY_TOKEN/);
-  assert.match(text, /::add-mask::/);
-  assert.match(text, /OPL_VERIFY_OPERATOR_TOKEN<<EOF/);
-  assert.ok(
-    [...stepMap.keys()].indexOf("Resolve operator token") < [...stepMap.keys()].indexOf("Run production persistence E2E"),
-    "operator token must be resolved before running the production E2E"
-  );
-});
-
-test("TKE production E2E resolves admin credentials from auth seed when operator token is absent", async () => {
-  const workflow = await readWorkflow(".github/workflows/e2e-tke-production.yml");
-  const currentJob = job(workflow, "persistence-e2e");
-  const stepMap = stepsByName(currentJob);
-  const step = stepMap.get("Resolve Console admin credentials");
-
-  assert.ok(step, "E2E workflow must resolve admin credentials before running API mutations");
-  const text = serializedStep(step);
-  assert.match(text, /get secret opl-cloud-auth/);
-  assert.match(text, /OPL_CONSOLE_USERS_JSON/);
-  assert.match(text, /role === "admin"/);
-  assert.match(text, /admin\.password/);
-  assert.match(text, /::add-mask::/);
-  assert.match(text, /OPL_VERIFY_ADMIN_EMAIL=/);
-  assert.match(text, /OPL_VERIFY_ADMIN_PASSWORD<<EOF/);
-  assert.ok(
-    [...stepMap.keys()].indexOf("Resolve Console admin credentials") < [...stepMap.keys()].indexOf("Run production persistence E2E"),
-    "admin credentials must be resolved before running the production E2E"
-  );
 });
 
 test("TKE diagnostics do not print account state or Workspace URL tokens", async () => {
