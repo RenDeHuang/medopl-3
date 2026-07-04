@@ -294,6 +294,7 @@ test("Tencent TKE provider provisions node pool compute, PVC storage, runtime at
       "oplcloud.cn/account-id",
       "oplcloud.cn/runtime"
     ]);
+    assert.equal("DesiredPodNumber" in createInput.InstanceAdvancedSettings, false);
     for (const call of calls.filter((item) => item.command === "tccli")) {
       assert.equal(call.env.HOME, "/tmp/opl-cloud-cli");
       assert.equal(call.env.XDG_CACHE_HOME, "/tmp/opl-cloud-cli/.cache");

@@ -531,17 +531,20 @@ export class TencentTkeProvider {
     autoscalingGroup.MinSize ??= 0;
     launchConfigure.InstanceChargeType ??= this.env.OPL_TKE_INSTANCE_CHARGE_TYPE || "POSTPAID_BY_HOUR";
     const labels = nodePoolLabels({ computeId, accountId });
+    const instanceAdvancedSettings = {
+      Labels: labels,
+      DataDisks: nodePoolDataDisks({ compute, packagePlan }),
+      Unschedulable: 0,
+      ExtraArgs: { Kubelet: [] }
+    };
+    if (this.env.OPL_TKE_NODEPOOL_DESIRED_POD_NUMBER) {
+      instanceAdvancedSettings.DesiredPodNumber = Number(this.env.OPL_TKE_NODEPOOL_DESIRED_POD_NUMBER);
+    }
     return {
       ClusterId: this.env.TENCENT_DEPLOY_CLUSTER_ID,
       AutoScalingGroupPara: JSON.stringify(autoscalingGroup),
       LaunchConfigurePara: JSON.stringify(launchConfigure),
-      InstanceAdvancedSettings: {
-        DesiredPodNumber: Number(this.env.OPL_TKE_NODEPOOL_DESIRED_POD_NUMBER || 64),
-        Labels: labels,
-        DataDisks: nodePoolDataDisks({ compute, packagePlan }),
-        Unschedulable: 0,
-        ExtraArgs: { Kubelet: [] }
-      },
+      InstanceAdvancedSettings: instanceAdvancedSettings,
       EnableAutoscale: true,
       Name: name,
       Labels: labels,
