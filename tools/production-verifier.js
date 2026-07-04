@@ -342,26 +342,76 @@ function assertRequestUsage(checks, usage, workspace) {
   ), { usageId: usage?.id });
 }
 
+function assertResourceBillingSettlement(checks, settlement, { accountId, compute, storage }) {
+  const entries = settlement?.entries || [];
+  const hasComputeDebit = entries.some((entry) =>
+    entry.accountId === accountId &&
+    entry.computeAllocationId === compute?.id &&
+    entry.type === "compute_debit"
+  );
+  const hasStorageDebit = entries.some((entry) =>
+    entry.accountId === accountId &&
+    entry.storageId === storage?.id &&
+    entry.type === "storage_debit"
+  );
+
+  addCheck(checks, "resource_billing_settled", Boolean(hasComputeDebit && hasStorageDebit), {
+    entryTypes: entries.map((entry) => entry.type)
+  });
+}
+
 function assertLedgerAndUsage(checks, state, { accountId, compute, storage, attachment, workspace, requestUsage }) {
   const ledger = state?.billingLedger || [];
   const resourceUsage = state?.resourceUsageLogs || [];
   const requestUsageLogs = state?.requestUsageLogs || [];
+  const walletTransactions = state?.walletTransactions || [];
 
-  const hasComputeLedger = ledger.some((entry) => entry.accountId === accountId && entry.computeAllocationId === compute?.id);
-  const hasStorageLedger = ledger.some((entry) => entry.accountId === accountId && entry.storageId === storage?.id);
+  const hasComputeLedger = ledger.some((entry) =>
+    entry.accountId === accountId &&
+    entry.computeAllocationId === compute?.id &&
+    entry.type === "compute_debit"
+  );
+  const hasStorageLedger = ledger.some((entry) =>
+    entry.accountId === accountId &&
+    entry.storageId === storage?.id &&
+    entry.type === "storage_debit"
+  );
   const hasAttachmentLedger = ledger.some((entry) => entry.accountId === accountId && entry.attachmentId === attachment?.id);
   const hasRequestLedger = ledger.some((entry) =>
     entry.accountId === accountId &&
     entry.workspaceId === workspace?.id &&
     entry.type === "request_debit"
   );
-  const hasComputeUsage = resourceUsage.some((entry) => entry.accountId === accountId && entry.computeAllocationId === compute?.id);
-  const hasStorageUsage = resourceUsage.some((entry) => entry.accountId === accountId && entry.storageId === storage?.id);
+  const hasComputeUsage = resourceUsage.some((entry) =>
+    entry.accountId === accountId &&
+    entry.computeAllocationId === compute?.id &&
+    entry.type === "compute_debit"
+  );
+  const hasStorageUsage = resourceUsage.some((entry) =>
+    entry.accountId === accountId &&
+    entry.storageId === storage?.id &&
+    entry.type === "storage_debit"
+  );
   const hasAttachmentUsage = resourceUsage.some((entry) => entry.accountId === accountId && entry.attachmentId === attachment?.id);
   const hasRequestUsage = requestUsageLogs.some((entry) =>
     entry.accountId === accountId &&
     entry.workspaceId === workspace?.id &&
     (entry.id === requestUsage?.id || entry.requestId === requestUsage?.requestId)
+  );
+  const hasComputeWalletTransaction = walletTransactions.some((entry) =>
+    entry.accountId === accountId &&
+    entry.resourceId === compute?.id &&
+    entry.type === "compute_debit"
+  );
+  const hasStorageWalletTransaction = walletTransactions.some((entry) =>
+    entry.accountId === accountId &&
+    entry.resourceId === storage?.id &&
+    entry.type === "storage_debit"
+  );
+  const hasRequestWalletTransaction = walletTransactions.some((entry) =>
+    entry.accountId === accountId &&
+    entry.workspaceId === workspace?.id &&
+    entry.type === "request_debit"
   );
 
   addCheck(checks, "ledger_and_usage_verified", Boolean(
@@ -373,7 +423,10 @@ function assertLedgerAndUsage(checks, state, { accountId, compute, storage, atta
     hasComputeUsage &&
     hasStorageUsage &&
     hasAttachmentUsage &&
-    hasRequestUsage
+    hasRequestUsage &&
+    hasComputeWalletTransaction &&
+    hasStorageWalletTransaction &&
+    hasRequestWalletTransaction
   ));
 }
 
@@ -668,6 +721,24 @@ export async function verifyProductionChain({
     });
     assertRequestUsage(checks, requestUsage, workspace);
 
+    const resourceSettlement = await requestJson({
+      fetchImpl,
+      origin: normalizedOrigin,
+      path: "/api/billing/resource-settlements",
+      method: "POST",
+      auth,
+      body: {
+        accountId,
+        hours: 1,
+        sourceEventId: `production_verification_resource_settlement:${runId}`
+      }
+    });
+    assertResourceBillingSettlement(checks, resourceSettlement, {
+      accountId,
+      compute: replacementCompute,
+      storage
+    });
+
     const state = await requestJson({
       fetchImpl,
       origin: normalizedOrigin,
@@ -676,7 +747,7 @@ export async function verifyProductionChain({
     });
     assertLedgerAndUsage(checks, state, {
       accountId,
-      compute: firstComputeForLedger || compute,
+      compute: replacementCompute,
       storage,
       attachment: firstAttachmentForLedger || attachment,
       workspace,
