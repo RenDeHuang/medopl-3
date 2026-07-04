@@ -226,7 +226,7 @@
       "label": "计算资源池",
       "area": "console",
       "role": "admin",
-      "menu": true,
+      "hiddenInMenu": true,
       "featureFlag": "workspaces",
       "routeKind": "read_model",
       "objectKind": "ComputePool",
@@ -237,8 +237,7 @@
       ],
       "serviceBoundary": "ComputePoolCatalogService",
       "requiresAdmin": true,
-      "requiresAuth": true,
-      "hiddenInMenu": true
+      "requiresAuth": true
     },
     {
       "status": "implemented",
@@ -294,15 +293,15 @@
         "POST /api/compute-allocations"
       ],
       "serviceBoundary": "ComputeAllocationService",
-      "requiresAdmin": false,
-      "requiresAuth": true,
       "operationProtocol": {
         "mutation": true,
         "confirmation": "normal",
         "costImpact": "required",
         "operationTimeline": true,
         "failureVisible": true
-      }
+      },
+      "requiresAdmin": false,
+      "requiresAuth": true
     },
     {
       "status": "implemented",
@@ -330,15 +329,15 @@
         "POST /api/compute-allocations/:id/destroy"
       ],
       "serviceBoundary": "ComputeAllocationService",
-      "requiresAdmin": false,
-      "requiresAuth": true,
       "operationProtocol": {
         "mutation": true,
         "confirmation": "normal",
         "destructive": true,
         "operationTimeline": true,
         "failureVisible": true
-      }
+      },
+      "requiresAdmin": false,
+      "requiresAuth": true
     },
     {
       "status": "implemented",
@@ -394,15 +393,15 @@
         "POST /api/storage-volumes"
       ],
       "serviceBoundary": "ResourceProvisioningService",
-      "requiresAdmin": false,
-      "requiresAuth": true,
       "operationProtocol": {
         "mutation": true,
         "confirmation": "normal",
         "costImpact": "required",
         "operationTimeline": true,
         "failureVisible": true
-      }
+      },
+      "requiresAdmin": false,
+      "requiresAuth": true
     },
     {
       "status": "implemented",
@@ -430,8 +429,6 @@
         "POST /api/storage-volumes/destroy"
       ],
       "serviceBoundary": "ResourceProvisioningService",
-      "requiresAdmin": false,
-      "requiresAuth": true,
       "operationProtocol": {
         "mutation": true,
         "confirmation": "strong",
@@ -440,7 +437,9 @@
         "confirmText": "确认删除数据",
         "operationTimeline": true,
         "failureVisible": true
-      }
+      },
+      "requiresAdmin": false,
+      "requiresAuth": true
     },
     {
       "status": "implemented",
@@ -496,19 +495,14 @@
         "POST /api/storage-attachments"
       ],
       "serviceBoundary": "ResourceProvisioningService",
-      "requiresAdmin": false,
-      "requiresAuth": true,
-      "inputContract": [
-        "computeAllocationId",
-        "storageVolumeId",
-        "mountPath"
-      ],
       "operationProtocol": {
         "mutation": true,
         "confirmation": "normal",
         "operationTimeline": true,
         "failureVisible": true
-      }
+      },
+      "requiresAdmin": false,
+      "requiresAuth": true
     },
     {
       "status": "implemented",
@@ -536,18 +530,42 @@
         "POST /api/storage-attachments/detach"
       ],
       "serviceBoundary": "ResourceProvisioningService",
-      "requiresAdmin": false,
-      "requiresAuth": true,
-      "inputContract": [
-        "storageAttachmentId"
-      ],
       "operationProtocol": {
         "mutation": true,
         "confirmation": "normal",
         "destructive": true,
         "operationTimeline": true,
         "failureVisible": true
-      }
+      },
+      "requiresAdmin": false,
+      "requiresAuth": true
+    },
+    {
+      "status": "implemented",
+      "contractLifecycle": "current",
+      "ownerRepo": "opl-console",
+      "capabilities": [
+        "read",
+        "summary",
+        "evidence"
+      ],
+      "id": "resources.relationships",
+      "path": "/console/resources/relationships",
+      "label": "资源关系",
+      "area": "console",
+      "role": "lab_owner",
+      "menu": true,
+      "featureFlag": "workspaces",
+      "routeKind": "read_model",
+      "objectKind": "ResourceRelationship",
+      "pageModule": "packages/console/ui/pages/resources/ResourceProvisioningPages.jsx",
+      "apiClient": "packages/console/ui/api/console-read-api.js",
+      "apiRoutes": [
+        "GET /api/state"
+      ],
+      "serviceBoundary": "ConsoleReadModelService",
+      "requiresAdmin": false,
+      "requiresAuth": true
     },
     {
       "status": "implemented",
@@ -584,8 +602,7 @@
       "ownerRepo": "opl-console",
       "capabilities": [
         "read",
-        "write",
-        "action"
+        "write"
       ],
       "id": "workspace.create",
       "path": "/console/workspaces/new",
@@ -603,17 +620,14 @@
         "POST /api/workspaces"
       ],
       "serviceBoundary": "WorkspaceEntryService",
-      "requiresAdmin": false,
-      "requiresAuth": true,
-      "inputContract": [
-        "storageAttachmentId"
-      ],
       "operationProtocol": {
         "mutation": true,
         "confirmation": "normal",
         "operationTimeline": true,
         "failureVisible": true
-      }
+      },
+      "requiresAdmin": false,
+      "requiresAuth": true
     },
     {
       "status": "implemented",
@@ -643,15 +657,15 @@
         "POST /api/workspaces/runtime-status"
       ],
       "serviceBoundary": "WorkspaceEntryService",
-      "requiresAdmin": false,
-      "requiresAuth": true,
       "operationProtocol": {
         "mutation": true,
         "confirmation": "normal",
         "destructive": true,
         "operationTimeline": true,
         "failureVisible": true
-      }
+      },
+      "requiresAdmin": false,
+      "requiresAuth": true
     },
     {
       "status": "external",
@@ -933,6 +947,8 @@
       "apiRoutes": [
         "GET /api/management/state",
         "POST /api/users",
+        "POST /api/users/disable",
+        "POST /api/users/delete",
         "POST /api/billing/topups"
       ],
       "serviceBoundary": "ManagementModel",
@@ -1032,6 +1048,64 @@
       "ownerRepo": "opl-console",
       "capabilities": [
         "read",
+        "detail",
+        "audit",
+        "evidence"
+      ],
+      "id": "admin.diagnostics",
+      "path": "/admin/diagnostics",
+      "label": "线上诊断",
+      "area": "admin",
+      "role": "admin",
+      "adminMenu": true,
+      "featureFlag": "runtimeAdmin",
+      "routeKind": "read_model",
+      "objectKind": "RuntimeReadiness",
+      "pageModule": "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
+      "apiClient": "packages/console/ui/api/console-read-api.js",
+      "apiRoutes": [
+        "GET /api/runtime/readiness",
+        "GET /api/production/readiness",
+        "GET /api/operator/summary"
+      ],
+      "serviceBoundary": "RuntimeOperationService",
+      "requiresAdmin": true,
+      "requiresAuth": true
+    },
+    {
+      "status": "implemented",
+      "contractLifecycle": "current",
+      "ownerRepo": "opl-console",
+      "capabilities": [
+        "read",
+        "list",
+        "audit",
+        "evidence"
+      ],
+      "id": "admin.e2e",
+      "path": "/admin/e2e",
+      "label": "E2E记录",
+      "area": "admin",
+      "role": "admin",
+      "adminMenu": true,
+      "featureFlag": "runtimeAdmin",
+      "routeKind": "read_model",
+      "objectKind": "ProductionVerification",
+      "pageModule": "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
+      "apiClient": "packages/console/ui/api/console-read-api.js",
+      "apiRoutes": [
+        "GET /api/operator/summary"
+      ],
+      "serviceBoundary": "RuntimeOperationService",
+      "requiresAdmin": true,
+      "requiresAuth": true
+    },
+    {
+      "status": "implemented",
+      "contractLifecycle": "current",
+      "ownerRepo": "opl-console",
+      "capabilities": [
+        "read",
         "list",
         "action",
         "audit"
@@ -1053,15 +1127,15 @@
         "POST /api/operator/cleanup-workspace-access"
       ],
       "serviceBoundary": "WorkspaceEntryService",
-      "requiresAdmin": true,
-      "requiresAuth": true,
       "operationProtocol": {
         "mutation": true,
         "confirmation": "normal",
         "destructive": true,
         "operationTimeline": true,
         "failureVisible": true
-      }
+      },
+      "requiresAdmin": true,
+      "requiresAuth": true
     },
     {
       "status": "implemented",

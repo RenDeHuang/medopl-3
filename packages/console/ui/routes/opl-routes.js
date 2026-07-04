@@ -154,6 +154,7 @@ export const oplRoutes = Object.freeze([
     label: "计算资源池",
     area: "console",
     role: "admin",
+    ownerRepo: "opl-fabric",
     hiddenInMenu: true,
     featureFlag: "workspaces",
     routeKind: "read_model",
@@ -313,6 +314,22 @@ export const oplRoutes = Object.freeze([
     serviceBoundary: "ResourceProvisioningService",
     capabilities: ["detail", "read", "action", "evidence"],
     operationProtocol: destructiveMutationProtocol
+  }),
+  currentRoute({
+    id: "resources.relationships",
+    path: "/console/resources/relationships",
+    label: "资源关系",
+    area: "console",
+    role: "lab_owner",
+    menu: true,
+    featureFlag: "workspaces",
+    routeKind: "read_model",
+    objectKind: "ResourceRelationship",
+    pageModule: "packages/console/ui/pages/resources/ResourceProvisioningPages.jsx",
+    apiClient: "packages/console/ui/api/console-read-api.js",
+    apiRoutes: ["GET /api/state"],
+    serviceBoundary: "ConsoleReadModelService",
+    capabilities: ["read", "summary", "evidence"]
   }),
   currentRoute({
     id: "workspace.list",
@@ -536,7 +553,7 @@ export const oplRoutes = Object.freeze([
     objectKind: "User",
     pageModule: "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
     apiClient: "packages/console/ui/api/console-read-api.js",
-    apiRoutes: ["GET /api/management/state", "POST /api/users", "POST /api/billing/topups"],
+    apiRoutes: ["GET /api/management/state", "POST /api/users", "POST /api/users/disable", "POST /api/users/delete", "POST /api/billing/topups"],
     serviceBoundary: "ManagementModel",
     capabilities: ["list", "read", "action", "audit"]
   }),
@@ -588,6 +605,38 @@ export const oplRoutes = Object.freeze([
     apiRoutes: ["GET /api/runtime/readiness", "GET /api/production/readiness", "GET /api/operator/summary"],
     serviceBoundary: "RuntimeOperationService",
     capabilities: ["read", "detail", "audit"]
+  }),
+  currentRoute({
+    id: "admin.diagnostics",
+    path: "/admin/diagnostics",
+    label: "线上诊断",
+    area: "admin",
+    role: "admin",
+    adminMenu: true,
+    featureFlag: "runtimeAdmin",
+    routeKind: "read_model",
+    objectKind: "RuntimeReadiness",
+    pageModule: "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
+    apiClient: "packages/console/ui/api/console-read-api.js",
+    apiRoutes: ["GET /api/runtime/readiness", "GET /api/production/readiness", "GET /api/operator/summary"],
+    serviceBoundary: "RuntimeOperationService",
+    capabilities: ["read", "detail", "audit", "evidence"]
+  }),
+  currentRoute({
+    id: "admin.e2e",
+    path: "/admin/e2e",
+    label: "E2E记录",
+    area: "admin",
+    role: "admin",
+    adminMenu: true,
+    featureFlag: "runtimeAdmin",
+    routeKind: "read_model",
+    objectKind: "ProductionVerification",
+    pageModule: "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
+    apiClient: "packages/console/ui/api/console-read-api.js",
+    apiRoutes: ["GET /api/operator/summary"],
+    serviceBoundary: "RuntimeOperationService",
+    capabilities: ["read", "list", "audit", "evidence"]
   }),
   currentRoute({
     id: "admin.cleanup",

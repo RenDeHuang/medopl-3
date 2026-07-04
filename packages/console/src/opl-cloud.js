@@ -73,6 +73,14 @@ export class OplCloudService {
     return this.consoleReadModel.createUser(...args);
   }
 
+  async disableUser(...args) {
+    return this.consoleReadModel.disableUser(...args);
+  }
+
+  async deleteUser(...args) {
+    return this.consoleReadModel.deleteUser(...args);
+  }
+
   async addOrganizationMember(...args) {
     return this.consoleReadModel.addOrganizationMember(...args);
   }

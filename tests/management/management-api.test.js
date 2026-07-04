@@ -36,6 +36,14 @@ test("management API exposes organization, user, membership, and management stat
       calls.push(["createUser", input]);
       return { id: input.userId, email: input.email, name: input.name };
     },
+    async disableUser(input) {
+      calls.push(["disableUser", input]);
+      return { id: input.userId, status: "disabled" };
+    },
+    async deleteUser(input) {
+      calls.push(["deleteUser", input]);
+      return { id: input.userId, status: "deleted" };
+    },
     async addOrganizationMember(input) {
       calls.push(["addOrganizationMember", input]);
       return { id: "membership-1", ...input, status: "active" };
@@ -77,6 +85,20 @@ test("management API exposes organization, user, membership, and management stat
     assert.equal(membership.response.status, 200);
     assert.equal(membership.payload.status, "active");
 
+    const disabled = await postJson(origin, "/api/users/disable", {
+      userId: "usr-ada",
+      reason: "security_review"
+    });
+    assert.equal(disabled.response.status, 200);
+    assert.equal(disabled.payload.status, "disabled");
+
+    const deleted = await postJson(origin, "/api/users/delete", {
+      userId: "usr-ada",
+      reason: "account_closed"
+    });
+    assert.equal(deleted.response.status, 200);
+    assert.equal(deleted.payload.status, "deleted");
+
     const stateResponse = await fetch(`${origin}/api/management/state?organizationId=org-lab`);
     const state = await stateResponse.json();
     assert.equal(stateResponse.status, 200);
@@ -85,6 +107,8 @@ test("management API exposes organization, user, membership, and management stat
       "createOrganization",
       "createUser",
       "addOrganizationMember",
+      "disableUser",
+      "deleteUser",
       "managementState"
     ]);
   } finally {

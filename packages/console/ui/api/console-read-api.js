@@ -27,6 +27,14 @@ export function createUser(input, csrfToken) {
   return postJson("/api/users", input, csrfToken);
 }
 
+export function disableUser(input, csrfToken) {
+  return postJson("/api/users/disable", input, csrfToken);
+}
+
+export function deleteUser(input, csrfToken) {
+  return postJson("/api/users/delete", input, csrfToken);
+}
+
 export function cleanupWorkspaceAccess(input, csrfToken) {
   return postJson("/api/operator/cleanup-workspace-access", input, csrfToken);
 }

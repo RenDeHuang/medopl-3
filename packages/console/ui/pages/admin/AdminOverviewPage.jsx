@@ -2,14 +2,17 @@ import React from "react";
 import { Alert, Button, Drawer, Form, Input, InputNumber, Select, Typography } from "antd";
 import { Plus } from "lucide-react";
 import { manualTopUp } from "../../api/billing-api.js";
-import { cleanupWorkspaceAccess, createUser } from "../../api/console-read-api.js";
+import { cleanupWorkspaceAccess, createUser, deleteUser, disableUser } from "../../api/console-read-api.js";
 import {
   ActionGroup,
   CleanupResourceTable,
   ConsoleSurface,
+  DataRetentionPolicyPanel,
   InsightPanel,
   MetricStrip,
   ObjectTable,
+  OperationConfirmButton,
+  ProductionE2EPanel,
   ResourceSplit,
   StatusPill,
   TimelineList
@@ -69,6 +72,7 @@ export function AdminUsersPage({ managementState, topUpOpen, setTopUpOpen, topUp
       totalRecharged: account.totalRecharged ?? user.totalRecharged ?? 0
     };
   });
+  const activeUsers = users.filter((user) => !["disabled", "deleted"].includes(user.status)).length;
   return (
     <ConsoleSurface
       title="用户"
@@ -77,6 +81,14 @@ export function AdminUsersPage({ managementState, topUpOpen, setTopUpOpen, topUp
       extra={<Button type="primary" icon={<Plus size={15} />} onClick={() => setCreateOpen(true)}>新建用户</Button>}
     >
       <InsightPanel title="用户钱包" eyebrow="管理">
+        <MetricStrip
+          items={[
+            { label: "用户", value: users.length, caption: "登录用户", tone: users.length ? "info" : "neutral" },
+            { label: "可登录", value: activeUsers, caption: "未禁用/删除", tone: activeUsers ? "good" : "warn" },
+            { label: "禁用", value: users.filter((user) => user.status === "disabled").length, caption: "不可登录", tone: "warn" },
+            { label: "删除", value: users.filter((user) => user.status === "deleted").length, caption: "资源和账单保留", tone: "danger" }
+          ]}
+        />
         <ObjectTable
           rowKey="id"
           data={users}
@@ -87,7 +99,7 @@ export function AdminUsersPage({ managementState, topUpOpen, setTopUpOpen, topUp
             { title: "账号", dataIndex: "accountId", render: (value) => <Typography.Text className="inlineCode">{value}</Typography.Text> },
             { title: "余额", dataIndex: "balance", render: (value) => money(value) },
             { title: "冻结", dataIndex: "frozen", render: (value) => money(value) },
-            { title: "状态", dataIndex: "status", render: (value) => <StatusPill label={value} tone="good" /> },
+            { title: "状态", dataIndex: "status", render: (value) => <StatusPill label={value} tone={value === "active" ? "good" : value === "deleted" ? "danger" : "warn"} /> },
             {
               title: "操作",
               valueType: "option",
@@ -96,7 +108,30 @@ export function AdminUsersPage({ managementState, topUpOpen, setTopUpOpen, topUp
                   { label: "充值", type: "primary", onClick: () => {
                     topUpForm.setFieldsValue({ accountId: row.accountId, amount: 200, reason: "commercial top-up" });
                     setTopUpOpen(true);
-                  } }
+                  } },
+                  <OperationConfirmButton
+                    key="disable"
+                    label="禁用"
+                    title="确认禁用用户"
+                    description="禁用后该用户不能登录；资源、账单、工作区入口保留。"
+                    disabled={row.status !== "active"}
+                    onConfirm={() => runAction(
+                      () => disableUser({ userId: row.id, reason: "admin_disabled" }, session.csrfToken),
+                      "用户已禁用"
+                    )}
+                  />,
+                  <OperationConfirmButton
+                    key="delete"
+                    label="删除"
+                    title="确认删除登录用户"
+                    description="删除后用户不能登录；资源和账单保留，便于审计和后续清理。"
+                    danger
+                    disabled={row.status === "deleted"}
+                    onConfirm={() => runAction(
+                      () => deleteUser({ userId: row.id, reason: "admin_deleted" }, session.csrfToken),
+                      "用户已删除"
+                    )}
+                  />
                 ]} />
               )
             }
@@ -272,6 +307,61 @@ export function AdminRuntimePage({ adminOps }) {
           />
         </InsightPanel>
       </div>
+    </ConsoleSurface>
+  );
+}
+
+export function AdminDiagnosticsPage({ adminOps }) {
+  const failedOperations = adminOps.operator?.failedOperations || adminOps.operator?.runtimeOperations?.recentFailed || [];
+  const resourceAnomalies = adminOps.operator?.resourceAnomalies || [];
+  return (
+    <ConsoleSurface title="线上诊断" eyebrow="管理" subtitle="只读检查、失败操作、资源异常">
+      {adminOps.error && <Alert type="error" showIcon message={adminOps.error} />}
+      <div className="consoleGrid equal">
+        <InsightPanel title="生产门禁" eyebrow="只读">
+          <ResourceSplit
+            items={[
+              { label: "运行就绪", value: adminOps.runtime?.ready ? "就绪" : "阻塞", meta: "runtime readiness", status: adminOps.runtime?.ready ? "通过" : "检查", tone: adminOps.runtime?.ready ? "good" : "warn" },
+              { label: "上线就绪", value: adminOps.launch?.ready ? "就绪" : "阻塞", meta: "production readiness", status: adminOps.launch?.ready ? "通过" : "检查", tone: adminOps.launch?.ready ? "good" : "warn" },
+              { label: "失败操作", value: failedOperations.length, meta: "failedOperations", status: failedOperations.length ? "待处理" : "清空", tone: failedOperations.length ? "danger" : "good" },
+              { label: "资源异常", value: resourceAnomalies.length, meta: "resourceAnomalies", status: resourceAnomalies.length ? "待处理" : "清空", tone: resourceAnomalies.length ? "danger" : "good" }
+            ]}
+          />
+        </InsightPanel>
+        <InsightPanel title="失败操作" eyebrow="操作">
+          <TimelineList
+            emptyText="暂无失败操作"
+            items={failedOperations.map((operation) => ({
+              title: operation.operationType || operation.id,
+              description: operation.accountId || operation.workspaceId || operation.resourceId,
+              meta: operation.status || operation.updatedAt,
+              tone: "danger"
+            }))}
+          />
+        </InsightPanel>
+      </div>
+      <InsightPanel title="资源异常" eyebrow="资源">
+        <ObjectTable
+          rowKey={(row) => `${row.type}-${row.workspaceId}-${row.status}`}
+          data={resourceAnomalies}
+          emptyText="暂无资源异常"
+          columns={[
+            { title: "类型", dataIndex: "type" },
+            { title: "账号", dataIndex: "accountId", ellipsis: true },
+            { title: "工作区", dataIndex: "workspaceId", ellipsis: true },
+            { title: "状态", dataIndex: "status", render: (value) => <StatusPill label={value} tone="danger" /> }
+          ]}
+        />
+      </InsightPanel>
+    </ConsoleSurface>
+  );
+}
+
+export function AdminE2EPage({ adminOps }) {
+  return (
+    <ConsoleSurface title="E2E记录" eyebrow="管理" subtitle="真实上线验证摘要">
+      <ProductionE2EPanel summary={adminOps.operator?.productionE2E || {}} />
+      <DataRetentionPolicyPanel />
     </ConsoleSurface>
   );
 }

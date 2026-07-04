@@ -43,6 +43,14 @@ export function buildAdminRoutes({ appService, request, operatorSummaryToken, re
       requireAdmin();
       return appService.createUser(body);
     },
+    "POST /api/users/disable": () => {
+      requireAdmin();
+      return appService.disableUser(body);
+    },
+    "POST /api/users/delete": () => {
+      requireAdmin();
+      return appService.deleteUser(body);
+    },
     "POST /api/organizations/members": () => {
       requireAdmin();
       return appService.addOrganizationMember(body);

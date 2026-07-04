@@ -17,12 +17,15 @@ import {
   InsightPanel,
   MetricStrip,
   ObjectTable,
+  DataRetentionPolicyPanel,
   OperationConfirmButton,
   OperationResultPanel,
   OperationTimeline,
   PriceImpactPanel,
+  ResourceRelationshipGraph,
   ResourceSplit,
-  StatusPill
+  StatusPill,
+  WalletRiskPanel
 } from "../shared/commercial-console.jsx";
 import { available, money } from "../shared/formatters.js";
 
@@ -61,6 +64,18 @@ function storageHoldAmount(plan, sizeGb) {
 
 function balanceAfterHold(wallet, holdAmount) {
   return Math.max(0, available(wallet) - Number(holdAmount || 0));
+}
+
+function supportContextPath(resource = {}, resourceType = "resource") {
+  const params = new URLSearchParams();
+  params.set("category", "Workspace");
+  params.set("priority", resource.safeMessage || resource.status === "failed" ? "high" : "normal");
+  params.set("resourceType", resourceType);
+  if (resource.id) params.set("resourceId", resource.id);
+  if (resource.operationId) params.set("operationId", resource.operationId);
+  if (resource.providerRequestId) params.set("providerRequestId", resource.providerRequestId);
+  if (resource.safeMessage) params.set("failureReason", resource.safeMessage);
+  return `${routeTo("support.create")}?${params.toString()}`;
 }
 
 function useOperationFeedback() {
@@ -110,6 +125,31 @@ export function ComputeAllocationsPage({ state }) {
           ]}
         />
       </InsightPanel>
+    </ConsoleSurface>
+  );
+}
+
+export function ResourceRelationshipPage({ state }) {
+  return (
+    <ConsoleSurface
+      title="资源关系"
+      eyebrow="资源"
+      subtitle="账号、计算、存储、挂载、工作区入口"
+      extra={<Button type="primary" icon={<Plus size={15} />} onClick={() => navigate(routeTo("workspace.create"))}>创建工作区入口</Button>}
+    >
+      <ResourceRelationshipGraph state={state} />
+      <div className="consoleGrid equal">
+        <DataRetentionPolicyPanel />
+        <InsightPanel title="下一步" eyebrow="闭环">
+          <ResourceSplit
+            items={[
+              { label: "没有计算", value: "开通计算", meta: "选择规格后创建独占资源", status: "下一步", tone: "info" },
+              { label: "只有存储", value: "数据保留", meta: "开通计算后再挂载", status: "安全", tone: "good" },
+              { label: "已挂载", value: "创建入口", meta: "生成可分发 URL", status: "交付", tone: "info" }
+            ]}
+          />
+        </InsightPanel>
+      </div>
     </ConsoleSurface>
   );
 }
@@ -165,6 +205,7 @@ export function CreateComputeAllocationPage({ state, session, runAction }) {
               { label: "冻结后可用", value: money(balanceAfterHold(state.wallet, selectedComputeHold)), meta: "可用余额", status: "余额", tone: balanceAfterHold(state.wallet, selectedComputeHold) > 0 ? "good" : "warn" }
             ]}
           />
+          <WalletRiskPanel wallet={state.wallet} requiredHold={selectedComputeHold} resourceLabel="计算资源" />
           <OperationResultPanel pending={operationPending} result={operationResult} />
           <Form.Item>
             <OperationConfirmButton
@@ -227,10 +268,11 @@ export function ComputeAllocationDetailPage({ state, path, session, runAction })
         <InsightPanel title="失败处理" eyebrow="恢复">
           <FailureRecoveryPanel
             resource={resource}
-            supportAction={() => navigate(routeTo("support.create"))}
+            supportAction={() => navigate(supportContextPath(resource, "compute"))}
           />
         </InsightPanel>
       </div>
+      <DataRetentionPolicyPanel />
     </ConsoleSurface>
   );
 }
@@ -307,6 +349,7 @@ export function CreateStorageVolumePage({ state, session, runAction }) {
               { label: "冻结后可用", value: money(balanceAfterHold(state.wallet, selectedStorageHold)), meta: "可用余额", status: "余额", tone: balanceAfterHold(state.wallet, selectedStorageHold) > 0 ? "good" : "warn" }
             ]}
           />
+          <WalletRiskPanel wallet={state.wallet} requiredHold={selectedStorageHold} resourceLabel="存储资源" />
           <ResourceSplit items={[{ label: "数据目录", value: "/data", meta: "用户文件保存位置", status: "可挂载", tone: "info" }]} />
           <OperationResultPanel pending={operationPending} result={operationResult} />
           <Form.Item>
@@ -372,10 +415,11 @@ export function StorageVolumeDetailPage({ state, path, session, runAction }) {
         <InsightPanel title="失败处理" eyebrow="恢复">
           <FailureRecoveryPanel
             resource={resource}
-            supportAction={() => navigate(routeTo("support.create"))}
+            supportAction={() => navigate(supportContextPath(resource, "storage"))}
           />
         </InsightPanel>
       </div>
+      <DataRetentionPolicyPanel />
     </ConsoleSurface>
   );
 }

@@ -507,6 +507,63 @@ button.primary {
   word-break: break-word;
 }
 
+.relationshipGraph {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr) auto minmax(120px, 1fr) auto minmax(120px, 1fr) auto minmax(120px, 1fr);
+  gap: 10px;
+  align-items: stretch;
+}
+
+.relationshipNode {
+  min-height: 82px;
+  border: 1px solid #dce4ef;
+  border-radius: 8px;
+  background: #fff;
+  padding: 13px;
+}
+
+.relationshipNode span {
+  display: block;
+  color: #5c687a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.relationshipNode strong {
+  display: block;
+  margin-top: 10px;
+  color: #111827;
+  font-size: 18px;
+}
+
+.relationshipNode.good {
+  border-color: #bbefd0;
+  background: #f2fbf6;
+}
+
+.relationshipNode.warn {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.relationshipNode.danger {
+  border-color: #fecaca;
+  background: #fff5f5;
+}
+
+.relationshipNode.info {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+}
+
+.relationshipArrow {
+  display: grid;
+  min-width: 18px;
+  place-items: center;
+  color: #758195;
+  font-weight: 800;
+}
+
 .statusPill {
   margin-inline-end: 0;
   border-radius: 999px;
@@ -586,6 +643,17 @@ button.primary {
   height: 10px;
   border-radius: 999px;
   background: #edf1f7;
+}
+
+@media (max-width: 980px) {
+  .relationshipGraph {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .relationshipArrow {
+    min-height: 16px;
+    transform: rotate(90deg);
+  }
 }
 
 .walletBar span {

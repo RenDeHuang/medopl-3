@@ -53,10 +53,30 @@ export function SupportPage({ tickets }) {
 
 export function NewSupportTicketPage({ state, tickets }) {
   const [form] = Form.useForm();
+  const query = new URLSearchParams(window.location.search);
+  const resourceId = query.get("resourceId") || "";
+  const operationId = query.get("operationId") || "";
+  const failureReason = query.get("failureReason") || "";
+  const resourceType = query.get("resourceType") || "";
+  const initialDescription = [
+    failureReason,
+    operationId ? `操作编号：${operationId}` : "",
+    resourceId ? `资源编号：${resourceId}` : "",
+    resourceType ? `资源类型：${resourceType}` : ""
+  ].filter(Boolean).join("\n");
   return (
     <ConsoleSurface title="新建工单" eyebrow="支持" subtitle="账号、账单、工作区入口" compact>
       <InsightPanel title="提交工单" eyebrow="工单">
-        <Form form={form} layout="vertical" onFinish={async (values) => {
+        <Form
+          form={form}
+          layout="vertical"
+          initialValues={{
+            title: failureReason ? "资源操作失败" : "",
+            category: query.get("category") || "Workspace",
+            priority: query.get("priority") || "normal",
+            description: initialDescription
+          }}
+          onFinish={async (values) => {
           const ticket = await tickets.createTicket(values);
           message.success("工单已提交");
           navigate(routeTo("support.detail", { id: ticket.id }));
@@ -64,7 +84,7 @@ export function NewSupportTicketPage({ state, tickets }) {
           <Form.Item name="title" label="标题" rules={[{ required: true }]}>
             <Input placeholder="工作区入口无法打开" />
           </Form.Item>
-          <Form.Item name="category" label="分类" initialValue="Workspace">
+          <Form.Item name="category" label="分类">
             <Select options={[
               { label: "工作区", value: "Workspace" },
               { label: "账单", value: "Billing" },
@@ -72,7 +92,7 @@ export function NewSupportTicketPage({ state, tickets }) {
               { label: "账号", value: "Account" }
             ]} />
           </Form.Item>
-          <Form.Item name="priority" label="优先级" initialValue="normal">
+          <Form.Item name="priority" label="优先级">
             <Select options={[
               { label: "普通", value: "normal" },
               { label: "高", value: "high" }

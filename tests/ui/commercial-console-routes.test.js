@@ -42,6 +42,7 @@ test("commercial Console route contract covers current public, auth, owner, and 
     ["attachment.list", "implemented"],
     ["attachment.create", "implemented"],
     ["attachment.detail", "implemented"],
+    ["resources.relationships", "implemented"],
     ["workspace.list", "implemented"],
     ["workspace.create", "implemented"],
     ["workspace.detail", "implemented"],
@@ -58,6 +59,9 @@ test("commercial Console route contract covers current public, auth, owner, and 
     ["admin.billing", "implemented"],
     ["admin.ledger", "implemented"],
     ["admin.runtime", "implemented"],
+    ["admin.diagnostics", "implemented"],
+    ["admin.e2e", "implemented"],
+    ["admin.cleanup", "implemented"],
     ["admin.support", "implemented"]
   ]) {
     assert.equal(byId.get(id)?.status, status, `${id} must have current commercial route status ${status}`);
@@ -73,6 +77,7 @@ test("Lab Owner menu is commercial and excludes operator surfaces", () => {
     "计算资源",
     "存储资源",
     "挂载关系",
+    "资源关系",
     "工作区入口",
     "网关",
     "账单",
@@ -98,6 +103,8 @@ test("Admin menu owns operator surfaces behind admin permission", () => {
     "账单运营",
     "账本",
     "运行状态",
+    "线上诊断",
+    "E2E记录",
     "入口清理",
     "工单运营"
   ]);

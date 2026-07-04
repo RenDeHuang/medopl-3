@@ -180,6 +180,54 @@ test("admin management state lists every login user and account wallet without o
   ]);
 });
 
+test("admin can disable and delete login users while preserving account resources and billing evidence", async () => {
+  const service = createTestService();
+
+  await service.createUser({
+    userId: "usr-owner",
+    email: "owner@example.com",
+    name: "Owner",
+    role: "pi",
+    accountId: "acct-owner",
+    password: "OwnerPass2026!",
+    initialBalance: 500
+  });
+  const workspace = await createWorkspaceEntry(service, {
+    accountId: "acct-owner",
+    workspaceName: "Retained Lab"
+  });
+
+  const disabled = await service.disableUser({
+    userId: "usr-owner",
+    operatorUserId: "usr-admin",
+    reason: "security_review"
+  });
+  assert.equal(disabled.status, "disabled");
+  assert.equal(disabled.accountId, "acct-owner");
+
+  let management = await service.managementState({});
+  assert.equal(management.users.find((user) => user.id === "usr-owner").status, "disabled");
+  assert.equal(management.accounts.find((account) => account.id === "acct-owner").balance, 500);
+  assert.ok(management.workspaces.find((item) => item.id === workspace.id), "disabled user resources must stay visible to admin");
+
+  const deleted = await service.deleteUser({
+    userId: "usr-owner",
+    operatorUserId: "usr-admin",
+    reason: "account_closed"
+  });
+  assert.equal(deleted.status, "deleted");
+  assert.equal(deleted.accountId, "acct-owner");
+
+  management = await service.managementState({});
+  assert.equal(management.users.find((user) => user.id === "usr-owner").status, "deleted");
+  assert.equal(management.accounts.find((account) => account.id === "acct-owner").balance, 500);
+  assert.ok(management.workspaces.find((item) => item.id === workspace.id), "deleted login user must not delete Workspace ownership evidence");
+
+  const auditTypes = (await service.store.read()).audit.map((event) => event.type);
+  assert.ok(auditTypes.includes("user.disabled"));
+  assert.ok(auditTypes.includes("user.deleted"));
+});
+
 test("organization Workspace creation fails closed unless the user is an active organization member", async () => {
   const service = createTestService();
   await service.createOrganization({ organizationId: "org-lab", name: "OPL Lab" });
@@ -242,4 +290,62 @@ test("support tickets are account-scoped durable Console objects", async () => {
     }),
     /support_ticket_workspace_not_in_account/
   );
+});
+
+test("operator summary includes safe production E2E records derived from existing ledger evidence", async () => {
+  const service = createTestService();
+  await service.store.update((state) => {
+    state.users["usr-owner"] = {
+      id: "usr-owner",
+      email: "owner@example.com",
+      accountId: "pi-production-verifier",
+      status: "active",
+      balance: 1000,
+      frozen: 0,
+      holds: {},
+      totalRecharged: 1000
+    };
+    state.billingLedger.push({
+      id: "ledger-credit",
+      accountId: "pi-production-verifier",
+      workspaceId: "account",
+      type: "credit",
+      amount: 1000,
+      sourceEventId: "production_verification_credit:run-123",
+      createdAt: "2026-07-05T00:00:00.000Z"
+    });
+    state.billingLedger.push({
+      id: "ledger-request",
+      accountId: "pi-production-verifier",
+      workspaceId: "ws-prod",
+      type: "request_debit",
+      amount: -0.01,
+      sourceEventId: "production_verification_request_usage:run-123",
+      createdAt: "2026-07-05T00:05:00.000Z"
+    });
+    state.runtimeOperations.push({
+      id: "op-create",
+      accountId: "pi-production-verifier",
+      workspaceId: "ws-prod",
+      resourceId: "compute-prod",
+      operationType: "create_compute_allocation",
+      status: "completed",
+      updatedAt: "2026-07-05T00:03:00.000Z"
+    });
+  });
+
+  const summary = await service.operatorSummary({});
+
+  assert.equal(summary.productionE2E.total, 1);
+  assert.deepEqual(summary.productionE2E.recent, [
+    {
+      runId: "run-123",
+      accountId: "pi-production-verifier",
+      workspaceId: "ws-prod",
+      status: "passed",
+      checks: ["credit", "request_usage", "runtime_operation"],
+      lastSeenAt: "2026-07-05T00:05:00.000Z"
+    }
+  ]);
+  assert.equal(JSON.stringify(summary.productionE2E).includes("token"), false, "E2E summary must not expose URL tokens or secrets");
 });

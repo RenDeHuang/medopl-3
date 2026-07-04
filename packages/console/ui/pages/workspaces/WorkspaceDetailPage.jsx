@@ -9,6 +9,7 @@ import { navigate, routeTo } from "../../consoleRoutes.js";
 import {
   ActionGroup,
   ConsoleSurface,
+  DataRetentionPolicyPanel,
   InsightPanel,
   ResourceSplit,
   StatusPill
@@ -100,6 +101,7 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
         </InsightPanel>
         <WorkspaceLifecyclePanel workspace={selected} compute={compute} storage={storage} attachment={attachment} />
       </div>
+      <DataRetentionPolicyPanel />
     </ConsoleSurface>
   );
 }

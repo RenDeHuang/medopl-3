@@ -25,7 +25,11 @@ test("commercial Console UI is built from the maintained surface component layer
     "FailureRecoveryPanel",
     "OperationConfirmButton",
     "OperationResultPanel",
-    "CleanupResourceTable"
+    "CleanupResourceTable",
+    "ResourceRelationshipGraph",
+    "WalletRiskPanel",
+    "DataRetentionPolicyPanel",
+    "ProductionE2EPanel"
   ]) {
     assert.match(surfaceSource, new RegExp(`export function ${exportName}\\b`), `${exportName} must be exported by the commercial UI layer`);
   }
@@ -199,12 +203,62 @@ test("Admin users surface is backed by management state and can create login use
 
   assert.match(stateSource, /getManagementState/, "admin state hook must load the management read model");
   assert.match(apiSource, /createUser/, "admin API client must expose user creation");
+  assert.match(apiSource, /disableUser/, "admin API client must expose user disable");
+  assert.match(apiSource, /deleteUser/, "admin API client must expose user delete");
   assert.match(apiSource, /"\/api\/users"/, "user creation client must call POST /api/users");
+  assert.match(apiSource, /"\/api\/users\/disable"/, "user disable client must call POST /api/users/disable");
+  assert.match(apiSource, /"\/api\/users\/delete"/, "user delete client must call POST /api/users/delete");
   assert.match(adminSource, /managementState\.users/, "Admin Users must list management users, not only session.user");
   assert.match(adminSource, /createUser\(/, "Admin Users must submit the new user form");
+  assert.match(adminSource, /disableUser\(/, "Admin Users must expose user disable action");
+  assert.match(adminSource, /deleteUser\(/, "Admin Users must expose user delete action");
+  assert.match(adminSource, /资源和账单保留/, "user delete UI must explain resource and billing evidence retention");
   assert.doesNotMatch(adminSource, /data=\{\[\{\s*id: session\.user\.id/, "Admin Users must not render only the current session user");
   assert.doesNotMatch(adminSource, /新建用户<\/Button><\/Tooltip>|disabled>新建用户/, "new user action must not remain disabled");
   assert.match(routesSource, /"POST \/api\/users"/, "admin.users route contract must declare user creation");
+  assert.match(routesSource, /"POST \/api\/users\/disable"/, "admin.users route contract must declare user disable");
+  assert.match(routesSource, /"POST \/api\/users\/delete"/, "admin.users route contract must declare user delete");
+});
+
+test("resource pages expose relationship map, wallet risk, support context, and data retention policy", async () => {
+  const resourceSource = await source("packages/console/ui/pages/resources/ResourceProvisioningPages.jsx");
+  const workspaceSource = await source("packages/console/ui/pages/workspaces/WorkspacesPage.jsx");
+  const detailSource = await source("packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx");
+  const supportSource = await source("packages/console/ui/pages/support/SupportPage.jsx");
+  const routeSource = await source("packages/console/ui/routes/opl-routes.js");
+  const surfaceSource = await source("packages/console/ui/pages/shared/commercial-console.jsx");
+
+  assert.match(routeSource, /id: "resources\.relationships"/, "resource relationship map must have a first-class route");
+  assert.match(resourceSource, /ResourceRelationshipPage/, "resources module must render the relationship route");
+  assert.match(resourceSource, /ResourceRelationshipGraph/, "resource relationship page must use shared graph component");
+  assert.match(resourceSource, /WalletRiskPanel/, "resource creation pages must show balance risk before paid mutations");
+  assert.match(resourceSource, /DataRetentionPolicyPanel/, "resource details must show compute/storage retention policy");
+  assert.match(resourceSource, /supportContextPath/, "failed resource support links must carry operation and resource context");
+  assert.match(workspaceSource, /ResourceRelationshipGraph/, "Workspace list must show account-to-entry resource relationship");
+  assert.match(detailSource, /DataRetentionPolicyPanel/, "Workspace detail must show data retention policy");
+  assert.match(supportSource, /URLSearchParams/, "support form must accept failure context from resource pages");
+  assert.match(supportSource, /operationId|resourceId/, "support form must carry operationId/resourceId into the ticket description");
+  assert.match(surfaceSource, /账号.*计算.*存储.*挂载.*工作区入口/s, "relationship graph must make the account-resource-entry chain visible");
+});
+
+test("Admin diagnostics and E2E records are read-only operator surfaces", async () => {
+  const adminSource = await source("packages/console/ui/pages/admin/AdminOverviewPage.jsx");
+  const shellSource = await source("packages/console/ui/pages/ConsolePage.jsx");
+  const routesSource = await source("packages/console/ui/routes/opl-routes.js");
+
+  assert.match(routesSource, /id: "admin\.diagnostics"/, "admin diagnostics must have a refreshable route");
+  assert.match(routesSource, /id: "admin\.e2e"/, "admin E2E records must have a refreshable route");
+  assert.match(routesSource, /"GET \/api\/operator\/summary"/, "admin read-only surfaces must use operator summary");
+  assert.match(shellSource, /AdminDiagnosticsPage/, "Console shell must render admin diagnostics route");
+  assert.match(shellSource, /AdminE2EPage/, "Console shell must render admin E2E route");
+  assert.match(adminSource, /AdminDiagnosticsPage/, "Admin diagnostics page must exist");
+  assert.match(adminSource, /ProductionE2EPanel/, "Admin E2E page must use safe E2E panel");
+  assert.match(adminSource, /failedOperations|resourceAnomalies|productionE2E/, "Admin diagnostics must show failed operations, resource anomalies, and E2E records");
+  const diagnosticsSlice = adminSource.slice(
+    adminSource.indexOf("export function AdminDiagnosticsPage"),
+    adminSource.indexOf("export function AdminCleanupPage")
+  );
+  assert.doesNotMatch(diagnosticsSlice, /OPL_CODEX_API_KEY|workspace\.url|access\?\.token/i, "Admin diagnostics UI must not render runtime secrets or Workspace access URLs");
 });
 
 test("Workspace detail links to first-class resources and excludes retired compute lifecycle controls", async () => {

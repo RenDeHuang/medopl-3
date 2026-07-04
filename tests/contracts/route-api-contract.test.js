@@ -86,6 +86,8 @@ test("active route contract excludes future, reserved, prune, and retired route 
     "POST /api/storage-volumes/destroy",
     "POST /api/support/tickets",
     "POST /api/users",
+    "POST /api/users/delete",
+    "POST /api/users/disable",
     "POST /api/workspaces",
     "POST /api/workspaces/delete-token",
     "POST /api/workspaces/reset-token",
@@ -110,9 +112,12 @@ test("active route contract models compute pools before account compute allocati
     ["attachment.list", "StorageAttachment", "/console/attachments"],
     ["attachment.create", "StorageAttachment", "/console/attachments/new"],
     ["attachment.detail", "StorageAttachment", "/console/attachments/:id"],
+    ["resources.relationships", "ResourceRelationship", "/console/resources/relationships"],
     ["workspace.list", "Workspace", "/console/workspaces"],
     ["workspace.create", "Workspace", "/console/workspaces/new"],
     ["workspace.detail", "Workspace", "/console/workspaces/:id"],
+    ["admin.diagnostics", "RuntimeReadiness", "/admin/diagnostics"],
+    ["admin.e2e", "ProductionVerification", "/admin/e2e"],
     ["admin.cleanup", "RuntimeReadiness", "/admin/cleanup"]
   ]) {
     const route = byId.get(id);
@@ -133,7 +138,9 @@ test("active route contract models compute pools before account compute allocati
     "POST /api/storage-volumes/destroy",
     "POST /api/storage-attachments",
     "POST /api/storage-attachments/detach",
-    "POST /api/operator/cleanup-workspace-access"
+    "POST /api/operator/cleanup-workspace-access",
+    "POST /api/users/disable",
+    "POST /api/users/delete"
   ]) {
     assert.ok(activeApiRoutes.has(apiRoute), `${apiRoute} must be in current resource contract`);
   }

@@ -9,6 +9,7 @@ import {
   InsightPanel,
   MetricStrip,
   ObjectTable,
+  ResourceRelationshipGraph,
   StatusPill
 } from "../shared/commercial-console.jsx";
 import { available, money, packageText, statusColor, statusLabel } from "../shared/formatters.js";
@@ -43,6 +44,7 @@ export function WorkspacesPage({ state, wallet, runAction, session }) {
           { label: "可用余额", value: money(available(wallet)), caption: "扣除冻结后", tone: available(wallet) > 0 ? "good" : "warn" }
         ]}
       />
+      <ResourceRelationshipGraph state={state} />
 
       <InsightPanel title="工作区入口" eyebrow="当前">
         <ObjectTable

@@ -42,6 +42,109 @@ function defaultAccountIdForState(state) {
     || "local-account";
 }
 
+function productionE2EFromState(state) {
+  const runs = new Map();
+  function ensureRun(runId) {
+    if (!runs.has(runId)) {
+      runs.set(runId, {
+        runId,
+        accountId: "",
+        workspaceId: "",
+        status: "running",
+        checks: new Set(),
+        lastSeenAt: ""
+      });
+    }
+    return runs.get(runId);
+  }
+  function touch(run, timestamp = "") {
+    if (timestamp && (!run.lastSeenAt || timestamp > run.lastSeenAt)) run.lastSeenAt = timestamp;
+  }
+
+  for (const entry of state.billingLedger || []) {
+    const sourceEventId = String(entry.sourceEventId || "");
+    const match = sourceEventId.match(/^production_verification_(credit|request_usage):(.+)$/);
+    if (!match) continue;
+    const run = ensureRun(match[2]);
+    run.accountId ||= entry.accountId || "";
+    run.workspaceId ||= entry.workspaceId && entry.workspaceId !== "account" ? entry.workspaceId : "";
+    run.checks.add(match[1] === "credit" ? "credit" : "request_usage");
+    touch(run, entry.createdAt);
+  }
+
+  for (const operation of state.runtimeOperations || []) {
+    const hasVerificationName = /production verification/i.test(String(operation.name || operation.workspaceName || ""));
+    const workspaceMatch = String(operation.workspaceId || "").match(/production-verification|prod/i);
+    const matchingRuns = [...runs.values()].filter((run) =>
+      run.accountId &&
+      run.accountId === operation.accountId &&
+      (!run.workspaceId || !operation.workspaceId || run.workspaceId === operation.workspaceId)
+    );
+    if (!hasVerificationName && !workspaceMatch && matchingRuns.length === 0) continue;
+    if (matchingRuns.length > 0) {
+      for (const run of matchingRuns) {
+        run.workspaceId ||= operation.workspaceId || "";
+        run.checks.add("runtime_operation");
+        if (operation.status === "failed") run.status = "failed";
+        touch(run, operation.updatedAt || operation.createdAt);
+      }
+      continue;
+    }
+    const runId = String(operation.id || operation.operationId || operation.workspaceId || "").split(":").at(-1) || "unknown";
+    const run = ensureRun(runId);
+    run.accountId ||= operation.accountId || "";
+    run.workspaceId ||= operation.workspaceId || "";
+    run.checks.add("runtime_operation");
+    if (operation.status === "failed") run.status = "failed";
+    touch(run, operation.updatedAt || operation.createdAt);
+  }
+
+  for (const run of runs.values()) {
+    if (run.checks.has("credit") && run.checks.has("request_usage")) run.status = run.status === "failed" ? "failed" : "passed";
+  }
+
+  const recent = [...runs.values()]
+    .map((run) => ({
+      runId: run.runId,
+      accountId: run.accountId,
+      workspaceId: run.workspaceId,
+      status: run.status,
+      checks: [...run.checks].sort(),
+      lastSeenAt: run.lastSeenAt
+    }))
+    .sort((a, b) => String(b.lastSeenAt).localeCompare(String(a.lastSeenAt)))
+    .slice(0, 8);
+  return {
+    total: runs.size,
+    passed: recent.filter((run) => run.status === "passed").length,
+    failed: recent.filter((run) => run.status === "failed").length,
+    recent
+  };
+}
+
+function resourceAnomaliesFromState(state, accountId = null) {
+  const computeById = new Map((state.computeAllocations || []).map((item) => [item.id, item]));
+  const storageById = new Map((state.storageVolumes || []).map((item) => [item.id, item]));
+  const attachmentById = new Map((state.storageAttachments || []).map((item) => [item.id, item]));
+  const anomalies = [];
+  for (const workspace of Object.values(state.workspaces || {})) {
+    if (accountId && workspace.ownerAccountId !== accountId) continue;
+    const compute = computeById.get(workspace.computeAllocationId);
+    const storage = storageById.get(workspace.storageId);
+    const attachment = attachmentById.get(workspace.attachmentId);
+    if (!compute || compute.status === "destroyed" || compute.status === "failed") {
+      anomalies.push({ type: "compute", accountId: workspace.ownerAccountId, workspaceId: workspace.id, status: compute?.status || "missing" });
+    }
+    if (!storage || storage.status === "destroyed" || storage.status === "failed") {
+      anomalies.push({ type: "storage", accountId: workspace.ownerAccountId, workspaceId: workspace.id, status: storage?.status || "missing" });
+    }
+    if (!attachment || attachment.status === "detached" || attachment.status === "failed") {
+      anomalies.push({ type: "attachment", accountId: workspace.ownerAccountId, workspaceId: workspace.id, status: attachment?.status || "missing" });
+    }
+  }
+  return anomalies.slice(0, 12);
+}
+
 export class ConsoleReadModelService extends OplDomainService {
   async supportTickets({ accountId = null } = {}) {
     const state = await this.store.read();
@@ -211,6 +314,48 @@ export class ConsoleReadModelService extends OplDomainService {
     });
   }
 
+  async disableUser(input) {
+    return this.updateUserStatus({
+      ...input,
+      status: "disabled",
+      auditType: "user.disabled"
+    });
+  }
+
+  async deleteUser(input) {
+    return this.updateUserStatus({
+      ...input,
+      status: "deleted",
+      auditType: "user.deleted"
+    });
+  }
+
+  async updateUserStatus({ userId, status, reason = "", operatorUserId = "", operatorAccountId = "", auditType }) {
+    if (!userId) throw new Error("user_required");
+    return this.store.update((state) => {
+      const user = state.users?.[userId];
+      if (!user) throw new Error("user_not_found");
+      if (user.role === "admin" && status !== "active") {
+        const activeAdmins = Object.values(state.users || {}).filter((item) =>
+          item.role === "admin" &&
+          item.id !== userId &&
+          !["disabled", "deleted"].includes(item.status)
+        );
+        if (activeAdmins.length === 0) throw new Error("last_admin_user_required");
+      }
+      user.status = status;
+      user.disabledReason = status === "disabled" ? reason : user.disabledReason || "";
+      user.deletedReason = status === "deleted" ? reason : user.deletedReason || "";
+      user.updatedAt = now();
+      state.audit.push(this.auditEvent({
+        accountId: user.accountId || operatorAccountId || "management",
+        type: auditType,
+        sourceEventId: `${userId}:${reason || status}`
+      }));
+      return publicWalletUser(user);
+    });
+  }
+
   async addOrganizationMember(input) {
     return this.store.update((state) => {
       const membership = addMembershipRecord(state, input);
@@ -375,6 +520,18 @@ export class ConsoleReadModelService extends OplDomainService {
           updatedAt: operation.updatedAt
         }))
       },
+      failedOperations: failedOperations.slice(-10).reverse().map((operation) => ({
+        id: operation.id,
+        accountId: operation.accountId,
+        workspaceId: operation.workspaceId,
+        resourceId: operation.resourceId,
+        operationType: operation.operationType,
+        status: operation.status,
+        error: operation.error || operation.safeMessage || "",
+        updatedAt: operation.updatedAt
+      })),
+      resourceAnomalies: resourceAnomaliesFromState(state, accountId),
+      productionE2E: productionE2EFromState(state),
       billingReconciliation: {
         reports: state.billingReconciliationReports?.length || 0,
         guard: clone(latestReconciliation?.guard || {

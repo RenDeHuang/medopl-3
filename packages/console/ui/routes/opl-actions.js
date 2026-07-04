@@ -170,6 +170,14 @@ export const consoleActions = Object.freeze([
     failureVisible: true
   },
   {
+    id: "resources.relationships",
+    label: "查看资源关系",
+    type: "route",
+    role: "lab_owner",
+    objectKind: "ResourceRelationship",
+    routeId: "resources.relationships"
+  },
+  {
     id: "billing.wallet",
     label: "钱包与冻结",
     type: "route",
@@ -218,6 +226,47 @@ export const consoleActions = Object.freeze([
     objectKind: "User",
     apiClient: "packages/console/ui/api/console-read-api.js",
     apiName: "createUser"
+  },
+  {
+    id: "admin.userDisable",
+    label: "禁用用户",
+    type: "api",
+    role: "admin",
+    objectKind: "User",
+    apiClient: "packages/console/ui/api/console-read-api.js",
+    apiName: "disableUser",
+    mutation: true,
+    confirmation: "normal",
+    failureVisible: true
+  },
+  {
+    id: "admin.userDelete",
+    label: "删除用户",
+    type: "api",
+    role: "admin",
+    objectKind: "User",
+    apiClient: "packages/console/ui/api/console-read-api.js",
+    apiName: "deleteUser",
+    mutation: true,
+    destructive: true,
+    confirmation: "normal",
+    failureVisible: true
+  },
+  {
+    id: "admin.diagnostics",
+    label: "查看线上诊断",
+    type: "route",
+    role: "admin",
+    objectKind: "RuntimeReadiness",
+    routeId: "admin.diagnostics"
+  },
+  {
+    id: "admin.e2e",
+    label: "查看 E2E 记录",
+    type: "route",
+    role: "admin",
+    objectKind: "ProductionVerification",
+    routeId: "admin.e2e"
   },
   {
     id: "admin.userWallet.disabled",

@@ -20,6 +20,8 @@ export const apiRouteManifest = [
   "POST /api/billing/topups",
   "POST /api/organizations",
   "POST /api/users",
+  "POST /api/users/disable",
+  "POST /api/users/delete",
   "POST /api/organizations/members",
   "GET /api/compute-pools",
   "GET /api/compute-allocations",

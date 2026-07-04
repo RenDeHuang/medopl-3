@@ -1,6 +1,7 @@
 import React from "react";
 import { PageContainer, ProTable } from "@ant-design/pro-components";
 import { Alert, Button, Empty, List, Popconfirm, Space, Tag, Typography } from "antd";
+import { available, money } from "./formatters.js";
 
 function toneClass(tone = "neutral") {
   return ["good", "warn", "danger", "info"].includes(tone) ? tone : "neutral";
@@ -228,6 +229,92 @@ export function ObjectTable({ rowKey = "id", data = [], columns = [], emptyText 
 
 export function PriceImpactPanel({ items = [], emptyText = "暂无价格信息" }) {
   return <ResourceSplit items={items.length ? items : [{ label: "价格", value: "-", meta: emptyText, status: "pending", tone: "neutral" }]} />;
+}
+
+export function WalletRiskPanel({ wallet = {}, requiredHold = 0, resourceLabel = "资源" }) {
+  const currentAvailable = available(wallet);
+  const afterHold = Math.max(0, currentAvailable - Number(requiredHold || 0));
+  const blocked = Number(requiredHold || 0) > currentAvailable;
+  const lowAfter = !blocked && afterHold < Math.max(10, Number(requiredHold || 0) * 0.2);
+  const message = blocked ? "余额不足" : lowAfter ? "冻结后余额偏低" : "余额充足";
+  const description = blocked
+    ? `${resourceLabel} 需要冻结 ${money(requiredHold)}，当前可用 ${money(currentAvailable)}，可能无法开通。`
+    : `${resourceLabel} 冻结后预计可用 ${money(afterHold)}。`;
+  return (
+    <Alert
+      type={blocked ? "error" : lowAfter ? "warning" : "success"}
+      showIcon
+      message={message}
+      description={description}
+    />
+  );
+}
+
+export function DataRetentionPolicyPanel({ compact = false }) {
+  const items = [
+    { label: "销毁计算", value: "只删除计算", meta: "存储资源和 /data 数据保留", status: "数据保留", tone: "good" },
+    { label: "销毁存储", value: "删除数据", meta: "会删除 /data 用户文件，需要强确认", status: "高风险", tone: "danger" },
+    { label: "迁移 / rollout", value: "不删数据", meta: "用户、账单在 PostgreSQL；用户文件在 PVC/CBS", status: "持久化", tone: "info" }
+  ];
+  if (compact) return <ResourceSplit items={items} />;
+  return (
+    <InsightPanel title="数据保留策略" eyebrow="数据安全">
+      <ResourceSplit items={items} />
+    </InsightPanel>
+  );
+}
+
+export function ResourceRelationshipGraph({ state = {}, title = "资源关系" }) {
+  const compute = state.computeAllocations || [];
+  const storage = state.storageVolumes || [];
+  const attachments = state.storageAttachments || [];
+  const workspaces = state.workspaces || [];
+  const nodes = [
+    { label: "账号", value: state.account?.id || state.wallet?.accountId || state.user?.accountId || "-", tone: "info" },
+    { label: "计算", value: `${compute.length} 个`, tone: compute.some((item) => item.status === "failed") ? "danger" : compute.length ? "good" : "neutral" },
+    { label: "存储", value: `${storage.length} 个`, tone: storage.some((item) => item.status === "failed") ? "danger" : storage.length ? "good" : "neutral" },
+    { label: "挂载", value: `${attachments.length} 个`, tone: attachments.some((item) => item.status === "failed") ? "danger" : attachments.length ? "good" : "neutral" },
+    { label: "工作区入口", value: `${workspaces.length} 个`, tone: workspaces.some((item) => item.state === "failed") ? "danger" : workspaces.length ? "good" : "neutral" }
+  ];
+  return (
+    <InsightPanel title={title} eyebrow="账号 -> 计算 -> 存储 -> 挂载 -> 工作区入口">
+      <div className="relationshipGraph" aria-label="账号 计算 存储 挂载 工作区入口">
+        {nodes.map((node, index) => (
+          <React.Fragment key={node.label}>
+            <article className={`relationshipNode ${toneClass(node.tone)}`}>
+              <span>{node.label}</span>
+              <strong>{node.value}</strong>
+            </article>
+            {index < nodes.length - 1 && <span className="relationshipArrow">→</span>}
+          </React.Fragment>
+        ))}
+      </div>
+    </InsightPanel>
+  );
+}
+
+export function ProductionE2EPanel({ summary = {} }) {
+  const recent = summary.recent || [];
+  return (
+    <InsightPanel title="真实 E2E 记录" eyebrow="上线验证">
+      <MetricStrip
+        items={[
+          { label: "记录", value: summary.total || 0, caption: "生产验证", tone: summary.total ? "info" : "neutral" },
+          { label: "通过", value: summary.passed || 0, caption: "最近记录", tone: summary.passed ? "good" : "neutral" },
+          { label: "失败", value: summary.failed || 0, caption: "需处理", tone: summary.failed ? "danger" : "good" }
+        ]}
+      />
+      <TimelineList
+        emptyText="暂无 E2E 记录"
+        items={recent.map((run) => ({
+          title: run.runId,
+          description: `${run.accountId || "-"} · ${run.workspaceId || "-"}`,
+          meta: `${run.status === "passed" ? "通过" : run.status} · ${(run.checks || []).join(", ")}`,
+          tone: run.status === "passed" ? "good" : run.status === "failed" ? "danger" : "warn"
+        }))}
+      />
+    </InsightPanel>
+  );
 }
 
 export function OperationTimeline({ operations = [], resourceId = "", emptyText = "暂无操作记录" }) {

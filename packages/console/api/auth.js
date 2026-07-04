@@ -45,6 +45,10 @@ function normalizeStoredAuthUser(user) {
   };
 }
 
+function isLoginEnabled(user) {
+  return !["disabled", "deleted"].includes(user?.status);
+}
+
 function authUsersFromState(state) {
   return Object.values(state.users || {})
     .filter(isAuthUser)
@@ -216,7 +220,7 @@ export function createAuthController({
       throw authError(401, "not_authenticated");
     }
     const users = await loadUsers();
-    const user = users.find((item) => item.id === session.userId && item.status !== "disabled");
+    const user = users.find((item) => item.id === session.userId && isLoginEnabled(item));
     if (!user) {
       sessions.delete(sessionId);
       throw authError(401, "not_authenticated");
@@ -227,7 +231,7 @@ export function createAuthController({
   return {
     async login({ email, password }, { request, response }) {
       const users = await loadUsers();
-      const user = users.find((item) => item.email === normalizeEmail(email) && item.status !== "disabled");
+      const user = users.find((item) => item.email === normalizeEmail(email) && isLoginEnabled(item));
       if (!user || !await verifyPassword(password, user.passwordHash)) throw authError(401, "invalid_credentials");
       const sessionId = randomToken();
       const csrfToken = randomToken(24);
@@ -245,7 +249,7 @@ export function createAuthController({
       if (!expectedToken) throw authError(403, "operator_token_not_configured");
       if (!operatorToken || operatorToken !== expectedToken) throw authError(403, "operator_token_invalid");
       const users = await loadUsers();
-      const admin = users.find((item) => item.role === "admin" && item.status !== "disabled");
+      const admin = users.find((item) => item.role === "admin" && isLoginEnabled(item));
       if (!admin) throw authError(403, "operator_admin_user_required");
       const sessionId = randomToken();
       const csrfToken = randomToken(24);

@@ -9,6 +9,8 @@ import { AccountPage } from "./account/AccountPage.jsx";
 import {
   AdminBillingPage,
   AdminCleanupPage,
+  AdminDiagnosticsPage,
+  AdminE2EPage,
   AdminFabricPage,
   AdminLedgerPage,
   AdminOverviewPage,
@@ -26,6 +28,7 @@ import {
   CreateComputeAllocationPage,
   CreateStorageAttachmentPage,
   CreateStorageVolumePage,
+  ResourceRelationshipPage,
   StorageAttachmentDetailPage,
   StorageAttachmentsPage,
   StorageVolumeDetailPage,
@@ -99,6 +102,8 @@ function renderRoute(ctx) {
   if (path.startsWith("/admin/fabric")) return <AdminFabricPage {...ctx} />;
   if (path.startsWith("/admin/ledger")) return <AdminLedgerPage {...ctx} />;
   if (path.startsWith("/admin/runtime")) return <AdminRuntimePage {...ctx} />;
+  if (path.startsWith("/admin/diagnostics")) return <AdminDiagnosticsPage {...ctx} />;
+  if (path.startsWith("/admin/e2e")) return <AdminE2EPage {...ctx} />;
   if (path.startsWith("/admin/cleanup")) return <AdminCleanupPage {...ctx} />;
   if (path.startsWith("/admin/support")) return <AdminSupportPage {...ctx} />;
   if (path.startsWith("/admin")) return <AdminOverviewPage {...ctx} />;
@@ -111,6 +116,7 @@ function renderRoute(ctx) {
   if (path.startsWith("/console/attachments/new")) return <CreateStorageAttachmentPage {...ctx} />;
   if (path.startsWith("/console/attachments/")) return <StorageAttachmentDetailPage {...ctx} />;
   if (path.startsWith("/console/attachments")) return <StorageAttachmentsPage {...ctx} />;
+  if (path.startsWith("/console/resources/relationships")) return <ResourceRelationshipPage {...ctx} />;
   if (path.startsWith("/console/workspaces/new")) return <CreateWorkspacePage {...ctx} />;
   if (path.startsWith("/console/workspaces/") || path.startsWith("/admin/workspaces/")) return <WorkspaceDetailPage {...ctx} />;
   if (path.startsWith("/console/workspaces")) return <WorkspacesPage {...ctx} />;

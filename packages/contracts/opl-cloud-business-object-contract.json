@@ -189,6 +189,33 @@
       "evidenceRequired": true
     },
     {
+      "kind": "ResourceRelationship",
+      "ownerRepo": "opl-console",
+      "routeKind": "read_model",
+      "lifecycle": "current",
+      "requiredCapabilitiesForImplemented": [
+        "read",
+        "summary",
+        "evidence"
+      ],
+      "evidenceRequired": true,
+      "boundary": "Account-level map of compute allocations, storage volumes, storage attachments, and Workspace URL entries."
+    },
+    {
+      "kind": "ProductionVerification",
+      "ownerRepo": "opl-console",
+      "routeKind": "read_model",
+      "lifecycle": "current",
+      "requiredCapabilitiesForImplemented": [
+        "list",
+        "read",
+        "audit",
+        "evidence"
+      ],
+      "evidenceRequired": true,
+      "boundary": "Safe read-only summary of real production E2E verification records derived from existing ledger and operation evidence."
+    },
+    {
       "kind": "GatewayIntegration",
       "ownerRepo": "opl-console",
       "routeKind": "external_integration",
