@@ -273,11 +273,11 @@
       "kind === \"PersistentVolumeClaim\"",
       "name.replace(/-env$/, \"\")",
       "name.replace(/-data$/, \"\")",
-      "deployment \"$name\"",
-      "service \"$name\"",
-      "secret \"$name-env\"",
-        "pvc \"$name-data\"",
-        "--ignore-not-found=true"
+      "\"deployment/$name\"",
+      "\"service/$name\"",
+      "\"secret/$name-env\"",
+      "\"persistentvolumeclaim/$name-data\"",
+      "--ignore-not-found=true"
       ],
     "Delete legacy namespaces": [
       "LEGACY_NAMESPACES",
@@ -288,11 +288,13 @@
       "cleanup_failed: namespace/$namespace still has pods before namespace deletion",
       "kubectl --kubeconfig \"$KUBECONFIG\" delete namespace \"$namespace\" --wait=true --timeout=300s"
     ],
-      "Verify cleanup": [
-        "cleanup_failed",
-        "app.kubernetes.io/name=opl-workspace",
-        "namespace/$namespace still exists"
-      ]
+    "Verify cleanup": [
+      "cleanup_failed",
+      "get deploy,svc,secret,pvc -o name",
+      "remaining_runtime_objects",
+      "persistentvolumeclaim)/opl-ws-",
+      "namespace/$namespace still exists"
+    ]
     },
     "forbiddenRunPatterns": [
       "kubectl .* delete\\s+ingress",

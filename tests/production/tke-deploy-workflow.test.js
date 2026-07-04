@@ -106,10 +106,10 @@ test("TKE old Workspace cleanup workflow is explicit and scoped to retired runti
   assert.match(text, /app\.kubernetes\.io\/name=opl-workspace/);
   assert.match(text, /\^opl-ws-/);
   assert.match(text, /backend\?\.service\?\.name/);
-  assert.match(text, /deployment "\$name"/);
-  assert.match(text, /service "\$name"/);
-  assert.match(text, /secret "\$name-env"/);
-  assert.match(text, /pvc "\$name-data"/);
+  assert.match(text, /"deployment\/\$name"/);
+  assert.match(text, /"service\/\$name"/);
+  assert.match(text, /"secret\/\$name-env"/);
+  assert.match(text, /"persistentvolumeclaim\/\$name-data"/);
   assert.match(text, /get deploy,svc,secret,pvc -o json/);
   assert.match(text, /kind === "Deployment" \|\| kind === "Service"/);
   assert.match(text, /kind === "Secret"/);
@@ -122,6 +122,9 @@ test("TKE old Workspace cleanup workflow is explicit and scoped to retired runti
   assert.match(text, /delete pod\s+\\\n\s+--all/);
   assert.match(text, /cleanup_failed: namespace\/\$namespace still has pods before namespace deletion/);
   assert.match(text, /kubectl --kubeconfig "\$KUBECONFIG" delete namespace "\$namespace" --wait=true --timeout=300s/);
+  assert.match(text, /remaining_runtime_objects=/);
+  assert.match(text, /get deploy,svc,secret,pvc -o name/);
+  assert.match(text, /\^\(deployment\.apps\|service\|secret\|persistentvolumeclaim\)\/opl-ws-/);
   assert.doesNotMatch(text, /delete namespace --all/);
   assert.doesNotMatch(text, /kubectl .* delete\s+ingress/);
   assert.doesNotMatch(text, /docker\s+rmi|tccli\s+tcr\s+Delete/);
