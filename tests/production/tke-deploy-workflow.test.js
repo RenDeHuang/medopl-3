@@ -276,6 +276,53 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
   assert.equal(serviceConfig.spec.loadBalancer.l7Listeners[0].domains[0].http2, false);
 });
 
+test("TKE manifest renderer allows package node pool ids to be discovered at runtime", async () => {
+  const source = await readFile("deploy/tke/opl-cloud.k8s.json", "utf8");
+  const manifest = JSON.parse(source);
+  const { env } = await pricingContractValues();
+  const rendered = renderTkeManifest({
+    manifest,
+    values: {
+      OPL_K8S_NAMESPACE: "opl-cloud",
+      OPL_PUBLIC_URL: "https://cloud.medopl.cn",
+      OPL_CONSOLE_DOMAIN: "cloud.medopl.cn",
+      OPL_WORKSPACE_DOMAIN: "workspace.medopl.cn",
+      OPL_CLOUD_IMAGE: "uswccr.ccs.tencentyun.com/oplcloud/opl-cloud:test",
+      OPL_WORKSPACE_IMAGE: "uswccr.ccs.tencentyun.com/oplcloud/one-person-lab-app:latest",
+      OPL_IMAGE_PULL_SECRET_NAME: "tcr-pull-secret",
+      OPL_WORKSPACE_STORAGE_CLASS: "cbs",
+      OPL_TENCENT_PROVISIONER_BIN: "/usr/local/bin/opl-tencent-provisioner",
+      OPL_BILLING_MARKUP: env.OPL_BILLING_MARKUP,
+      OPL_BASIC_COMPUTE_HOURLY_CNY: env.OPL_BASIC_COMPUTE_HOURLY_CNY,
+      OPL_PRO_COMPUTE_HOURLY_CNY: env.OPL_PRO_COMPUTE_HOURLY_CNY,
+      OPL_STORAGE_GB_MONTH_CNY: env.OPL_STORAGE_GB_MONTH_CNY,
+      OPL_BASIC_COMPUTE_INSTANCE_TYPE: "SA5.MEDIUM4",
+      OPL_PRO_COMPUTE_INSTANCE_TYPE: "SA5.LARGE16",
+      OPL_CODEX_MODEL: "gpt-5.5",
+      OPL_CODEX_REASONING_EFFORT: "xhigh",
+      OPL_CODEX_BASE_URL: "https://gflabtoken.cn/v1",
+      OPL_CONSOLE_TLS_SECRET_NAME: "opl-cloud-console-medopl-cn-tls",
+      OPL_WORKSPACE_TLS_SECRET_NAME: "opl-cloud-workspace-medopl-cn-tls",
+      OPL_INGRESS_CLASS: "qcloud",
+      TENCENTCLOUD_REGION: "na-siliconvalley",
+      TENCENT_CVM_SUBNET_ID: "subnet-opl",
+      TENCENT_CVM_SECURITY_GROUP_IDS: "sg-opl-a,sg-opl-b",
+      TENCENT_CVM_SYSTEM_DISK_TYPE: "CLOUD_BSSD",
+      TENCENT_CVM_SYSTEM_DISK_SIZE_GB: "50",
+      RUN_TENCENT_CREATE_RELEASE_EXECUTION: "1",
+      TENCENT_DEPLOY_CLUSTER_ID: "cls-oplcloud",
+      TENCENT_TCR_REGISTRY: "uswccr.ccs.tencentyun.com",
+      TENCENT_TCR_NAMESPACE: "oplcloud",
+      TENCENT_TCR_REGION: "na-siliconvalley",
+      TENCENT_DEPLOY_KUBECONFIG_REF: "/var/run/opl-cloud/kubeconfig/kubeconfig"
+    }
+  });
+
+  const config = rendered.items.find((item) => item.kind === "ConfigMap");
+  assert.equal(config.data.OPL_BASIC_COMPUTE_NODE_POOL_ID, "");
+  assert.equal(config.data.OPL_PRO_COMPUTE_NODE_POOL_ID, "");
+});
+
 test("TKE manifest renderer can skip the shared Ingress during deploy so Workspace routes are not overwritten", async () => {
   const source = await readFile("deploy/tke/opl-cloud.k8s.json", "utf8");
   const manifest = JSON.parse(source);
