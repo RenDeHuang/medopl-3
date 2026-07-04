@@ -220,7 +220,24 @@ Then open `http://127.0.0.1:5178`. The demo API resets only `.runtime/uiux-demo-
 - Lab Owner: `owner@opl.local` / `OplOwnerPass2026!`
 - Admin: `admin@opl.local` / `OplAdminPass2026!`
 
-For local Console provisioning real TKE resources, use `OPL_RUNTIME_PROVIDER=tencent-tke` with the required TKE env vars. In TKE mode the demo API does not reset state unless `OPL_UIUX_DEMO_RESET=1` is explicit. See [DEV_GUIDE.md](./DEV_GUIDE.md).
+The demo API is local-only and refuses `OPL_RUNTIME_PROVIDER=tencent-tke`; it must not mutate staging resources.
+
+For local Console provisioning against staging TKE, use the dedicated local-to-staging entrypoints:
+
+```bash
+cp deploy/tke/opl-cloud-staging.local.env.example .env.staging.local
+npm run staging:readiness
+npm run staging:local
+npm run staging:ui
+```
+
+`staging:local` uses `tencent-tke`, the shared staging `DATABASE_URL`, the Go Tencent provisioner, and the staging TKE/CVM settings from `.env.staging.local`. This mode is the local operator Console for the same staging system used by cloud rollout. Real E2E is protected by an explicit paid-operation guard:
+
+```bash
+OPL_CONFIRM_REAL_CLOUD_E2E=1 npm run staging:e2e
+```
+
+See [DEV_GUIDE.md](./DEV_GUIDE.md) for the local-demo, local-to-staging, and cloud-staging gate sequence.
 
 ## Production Deployment Contract
 
@@ -250,7 +267,7 @@ After deploying OPL Console to Tencent TKE with PostgreSQL, TCR images, TLS, DNS
 OPL_CONSOLE_ORIGIN=https://<console-domain> npm run verify:production
 ```
 
-The verifier is fail-closed. It first checks:
+The production verifier is fail-closed and requires public HTTPS Console and Workspace URLs. Local-to-staging uses `npm run staging:e2e` instead, which may talk to a local Console origin but still requires a public Workspace URL. Both verifiers first check:
 
 - `GET /api/production/readiness`
 - `GET /api/runtime/readiness`

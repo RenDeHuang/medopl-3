@@ -47,9 +47,11 @@ The following actions require explicit human approval:
 
 ## Verification
 
-Use the production verifier only from an approved operator environment.
+Use `npm run staging:e2e` from a local operator shell before rollout when the local Console is connected to staging PostgreSQL and staging TKE. This command requires `OPL_CONFIRM_REAL_CLOUD_E2E=1`, may use a local Console origin, and still requires a public HTTPS Workspace URL.
 
-The verifier creates a real ComputeAllocation, StorageVolume, and StorageAttachment, creates a Workspace URL entry, opens the public URL, records one Gateway request usage event, verifies wallet/ledger/usage state, and attempts cleanup.
+Use `npm run verify:production` only after cloud staging rollout from an approved operator environment. This command requires public HTTPS Console and Workspace URLs.
+
+Both verifiers create a real ComputeAllocation, StorageVolume, and StorageAttachment, create a Workspace URL entry, open the public URL, record one Gateway request usage event, verify wallet/ledger/usage state, and attempt cleanup.
 
 Verification output belongs in runtime evidence or `docs/history/**`, not active docs.
 

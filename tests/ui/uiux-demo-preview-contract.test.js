@@ -67,10 +67,10 @@ test("UIUX demo API seeds the current compute storage attachment business chain"
   assert.doesNotMatch(demoApiSource, /createWorkspace\(\{[\s\S]*packageId: "basic"[\s\S]*\}\)/, "demo seed must not create Workspace directly from packageId");
 });
 
-test("UIUX demo API does not reset real TKE state unless explicitly requested", async () => {
+test("UIUX demo API is local-only and cannot seed real TKE state", async () => {
   const demoApiSource = await source("tools/start-uiux-demo-api.js");
 
-  assert.match(demoApiSource, /OPL_RUNTIME_PROVIDER/, "demo API must branch on runtime provider");
-  assert.match(demoApiSource, /OPL_UIUX_DEMO_RESET === "1"/, "real runtime reset must require explicit opt-in");
-  assert.match(demoApiSource, /runtimeReadiness/, "demo API must preflight runtime readiness before real TKE provisioning");
+  assert.match(demoApiSource, /OPL_RUNTIME_PROVIDER/, "demo API must inspect runtime provider");
+  assert.match(demoApiSource, /uiux_demo_refuses_real_tke/, "demo API must reject real TKE mode");
+  assert.doesNotMatch(demoApiSource, /runtimeReadiness/, "real TKE readiness belongs to staging scripts");
 });

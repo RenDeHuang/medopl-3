@@ -135,18 +135,18 @@ function chainResponses(chain) {
   };
 }
 
-function keyedFetch({ responses, requests = [], responseHeaders = null }) {
+function keyedFetch({ responses, requests = [], responseHeaders = null, consoleOrigin = "https://console.oplcloud.cn" }) {
   let workspaceUrlCount = 0;
   let runtimeStatusCount = 0;
   return async (url, options = {}) => {
     const parsed = new URL(String(url));
     const method = options.method || "GET";
-    let key = parsed.origin === "https://console.oplcloud.cn" ? `${method} ${parsed.pathname}` : `${method} ${String(url)}`;
+    let key = parsed.origin === consoleOrigin ? `${method} ${parsed.pathname}` : `${method} ${String(url)}`;
     if (key === "POST /api/workspaces/runtime-status") {
       runtimeStatusCount += 1;
       key = runtimeStatusCount === 1 ? key : `${key}#${runtimeStatusCount}`;
     }
-    if (parsed.origin !== "https://console.oplcloud.cn") {
+    if (parsed.origin !== consoleOrigin) {
       workspaceUrlCount += 1;
       key = workspaceUrlCount === 1 ? key : `${key}#${workspaceUrlCount}`;
     }
@@ -175,6 +175,40 @@ test("production verifier refuses localhost Console origins", async () => {
       }
     }),
     /public_origin_required/
+  );
+});
+
+test("staging-local verifier can use a local Console origin while still requiring public Workspace URLs", async () => {
+  const requests = [];
+  const chain = tkeChain();
+  const result = await verifyProductionChain({
+    origin: "http://127.0.0.1:8787",
+    allowPrivateConsoleOrigin: true,
+    accountId: "pi-prod",
+    workspaceName: "Local To Staging Verification Lab",
+    fetchImpl: keyedFetch({
+      responses: chainResponses(chain),
+      requests,
+      consoleOrigin: "http://127.0.0.1:8787"
+    })
+  });
+
+  assert.equal(requests[0].key, "GET /api/production/readiness");
+  assert.equal(result.ok, true);
+
+  await assert.rejects(
+    verifyProductionChain({
+      origin: "http://127.0.0.1:8787",
+      allowPrivateConsoleOrigin: true,
+      accountId: "pi-prod",
+      workspaceName: "Bad Workspace URL",
+      fetchImpl: keyedFetch({
+        responses: chainResponses(tkeChain({ workspaceUrl: "http://127.0.0.1:3000/" })),
+        requests: [],
+        consoleOrigin: "http://127.0.0.1:8787"
+      })
+    }),
+    /public_workspace_url_required/
   );
 });
 

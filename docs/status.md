@@ -20,6 +20,7 @@ Supported:
 - Resource usage, request usage, wallet transactions, manual top-up audit, billing ledger, and reconciliation records.
 - Server-backed support ticket list, creation, detail, and admin queue.
 - Local Docker development provider.
+- Local-to-staging operator mode using the same staging PostgreSQL and Tencent TKE resource pool as cloud staging.
 - Tencent TKE production handoff.
 - PostgreSQL persistence when `DATABASE_URL` is configured.
 
@@ -56,4 +57,17 @@ Before claiming a development branch is complete:
 npm test
 npm run build
 git diff --check
+```
+
+Before cloud staging rollout:
+
+```bash
+npm run staging:readiness
+OPL_CONFIRM_REAL_CLOUD_E2E=1 npm run staging:e2e
+```
+
+After cloud staging rollout:
+
+```bash
+OPL_CONSOLE_ORIGIN=https://<console-domain> npm run verify:production
 ```

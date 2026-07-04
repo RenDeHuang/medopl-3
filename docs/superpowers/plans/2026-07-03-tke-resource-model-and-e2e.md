@@ -339,52 +339,23 @@ git add packages/console/api packages/console/ui tests/ui tests/contracts
 git commit -m "feat: expose resource provisioning console"
 ```
 
-## Task 5: Local Console Creates Cloud Resources
+## Task 5: Superseded Local Console Cloud Resource Mode
 
-**Files:**
-- Modify: `tools/start-uiux-demo-api.js`
-- Modify: `README.md`
-- Create/modify: `DEV_GUIDE.md`
-- Modify: `tests/ui/uiux-demo-preview-contract.test.js`
+This task was superseded by the explicit local-to-staging split added after the ComputePool/ComputeAllocation model was finalized.
 
-- [ ] **Step 1: Add documented local-to-TKE mode**
+Do not use `npm run demo:api` for Tencent TKE. The demo API is local-only and must not mutate staging resources.
 
-Support running local Console/API against real TKE:
+Use the dedicated staging-local commands instead:
 
 ```bash
-OPL_RUNTIME_PROVIDER=tencent-tke \
-OPL_WORKSPACE_IMAGE=<tcr>/<namespace>/one-person-lab-app:<tag> \
-OPL_WORKSPACE_DOMAIN=<workspace-staging-domain> \
-OPL_K8S_NAMESPACE=<namespace> \
-OPL_INGRESS_CLASS=<ingress-class> \
-OPL_WORKSPACE_STORAGE_CLASS=<storage-class> \
-OPL_IMAGE_PULL_SECRET_NAME=<secret> \
-npm run demo:api
+cp deploy/tke/opl-cloud-staging.local.env.example .env.staging.local
+npm run staging:readiness
+npm run staging:local
+npm run staging:ui
+OPL_CONFIRM_REAL_CLOUD_E2E=1 npm run staging:e2e
 ```
 
-This mode must not reset production/staging state unless `OPL_UIUX_DEMO_RESET=1` is explicit.
-
-- [ ] **Step 2: Add readiness preflight**
-
-Before allowing real TKE resource creation, verify env, kubeconfig, storage class, image pull secret, ingress domain, and `one-person-lab-app` image are available.
-
-- [ ] **Step 3: Verify local-to-TKE route**
-
-Run:
-
-```bash
-npm run demo:api
-curl http://127.0.0.1:8791/api/runtime/readiness
-```
-
-Expected: readiness is green only when TKE resources are correctly configured.
-
-- [ ] **Step 4: Commit**
-
-```bash
-git add tools README.md DEV_GUIDE.md tests/ui
-git commit -m "docs: document local tke resource e2e"
-```
+`local-to-staging` and `cloud-staging` must share staging PostgreSQL and the same Tencent TKE resource pool so local E2E and rollout validate the same system.
 
 ## Task 6: Public Staging E2E
 

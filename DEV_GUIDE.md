@@ -13,6 +13,16 @@ OPL Console is the commercial control plane. The current resource model is:
 
 Workspace is not the only resource body. It is the access entry.
 
+## Runtime Modes
+
+OPL Console has three supported operator modes:
+
+- `local-demo`: local UI preview with `local-docker`; never mutates Tencent Cloud.
+- `local-to-staging`: local Console API/UI connected to staging PostgreSQL and staging TKE; can create real Tencent resources after explicit operator confirmation.
+- `cloud-staging`: deployed Console in TKE using the same staging PostgreSQL and resource pool; validates rollout, ingress, TLS, image, and secret wiring.
+
+The code path is shared. The difference is environment and persistence. `local-to-staging` and `cloud-staging` must use the same `DATABASE_URL` so accounts, balances, resources, ledger rows, and Workspace URLs are one system.
+
 ## Local UI Demo
 
 ```bash
@@ -27,28 +37,30 @@ Default demo accounts:
 
 Local demo seeds the current chain: manual top-up, create compute allocation, create storage, attach storage, create Workspace URL, record one sub2api request usage, and create one support ticket.
 
-## Local Console Against Real TKE
+`demo:api` is local-only and refuses `OPL_RUNTIME_PROVIDER=tencent-tke`. Use it for UI/UX review, not cloud resource testing.
 
-Use this when the Console runs locally but provisions cloud resources in TKE:
+## Local To Staging
 
 ```bash
-OPL_RUNTIME_PROVIDER=tencent-tke \
-OPL_WORKSPACE_IMAGE=<tcr>/<namespace>/one-person-lab-app:<tag> \
-OPL_WORKSPACE_DOMAIN=<workspace-staging-domain> \
-OPL_K8S_NAMESPACE=<namespace> \
-OPL_INGRESS_CLASS=<ingress-class> \
-OPL_WORKSPACE_STORAGE_CLASS=<storage-class> \
-OPL_IMAGE_PULL_SECRET_NAME=<secret> \
-TENCENT_DEPLOY_KUBECONFIG_REF=<kubeconfig> \
-OPL_TENCENT_PROVISIONER_BIN=<path-to-go-provisioner> \
-npm run demo:api
+cp deploy/tke/opl-cloud-staging.local.env.example .env.staging.local
+npm run staging:readiness
+npm run staging:local
+npm run staging:ui
 ```
 
-In `tencent-tke` mode, `npm run demo:api` does not reset state unless `OPL_UIUX_DEMO_RESET=1` is explicit. The API calls `GET /api/runtime/readiness` internally before seeding real resources.
+`staging:local` loads the ignored `.env.staging.local`, builds the Go Tencent provisioner, requires `OPL_RUNTIME_PROVIDER=tencent-tke`, and uses staging PostgreSQL. It does not reset state or seed demo users.
 
-## Public Staging E2E
+Run real local-to-staging E2E only after readiness passes and you intend to create billable Tencent Cloud resources:
 
-Full commercial e2e must use a public Console URL and a public Workspace URL. Localhost does not count.
+```bash
+OPL_CONFIRM_REAL_CLOUD_E2E=1 npm run staging:e2e
+```
+
+This verifier may use a local Console origin such as `http://127.0.0.1:8787`, but the Workspace URL still must be a public HTTPS staging URL.
+
+## Cloud Staging E2E
+
+After rollout, run the public verifier against the deployed Console. Both Console and Workspace URLs must be public HTTPS URLs.
 
 Expected chain:
 
@@ -68,7 +80,18 @@ Run after staging is configured:
 
 ```bash
 npm run validate:production-manifest
-npm run verify:production
+OPL_CONSOLE_ORIGIN=https://<console-domain> npm run verify:production
+```
+
+Rollout confidence gate:
+
+```text
+unit/contract tests pass
++ local-to-staging readiness pass
++ local-to-staging real E2E pass
++ cloud-staging readiness pass
++ cloud-staging public E2E pass
+= ready to consider public launch
 ```
 
 ## Required Env Vars

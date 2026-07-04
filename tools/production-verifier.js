@@ -59,6 +59,18 @@ function assertPublicHttpsUrl(url, errorName) {
   return parsed;
 }
 
+function assertConsoleOrigin(url, { allowPrivateConsoleOrigin = false } = {}) {
+  if (!allowPrivateConsoleOrigin) return assertPublicHttpsUrl(url, "public_origin_required");
+  let parsed = null;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error("console_origin_required");
+  }
+  if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("console_origin_required");
+  return parsed;
+}
+
 function endpoint(origin, path) {
   return `${normalizeOrigin(origin)}${path}`;
 }
@@ -359,12 +371,13 @@ export async function verifyProductionChain({
   workspaceUrlAttempts = DEFAULT_WORKSPACE_URL_ATTEMPTS,
   retryDelayMs = DEFAULT_RETRY_DELAY_MS,
   operatorToken = "",
+  allowPrivateConsoleOrigin = false,
   fetchImpl = globalThis.fetch
 } = {}) {
   if (typeof fetchImpl !== "function") throw new Error("fetch_required");
   const checks = [];
   const normalizedOrigin = normalizeOrigin(origin);
-  assertPublicHttpsUrl(normalizedOrigin, "public_origin_required");
+  assertConsoleOrigin(normalizedOrigin, { allowPrivateConsoleOrigin });
   const effectiveWorkspaceName = workspaceName || `${DEFAULT_WORKSPACE_NAME} ${runId}`;
   const creditSourceEventId = `production_verification_credit:${runId}`;
   const requestUsageSourceEventId = `production_verification_request_usage:${runId}`;
