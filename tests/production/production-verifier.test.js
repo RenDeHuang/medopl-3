@@ -175,8 +175,8 @@ function chainResponses(chain) {
         { id: "usage-request-prod001", accountId: "pi-prod", workspaceId: chain.workspace.id, requestId: "production-verification-request" }
       ],
       walletTransactions: [
-        { id: "wallet-compute-debit", accountId: "pi-prod", resourceId: chain.replacementCompute.id, type: "compute_debit" },
-        { id: "wallet-storage-debit", accountId: "pi-prod", resourceId: chain.storage.id, type: "storage_debit" },
+        { id: "wallet-compute-debit", accountId: "pi-prod", metadata: { computeAllocationId: chain.replacementCompute.id }, type: "compute_debit" },
+        { id: "wallet-storage-debit", accountId: "pi-prod", metadata: { storageId: chain.storage.id }, type: "storage_debit" },
         { id: "wallet-request-debit", accountId: "pi-prod", workspaceId: chain.workspace.id, type: "request_debit" }
       ]
     },

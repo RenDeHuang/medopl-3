@@ -400,12 +400,12 @@ function assertLedgerAndUsage(checks, state, { accountId, compute, storage, atta
   );
   const hasComputeWalletTransaction = walletTransactions.some((entry) =>
     entry.accountId === accountId &&
-    entry.resourceId === compute?.id &&
+    entry.metadata?.computeAllocationId === compute?.id &&
     entry.type === "compute_debit"
   );
   const hasStorageWalletTransaction = walletTransactions.some((entry) =>
     entry.accountId === accountId &&
-    entry.resourceId === storage?.id &&
+    entry.metadata?.storageId === storage?.id &&
     entry.type === "storage_debit"
   );
   const hasRequestWalletTransaction = walletTransactions.some((entry) =>
