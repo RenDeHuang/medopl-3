@@ -146,6 +146,29 @@ test("TKE production deploy workflow passes package compute pool bindings to the
   }
 });
 
+test("TKE production deploy workflow injects Tencent Go SDK mutation inputs", async () => {
+  const deploymentContract = await readJson(deploymentContractPath);
+  const workflow = await readWorkflow(deploymentContract.deployWorkflow.file);
+  const currentJob = job(workflow, deploymentContract.deployWorkflow.job);
+  const stepMap = stepsByName(currentJob);
+
+  assert.ok(String(currentJob.env.TENCENTCLOUD_SECRET_ID || "").includes("secrets.TENCENT_MUTATION_SECRET_ID"));
+  assert.ok(String(currentJob.env.TENCENTCLOUD_SECRET_KEY || "").includes("secrets.TENCENT_MUTATION_SECRET_KEY"));
+  for (const key of [
+    "TENCENTCLOUD_REGION",
+    "TENCENT_CVM_SUBNET_ID",
+    "TENCENT_CVM_SECURITY_GROUP_IDS",
+    "RUN_TENCENT_CREATE_RELEASE_EXECUTION"
+  ]) {
+    assert.ok(Object.hasOwn(currentJob.env, key), `deploy workflow missing ${key}`);
+  }
+  assert.match(
+    serializedStep(stepMap.get("Install Kubernetes secrets")),
+    /opl-cloud-tencent-mutation/,
+    "deploy must install Tencent mutation credentials as a Kubernetes secret"
+  );
+});
+
 test("TKE manifest renderer replaces deploy-time values without rendering secrets", async () => {
   const source = await readFile("deploy/tke/opl-cloud.k8s.json", "utf8");
   const manifest = JSON.parse(source);
@@ -177,6 +200,12 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
       OPL_CONSOLE_TLS_SECRET_NAME: "opl-cloud-console-medopl-cn-tls",
       OPL_WORKSPACE_TLS_SECRET_NAME: "opl-cloud-workspace-medopl-cn-tls",
       OPL_INGRESS_CLASS: "qcloud",
+      TENCENTCLOUD_REGION: "na-siliconvalley",
+      TENCENT_CVM_SUBNET_ID: "subnet-opl",
+      TENCENT_CVM_SECURITY_GROUP_IDS: "sg-opl-a,sg-opl-b",
+      TENCENT_CVM_SYSTEM_DISK_TYPE: "CLOUD_BSSD",
+      TENCENT_CVM_SYSTEM_DISK_SIZE_GB: "50",
+      RUN_TENCENT_CREATE_RELEASE_EXECUTION: "1",
       TENCENT_DEPLOY_CLUSTER_ID: "cls-oplcloud",
       TENCENT_TCR_REGISTRY: "uswccr.ccs.tencentyun.com",
       TENCENT_TCR_NAMESPACE: "oplcloud",
@@ -215,8 +244,24 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
   assert.equal(config.data.OPL_CODEX_BASE_URL, "https://gflabtoken.cn/v1");
   assert.equal(config.data.OPL_WORKSPACE_VOLUME_SNAPSHOT_CLASS, "cbs-snapshot");
   assert.equal(config.data.OPL_TENCENT_PROVISIONER_BIN, "/usr/local/bin/opl-tencent-provisioner");
+  assert.equal(config.data.TENCENTCLOUD_REGION, "na-siliconvalley");
+  assert.equal(config.data.TENCENT_CVM_SUBNET_ID, "subnet-opl");
+  assert.equal(config.data.TENCENT_CVM_SECURITY_GROUP_IDS, "sg-opl-a,sg-opl-b");
+  assert.equal(config.data.RUN_TENCENT_CREATE_RELEASE_EXECUTION, "1");
   assert.equal(config.data.TENCENT_DEPLOY_CLUSTER_ID, "cls-oplcloud");
   assert.equal(config.data.TENCENT_TCR_REGISTRY, "uswccr.ccs.tencentyun.com");
+  assert.ok(
+    deployment.spec.template.spec.containers[0].env.some((entry) =>
+      entry.name === "TENCENTCLOUD_SECRET_ID" &&
+      entry.valueFrom?.secretKeyRef?.name === "opl-cloud-tencent-mutation"
+    )
+  );
+  assert.ok(
+    deployment.spec.template.spec.containers[0].env.some((entry) =>
+      entry.name === "TENCENTCLOUD_SECRET_KEY" &&
+      entry.valueFrom?.secretKeyRef?.name === "opl-cloud-tencent-mutation"
+    )
+  );
   assert.equal(deployment.spec.template.spec.containers[0].image, "uswccr.ccs.tencentyun.com/oplcloud/opl-cloud:test");
   assert.deepEqual(deployment.spec.template.spec.imagePullSecrets, [{ name: "tcr-pull-secret" }]);
   assert.equal(ingress.spec.ingressClassName, "qcloud");
@@ -263,6 +308,12 @@ test("TKE manifest renderer can skip the shared Ingress during deploy so Workspa
       OPL_CONSOLE_TLS_SECRET_NAME: "opl-cloud-console-medopl-cn-tls",
       OPL_WORKSPACE_TLS_SECRET_NAME: "opl-cloud-workspace-medopl-cn-tls",
       OPL_INGRESS_CLASS: "qcloud",
+      TENCENTCLOUD_REGION: "na-siliconvalley",
+      TENCENT_CVM_SUBNET_ID: "subnet-opl",
+      TENCENT_CVM_SECURITY_GROUP_IDS: "sg-opl-a,sg-opl-b",
+      TENCENT_CVM_SYSTEM_DISK_TYPE: "CLOUD_BSSD",
+      TENCENT_CVM_SYSTEM_DISK_SIZE_GB: "50",
+      RUN_TENCENT_CREATE_RELEASE_EXECUTION: "1",
       TENCENT_DEPLOY_CLUSTER_ID: "cls-oplcloud",
       TENCENT_TCR_REGISTRY: "uswccr.ccs.tencentyun.com",
       TENCENT_TCR_NAMESPACE: "oplcloud",

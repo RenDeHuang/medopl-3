@@ -40,8 +40,14 @@ const tkeProductionEnv = {
       accountId: "admin"
     }
   ]),
+  TENCENTCLOUD_SECRET_ID: "secret-id",
+  TENCENTCLOUD_SECRET_KEY: "secret-key",
+  TENCENTCLOUD_REGION: "ap-guangzhou",
   TENCENT_DEPLOY_KUBECONFIG_REF: "/tmp/kubeconfig",
   TENCENT_DEPLOY_CLUSTER_ID: "cls-123",
+  TENCENT_CVM_SUBNET_ID: "subnet-123",
+  TENCENT_CVM_SECURITY_GROUP_IDS: "sg-123,sg-456",
+  RUN_TENCENT_CREATE_RELEASE_EXECUTION: "1",
   TENCENT_TCR_REGISTRY: "registry.example.com",
   TENCENT_TCR_NAMESPACE: "opl",
   TENCENT_TCR_REGION: "ap-guangzhou"
@@ -65,6 +71,7 @@ test("productionReadiness passes only when the TKE production runtime, images, p
     "database_url:true",
     "auth_seed:true",
     "provider_env:true",
+    "live_mutation_guard:true",
     "tools:true"
   ]);
 });
@@ -84,6 +91,31 @@ test("productionReadiness reports only TKE-specific blockers", async () => {
   assert.ok(report.missingEnv.includes("OPL_WORKSPACE_STORAGE_CLASS"));
   assert.deepEqual(report.missingTools, ["kubectl", "/usr/local/bin/opl-tencent-provisioner"]);
   assert.ok(report.failedChecks.includes("registry_images"));
+  assert.ok(report.failedChecks.includes("provider_env"));
+});
+
+test("productionReadiness requires Tencent Go SDK mutation inputs for live compute allocation", async () => {
+  const {
+    TENCENTCLOUD_SECRET_ID,
+    TENCENTCLOUD_SECRET_KEY,
+    TENCENTCLOUD_REGION,
+    TENCENT_CVM_SUBNET_ID,
+    TENCENT_CVM_SECURITY_GROUP_IDS,
+    RUN_TENCENT_CREATE_RELEASE_EXECUTION,
+    ...missingMutationEnv
+  } = tkeProductionEnv;
+  const report = await productionReadiness({
+    env: missingMutationEnv,
+    commandExists: (command) => command === "kubectl" || command === "/usr/local/bin/opl-tencent-provisioner"
+  });
+
+  assert.equal(report.ready, false);
+  assert.ok(report.missingEnv.includes("TENCENTCLOUD_SECRET_ID"));
+  assert.ok(report.missingEnv.includes("TENCENTCLOUD_SECRET_KEY"));
+  assert.ok(report.missingEnv.includes("TENCENTCLOUD_REGION"));
+  assert.ok(report.missingEnv.includes("TENCENT_CVM_SUBNET_ID"));
+  assert.ok(report.missingEnv.includes("TENCENT_CVM_SECURITY_GROUP_IDS"));
+  assert.ok(report.missingEnv.includes("RUN_TENCENT_CREATE_RELEASE_EXECUTION"));
   assert.ok(report.failedChecks.includes("provider_env"));
 });
 

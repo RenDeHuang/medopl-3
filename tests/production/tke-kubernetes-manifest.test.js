@@ -33,6 +33,10 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
   assert.equal(config.data.OPL_WORKSPACE_VOLUME_SNAPSHOT_CLASS, "cbs-snapshot");
   assert.equal(config.data.OPL_TENCENT_PROVISIONER_BIN, "/usr/local/bin/opl-tencent-provisioner");
   assert.equal(config.data.TENCENT_DEPLOY_CLUSTER_ID, "cls-xxxxxxxx");
+  assert.equal(config.data.TENCENTCLOUD_REGION, "ap-guangzhou");
+  assert.equal(config.data.TENCENT_CVM_SUBNET_ID, "subnet-xxxxxxxx");
+  assert.equal(config.data.TENCENT_CVM_SECURITY_GROUP_IDS, "sg-xxxxxxxx");
+  assert.equal(config.data.RUN_TENCENT_CREATE_RELEASE_EXECUTION, "0");
   assert.equal(config.data.TENCENT_TCR_REGISTRY, "registry.example.com");
   assert.equal(config.data.TENCENT_TCR_NAMESPACE, "opl");
   assert.equal(config.data.TENCENT_TCR_REGION, "ap-guangzhou");
@@ -55,7 +59,9 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
     "DATABASE_URL->opl-cloud-database/DATABASE_URL",
     "OPL_CONSOLE_USERS_JSON->opl-cloud-auth/OPL_CONSOLE_USERS_JSON",
     "OPL_OPERATOR_SUMMARY_TOKEN->opl-cloud-operator/OPL_OPERATOR_SUMMARY_TOKEN",
-    "OPL_CODEX_API_KEY->opl-cloud-workspace-codex/OPL_CODEX_API_KEY"
+    "OPL_CODEX_API_KEY->opl-cloud-workspace-codex/OPL_CODEX_API_KEY",
+    "TENCENTCLOUD_SECRET_ID->opl-cloud-tencent-mutation/TENCENTCLOUD_SECRET_ID",
+    "TENCENTCLOUD_SECRET_KEY->opl-cloud-tencent-mutation/TENCENTCLOUD_SECRET_KEY"
   ]);
   assert.equal(container.env.find((item) => item.name === "OPL_OPERATOR_SUMMARY_TOKEN").valueFrom.secretKeyRef.optional, true);
   assert.equal(container.env.find((item) => item.name === "OPL_CODEX_API_KEY").valueFrom.secretKeyRef.optional, true);

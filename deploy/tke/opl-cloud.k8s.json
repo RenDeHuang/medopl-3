@@ -69,7 +69,13 @@
         "OPL_CODEX_MODEL": "gpt-5.5",
         "OPL_CODEX_REASONING_EFFORT": "xhigh",
         "OPL_CODEX_BASE_URL": "https://gflabtoken.cn/v1",
-        "OPL_TENCENT_PROVISIONER_BIN": "/usr/local/bin/opl-tencent-provisioner"
+        "OPL_TENCENT_PROVISIONER_BIN": "/usr/local/bin/opl-tencent-provisioner",
+        "TENCENTCLOUD_REGION": "ap-guangzhou",
+        "TENCENT_CVM_SUBNET_ID": "subnet-xxxxxxxx",
+        "TENCENT_CVM_SECURITY_GROUP_IDS": "sg-xxxxxxxx",
+        "TENCENT_CVM_SYSTEM_DISK_TYPE": "CLOUD_BSSD",
+        "TENCENT_CVM_SYSTEM_DISK_SIZE_GB": "50",
+        "RUN_TENCENT_CREATE_RELEASE_EXECUTION": "0"
       }
     },
     {
@@ -166,6 +172,24 @@
                         "name": "opl-cloud-workspace-codex",
                         "key": "OPL_CODEX_API_KEY",
                         "optional": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "TENCENTCLOUD_SECRET_ID",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "opl-cloud-tencent-mutation",
+                        "key": "TENCENTCLOUD_SECRET_ID"
+                      }
+                    }
+                  },
+                  {
+                    "name": "TENCENTCLOUD_SECRET_KEY",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "opl-cloud-tencent-mutation",
+                        "key": "TENCENTCLOUD_SECRET_KEY"
                       }
                     }
                   }

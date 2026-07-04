@@ -20,8 +20,14 @@ const REQUIRED_TKE_ENV = [
   "OPL_IMAGE_PULL_SECRET_NAME",
   "OPL_WORKSPACE_STORAGE_CLASS",
   "OPL_TENCENT_PROVISIONER_BIN",
+  "TENCENTCLOUD_SECRET_ID",
+  "TENCENTCLOUD_SECRET_KEY",
+  "TENCENTCLOUD_REGION",
   "TENCENT_DEPLOY_KUBECONFIG_REF",
   "TENCENT_DEPLOY_CLUSTER_ID",
+  "TENCENT_CVM_SUBNET_ID",
+  "TENCENT_CVM_SECURITY_GROUP_IDS",
+  "RUN_TENCENT_CREATE_RELEASE_EXECUTION",
   "TENCENT_TCR_REGISTRY",
   "TENCENT_TCR_NAMESPACE",
   "TENCENT_TCR_REGION"
@@ -167,6 +173,7 @@ export async function productionReadiness({ env = process.env, commandExists = (
     check("database_url", Boolean(env.DATABASE_URL), "DATABASE_URL is required for production persistence"),
     check("auth_seed", hasProductionAuthSeed(env), "OPL_CONSOLE_USERS_JSON or explicit PI/Admin auth credentials are required for production"),
     check("provider_env", providerConfig.requiredEnv.every((key) => Boolean(env[key])), "Runtime provider environment is incomplete"),
+    check("live_mutation_guard", env.RUN_TENCENT_CREATE_RELEASE_EXECUTION === "1", "RUN_TENCENT_CREATE_RELEASE_EXECUTION must be 1 for production compute allocation"),
     check("tools", missingTools.length === 0, "Required production tools are missing")
   ];
   const failedChecks = checks.filter((item) => !item.ok).map((item) => item.id);
