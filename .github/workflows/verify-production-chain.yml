@@ -1,0 +1,75 @@
+name: Verify Production Chain
+
+on:
+  workflow_dispatch:
+    inputs:
+      origin:
+        description: Public OPL Console origin.
+        required: true
+        default: "https://cloud.medopl.cn"
+        type: string
+      run_id:
+        description: Optional verifier run id.
+        required: false
+        type: string
+      account_id:
+        description: Account id used for the paid verifier resources.
+        required: false
+        default: "pi-production-verifier"
+        type: string
+      package_id:
+        description: Compute package id to verify.
+        required: false
+        default: "basic"
+        type: choice
+        options:
+          - "basic"
+          - "pro"
+      credit_amount:
+        description: Manual recharge amount for this paid verification.
+        required: false
+        default: "1000"
+        type: string
+      url_attempts:
+        description: Workspace URL readiness attempts.
+        required: false
+        default: "30"
+        type: string
+      retry_delay_ms:
+        description: Delay between Workspace readiness attempts.
+        required: false
+        default: "10000"
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify live OPL business chain
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      OPL_CONSOLE_ORIGIN: ${{ inputs.origin }}
+      OPL_VERIFY_OPERATOR_TOKEN: ${{ secrets.OPL_OPERATOR_SUMMARY_TOKEN }}
+      OPL_VERIFY_ACCOUNT_ID: ${{ inputs.account_id }}
+      OPL_VERIFY_PACKAGE_ID: ${{ inputs.package_id }}
+      OPL_VERIFY_CREDIT_AMOUNT: ${{ inputs.credit_amount }}
+      OPL_VERIFY_URL_ATTEMPTS: ${{ inputs.url_attempts }}
+      OPL_VERIFY_RETRY_DELAY_MS: ${{ inputs.retry_delay_ms }}
+      OPL_VERIFY_RUN_ID: ${{ inputs.run_id }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify production chain
+        run: npm run verify:production
