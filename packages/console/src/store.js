@@ -564,6 +564,7 @@ export class PostgresStore {
       )
     `);
     await this.ensureCurrentColumns(client);
+    await this.dropRetiredColumnRequirements(client);
     await client.query("CREATE UNIQUE INDEX IF NOT EXISTS request_usage_logs_workspace_request_idx ON request_usage_logs (workspace_id, request_id)");
     await client.query("CREATE UNIQUE INDEX IF NOT EXISTS request_usage_dedup_workspace_source_idx ON request_usage_dedup (workspace_id, source_event_id)");
     await client.query("CREATE UNIQUE INDEX IF NOT EXISTS resource_usage_logs_workspace_resource_source_idx ON resource_usage_logs (workspace_id, resource_type, ((state->>'sourceEventId')))");
@@ -691,5 +692,23 @@ export class PostgresStore {
         await client.query(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${definition}`);
       }
     }
+  }
+
+  async dropRetiredColumnRequirements(client) {
+    await client.query(`
+      DO $$
+      BEGIN
+        IF EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name = 'storage_attachments'
+            AND column_name = 'compute_id'
+        ) THEN
+          ALTER TABLE storage_attachments ALTER COLUMN compute_id DROP NOT NULL;
+        END IF;
+      END
+      $$;
+    `);
   }
 }

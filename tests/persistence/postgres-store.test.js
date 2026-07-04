@@ -37,7 +37,7 @@ function createFakePool() {
       if (normalized === "BEGIN" || normalized === "COMMIT" || normalized === "ROLLBACK") {
         return { rows: [] };
       }
-      if (normalized.startsWith("CREATE TABLE IF NOT EXISTS") || normalized.startsWith("ALTER TABLE") || normalized.startsWith("CREATE UNIQUE INDEX IF NOT EXISTS") || normalized.startsWith("CREATE INDEX IF NOT EXISTS") || normalized.startsWith("DROP INDEX IF EXISTS")) {
+      if (normalized.startsWith("CREATE TABLE IF NOT EXISTS") || normalized.startsWith("ALTER TABLE") || normalized.startsWith("DO $$") || normalized.startsWith("CREATE UNIQUE INDEX IF NOT EXISTS") || normalized.startsWith("CREATE INDEX IF NOT EXISTS") || normalized.startsWith("DROP INDEX IF EXISTS")) {
         return { rows: [] };
       }
       if (normalized.startsWith("TRUNCATE organizations, users, memberships, workspaces, billing_reconciliation_reports, support_tickets, evidence_ledger, billing_ledger, audit_events, notifications, runtime_operations")) {
@@ -478,6 +478,10 @@ test("PostgresStore schema setup upgrades existing commercial tables in place", 
   assert.ok(
     alterStatements.some((sql) => sql.includes("ALTER TABLE request_usage_dedup ADD COLUMN IF NOT EXISTS request_fingerprint")),
     "existing request dedup tables must gain request_fingerprint before writes"
+  );
+  assert.ok(
+    pool.statements.some((statement) => statement.sql.includes("ALTER TABLE storage_attachments ALTER COLUMN compute_id DROP NOT NULL")),
+    "existing storage_attachments tables must stop requiring retired compute_id before current writes"
   );
 });
 
