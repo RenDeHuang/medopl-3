@@ -940,9 +940,9 @@ function nodePoolLabels({ computeId, accountId }) {
 
 function nodePoolTags({ computeId, accountId }) {
   return [
-    { Key: "oplcloud:compute-id", Value: compactId(computeId) },
-    { Key: "oplcloud:account-id", Value: compactId(accountId) },
-    { Key: "oplcloud:managed-by", Value: "opl-cloud" }
+    { Key: "oplcloud-compute-id", Value: compactId(computeId) },
+    { Key: "oplcloud-account-id", Value: compactId(accountId) },
+    { Key: "oplcloud-managed-by", Value: "opl-cloud" }
   ];
 }
 
