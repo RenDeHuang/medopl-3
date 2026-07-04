@@ -138,6 +138,32 @@ func (client *tencentSDKClient) CreateComputeAllocation(request Request, env map
 	}
 	nodePoolId := request.Pool.NodePoolId
 	createNodePoolRequestId := ""
+	describeRequestId := ""
+	var pool *tke2022.NodePool
+	if nodePoolId != "" {
+		describedPool, requestId, err := client.describeNativeNodePool(nodePoolId)
+		if err != nil && !isNodePoolNotFound(err) {
+			response := sdkErrorResponse("tencent_describe_node_pool_failed", err)
+			return response
+		}
+		if err == nil {
+			pool = describedPool
+			describeRequestId = requestId
+		} else {
+			nodePoolId = ""
+		}
+	}
+	if nodePoolId == "" {
+		discoveredPool, requestId, err := client.discoverNativeNodePool(request)
+		if err != nil {
+			return sdkErrorResponse("tencent_describe_node_pool_failed", err)
+		}
+		if discoveredPool != nil {
+			pool = discoveredPool
+			nodePoolId = stringValue(discoveredPool.NodePoolId)
+			describeRequestId = requestId
+		}
+	}
 	if nodePoolId == "" {
 		createNodePoolRequest, failure := buildCreateNativeNodePoolRequest(request, env)
 		if failure != nil {
@@ -160,11 +186,15 @@ func (client *tencentSDKClient) CreateComputeAllocation(request Request, env map
 		}
 	}
 
-	pool, describeRequestId, err := client.describeNativeNodePool(nodePoolId)
-	if err != nil {
-		response := sdkErrorResponse("tencent_describe_node_pool_failed", err)
-		response.ProviderRequestId = createNodePoolRequestId
-		return response
+	if pool == nil {
+		describedPool, requestId, err := client.describeNativeNodePool(nodePoolId)
+		if err != nil {
+			response := sdkErrorResponse("tencent_describe_node_pool_failed", err)
+			response.ProviderRequestId = createNodePoolRequestId
+			return response
+		}
+		pool = describedPool
+		describeRequestId = requestId
 	}
 	currentReplicas := nativeReplicas(pool)
 	targetReplicas := currentReplicas + 1
@@ -270,6 +300,57 @@ func (client *tencentSDKClient) describeNativeNodePool(nodePoolId string) (*tke2
 		return nil, stringValue(describeResponse.Response.RequestId), fmt.Errorf("node pool not found: %s", nodePoolId)
 	}
 	return describeResponse.Response.NodePools[0], stringValue(describeResponse.Response.RequestId), nil
+}
+
+func (client *tencentSDKClient) discoverNativeNodePool(request Request) (*tke2022.NodePool, string, error) {
+	describeRequest := tke2022.NewDescribeNodePoolsRequest()
+	describeRequest.ClusterId = common.StringPtr(client.clusterId)
+	describeRequest.Limit = common.Int64Ptr(100)
+	describeResponse, err := client.nativeTkeClient.DescribeNodePools(describeRequest)
+	if err != nil {
+		return nil, "", err
+	}
+	requestId := stringValue(describeResponse.Response.RequestId)
+	for _, pool := range describeResponse.Response.NodePools {
+		if matchesPackageNodePool(pool, request) {
+			return pool, requestId, nil
+		}
+	}
+	return nil, requestId, nil
+}
+
+func matchesPackageNodePool(pool *tke2022.NodePool, request Request) bool {
+	if pool == nil || isDeletingNodePool(pool) {
+		return false
+	}
+	labels := nodePoolLabels(pool)
+	if request.Pool.Id != "" && labels["oplcloud.cn/pool-id"] == request.Pool.Id {
+		return true
+	}
+	if request.PackageId != "" && request.Pool.InstanceType != "" {
+		return labels["oplcloud.cn/package-id"] == request.PackageId &&
+			labels["oplcloud.cn/instance-type"] == request.Pool.InstanceType
+	}
+	return request.Pool.Id != "" && stringValue(pool.Name) == request.Pool.Id
+}
+
+func nodePoolLabels(pool *tke2022.NodePool) map[string]string {
+	labels := map[string]string{}
+	for _, label := range pool.Labels {
+		if label != nil && label.Name != nil && label.Value != nil {
+			labels[*label.Name] = *label.Value
+		}
+	}
+	return labels
+}
+
+func isDeletingNodePool(pool *tke2022.NodePool) bool {
+	lifeState := strings.ToLower(strings.TrimSpace(stringValue(pool.LifeState)))
+	return strings.Contains(lifeState, "delet")
+}
+
+func isNodePoolNotFound(err error) bool {
+	return err != nil && strings.Contains(strings.ToLower(err.Error()), "node pool not found")
 }
 
 func buildCreateNativeNodePoolRequest(request Request, env map[string]string) (*tke2022.CreateNodePoolRequest, *Response) {

@@ -303,6 +303,7 @@ type fakeNativeTkeAPI struct {
 	scaleNodePoolRequest     *tke2022.ScaleNodePoolRequest
 	deleteMachinesRequest    *tke2022.DeleteClusterMachinesRequest
 	nodePoolId               string
+	discoverNodePoolId       string
 	replicas                 int64
 	calls                    []string
 }
@@ -327,6 +328,27 @@ func (api *fakeNativeTkeAPI) DescribeNodePools(request *tke2022.DescribeNodePool
 	if nodePoolId == "" {
 		nodePoolId = "np-basic"
 	}
+	if filterValue := nodePoolIdFilterValue(request); filterValue != "" && filterValue != nodePoolId {
+		return &tke2022.DescribeNodePoolsResponse{
+			Response: &tke2022.DescribeNodePoolsResponseParams{
+				NodePools:  []*tke2022.NodePool{},
+				TotalCount: common.Int64Ptr(0),
+				RequestId:  common.StringPtr("req-describe-missing"),
+			},
+		}, nil
+	}
+	if nodePoolIdFilterValue(request) == "" {
+		if api.discoverNodePoolId == "" {
+			return &tke2022.DescribeNodePoolsResponse{
+				Response: &tke2022.DescribeNodePoolsResponseParams{
+					NodePools:  []*tke2022.NodePool{},
+					TotalCount: common.Int64Ptr(0),
+					RequestId:  common.StringPtr("req-discover-pool"),
+				},
+			}, nil
+		}
+		nodePoolId = api.discoverNodePoolId
+	}
 	return &tke2022.DescribeNodePoolsResponse{
 		Response: &tke2022.DescribeNodePoolsResponseParams{
 			NodePools: []*tke2022.NodePool{{
@@ -334,6 +356,11 @@ func (api *fakeNativeTkeAPI) DescribeNodePools(request *tke2022.DescribeNodePool
 				Name:       common.StringPtr("pool-basic-2c4g"),
 				Type:       common.StringPtr("Native"),
 				LifeState:  common.StringPtr("Running"),
+				Labels: []*tke2022.Label{
+					{Name: common.StringPtr("oplcloud.cn/pool-id"), Value: common.StringPtr("pool-basic-2c4g")},
+					{Name: common.StringPtr("oplcloud.cn/package-id"), Value: common.StringPtr("basic")},
+					{Name: common.StringPtr("oplcloud.cn/instance-type"), Value: common.StringPtr("SA5.LARGE4")},
+				},
 				Native: &tke2022.NativeNodePoolInfo{
 					Replicas: common.Int64Ptr(api.replicas),
 				},
@@ -342,6 +369,15 @@ func (api *fakeNativeTkeAPI) DescribeNodePools(request *tke2022.DescribeNodePool
 			RequestId:  common.StringPtr("req-describe-pool"),
 		},
 	}, nil
+}
+
+func nodePoolIdFilterValue(request *tke2022.DescribeNodePoolsRequest) string {
+	for _, filter := range request.Filters {
+		if filter.Name != nil && *filter.Name == "NodePoolsId" && len(filter.Values) > 0 && filter.Values[0] != nil {
+			return *filter.Values[0]
+		}
+	}
+	return ""
 }
 
 func (api *fakeNativeTkeAPI) ScaleNodePool(request *tke2022.ScaleNodePoolRequest) (*tke2022.ScaleNodePoolResponse, error) {
@@ -404,6 +440,91 @@ func TestTencentSDKClientCreateAllocationScalesExistingPackageNodePool(t *testin
 	}
 }
 
+func TestTencentSDKClientCreateAllocationDiscoversExistingPackageNodePool(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{discoverNodePoolId: "np-discovered", replicas: 2}
+	client := &tencentSDKClient{
+		region:          "ap-guangzhou",
+		clusterId:       "cls-123",
+		nativeTkeClient: tkeAPI,
+	}
+
+	response := client.CreateComputeAllocation(Request{
+		AccountId: "pi-alpha",
+		UserId:    "usr-alpha",
+		PackageId: "basic",
+		Pool: ComputePoolInput{
+			Id:           "pool-basic-2c4g",
+			InstanceType: "SA5.LARGE4",
+		},
+		Allocation: ComputeAllocationInput{Id: "compute-alpha"},
+	}, map[string]string{})
+
+	if !response.Ok {
+		t.Fatalf("expected ok response: %#v", response)
+	}
+	if response.NodePoolId != "np-discovered" {
+		t.Fatalf("expected discovered node pool id: %#v", response)
+	}
+	if tkeAPI.createNodePoolRequest != nil {
+		t.Fatalf("must reuse discovered package pool before creating: %#v", tkeAPI.createNodePoolRequest)
+	}
+	if tkeAPI.scaleNodePoolRequest == nil || tkeAPI.scaleNodePoolRequest.Replicas == nil || *tkeAPI.scaleNodePoolRequest.Replicas != 3 {
+		t.Fatalf("expected scale to 3 replicas: %#v", tkeAPI.scaleNodePoolRequest)
+	}
+	expectedCalls := []string{"DescribeNodePools", "ScaleNodePool"}
+	if len(tkeAPI.calls) != len(expectedCalls) {
+		t.Fatalf("unexpected call order: %#v", tkeAPI.calls)
+	}
+	for index, expected := range expectedCalls {
+		if tkeAPI.calls[index] != expected {
+			t.Fatalf("unexpected call order: %#v", tkeAPI.calls)
+		}
+	}
+}
+
+func TestTencentSDKClientCreateAllocationFallsBackFromStaleConfiguredNodePool(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-live", discoverNodePoolId: "np-live", replicas: 4}
+	client := &tencentSDKClient{
+		region:          "ap-guangzhou",
+		clusterId:       "cls-123",
+		nativeTkeClient: tkeAPI,
+	}
+
+	response := client.CreateComputeAllocation(Request{
+		AccountId: "pi-alpha",
+		UserId:    "usr-alpha",
+		PackageId: "basic",
+		Pool: ComputePoolInput{
+			Id:           "pool-basic-2c4g",
+			InstanceType: "SA5.LARGE4",
+			NodePoolId:   "np-stale",
+		},
+		Allocation: ComputeAllocationInput{Id: "compute-alpha"},
+	}, map[string]string{})
+
+	if !response.Ok {
+		t.Fatalf("expected ok response: %#v", response)
+	}
+	if response.NodePoolId != "np-live" {
+		t.Fatalf("expected discovered live node pool id: %#v", response)
+	}
+	if tkeAPI.createNodePoolRequest != nil {
+		t.Fatalf("must not create when matching live package pool exists: %#v", tkeAPI.createNodePoolRequest)
+	}
+	if tkeAPI.scaleNodePoolRequest == nil || tkeAPI.scaleNodePoolRequest.Replicas == nil || *tkeAPI.scaleNodePoolRequest.Replicas != 5 {
+		t.Fatalf("expected scale to 5 replicas: %#v", tkeAPI.scaleNodePoolRequest)
+	}
+	expectedCalls := []string{"DescribeNodePools", "DescribeNodePools", "ScaleNodePool"}
+	if len(tkeAPI.calls) != len(expectedCalls) {
+		t.Fatalf("unexpected call order: %#v", tkeAPI.calls)
+	}
+	for index, expected := range expectedCalls {
+		if tkeAPI.calls[index] != expected {
+			t.Fatalf("unexpected call order: %#v", tkeAPI.calls)
+		}
+	}
+}
+
 func TestTencentSDKClientCreateAllocationCreatesMissingPackageNodePoolThenScales(t *testing.T) {
 	tkeAPI := &fakeNativeTkeAPI{}
 	client := &tencentSDKClient{
@@ -445,7 +566,7 @@ func TestTencentSDKClientCreateAllocationCreatesMissingPackageNodePoolThenScales
 	if tkeAPI.scaleNodePoolRequest.Replicas == nil || *tkeAPI.scaleNodePoolRequest.Replicas != 1 {
 		t.Fatalf("expected scale to one replica: %#v", tkeAPI.scaleNodePoolRequest)
 	}
-	expectedCalls := []string{"CreateNodePool", "DescribeNodePools", "ScaleNodePool"}
+	expectedCalls := []string{"DescribeNodePools", "CreateNodePool", "DescribeNodePools", "ScaleNodePool"}
 	if len(tkeAPI.calls) != len(expectedCalls) {
 		t.Fatalf("unexpected call order: %#v", tkeAPI.calls)
 	}
