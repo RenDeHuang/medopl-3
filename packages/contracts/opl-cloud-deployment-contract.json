@@ -135,6 +135,7 @@
     "steps": [
       "Prepare kubeconfig",
       "Show workload status",
+      "Show legacy cleanup inventory",
       "Show cluster node capacity",
       "Show namespace resource requests",
       "Describe pending workspace pods",
@@ -153,6 +154,12 @@
     "requiredCommandsByStep": {
       "Show workload status": [
         "get deploy,rs,pod,svc,ingress -o wide"
+      ],
+      "Show legacy cleanup inventory": [
+        "get ns -o name",
+        "medopl|opl-webui|opl-ws-",
+        "get deploy,sts,ds,svc,ingress,pvc,secret -A -o json",
+        "namespace/$namespace resource summary"
       ],
       "Describe pending workspace pods": [
         "status.phase=Pending",
