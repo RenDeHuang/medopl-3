@@ -549,6 +549,22 @@ export const oplRoutes = Object.freeze([
     capabilities: ["read", "detail", "audit"]
   }),
   currentRoute({
+    id: "admin.cleanup",
+    path: "/admin/cleanup",
+    label: "Cleanup",
+    area: "admin",
+    role: "admin",
+    adminMenu: true,
+    featureFlag: "runtimeAdmin",
+    routeKind: "read_model",
+    objectKind: "RuntimeReadiness",
+    pageModule: "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
+    apiClient: "packages/console/ui/api/console-read-api.js",
+    apiRoutes: ["GET /api/management/state", "GET /api/operator/summary", "POST /api/operator/cleanup-workspace-access"],
+    serviceBoundary: "WorkspaceEntryService",
+    capabilities: ["read", "list", "action", "audit"]
+  }),
+  currentRoute({
     id: "admin.support",
     path: "/admin/support",
     label: "Support Ops",

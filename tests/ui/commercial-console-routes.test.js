@@ -98,6 +98,7 @@ test("Admin menu owns operator surfaces behind admin permission", () => {
     "Billing Ops",
     "Ledger",
     "Runtime",
+    "Cleanup",
     "Support Ops"
   ]);
 

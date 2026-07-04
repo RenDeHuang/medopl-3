@@ -8,6 +8,7 @@ import { useConsoleState } from "../store/console-state.js";
 import { AccountPage } from "./account/AccountPage.jsx";
 import {
   AdminBillingPage,
+  AdminCleanupPage,
   AdminFabricPage,
   AdminLedgerPage,
   AdminOverviewPage,
@@ -98,6 +99,7 @@ function renderRoute(ctx) {
   if (path.startsWith("/admin/fabric")) return <AdminFabricPage {...ctx} />;
   if (path.startsWith("/admin/ledger")) return <AdminLedgerPage {...ctx} />;
   if (path.startsWith("/admin/runtime")) return <AdminRuntimePage {...ctx} />;
+  if (path.startsWith("/admin/cleanup")) return <AdminCleanupPage {...ctx} />;
   if (path.startsWith("/admin/support")) return <AdminSupportPage {...ctx} />;
   if (path.startsWith("/admin")) return <AdminOverviewPage {...ctx} />;
   if (path.startsWith("/console/compute/new")) return <CreateComputeAllocationPage {...ctx} />;

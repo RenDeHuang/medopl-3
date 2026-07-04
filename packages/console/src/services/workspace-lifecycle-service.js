@@ -28,6 +28,10 @@ function resourceForAccount(resources, accountId, resourceId, errorName) {
   return resource;
 }
 
+function resourceIsDestroyed(resource) {
+  return !resource || resource.status === "destroyed" || resource.billingStatus === "stopped";
+}
+
 export class WorkspaceLifecycleService extends OplDomainService {
   async createWorkspace(input) {
     if (!input?.attachmentId) throw new Error("workspace_attachment_required");
@@ -254,6 +258,92 @@ export class WorkspaceLifecycleService extends OplDomainService {
         continuation: { action: "reset_workspace_token" }
       });
       return clone(workspace);
+    });
+  }
+
+  async cleanupWorkspaceAccess({ accountId = "", workspaceIds = [], reason = "operator_cleanup" } = {}) {
+    return this.store.update((state) => {
+      state.computeAllocations ??= [];
+      state.storageVolumes ??= [];
+      state.storageAttachments ??= [];
+      const targetWorkspaceIds = new Set((workspaceIds || []).filter(Boolean));
+      const computeById = new Map(state.computeAllocations.map((resource) => [resource.id, resource]));
+      const storageById = new Map(state.storageVolumes.map((resource) => [resource.id, resource]));
+      const attachmentById = new Map(state.storageAttachments.map((resource) => [resource.id, resource]));
+      const cleaned = [];
+      const skipped = [];
+
+      for (const workspace of Object.values(state.workspaces || {})) {
+        if (accountId && workspace.ownerAccountId !== accountId) continue;
+        if (targetWorkspaceIds.size && !targetWorkspaceIds.has(workspace.id)) continue;
+        const tokenStatus = workspace.access?.tokenStatus || "unknown";
+        if (tokenStatus !== "active") {
+          skipped.push({ workspaceId: workspace.id, reason: "token_not_active", tokenStatus });
+          continue;
+        }
+        const compute = computeById.get(workspace.computeAllocationId);
+        const storage = storageById.get(workspace.storageId);
+        const attachment = attachmentById.get(workspace.attachmentId);
+        const unavailableBecause = [
+          resourceIsDestroyed(compute) ? "compute_unavailable" : "",
+          resourceIsDestroyed(storage) ? "storage_unavailable" : "",
+          !attachment || attachment.status === "detached" ? "attachment_unavailable" : ""
+        ].filter(Boolean);
+
+        if (!unavailableBecause.length) {
+          skipped.push({ workspaceId: workspace.id, reason: "resources_still_active", tokenStatus });
+          continue;
+        }
+
+        workspace.access.tokenStatus = "unavailable";
+        workspace.updatedAt = now();
+        const sourceEventId = `workspace_access_cleanup:${workspace.id}:${reason}`;
+        state.billingLedger.push(this.ledgerEntry({
+          state,
+          workspaceId: workspace.id,
+          accountId: workspace.ownerAccountId,
+          type: "workspace_access_cleaned",
+          amount: 0,
+          sourceEventId,
+          metadata: {
+            reason,
+            unavailableBecause,
+            computeAllocationId: workspace.computeAllocationId,
+            storageId: workspace.storageId,
+            attachmentId: workspace.attachmentId
+          }
+        }));
+        this.recordEvidence({
+          state,
+          type: "workspace.access_cleanup",
+          accountId: workspace.ownerAccountId,
+          workspace,
+          continuation: { action: "create_workspace_entry" }
+        });
+        cleaned.push({
+          workspaceId: workspace.id,
+          accountId: workspace.ownerAccountId,
+          tokenStatus: workspace.access.tokenStatus,
+          unavailableBecause
+        });
+      }
+
+      const activeStatus = new Set(["creating", "running", "ready", "attaching", "attached", "provisioning", "pending"]);
+      return {
+        cleaned,
+        skipped,
+        activeResources: {
+          compute: state.computeAllocations
+            .filter((item) => (!accountId || item.ownerAccountId === accountId) && (activeStatus.has(item.status) || item.billingStatus === "running"))
+            .map(({ id, ownerAccountId, packageId, spec, status, billingStatus }) => ({ id, ownerAccountId, packageId, spec, status, billingStatus })),
+          storage: state.storageVolumes
+            .filter((item) => (!accountId || item.ownerAccountId === accountId) && (activeStatus.has(item.status) || item.billingStatus === "running"))
+            .map(({ id, ownerAccountId, packageId, sizeGb, status, billingStatus }) => ({ id, ownerAccountId, packageId, sizeGb, status, billingStatus })),
+          attachments: state.storageAttachments
+            .filter((item) => (!accountId || item.ownerAccountId === accountId) && activeStatus.has(item.status))
+            .map(({ id, ownerAccountId, computeAllocationId, storageId, status }) => ({ id, ownerAccountId, computeAllocationId, storageId, status }))
+        }
+      };
     });
   }
 

@@ -2,9 +2,10 @@ import React from "react";
 import { Alert, Button, Drawer, Form, Input, InputNumber, Select, Typography } from "antd";
 import { Plus } from "lucide-react";
 import { manualTopUp } from "../../api/billing-api.js";
-import { createUser } from "../../api/console-read-api.js";
+import { cleanupWorkspaceAccess, createUser } from "../../api/console-read-api.js";
 import {
   ActionGroup,
+  CleanupResourceTable,
   ConsoleSurface,
   InsightPanel,
   MetricStrip,
@@ -271,6 +272,60 @@ export function AdminRuntimePage({ adminOps }) {
           />
         </InsightPanel>
       </div>
+    </ConsoleSurface>
+  );
+}
+
+export function AdminCleanupPage({ managementState, session, runAction }) {
+  const activeWorkspaces = (managementState.workspaces || []).filter((workspace) => workspace.access?.tokenStatus === "active");
+  const destroyedCompute = (managementState.computeAllocations || []).filter((item) => item.status === "destroyed").length;
+  const destroyedStorage = (managementState.storageVolumes || []).filter((item) => item.status === "destroyed").length;
+  const detachedAttachments = (managementState.storageAttachments || []).filter((item) => item.status === "detached").length;
+  return (
+    <ConsoleSurface title="Cleanup" eyebrow="Admin" subtitle="Workspace URL cleanup for destroyed or detached backing resources">
+      <MetricStrip
+        items={[
+          { label: "Active URLs", value: activeWorkspaces.length, caption: "candidate Workspace entries", tone: activeWorkspaces.length ? "warn" : "good" },
+          { label: "Destroyed compute", value: destroyedCompute, caption: "stopped allocations", tone: destroyedCompute ? "info" : "neutral" },
+          { label: "Destroyed storage", value: destroyedStorage, caption: "released volumes", tone: destroyedStorage ? "info" : "neutral" },
+          { label: "Detached mounts", value: detachedAttachments, caption: "inactive attachments", tone: detachedAttachments ? "info" : "neutral" }
+        ]}
+      />
+      <InsightPanel
+        title="Workspace URL cleanup"
+        eyebrow="Operator cleanup"
+        actions={(
+          <Button
+            danger
+            onClick={() => runAction(
+              () => cleanupWorkspaceAccess({ reason: "operator_cleanup_all" }, session.csrfToken),
+              "无效 Workspace URL 已清理"
+            )}
+          >
+            清理全部无效 URL
+          </Button>
+        )}
+      >
+        <CleanupResourceTable
+          workspaces={managementState.workspaces || []}
+          computeAllocations={managementState.computeAllocations || []}
+          storageVolumes={managementState.storageVolumes || []}
+          storageAttachments={managementState.storageAttachments || []}
+          onCleanup={(row) => runAction(
+            () => cleanupWorkspaceAccess({ workspaceIds: [row.id], reason: "operator_cleanup_single" }, session.csrfToken),
+            "Workspace URL 已清理"
+          )}
+        />
+      </InsightPanel>
+      <InsightPanel title="清理边界" eyebrow="Safety">
+        <ResourceSplit
+          items={[
+            { label: "不删除", value: "Compute / Storage / Ledger", meta: "只处理 Workspace URL access.tokenStatus", status: "guarded", tone: "good" },
+            { label: "清理条件", value: "资源已销毁或挂载已解除", meta: "active URL becomes unavailable", status: "current", tone: "info" },
+            { label: "证据", value: "workspace_access_cleaned", meta: "billing ledger amount 0", status: "audit", tone: "info" }
+          ]}
+        />
+      </InsightPanel>
     </ConsoleSurface>
   );
 }

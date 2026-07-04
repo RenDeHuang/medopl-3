@@ -1,6 +1,6 @@
 import React from "react";
 import { PageContainer, ProTable } from "@ant-design/pro-components";
-import { Button, Empty, List, Space, Tag, Typography } from "antd";
+import { Alert, Button, Empty, List, Space, Tag, Typography } from "antd";
 
 function toneClass(tone = "neutral") {
   return ["good", "warn", "danger", "info"].includes(tone) ? tone : "neutral";
@@ -147,6 +147,104 @@ export function ObjectTable({ rowKey = "id", data = [], columns = [], emptyText 
       columns={columns}
       locale={{ emptyText: <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={emptyText} /> }}
       {...rest}
+    />
+  );
+}
+
+export function PriceImpactPanel({ items = [], emptyText = "暂无价格信息" }) {
+  return <ResourceSplit items={items.length ? items : [{ label: "价格", value: "-", meta: emptyText, status: "pending", tone: "neutral" }]} />;
+}
+
+export function OperationTimeline({ operations = [], resourceId = "", emptyText = "暂无操作记录" }) {
+  const scoped = operations
+    .filter((operation) => !resourceId || operation.resourceId === resourceId || operation.workspaceId === resourceId)
+    .slice(-8)
+    .reverse()
+    .map((operation) => ({
+      title: operation.operationType || operation.type || "operation",
+      description: operation.error || operation.providerRequestId || operation.resourceId || operation.workspaceId,
+      meta: operation.status || operation.updatedAt || operation.createdAt,
+      tone: operation.status === "failed" ? "danger" : operation.status === "completed" ? "good" : "info"
+    }));
+  return <TimelineList items={scoped} emptyText={emptyText} />;
+}
+
+export function FailureRecoveryPanel({ resource, supportAction, cleanupAction }) {
+  const failed = Boolean(resource?.safeMessage || resource?.error || resource?.status === "failed");
+  if (!failed) {
+    return (
+      <Alert
+        type="success"
+        showIcon
+        message="资源状态正常"
+        description="失败原因、重试入口和工单入口会在异常时显示。"
+      />
+    );
+  }
+  return (
+    <div className="stackList">
+      <Alert
+        type="error"
+        showIcon
+        message={resource.safeMessage || resource.error || "资源操作失败"}
+        description={resource.providerRequestId || resource.operationId || resource.id}
+      />
+      <ActionGroup actions={[
+        cleanupAction && { label: "清理无效入口", danger: true, onClick: cleanupAction },
+        supportAction && { label: "提交工单", type: "primary", onClick: supportAction }
+      ].filter(Boolean)} />
+    </div>
+  );
+}
+
+export function CleanupResourceTable({ workspaces = [], computeAllocations = [], storageVolumes = [], storageAttachments = [], onCleanup }) {
+  const computeById = new Map(computeAllocations.map((item) => [item.id, item]));
+  const storageById = new Map(storageVolumes.map((item) => [item.id, item]));
+  const attachmentById = new Map(storageAttachments.map((item) => [item.id, item]));
+  const rows = workspaces
+    .filter((workspace) => workspace.access?.tokenStatus === "active")
+    .map((workspace) => {
+      const compute = computeById.get(workspace.computeAllocationId);
+      const storage = storageById.get(workspace.storageId);
+      const attachment = attachmentById.get(workspace.attachmentId);
+      const unavailable = [
+        !compute || compute.status === "destroyed" ? "compute" : "",
+        !storage || storage.status === "destroyed" ? "storage" : "",
+        !attachment || attachment.status === "detached" ? "attachment" : ""
+      ].filter(Boolean);
+      return {
+        id: workspace.id,
+        name: workspace.name,
+        accountId: workspace.ownerAccountId,
+        tokenStatus: workspace.access?.tokenStatus,
+        computeStatus: compute?.status || "missing",
+        storageStatus: storage?.status || "missing",
+        attachmentStatus: attachment?.status || "missing",
+        cleanupNeeded: unavailable.length > 0,
+        unavailable: unavailable.join(", ") || "none"
+      };
+    });
+  return (
+    <ObjectTable
+      data={rows}
+      emptyText="暂无需要检查的 Workspace URL"
+      columns={[
+        { title: "Workspace", dataIndex: "name", render: (_, row) => <Typography.Text className="inlineCode">{row.name || row.id}</Typography.Text> },
+        { title: "账号", dataIndex: "accountId", ellipsis: true },
+        { title: "URL", dataIndex: "tokenStatus", render: (value) => <StatusPill label={value} tone={value === "active" ? "good" : "warn"} /> },
+        { title: "计算", dataIndex: "computeStatus", render: (value) => <StatusPill label={value} tone={value === "destroyed" || value === "missing" ? "danger" : "good"} /> },
+        { title: "存储", dataIndex: "storageStatus", render: (value) => <StatusPill label={value} tone={value === "destroyed" || value === "missing" ? "danger" : "good"} /> },
+        { title: "挂载", dataIndex: "attachmentStatus", render: (value) => <StatusPill label={value} tone={value === "detached" || value === "missing" ? "danger" : "good"} /> },
+        {
+          title: "操作",
+          valueType: "option",
+          render: (_, row) => (
+            <Button danger disabled={!row.cleanupNeeded} onClick={() => onCleanup?.(row)}>
+              清理 URL
+            </Button>
+          )
+        }
+      ]}
     />
   );
 }

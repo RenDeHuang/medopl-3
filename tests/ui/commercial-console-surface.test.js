@@ -19,7 +19,11 @@ test("commercial Console UI is built from the maintained surface component layer
     "ResourceSplit",
     "ActionGroup",
     "TimelineList",
-    "ObjectTable"
+    "ObjectTable",
+    "PriceImpactPanel",
+    "OperationTimeline",
+    "FailureRecoveryPanel",
+    "CleanupResourceTable"
   ]) {
     assert.match(surfaceSource, new RegExp(`export function ${exportName}\\b`), `${exportName} must be exported by the commercial UI layer`);
   }
@@ -106,6 +110,35 @@ test("resource provisioning UI shows price, hold, balance impact, and operation 
   }
   assert.match(resourceSource, /¥\/小时|每小时/, "compute creation must show hourly pricing before submit");
   assert.match(resourceSource, /冻结|hold/i, "resource creation must show prepaid hold impact before submit");
+  assert.match(resourceSource, /Form\.useWatch\("packageId"/, "resource creation must update pricing when package selection changes");
+  assert.match(resourceSource, /PriceImpactPanel/, "resource creation must use the maintained pricing impact component");
+  assert.match(resourceSource, /OperationTimeline/, "resource detail must show operation timeline evidence");
+  assert.match(resourceSource, /FailureRecoveryPanel/, "resource detail must expose failed-operation recovery guidance");
+});
+
+test("Admin cleanup route exposes orphan URL cleanup without redesigning the Console shell", async () => {
+  const routesSource = await source("packages/console/ui/routes/opl-routes.js");
+  const shellSource = await source("packages/console/ui/pages/ConsolePage.jsx");
+  const adminSource = await source("packages/console/ui/pages/admin/AdminOverviewPage.jsx");
+  const apiSource = await source("packages/console/ui/api/console-read-api.js");
+
+  assert.match(routesSource, /id: "admin\.cleanup"/, "admin cleanup must be a first-class route id");
+  assert.match(routesSource, /path: "\/admin\/cleanup"/, "admin cleanup must have a refreshable route");
+  assert.match(routesSource, /"POST \/api\/operator\/cleanup-workspace-access"/, "admin cleanup route must declare its cleanup API");
+  assert.match(shellSource, /AdminCleanupPage/, "Console shell must render the cleanup page through the route");
+  assert.match(adminSource, /CleanupResourceTable/, "cleanup UI must use the maintained cleanup table component");
+  assert.match(adminSource, /cleanupWorkspaceAccess/, "cleanup UI must call the cleanup API client");
+  assert.match(apiSource, /"\/api\/operator\/cleanup-workspace-access"/, "cleanup API client must call the operator cleanup route");
+});
+
+test("Billing and Workspace pages explain commercial charging and URL lifecycle", async () => {
+  const billingSource = await source("packages/console/ui/pages/billing/BillingPage.jsx");
+  const detailSource = await source("packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx");
+
+  assert.match(billingSource, /计费规则|billingPolicy/, "billing page must explain holds, release, and request debit policy");
+  assert.match(billingSource, /request_debit|请求扣费/, "billing page must expose request debit evidence");
+  assert.match(detailSource, /WorkspaceLifecyclePanel/, "Workspace detail must expose URL/resource lifecycle state");
+  assert.match(detailSource, /tokenStatus/, "Workspace detail must show token lifecycle status");
 });
 
 test("Admin users surface is backed by management state and can create login users", async () => {

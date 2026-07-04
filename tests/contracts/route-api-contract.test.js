@@ -74,6 +74,7 @@ test("active route contract excludes future, reserved, prune, and retired route 
     "GET /api/runtime/readiness",
     "GET /api/state",
     "GET /api/support/tickets",
+    "POST /api/operator/cleanup-workspace-access",
     "POST /api/auth/login",
     "POST /api/auth/logout",
     "POST /api/billing/topups",
@@ -111,7 +112,8 @@ test("active route contract models compute pools before account compute allocati
     ["attachment.detail", "StorageAttachment", "/console/attachments/:id"],
     ["workspace.list", "Workspace", "/console/workspaces"],
     ["workspace.create", "Workspace", "/console/workspaces/new"],
-    ["workspace.detail", "Workspace", "/console/workspaces/:id"]
+    ["workspace.detail", "Workspace", "/console/workspaces/:id"],
+    ["admin.cleanup", "RuntimeReadiness", "/admin/cleanup"]
   ]) {
     const route = byId.get(id);
     assert.ok(route, `missing current route ${id}`);
@@ -130,7 +132,8 @@ test("active route contract models compute pools before account compute allocati
     "POST /api/storage-volumes",
     "POST /api/storage-volumes/destroy",
     "POST /api/storage-attachments",
-    "POST /api/storage-attachments/detach"
+    "POST /api/storage-attachments/detach",
+    "POST /api/operator/cleanup-workspace-access"
   ]) {
     assert.ok(activeApiRoutes.has(apiRoute), `${apiRoute} must be in current resource contract`);
   }

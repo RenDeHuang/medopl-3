@@ -26,3 +26,7 @@ export function getManagementState(organizationId) {
 export function createUser(input, csrfToken) {
   return postJson("/api/users", input, csrfToken);
 }
+
+export function cleanupWorkspaceAccess(input, csrfToken) {
+  return postJson("/api/operator/cleanup-workspace-access", input, csrfToken);
+}

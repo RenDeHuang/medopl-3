@@ -394,6 +394,62 @@ test("admin resource writes default to the admin account when no accountId is su
   }
 });
 
+test("admin can invoke operator Workspace URL cleanup with CSRF", async () => {
+  const root = await mkdtemp(join(tmpdir(), "opl-auth-admin-cleanup-"));
+  const calls = [];
+  const appService = {
+    async cleanupWorkspaceAccess(input) {
+      calls.push(["cleanupWorkspaceAccess", input]);
+      return {
+        cleaned: [{ workspaceId: "ws-alpha", tokenStatus: "unavailable" }],
+        skipped: [],
+        activeResources: { compute: [], storage: [], attachments: [] }
+      };
+    }
+  };
+  const auth = createAuthController({
+    usersPath: join(root, "users.json"),
+    seedUsers: [
+      {
+        id: "usr-admin",
+        email: "admin@example.com",
+        password: "secret-admin",
+        name: "Admin",
+        role: "admin",
+        accountId: "admin"
+      }
+    ]
+  });
+  const { origin, close } = await listen(createRequestHandler({ appService, auth }));
+  try {
+    const adminLogin = await postJson(origin, "/api/auth/login", {
+      email: "admin@example.com",
+      password: "secret-admin"
+    });
+    const cleanup = await postJson(origin, "/api/operator/cleanup-workspace-access", {
+      accountId: "pi-alpha",
+      workspaceIds: ["ws-alpha"],
+      reason: "operator_cleanup_single"
+    }, {
+      cookie: cookieFrom(adminLogin.response),
+      "x-opl-csrf": adminLogin.payload.csrfToken
+    });
+
+    assert.equal(cleanup.response.status, 200);
+    assert.deepEqual(cleanup.payload.cleaned, [{ workspaceId: "ws-alpha", tokenStatus: "unavailable" }]);
+    assert.deepEqual(calls, [
+      ["cleanupWorkspaceAccess", {
+        accountId: "pi-alpha",
+        workspaceIds: ["ws-alpha"],
+        reason: "operator_cleanup_single"
+      }]
+    ]);
+  } finally {
+    await close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("admin can create a login user with an account wallet", async () => {
   const root = await mkdtemp(join(tmpdir(), "opl-auth-create-user-"));
   const store = new MemoryStore();

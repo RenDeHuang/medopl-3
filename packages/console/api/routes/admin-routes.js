@@ -24,6 +24,10 @@ export function buildAdminRoutes({ appService, request, operatorSummaryToken, re
         accountId: url.searchParams.get("accountId") || null
       });
     },
+    "POST /api/operator/cleanup-workspace-access": () => {
+      requireAdmin();
+      return appService.cleanupWorkspaceAccess(body);
+    },
     "GET /api/management/state": () => {
       requireAdmin();
       const url = new URL(request.url, "http://localhost");

@@ -23,6 +23,21 @@ function toneForStatus(value) {
   return "info";
 }
 
+function WorkspaceLifecyclePanel({ workspace, compute, storage, attachment }) {
+  return (
+    <InsightPanel title="访问生命周期" eyebrow="Workspace lifecycle">
+      <ResourceSplit
+        items={[
+          { label: "URL token", value: workspace.access?.tokenStatus || "-", meta: "tokenStatus", status: workspace.access?.tokenStatus || "unknown", tone: workspace.access?.tokenStatus === "active" ? "good" : "warn" },
+          { label: "计算资源", value: compute?.status || "missing", meta: workspace.computeAllocationId, status: "ComputeAllocation", tone: toneForStatus(compute?.status) },
+          { label: "存储资源", value: storage?.status || "missing", meta: workspace.storageId, status: "StorageVolume", tone: toneForStatus(storage?.status) },
+          { label: "挂载状态", value: attachment?.status || "missing", meta: attachment?.mountPath || "/data", status: "StorageAttachment", tone: toneForStatus(attachment?.status) }
+        ]}
+      />
+    </InsightPanel>
+  );
+}
+
 export function WorkspaceDetailPage({ selected, selectedPlan, state, session, runAction }) {
   if (!selected) {
     return (
@@ -83,6 +98,7 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
             ]}
           />
         </InsightPanel>
+        <WorkspaceLifecyclePanel workspace={selected} compute={compute} storage={storage} attachment={attachment} />
       </div>
     </ConsoleSurface>
   );

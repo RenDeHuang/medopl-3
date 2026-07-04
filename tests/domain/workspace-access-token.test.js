@@ -84,3 +84,50 @@ test("Workspace access uses a long-lived URL token that can be deleted and reset
     "token_reset"
   ]);
 });
+
+test("operator cleanup marks active Workspace URLs unavailable after backing resources are destroyed", async () => {
+  const service = createTestService();
+  await service.manualTopUp({ accountId: "pi-alpha", amount: 250, reason: "owner_credit" });
+  const workspace = await createWorkspaceEntry(service, {
+    accountId: "pi-alpha",
+    workspaceName: "Cleanup Lab"
+  });
+
+  await service.detachStorage({
+    accountId: "pi-alpha",
+    attachmentId: workspace.attachmentId,
+    confirm: true
+  });
+  await service.destroyComputeAllocation({
+    accountId: "pi-alpha",
+    computeAllocationId: workspace.computeAllocationId,
+    confirm: true
+  });
+  await service.destroyStorageVolume({
+    accountId: "pi-alpha",
+    storageId: workspace.storageId,
+    confirmDataLoss: true
+  });
+
+  const before = await service.getState("pi-alpha");
+  assert.equal(before.workspaces.find((item) => item.id === workspace.id).access.tokenStatus, "active");
+
+  const cleanup = await service.cleanupWorkspaceAccess({
+    accountId: "pi-alpha",
+    reason: "operator_cleanup"
+  });
+  assert.deepEqual(cleanup.cleaned.map((item) => item.workspaceId), [workspace.id]);
+  assert.equal(cleanup.cleaned[0].tokenStatus, "unavailable");
+  assert.equal(cleanup.activeResources.compute.length, 0);
+  assert.equal(cleanup.activeResources.storage.length, 0);
+  assert.equal(cleanup.activeResources.attachments.length, 0);
+
+  await assert.rejects(
+    service.resolveWorkspaceAccess({ slug: workspace.slug, token: workspace.access.token }),
+    /workspace_token_inactive/
+  );
+
+  const after = await service.getState("pi-alpha");
+  assert.equal(after.workspaces.find((item) => item.id === workspace.id).access.tokenStatus, "unavailable");
+  assert.equal(after.billingLedger.some((entry) => entry.type === "workspace_access_cleaned" && entry.workspaceId === workspace.id), true);
+});

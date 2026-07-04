@@ -15,6 +15,7 @@ export const apiRouteManifest = [
   "GET /api/auth/me",
   "GET /api/state",
   "GET /api/operator/summary",
+  "POST /api/operator/cleanup-workspace-access",
   "GET /api/management/state",
   "POST /api/billing/topups",
   "POST /api/organizations",

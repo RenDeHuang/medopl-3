@@ -10,7 +10,18 @@ import {
   detachStorage
 } from "../../api/resources-api.js";
 import { navigate, routeTo } from "../../consoleRoutes.js";
-import { ActionGroup, ConsoleSurface, InsightPanel, MetricStrip, ObjectTable, ResourceSplit, StatusPill } from "../shared/commercial-console.jsx";
+import {
+  ActionGroup,
+  ConsoleSurface,
+  FailureRecoveryPanel,
+  InsightPanel,
+  MetricStrip,
+  ObjectTable,
+  OperationTimeline,
+  PriceImpactPanel,
+  ResourceSplit,
+  StatusPill
+} from "../shared/commercial-console.jsx";
 import { available, money } from "../shared/formatters.js";
 
 function resourceStatus(value) {
@@ -84,12 +95,15 @@ export function ComputeAllocationsPage({ state }) {
 export function CreateComputeAllocationPage({ state, session, runAction }) {
   const availablePackages = (state.packages || []).filter((plan) => plan.available);
   const initialPackageId = availablePackages[0]?.id || "basic";
-  const initialPlan = availablePackages.find((plan) => plan.id === initialPackageId);
-  const initialComputeHold = computeHoldAmount(initialPlan);
+  const [form] = Form.useForm();
+  const selectedPackageId = Form.useWatch("packageId", form) || initialPackageId;
+  const selectedPlan = availablePackages.find((plan) => plan.id === selectedPackageId) || availablePackages[0];
+  const selectedComputeHold = computeHoldAmount(selectedPlan);
   return (
     <ConsoleSurface title="Create Compute" eyebrow="Provision" subtitle="Choose a verified TKE compute package" compact>
       <InsightPanel title="开通计算" eyebrow="ComputeAllocation">
         <Form
+          form={form}
           layout="vertical"
           initialValues={{ name: "Analysis compute", packageId: initialPackageId }}
           onFinish={async (values) => {
@@ -120,11 +134,11 @@ export function CreateComputeAllocationPage({ state, session, runAction }) {
               tone: "good"
             }))}
           />
-          <ResourceSplit
+          <PriceImpactPanel
             items={[
-              { label: "每小时价格", value: `${money(computeHourlyPrice(initialPlan))}/小时`, meta: "computeHourlyPrice", status: "billable", tone: "info" },
-              { label: "预冻结", value: money(initialComputeHold), meta: "computeHoldAmount · 7 天", status: "hold", tone: "warn" },
-              { label: "冻结后可用", value: money(balanceAfterHold(state.wallet, initialComputeHold)), meta: "balanceAfterHold", status: "after hold", tone: balanceAfterHold(state.wallet, initialComputeHold) > 0 ? "good" : "warn" }
+              { label: "每小时价格", value: `${money(computeHourlyPrice(selectedPlan))}/小时`, meta: `${selectedPlan?.server || "-"} · computeHourlyPrice`, status: "billable", tone: "info" },
+              { label: "预冻结", value: money(selectedComputeHold), meta: "computeHoldAmount · 7 天", status: "hold", tone: "warn" },
+              { label: "冻结后可用", value: money(balanceAfterHold(state.wallet, selectedComputeHold)), meta: "balanceAfterHold", status: "after hold", tone: balanceAfterHold(state.wallet, selectedComputeHold) > 0 ? "good" : "warn" }
             ]}
           />
           <Button className="formSubmit" type="primary" htmlType="submit" icon={<Server size={15} />} disabled={!availablePackages.length}>
@@ -166,6 +180,17 @@ export function ComputeAllocationDetailPage({ state, path, session, runAction })
           ]}
         />
       </InsightPanel>
+      <div className="consoleGrid equal">
+        <InsightPanel title="操作时间线" eyebrow="Operation timeline">
+          <OperationTimeline operations={state.runtimeOperations || []} resourceId={resource.id} />
+        </InsightPanel>
+        <InsightPanel title="失败恢复" eyebrow="Recovery">
+          <FailureRecoveryPanel
+            resource={resource}
+            supportAction={() => navigate(routeTo("support.create"))}
+          />
+        </InsightPanel>
+      </div>
     </ConsoleSurface>
   );
 }
@@ -198,13 +223,17 @@ export function StorageVolumesPage({ state }) {
 export function CreateStorageVolumePage({ state, session, runAction }) {
   const availablePackages = (state.packages || []).filter((plan) => plan.available);
   const initialPackageId = availablePackages[0]?.id || "basic";
-  const initialPlan = availablePackages.find((plan) => plan.id === initialPackageId);
+  const [form] = Form.useForm();
+  const selectedPackageId = Form.useWatch("packageId", form) || initialPackageId;
+  const selectedSizeGb = Form.useWatch("sizeGb", form) || availablePackages[0]?.diskGb || 10;
+  const selectedPlan = availablePackages.find((plan) => plan.id === selectedPackageId) || availablePackages[0];
   const initialStorageSize = availablePackages[0]?.diskGb || 10;
-  const initialStorageHold = storageHoldAmount(initialPlan, initialStorageSize);
+  const selectedStorageHold = storageHoldAmount(selectedPlan, selectedSizeGb);
   return (
     <ConsoleSurface title="Create Storage" eyebrow="Provision" subtitle="Create a retained TKE storage volume" compact>
       <InsightPanel title="开通存储" eyebrow="StorageVolume">
         <Form
+          form={form}
           layout="vertical"
           initialValues={{ name: "Lab storage", packageId: initialPackageId, sizeGb: availablePackages[0]?.diskGb || 10 }}
           onFinish={async (values) => {
@@ -229,12 +258,12 @@ export function CreateStorageVolumePage({ state, session, runAction }) {
           <Form.Item name="sizeGb" label="容量 GB" rules={[{ required: true, message: "请输入容量" }]}>
             <InputNumber min={1} max={4096} style={{ width: "100%" }} />
           </Form.Item>
-          <ResourceSplit
+          <PriceImpactPanel
             items={[
-              { label: "存储单价", value: `${money(storageGbMonthPrice(initialPlan))}/GB月`, meta: "storageGbMonthPrice", status: "billable", tone: "info" },
-              { label: "每小时估算", value: `${money(storageHourlyEstimate(initialPlan, initialStorageSize))}/小时`, meta: "storageHourlyEstimate", status: `${initialStorageSize}GB`, tone: "info" },
-              { label: "预冻结", value: money(initialStorageHold), meta: "hold · 7 天", status: "冻结", tone: "warn" },
-              { label: "冻结后可用", value: money(balanceAfterHold(state.wallet, initialStorageHold)), meta: "balanceAfterHold", status: "after hold", tone: balanceAfterHold(state.wallet, initialStorageHold) > 0 ? "good" : "warn" }
+              { label: "存储单价", value: `${money(storageGbMonthPrice(selectedPlan))}/GB月`, meta: "storageGbMonthPrice", status: "billable", tone: "info" },
+              { label: "每小时估算", value: `${money(storageHourlyEstimate(selectedPlan, selectedSizeGb))}/小时`, meta: "storageHourlyEstimate", status: `${selectedSizeGb}GB`, tone: "info" },
+              { label: "预冻结", value: money(selectedStorageHold), meta: "hold · 7 天", status: "冻结", tone: "warn" },
+              { label: "冻结后可用", value: money(balanceAfterHold(state.wallet, selectedStorageHold)), meta: "balanceAfterHold", status: "after hold", tone: balanceAfterHold(state.wallet, selectedStorageHold) > 0 ? "good" : "warn" }
             ]}
           />
           <ResourceSplit items={[{ label: "挂载路径", value: "/data", meta: "one-person-lab-app persistent state", status: "ready", tone: "info" }]} />
@@ -277,6 +306,17 @@ export function StorageVolumeDetailPage({ state, path, session, runAction }) {
           ]}
         />
       </InsightPanel>
+      <div className="consoleGrid equal">
+        <InsightPanel title="操作时间线" eyebrow="Operation timeline">
+          <OperationTimeline operations={state.runtimeOperations || []} resourceId={resource.id} />
+        </InsightPanel>
+        <InsightPanel title="失败恢复" eyebrow="Recovery">
+          <FailureRecoveryPanel
+            resource={resource}
+            supportAction={() => navigate(routeTo("support.create"))}
+          />
+        </InsightPanel>
+      </div>
     </ConsoleSurface>
   );
 }

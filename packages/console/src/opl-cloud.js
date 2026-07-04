@@ -137,6 +137,10 @@ export class OplCloudService {
     return this.workspaceLifecycle.deleteWorkspaceToken(...args);
   }
 
+  async cleanupWorkspaceAccess(...args) {
+    return this.workspaceLifecycle.cleanupWorkspaceAccess(...args);
+  }
+
   async settleBilling(...args) {
     return this.billing.settleBilling(...args);
   }

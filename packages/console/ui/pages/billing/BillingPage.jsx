@@ -11,6 +11,7 @@ import {
 import { available, money, usageQuantity } from "../shared/formatters.js";
 
 export function BillingPage({ state, wallet }) {
+  const billingPolicy = state.billingPolicy || {};
   const resourceUsage = state.resourceUsageLogs || [];
   const requestUsage = state.requestUsageLogs || [];
   const recent = [
@@ -57,6 +58,16 @@ export function BillingPage({ state, wallet }) {
               { label: "Storage", value: `${usageQuantity(resourceUsage, "storage").toFixed(1)} GB-h`, meta: "storage volume usage", status: "retained", tone: "good" },
               { label: "Gateway", value: requestUsage.length, meta: "request usage logs", status: "metered", tone: "info" },
               { label: "充值记录", value: state.manualTopups?.length || 0, meta: "admin top-up evidence", status: "audited", tone: "good" }
+            ]}
+          />
+        </InsightPanel>
+
+        <InsightPanel title="计费规则" eyebrow="billingPolicy">
+          <ResourceSplit
+            items={[
+              { label: "计算/存储", value: "预付冻结", meta: `holdDays ${billingPolicy.holdDays || 7} · 销毁后释放未用冻结`, status: "hold", tone: "warn" },
+              { label: "请求扣费", value: "request_debit", meta: "sub2api request usage writes wallet transaction", status: "metered", tone: "info" },
+              { label: "对账", value: state.billingReconciliation?.guard?.status || "not_required", meta: state.billingReconciliation?.guard?.reason || "billing reconciliation guard", status: "guard", tone: state.billingReconciliation?.guard?.blockNewWorkspaces ? "danger" : "good" }
             ]}
           />
         </InsightPanel>
