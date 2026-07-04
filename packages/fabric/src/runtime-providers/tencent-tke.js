@@ -60,10 +60,14 @@ function computePoolInputFromPackage(packagePlan) {
   };
 }
 
-function computeAllocationNodeSelector(allocationId) {
-  return {
-    "oplcloud.cn/compute-allocation-id": allocationId
-  };
+function computePoolNodeSelector(poolId) {
+  return poolId
+    ? { "oplcloud.cn/pool-id": poolId }
+    : undefined;
+}
+
+function computePoolNodeSelectorFromCompute(compute) {
+  return computePoolNodeSelector(compute.poolId || compute.runtime?.poolId || "");
 }
 
 async function defaultRunner({ command, args, cwd, env }) {
@@ -159,9 +163,9 @@ export class TencentTkeProvider {
       }
     });
     const name = k8sName(allocationId);
-    const nodeSelector = computeAllocationNodeSelector(allocationId);
+    const nodeSelector = computePoolNodeSelector(pool.id);
     return {
-      providerResourceId: provisioned.instanceId ? `cvm/${provisioned.instanceId}` : "",
+      providerResourceId: provisioned.nodePoolId ? `nodepool/${provisioned.nodePoolId}` : "",
       operationId: provisioned.operationId || "",
       poolId: provisioned.poolId || pool.id,
       nodePoolId: provisioned.nodePoolId || pool.nodePoolId || "",
@@ -195,7 +199,7 @@ export class TencentTkeProvider {
       computeName,
       storageClaimName,
       nodeName: compute.nodeName || compute.runtime?.nodeName || "",
-      nodeSelector: compute.nodeSelector || compute.runtime?.nodeSelector || computeAllocationNodeSelector(compute.id || attachment.computeAllocationId)
+      nodeSelector: compute.nodeSelector || compute.runtime?.nodeSelector || computePoolNodeSelectorFromCompute(compute)
     });
     await this.runKubectl(["apply", "-f", manifestPath]);
     return {
@@ -237,12 +241,13 @@ export class TencentTkeProvider {
     const instanceId = compute.instanceId || (String(compute.providerResourceId || "").startsWith("cvm/")
       ? resourceName(compute.providerResourceId)
       : "");
-    if (instanceId && typeof this.provisionerClient.destroyComputeAllocation === "function") {
+    const nodePoolId = compute.nodePoolId || "";
+    if ((nodePoolId || instanceId || compute.nodeName) && typeof this.provisionerClient.destroyComputeAllocation === "function") {
       await this.provisionerClient.destroyComputeAllocation({
         accountId: compute.ownerAccountId || computeAllocation.ownerAccountId || "",
         pool: {
           id: compute.poolId || "",
-          nodePoolId: compute.nodePoolId || ""
+          nodePoolId
         },
         allocation: {
           id: compute.id || computeAllocation.id || "",

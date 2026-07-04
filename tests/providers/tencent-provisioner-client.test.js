@@ -25,8 +25,6 @@ test("TencentProvisionerClient invokes JSON stdin/stdout provisioner", async () 
       operationId: "op-test",
       poolId: input.pool.id,
       nodePoolId: input.pool.nodePoolId,
-      instanceId: "ins-test",
-      nodeName: "node-test",
       status: "provisioning",
       providerData: {
         action: input.action,
@@ -50,7 +48,7 @@ test("TencentProvisionerClient invokes JSON stdin/stdout provisioner", async () 
     });
 
     assert.equal(result.operationId, "op-test");
-    assert.equal(result.instanceId, "ins-test");
+    assert.equal(result.instanceId || "", "");
     assert.equal(result.providerData.action, "create_compute_allocation");
     assert.equal(result.providerData.dryRun, "true");
     assert.equal(result.providerData.accountId, "pi-alpha");
@@ -65,7 +63,7 @@ test("TencentProvisionerClient maps provisioner failures to safe errors", async 
     const scriptPath = await createFixtureProvisioner(root, `() => ({
       ok: false,
       errorCode: "tencent_permission_denied",
-      message: "CAM denied CreateClusterInstances",
+      message: "CAM denied ScaleNodePool",
       providerRequestId: "req-denied",
       retryable: false,
       providerData: { action: "create_compute_allocation" }
@@ -86,7 +84,7 @@ test("TencentProvisionerClient maps provisioner failures to safe errors", async 
       }),
       (error) => {
         assert.equal(error.message, "tencent_permission_denied");
-        assert.equal(error.safeMessage, "CAM denied CreateClusterInstances");
+        assert.equal(error.safeMessage, "CAM denied ScaleNodePool");
         assert.equal(error.providerRequestId, "req-denied");
         assert.equal(error.retryable, false);
         assert.deepEqual(error.providerData, { action: "create_compute_allocation" });

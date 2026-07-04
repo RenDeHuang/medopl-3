@@ -12,8 +12,7 @@ import (
 
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
-	cvm "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm/v20170312"
-	tke "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tke/v20180525"
+	tke2022 "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tke/v20220501"
 )
 
 var requiredTencentEnv = []string{
@@ -71,20 +70,16 @@ type TencentClient interface {
 type unimplementedTencentClient struct{}
 
 type tencentSDKClient struct {
-	region    string
-	clusterId string
-	tkeClient tkeComputeAPI
-	cvmClient cvmComputeAPI
+	region          string
+	clusterId       string
+	nativeTkeClient tkeNativeAPI
 }
 
-type tkeComputeAPI interface {
-	CreateClusterNodePool(request *tke.CreateClusterNodePoolRequest) (*tke.CreateClusterNodePoolResponse, error)
-	CreateClusterInstances(request *tke.CreateClusterInstancesRequest) (*tke.CreateClusterInstancesResponse, error)
-	AddNodeToNodePool(request *tke.AddNodeToNodePoolRequest) (*tke.AddNodeToNodePoolResponse, error)
-}
-
-type cvmComputeAPI interface {
-	TerminateInstances(request *cvm.TerminateInstancesRequest) (*cvm.TerminateInstancesResponse, error)
+type tkeNativeAPI interface {
+	CreateNodePool(request *tke2022.CreateNodePoolRequest) (*tke2022.CreateNodePoolResponse, error)
+	DescribeNodePools(request *tke2022.DescribeNodePoolsRequest) (*tke2022.DescribeNodePoolsResponse, error)
+	ScaleNodePool(request *tke2022.ScaleNodePoolRequest) (*tke2022.ScaleNodePoolResponse, error)
+	DeleteClusterMachines(request *tke2022.DeleteClusterMachinesRequest) (*tke2022.DeleteClusterMachinesResponse, error)
 }
 
 func (unimplementedTencentClient) CreateComputeAllocation(_ Request, _ map[string]string) Response {
@@ -120,19 +115,7 @@ func newTencentSDKClient(env map[string]string) (*tencentSDKClient, *Response) {
 
 	tkeProfile := profile.NewClientProfile()
 	tkeProfile.HttpProfile.Endpoint = "tke.tencentcloudapi.com"
-	tkeClient, err := tke.NewClient(credential, env["TENCENTCLOUD_REGION"], tkeProfile)
-	if err != nil {
-		return nil, &Response{
-			Ok:        false,
-			ErrorCode: "tencent_sdk_client_failed",
-			Message:   err.Error(),
-			Retryable: false,
-		}
-	}
-
-	cvmProfile := profile.NewClientProfile()
-	cvmProfile.HttpProfile.Endpoint = "cvm.tencentcloudapi.com"
-	cvmClient, err := cvm.NewClient(credential, env["TENCENTCLOUD_REGION"], cvmProfile)
+	tkeClient, err := tke2022.NewClient(credential, env["TENCENTCLOUD_REGION"], tkeProfile)
 	if err != nil {
 		return nil, &Response{
 			Ok:        false,
@@ -143,25 +126,24 @@ func newTencentSDKClient(env map[string]string) (*tencentSDKClient, *Response) {
 	}
 
 	return &tencentSDKClient{
-		region:    env["TENCENTCLOUD_REGION"],
-		clusterId: env["TENCENT_DEPLOY_CLUSTER_ID"],
-		tkeClient: tkeClient,
-		cvmClient: cvmClient,
+		region:          env["TENCENTCLOUD_REGION"],
+		clusterId:       env["TENCENT_DEPLOY_CLUSTER_ID"],
+		nativeTkeClient: tkeClient,
 	}, nil
 }
 
 func (client *tencentSDKClient) CreateComputeAllocation(request Request, env map[string]string) Response {
-	if client == nil || client.tkeClient == nil {
+	if client == nil || client.nativeTkeClient == nil {
 		return Response{Ok: false, ErrorCode: "tencent_sdk_client_missing", Message: "Tencent TKE SDK client is missing.", Retryable: false}
 	}
 	nodePoolId := request.Pool.NodePoolId
 	createNodePoolRequestId := ""
 	if nodePoolId == "" {
-		createNodePoolRequest, failure := buildCreateClusterNodePoolRequest(request, env)
+		createNodePoolRequest, failure := buildCreateNativeNodePoolRequest(request, env)
 		if failure != nil {
 			return *failure
 		}
-		createNodePoolResponse, err := client.tkeClient.CreateClusterNodePool(createNodePoolRequest)
+		createNodePoolResponse, err := client.nativeTkeClient.CreateNodePool(createNodePoolRequest)
 		if err != nil {
 			return sdkErrorResponse("tencent_create_node_pool_failed", err)
 		}
@@ -177,79 +159,95 @@ func (client *tencentSDKClient) CreateComputeAllocation(request Request, env map
 			}
 		}
 	}
-	request.Pool.NodePoolId = nodePoolId
-	createRequest, failure := buildCreateClusterInstancesRequest(request, env)
-	if failure != nil {
-		failure.ProviderRequestId = createNodePoolRequestId
-		return *failure
-	}
-	createResponse, err := client.tkeClient.CreateClusterInstances(createRequest)
+
+	pool, describeRequestId, err := client.describeNativeNodePool(nodePoolId)
 	if err != nil {
-		response := sdkErrorResponse("tencent_create_cluster_instances_failed", err)
+		response := sdkErrorResponse("tencent_describe_node_pool_failed", err)
 		response.ProviderRequestId = createNodePoolRequestId
 		return response
 	}
-	instanceId := firstString(createResponse.Response.InstanceIdSet)
-	if instanceId == "" {
-		return Response{Ok: false, ErrorCode: "tencent_instance_id_missing", Message: "Tencent TKE did not return a CVM instance id.", ProviderRequestId: stringValue(createResponse.Response.RequestId), Retryable: true}
-	}
-	addRequest, failure := buildAddNodeToPoolRequest(request, client.clusterId, instanceId)
-	if failure != nil {
-		failure.ProviderRequestId = stringValue(createResponse.Response.RequestId)
-		failure.ProviderData = map[string]string{"createdInstanceId": instanceId}
-		return *failure
-	}
-	addResponse, err := client.tkeClient.AddNodeToNodePool(addRequest)
+	currentReplicas := nativeReplicas(pool)
+	targetReplicas := currentReplicas + 1
+	scaleRequest := tke2022.NewScaleNodePoolRequest()
+	scaleRequest.ClusterId = common.StringPtr(client.clusterId)
+	scaleRequest.NodePoolId = common.StringPtr(nodePoolId)
+	scaleRequest.Replicas = common.Int64Ptr(targetReplicas)
+	scaleResponse, err := client.nativeTkeClient.ScaleNodePool(scaleRequest)
 	if err != nil {
-		response := sdkErrorResponse("tencent_add_node_to_pool_failed", err)
-		response.ProviderRequestId = stringValue(createResponse.Response.RequestId)
-		response.ProviderData = map[string]string{"createdInstanceId": instanceId}
+		response := sdkErrorResponse("tencent_scale_node_pool_failed", err)
+		response.ProviderRequestId = describeRequestId
 		return response
 	}
-	createRequestId := stringValue(createResponse.Response.RequestId)
-	addRequestId := stringValue(addResponse.Response.RequestId)
+	scaleRequestId := stringValue(scaleResponse.Response.RequestId)
 	return Response{
 		Ok:                true,
-		OperationId:       "op-create-compute-" + stableSuffix(request.AccountId, request.Allocation.Id, instanceId)[:12],
+		OperationId:       "op-create-compute-" + stableSuffix(request.AccountId, request.Allocation.Id, nodePoolId, fmt.Sprintf("%d", targetReplicas))[:12],
 		PoolId:            request.Pool.Id,
 		NodePoolId:        nodePoolId,
-		InstanceId:        instanceId,
 		NodeName:          request.Allocation.NodeName,
 		Status:            "provisioning",
-		ProviderRequestId: createRequestId,
+		ProviderRequestId: scaleRequestId,
 		ProviderData: map[string]string{
-			"clusterId":               client.clusterId,
-			"region":                  client.region,
-			"createNodePoolRequestId": createNodePoolRequestId,
-			"createRequestId":         createRequestId,
-			"addNodeRequestId":        addRequestId,
-			"instanceType":            request.Pool.InstanceType,
+			"clusterId":                 client.clusterId,
+			"region":                    client.region,
+			"createNodePoolRequestId":   createNodePoolRequestId,
+			"describeNodePoolRequestId": describeRequestId,
+			"scaleNodePoolRequestId":    scaleRequestId,
+			"instanceType":              request.Pool.InstanceType,
+			"replicasBefore":            fmt.Sprintf("%d", currentReplicas),
+			"replicasAfter":             fmt.Sprintf("%d", targetReplicas),
 		},
 	}
 }
 
 func (client *tencentSDKClient) DestroyComputeAllocation(request Request, _ map[string]string) Response {
-	if client == nil || client.cvmClient == nil {
-		return Response{Ok: false, ErrorCode: "tencent_sdk_client_missing", Message: "Tencent CVM SDK client is missing.", Retryable: false}
+	if client == nil || client.nativeTkeClient == nil {
+		return Response{Ok: false, ErrorCode: "tencent_sdk_client_missing", Message: "Tencent TKE SDK client is missing.", Retryable: false}
 	}
-	if strings.TrimSpace(request.Allocation.InstanceId) == "" {
-		return Response{Ok: false, ErrorCode: "instance_id_required", Message: "Tencent CVM instance id is required.", Retryable: false}
+	if strings.TrimSpace(request.Pool.NodePoolId) == "" {
+		return Response{Ok: false, ErrorCode: "node_pool_id_required", Message: "ComputePool nodePoolId is required.", Retryable: false}
 	}
-	terminateRequest := cvm.NewTerminateInstancesRequest()
-	terminateRequest.InstanceIds = []*string{common.StringPtr(request.Allocation.InstanceId)}
-	terminateRequest.ReleaseAddress = common.BoolPtr(false)
-	terminateRequest.ReleasePrepaidDataDisks = common.BoolPtr(false)
-	terminateResponse, err := client.cvmClient.TerminateInstances(terminateRequest)
-	if err != nil {
-		return sdkErrorResponse("tencent_terminate_instance_failed", err)
+	providerRequestId := ""
+	if strings.TrimSpace(request.Allocation.NodeName) != "" {
+		deleteRequest := tke2022.NewDeleteClusterMachinesRequest()
+		deleteRequest.ClusterId = common.StringPtr(client.clusterId)
+		deleteRequest.MachineNames = []*string{common.StringPtr(request.Allocation.NodeName)}
+		deleteRequest.EnableScaleDown = common.BoolPtr(true)
+		deleteRequest.InstanceDeleteMode = common.StringPtr("terminate")
+		deleteResponse, err := client.nativeTkeClient.DeleteClusterMachines(deleteRequest)
+		if err != nil {
+			return sdkErrorResponse("tencent_delete_cluster_machine_failed", err)
+		}
+		providerRequestId = stringValue(deleteResponse.Response.RequestId)
+	} else {
+		pool, describeRequestId, err := client.describeNativeNodePool(request.Pool.NodePoolId)
+		if err != nil {
+			return sdkErrorResponse("tencent_describe_node_pool_failed", err)
+		}
+		targetReplicas := nativeReplicas(pool) - 1
+		if targetReplicas < 0 {
+			targetReplicas = 0
+		}
+		scaleRequest := tke2022.NewScaleNodePoolRequest()
+		scaleRequest.ClusterId = common.StringPtr(client.clusterId)
+		scaleRequest.NodePoolId = common.StringPtr(request.Pool.NodePoolId)
+		scaleRequest.Replicas = common.Int64Ptr(targetReplicas)
+		scaleResponse, err := client.nativeTkeClient.ScaleNodePool(scaleRequest)
+		if err != nil {
+			response := sdkErrorResponse("tencent_scale_node_pool_failed", err)
+			response.ProviderRequestId = describeRequestId
+			return response
+		}
+		providerRequestId = stringValue(scaleResponse.Response.RequestId)
 	}
 	return Response{
 		Ok:                true,
-		OperationId:       "op-destroy-compute-" + stableSuffix(request.AccountId, request.Allocation.Id, request.Allocation.InstanceId)[:12],
+		OperationId:       "op-destroy-compute-" + stableSuffix(request.AccountId, request.Allocation.Id, request.Pool.NodePoolId, request.Allocation.NodeName)[:12],
 		InstanceId:        request.Allocation.InstanceId,
 		NodeName:          request.Allocation.NodeName,
+		NodePoolId:        request.Pool.NodePoolId,
 		Status:            "destroyed",
-		ProviderRequestId: stringValue(terminateResponse.Response.RequestId),
+		ProviderRequestId: providerRequestId,
 		ProviderData: map[string]string{
 			"clusterId": client.clusterId,
 			"region":    client.region,
@@ -257,108 +255,28 @@ func (client *tencentSDKClient) DestroyComputeAllocation(request Request, _ map[
 	}
 }
 
-func buildCreateClusterInstancesRequest(request Request, env map[string]string) (*tke.CreateClusterInstancesRequest, *Response) {
+func (client *tencentSDKClient) describeNativeNodePool(nodePoolId string) (*tke2022.NodePool, string, error) {
+	describeRequest := tke2022.NewDescribeNodePoolsRequest()
+	describeRequest.ClusterId = common.StringPtr(client.clusterId)
+	describeRequest.Limit = common.Int64Ptr(100)
+	describeRequest.Filters = []*tke2022.Filter{
+		{Name: common.StringPtr("NodePoolsId"), Values: []*string{common.StringPtr(nodePoolId)}},
+	}
+	describeResponse, err := client.nativeTkeClient.DescribeNodePools(describeRequest)
+	if err != nil {
+		return nil, "", err
+	}
+	if len(describeResponse.Response.NodePools) == 0 {
+		return nil, stringValue(describeResponse.Response.RequestId), fmt.Errorf("node pool not found: %s", nodePoolId)
+	}
+	return describeResponse.Response.NodePools[0], stringValue(describeResponse.Response.RequestId), nil
+}
+
+func buildCreateNativeNodePoolRequest(request Request, env map[string]string) (*tke2022.CreateNodePoolRequest, *Response) {
 	missing := missingSpecificEnv(env, []string{
 		"TENCENT_DEPLOY_CLUSTER_ID",
-		"TENCENT_CVM_ZONE",
-		"TENCENT_CVM_VPC_ID",
 		"TENCENT_CVM_SUBNET_ID",
 		"TENCENT_CVM_SECURITY_GROUP_IDS",
-		"TENCENT_CVM_IMAGE_ID",
-	})
-	if len(missing) > 0 {
-		return nil, &Response{
-			Ok:         false,
-			ErrorCode:  "tencent_cvm_env_missing",
-			Message:    "Tencent CVM creation environment is incomplete.",
-			MissingEnv: missing,
-			Retryable:  false,
-		}
-	}
-	if strings.TrimSpace(request.Pool.InstanceType) == "" {
-		return nil, &Response{
-			Ok:        false,
-			ErrorCode: "instance_type_required",
-			Message:   "ComputePool instanceType is required.",
-			Retryable: false,
-		}
-	}
-	if strings.TrimSpace(request.Allocation.Id) == "" {
-		return nil, &Response{
-			Ok:        false,
-			ErrorCode: "allocation_id_required",
-			Message:   "ComputeAllocation id is required.",
-			Retryable: false,
-		}
-	}
-
-	instanceName := "opl-" + compactName(request.Allocation.Id)
-	runInstances := map[string]any{
-		"Placement": map[string]any{
-			"Zone": env["TENCENT_CVM_ZONE"],
-		},
-		"VirtualPrivateCloud": map[string]any{
-			"VpcId":    env["TENCENT_CVM_VPC_ID"],
-			"SubnetId": env["TENCENT_CVM_SUBNET_ID"],
-		},
-		"InstanceType":       request.Pool.InstanceType,
-		"ImageId":            env["TENCENT_CVM_IMAGE_ID"],
-		"InstanceName":       instanceName,
-		"InstanceChargeType": "POSTPAID_BY_HOUR",
-		"ClientToken":        instanceName,
-		"SecurityGroupIds":   splitCsv(env["TENCENT_CVM_SECURITY_GROUP_IDS"]),
-		"SystemDisk": map[string]any{
-			"DiskType": strings.TrimSpace(defaultString(env["TENCENT_CVM_SYSTEM_DISK_TYPE"], "CLOUD_BSSD")),
-			"DiskSize": intFromEnv(env, "TENCENT_CVM_SYSTEM_DISK_SIZE_GB", 80),
-		},
-		"Tags": ownershipTags(request),
-	}
-	raw, err := json.Marshal(runInstances)
-	if err != nil {
-		return nil, &Response{
-			Ok:        false,
-			ErrorCode: "run_instances_json_failed",
-			Message:   err.Error(),
-			Retryable: false,
-		}
-	}
-
-	createRequest := tke.NewCreateClusterInstancesRequest()
-	createRequest.ClusterId = common.StringPtr(env["TENCENT_DEPLOY_CLUSTER_ID"])
-	createRequest.RunInstancePara = common.StringPtr(string(raw))
-	createRequest.InstanceAdvancedSettings = &tke.InstanceAdvancedSettings{
-		Labels: []*tke.Label{
-			{Name: common.StringPtr("oplcloud.cn/compute-allocation-id"), Value: common.StringPtr(request.Allocation.Id)},
-			{Name: common.StringPtr("oplcloud.cn/account-id"), Value: common.StringPtr(request.AccountId)},
-			{Name: common.StringPtr("oplcloud.cn/pool-id"), Value: common.StringPtr(request.Pool.Id)},
-			{Name: common.StringPtr("oplcloud.cn/package-id"), Value: common.StringPtr(request.PackageId)},
-		},
-	}
-	return createRequest, nil
-}
-
-func buildAddNodeToPoolRequest(request Request, clusterId string, instanceId string) (*tke.AddNodeToNodePoolRequest, *Response) {
-	if strings.TrimSpace(clusterId) == "" {
-		return nil, &Response{Ok: false, ErrorCode: "cluster_id_required", Message: "Tencent TKE cluster id is required.", Retryable: false}
-	}
-	if strings.TrimSpace(request.Pool.NodePoolId) == "" {
-		return nil, &Response{Ok: false, ErrorCode: "node_pool_id_required", Message: "ComputePool nodePoolId is required.", Retryable: false}
-	}
-	if strings.TrimSpace(instanceId) == "" {
-		return nil, &Response{Ok: false, ErrorCode: "instance_id_required", Message: "Tencent CVM instance id is required.", Retryable: false}
-	}
-	addRequest := tke.NewAddNodeToNodePoolRequest()
-	addRequest.ClusterId = common.StringPtr(clusterId)
-	addRequest.NodePoolId = common.StringPtr(request.Pool.NodePoolId)
-	addRequest.InstanceIds = []*string{common.StringPtr(instanceId)}
-	return addRequest, nil
-}
-
-func buildCreateClusterNodePoolRequest(request Request, env map[string]string) (*tke.CreateClusterNodePoolRequest, *Response) {
-	missing := missingSpecificEnv(env, []string{
-		"TENCENT_DEPLOY_CLUSTER_ID",
-		"TENCENT_TKE_NODE_POOL_ASG_PARA_JSON",
-		"TENCENT_TKE_NODE_POOL_LAUNCH_CONFIG_JSON",
 	})
 	if len(missing) > 0 {
 		return nil, &Response{
@@ -373,25 +291,41 @@ func buildCreateClusterNodePoolRequest(request Request, env map[string]string) (
 	if strings.TrimSpace(nodePoolName) == "" {
 		nodePoolName = "pool-" + request.PackageId + "-" + request.Pool.InstanceType
 	}
-	createRequest := tke.NewCreateClusterNodePoolRequest()
-	createRequest.ClusterId = common.StringPtr(env["TENCENT_DEPLOY_CLUSTER_ID"])
-	createRequest.AutoScalingGroupPara = common.StringPtr(env["TENCENT_TKE_NODE_POOL_ASG_PARA_JSON"])
-	createRequest.LaunchConfigurePara = common.StringPtr(env["TENCENT_TKE_NODE_POOL_LAUNCH_CONFIG_JSON"])
-	createRequest.EnableAutoscale = common.BoolPtr(true)
-	createRequest.Name = common.StringPtr(nodePoolName)
-	createRequest.ContainerRuntime = common.StringPtr(defaultString(env["TENCENT_TKE_NODE_POOL_CONTAINER_RUNTIME"], "containerd"))
-	createRequest.RuntimeVersion = common.StringPtr(defaultString(env["TENCENT_TKE_NODE_POOL_RUNTIME_VERSION"], "1.6.9"))
-	if strings.TrimSpace(env["TENCENT_TKE_NODE_POOL_OS"]) != "" {
-		createRequest.NodePoolOs = common.StringPtr(env["TENCENT_TKE_NODE_POOL_OS"])
+	if strings.TrimSpace(request.Pool.InstanceType) == "" {
+		return nil, &Response{Ok: false, ErrorCode: "instance_type_required", Message: "ComputePool instanceType is required.", Retryable: false}
 	}
-	createRequest.Labels = []*tke.Label{
+	createRequest := tke2022.NewCreateNodePoolRequest()
+	createRequest.ClusterId = common.StringPtr(env["TENCENT_DEPLOY_CLUSTER_ID"])
+	createRequest.Name = common.StringPtr(nodePoolName)
+	createRequest.Type = common.StringPtr("Native")
+	createRequest.DeletionProtection = common.BoolPtr(true)
+	nodePoolLabels := []*tke2022.Label{
 		{Name: common.StringPtr("oplcloud.cn/pool-id"), Value: common.StringPtr(request.Pool.Id)},
 		{Name: common.StringPtr("oplcloud.cn/package-id"), Value: common.StringPtr(request.PackageId)},
 		{Name: common.StringPtr("oplcloud.cn/instance-type"), Value: common.StringPtr(request.Pool.InstanceType)},
 	}
-	createRequest.Tags = []*tke.Tag{
-		{Key: common.StringPtr("oplcloud:pool-id"), Value: common.StringPtr(request.Pool.Id)},
-		{Key: common.StringPtr("oplcloud:package-id"), Value: common.StringPtr(request.PackageId)},
+	createRequest.Labels = nodePoolLabels
+	createRequest.Native = &tke2022.CreateNativeNodePoolParam{
+		Scaling: &tke2022.MachineSetScaling{
+			MinReplicas:  common.Int64Ptr(0),
+			MaxReplicas:  common.Int64Ptr(10),
+			CreatePolicy: common.StringPtr("ZonePriority"),
+		},
+		SubnetIds:          stringsToPtrs(splitCsv(env["TENCENT_CVM_SUBNET_ID"])),
+		InstanceChargeType: common.StringPtr("POSTPAID_BY_HOUR"),
+		SystemDisk: &tke2022.Disk{
+			DiskType: common.StringPtr(defaultString(env["TENCENT_CVM_SYSTEM_DISK_TYPE"], "CLOUD_BSSD")),
+			DiskSize: common.Int64Ptr(int64(intFromEnv(env, "TENCENT_CVM_SYSTEM_DISK_SIZE_GB", 50))),
+		},
+		InstanceTypes:      []*string{common.StringPtr(request.Pool.InstanceType)},
+		SecurityGroupIds:   stringsToPtrs(splitCsv(env["TENCENT_CVM_SECURITY_GROUP_IDS"])),
+		AutoRepair:         common.BoolPtr(true),
+		EnableAutoscaling:  common.BoolPtr(true),
+		Replicas:           common.Int64Ptr(0),
+		InternetAccessible: &tke2022.InternetAccessible{MaxBandwidthOut: common.Int64Ptr(0), ChargeType: common.StringPtr("TRAFFIC_POSTPAID_BY_HOUR")},
+		MachineType:        common.StringPtr("Native"),
+		AutomationService:  common.BoolPtr(true),
+		RuntimeRootDir:     common.StringPtr("/var/lib/containerd"),
 	}
 	return createRequest, nil
 }
@@ -468,6 +402,14 @@ func handleWithClient(request Request, env map[string]string, client TencentClie
 			Retryable:  false,
 		}
 	}
+	if isLiveMutation(request) && strings.TrimSpace(env["RUN_TENCENT_CREATE_RELEASE_EXECUTION"]) != "1" {
+		return Response{
+			Ok:        false,
+			ErrorCode: "live_mutation_flag_required",
+			Message:   "Set RUN_TENCENT_CREATE_RELEASE_EXECUTION=1 to run live Tencent compute mutations.",
+			Retryable: false,
+		}
+	}
 
 	switch request.Action {
 	case "create_compute_allocation":
@@ -488,6 +430,13 @@ func handleWithClient(request Request, env map[string]string, client TencentClie
 			Retryable: false,
 		}
 	}
+}
+
+func isLiveMutation(request Request) bool {
+	if request.DryRun {
+		return false
+	}
+	return request.Action == "create_compute_allocation" || request.Action == "destroy_compute_allocation"
 }
 
 func missingEnv(env map[string]string) []string {
@@ -600,6 +549,24 @@ func splitCsv(value string) []string {
 	return result
 }
 
+func stringsToPtrs(values []string) []*string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]*string, 0, len(values))
+	for _, value := range values {
+		result = append(result, common.StringPtr(value))
+	}
+	return result
+}
+
+func nativeReplicas(pool *tke2022.NodePool) int64 {
+	if pool == nil || pool.Native == nil || pool.Native.Replicas == nil {
+		return 0
+	}
+	return *pool.Native.Replicas
+}
+
 func compactName(value string) string {
 	value = strings.ToLower(value)
 	var builder strings.Builder
@@ -617,16 +584,6 @@ func compactName(value string) string {
 		}
 	}
 	return strings.Trim(strings.TrimSpace(builder.String()), "-")
-}
-
-func ownershipTags(request Request) []map[string]string {
-	return []map[string]string{
-		{"Key": "oplcloud:account-id", "Value": request.AccountId},
-		{"Key": "oplcloud:user-id", "Value": request.UserId},
-		{"Key": "oplcloud:package-id", "Value": request.PackageId},
-		{"Key": "oplcloud:pool-id", "Value": request.Pool.Id},
-		{"Key": "oplcloud:compute-allocation-id", "Value": request.Allocation.Id},
-	}
 }
 
 func stringValue(value *string) string {

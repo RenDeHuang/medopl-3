@@ -6,12 +6,12 @@ export function createFakeRuntimeProvider(overrides = {}) {
     },
     async createComputeAllocation({ computeAllocationId, packagePlan }) {
       return {
-        providerResourceId: `cvm/${computeAllocationId}`,
+        providerResourceId: `nodepool/${packagePlan.nodePoolId || `np-${packagePlan.id}`}`,
         operationId: `op-${computeAllocationId}`,
         poolId: `pool-${packagePlan.id}-${packagePlan.server}`,
         nodePoolId: packagePlan.nodePoolId || `np-${packagePlan.id}`,
-        instanceId: `ins-${computeAllocationId}`,
-        nodeName: `${computeAllocationId}.node.internal`,
+        instanceId: "",
+        nodeName: "",
         status: "running",
         billingStatus: "active",
         spec: packagePlan.server,

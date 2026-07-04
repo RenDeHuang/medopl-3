@@ -119,17 +119,18 @@ test("compute allocation persists provisioner ownership, pricing, hold, and oper
   const service = createService({
     async createComputeAllocation({ computeAllocationId }) {
       return {
-        providerResourceId: "cvm/ins-alpha",
+        providerResourceId: "nodepool/np-basic",
         operationId: "op-create-alpha",
         poolId: "pool-basic-2c4g",
         nodePoolId: "np-basic",
-        instanceId: "ins-alpha",
-        nodeName: "10.0.0.12",
+        instanceId: "",
+        nodeName: "",
         status: "provisioning",
         billingStatus: "active",
         spec: "2c4g",
         image: "ghcr.io/gaofeng21cn/one-person-lab-app:latest",
-        providerData: { createRequestId: "req-create", addNodeRequestId: "req-add", computeAllocationId }
+        providerRequestId: "req-scale",
+        providerData: { scaleNodePoolRequestId: "req-scale", replicasBefore: "0", replicasAfter: "1", computeAllocationId }
       };
     }
   });
@@ -144,12 +145,12 @@ test("compute allocation persists provisioner ownership, pricing, hold, and oper
   const state = await service.getState("pi-alpha");
   const operation = state.runtimeOperations.find((item) => item.resourceId === compute.id);
 
-  assert.equal(compute.providerResourceId, "cvm/ins-alpha");
+  assert.equal(compute.providerResourceId, "nodepool/np-basic");
   assert.equal(compute.operationId, "op-create-alpha");
   assert.equal(compute.poolId, "pool-basic-2c4g");
   assert.equal(compute.nodePoolId, "np-basic");
-  assert.equal(compute.instanceId, "ins-alpha");
-  assert.equal(compute.nodeName, "10.0.0.12");
+  assert.equal(compute.instanceId || "", "");
+  assert.equal(compute.nodeName || "", "");
   assert.equal(compute.hourlyPrice, 1.2);
   assert.equal(compute.holdAmount, 201.6);
   assert.deepEqual(compute.balanceImpact, {
@@ -162,14 +163,14 @@ test("compute allocation persists provisioner ownership, pricing, hold, and oper
   assert.equal(operation.operationType, "create_compute_allocation");
   assert.equal(operation.resourceType, "compute_allocation");
   assert.equal(operation.status, "completed");
-  assert.equal(operation.providerRequestId, "req-create");
+  assert.equal(operation.providerRequestId, "req-scale");
 });
 
 test("failed compute allocation remains visible with safe provider failure state", async () => {
   const service = createService({
     async createComputeAllocation() {
       const error = new Error("tencent_permission_denied");
-      error.safeMessage = "CAM denied CreateClusterInstances";
+      error.safeMessage = "CAM denied ScaleNodePool";
       error.providerRequestId = "req-denied";
       error.retryable = false;
       error.providerData = { action: "create_compute_allocation" };
@@ -194,12 +195,12 @@ test("failed compute allocation remains visible with safe provider failure state
 
   assert.equal(compute.status, "failed");
   assert.equal(compute.error, "tencent_permission_denied");
-  assert.equal(compute.safeMessage, "CAM denied CreateClusterInstances");
+  assert.equal(compute.safeMessage, "CAM denied ScaleNodePool");
   assert.equal(compute.providerRequestId, "req-denied");
   assert.equal(compute.retryable, false);
   assert.deepEqual(compute.providerData, { action: "create_compute_allocation" });
   assert.equal(operation.status, "failed");
-  assert.equal(operation.safeMessage, "CAM denied CreateClusterInstances");
+  assert.equal(operation.safeMessage, "CAM denied ScaleNodePool");
   assert.equal(operation.providerRequestId, "req-denied");
 });
 
@@ -371,8 +372,8 @@ test("resource service preserves provider handles for one-person-lab-app runtime
   const persistedAttachment = state.storageAttachments[0];
 
   assert.equal(persistedCompute.provider, "tencent-tke");
-  assert.equal(persistedCompute.providerResourceId, `cvm/${compute.id}`);
-  assert.equal(persistedCompute.instanceId, `ins-${compute.id}`);
+  assert.equal(persistedCompute.providerResourceId, "nodepool/np-basic");
+  assert.equal(persistedCompute.instanceId || "", "");
   assert.equal(persistedCompute.runtime.service, `service/opl-runtime-${compute.id}`);
   assert.equal(persistedStorage.providerResourceId, `pvc/${storage.id}`);
   assert.equal(persistedAttachment.providerAttachmentId, `mount/${compute.id}:${storage.id}:/data`);
