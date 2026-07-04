@@ -302,6 +302,25 @@ test("TKE production diagnostics workflow is read-only and matches the deploymen
   assertWorkflowContract(workflow, contract.diagnosticsWorkflow, contract);
 });
 
+test("TKE production E2E resolves operator token from the existing cluster secret when GitHub secret is absent", async () => {
+  const workflow = await readWorkflow(".github/workflows/e2e-tke-production.yml");
+  const currentJob = job(workflow, "persistence-e2e");
+  const stepMap = stepsByName(currentJob);
+  const step = stepMap.get("Resolve operator token");
+
+  assert.ok(step, "E2E workflow must resolve the operator token before running API mutations");
+  const text = serializedStep(step);
+  assert.match(text, /OPL_VERIFY_OPERATOR_TOKEN:-/);
+  assert.match(text, /get secret opl-cloud-operator/);
+  assert.match(text, /OPL_OPERATOR_SUMMARY_TOKEN/);
+  assert.match(text, /::add-mask::/);
+  assert.match(text, /OPL_VERIFY_OPERATOR_TOKEN<<EOF/);
+  assert.ok(
+    [...stepMap.keys()].indexOf("Resolve operator token") < [...stepMap.keys()].indexOf("Run production persistence E2E"),
+    "operator token must be resolved before running the production E2E"
+  );
+});
+
 test("TKE diagnostics do not print account state or Workspace URL tokens", async () => {
   const contract = await readJson(deploymentContractPath);
   const workflow = await readWorkflow(contract.diagnosticsWorkflow.file);
