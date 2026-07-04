@@ -281,6 +281,12 @@ test("Tencent TKE provider provisions node pool compute, PVC storage, runtime at
     assert.equal(commandLines.some((line) => line.includes("tccli tke CreateClusterNodePool")), true);
     assert.equal(commandLines.some((line) => line.includes("tccli tke DescribeClusterNodePoolDetail")), true);
     assert.equal(commandLines.some((line) => line.includes("tccli tke DeleteClusterNodePool")), true);
+    const createNodePoolCall = calls.find((call) => call.command === "tccli" && call.args.includes("CreateClusterNodePool"));
+    const cliInputJsonArg = createNodePoolCall.args[createNodePoolCall.args.indexOf("--cli-input-json") + 1];
+    assert.match(cliInputJsonArg, /^file:\/\//);
+    const createInput = JSON.parse(await readFile(cliInputJsonArg.replace(/^file:\/\//, ""), "utf8"));
+    assert.equal(createInput.ClusterId, requiredEnv.TENCENT_DEPLOY_CLUSTER_ID);
+    assert.equal(JSON.parse(createInput.LaunchConfigurePara).InstanceType, packagePlan.server);
     for (const call of calls.filter((item) => item.command === "tccli")) {
       assert.equal(call.env.HOME, "/tmp/opl-cloud-cli");
       assert.equal(call.env.XDG_CACHE_HOME, "/tmp/opl-cloud-cli/.cache");

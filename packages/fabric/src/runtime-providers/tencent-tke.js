@@ -2,6 +2,7 @@ import { access, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../../..");
 const REQUIRED_ENV = [
@@ -447,9 +448,23 @@ export class TencentTkeProvider {
     });
   }
 
-  tccliArgs(args) {
+  async tccliArgs(args) {
+    const normalized = [];
+    for (let index = 0; index < args.length; index += 1) {
+      const value = args[index];
+      if (value === "--cli-input-json" && args[index + 1] && !String(args[index + 1]).startsWith("file://")) {
+        const inputDir = join(this.stateRootDir, "tccli-input");
+        await mkdir(inputDir, { recursive: true });
+        const inputPath = join(inputDir, `${Date.now()}-${randomUUID()}.json`);
+        await writeFile(inputPath, String(args[index + 1]), "utf8");
+        normalized.push(value, `file://${inputPath}`);
+        index += 1;
+      } else {
+        normalized.push(value);
+      }
+    }
     return [
-      ...args,
+      ...normalized,
       "--region",
       this.env.TENCENT_TKE_REGION
     ];
@@ -461,7 +476,7 @@ export class TencentTkeProvider {
     const cliHome = this.env.OPL_TKE_CLI_HOME || "/tmp/opl-cloud-cli";
     const raw = await this.runner({
       command: "tccli",
-      args: this.tccliArgs(args),
+      args: await this.tccliArgs(args),
       cwd: repoRoot,
       env: {
         ...this.env,
