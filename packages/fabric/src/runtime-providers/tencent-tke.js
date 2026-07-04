@@ -549,7 +549,6 @@ export class TencentTkeProvider {
       RuntimeVersion: this.env.OPL_TKE_RUNTIME_VERSION || "1.6.9",
       NodePoolOs: this.env.OPL_TKE_NODEPOOL_OS || "tlinux3.1x86_64",
       OsCustomizeType: this.env.OPL_TKE_OS_CUSTOMIZE_TYPE || "GENERAL",
-      Tags: nodePoolTags({ computeId, accountId }),
       DeletionProtection: false
     };
   }
@@ -935,14 +934,6 @@ function nodePoolLabels({ computeId, accountId }) {
     { Name: "oplcloud.cn/compute-id", Value: compactId(computeId) },
     { Name: "oplcloud.cn/account-id", Value: compactId(accountId) },
     { Name: "oplcloud.cn/runtime", Value: "one-person-lab-app" }
-  ];
-}
-
-function nodePoolTags({ computeId, accountId }) {
-  return [
-    { Key: "oplcloud-compute-id", Value: compactId(computeId) },
-    { Key: "oplcloud-account-id", Value: compactId(accountId) },
-    { Key: "oplcloud-managed-by", Value: "opl-cloud" }
   ];
 }
 
