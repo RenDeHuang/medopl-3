@@ -74,7 +74,30 @@ function tkeChain({ workspaceUrl = "https://workspace.medopl.cn/w/ws-tke-prod001
     url: workspaceUrl,
     access: { token: "share_tke_prod", tokenStatus: "active", requiresLogin: false }
   };
-  return { compute, storage, attachment, workspace };
+  const replacementCompute = {
+    ...compute,
+    id: "compute-prod002",
+    providerResourceId: "deployment/opl-compute-prod002",
+    runtime: { service: "service/opl-compute-prod002", serviceName: "opl-compute-prod002" }
+  };
+  const replacementAttachment = {
+    ...attachment,
+    id: "attach-prod002",
+    computeAllocationId: replacementCompute.id,
+    providerAttachmentId: "deployment/opl-compute-prod002:pvc/opl-storage-prod001-data:/data"
+  };
+  const replacementWorkspace = {
+    ...workspace,
+    id: "ws-tke-prod002",
+    computeAllocationId: replacementCompute.id,
+    attachmentId: replacementAttachment.id,
+    server: { ...workspace.server, id: replacementCompute.providerResourceId },
+    docker: { ...workspace.docker, id: replacementCompute.providerResourceId, service: replacementCompute.runtime.service },
+    slug: "production-verification-lab-replacement",
+    url: "https://workspace.medopl.cn/w/ws-tke-prod002/?token=share_tke_prod_2",
+    access: { token: "share_tke_prod_2", tokenStatus: "active", requiresLogin: false }
+  };
+  return { compute, storage, attachment, workspace, replacementCompute, replacementAttachment, replacementWorkspace };
 }
 
 function readyRuntimeStatus(workspace) {
@@ -101,10 +124,14 @@ function chainResponses(chain) {
     "GET /api/runtime/readiness": { provider: "tencent-tke", ready: true, missingEnv: [], missingTools: [] },
     "POST /api/billing/topups": { id: "pi-prod", balance: 1000, frozen: 0 },
     "POST /api/compute-allocations": chain.compute,
+    "POST /api/compute-allocations#2": chain.replacementCompute,
     "POST /api/storage-volumes": chain.storage,
     "POST /api/storage-attachments": chain.attachment,
+    "POST /api/storage-attachments#2": chain.replacementAttachment,
     "POST /api/workspaces": chain.workspace,
+    "POST /api/workspaces#2": chain.replacementWorkspace,
     "POST /api/workspaces/runtime-status": readyRuntimeStatus(chain.workspace),
+    "POST /api/workspaces/runtime-status#2": readyRuntimeStatus(chain.replacementWorkspace),
     [`GET ${chain.workspace.url}`]: "<html>one-person-lab-app</html>",
     [`GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}`]: {
       success: true,
@@ -112,6 +139,8 @@ function chainResponses(chain) {
     },
     [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/write")}`]: { success: true, data: true },
     [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}`]: { success: true, data: persistenceText },
+    [`GET ${chain.replacementWorkspace.url}`]: "<html>one-person-lab-app</html>",
+    [`POST ${workspaceUrl(chain.replacementWorkspace.url, "/api/fs/read")}`]: { success: true, data: persistenceText },
     "POST /api/billing/request-usage": {
       id: "usage-request-prod001",
       workspaceId: chain.workspace.id,
@@ -137,23 +166,29 @@ function chainResponses(chain) {
       ]
     },
     "POST /api/storage-attachments/detach": { ...chain.attachment, status: "detached" },
+    "POST /api/storage-attachments/detach#2": { ...chain.replacementAttachment, status: "detached" },
     [`POST /api/compute-allocations/${chain.compute.id}/destroy`]: { ...chain.compute, status: "destroyed", billingStatus: "stopped" },
+    [`POST /api/compute-allocations/${chain.replacementCompute.id}/destroy`]: { ...chain.replacementCompute, status: "destroyed", billingStatus: "stopped" },
     "POST /api/storage-volumes/destroy": { ...chain.storage, status: "destroyed", billingStatus: "stopped" }
   };
 }
 
 function keyedFetch({ responses, requests = [], responseHeaders = null, consoleOrigin = "https://console.oplcloud.cn" }) {
   const requestCounts = new Map();
-  let runtimeStatusCount = 0;
   return async (url, options = {}) => {
     const parsed = new URL(String(url));
     const method = options.method || "GET";
     let key = parsed.origin === consoleOrigin ? `${method} ${parsed.pathname}${parsed.search}` : `${method} ${String(url)}`;
-    if (key === "POST /api/workspaces/runtime-status") {
-      runtimeStatusCount += 1;
-      key = runtimeStatusCount === 1 ? key : `${key}#${runtimeStatusCount}`;
-    }
-    if (parsed.origin !== consoleOrigin) {
+    if (
+      parsed.origin !== consoleOrigin ||
+      [
+        "POST /api/compute-allocations",
+        "POST /api/storage-attachments",
+        "POST /api/workspaces",
+        "POST /api/workspaces/runtime-status",
+        "POST /api/storage-attachments/detach"
+      ].includes(key)
+    ) {
       const count = (requestCounts.get(key) || 0) + 1;
       requestCounts.set(key, count);
       key = count === 1 ? key : `${key}#${count}`;
@@ -280,10 +315,18 @@ test("production verifier exercises the public TKE resource provisioning chain",
     `GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}`,
     `POST ${workspaceUrl(chain.workspace.url, "/api/fs/write")}`,
     `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}`,
-    "POST /api/billing/request-usage",
-    "GET /api/state?accountId=pi-prod",
     "POST /api/storage-attachments/detach",
     `POST /api/compute-allocations/${chain.compute.id}/destroy`,
+    "POST /api/compute-allocations#2",
+    "POST /api/storage-attachments#2",
+    "POST /api/workspaces#2",
+    "POST /api/workspaces/runtime-status#2",
+    `GET ${chain.replacementWorkspace.url}`,
+    `POST ${workspaceUrl(chain.replacementWorkspace.url, "/api/fs/read")}`,
+    "POST /api/billing/request-usage",
+    "GET /api/state?accountId=pi-prod",
+    "POST /api/storage-attachments/detach#2",
+    `POST /api/compute-allocations/${chain.replacementCompute.id}/destroy`,
     "POST /api/storage-volumes/destroy"
   ]);
   assert.deepEqual(requests.find((request) => request.key === "POST /api/workspaces").body, {
@@ -301,6 +344,11 @@ test("production verifier exercises the public TKE resource provisioning chain",
     path: "/projects/opl-e2e-prod-run.txt",
     workspace: "/projects"
   });
+  assert.equal(requests.find((request) => request.key === "POST /api/storage-attachments#2").body.storageId, chain.storage.id);
+  assert.deepEqual(requests.find((request) => request.key === `POST ${workspaceUrl(chain.replacementWorkspace.url, "/api/fs/read")}`).body, {
+    path: "/projects/opl-e2e-prod-run.txt",
+    workspace: "/projects"
+  });
   assert.equal(result.workspaceId, chain.workspace.id);
   assert.equal(result.url, chain.workspace.url);
   assert.deepEqual(result.checks.map((check) => `${check.name}:${check.ok}`), [
@@ -315,6 +363,14 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "workspace_runtime_auth:true",
     "workspace_file_written:true",
     "workspace_file_read:true",
+    "verification_storage_detached:true",
+    "verification_compute_destroyed:true",
+    "replacement_compute_created:true",
+    "replacement_storage_attached:true",
+    "replacement_workspace_created:true",
+    "replacement_workspace_runtime_status:true",
+    "replacement_workspace_url:true",
+    "workspace_persisted_file_read:true",
     "request_usage_recorded:true",
     "ledger_and_usage_verified:true",
     "verification_storage_detached:true",
@@ -367,6 +423,7 @@ test("production verifier retries TKE runtime status and Workspace URL until rea
     checks: [{ name: "deployment_ready", ok: false }]
   };
   responses["POST /api/workspaces/runtime-status#2"] = readyRuntimeStatus(chain.workspace);
+  responses["POST /api/workspaces/runtime-status#3"] = readyRuntimeStatus(chain.replacementWorkspace);
   responses[`GET ${chain.workspace.url}`] = "bad gateway";
   responses[`GET ${chain.workspace.url}#2`] = "<html>one-person-lab-app</html>";
   const baseFetch = keyedFetch({ responses, requests });

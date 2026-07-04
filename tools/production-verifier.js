@@ -218,6 +218,17 @@ async function verifyWorkspaceRuntimeFile({ fetchImpl, checks, workspaceUrl, run
   return { filePath, content };
 }
 
+async function verifyWorkspacePersistedFile({ fetchImpl, checks, workspaceUrl, fileProof }) {
+  const read = await requestWorkspaceJson({
+    fetchImpl,
+    workspaceUrl,
+    path: "/api/fs/read",
+    method: "POST",
+    body: { path: fileProof.filePath, workspace: "/projects" }
+  });
+  addCheck(checks, "workspace_persisted_file_read", runtimePayloadData(read) === fileProof.content, { path: fileProof.filePath });
+}
+
 async function requestRuntimeStatus({ fetchImpl, origin, accountId, workspaceId, attempts, retryDelayMs, auth = null }) {
   let lastStatus = null;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -258,8 +269,8 @@ function assertReady({ checks, name, payload }) {
   addCheck(checks, name, true);
 }
 
-function assertComputeShape(checks, compute) {
-  addCheck(checks, "compute_created", Boolean(
+function assertComputeShape(checks, compute, name = "compute_created") {
+  addCheck(checks, name, Boolean(
     compute?.id &&
     compute?.provider === "tencent-tke" &&
     (compute?.instanceId || compute?.providerResourceId || compute?.nodeName) &&
@@ -279,8 +290,8 @@ function assertStorageShape(checks, storage) {
   ), { storageId: storage?.id });
 }
 
-function assertAttachmentShape(checks, attachment, { compute, storage }) {
-  addCheck(checks, "storage_attached", Boolean(
+function assertAttachmentShape(checks, attachment, { compute, storage }, name = "storage_attached") {
+  addCheck(checks, name, Boolean(
     attachment?.id &&
     attachment?.provider === "tencent-tke" &&
     attachment?.computeAllocationId === compute?.id &&
@@ -290,8 +301,8 @@ function assertAttachmentShape(checks, attachment, { compute, storage }) {
   ), { attachmentId: attachment?.id });
 }
 
-function assertWorkspaceShape(checks, workspace, { compute, storage, attachment }) {
-  addCheck(checks, "workspace_created", Boolean(
+function assertWorkspaceShape(checks, workspace, { compute, storage, attachment }, name = "workspace_created") {
+  addCheck(checks, name, Boolean(
     workspace?.id &&
     workspace?.provider === "tencent-tke" &&
     workspace?.computeAllocationId === compute?.id &&
@@ -302,8 +313,8 @@ function assertWorkspaceShape(checks, workspace, { compute, storage, attachment 
   ), { workspaceId: workspace?.id });
 }
 
-function assertRuntimeStatus(checks, runtimeStatus) {
-  addCheck(checks, "workspace_runtime_status", Boolean(
+function assertRuntimeStatus(checks, runtimeStatus, name = "workspace_runtime_status") {
+  addCheck(checks, name, Boolean(
     runtimeStatus?.ready === true &&
     Array.isArray(runtimeStatus.checks) &&
     runtimeStatus.checks.length > 0 &&
@@ -451,7 +462,12 @@ export async function verifyProductionChain({
   let storage = null;
   let attachment = null;
   let workspace = null;
+  let replacementCompute = null;
+  let replacementAttachment = null;
+  let replacementWorkspace = null;
   let auth = null;
+  let firstComputeForLedger = null;
+  let firstAttachmentForLedger = null;
 
   try {
     const productionReadiness = await requestJson({ fetchImpl, origin: normalizedOrigin, path: "/api/production/readiness" });
@@ -535,7 +551,94 @@ export async function verifyProductionChain({
       retryDelayMs
     });
     addCheck(checks, "workspace_url", true, { url: workspace.url, attempts: workspaceUrlResult.attempts });
-    await verifyWorkspaceRuntimeFile({ fetchImpl, checks, workspaceUrl: workspace.url, runId });
+    const fileProof = await verifyWorkspaceRuntimeFile({ fetchImpl, checks, workspaceUrl: workspace.url, runId });
+
+    firstComputeForLedger = compute;
+    firstAttachmentForLedger = attachment;
+    const firstCleanupErrors = await cleanupVerificationResources({
+      fetchImpl,
+      origin: normalizedOrigin,
+      accountId,
+      computeAllocationId: compute.id,
+      attachmentId: attachment.id,
+      checks,
+      auth
+    });
+    if (firstCleanupErrors.length > 0) {
+      const error = new Error(`production_verification_cleanup_failed:${firstCleanupErrors.join("|")}`);
+      error.cleanupErrors = firstCleanupErrors;
+      throw error;
+    }
+    compute = null;
+    attachment = null;
+
+    replacementCompute = await requestJson({
+      fetchImpl,
+      origin: normalizedOrigin,
+      path: "/api/compute-allocations",
+      method: "POST",
+      auth,
+      body: { accountId, packageId, name: `${effectiveWorkspaceName} replacement compute ${runId}` }
+    });
+    assertComputeShape(checks, replacementCompute, "replacement_compute_created");
+
+    replacementAttachment = await requestJson({
+      fetchImpl,
+      origin: normalizedOrigin,
+      path: "/api/storage-attachments",
+      method: "POST",
+      auth,
+      body: {
+        accountId,
+        computeAllocationId: replacementCompute.id,
+        storageId: storage.id,
+        mountPath: DEFAULT_MOUNT_PATH
+      }
+    });
+    assertAttachmentShape(checks, replacementAttachment, { compute: replacementCompute, storage }, "replacement_storage_attached");
+
+    replacementWorkspace = await requestJson({
+      fetchImpl,
+      origin: normalizedOrigin,
+      path: "/api/workspaces",
+      method: "POST",
+      auth,
+      body: { accountId, workspaceName: `${effectiveWorkspaceName} replacement`, attachmentId: replacementAttachment.id }
+    });
+    assertWorkspaceShape(checks, replacementWorkspace, {
+      compute: replacementCompute,
+      storage,
+      attachment: replacementAttachment
+    }, "replacement_workspace_created");
+
+    const replacementRuntimeStatus = await requestRuntimeStatus({
+      fetchImpl,
+      origin: normalizedOrigin,
+      accountId,
+      workspaceId: replacementWorkspace.id,
+      attempts: workspaceUrlAttempts,
+      retryDelayMs,
+      auth
+    });
+    assertRuntimeStatus(checks, replacementRuntimeStatus, "replacement_workspace_runtime_status");
+
+    assertPublicHttpsUrl(replacementWorkspace.url, "public_workspace_url_required");
+    const replacementWorkspaceUrlResult = await requestWorkspaceUrl({
+      fetchImpl,
+      url: replacementWorkspace.url,
+      attempts: workspaceUrlAttempts,
+      retryDelayMs
+    });
+    addCheck(checks, "replacement_workspace_url", true, {
+      url: replacementWorkspace.url,
+      attempts: replacementWorkspaceUrlResult.attempts
+    });
+    await verifyWorkspacePersistedFile({
+      fetchImpl,
+      checks,
+      workspaceUrl: replacementWorkspace.url,
+      fileProof
+    });
 
     const requestUsage = await requestJson({
       fetchImpl,
@@ -563,15 +666,22 @@ export async function verifyProductionChain({
       path: `/api/state?accountId=${encodeURIComponent(accountId)}`,
       auth
     });
-    assertLedgerAndUsage(checks, state, { accountId, compute, storage, attachment, workspace, requestUsage });
+    assertLedgerAndUsage(checks, state, {
+      accountId,
+      compute: firstComputeForLedger || compute,
+      storage,
+      attachment: firstAttachmentForLedger || attachment,
+      workspace,
+      requestUsage
+    });
 
     const cleanupErrors = await cleanupVerificationResources({
       fetchImpl,
       origin: normalizedOrigin,
       accountId,
-      computeAllocationId: compute.id,
+      computeAllocationId: replacementCompute.id,
       storageId: storage.id,
-      attachmentId: attachment.id,
+      attachmentId: replacementAttachment.id,
       checks,
       auth
     });
@@ -591,17 +701,41 @@ export async function verifyProductionChain({
       checks
     };
   } catch (error) {
-    if (!compute?.id && !storage?.id && !attachment?.id) throw error;
-    const cleanupErrors = await cleanupVerificationResources({
-      fetchImpl,
-      origin: normalizedOrigin,
-      accountId,
-      computeAllocationId: compute?.id,
-      storageId: storage?.id,
-      attachmentId: attachment?.id,
-      auth
-    });
-    if (cleanupErrors.length > 0) error.cleanupErrors = cleanupErrors;
+    if (!compute?.id && !storage?.id && !attachment?.id && !replacementCompute?.id && !replacementAttachment?.id) throw error;
+    const cleanupErrors = [];
+    if (replacementCompute?.id || replacementAttachment?.id) {
+      const replacementCleanupErrors = await cleanupVerificationResources({
+        fetchImpl,
+        origin: normalizedOrigin,
+        accountId,
+        computeAllocationId: replacementCompute?.id,
+        attachmentId: replacementAttachment?.id,
+        auth
+      });
+      cleanupErrors.push(...replacementCleanupErrors);
+    }
+    if (compute?.id || attachment?.id) {
+      const primaryCleanupErrors = await cleanupVerificationResources({
+        fetchImpl,
+        origin: normalizedOrigin,
+        accountId,
+        computeAllocationId: compute?.id,
+        attachmentId: attachment?.id,
+        auth
+      });
+      cleanupErrors.push(...primaryCleanupErrors);
+    }
+    if (storage?.id) {
+      const storageCleanupErrors = await cleanupVerificationResources({
+        fetchImpl,
+        origin: normalizedOrigin,
+        accountId,
+        storageId: storage.id,
+        auth
+      });
+      cleanupErrors.push(...storageCleanupErrors);
+    }
+    if (cleanupErrors.length > 0) error.cleanupErrors = [...(error.cleanupErrors || []), ...cleanupErrors];
     throw error;
   }
 }
