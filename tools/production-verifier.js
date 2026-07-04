@@ -389,12 +389,12 @@ function assertLedgerAndUsage(checks, state, { accountId, compute, storage, atta
   const hasComputeUsage = resourceUsage.some((entry) =>
     entry.accountId === accountId &&
     entry.computeAllocationId === compute?.id &&
-    entry.type === "compute_debit"
+    entry.resourceType === "compute"
   );
   const hasStorageUsage = resourceUsage.some((entry) =>
     entry.accountId === accountId &&
     entry.storageId === storage?.id &&
-    entry.type === "storage_debit"
+    entry.resourceType === "storage"
   );
   const hasAttachmentUsage = resourceUsage.some((entry) => entry.accountId === accountId && entry.attachmentId === attachment?.id);
   const hasRequestUsage = requestUsageLogs.some((entry) =>

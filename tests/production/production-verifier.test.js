@@ -168,8 +168,8 @@ function chainResponses(chain) {
         { id: "usage-compute", accountId: "pi-prod", computeAllocationId: chain.compute.id },
         { id: "usage-storage", accountId: "pi-prod", storageId: chain.storage.id },
         { id: "usage-attach", accountId: "pi-prod", attachmentId: chain.attachment.id },
-        { id: "usage-compute-debit", accountId: "pi-prod", computeAllocationId: chain.replacementCompute.id, type: "compute_debit" },
-        { id: "usage-storage-debit", accountId: "pi-prod", storageId: chain.storage.id, type: "storage_debit" }
+        { id: "usage-compute-debit", accountId: "pi-prod", computeAllocationId: chain.replacementCompute.id, resourceType: "compute" },
+        { id: "usage-storage-debit", accountId: "pi-prod", storageId: chain.storage.id, resourceType: "storage" }
       ],
       requestUsageLogs: [
         { id: "usage-request-prod001", accountId: "pi-prod", workspaceId: chain.workspace.id, requestId: "production-verification-request" }
