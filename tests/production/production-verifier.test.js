@@ -95,6 +95,7 @@ function readyRuntimeStatus(workspace) {
 }
 
 function chainResponses(chain) {
+  const persistenceText = "opl persistence prod-run";
   return {
     "GET /api/production/readiness": { ready: true, missingEnv: [], missingTools: [], failedChecks: [], checks: [] },
     "GET /api/runtime/readiness": { provider: "tencent-tke", ready: true, missingEnv: [], missingTools: [] },
@@ -105,6 +106,12 @@ function chainResponses(chain) {
     "POST /api/workspaces": chain.workspace,
     "POST /api/workspaces/runtime-status": readyRuntimeStatus(chain.workspace),
     [`GET ${chain.workspace.url}`]: "<html>one-person-lab-app</html>",
+    [`GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}`]: {
+      success: true,
+      user: { id: "opl-webui-noauth", username: "admin" }
+    },
+    [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/write")}`]: { success: true, data: true },
+    [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}`]: { success: true, data: persistenceText },
     "POST /api/billing/request-usage": {
       id: "usage-request-prod001",
       workspaceId: chain.workspace.id,
@@ -136,7 +143,7 @@ function chainResponses(chain) {
 }
 
 function keyedFetch({ responses, requests = [], responseHeaders = null, consoleOrigin = "https://console.oplcloud.cn" }) {
-  let workspaceUrlCount = 0;
+  const requestCounts = new Map();
   let runtimeStatusCount = 0;
   return async (url, options = {}) => {
     const parsed = new URL(String(url));
@@ -147,8 +154,9 @@ function keyedFetch({ responses, requests = [], responseHeaders = null, consoleO
       key = runtimeStatusCount === 1 ? key : `${key}#${runtimeStatusCount}`;
     }
     if (parsed.origin !== consoleOrigin) {
-      workspaceUrlCount += 1;
-      key = workspaceUrlCount === 1 ? key : `${key}#${workspaceUrlCount}`;
+      const count = (requestCounts.get(key) || 0) + 1;
+      requestCounts.set(key, count);
+      key = count === 1 ? key : `${key}#${count}`;
     }
     requests.push({
       key,
@@ -164,6 +172,12 @@ function keyedFetch({ responses, requests = [], responseHeaders = null, consoleO
     }
     throw new Error(`unexpected_request:${key}`);
   };
+}
+
+function workspaceUrl(baseUrl, path) {
+  const parsed = new URL(baseUrl);
+  parsed.pathname = `${parsed.pathname.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
+  return parsed.toString();
 }
 
 test("production verifier refuses localhost Console origins", async () => {
@@ -186,6 +200,7 @@ test("staging-local verifier can use a local Console origin while still requirin
     allowPrivateConsoleOrigin: true,
     accountId: "pi-prod",
     workspaceName: "Local To Staging Verification Lab",
+    runId: "prod-run",
     fetchImpl: keyedFetch({
       responses: chainResponses(chain),
       requests,
@@ -247,6 +262,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
     origin: "https://console.oplcloud.cn",
     accountId: "pi-prod",
     workspaceName: "Production Verification Lab",
+    runId: "prod-run",
     packageId: "basic",
     fetchImpl: keyedFetch({ responses: chainResponses(chain), requests })
   });
@@ -261,6 +277,9 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "POST /api/workspaces",
     "POST /api/workspaces/runtime-status",
     `GET ${chain.workspace.url}`,
+    `GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}`,
+    `POST ${workspaceUrl(chain.workspace.url, "/api/fs/write")}`,
+    `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}`,
     "POST /api/billing/request-usage",
     "GET /api/state?accountId=pi-prod",
     "POST /api/storage-attachments/detach",
@@ -274,6 +293,14 @@ test("production verifier exercises the public TKE resource provisioning chain",
   });
   assert.equal(requests.find((request) => request.key === "POST /api/storage-attachments").body.computeAllocationId, chain.compute.id);
   assert.equal(requests.find((request) => request.key === "POST /api/storage-attachments").body.storageId, chain.storage.id);
+  assert.deepEqual(requests.find((request) => request.key === `POST ${workspaceUrl(chain.workspace.url, "/api/fs/write")}`).body, {
+    path: "/projects/opl-e2e-prod-run.txt",
+    data: "opl persistence prod-run"
+  });
+  assert.deepEqual(requests.find((request) => request.key === `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}`).body, {
+    path: "/projects/opl-e2e-prod-run.txt",
+    workspace: "/projects"
+  });
   assert.equal(result.workspaceId, chain.workspace.id);
   assert.equal(result.url, chain.workspace.url);
   assert.deepEqual(result.checks.map((check) => `${check.name}:${check.ok}`), [
@@ -285,6 +312,9 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "workspace_created:true",
     "workspace_runtime_status:true",
     "workspace_url:true",
+    "workspace_runtime_auth:true",
+    "workspace_file_written:true",
+    "workspace_file_read:true",
     "request_usage_recorded:true",
     "ledger_and_usage_verified:true",
     "verification_storage_detached:true",
@@ -309,6 +339,7 @@ test("production verifier authenticates as operator and sends CSRF on commercial
   await verifyProductionChain({
     origin: "https://console.oplcloud.cn",
     accountId: "pi-prod",
+    runId: "prod-run",
     operatorToken: "operator-token",
     fetchImpl: keyedFetch({ responses, requests, responseHeaders })
   });
@@ -343,6 +374,7 @@ test("production verifier retries TKE runtime status and Workspace URL until rea
   const result = await verifyProductionChain({
     origin: "https://console.oplcloud.cn",
     accountId: "pi-prod",
+    runId: "prod-run",
     workspaceUrlAttempts: 2,
     retryDelayMs: 0,
     fetchImpl: async (url, options = {}) => {

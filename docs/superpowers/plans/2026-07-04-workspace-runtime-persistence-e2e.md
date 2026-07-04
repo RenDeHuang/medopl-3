@@ -22,9 +22,9 @@ Add a test that expects the verifier to call these public Workspace URL paths af
 
 ```text
 GET https://workspace.example/w/ws-prod/?token=share
-GET https://workspace.example/w/ws-prod/api/auth/user
-POST https://workspace.example/w/ws-prod/api/fs/write
-POST https://workspace.example/w/ws-prod/api/fs/read
+GET https://workspace.example/w/ws-prod/api/auth/user?token=share
+POST https://workspace.example/w/ws-prod/api/fs/write?token=share
+POST https://workspace.example/w/ws-prod/api/fs/read?token=share
 ```
 
 The mock `POST /api/fs/write` response should be `{ "success": true, "data": true }`.
@@ -47,7 +47,6 @@ function workspaceApiUrl(workspaceUrl, path) {
   const parsed = new URL(workspaceUrl);
   const normalizedPath = path.startsWith("/") ? path.slice(1) : path;
   parsed.pathname = `${parsed.pathname.replace(/\/$/, "")}/${normalizedPath}`;
-  parsed.search = "";
   return parsed.toString();
 }
 
@@ -132,7 +131,7 @@ const replacementCompute = await requestJson({
 });
 ```
 
-Attach the original `storage.id`, create a second Workspace URL, open it, and read `/projects/opl-e2e/<runId>.txt`.
+Attach the original `storage.id`, create a second Workspace URL, open it, and read `/projects/opl-e2e-<runId>.txt`.
 
 - [ ] **Step 3: Harden cleanup**
 
@@ -220,4 +219,3 @@ git status --short
 ```
 
 Expected: clean worktree.
-

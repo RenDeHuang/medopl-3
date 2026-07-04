@@ -29,7 +29,9 @@ one-person-lab-app owns file operations, chat UI/API behavior, and runtime works
 
 ## Runtime API Contract
 
-The current one-person-lab WebUI implementation is `opl-aion-shell`. Its web host proxies `/api/*` and `/ws` to `aioncore`. The verifier uses only stable WebUI APIs discovered from the current source:
+The current one-person-lab WebUI implementation is `opl-aion-shell`. Its web host proxies `/api/*` and `/ws` to `aioncore`. Because the verifier is not a browser and does not keep the Workspace gateway cookie jar, every runtime API URL keeps the Workspace URL token query while changing the path from `/w/:workspaceId/` to `/w/:workspaceId/api/...`. The Workspace gateway strips the token before proxying upstream.
+
+The verifier uses only stable WebUI APIs discovered from the current source:
 
 - `GET /api/auth/user`: no-auth session readiness.
 - `POST /api/fs/write`: write a text file to an absolute runtime path.
@@ -40,7 +42,7 @@ The current one-person-lab WebUI implementation is `opl-aion-shell`. Its web hos
 - `GET /api/conversations/:conversation_id/workspace?path=<relative>`: list workspace files.
 - `GET /ws`: runtime event stream.
 
-For the persistence proof, the verifier writes a deterministic text file under `/projects/opl-e2e/<runId>.txt` and reads it back before and after compute recreation. Multipart upload is attempted against `/api/fs/upload`; if it returns an absolute path, the verifier reads that path and records a separate upload check.
+For the persistence proof, the verifier writes a deterministic text file under `/projects/opl-e2e-<runId>.txt` and reads it back before and after compute recreation. Multipart upload is attempted against `/api/fs/upload`; if it returns an absolute path, the verifier reads that path and records a separate upload check.
 
 ## Chat Probe
 
@@ -83,4 +85,3 @@ Completion requires:
   - ledger/resource usage verified
   - cleanup completed
 - Post-run account state showing no active compute, storage, or attachment for the verifier account.
-

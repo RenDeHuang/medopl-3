@@ -155,6 +155,69 @@ async function requestWorkspaceUrl({ fetchImpl, url, attempts, retryDelayMs }) {
   throw lastError;
 }
 
+function workspaceApiUrl(workspaceUrl, path) {
+  const parsed = new URL(workspaceUrl);
+  const normalizedPath = String(path || "").replace(/^\//, "");
+  parsed.pathname = `${parsed.pathname.replace(/\/$/, "")}/${normalizedPath}`;
+  return parsed.toString();
+}
+
+async function requestWorkspaceJson({ fetchImpl, workspaceUrl, path, method = "GET", body = null }) {
+  const response = await fetchImpl(workspaceApiUrl(workspaceUrl, path), {
+    method,
+    headers: body ? { "content-type": "application/json" } : undefined,
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const payload = await readResponse(response);
+  if (!response.ok) {
+    const message = typeof payload === "string" ? payload : payload.error || JSON.stringify(payload);
+    throw new Error(`workspace_api_failed:${method}:${path}:${response.status}:${message}`);
+  }
+  return payload;
+}
+
+function runtimePayloadData(payload) {
+  if (payload && typeof payload === "object" && Object.hasOwn(payload, "data")) return payload.data;
+  return payload;
+}
+
+async function verifyWorkspaceRuntimeFile({ fetchImpl, checks, workspaceUrl, runId }) {
+  const filePath = `/projects/opl-e2e-${runId}.txt`;
+  const content = `opl persistence ${runId}`;
+  const user = await requestWorkspaceJson({
+    fetchImpl,
+    workspaceUrl,
+    path: "/api/auth/user"
+  });
+  addCheck(checks, "workspace_runtime_auth", Boolean(
+    user?.success === true ||
+    user?.user?.id ||
+    user?.data?.user?.id
+  ));
+
+  const written = await requestWorkspaceJson({
+    fetchImpl,
+    workspaceUrl,
+    path: "/api/fs/write",
+    method: "POST",
+    body: { path: filePath, data: content }
+  });
+  addCheck(checks, "workspace_file_written", Boolean(
+    written?.success === true ||
+    runtimePayloadData(written) === true
+  ), { path: filePath });
+
+  const read = await requestWorkspaceJson({
+    fetchImpl,
+    workspaceUrl,
+    path: "/api/fs/read",
+    method: "POST",
+    body: { path: filePath, workspace: "/projects" }
+  });
+  addCheck(checks, "workspace_file_read", runtimePayloadData(read) === content, { path: filePath });
+  return { filePath, content };
+}
+
 async function requestRuntimeStatus({ fetchImpl, origin, accountId, workspaceId, attempts, retryDelayMs, auth = null }) {
   let lastStatus = null;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -472,6 +535,7 @@ export async function verifyProductionChain({
       retryDelayMs
     });
     addCheck(checks, "workspace_url", true, { url: workspace.url, attempts: workspaceUrlResult.attempts });
+    await verifyWorkspaceRuntimeFile({ fetchImpl, checks, workspaceUrl: workspace.url, runId });
 
     const requestUsage = await requestJson({
       fetchImpl,
