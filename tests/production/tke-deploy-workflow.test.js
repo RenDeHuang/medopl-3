@@ -130,6 +130,22 @@ test("TKE production deploy workflow defaults to the versioned pricing contract"
   assert.equal(Object.hasOwn(currentJob.env, "OPL_GPU_COMPUTE_HOURLY_CNY"), false);
 });
 
+test("TKE production deploy workflow passes package compute pool bindings to the manifest", async () => {
+  const deploymentContract = await readJson(deploymentContractPath);
+  const workflow = await readWorkflow(deploymentContract.deployWorkflow.file);
+  const currentJob = job(workflow, deploymentContract.deployWorkflow.job);
+
+  for (const key of [
+    "OPL_BASIC_COMPUTE_INSTANCE_TYPE",
+    "OPL_BASIC_COMPUTE_NODE_POOL_ID",
+    "OPL_PRO_COMPUTE_INSTANCE_TYPE",
+    "OPL_PRO_COMPUTE_NODE_POOL_ID"
+  ]) {
+    assert.ok(Object.hasOwn(currentJob.env, key), `deploy workflow missing ${key}`);
+    assert.ok(String(currentJob.env[key]).includes(`vars.${key}`), `${key} must come from GitHub vars`);
+  }
+});
+
 test("TKE manifest renderer replaces deploy-time values without rendering secrets", async () => {
   const source = await readFile("deploy/tke/opl-cloud.k8s.json", "utf8");
   const manifest = JSON.parse(source);
