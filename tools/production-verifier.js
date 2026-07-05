@@ -1,4 +1,4 @@
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -258,6 +258,42 @@ async function writeBrowserUploadFixture({ runId }) {
   return { fileName, filePath, content };
 }
 
+async function captureBrowserScreenshot({ page, screenshotDir, runId, suffix }) {
+  if (!page || !screenshotDir) return "";
+  const screenshotPath = join(screenshotDir, `workspace-browser-e2e-${runId}-${suffix}.png`);
+  try {
+    await mkdir(screenshotDir, { recursive: true });
+    await page.screenshot({ path: screenshotPath, fullPage: true });
+    return screenshotPath;
+  } catch {
+    return "";
+  }
+}
+
+async function runBrowserCheck({ page, checks, name, screenshotDir, runId, successDetails = {}, recordSuccess = true, task }) {
+  try {
+    const result = await task();
+    if (recordSuccess) addCheck(checks, name, true, successDetails);
+    return result;
+  } catch (cause) {
+    const screenshotPath = await captureBrowserScreenshot({ page, screenshotDir, runId, suffix: "failure" });
+    const details = {
+      stage: name,
+      ...(screenshotPath ? { screenshotPath } : {})
+    };
+    checks.push({
+      name,
+      ok: false,
+      ...details,
+      error: cause?.message || String(cause)
+    });
+    const error = new Error(`${name}_failed:${cause?.message || String(cause)}`);
+    error.cause = cause;
+    error.details = details;
+    throw error;
+  }
+}
+
 async function requireFirstFileInput(page) {
   const input = page.locator('input[type="file"]').first();
   if (await input.count() < 1) throw new Error("workspace_browser_file_input_missing");
@@ -291,34 +327,76 @@ export async function verifyWorkspaceBrowserUi({
   const browser = await factory.chromium.launch(launchOptions);
   try {
     const page = await browser.newPage();
-    await page.goto(workspaceUrl, { waitUntil: "networkidle", timeout: 120_000 });
-    addCheck(checks, "workspace_browser_opened", true, { url: workspaceUrl });
+    await runBrowserCheck({
+      page,
+      checks,
+      name: "workspace_browser_opened",
+      screenshotDir,
+      runId,
+      successDetails: { url: workspaceUrl },
+      task: () => page.goto(workspaceUrl, { waitUntil: "networkidle", timeout: 120_000 })
+    });
 
     const fixture = await writeBrowserUploadFixture({ runId });
-    const fileInput = await requireFirstFileInput(page);
-    await fileInput.setInputFiles(fixture.filePath);
-    addCheck(checks, "workspace_browser_file_uploaded", true, { fileName: fixture.fileName });
+    const fileInput = await runBrowserCheck({
+      page,
+      checks,
+      name: "workspace_browser_file_input",
+      screenshotDir,
+      runId,
+      recordSuccess: false,
+      task: () => requireFirstFileInput(page)
+    });
+    await runBrowserCheck({
+      page,
+      checks,
+      name: "workspace_browser_file_uploaded",
+      screenshotDir,
+      runId,
+      successDetails: { fileName: fixture.fileName },
+      task: () => fileInput.setInputFiles(fixture.filePath)
+    });
 
-    await page.waitForFunction(({ fileName, content }) => {
-      const text = document.body?.innerText || "";
-      return text.includes(fileName) || text.includes(content);
-    }, { fileName: fixture.fileName, content: fixture.content }, { timeout: 60_000 });
-    addCheck(checks, "workspace_browser_file_read", true, { fileName: fixture.fileName });
+    await runBrowserCheck({
+      page,
+      checks,
+      name: "workspace_browser_file_read",
+      screenshotDir,
+      runId,
+      successDetails: { fileName: fixture.fileName },
+      task: () => page.waitForFunction(({ fileName, content }) => {
+        const text = document.body?.innerText || "";
+        return text.includes(fileName) || text.includes(content);
+      }, { fileName: fixture.fileName, content: fixture.content }, { timeout: 60_000 })
+    });
 
     const marker = `OPL_BROWSER_E2E_${runId}`;
     const prompt = `请只回复：${marker}`;
-    await page.getByRole("textbox").first().fill(prompt);
-    await clickSendControl(page);
-    addCheck(checks, "workspace_browser_message_sent", true);
+    await runBrowserCheck({
+      page,
+      checks,
+      name: "workspace_browser_message_sent",
+      screenshotDir,
+      runId,
+      task: async () => {
+        await page.getByRole("textbox").first().fill(prompt);
+        await clickSendControl(page);
+      }
+    });
 
-    await page.waitForFunction(({ marker: expected }) => {
-      return (document.body?.innerText || "").includes(expected);
-    }, { marker }, { timeout: 180_000 });
-    addCheck(checks, "workspace_browser_reply_seen", true, { marker });
+    await runBrowserCheck({
+      page,
+      checks,
+      name: "workspace_browser_reply_seen",
+      screenshotDir,
+      runId,
+      successDetails: { marker },
+      task: () => page.waitForFunction(({ marker: expected }) => {
+        return (document.body?.innerText || "").includes(expected);
+      }, { marker }, { timeout: 180_000 })
+    });
 
-    if (screenshotDir) {
-      await page.screenshot({ path: join(screenshotDir, `workspace-browser-e2e-${runId}.png`), fullPage: true });
-    }
+    await captureBrowserScreenshot({ page, screenshotDir, runId, suffix: "success" });
   } finally {
     await browser.close();
   }
@@ -581,6 +659,22 @@ function assertLedgerAndUsage(checks, state, { accountId, compute, storage, atta
     hasStorageWalletTransaction &&
     hasRequestWalletTransaction
   ), { missingChecks });
+}
+
+function compactObject(payload) {
+  return Object.fromEntries(Object.entries(payload).filter(([, value]) => value));
+}
+
+function verificationResourceIds({ compute, storage, attachment, workspace, replacementCompute, replacementAttachment, replacementWorkspace }) {
+  return compactObject({
+    computeAllocationId: compute?.id,
+    storageId: storage?.id,
+    attachmentId: attachment?.id,
+    workspaceId: workspace?.id,
+    replacementComputeAllocationId: replacementCompute?.id,
+    replacementAttachmentId: replacementAttachment?.id,
+    replacementWorkspaceId: replacementWorkspace?.id
+  });
 }
 
 async function cleanupVerificationResources({ fetchImpl, origin, accountId, computeAllocationId, storageId, attachmentId, checks = null, auth = null }) {
@@ -965,6 +1059,19 @@ export async function verifyProductionChain({
     };
   } catch (error) {
     if (!compute?.id && !storage?.id && !attachment?.id && !replacementCompute?.id && !replacementAttachment?.id) throw error;
+    error.accountId = accountId;
+    error.runId = runId;
+    error.workspaceName = effectiveWorkspaceName;
+    error.resourceIds = verificationResourceIds({
+      compute,
+      storage,
+      attachment,
+      workspace,
+      replacementCompute,
+      replacementAttachment,
+      replacementWorkspace
+    });
+    error.checks = checks;
     const cleanupErrors = [];
     if (replacementCompute?.id || replacementAttachment?.id) {
       const replacementCleanupErrors = await cleanupVerificationResources({
@@ -1042,6 +1149,11 @@ function errorPayload(error) {
     ...(typeof error.retryable === "boolean" ? { retryable: error.retryable } : {}),
     ...(Array.isArray(error.missingEnv) ? { missingEnv: error.missingEnv } : {}),
     ...(error.details ? { details: error.details } : {}),
+    ...(error.resourceIds ? { resourceIds: error.resourceIds } : {}),
+    ...(error.accountId ? { accountId: error.accountId } : {}),
+    ...(error.runId ? { runId: error.runId } : {}),
+    ...(error.workspaceName ? { workspaceName: error.workspaceName } : {}),
+    ...(error.checks ? { checks: error.checks } : {}),
     ...(error.cleanupErrors ? { cleanupErrors: error.cleanupErrors } : {})
   };
 }

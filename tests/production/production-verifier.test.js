@@ -243,7 +243,8 @@ function workspaceUrl(baseUrl, path) {
   return parsed.toString();
 }
 
-function fakeBrowserFactory(actions = []) {
+function fakeBrowserFactory(actions = [], { failWaitAt = 0 } = {}) {
+  let waitCount = 0;
   const page = {
     async goto(url) {
       actions.push(["goto", url]);
@@ -277,7 +278,9 @@ function fakeBrowserFactory(actions = []) {
       };
     },
     async waitForFunction(_fn, ...args) {
+      waitCount += 1;
       actions.push(["waitForFunction", ...args.slice(0, 2)]);
+      if (failWaitAt === waitCount) throw new Error("Timeout 180000ms exceeded.");
       return true;
     },
     async screenshot(options = {}) {
@@ -562,6 +565,60 @@ test("production verifier runs optional browser UI checks after Workspace URL is
   assert.equal(actions.find((action) => action[0] === "goto")?.[1], chain.workspace.url);
 });
 
+test("production verifier reports browser failure stage with resources, checks, and screenshot", async () => {
+  const requests = [];
+  const actions = [];
+  const chain = tkeChain();
+  let caught = null;
+
+  try {
+    await verifyProductionChain({
+      origin: "https://console.oplcloud.cn",
+      accountId: "pi-prod",
+      workspaceName: "Production Verification Lab",
+      runId: "prod-run",
+      packageId: "basic",
+      browserE2E: true,
+      browserFactory: fakeBrowserFactory(actions, { failWaitAt: 2 }),
+      screenshotDir: "/tmp/opl-production-verifier-test-screenshots",
+      fetchImpl: keyedFetch({ responses: chainResponses(chain), requests })
+    });
+  } catch (error) {
+    caught = error;
+  }
+
+  assert.equal(caught?.message, "workspace_browser_reply_seen_failed:Timeout 180000ms exceeded.");
+  assert.equal(caught?.details?.stage, "workspace_browser_reply_seen");
+  assert.match(caught?.details?.screenshotPath || "", /workspace-browser-e2e-prod-run-failure\.png$/);
+  assert.deepEqual(caught?.resourceIds, {
+    computeAllocationId: chain.compute.id,
+    storageId: chain.storage.id,
+    attachmentId: chain.attachment.id,
+    workspaceId: chain.workspace.id
+  });
+  assert.deepEqual(caught?.checks?.map((check) => `${check.name}:${check.ok}`), [
+    "production_readiness:true",
+    "runtime_readiness:true",
+    "compute_created:true",
+    "storage_created:true",
+    "storage_attached:true",
+    "workspace_created:true",
+    "workspace_runtime_status:true",
+    "workspace_url:true",
+    "workspace_browser_opened:true",
+    "workspace_browser_file_uploaded:true",
+    "workspace_browser_file_read:true",
+    "workspace_browser_message_sent:true",
+    "workspace_browser_reply_seen:false"
+  ]);
+  assert.ok(actions.some((action) => action[0] === "screenshot" && action[1].endsWith("workspace-browser-e2e-prod-run-failure.png")));
+  assert.deepEqual(requests.map((request) => request.key).slice(-3), [
+    "POST /api/storage-attachments/detach",
+    `POST /api/compute-allocations/${chain.compute.id}/destroy`,
+    "POST /api/storage-volumes/destroy"
+  ]);
+});
+
 test("production verifier authenticates as operator and sends CSRF on commercial write APIs", async () => {
   const requests = [];
   const chain = tkeChain();
@@ -792,15 +849,29 @@ test("production verifier CLI writes structured failure JSON with cleanup errors
 
   assert.equal(code, 1);
   assert.equal(stdout, "");
-  assert.deepEqual(JSON.parse(stderr), {
-    ok: false,
-    error: "workspace_url_failed:502:bad gateway",
-    cleanupErrors: [
-      "detach_storage:request_failed:POST:/api/storage-attachments/detach:500:detach_failed",
-      `destroy_compute:request_failed:POST:/api/compute-allocations/${chain.compute.id}/destroy:500:destroy_compute_failed`,
-      "destroy_storage:request_failed:POST:/api/storage-volumes/destroy:500:destroy_storage_failed"
-    ]
+  const payload = JSON.parse(stderr);
+  assert.equal(payload.ok, false);
+  assert.equal(payload.error, "workspace_url_failed:502:bad gateway");
+  assert.deepEqual(payload.resourceIds, {
+    computeAllocationId: chain.compute.id,
+    storageId: chain.storage.id,
+    attachmentId: chain.attachment.id,
+    workspaceId: chain.workspace.id
   });
+  assert.deepEqual(payload.checks.map((check) => `${check.name}:${check.ok}`), [
+    "production_readiness:true",
+    "runtime_readiness:true",
+    "compute_created:true",
+    "storage_created:true",
+    "storage_attached:true",
+    "workspace_created:true",
+    "workspace_runtime_status:true"
+  ]);
+  assert.deepEqual(payload.cleanupErrors, [
+    "detach_storage:request_failed:POST:/api/storage-attachments/detach:500:detach_failed",
+    `destroy_compute:request_failed:POST:/api/compute-allocations/${chain.compute.id}/destroy:500:destroy_compute_failed`,
+    "destroy_storage:request_failed:POST:/api/storage-volumes/destroy:500:destroy_storage_failed"
+  ]);
 });
 
 test("production verifier CLI preserves safe provider failure details", async () => {
