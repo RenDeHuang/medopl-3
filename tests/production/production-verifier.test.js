@@ -303,7 +303,7 @@ function fakeBrowserFactory(actions = [], { failWaitAt = 0 } = {}) {
   };
 }
 
-function fakeWorkspaceBrowserFactory(actions = [], { assistantSelectionTakesEffect = true } = {}) {
+function fakeWorkspaceBrowserFactory(actions = [], { assistantSelectionTakesEffect = true, firstTextboxIsNotComposer = false } = {}) {
   const state = {
     bodyText: "Select an assistant to start a task\n@Research\n@Grants\n@PPT",
     prompt: ""
@@ -332,11 +332,19 @@ function fakeWorkspaceBrowserFactory(actions = [], { assistantSelectionTakesEffe
       actions.push(["getByRole", role, roleName]);
       return {
         first() {
+          this.target = "first";
+          return this;
+        },
+        last() {
+          this.target = "last";
           return this;
         },
         async fill(value) {
-          actions.push(["fill", role, value]);
-          state.prompt = value;
+          const target = this.target || "first";
+          actions.push(["fill", role, value, target]);
+          if (!(role === "textbox" && firstTextboxIsNotComposer && target === "first")) {
+            state.prompt = value;
+          }
         },
         async click() {
           actions.push(["click", role, roleName]);
@@ -352,11 +360,25 @@ function fakeWorkspaceBrowserFactory(actions = [], { assistantSelectionTakesEffe
     async waitForFunction(fn, arg, options = {}) {
       actions.push(["waitForFunction", arg, options]);
       const previousDocument = globalThis.document;
-      globalThis.document = { body: { innerText: state.bodyText } };
+      const previousWindow = globalThis.window;
+      const visiblePromptElement = {
+        value: state.prompt,
+        textContent: state.prompt,
+        innerText: state.prompt,
+        getBoundingClientRect: () => ({ width: state.prompt ? 360 : 0, height: state.prompt ? 40 : 0 })
+      };
+      globalThis.document = {
+        body: { innerText: state.bodyText },
+        querySelectorAll: () => (state.prompt ? [visiblePromptElement] : [])
+      };
+      globalThis.window = {
+        getComputedStyle: () => ({ visibility: "visible", display: "block" })
+      };
       try {
         if (!fn(arg)) throw new Error("Timeout exceeded.");
       } finally {
         globalThis.document = previousDocument;
+        globalThis.window = previousWindow;
       }
     },
     async screenshot(options = {}) {
@@ -659,6 +681,24 @@ test("production verifier does not treat the submitted user prompt as an assista
   assert.ok(checks.some((check) => check.name === "workspace_browser_reply_seen" && check.ok === false));
 });
 
+test("production verifier fills the visible composer textbox before sending", async () => {
+  const checks = [];
+  const actions = [];
+
+  await assert.rejects(
+    verifyWorkspaceBrowserUi({
+      workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+      runId: "browser-run",
+      checks,
+      browserFactory: fakeWorkspaceBrowserFactory(actions, { firstTextboxIsNotComposer: true }),
+      screenshotDir: ""
+    }),
+    /workspace_browser_reply_seen_failed/
+  );
+  assert.ok(actions.some((action) => action[0] === "fill" && action[3] === "last"));
+  assert.ok(checks.some((check) => check.name === "workspace_browser_message_sent" && check.ok === true));
+});
+
 test("production verifier runs optional browser UI checks after Workspace URL is ready", async () => {
   const requests = [];
   const actions = [];
@@ -701,7 +741,7 @@ test("production verifier reports browser failure stage with resources, checks, 
       runId: "prod-run",
       packageId: "basic",
       browserE2E: true,
-      browserFactory: fakeBrowserFactory(actions, { failWaitAt: 4 }),
+      browserFactory: fakeBrowserFactory(actions, { failWaitAt: 5 }),
       screenshotDir: "/tmp/opl-production-verifier-test-screenshots",
       fetchImpl: keyedFetch({ responses: chainResponses(chain), requests })
     });

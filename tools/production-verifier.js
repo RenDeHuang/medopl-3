@@ -398,6 +398,46 @@ async function clickRightmostComposerButton(page) {
   if (!clicked) throw new Error("workspace_send_control_not_found");
 }
 
+async function fillWorkspacePrompt(page, prompt) {
+  let lastError = null;
+  const roleTextbox = page.getByRole("textbox");
+  const attempts = [];
+  if (typeof roleTextbox.last === "function") attempts.push(() => roleTextbox.last().fill(prompt));
+  if (typeof page.locator === "function") {
+    const composerSelector = "textarea, [contenteditable='true'], input[type='text']";
+    const composer = page.locator(composerSelector);
+    if (typeof composer.last === "function") attempts.push(() => composer.last().fill(prompt));
+  }
+  attempts.push(() => roleTextbox.first().fill(prompt));
+
+  for (const attempt of attempts) {
+    try {
+      await attempt();
+      await waitForComposerPrompt(page, prompt);
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw new Error(`workspace_prompt_fill_failed:${lastError?.message || "unknown"}`);
+}
+
+async function waitForComposerPrompt(page, prompt) {
+  await page.waitForFunction(({ prompt: expected }) => {
+    const visible = (element) => {
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+    };
+    return Array.from(document.querySelectorAll("textarea, [contenteditable='true'], input[type='text'], [role='textbox']"))
+      .filter(visible)
+      .some((element) => {
+        const value = element.value || element.textContent || element.innerText || "";
+        return value.includes(expected);
+      });
+  }, { prompt }, { timeout: 15_000 });
+}
+
 async function waitForSubmittedPrompt(page, prompt) {
   await page.waitForFunction(({ prompt: expected }) => {
     return (document.body?.innerText || "").includes(expected);
@@ -472,7 +512,7 @@ export async function verifyWorkspaceBrowserUi({
       runId,
       task: async () => {
         await selectDefaultWorkspaceAssistant(page);
-        await page.getByRole("textbox").first().fill(prompt);
+        await fillWorkspacePrompt(page, prompt);
         await clickSendControl(page);
         await waitForSubmittedPrompt(page, prompt);
       }
