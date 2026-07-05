@@ -304,9 +304,12 @@ export class WorkspaceLifecycleService extends OplDomainService {
           skipped.push({ workspaceId: workspace.id, reason: "token_not_active", tokenStatus });
           continue;
         }
-        const storage = storageById.get(workspace.storageId);
+        const stableStorageId = String(workspace.storageId || "").trim();
+        const storage = stableStorageId ? storageById.get(stableStorageId) : null;
         const unavailableBecause = [
-          resourceIsDestroyed(storage) ? "storage_unavailable" : ""
+          workspace.ownerAccountId ? "" : "owner_account_missing",
+          stableStorageId ? "" : "stable_storage_identity_missing",
+          stableStorageId && resourceIsDestroyed(storage) ? "storage_unavailable" : ""
         ].filter(Boolean);
 
         if (!unavailableBecause.length) {

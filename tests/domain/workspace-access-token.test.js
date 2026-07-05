@@ -140,3 +140,44 @@ test("operator cleanup keeps suspended compute URLs active and storage destroy m
   assert.equal(after.workspaces.find((item) => item.id === workspace.id).access.tokenStatus, "unavailable");
   assert.equal(after.workspaces.find((item) => item.id === workspace.id).state, "destroyed");
 });
+
+test("operator cleanup retires active legacy Workspace entries without stable storage identity", async () => {
+  const service = createTestService();
+  await service.store.update((state) => {
+    state.workspaces["ws-legacy"] = {
+      id: "ws-legacy",
+      ownerAccountId: "pi-alpha",
+      packageId: "basic",
+      name: "Legacy URL",
+      slug: "legacy-url",
+      url: "https://workspace.example.test/w/legacy-url/?token=share_legacy",
+      access: {
+        token: "share_legacy",
+        tokenStatus: "active"
+      },
+      state: "running",
+      storageVolumeId: "storage-old",
+      currentComputeAllocationId: "",
+      currentAttachmentId: "",
+      createdAt: "2026-07-01T00:00:00.000Z",
+      updatedAt: "2026-07-01T00:00:00.000Z"
+    };
+  });
+
+  const cleanup = await service.cleanupWorkspaceAccess({
+    accountId: "pi-alpha",
+    reason: "legacy_shape_retired"
+  });
+
+  assert.deepEqual(cleanup.cleaned, [{
+    workspaceId: "ws-legacy",
+    accountId: "pi-alpha",
+    tokenStatus: "unavailable",
+    unavailableBecause: ["stable_storage_identity_missing"]
+  }]);
+
+  await assert.rejects(
+    service.resolveWorkspaceAccess({ slug: "legacy-url", token: "share_legacy" }),
+    /workspace_token_inactive/
+  );
+});

@@ -829,7 +829,7 @@ func TestTencentSDKClientDestroyAllocationDeletesNamedMachine(t *testing.T) {
 	}
 }
 
-func TestTencentSDKClientDestroyNativeAllocationOmitsCvmDeleteMode(t *testing.T) {
+func TestTencentSDKClientDestroyMachineAllocationAlwaysScalesDownAndTerminates(t *testing.T) {
 	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1}
 	client := newFakeTencentSDKClient(tkeAPI)
 
@@ -849,11 +849,39 @@ func TestTencentSDKClientDestroyNativeAllocationOmitsCvmDeleteMode(t *testing.T)
 	if tkeAPI.deleteMachinesRequest == nil {
 		t.Fatalf("expected DeleteClusterMachines call")
 	}
-	if tkeAPI.deleteMachinesRequest.InstanceDeleteMode != nil {
-		t.Fatalf("native TKE machines must not force CVM delete mode: %#v", *tkeAPI.deleteMachinesRequest.InstanceDeleteMode)
+	if tkeAPI.deleteMachinesRequest.EnableScaleDown == nil || !*tkeAPI.deleteMachinesRequest.EnableScaleDown {
+		t.Fatalf("compute destroy must scale down the node pool")
 	}
-	if tkeAPI.deleteMachinesRequest.EnableScaleDown != nil {
-		t.Fatalf("native TKE machines must not force node pool scale down: %#v", *tkeAPI.deleteMachinesRequest.EnableScaleDown)
+	if tkeAPI.deleteMachinesRequest.InstanceDeleteMode == nil || *tkeAPI.deleteMachinesRequest.InstanceDeleteMode != "terminate" {
+		t.Fatalf("compute destroy must terminate the cloud machine")
+	}
+}
+
+func TestTencentSDKClientDestroyMachineNameOnlyAllocationScalesDownAndTerminates(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1}
+	client := newFakeTencentSDKClient(tkeAPI)
+
+	response := client.DestroyComputeAllocation(Request{
+		AccountId: "pi-alpha",
+		Pool:      ComputePoolInput{Id: "pool-basic-2c4g", NodePoolId: "np-basic"},
+		Allocation: ComputeAllocationInput{
+			Id:          "compute-alpha",
+			NodeName:    "10.0.0.12",
+			MachineName: "np-basic-native",
+		},
+	}, map[string]string{})
+
+	if !response.Ok {
+		t.Fatalf("expected ok response: %#v", response)
+	}
+	if tkeAPI.deleteMachinesRequest == nil {
+		t.Fatalf("expected DeleteClusterMachines call")
+	}
+	if tkeAPI.deleteMachinesRequest.EnableScaleDown == nil || !*tkeAPI.deleteMachinesRequest.EnableScaleDown {
+		t.Fatalf("machineName-only compute destroy must scale down the node pool")
+	}
+	if tkeAPI.deleteMachinesRequest.InstanceDeleteMode == nil || *tkeAPI.deleteMachinesRequest.InstanceDeleteMode != "terminate" {
+		t.Fatalf("machineName-only compute destroy must terminate the cloud machine")
 	}
 }
 

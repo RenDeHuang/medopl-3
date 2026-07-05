@@ -347,7 +347,7 @@ jobs:
           const workspaces = (payload.workspaces || []).filter((workspace) =>
             workspace.currentComputeAllocationId === computeAllocationId ||
             workspace.currentAttachmentId && attachments.some((item) => item.id === workspace.currentAttachmentId) ||
-            workspace.storageVolumeId && storageIds.has(workspace.storageVolumeId)
+            workspace.storageId && storageIds.has(workspace.storageId)
           );
           const runtimeOperations = (payload.runtimeOperations || []).filter((operation) =>
             operation.resourceId === computeAllocationId ||
@@ -425,7 +425,7 @@ jobs:
             workspaces: workspaces.map((workspace) => ({
               id: workspace.id,
               state: workspace.state,
-              storageVolumeId: workspace.storageVolumeId,
+              storageId: workspace.storageId,
               currentComputeAllocationId: workspace.currentComputeAllocationId,
               currentAttachmentId: workspace.currentAttachmentId,
               urlStatus: workspace.urlStatus || workspace.access?.status || "",

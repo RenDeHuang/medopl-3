@@ -95,6 +95,7 @@ const destructiveMutationProtocol = Object.freeze({
 
 const computeAllocationFields = Object.freeze([
   "id",
+  "ownerAccountId",
   "name",
   "packageId",
   "spec",
@@ -114,6 +115,7 @@ const computeAllocationFields = Object.freeze([
 
 const workspaceFields = Object.freeze([
   "id",
+  "ownerAccountId",
   "storageId",
   "currentComputeAllocationId",
   "currentAttachmentId",

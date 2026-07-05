@@ -146,6 +146,7 @@ export function ComputeAllocationsPage({ state }) {
           emptyText="暂无计算分配"
           columns={[
             { title: "名称", dataIndex: "name", render: (_, row) => <Button type="link" onClick={() => navigate(routeTo("compute-allocations.detail", { id: row.id }))}>{row.name || row.id}</Button> },
+            { title: "拥有账号", dataIndex: "ownerAccountId", ellipsis: true },
             { title: "规格", dataIndex: "spec" },
             { title: "状态", dataIndex: "status", render: (value) => <StatusPill label={value || "pending"} tone={resourceStatus(value)} /> },
             { title: "节点池", dataIndex: "nodePoolId", ellipsis: true },
@@ -268,6 +269,7 @@ export function ComputeAllocationDetailPage({ state, path, session, runAction })
       <InsightPanel title="计算资源" eyebrow="资源">
         <ResourceSplit
           items={[
+            { label: "拥有账号", value: resource.ownerAccountId || "-", meta: resource.ownerUserId || "账号级资源", status: "Owner", tone: "info" },
             { label: "状态", value: resource.status || "-", status: resource.status || "pending", tone: resourceStatus(resource.status) },
             { label: "规格", value: resource.spec || "-", meta: resource.packageId },
             { label: "节点池", value: resource.nodePoolId || "-", meta: "规格资源池", status: resource.poolId || "pool", tone: "info" },
@@ -331,6 +333,7 @@ export function StorageVolumesPage({ state }) {
           emptyText="暂无存储资源"
           columns={[
             { title: "名称", dataIndex: "name", render: (_, row) => <Button type="link" onClick={() => navigate(routeTo("storage.detail", { id: row.id }))}>{row.name || row.id}</Button> },
+            { title: "拥有账号", dataIndex: "ownerAccountId", ellipsis: true },
             { title: "容量", dataIndex: "sizeGb", render: (value) => `${value || 0}GB` },
             { title: "状态", dataIndex: "status", render: (value) => <StatusPill label={value || "pending"} tone={resourceStatus(value)} /> },
             { title: "存储句柄", dataIndex: "providerResourceId", ellipsis: true },
@@ -423,6 +426,7 @@ export function StorageVolumeDetailPage({ state, path, session, runAction }) {
       <InsightPanel title="存储资源" eyebrow="资源">
         <ResourceSplit
           items={[
+            { label: "拥有账号", value: resource.ownerAccountId || "-", meta: resource.ownerUserId || "账号级资源", status: "Owner", tone: "info" },
             { label: "状态", value: resource.status || "-", status: resource.status || "pending", tone: resourceStatus(resource.status) },
             { label: "容量", value: `${resource.sizeGb || 0}GB`, meta: resource.storageClassId },
             { label: "存储句柄", value: resource.providerResourceId || "-", meta: resource.provider || "tencent-tke" },
@@ -486,6 +490,7 @@ export function StorageAttachmentsPage({ state }) {
           emptyText="暂无挂载关系"
           columns={[
             { title: "挂载", dataIndex: "id" },
+            { title: "拥有账号", dataIndex: "ownerAccountId", ellipsis: true },
             { title: "计算", dataIndex: "computeAllocationId", render: (_, row) => <Button type="link" onClick={() => navigate(routeTo("attachment.detail", { id: row.id }))}>{row.computeAllocationId}</Button> },
             { title: "存储", dataIndex: "storageId" },
             { title: "路径", dataIndex: "mountPath" },
@@ -506,6 +511,7 @@ export function StorageAttachmentDetailPage({ state, path, session, runAction })
       <InsightPanel title="挂载关系" eyebrow="资源">
         <ResourceSplit
           items={[
+            { label: "拥有账号", value: attachment.ownerAccountId || "-", meta: "账号级挂载", status: "Owner", tone: "info" },
             { label: "状态", value: attachment.status || "-", status: attachment.status || "pending", tone: resourceStatus(attachment.status) },
             { label: "计算", value: attachment.computeAllocationId || "-", meta: "计算资源" },
             { label: "存储", value: attachment.storageId || "-", meta: attachment.mountPath || "/data" }

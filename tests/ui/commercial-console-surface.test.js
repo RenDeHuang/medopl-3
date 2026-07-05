@@ -255,6 +255,7 @@ test("resource UI exposes dedicated node identity and cold-start progress withou
   const surfaceSource = await source("packages/console/ui/pages/shared/commercial-console.jsx");
 
   for (const signal of [
+    "ownerAccountId",
     "nodePoolId",
     "nodeName",
     "privateIp",
@@ -267,6 +268,7 @@ test("resource UI exposes dedicated node identity and cold-start progress withou
     "公网 IP",
     "计费状态",
     "绑定入口",
+    "拥有账号",
     "预计等待"
   ]) {
     assert.match(resourceSource, new RegExp(signal), `resource UI must expose ${signal}`);
@@ -362,6 +364,8 @@ test("Workspace detail links to first-class resources and excludes retired compu
   assert.match(detailSource, /routeTo\("compute-allocations.detail"/, "detail must link to the attached ComputeAllocation");
   assert.match(detailSource, /routeTo\("storage.detail"/, "detail must link to the attached StorageVolume");
   assert.match(detailSource, /routeTo\("attachment.detail"/, "detail must link to the StorageAttachment");
+  assert.match(detailSource, /ownerAccountId/, "detail must show the owner account for maintenance handoff");
+  assert.match(detailSource, /拥有账号/, "detail must label the owner account in Chinese");
 });
 
 test("active UI and docs describe the ComputeAllocation, StorageVolume, attachment, and URL-entry chain", async () => {

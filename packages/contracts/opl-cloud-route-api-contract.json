@@ -266,6 +266,7 @@
       "serviceBoundary": "ComputeAllocationService",
       "dynamicFields": [
         "id",
+        "ownerAccountId",
         "name",
         "packageId",
         "spec",
@@ -313,6 +314,7 @@
       "serviceBoundary": "ComputeAllocationService",
       "dynamicFields": [
         "id",
+        "ownerAccountId",
         "name",
         "packageId",
         "spec",
@@ -382,6 +384,7 @@
       "serviceBoundary": "ComputeAllocationService",
       "dynamicFields": [
         "id",
+        "ownerAccountId",
         "name",
         "packageId",
         "spec",
@@ -738,6 +741,7 @@
       "serviceBoundary": "WorkspaceEntryService",
       "dynamicFields": [
         "id",
+        "ownerAccountId",
         "storageId",
         "currentComputeAllocationId",
         "currentAttachmentId",
@@ -774,6 +778,7 @@
       ],
       "serviceBoundary": "WorkspaceEntryService",
       "dynamicFields": [
+        "ownerAccountId",
         "workspaceName",
         "attachmentId",
         "storageId",
@@ -826,6 +831,7 @@
       "serviceBoundary": "WorkspaceEntryService",
       "dynamicFields": [
         "id",
+        "ownerAccountId",
         "storageId",
         "currentComputeAllocationId",
         "currentAttachmentId",

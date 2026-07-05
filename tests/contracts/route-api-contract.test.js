@@ -226,11 +226,11 @@ test("resource route contract declares dynamic fields, billing fields, and visib
   const workspaceDetail = byId.get("workspace.detail");
   const billingOverview = byId.get("billing.overview");
 
-  for (const field of ["nodePoolId", "cvmInstanceId", "machineName", "nodeName", "privateIp", "billingStatus", "workspaceId"]) {
+  for (const field of ["ownerAccountId", "nodePoolId", "cvmInstanceId", "machineName", "nodeName", "privateIp", "billingStatus", "workspaceId"]) {
     assert.ok(computeList.dynamicFields?.includes(field), `compute list must declare ${field}`);
     assert.ok(computeDetail.dynamicFields?.includes(field), `compute detail must declare ${field}`);
   }
-  for (const field of ["storageId", "currentComputeAllocationId", "currentAttachmentId", "url", "runtime.status", "state"]) {
+  for (const field of ["ownerAccountId", "storageId", "currentComputeAllocationId", "currentAttachmentId", "url", "runtime.status", "state"]) {
     assert.ok(workspaceDetail.dynamicFields?.includes(field), `workspace detail must declare ${field}`);
   }
 

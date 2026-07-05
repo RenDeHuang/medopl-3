@@ -79,6 +79,7 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
         <InsightPanel title="计算与存储" eyebrow="资源">
           <ResourceSplit
             items={[
+              { label: "拥有账号", value: selected.ownerAccountId || "-", meta: selected.ownerUserId || "账号级入口", status: "Owner", tone: "info" },
               { label: "状态", value: statusLabel(selected), meta: selected.state, status: "工作区", tone: toneForStatus(selected.state) },
               { label: "套餐", value: selectedPlan?.name || "-", meta: packageText(selectedPlan), status: "套餐", tone: "info" },
               { label: "当前计算", value: compute?.name || computeAllocationId || "待重建", meta: valueLabel(compute?.status || selected.server?.status), status: "计算", tone: toneForStatus(compute?.status || selected.server?.status) },
