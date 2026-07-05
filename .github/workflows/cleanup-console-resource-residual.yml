@@ -198,7 +198,7 @@ jobs:
             await request("/api/storage-volumes/destroy", {
               method: "POST",
               session,
-              body: { accountId, storageId, confirm: true }
+              body: { accountId, storageId, confirmDataLoss: true }
             });
           }
 
