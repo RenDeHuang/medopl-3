@@ -372,6 +372,24 @@ function workspaceUnavailableStatus(workspace) {
   return 0;
 }
 
+function workspaceUnavailableHtmlFor(workspace) {
+  if (workspace?.state === "suspended" || workspace?.runtime?.status === "suspended" || workspace?.server?.status === "suspended") {
+    return workspaceUnavailableHtml({
+      title: "OPL Workspace 已暂停",
+      heading: "工作区已暂停",
+      message: "稳定 URL 和存储仍然保留；请回到控制台重建计算资源后继续使用。"
+    });
+  }
+  if (workspace?.state === "destroyed" || workspace?.disk?.status === "destroyed") {
+    return workspaceUnavailableHtml({
+      title: "OPL Workspace 数据已删除",
+      heading: "工作区数据已删除",
+      message: "该 Workspace 的持久存储已删除，无法通过重建计算资源恢复文件。"
+    });
+  }
+  return workspaceUnavailableHtml();
+}
+
 function workspaceErrorText(value) {
   const labels = {
     workspace_not_found: "未找到 OPL Workspace。",
@@ -501,7 +519,7 @@ async function handleWorkspaceGateway(request, response, url, appService) {
 
   const unavailableStatus = workspaceUnavailableStatus(workspace);
   if (unavailableStatus) {
-    return sendHtml(response, unavailableStatus, workspaceUnavailableHtml());
+    return sendHtml(response, unavailableStatus, workspaceUnavailableHtmlFor(workspace));
   }
 
   const setCookie = queryToken ? workspaceAccessCookies({ workspaceId, token: queryToken }) : null;

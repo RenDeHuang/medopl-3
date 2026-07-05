@@ -11,6 +11,7 @@ export function createFakeRuntimeProvider(overrides = {}) {
         operationId: `op-${computeAllocationId}`,
         poolId: `pool-${packagePlan.id}-${packagePlan.server}`,
         nodePoolId: packagePlan.nodePoolId || `np-${packagePlan.id}`,
+        cvmInstanceId: `ins-${computeAllocationId}`,
         instanceId: `ins-${computeAllocationId}`,
         nodeName,
         privateIp: "10.0.0.21",

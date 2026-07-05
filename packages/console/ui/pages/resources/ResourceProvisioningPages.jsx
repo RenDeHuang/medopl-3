@@ -271,7 +271,7 @@ export function ComputeAllocationDetailPage({ state, path, session, runAction })
             { label: "状态", value: resource.status || "-", status: resource.status || "pending", tone: resourceStatus(resource.status) },
             { label: "规格", value: resource.spec || "-", meta: resource.packageId },
             { label: "节点池", value: resource.nodePoolId || "-", meta: "规格资源池", status: resource.poolId || "pool", tone: "info" },
-            { label: "独占节点", value: resource.nodeName || "-", meta: resource.instanceId || "实例 ID 等待云厂商返回", status: "CVM/Node", tone: resource.nodeName ? "good" : "warn" },
+            { label: "独占节点", value: resource.nodeName || "-", meta: resource.cvmInstanceId || "CVM ID 未返回，使用节点身份", status: "CVM/Node", tone: resource.nodeName ? "good" : "warn" },
             { label: "内网 IP", value: resource.privateIp || "-", meta: resource.publicIp ? `公网 IP ${resource.publicIp}` : "公网 IP 未开放" },
             { label: "计费状态", value: billingStatusLabel(resource.billingStatus), meta: `${money(resource.hourlyPrice)}/小时`, status: resource.billingStatus || "pending", tone: resource.billingStatus === "active" ? "good" : "warn" },
             { label: "绑定入口", value: workspace?.name || workspaceId || "-", meta: workspaceId || "尚未创建工作区入口" },

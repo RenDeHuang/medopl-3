@@ -22,6 +22,53 @@ function workspaceEntrySlug(workspaceName, workspaceId) {
   return `${compactId(workspaceName)}-${workspaceId.slice(-6)}`;
 }
 
+function workspaceRuntimeSnapshot({ workspaceId, entry = {}, compute, storage, attachment }) {
+  return {
+    provider: entry.provider || compute.provider || storage.provider,
+    packageId: compute.packageId,
+    attachmentId: attachment.id,
+    computeAllocationId: compute.id,
+    storageId: storage.id,
+    currentAttachmentId: attachment.id,
+    currentComputeAllocationId: compute.id,
+    state: "running",
+    server: {
+      id: compute.providerResourceId || compute.id,
+      status: compute.status === "running" ? "running" : compute.status,
+      billingStatus: compute.billingStatus,
+      spec: compute.spec
+    },
+    docker: {
+      id: compute.runtime?.dockerId || `runtime-${workspaceId}`,
+      image: compute.image || "ghcr.io/gaofeng21cn/one-person-lab-app:latest",
+      status: "running",
+      service: compute.runtime?.service || (compute.runtime?.serviceName ? `service/${compute.runtime.serviceName}` : undefined),
+      composePath: compute.composePath || attachment.composePath,
+      localPath: compute.localPath
+    },
+    disk: {
+      id: storage.providerResourceId || storage.id,
+      status: "attached_retained",
+      billingStatus: storage.billingStatus,
+      sizeGb: storage.sizeGb,
+      mountPath: attachment.mountPath,
+      localPath: storage.localPath
+    },
+    runtime: {
+      kind: "one-person-lab-app",
+      webui: "one-person-lab-app",
+      status: entry.status || "ready"
+    },
+    billing: {
+      model: "resource_scoped",
+      computeAllocationId: compute.id,
+      storageId: storage.id,
+      attachmentId: attachment.id,
+      minimumBillableHours: 1
+    }
+  };
+}
+
 function resourceForAccount(resources, accountId, resourceId, errorName) {
   const resource = (resources || []).find((item) => item.id === resourceId && item.ownerAccountId === accountId);
   if (!resource) throw new Error(errorName);
@@ -70,19 +117,17 @@ export class WorkspaceLifecycleService extends OplDomainService {
       if (storage.status === "destroyed") throw new Error("storage_volume_destroyed");
 
       packagePlan = this.getPackage(compute.packageId);
-      workspaceId = makeId("ws", accountId, workspaceName, attachmentId);
-      token = makeToken(workspaceId);
-      if (state.workspaces[workspaceId]) return { existing: true, workspace: clone(state.workspaces[workspaceId]) };
+      workspaceId = makeId("ws", accountId, workspaceName, storage.id);
+      const existing = state.workspaces[workspaceId];
+      token = existing?.access?.token || makeToken(workspaceId);
       const operation = this.startRuntimeOperation({ state, accountId, workspaceId, operationType: "create_workspace" });
       attachmentSnapshot = clone(attachment);
       computeSnapshot = clone(compute);
       storageSnapshot = clone(storage);
-      return { existing: false, operationId: operation.id };
+      return { existing: Boolean(existing), operationId: operation.id, workspace: existing ? clone(existing) : null };
     });
 
-    if (reservation.existing) return reservation.workspace;
-
-    const slug = workspaceEntrySlug(workspaceName, workspaceId);
+    const slug = reservation.workspace?.slug || workspaceEntrySlug(workspaceName, workspaceId);
     let entry;
     try {
       entry = typeof this.runtimeProvider.createWorkspaceEntry === "function"
@@ -121,42 +166,17 @@ export class WorkspaceLifecycleService extends OplDomainService {
       const attachment = resourceForAccount(state.storageAttachments, accountId, attachmentId, "storage_attachment_not_found");
       const compute = resourceForAccount(state.computeAllocations, accountId, attachment.computeAllocationId, "compute_allocation_not_found");
       const storage = resourceForAccount(state.storageVolumes, accountId, attachment.storageId, "storage_volume_not_found");
-      const workspace = {
+      const runtimeSnapshot = workspaceRuntimeSnapshot({ workspaceId, entry, compute, storage, attachment });
+      runtimeSnapshot.billing.priceMarkup = pricingMarkup(this.pricing);
+      const existing = state.workspaces[workspaceId];
+      const workspace = existing || {
         id: workspaceId,
         ownerAccountId: accountId,
         ownerUserId: account.id,
         owner,
         name: workspaceName,
-        packageId: compute.packageId,
-        attachmentId: attachment.id,
-        computeAllocationId: compute.id,
-        storageId: storage.id,
-        state: "running",
-        provider: entry.provider || compute.provider || storage.provider,
-        server: {
-          id: compute.providerResourceId || compute.id,
-          status: compute.status === "running" ? "running" : compute.status,
-          billingStatus: compute.billingStatus,
-          spec: compute.spec
-        },
-        docker: {
-          id: compute.runtime?.dockerId || `runtime-${workspaceId}`,
-          image: compute.image || "ghcr.io/gaofeng21cn/one-person-lab-app:latest",
-          status: "running",
-          service: compute.runtime?.service || (compute.runtime?.serviceName ? `service/${compute.runtime.serviceName}` : undefined),
-          composePath: compute.composePath || attachment.composePath,
-          localPath: compute.localPath
-        },
-        disk: {
-          id: storage.providerResourceId || storage.id,
-          status: "attached_retained",
-          billingStatus: storage.billingStatus,
-          sizeGb: storage.sizeGb,
-          mountPath: attachment.mountPath,
-          localPath: storage.localPath
-        },
         slug: entry.slug || slug,
-        url: entry.url,
+        url: entry.url || this.runtimeProvider.workspaceUrl({ workspaceId, slug, token }),
         access: {
           mode: "long_lived_url_token",
           requiresLogin: false,
@@ -164,30 +184,35 @@ export class WorkspaceLifecycleService extends OplDomainService {
           tokenStatus: "active",
           rotationPolicy: "reset_or_delete_on_leak"
         },
-        runtime: {
-          kind: "one-person-lab-app",
-          webui: "one-person-lab-app",
-          status: entry.status || "ready"
-        },
-        billing: {
-          model: "resource_scoped",
-          computeAllocationId: compute.id,
-          storageId: storage.id,
-          attachmentId: attachment.id,
-          minimumBillableHours: 1,
-          priceMarkup: pricingMarkup(this.pricing)
-        },
         createdAt: now(),
         updatedAt: now()
       };
+      Object.assign(workspace, runtimeSnapshot, {
+        ownerAccountId: accountId,
+        ownerUserId: account.id,
+        owner,
+        name: workspaceName,
+        slug: existing?.slug || entry.slug || slug,
+        url: existing?.url || entry.url || this.runtimeProvider.workspaceUrl({ workspaceId, slug, token }),
+        access: {
+          ...(existing?.access || {}),
+          mode: "long_lived_url_token",
+          requiresLogin: false,
+          token,
+          tokenStatus: "active",
+          rotationPolicy: "reset_or_delete_on_leak"
+        },
+        createdAt: existing?.createdAt || workspace.createdAt || now(),
+        updatedAt: now()
+      });
       state.workspaces[workspaceId] = workspace;
-      const sourceEventId = `workspace_entry:${workspaceId}:created`;
+      const sourceEventId = `workspace_entry:${workspaceId}:${existing ? "runtime_rebound" : "created"}`;
       state.billingLedger.push({
         ...this.ledgerEntry({
           state,
           workspaceId,
           accountId,
-          type: "workspace_entry_created",
+          type: existing ? "workspace_runtime_rebound" : "workspace_entry_created",
           amount: 0,
           sourceEventId,
           metadata: {
@@ -200,10 +225,10 @@ export class WorkspaceLifecycleService extends OplDomainService {
         storageId: storage.id,
         attachmentId: attachment.id
       });
-      state.audit.push(this.auditEvent({ accountId, workspaceId, type: "workspace.created", sourceEventId: workspaceId }));
+      state.audit.push(this.auditEvent({ accountId, workspaceId, type: existing ? "workspace.runtime_rebound" : "workspace.created", sourceEventId: workspaceId }));
       this.recordEvidence({
         state,
-        type: "workspace.created",
+        type: existing ? "workspace.runtime_rebound" : "workspace.created",
         accountId,
         workspace,
         packagePlan,
@@ -267,9 +292,7 @@ export class WorkspaceLifecycleService extends OplDomainService {
       state.storageVolumes ??= [];
       state.storageAttachments ??= [];
       const targetWorkspaceIds = new Set((workspaceIds || []).filter(Boolean));
-      const computeById = new Map(state.computeAllocations.map((resource) => [resource.id, resource]));
       const storageById = new Map(state.storageVolumes.map((resource) => [resource.id, resource]));
-      const attachmentById = new Map(state.storageAttachments.map((resource) => [resource.id, resource]));
       const cleaned = [];
       const skipped = [];
 
@@ -281,13 +304,9 @@ export class WorkspaceLifecycleService extends OplDomainService {
           skipped.push({ workspaceId: workspace.id, reason: "token_not_active", tokenStatus });
           continue;
         }
-        const compute = computeById.get(workspace.computeAllocationId);
         const storage = storageById.get(workspace.storageId);
-        const attachment = attachmentById.get(workspace.attachmentId);
         const unavailableBecause = [
-          resourceIsDestroyed(compute) ? "compute_unavailable" : "",
-          resourceIsDestroyed(storage) ? "storage_unavailable" : "",
-          !attachment || attachment.status === "detached" ? "attachment_unavailable" : ""
+          resourceIsDestroyed(storage) ? "storage_unavailable" : ""
         ].filter(Boolean);
 
         if (!unavailableBecause.length) {

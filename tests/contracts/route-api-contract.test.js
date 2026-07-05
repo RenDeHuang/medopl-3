@@ -223,11 +223,15 @@ test("resource route contract declares dynamic fields, billing fields, and visib
   const storageDetail = byId.get("storage.detail");
   const attachmentCreate = byId.get("attachment.create");
   const workspaceCreate = byId.get("workspace.create");
+  const workspaceDetail = byId.get("workspace.detail");
   const billingOverview = byId.get("billing.overview");
 
-  for (const field of ["nodePoolId", "nodeName", "privateIp", "instanceId", "billingStatus", "workspaceId"]) {
+  for (const field of ["nodePoolId", "cvmInstanceId", "machineName", "nodeName", "privateIp", "billingStatus", "workspaceId"]) {
     assert.ok(computeList.dynamicFields?.includes(field), `compute list must declare ${field}`);
     assert.ok(computeDetail.dynamicFields?.includes(field), `compute detail must declare ${field}`);
+  }
+  for (const field of ["storageId", "currentComputeAllocationId", "currentAttachmentId", "url", "runtime.status", "state"]) {
+    assert.ok(workspaceDetail.dynamicFields?.includes(field), `workspace detail must declare ${field}`);
   }
 
   assert.deepEqual(computeDetail.operationProtocol.visibleStages, [

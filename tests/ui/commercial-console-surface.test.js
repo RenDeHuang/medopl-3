@@ -102,11 +102,26 @@ test("create Workspace flow is a single commercial submit action", async () => {
 
   assert.doesNotMatch(createSource, /StepsForm/, "create flow must not hide provisioning behind a multi-step wizard");
   assert.match(createSource, /htmlType="submit"/, "create flow must expose one clear submit button");
-  assert.match(createSource, /attachmentId/, "Workspace entry creation must require an attached compute/storage pair");
+  assert.match(createSource, /attachmentId/, "Workspace runtime binding must start from an attached compute/storage pair");
   assert.match(createSource, /const created = await runAction/, "create flow must inspect action success before navigating");
   assert.match(createSource, /if \(created\) navigate/, "create flow must not navigate away after failed provisioning");
   assert.match(stateSource, /return result \|\| true/, "runAction must return successful action payloads");
   assert.match(stateSource, /return false/, "runAction must report failed actions");
+});
+
+test("Workspace UI treats URL as stable storage subject with current runtime pointer", async () => {
+  const listSource = await source("packages/console/ui/pages/workspaces/WorkspacesPage.jsx");
+  const detailSource = await source("packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx");
+  const routeSource = await source("packages/console/ui/routes/opl-routes.js");
+  const cleanupSource = await source("packages/console/ui/pages/shared/commercial-console.jsx");
+
+  assert.match(listSource, /currentComputeAllocationId/, "Workspace list must show current compute pointer");
+  assert.match(listSource, /当前计算/, "Workspace list must label current compute");
+  assert.match(detailSource, /currentAttachmentId/, "Workspace detail must show current attachment pointer");
+  assert.match(detailSource, /稳定 URL、持久存储、当前运行时指针/, "Workspace detail must state stable Workspace model");
+  assert.match(routeSource, /currentComputeAllocationId/, "runtime route registry must expose current compute pointer");
+  assert.match(routeSource, /currentAttachmentId/, "runtime route registry must expose current attachment pointer");
+  assert.doesNotMatch(cleanupSource, /!compute \|\| compute\.status === "destroyed"/, "cleanup must not invalidate stable URL only because compute is suspended");
 });
 
 test("resource provisioning pages call resource APIs instead of disabled placeholders", async () => {
@@ -243,7 +258,7 @@ test("resource UI exposes dedicated node identity and cold-start progress withou
     "nodePoolId",
     "nodeName",
     "privateIp",
-    "instanceId",
+    "cvmInstanceId",
     "billingStatus",
     "workspaceId",
     "节点池",
@@ -256,6 +271,7 @@ test("resource UI exposes dedicated node identity and cold-start progress withou
   ]) {
     assert.match(resourceSource, new RegExp(signal), `resource UI must expose ${signal}`);
   }
+  assert.match(resourceSource, /CVM ID 未返回，使用节点身份/, "resource UI must distinguish missing CVM ID from valid node identity");
 
   for (const stage of ["已提交", "冻结余额", "云资源创建中", "Runtime 部署中", "存储挂载中", "URL 可用"]) {
     assert.match(surfaceSource, new RegExp(stage), `operation timeline must include ${stage}`);

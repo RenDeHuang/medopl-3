@@ -58,6 +58,17 @@ test("business chain keeps storage independent while dedicated compute is replac
     attachmentId: firstAttachment.id,
     confirm: true
   });
+  const suspendedWorkspace = await service.resolveWorkspaceAccess({
+    slug: firstWorkspace.slug,
+    token: firstWorkspace.access.token
+  });
+  assert.equal(suspendedWorkspace.id, firstWorkspace.id);
+  assert.equal(suspendedWorkspace.state, "suspended");
+  assert.equal(suspendedWorkspace.runtime.status, "suspended");
+  assert.equal(suspendedWorkspace.currentComputeAllocationId, "");
+  assert.equal(suspendedWorkspace.currentAttachmentId, "");
+  assert.equal(suspendedWorkspace.url, firstWorkspace.url);
+
   const destroyed = await service.destroyComputeAllocation({
     accountId: "pi-alpha",
     computeAllocationId: firstCompute.id,
@@ -81,7 +92,7 @@ test("business chain keeps storage independent while dedicated compute is replac
   const secondWorkspace = await service.createWorkspace({
     accountId: "pi-alpha",
     userId: "usr-alpha",
-    workspaceName: "Persistent Lab B",
+    workspaceName: "Persistent Lab A",
     attachmentId: secondAttachment.id
   });
 
@@ -90,6 +101,9 @@ test("business chain keeps storage independent while dedicated compute is replac
 
   assert.equal(secondWorkspace.computeAllocationId, secondCompute.id);
   assert.equal(secondWorkspace.storageId, storage.id);
+  assert.equal(secondWorkspace.id, firstWorkspace.id);
+  assert.equal(secondWorkspace.url, firstWorkspace.url);
+  assert.equal(secondWorkspace.access.token, firstWorkspace.access.token);
   assert.notEqual(secondWorkspace.computeAllocationId, firstWorkspace.computeAllocationId);
   assert.equal(persistedStorage.providerResourceId, storage.providerResourceId);
   assert.equal(persistedStorage.status, "attached");
@@ -97,7 +111,9 @@ test("business chain keeps storage independent while dedicated compute is replac
   assert.equal(state.computeAllocations.find((item) => item.id === firstCompute.id).status, "destroyed");
   assert.equal(state.computeAllocations.find((item) => item.id === secondCompute.id).status, "running");
   assert.deepEqual(state.storageVolumes.map((item) => item.id), [storage.id]);
-  assert.equal(state.workspaces.length, 2);
+  assert.equal(state.workspaces.length, 1);
+  assert.equal(state.workspaces[0].computeAllocationId, secondCompute.id);
+  assert.equal(state.workspaces[0].attachmentId, secondAttachment.id);
   assert.equal(state.billingLedger.some((entry) => entry.computeAllocationId === firstCompute.id), true);
   assert.equal(state.billingLedger.some((entry) => entry.computeAllocationId === secondCompute.id), true);
   assert.equal(state.billingLedger.some((entry) => entry.storageId === storage.id), true);

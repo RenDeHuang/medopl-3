@@ -170,6 +170,7 @@ export class TencentTkeProvider {
       operationId: provisioned.operationId || "",
       poolId: provisioned.poolId || pool.id,
       nodePoolId: provisioned.nodePoolId || pool.nodePoolId || "",
+      cvmInstanceId: provisioned.cvmInstanceId || provisioned.instanceId || "",
       instanceId: provisioned.instanceId || "",
       nodeName,
       privateIp: provisioned.privateIp || "",
@@ -244,8 +245,9 @@ export class TencentTkeProvider {
     const instanceId = compute.instanceId || (String(compute.providerResourceId || "").startsWith("cvm/")
       ? resourceName(compute.providerResourceId)
       : "");
+    const cvmInstanceId = compute.cvmInstanceId || instanceId;
     const nodePoolId = compute.nodePoolId || "";
-    if ((nodePoolId || instanceId || compute.nodeName) && typeof this.provisionerClient.destroyComputeAllocation === "function") {
+    if ((nodePoolId || cvmInstanceId || compute.nodeName || compute.machineName || compute.providerData?.machineName) && typeof this.provisionerClient.destroyComputeAllocation === "function") {
       await this.provisionerClient.destroyComputeAllocation({
         accountId: compute.ownerAccountId || computeAllocation.ownerAccountId || "",
         pool: {
@@ -254,7 +256,7 @@ export class TencentTkeProvider {
         },
         allocation: {
           id: compute.id || computeAllocation.id || "",
-          instanceId,
+          instanceId: cvmInstanceId,
           machineName: compute.providerData?.machineName || compute.machineName || "",
           nodeName: compute.nodeName || ""
         }
