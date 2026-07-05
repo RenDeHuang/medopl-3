@@ -141,6 +141,24 @@
   "diagnosticsWorkflow": {
     "file": ".github/workflows/diagnose-tke-production.yml",
     "job": "diagnose",
+    "inputs": [
+      "account_id",
+      "compute_allocation_id"
+    ],
+    "requiredEnv": [
+      "OPL_K8S_NAMESPACE",
+      "TENCENT_DEPLOY_KUBECONFIG_PATH",
+      "TENCENT_DEPLOY_KUBECONFIG_B64",
+      "TENCENT_DEPLOY_KUBECONFIG",
+      "OPL_OPERATOR_SUMMARY_TOKEN",
+      "OPL_DIAG_ACCOUNT_ID",
+      "OPL_DIAG_COMPUTE_ALLOCATION_ID"
+    ],
+    "secretEnv": [
+      "TENCENT_DEPLOY_KUBECONFIG_B64",
+      "TENCENT_DEPLOY_KUBECONFIG",
+      "OPL_OPERATOR_SUMMARY_TOKEN"
+    ],
     "steps": [
       "Prepare kubeconfig",
       "Show workload status",
@@ -157,7 +175,8 @@
       "Show control plane logs",
       "Show previous control plane crash logs",
       "Show control plane container status",
-      "Check control plane API through port-forward"
+      "Check control plane API through port-forward",
+      "Show redacted console resource state"
     ],
     "requiredCommandsByStep": {
       "Show workload status": [
@@ -183,6 +202,13 @@
         "port-forward service/opl-cloud-control-plane 18787:8787",
         "http://127.0.0.1:18787/api/state",
         "http://127.0.0.1:18787/api/production/readiness"
+      ],
+      "Show redacted console resource state": [
+        "/api/auth/operator-login",
+        "/api/state?accountId=",
+        "computeAllocationId",
+        "runtimeOperations",
+        "providerData"
       ]
     },
     "forbiddenRunTokens": [],

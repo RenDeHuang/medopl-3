@@ -411,3 +411,22 @@ test("TKE diagnostics do not print account state or Workspace URL tokens", async
   assert.doesNotMatch(text, /cat \/tmp\/opl-cloud-state\.json/, "diagnostics must not print /api/state payloads");
   assert.doesNotMatch(text, /printf 'state='/, "diagnostics must not label and dump account state");
 });
+
+test("TKE diagnostics can print a redacted single-resource console state summary", async () => {
+  const contract = await readJson(deploymentContractPath);
+  const workflow = await readWorkflow(contract.diagnosticsWorkflow.file);
+  const currentJob = job(workflow, contract.diagnosticsWorkflow.job);
+  const step = stepsByName(currentJob).get("Show redacted console resource state");
+  const text = serializedStep(step);
+
+  assert.ok(workflow.on.workflow_dispatch.inputs.account_id, "diagnostics must accept account_id input");
+  assert.ok(workflow.on.workflow_dispatch.inputs.compute_allocation_id, "diagnostics must accept compute_allocation_id input");
+  assert.match(text, /\/api\/auth\/operator-login/, "diagnostics must use operator auth instead of public state");
+  assert.match(text, /\/api\/state\?accountId=/, "diagnostics must scope state to one account");
+  assert.match(text, /computeAllocationId/, "summary must identify the selected compute allocation");
+  assert.match(text, /runtimeOperations/, "summary must include matching runtime operations");
+  assert.match(text, /providerData/, "summary must include provider identity data needed for TKE debugging");
+  assert.doesNotMatch(text, /console\.log\(payload\)/, "diagnostics must not print the full state payload");
+  assert.doesNotMatch(text, /accessToken|tokenStatus/i, "diagnostics must not print workspace tokens");
+  assert.doesNotMatch(text, /console\.log\([^)]*cookie/i, "diagnostics must not print session cookies");
+});
