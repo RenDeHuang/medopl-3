@@ -301,28 +301,107 @@ async function requireFirstFileInput(page) {
 }
 
 async function selectDefaultWorkspaceAssistant(page) {
+  let lastError = null;
   try {
     await page.getByRole("button", { name: /@Research|Research/i }).first().click({ timeout: 15_000 });
+    await waitForWorkspaceAssistantSelection(page);
     return;
   } catch (error) {
+    lastError = error;
     if (typeof page.getByText === "function") {
-      await page.getByText(/@Research|Research/i).first().click({ timeout: 15_000 });
-      return;
+      try {
+        await page.getByText(/@Research|Research/i).first().click({ timeout: 15_000 });
+        await waitForWorkspaceAssistantSelection(page);
+        return;
+      } catch (textError) {
+        lastError = textError;
+      }
     }
-    throw error;
   }
+  throw lastError || new Error("workspace_assistant_selection_failed");
+}
+
+async function waitForWorkspaceAssistantSelection(page) {
+  await page.waitForFunction(() => {
+    const text = document.body?.innerText || "";
+    return !/Select an assistant to start a task/i.test(text);
+  }, {}, { timeout: 15_000 });
 }
 
 async function clickSendControl(page) {
+  let lastError = null;
   try {
     await page.getByRole("button", { name: /发送|Send|提交|运行|Ask/i }).first().click({ timeout: 15_000 });
+    return;
   } catch (error) {
-    if (page.keyboard?.press) {
-      await page.keyboard.press("Enter");
-      return;
-    }
-    throw error;
+    lastError = error;
   }
+  const sendSelector = [
+    'button[aria-label*="Send" i]',
+    'button[title*="Send" i]',
+    'button[aria-label*="发送" i]',
+    'button[title*="发送" i]',
+    'button[type="submit"]'
+  ].join(", ");
+  if (typeof page.locator === "function") {
+    try {
+      await page.locator(sendSelector).first().click({ timeout: 5_000 });
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  try {
+    await clickRightmostComposerButton(page);
+    return;
+  } catch (error) {
+    lastError = error;
+  }
+  throw new Error(`workspace_send_control_not_found:${lastError?.message || "unknown"}`);
+}
+
+async function clickRightmostComposerButton(page) {
+  if (typeof page.evaluate !== "function") throw new Error("workspace_send_control_dom_unavailable");
+  const clicked = await page.evaluate(() => {
+    const visible = (element) => {
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+    };
+    const buttons = Array.from(document.querySelectorAll("button"))
+      .filter((button) => !button.disabled && visible(button));
+    const explicit = buttons.find((button) => {
+      const label = `${button.getAttribute("aria-label") || ""} ${button.getAttribute("title") || ""} ${button.innerText || ""}`;
+      return /发送|Send|提交|运行|Ask/i.test(label);
+    });
+    if (explicit) {
+      explicit.click();
+      return true;
+    }
+    const inputs = Array.from(document.querySelectorAll("textarea, input[type='text'], [contenteditable='true']"))
+      .filter(visible);
+    const composer = inputs[inputs.length - 1];
+    const composerRect = composer?.getBoundingClientRect();
+    const candidates = buttons
+      .filter((button) => !/@Research|@Grants|@PPT|Research|Grants|PPT|File/i.test(button.innerText || ""))
+      .filter((button) => {
+        if (!composerRect) return true;
+        const rect = button.getBoundingClientRect();
+        return rect.top >= composerRect.top - 96 && rect.bottom <= composerRect.bottom + 96;
+      })
+      .sort((left, right) => right.getBoundingClientRect().left - left.getBoundingClientRect().left);
+    const button = candidates[0];
+    if (!button) return false;
+    button.click();
+    return true;
+  });
+  if (!clicked) throw new Error("workspace_send_control_not_found");
+}
+
+async function waitForSubmittedPrompt(page, prompt) {
+  await page.waitForFunction(({ prompt: expected }) => {
+    return (document.body?.innerText || "").includes(expected);
+  }, { prompt }, { timeout: 15_000 });
 }
 
 export async function verifyWorkspaceBrowserUi({
@@ -395,6 +474,7 @@ export async function verifyWorkspaceBrowserUi({
         await selectDefaultWorkspaceAssistant(page);
         await page.getByRole("textbox").first().fill(prompt);
         await clickSendControl(page);
+        await waitForSubmittedPrompt(page, prompt);
       }
     });
 
@@ -406,7 +486,15 @@ export async function verifyWorkspaceBrowserUi({
       runId,
       successDetails: { marker },
       task: () => page.waitForFunction(({ marker: expected }) => {
-        return (document.body?.innerText || "").includes(expected);
+        const text = document.body?.innerText || "";
+        const prompt = `请只回复：${expected}`;
+        let count = 0;
+        let index = 0;
+        while ((index = text.indexOf(expected, index)) !== -1) {
+          count += 1;
+          index += expected.length;
+        }
+        return count >= 2 || (text.includes(expected) && !text.includes(prompt));
       }, { marker }, { timeout: 180_000 })
     });
 

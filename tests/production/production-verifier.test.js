@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { basename } from "node:path";
 import test from "node:test";
 
 import {
@@ -302,6 +303,84 @@ function fakeBrowserFactory(actions = [], { failWaitAt = 0 } = {}) {
   };
 }
 
+function fakeWorkspaceBrowserFactory(actions = [], { assistantSelectionTakesEffect = true } = {}) {
+  const state = {
+    bodyText: "Select an assistant to start a task\n@Research\n@Grants\n@PPT",
+    prompt: ""
+  };
+  const page = {
+    async goto(url) {
+      actions.push(["goto", url]);
+    },
+    locator(selector) {
+      actions.push(["locator", selector]);
+      return {
+        first() {
+          return this;
+        },
+        async count() {
+          return selector === 'input[type="file"]' ? 1 : 0;
+        },
+        async setInputFiles(filePath) {
+          actions.push(["setInputFiles", filePath]);
+          state.bodyText += `\n${basename(filePath)}`;
+        }
+      };
+    },
+    getByRole(role, options = {}) {
+      const roleName = String(options.name || "");
+      actions.push(["getByRole", role, roleName]);
+      return {
+        first() {
+          return this;
+        },
+        async fill(value) {
+          actions.push(["fill", role, value]);
+          state.prompt = value;
+        },
+        async click() {
+          actions.push(["click", role, roleName]);
+          if (/Research/i.test(roleName) && assistantSelectionTakesEffect) {
+            state.bodyText = state.bodyText.replace("Select an assistant to start a task", "Research assistant selected");
+          }
+          if (/发送|Send|提交|运行|Ask/i.test(roleName) && !/Select an assistant to start a task/i.test(state.bodyText)) {
+            state.bodyText += `\n${state.prompt}`;
+          }
+        }
+      };
+    },
+    async waitForFunction(fn, arg, options = {}) {
+      actions.push(["waitForFunction", arg, options]);
+      const previousDocument = globalThis.document;
+      globalThis.document = { body: { innerText: state.bodyText } };
+      try {
+        if (!fn(arg)) throw new Error("Timeout exceeded.");
+      } finally {
+        globalThis.document = previousDocument;
+      }
+    },
+    async screenshot(options = {}) {
+      actions.push(["screenshot", options.path || ""]);
+    }
+  };
+  return {
+    chromium: {
+      async launch() {
+        actions.push(["launch"]);
+        return {
+          async newPage() {
+            actions.push(["newPage"]);
+            return page;
+          },
+          async close() {
+            actions.push(["close"]);
+          }
+        };
+      }
+    }
+  };
+}
+
 test("production verifier refuses localhost Console origins", async () => {
   await assert.rejects(
     verifyProductionChain({
@@ -544,6 +623,42 @@ test("production verifier can exercise one-person-lab-app through a real browser
   assert.ok(assistantClick, "browser verifier must select an assistant before sending the chat prompt");
 });
 
+test("production verifier fails message submission when assistant selection does not enter task mode", async () => {
+  const checks = [];
+  const actions = [];
+
+  await assert.rejects(
+    verifyWorkspaceBrowserUi({
+      workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+      runId: "browser-run",
+      checks,
+      browserFactory: fakeWorkspaceBrowserFactory(actions, { assistantSelectionTakesEffect: false }),
+      screenshotDir: ""
+    }),
+    /workspace_browser_message_sent_failed/
+  );
+  assert.ok(checks.some((check) => check.name === "workspace_browser_message_sent" && check.ok === false));
+  assert.ok(!checks.some((check) => check.name === "workspace_browser_reply_seen"));
+});
+
+test("production verifier does not treat the submitted user prompt as an assistant reply", async () => {
+  const checks = [];
+  const actions = [];
+
+  await assert.rejects(
+    verifyWorkspaceBrowserUi({
+      workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+      runId: "browser-run",
+      checks,
+      browserFactory: fakeWorkspaceBrowserFactory(actions),
+      screenshotDir: ""
+    }),
+    /workspace_browser_reply_seen_failed/
+  );
+  assert.ok(checks.some((check) => check.name === "workspace_browser_message_sent" && check.ok === true));
+  assert.ok(checks.some((check) => check.name === "workspace_browser_reply_seen" && check.ok === false));
+});
+
 test("production verifier runs optional browser UI checks after Workspace URL is ready", async () => {
   const requests = [];
   const actions = [];
@@ -586,7 +701,7 @@ test("production verifier reports browser failure stage with resources, checks, 
       runId: "prod-run",
       packageId: "basic",
       browserE2E: true,
-      browserFactory: fakeBrowserFactory(actions, { failWaitAt: 2 }),
+      browserFactory: fakeBrowserFactory(actions, { failWaitAt: 4 }),
       screenshotDir: "/tmp/opl-production-verifier-test-screenshots",
       fetchImpl: keyedFetch({ responses: chainResponses(chain), requests })
     });
