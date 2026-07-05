@@ -270,8 +270,9 @@
         "packageId",
         "spec",
         "nodePoolId",
+        "cvmInstanceId",
+        "machineName",
         "nodeName",
-        "instanceId",
         "privateIp",
         "publicIp",
         "billingStatus",
@@ -316,8 +317,9 @@
         "packageId",
         "spec",
         "nodePoolId",
+        "cvmInstanceId",
+        "machineName",
         "nodeName",
-        "instanceId",
         "privateIp",
         "publicIp",
         "billingStatus",
@@ -384,8 +386,9 @@
         "packageId",
         "spec",
         "nodePoolId",
+        "cvmInstanceId",
+        "machineName",
         "nodeName",
-        "instanceId",
         "privateIp",
         "publicIp",
         "billingStatus",
@@ -733,6 +736,16 @@
         "POST /api/workspaces/delete-token"
       ],
       "serviceBoundary": "WorkspaceEntryService",
+      "dynamicFields": [
+        "id",
+        "storageId",
+        "currentComputeAllocationId",
+        "currentAttachmentId",
+        "url",
+        "access.tokenStatus",
+        "runtime.status",
+        "state"
+      ],
       "requiresAdmin": false,
       "requiresAuth": true
     },
@@ -760,6 +773,15 @@
         "POST /api/workspaces"
       ],
       "serviceBoundary": "WorkspaceEntryService",
+      "dynamicFields": [
+        "workspaceName",
+        "attachmentId",
+        "storageId",
+        "currentComputeAllocationId",
+        "currentAttachmentId",
+        "url",
+        "runtime.status"
+      ],
       "operationProtocol": {
         "mutation": true,
         "confirmation": "normal",
@@ -802,6 +824,16 @@
         "POST /api/workspaces/runtime-status"
       ],
       "serviceBoundary": "WorkspaceEntryService",
+      "dynamicFields": [
+        "id",
+        "storageId",
+        "currentComputeAllocationId",
+        "currentAttachmentId",
+        "url",
+        "access.tokenStatus",
+        "runtime.status",
+        "state"
+      ],
       "operationProtocol": {
         "mutation": true,
         "confirmation": "normal",

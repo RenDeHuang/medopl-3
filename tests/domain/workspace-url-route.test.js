@@ -257,7 +257,7 @@ test("workspace gateway shows productized unavailable page when runtime fetch fa
   }
 });
 
-test("workspace gateway explains stopped or released resources without raw status jargon", async () => {
+test("workspace gateway explains deleted storage as unrecoverable data loss", async () => {
   const appService = {
     async resolveWorkspaceAccess() {
       return {
@@ -275,9 +275,37 @@ test("workspace gateway explains stopped or released resources without raw statu
     const html = await response.text();
 
     assert.equal(response.status, 409);
-    assert.match(html, /工作区已释放或资源不可用/);
-    assert.match(html, /存储数据是否保留请以控制台资源状态为准/);
+    assert.match(html, /工作区数据已删除/);
+    assert.match(html, /无法通过重建计算资源恢复文件/);
     assert.doesNotMatch(html, /尚未运行/);
+  } finally {
+    await close();
+  }
+});
+
+test("workspace gateway keeps stable URL alive when runtime is suspended", async () => {
+  const appService = {
+    async resolveWorkspaceAccess() {
+      return {
+        id: "ws-suspended001",
+        name: "Paused Lab",
+        state: "suspended",
+        server: { status: "suspended" },
+        access: { tokenStatus: "active" },
+        runtime: { status: "suspended" },
+        docker: {}
+      };
+    }
+  };
+  const { origin, close } = await listen(createRequestHandler({ appService }));
+  try {
+    const response = await fetch(`${origin}/w/ws-suspended001/?token=share_suspended`);
+    const html = await response.text();
+
+    assert.equal(response.status, 409);
+    assert.match(html, /工作区已暂停/);
+    assert.match(html, /重建计算资源/);
+    assert.doesNotMatch(html, /未找到 OPL Workspace|令牌已失效/);
   } finally {
     await close();
   }

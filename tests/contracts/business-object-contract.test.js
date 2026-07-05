@@ -70,6 +70,25 @@ test("business object contract uses compute pools and account allocations as cur
   ].sort());
 });
 
+test("Workspace contract is the stable URL, storage, and current runtime pointer", async () => {
+  const contract = await readJson(businessObjectContractPath);
+  const workspace = contract.objectKinds.find((object) => object.kind === "Workspace");
+
+  assert.ok(workspace, "Workspace must be current object truth");
+  assert.match(workspace.boundary || "", /Stable URL\/token subject/);
+  assert.deepEqual(workspace.requiredFields, [
+    "storageId",
+    "currentComputeAllocationId",
+    "currentAttachmentId",
+    "url",
+    "access.token",
+    "runtime.status",
+    "state"
+  ]);
+  assert.ok(contract.principles.includes("Destroying compute suspends the Workspace URL and retains storage; rebuilding compute reuses the same Workspace URL and StorageVolume."));
+  assert.ok(contract.principles.includes("Destroying storage makes the Workspace unrecoverable because the file body is gone."));
+});
+
 test("ComputeAllocation contract requires dedicated CVM or Kubernetes node identity", async () => {
   const contract = await readJson(businessObjectContractPath);
   const computeAllocation = contract.objectKinds.find((object) => object.kind === "ComputeAllocation");
@@ -78,11 +97,13 @@ test("ComputeAllocation contract requires dedicated CVM or Kubernetes node ident
   assert.match(computeAllocation.boundary || "", /dedicated CVM/i);
   assert.deepEqual(computeAllocation.requiredProviderFields, [
     "nodePoolId",
-    "instanceId",
+    "cvmInstanceId",
     "machineName",
     "nodeName",
     "privateIp",
+    "publicIp",
     "ownerAccountId",
+    "workspaceIds",
     "billingStatus",
     "destroyedAt",
     "lastProviderSyncAt"

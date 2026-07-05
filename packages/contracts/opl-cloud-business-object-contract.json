@@ -10,7 +10,7 @@
   },
   "productTruth": "OPL Console / OPL Cloud Console commercial launch slice",
   "frameworkTruth": "one-person-lab",
-  "currentSlice": "Business-chain closure for wallet, package-level compute pools, account-owned compute allocations, independent storage volumes, storage attachments, Workspace URL sharing, request usage billing, support, and admin operations.",
+  "currentSlice": "Business-chain closure for wallet, stable Workspace URL subjects, package-level compute pools, account-owned compute allocations, independent storage volumes, runtime attachments, request usage billing, support, and admin operations.",
   "repositoryBoundaries": [
     "opl-console",
     "opl-fabric",
@@ -23,9 +23,11 @@
   ],
   "principles": [
     "Active business object contract contains only current commercial objects.",
-    "ComputePool is the package-level TKE node pool; ComputeAllocation is one account-owned dedicated CVM in that pool.",
-    "StorageVolume can exist without compute; StorageAttachment mounts one volume to one ComputeAllocation runtime.",
-    "Workspace is the URL/token/runtime entry and does not own compute or storage lifecycle.",
+    "Workspace is the stable commercial object: stable URL, persistent StorageVolume, and current runtime pointer.",
+    "ComputePool is the package-level TKE node pool; ComputeAllocation is one replaceable account-owned dedicated CVM or Kubernetes node in that pool.",
+    "StorageVolume can exist without compute; StorageAttachment mounts one volume to one current ComputeAllocation runtime.",
+    "Destroying compute suspends the Workspace URL and retains storage; rebuilding compute reuses the same Workspace URL and StorageVolume.",
+    "Destroying storage makes the Workspace unrecoverable because the file body is gone.",
     "Business objects are protected by route ids, action ids, API clients, permission boundaries, and tests.",
     "Lab Owner sees business outcomes; Admin sees operator evidence and commercial operations.",
     "Future approval, policy, raw provider diagnostics, snapshot/recovery, and retired runtime lifecycle objects live outside the active contract until implemented."
@@ -76,7 +78,16 @@
         "action"
       ],
       "evidenceRequired": true,
-      "boundary": "URL/token/runtime entry for a StorageAttachment-backed one-person-lab-app runtime; not a compute or storage lifecycle owner."
+      "boundary": "Stable URL/token subject backed by one persistent StorageVolume and a current replaceable ComputeAllocation/StorageAttachment runtime pointer.",
+      "requiredFields": [
+        "storageId",
+        "currentComputeAllocationId",
+        "currentAttachmentId",
+        "url",
+        "access.token",
+        "runtime.status",
+        "state"
+      ]
     },
     {
       "kind": "WorkspaceAccess",
@@ -111,11 +122,13 @@
       "boundary": "Account-owned dedicated CVM or Kubernetes node allocation inside a package ComputePool; nodePoolId is the placement pool, not the compute resource identity.",
       "requiredProviderFields": [
         "nodePoolId",
-        "instanceId",
+        "cvmInstanceId",
         "machineName",
         "nodeName",
         "privateIp",
+        "publicIp",
         "ownerAccountId",
+        "workspaceIds",
         "billingStatus",
         "destroyedAt",
         "lastProviderSyncAt"

@@ -304,6 +304,7 @@ func TestBuildCreateNativeNodePoolRequestUsesCurrentPackageShape(t *testing.T) {
 
 type fakeNativeTkeAPI struct {
 	createNodePoolRequest    *tke2022.CreateNodePoolRequest
+	describeInstancesRequest []*tke2022.DescribeClusterInstancesRequest
 	describeMachinesRequest  []*tke2022.DescribeClusterMachinesRequest
 	describeNodePoolsRequest []*tke2022.DescribeNodePoolsRequest
 	scaleNodePoolRequest     *tke2022.ScaleNodePoolRequest
@@ -426,6 +427,40 @@ func (api *fakeNativeTkeAPI) DescribeNodePools(request *tke2022.DescribeNodePool
 	}, nil
 }
 
+func (api *fakeNativeTkeAPI) DescribeClusterInstances(request *tke2022.DescribeClusterInstancesRequest) (*tke2022.DescribeClusterInstancesResponse, error) {
+	api.calls = append(api.calls, "DescribeClusterInstances")
+	api.describeInstancesRequest = append(api.describeInstancesRequest, request)
+	privateIp := clusterInstanceFilterValue(request, "VagueIpAddress")
+	nodePoolId := clusterInstanceFilterValue(request, "NodePoolIds")
+	instances := []*tke2022.Instance{}
+	for index := int64(1); index <= api.replicas; index++ {
+		lanIp := fmt.Sprintf("10.0.0.%d", index+10)
+		if privateIp != "" && privateIp != lanIp {
+			continue
+		}
+		currentNodePoolId := api.nodePoolId
+		if currentNodePoolId == "" {
+			currentNodePoolId = "np-basic"
+		}
+		if nodePoolId != "" && nodePoolId != currentNodePoolId {
+			continue
+		}
+		instances = append(instances, &tke2022.Instance{
+			InstanceId:    common.StringPtr(fmt.Sprintf("np-native-%d", index)),
+			InstanceState: common.StringPtr("running"),
+			LanIP:         common.StringPtr(lanIp),
+			NodePoolId:    common.StringPtr(currentNodePoolId),
+		})
+	}
+	return &tke2022.DescribeClusterInstancesResponse{
+		Response: &tke2022.DescribeClusterInstancesResponseParams{
+			InstanceSet: instances,
+			TotalCount:  common.Uint64Ptr(uint64(len(instances))),
+			RequestId:   common.StringPtr("req-describe-tke-instances"),
+		},
+	}, nil
+}
+
 func (api *fakeNativeTkeAPI) DescribeClusterMachines(request *tke2022.DescribeClusterMachinesRequest) (*tke2022.DescribeClusterMachinesResponse, error) {
 	api.calls = append(api.calls, "DescribeClusterMachines")
 	api.describeMachinesRequest = append(api.describeMachinesRequest, request)
@@ -462,6 +497,15 @@ func nodePoolIdFilterValue(request *tke2022.DescribeNodePoolsRequest) string {
 func clusterMachineNodePoolIdFilterValue(request *tke2022.DescribeClusterMachinesRequest) string {
 	for _, filter := range request.Filters {
 		if filter.Name != nil && *filter.Name == "NodePoolsId" && len(filter.Values) > 0 && filter.Values[0] != nil {
+			return *filter.Values[0]
+		}
+	}
+	return ""
+}
+
+func clusterInstanceFilterValue(request *tke2022.DescribeClusterInstancesRequest, name string) string {
+	for _, filter := range request.Filters {
+		if filter.Name != nil && *filter.Name == name && len(filter.Values) > 0 && filter.Values[0] != nil {
 			return *filter.Values[0]
 		}
 	}
@@ -546,6 +590,43 @@ func TestTencentSDKClientCreateAllocationScalesExistingPackageNodePool(t *testin
 	}
 	if response.ProviderData["replicasBefore"] != "1" || response.ProviderData["replicasAfter"] != "2" {
 		t.Fatalf("expected replica evidence: %#v", response.ProviderData)
+	}
+}
+
+func TestTencentSDKClientCreateAllocationUsesTkeInstanceWhenCvmPrivateIpLookupIsEmpty(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1}
+	client := newFakeTencentSDKClient(tkeAPI)
+	client.nativeCvmClient = &fakeNativeCvmAPI{empty: true}
+
+	response := client.CreateComputeAllocation(Request{
+		AccountId: "pi-alpha",
+		UserId:    "usr-alpha",
+		PackageId: "basic",
+		Pool: ComputePoolInput{
+			Id:           "pool-basic-2c4g",
+			InstanceType: "SA5.LARGE4",
+			NodePoolId:   "np-basic",
+		},
+		Allocation: ComputeAllocationInput{Id: "compute-alpha"},
+	}, map[string]string{})
+
+	if !response.Ok {
+		t.Fatalf("native TKE allocation should not fail only because CVM private IP lookup is empty: %#v", response)
+	}
+	if response.InstanceId != "" {
+		t.Fatalf("TKE cluster instance id must not be reported as a CVM instance id: %#v", response)
+	}
+	if response.NodeName != "10.0.0.12" {
+		t.Fatalf("expected Kubernetes node hostname from LanIP: %#v", response)
+	}
+	if response.ProviderData["machineName"] != "node-basic-2" {
+		t.Fatalf("expected machineName deletion handle: %#v", response.ProviderData)
+	}
+	if response.ProviderData["instanceIdentitySource"] != "tke_cluster_instance" {
+		t.Fatalf("expected identity source evidence: %#v", response.ProviderData)
+	}
+	if response.ProviderData["tkeClusterInstanceId"] != "np-native-2" {
+		t.Fatalf("expected TKE cluster instance evidence: %#v", response.ProviderData)
 	}
 }
 

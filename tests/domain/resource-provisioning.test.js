@@ -29,6 +29,7 @@ function createService(runtimeProviderOverrides = {}) {
           operationId: `op-${computeAllocationId}`,
           poolId: `pool-${packagePlan.id}-${packagePlan.server}`,
           nodePoolId: `np-${packagePlan.id}`,
+          cvmInstanceId: `ins-${computeAllocationId}`,
           instanceId: `ins-${computeAllocationId}`,
           nodeName: `node-${computeAllocationId}`,
           privateIp: "10.0.0.21",
@@ -147,6 +148,7 @@ test("compute allocation returns a provisioning record before slow provider work
           operationId: `op-${computeAllocationId}`,
           poolId: `pool-${packagePlan.id}-${packagePlan.server}`,
           nodePoolId: "np-basic",
+          cvmInstanceId: `ins-${computeAllocationId}`,
           instanceId: `ins-${computeAllocationId}`,
           nodeName: `node-${computeAllocationId}`,
           privateIp: "10.0.0.21",
@@ -204,6 +206,7 @@ test("compute allocation persists provisioner ownership, pricing, hold, and oper
         operationId: "op-create-alpha",
         poolId: "pool-basic-2c4g",
         nodePoolId: "np-basic",
+        cvmInstanceId: "ins-basic-2",
         instanceId: "ins-basic-2",
         nodeName: "10.0.0.12",
         privateIp: "10.0.0.12",
@@ -234,6 +237,7 @@ test("compute allocation persists provisioner ownership, pricing, hold, and oper
   assert.equal(compute.operationId, "op-create-alpha");
   assert.equal(compute.poolId, "pool-basic-2c4g");
   assert.equal(compute.nodePoolId, "np-basic");
+  assert.equal(compute.cvmInstanceId, "ins-basic-2");
   assert.equal(compute.instanceId, "ins-basic-2");
   assert.equal(compute.nodeName, "10.0.0.12");
   assert.equal(compute.privateIp, "10.0.0.12");
@@ -289,6 +293,56 @@ test("compute allocation cannot complete without a dedicated CVM or node identit
   assert.equal(compute.status, "failed");
   assert.equal(compute.safeMessage, "计算资源未返回独占节点，请重试或联系支持。");
   assert.equal(operation.status, "failed");
+});
+
+test("compute allocation can complete with TKE node identity even when CVM instance lookup is empty", async () => {
+  const service = createService({
+    async createComputeAllocation({ computeAllocationId }) {
+      return {
+        providerResourceId: "node/10.0.0.12",
+        operationId: "op-create-alpha",
+        poolId: "pool-basic-2c4g",
+        nodePoolId: "np-basic",
+        cvmInstanceId: "",
+        instanceId: "",
+        nodeName: "10.0.0.12",
+        privateIp: "10.0.0.12",
+        publicIp: "",
+        status: "running",
+        billingStatus: "active",
+        spec: "2c4g",
+        image: "ghcr.io/gaofeng21cn/one-person-lab-app:latest",
+        providerRequestId: "req-tke-instance",
+        providerData: {
+          instanceIdentitySource: "tke_cluster_instance",
+          machineName: "node-basic-2",
+          nodeName: "10.0.0.12",
+          privateIp: "10.0.0.12",
+          computeAllocationId
+        }
+      };
+    }
+  });
+
+  await service.manualTopUp({ accountId: "pi-alpha", amount: 300, reason: "owner_credit" });
+  const pendingCompute = await service.createComputeAllocation({
+    accountId: "pi-alpha",
+    userId: "usr-alpha",
+    packageId: "basic",
+    name: "Native TKE node"
+  });
+  const result = await service.processPendingResourceProvisioning({ limit: 1 });
+  assert.deepEqual(result.completed, [pendingCompute.id]);
+  assert.deepEqual(result.failed, []);
+
+  const compute = await service.computeAllocation({ accountId: "pi-alpha", computeAllocationId: pendingCompute.id });
+  assert.equal(compute.status, "running");
+  assert.equal(compute.cvmInstanceId, undefined);
+  assert.equal(compute.instanceId, undefined);
+  assert.equal(compute.nodeName, "10.0.0.12");
+  assert.equal(compute.machineName, "node-basic-2");
+  assert.equal(compute.privateIp, "10.0.0.12");
+  assert.equal(compute.providerData.instanceIdentitySource, "tke_cluster_instance");
 });
 
 test("failed compute allocation remains visible with safe provider failure state", async () => {
@@ -446,6 +500,51 @@ test("storage detach retry completes when a previous provider attempt left the a
   assert.deepEqual(state.storageVolumes[0].attachmentIds, []);
 });
 
+test("destroying compute with an active attachment suspends Workspace URL and retains storage", async () => {
+  const service = createService();
+
+  await service.manualTopUp({ accountId: "pi-alpha", amount: 300, reason: "owner_credit" });
+  const compute = await service.createComputeAllocation({
+    accountId: "pi-alpha",
+    packageId: "basic",
+    name: "Replaceable compute"
+  });
+  await provisionNextCompute(service);
+  const storage = await service.createStorageVolume({
+    accountId: "pi-alpha",
+    packageId: "basic",
+    sizeGb: 10,
+    name: "Persistent storage"
+  });
+  const attachment = await service.attachStorage({
+    accountId: "pi-alpha",
+    computeAllocationId: compute.id,
+    storageId: storage.id,
+    mountPath: "/data"
+  });
+  const workspace = await service.createWorkspace({
+    accountId: "pi-alpha",
+    workspaceName: "Stable Lab",
+    attachmentId: attachment.id
+  });
+
+  const destroyed = await service.destroyComputeAllocation({
+    accountId: "pi-alpha",
+    computeAllocationId: compute.id,
+    confirm: true
+  });
+
+  assert.equal(destroyed.status, "destroyed");
+  const state = await service.getState("pi-alpha");
+  assert.equal(state.storageAttachments[0].status, "detached");
+  assert.equal(state.storageVolumes[0].status, "available");
+  assert.equal(state.workspaces[0].id, workspace.id);
+  assert.equal(state.workspaces[0].state, "suspended");
+  assert.equal(state.workspaces[0].access.tokenStatus, "active");
+  assert.equal(state.workspaces[0].currentComputeAllocationId, "");
+  assert.equal(state.workspaces[0].currentAttachmentId, "");
+});
+
 test("storage cannot attach across accounts", async () => {
   const service = createService();
 
@@ -512,6 +611,7 @@ test("resource service preserves provider handles for one-person-lab-app runtime
 
   assert.equal(persistedCompute.provider, "tencent-tke");
   assert.equal(persistedCompute.providerResourceId, `node/node-${compute.id}`);
+  assert.equal(persistedCompute.cvmInstanceId, `ins-${compute.id}`);
   assert.equal(persistedCompute.instanceId, `ins-${compute.id}`);
   assert.equal(persistedCompute.nodeName, `node-${compute.id}`);
   assert.equal(persistedCompute.privateIp, "10.0.0.21");

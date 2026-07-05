@@ -99,8 +99,9 @@ const computeAllocationFields = Object.freeze([
   "packageId",
   "spec",
   "nodePoolId",
+  "cvmInstanceId",
+  "machineName",
   "nodeName",
-  "instanceId",
   "privateIp",
   "publicIp",
   "billingStatus",
@@ -109,6 +110,17 @@ const computeAllocationFields = Object.freeze([
   "operationId",
   "providerRequestId",
   "safeMessage"
+]);
+
+const workspaceFields = Object.freeze([
+  "id",
+  "storageId",
+  "currentComputeAllocationId",
+  "currentAttachmentId",
+  "url",
+  "access.tokenStatus",
+  "runtime.status",
+  "state"
 ]);
 
 const storageVolumeFields = Object.freeze([
@@ -451,6 +463,7 @@ export const oplRoutes = Object.freeze([
     apiClient: "packages/console/ui/api/workspaces-api.js",
     apiRoutes: ["GET /api/state", "POST /api/workspaces/reset-token", "POST /api/workspaces/delete-token"],
     serviceBoundary: "WorkspaceEntryService",
+    dynamicFields: workspaceFields,
     capabilities: ["list", "read", "action"]
   }),
   currentRoute({
@@ -467,6 +480,7 @@ export const oplRoutes = Object.freeze([
     apiClient: "packages/console/ui/api/workspaces-api.js",
     apiRoutes: ["GET /api/state", "POST /api/workspaces"],
     serviceBoundary: "WorkspaceEntryService",
+    dynamicFields: ["workspaceName", "attachmentId", "storageId", "currentComputeAllocationId", "currentAttachmentId", "url", "runtime.status"],
     capabilities: ["read", "write"],
     operationProtocol: workspaceCreateProtocol
   }),
@@ -489,6 +503,7 @@ export const oplRoutes = Object.freeze([
       "POST /api/workspaces/runtime-status"
     ],
     serviceBoundary: "WorkspaceEntryService",
+    dynamicFields: workspaceFields,
     capabilities: ["detail", "read", "action", "evidence"],
     operationProtocol: destructiveMutationProtocol
   }),

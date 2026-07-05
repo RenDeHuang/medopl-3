@@ -66,7 +66,7 @@ function providerRequestId(providerResult = {}) {
 }
 
 function providerNodeIdentity(providerCompute = {}) {
-  return String(providerCompute.nodeName || providerCompute.instanceId || "").trim();
+  return String(providerCompute.nodeName || providerCompute.providerData?.machineName || providerCompute.cvmInstanceId || providerCompute.instanceId || "").trim();
 }
 
 function computeNodeIdentityError(providerCompute = {}) {
@@ -75,6 +75,72 @@ function computeNodeIdentityError(providerCompute = {}) {
   error.providerRequestId = providerRequestId(providerCompute);
   error.retryable = true;
   return error;
+}
+
+function suspendWorkspaceRuntime(workspace) {
+  workspace.state = "suspended";
+  workspace.currentComputeAllocationId = "";
+  workspace.currentAttachmentId = "";
+  workspace.computeAllocationId = "";
+  workspace.attachmentId = "";
+  workspace.server = {
+    ...(workspace.server || {}),
+    status: "suspended",
+    billingStatus: "stopped"
+  };
+  workspace.docker = {
+    ...(workspace.docker || {}),
+    status: "suspended",
+    service: "",
+    localUrl: ""
+  };
+  workspace.runtime = {
+    ...(workspace.runtime || {}),
+    status: "suspended"
+  };
+  if (workspace.disk) {
+    workspace.disk.status = workspace.disk.status === "destroyed" ? "destroyed" : "detached_retained";
+  }
+  if (workspace.access) workspace.access.tokenStatus = "active";
+  workspace.updatedAt = now();
+}
+
+function destroyWorkspaceStorage(workspace) {
+  workspace.state = "destroyed";
+  workspace.currentComputeAllocationId = "";
+  workspace.currentAttachmentId = "";
+  workspace.computeAllocationId = "";
+  workspace.attachmentId = "";
+  workspace.server = {
+    ...(workspace.server || {}),
+    status: "destroyed",
+    billingStatus: "stopped"
+  };
+  workspace.docker = {
+    ...(workspace.docker || {}),
+    status: "destroyed",
+    service: "",
+    localUrl: ""
+  };
+  workspace.disk = {
+    ...(workspace.disk || {}),
+    status: "destroyed",
+    billingStatus: "stopped"
+  };
+  workspace.runtime = {
+    ...(workspace.runtime || {}),
+    status: "destroyed"
+  };
+  if (workspace.access) workspace.access.tokenStatus = "unavailable";
+  workspace.updatedAt = now();
+}
+
+function workspaceCurrentAttachmentId(workspace) {
+  return workspace.currentAttachmentId ?? workspace.attachmentId ?? "";
+}
+
+function workspaceCurrentComputeAllocationId(workspace) {
+  return workspace.currentComputeAllocationId ?? workspace.computeAllocationId ?? "";
 }
 
 function resourceOperationId(accountId, resourceId, operationType, sequence) {
@@ -289,7 +355,9 @@ export class ResourceProvisioningService extends OplDomainService {
         operationId: providerCompute.operationId || compute.operationId,
         poolId: providerCompute.poolId || compute.poolId,
         nodePoolId: providerCompute.nodePoolId || compute.nodePoolId,
+        cvmInstanceId: providerCompute.cvmInstanceId || providerCompute.instanceId || compute.cvmInstanceId,
         instanceId: providerCompute.instanceId || compute.instanceId,
+        machineName: providerCompute.machineName || providerCompute.providerData?.machineName || compute.machineName,
         nodeName: providerCompute.nodeName || compute.nodeName,
         privateIp: providerCompute.privateIp || compute.privateIp || "",
         publicIp: providerCompute.publicIp || compute.publicIp || "",
@@ -322,12 +390,6 @@ export class ResourceProvisioningService extends OplDomainService {
     const compute = await this.store.update((state) => {
       ensureResourceCollections(state);
       const current = findOwnedResource(state.computeAllocations, accountId, computeAllocationId, "compute_allocation_not_found");
-      const activeAttachment = state.storageAttachments.find((item) =>
-        item.ownerAccountId === accountId &&
-        item.computeAllocationId === computeAllocationId &&
-        item.status === "attached"
-      );
-      if (activeAttachment) throw new Error("compute_has_attached_storage");
       current.status = "destroying";
       current.updatedAt = now();
       return clone(current);
@@ -345,6 +407,39 @@ export class ResourceProvisioningService extends OplDomainService {
       current.billingStatus = "stopped";
       current.destroyedAt = now();
       current.updatedAt = now();
+      current.attachedStorageIds = [];
+      for (const attachment of state.storageAttachments || []) {
+        if (attachment.ownerAccountId !== accountId) continue;
+        if (attachment.computeAllocationId !== computeAllocationId) continue;
+        if (attachment.status !== "attached" && attachment.status !== "detaching") continue;
+        attachment.status = "detached";
+        attachment.detachedAt = now();
+        attachment.updatedAt = now();
+        const storage = state.storageVolumes.find((item) => item.id === attachment.storageId && item.ownerAccountId === accountId);
+        if (storage) {
+          storage.attachmentIds = (storage.attachmentIds || []).filter((id) => id !== attachment.id);
+          if (storage.status === "attached") storage.status = "available";
+          storage.updatedAt = now();
+        }
+        state.billingLedger.push(addResourceIds(this.ledgerEntry({
+          state,
+          workspaceId: "resource",
+          accountId,
+          type: "storage_detached",
+          amount: 0,
+          sourceEventId: "destroy_compute_detach_storage",
+          metadata: {
+            computeAllocationId,
+            storageId: attachment.storageId,
+            attachmentId: attachment.id
+          }
+        }), { computeAllocationId, storageId: attachment.storageId, attachmentId: attachment.id }));
+      }
+      for (const workspace of Object.values(state.workspaces || {})) {
+        if (workspace.ownerAccountId !== accountId) continue;
+        if (workspaceCurrentComputeAllocationId(workspace) !== computeAllocationId) continue;
+        suspendWorkspaceRuntime(workspace);
+      }
       state.billingLedger.push(addResourceIds(this.ledgerEntry({
         state,
         workspaceId: "resource",
@@ -535,6 +630,11 @@ export class ResourceProvisioningService extends OplDomainService {
       current.billingStatus = "stopped";
       current.destroyedAt = now();
       current.updatedAt = now();
+      for (const workspace of Object.values(state.workspaces || {})) {
+        if (workspace.ownerAccountId !== accountId) continue;
+        if (workspace.storageId !== storageId) continue;
+        destroyWorkspaceStorage(workspace);
+      }
       state.billingLedger.push(addResourceIds(this.ledgerEntry({
         state,
         workspaceId: "resource",
@@ -687,6 +787,11 @@ export class ResourceProvisioningService extends OplDomainService {
       compute.attachedStorageIds = (compute.attachedStorageIds || []).filter((id) => id !== current.storageId);
       storage.attachmentIds = (storage.attachmentIds || []).filter((id) => id !== current.id);
       if (storage.status === "attached") storage.status = "available";
+      for (const workspace of Object.values(state.workspaces || {})) {
+        if (workspace.ownerAccountId !== accountId) continue;
+        if (workspaceCurrentAttachmentId(workspace) !== attachmentId) continue;
+        suspendWorkspaceRuntime(workspace);
+      }
       state.billingLedger.push(addResourceIds(this.ledgerEntry({
         state,
         workspaceId: "resource",

@@ -387,22 +387,20 @@ export function CleanupResourceTable({ workspaces = [], computeAllocations = [],
   const rows = workspaces
     .filter((workspace) => workspace.access?.tokenStatus === "active")
     .map((workspace) => {
-      const compute = computeById.get(workspace.computeAllocationId);
+      const compute = computeById.get(workspace.currentComputeAllocationId);
       const storage = storageById.get(workspace.storageId);
-      const attachment = attachmentById.get(workspace.attachmentId);
+      const attachment = attachmentById.get(workspace.currentAttachmentId);
       const unavailable = [
-        !compute || compute.status === "destroyed" ? "compute" : "",
         !storage || storage.status === "destroyed" ? "storage" : "",
-        !attachment || attachment.status === "detached" ? "attachment" : ""
       ].filter(Boolean);
       return {
         id: workspace.id,
         name: workspace.name,
         accountId: workspace.ownerAccountId,
         tokenStatus: workspace.access?.tokenStatus,
-        computeStatus: compute?.status || "missing",
+        computeStatus: compute?.status || workspace.runtime?.status || "suspended",
         storageStatus: storage?.status || "missing",
-        attachmentStatus: attachment?.status || "missing",
+        attachmentStatus: attachment?.status || workspace.runtime?.status || "suspended",
         cleanupNeeded: unavailable.length > 0,
         unavailable: unavailable.join(", ") || "none"
       };

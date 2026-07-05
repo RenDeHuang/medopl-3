@@ -26,7 +26,7 @@ export function WorkspacesPage({ state, wallet, runAction, session }) {
   const planById = Object.fromEntries((state.packages || []).map((plan) => [plan.id, plan]));
   const running = state.workspaces.filter((workspace) => workspace.state === "running").length;
   const activeUrls = state.workspaces.filter((workspace) => workspace.access?.tokenStatus === "active").length;
-  const attachedEntries = state.workspaces.filter((workspace) => workspace.attachmentId).length;
+  const activeRuntimes = state.workspaces.filter((workspace) => workspace.currentComputeAllocationId && workspace.currentAttachmentId).length;
 
   return (
     <ConsoleSurface
@@ -40,7 +40,7 @@ export function WorkspacesPage({ state, wallet, runAction, session }) {
           { label: "总数", value: state.workspaces.length, caption: "当前实验室", tone: state.workspaces.length ? "info" : "neutral" },
           { label: "运行中", value: running, caption: "可访问入口", tone: running ? "good" : "neutral" },
           { label: "URL 可用", value: activeUrls, caption: "可分享链接", tone: activeUrls ? "good" : "warn" },
-          { label: "已挂载", value: attachedEntries, caption: "已绑定计算和存储", tone: attachedEntries ? "info" : "neutral" },
+          { label: "运行时", value: activeRuntimes, caption: "当前计算绑定", tone: activeRuntimes ? "info" : "neutral" },
           { label: "可用余额", value: money(available(wallet)), caption: "扣除冻结后", tone: available(wallet) > 0 ? "good" : "warn" }
         ]}
       />
@@ -63,7 +63,7 @@ export function WorkspacesPage({ state, wallet, runAction, session }) {
               render: (_, row) => <StatusPill label={statusLabel(row)} tone={statusTone(row.state)} />
             },
             { title: "套餐", dataIndex: "packageId", render: (value) => packageText(planById[value]) },
-            { title: "计算分配", render: (_, row) => <Typography.Text ellipsis>{row.computeAllocationId || row.server?.id || "-"}</Typography.Text> },
+            { title: "当前计算", render: (_, row) => <Typography.Text ellipsis>{row.currentComputeAllocationId || row.server?.id || "-"}</Typography.Text> },
             { title: "存储卷", render: (_, row) => <Typography.Text ellipsis>{row.storageId || row.disk?.id || "-"}</Typography.Text> },
             {
               title: "访问 URL",
