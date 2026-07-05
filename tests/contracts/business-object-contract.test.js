@@ -89,6 +89,20 @@ test("Workspace contract is the stable URL, storage, and current runtime pointer
   assert.ok(contract.principles.includes("Destroying storage makes the Workspace unrecoverable because the file body is gone."));
 });
 
+test("ComputePool contract forbids cloud-side self provisioning of account CVMs", async () => {
+  const contract = await readJson(businessObjectContractPath);
+  const computePool = contract.objectKinds.find((object) => object.kind === "ComputePool");
+
+  assert.ok(computePool, "ComputePool must be current object truth");
+  assert.match(computePool.boundary || "", /package-level TKE node pool/i);
+  assert.deepEqual(computePool.selfProvisioningPolicy, {
+    autoscaling: "disabled",
+    autoRepair: "disabled",
+    allocationAuthority: "Console/Fabric explicit ComputeAllocation mutation"
+  });
+  assert.ok(contract.principles.includes("Fabric-managed ComputePools must not auto-scale or auto-repair user nodes; every account CVM must be created, owned, billed, and destroyed as a Console ComputeAllocation."));
+});
+
 test("ComputeAllocation contract requires dedicated CVM or Kubernetes node identity", async () => {
   const contract = await readJson(businessObjectContractPath);
   const computeAllocation = contract.objectKinds.find((object) => object.kind === "ComputeAllocation");

@@ -223,16 +223,17 @@ func (client *tencentSDKClient) CreateComputeAllocation(request Request, env map
 		pool = describedPool
 		describeRequestId = requestId
 	}
-	modifyAutoscalingRequestId := ""
-	if nativeAutoscalingEnabled(pool) {
-		requestId, err := client.disableNativeNodePoolAutoscaling(nodePoolId)
+	modifySelfProvisioningRequestId := ""
+	if nativeSelfProvisioningEnabled(pool) {
+		requestId, err := client.disableNativeNodePoolSelfProvisioning(nodePoolId)
 		if err != nil {
-			response := sdkErrorResponse("tencent_disable_node_pool_autoscaling_failed", err)
+			response := sdkErrorResponse("tencent_disable_node_pool_self_provisioning_failed", err)
 			response.ProviderRequestId = describeRequestId
 			return response
 		}
-		modifyAutoscalingRequestId = requestId
+		modifySelfProvisioningRequestId = requestId
 		pool.Native.EnableAutoscaling = common.BoolPtr(false)
+		pool.Native.AutoRepair = common.BoolPtr(false)
 	}
 	currentReplicas := nativeReplicas(pool)
 	beforeMachines, beforeMachinesRequestId, err := client.describeClusterMachines(nodePoolId)
@@ -266,7 +267,7 @@ func (client *tencentSDKClient) CreateComputeAllocation(request Request, env map
 				"region":                      client.region,
 				"createNodePoolRequestId":     createNodePoolRequestId,
 				"describeNodePoolRequestId":   describeRequestId,
-				"modifyAutoscalingRequestId":  modifyAutoscalingRequestId,
+				"modifySelfProvisioningReqId": modifySelfProvisioningRequestId,
 				"describeMachinesBeforeReqId": beforeMachinesRequestId,
 				"describeMachinesLatestReqId": machineRequestId,
 				"scaleNodePoolRequestId":      scaleRequestId,
@@ -324,7 +325,7 @@ func (client *tencentSDKClient) CreateComputeAllocation(request Request, env map
 			"region":                      client.region,
 			"createNodePoolRequestId":     createNodePoolRequestId,
 			"describeNodePoolRequestId":   describeRequestId,
-			"modifyAutoscalingRequestId":  modifyAutoscalingRequestId,
+			"modifySelfProvisioningReqId": modifySelfProvisioningRequestId,
 			"describeMachinesBeforeReqId": beforeMachinesRequestId,
 			"describeMachinesReadyReqId":  machineRequestId,
 			"describeCvmRequestId":        cvmRequestId,
@@ -354,7 +355,7 @@ func (client *tencentSDKClient) DestroyComputeAllocation(request Request, _ map[
 		return Response{Ok: false, ErrorCode: "compute_allocation_machine_identity_required", Message: "ComputeAllocation machineName is required to destroy a dedicated Tencent node.", Retryable: false}
 	}
 	describeRequestId := ""
-	modifyAutoscalingRequestId := ""
+	modifySelfProvisioningRequestId := ""
 	pool, requestId, err := client.describeNativeNodePool(request.Pool.NodePoolId)
 	if err != nil {
 		response := sdkErrorResponse("tencent_describe_node_pool_failed", err)
@@ -369,23 +370,24 @@ func (client *tencentSDKClient) DestroyComputeAllocation(request Request, _ map[
 		return response
 	}
 	describeRequestId = requestId
-	if nativeAutoscalingEnabled(pool) {
-		requestId, err := client.disableNativeNodePoolAutoscaling(request.Pool.NodePoolId)
+	if nativeSelfProvisioningEnabled(pool) {
+		requestId, err := client.disableNativeNodePoolSelfProvisioning(request.Pool.NodePoolId)
 		if err != nil {
-			response := sdkErrorResponse("tencent_disable_node_pool_autoscaling_failed", err)
+			response := sdkErrorResponse("tencent_disable_node_pool_self_provisioning_failed", err)
 			response.ProviderRequestId = describeRequestId
 			response.ProviderData = map[string]string{
-				"clusterId":                 client.clusterId,
-				"region":                    client.region,
-				"nodePoolId":                request.Pool.NodePoolId,
-				"machineName":               request.Allocation.MachineName,
-				"nodeName":                  request.Allocation.NodeName,
-				"instanceId":                request.Allocation.InstanceId,
-				"describeNodePoolRequestId": describeRequestId,
+				"clusterId":                    client.clusterId,
+				"region":                       client.region,
+				"nodePoolId":                   request.Pool.NodePoolId,
+				"machineName":                  request.Allocation.MachineName,
+				"nodeName":                     request.Allocation.NodeName,
+				"instanceId":                   request.Allocation.InstanceId,
+				"describeNodePoolRequestId":    describeRequestId,
+				"selfProvisioningDisableError": "true",
 			}
 			return response
 		}
-		modifyAutoscalingRequestId = requestId
+		modifySelfProvisioningRequestId = requestId
 	}
 	providerRequestId := ""
 	deleteRequest := tke2022.NewDeleteClusterMachinesRequest()
@@ -397,17 +399,17 @@ func (client *tencentSDKClient) DestroyComputeAllocation(request Request, _ map[
 	if err != nil {
 		response := sdkErrorResponse("tencent_delete_cluster_machine_failed", err)
 		response.ProviderData = map[string]string{
-			"clusterId":                  client.clusterId,
-			"region":                     client.region,
-			"nodePoolId":                 request.Pool.NodePoolId,
-			"machineName":                request.Allocation.MachineName,
-			"nodeName":                   request.Allocation.NodeName,
-			"instanceId":                 request.Allocation.InstanceId,
-			"deleteMethod":               "DeleteClusterMachines",
-			"scaleDown":                  "true",
-			"deleteMode":                 "terminate",
-			"describeNodePoolRequestId":  describeRequestId,
-			"modifyAutoscalingRequestId": modifyAutoscalingRequestId,
+			"clusterId":                   client.clusterId,
+			"region":                      client.region,
+			"nodePoolId":                  request.Pool.NodePoolId,
+			"machineName":                 request.Allocation.MachineName,
+			"nodeName":                    request.Allocation.NodeName,
+			"instanceId":                  request.Allocation.InstanceId,
+			"deleteMethod":                "DeleteClusterMachines",
+			"scaleDown":                   "true",
+			"deleteMode":                  "terminate",
+			"describeNodePoolRequestId":   describeRequestId,
+			"modifySelfProvisioningReqId": modifySelfProvisioningRequestId,
 		}
 		return response
 	}
@@ -421,13 +423,13 @@ func (client *tencentSDKClient) DestroyComputeAllocation(request Request, _ map[
 		Status:            "destroyed",
 		ProviderRequestId: providerRequestId,
 		ProviderData: map[string]string{
-			"clusterId":                  client.clusterId,
-			"region":                     client.region,
-			"deleteMethod":               "DeleteClusterMachines",
-			"scaleDown":                  "true",
-			"deleteMode":                 "terminate",
-			"describeNodePoolRequestId":  describeRequestId,
-			"modifyAutoscalingRequestId": modifyAutoscalingRequestId,
+			"clusterId":                   client.clusterId,
+			"region":                      client.region,
+			"deleteMethod":                "DeleteClusterMachines",
+			"scaleDown":                   "true",
+			"deleteMode":                  "terminate",
+			"describeNodePoolRequestId":   describeRequestId,
+			"modifySelfProvisioningReqId": modifySelfProvisioningRequestId,
 		},
 	}
 }
@@ -454,16 +456,18 @@ func (client *tencentSDKClient) describeClusterMachines(nodePoolId string) ([]*t
 	return describeResponse.Response.Machines, stringValue(describeResponse.Response.RequestId), nil
 }
 
-func nativeAutoscalingEnabled(pool *tke2022.NodePool) bool {
-	return pool != nil && pool.Native != nil && pool.Native.EnableAutoscaling != nil && *pool.Native.EnableAutoscaling
+func nativeSelfProvisioningEnabled(pool *tke2022.NodePool) bool {
+	return pool != nil && pool.Native != nil && ((pool.Native.EnableAutoscaling != nil && *pool.Native.EnableAutoscaling) ||
+		(pool.Native.AutoRepair != nil && *pool.Native.AutoRepair))
 }
 
-func (client *tencentSDKClient) disableNativeNodePoolAutoscaling(nodePoolId string) (string, error) {
+func (client *tencentSDKClient) disableNativeNodePoolSelfProvisioning(nodePoolId string) (string, error) {
 	modifyRequest := tke2022.NewModifyNodePoolRequest()
 	modifyRequest.ClusterId = common.StringPtr(client.clusterId)
 	modifyRequest.NodePoolId = common.StringPtr(nodePoolId)
 	modifyRequest.Native = &tke2022.UpdateNativeNodePoolParam{
 		EnableAutoscaling: common.BoolPtr(false),
+		AutoRepair:        common.BoolPtr(false),
 	}
 	modifyResponse, err := client.nativeTkeClient.ModifyNodePool(modifyRequest)
 	if err != nil {
@@ -727,7 +731,7 @@ func buildCreateNativeNodePoolRequest(request Request, env map[string]string) (*
 		},
 		InstanceTypes:      []*string{common.StringPtr(request.Pool.InstanceType)},
 		SecurityGroupIds:   stringsToPtrs(splitCsv(env["TENCENT_CVM_SECURITY_GROUP_IDS"])),
-		AutoRepair:         common.BoolPtr(true),
+		AutoRepair:         common.BoolPtr(false),
 		EnableAutoscaling:  common.BoolPtr(false),
 		Replicas:           common.Int64Ptr(0),
 		InternetAccessible: &tke2022.InternetAccessible{MaxBandwidthOut: common.Int64Ptr(0), ChargeType: common.StringPtr("TRAFFIC_POSTPAID_BY_HOUR")},

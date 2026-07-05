@@ -25,6 +25,7 @@
     "Active business object contract contains only current commercial objects.",
     "Workspace is the stable commercial object: stable URL, persistent StorageVolume, and current runtime pointer.",
     "ComputePool is the package-level TKE node pool; ComputeAllocation is one replaceable account-owned dedicated CVM or Kubernetes node in that pool.",
+    "Fabric-managed ComputePools must not auto-scale or auto-repair user nodes; every account CVM must be created, owned, billed, and destroyed as a Console ComputeAllocation.",
     "StorageVolume can exist without compute; StorageAttachment mounts one volume to one current ComputeAllocation runtime.",
     "Destroying compute suspends the Workspace URL and retains storage; rebuilding compute reuses the same Workspace URL and StorageVolume.",
     "Destroying storage makes the Workspace unrecoverable because the file body is gone.",
@@ -111,7 +112,13 @@
         "read",
         "evidence"
       ],
-      "evidenceRequired": true
+      "evidenceRequired": true,
+      "boundary": "Package-level TKE node pool for one compute specification. It is a placement pool, not an account resource identity.",
+      "selfProvisioningPolicy": {
+        "autoscaling": "disabled",
+        "autoRepair": "disabled",
+        "allocationAuthority": "Console/Fabric explicit ComputeAllocation mutation"
+      }
     },
     {
       "kind": "ComputeAllocation",

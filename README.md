@@ -42,10 +42,12 @@ PI signs in to OPL Console
 1 ComputeAllocation = account-owned dedicated CVM node inside one ComputePool
 1 StorageVolume = persistent account-owned storage
 1 StorageAttachment = one storage volume mounted to one ComputeAllocation runtime
-1 OPL Workspace = URL token and one-person-lab-app WebUI entry for an attachment
+1 OPL Workspace = stable URL token entry backed by one StorageVolume and the current ComputeAllocation/StorageAttachment runtime pointer
 ```
 
 One PI account can own multiple compute allocations, storage volumes, attachments, and Workspace URL entries.
+
+Fabric-managed ComputePools are explicit placement pools, not user resource identities. TKE autoscaling and node-pool auto repair are disabled for these pools; every billable CVM must be created, owned, shown, and destroyed through a Console ComputeAllocation record.
 
 ## Critical Lifecycle Rule
 

@@ -7,10 +7,12 @@
 1 ComputeAllocation = account-owned dedicated CVM node inside one ComputePool
 1 StorageVolume = account-owned persistent storage
 1 StorageAttachment = one storage volume mounted to one ComputeAllocation runtime
-1 OPL Workspace = URL token and WebUI entry for one attachment
+1 OPL Workspace = stable URL token entry backed by one StorageVolume and the current ComputeAllocation/StorageAttachment runtime pointer
 ```
 
 One Lab Owner can own multiple compute allocations, storage volumes, attachments, and OPL Workspace URL entries.
+
+Fabric-managed ComputePools are explicit placement pools, not user resource identities. TKE autoscaling and node-pool auto repair must stay disabled; every billable CVM is created, owned, billed, and destroyed as a Console ComputeAllocation.
 
 ## Access
 

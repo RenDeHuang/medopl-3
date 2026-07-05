@@ -288,6 +288,9 @@ func TestBuildCreateNativeNodePoolRequestUsesCurrentPackageShape(t *testing.T) {
 	if createRequest.Native.EnableAutoscaling == nil || *createRequest.Native.EnableAutoscaling {
 		t.Fatalf("Fabric-managed package node pools must disable TKE autoscaling: %#v", createRequest.Native.EnableAutoscaling)
 	}
+	if createRequest.Native.AutoRepair == nil || *createRequest.Native.AutoRepair {
+		t.Fatalf("Fabric-managed package node pools must disable TKE autorepair so Console owns every replacement CVM: %#v", createRequest.Native.AutoRepair)
+	}
 	if len(createRequest.Native.InstanceTypes) != 1 || *createRequest.Native.InstanceTypes[0] != "SA5.LARGE4" {
 		t.Fatalf("unexpected instance types: %#v", createRequest.Native.InstanceTypes)
 	}
@@ -317,6 +320,7 @@ type fakeNativeTkeAPI struct {
 	discoverNodePoolId       string
 	replicas                 int64
 	enableAutoscaling        bool
+	autoRepair               bool
 	rejectMachinePoolFilter  bool
 	calls                    []string
 }
@@ -425,6 +429,7 @@ func (api *fakeNativeTkeAPI) DescribeNodePools(request *tke2022.DescribeNodePool
 				Native: &tke2022.NativeNodePoolInfo{
 					Replicas:          common.Int64Ptr(api.replicas),
 					EnableAutoscaling: common.BoolPtr(api.enableAutoscaling),
+					AutoRepair:        common.BoolPtr(api.autoRepair),
 				},
 			}},
 			TotalCount: common.Int64Ptr(1),
@@ -546,6 +551,9 @@ func (api *fakeNativeTkeAPI) ModifyNodePool(request *tke2022.ModifyNodePoolReque
 	if request.Native != nil && request.Native.EnableAutoscaling != nil {
 		api.enableAutoscaling = *request.Native.EnableAutoscaling
 	}
+	if request.Native != nil && request.Native.AutoRepair != nil {
+		api.autoRepair = *request.Native.AutoRepair
+	}
 	return &tke2022.ModifyNodePoolResponse{
 		Response: &tke2022.ModifyNodePoolResponseParams{
 			RequestId: common.StringPtr("req-modify-pool"),
@@ -563,8 +571,8 @@ func (api *fakeNativeTkeAPI) DeleteClusterMachines(request *tke2022.DeleteCluste
 	}, nil
 }
 
-func TestTencentSDKClientCreateAllocationDisablesNodePoolAutoscalingBeforeExplicitScale(t *testing.T) {
-	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, enableAutoscaling: true}
+func TestTencentSDKClientCreateAllocationDisablesNodePoolSelfProvisioningBeforeExplicitScale(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, enableAutoscaling: true, autoRepair: true}
 	client := newFakeTencentSDKClient(tkeAPI)
 
 	response := client.CreateComputeAllocation(Request{
@@ -587,8 +595,10 @@ func TestTencentSDKClientCreateAllocationDisablesNodePoolAutoscalingBeforeExplic
 	}
 	if tkeAPI.modifyNodePoolRequest.Native == nil ||
 		tkeAPI.modifyNodePoolRequest.Native.EnableAutoscaling == nil ||
-		*tkeAPI.modifyNodePoolRequest.Native.EnableAutoscaling {
-		t.Fatalf("explicit Fabric allocation must disable TKE node pool autoscaling: %#v", tkeAPI.modifyNodePoolRequest)
+		*tkeAPI.modifyNodePoolRequest.Native.EnableAutoscaling ||
+		tkeAPI.modifyNodePoolRequest.Native.AutoRepair == nil ||
+		*tkeAPI.modifyNodePoolRequest.Native.AutoRepair {
+		t.Fatalf("explicit Fabric allocation must disable TKE self-provisioning paths: %#v", tkeAPI.modifyNodePoolRequest)
 	}
 	expectedCalls := []string{"DescribeNodePools", "ModifyNodePool", "DescribeClusterMachines", "ScaleNodePool", "DescribeClusterMachines"}
 	if len(tkeAPI.calls) != len(expectedCalls) {
@@ -886,8 +896,8 @@ func TestTencentSDKClientDestroyAllocationDeletesNamedMachine(t *testing.T) {
 	}
 }
 
-func TestTencentSDKClientDestroyAllocationDisablesNodePoolAutoscalingBeforeDelete(t *testing.T) {
-	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, enableAutoscaling: true}
+func TestTencentSDKClientDestroyAllocationDisablesNodePoolSelfProvisioningBeforeDelete(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, enableAutoscaling: true, autoRepair: true}
 	client := newFakeTencentSDKClient(tkeAPI)
 
 	response := client.DestroyComputeAllocation(Request{
@@ -909,8 +919,10 @@ func TestTencentSDKClientDestroyAllocationDisablesNodePoolAutoscalingBeforeDelet
 	}
 	if tkeAPI.modifyNodePoolRequest.Native == nil ||
 		tkeAPI.modifyNodePoolRequest.Native.EnableAutoscaling == nil ||
-		*tkeAPI.modifyNodePoolRequest.Native.EnableAutoscaling {
-		t.Fatalf("destroy must disable autoscaling before scaledown delete: %#v", tkeAPI.modifyNodePoolRequest)
+		*tkeAPI.modifyNodePoolRequest.Native.EnableAutoscaling ||
+		tkeAPI.modifyNodePoolRequest.Native.AutoRepair == nil ||
+		*tkeAPI.modifyNodePoolRequest.Native.AutoRepair {
+		t.Fatalf("destroy must disable TKE self-provisioning paths before scaledown delete: %#v", tkeAPI.modifyNodePoolRequest)
 	}
 	expectedCalls := []string{"DescribeNodePools", "ModifyNodePool", "DeleteClusterMachines"}
 	if len(tkeAPI.calls) != len(expectedCalls) {

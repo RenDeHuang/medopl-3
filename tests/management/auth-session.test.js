@@ -515,6 +515,105 @@ test("admin can create a login user with an account wallet", async () => {
   }
 });
 
+test("admin delete user persists to store, blocks login, and keeps ownership evidence", async () => {
+  const root = await mkdtemp(join(tmpdir(), "opl-auth-delete-user-"));
+  const store = new MemoryStore();
+  const appService = createOplCloud({
+    store,
+    runtimeProvider: { name: "test-provider" },
+    pricing: TEST_PRICING
+  });
+  const auth = createAuthController({
+    store,
+    usersPath: join(root, "users.json"),
+    seedUsers: [
+      {
+        id: "usr-admin",
+        email: "admin@example.com",
+        password: "secret-admin",
+        name: "Admin",
+        role: "admin",
+        accountId: "admin",
+        balance: 100
+      },
+      {
+        id: "usr-owner",
+        email: "owner@example.com",
+        password: "OwnerPass2026!",
+        name: "Owner",
+        role: "pi",
+        accountId: "acct-owner",
+        balance: 500
+      }
+    ]
+  });
+  const { origin, close } = await listen(createRequestHandler({ appService, auth }));
+  try {
+    const ownerLogin = await postJson(origin, "/api/auth/login", {
+      email: "owner@example.com",
+      password: "OwnerPass2026!"
+    });
+    assert.equal(ownerLogin.response.status, 200);
+
+    await store.update((state) => {
+      state.workspaces["ws-owned"] = {
+        id: "ws-owned",
+        ownerAccountId: "acct-owner",
+        ownerUserId: "usr-owner",
+        name: "Owned workspace",
+        storageId: "storage-owned",
+        currentComputeAllocationId: "compute-owned",
+        currentAttachmentId: "attach-owned",
+        url: "https://workspace.medopl.cn/w/ws-owned/?token=redacted",
+        access: { token: "redacted", tokenStatus: "active" },
+        state: "running"
+      };
+      state.computeAllocations.push({
+        id: "compute-owned",
+        ownerAccountId: "acct-owner",
+        ownerUserId: "usr-owner",
+        status: "running",
+        billingStatus: "active",
+        nodePoolId: "np-basic",
+        machineName: "node-owned",
+        nodeName: "10.0.0.12"
+      });
+    });
+
+    const adminLogin = await postJson(origin, "/api/auth/login", {
+      email: "admin@example.com",
+      password: "secret-admin"
+    });
+    const deleted = await postJson(origin, "/api/users/delete", {
+      userId: "usr-owner",
+      reason: "admin_deleted"
+    }, {
+      cookie: cookieFrom(adminLogin.response),
+      "x-opl-csrf": adminLogin.payload.csrfToken
+    });
+    assert.equal(deleted.response.status, 200);
+    assert.equal(deleted.payload.status, "deleted");
+
+    const blockedLogin = await postJson(origin, "/api/auth/login", {
+      email: "owner@example.com",
+      password: "OwnerPass2026!"
+    });
+    assert.equal(blockedLogin.response.status, 401);
+    assert.equal(blockedLogin.payload.error, "invalid_credentials");
+
+    const management = await fetch(`${origin}/api/management/state`, {
+      headers: { cookie: cookieFrom(adminLogin.response) }
+    });
+    const managementPayload = await management.json();
+    assert.equal(managementPayload.users.find((user) => user.id === "usr-owner").status, "deleted");
+    assert.ok(managementPayload.workspaces.find((workspace) => workspace.id === "ws-owned"), "deleted user Workspace evidence must remain inspectable");
+    assert.ok(managementPayload.computeAllocations.find((compute) => compute.id === "compute-owned"), "deleted user ComputeAllocation evidence must remain inspectable");
+  } finally {
+    await close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("operator token can create an admin session for production verifier actions", async () => {
   const root = await mkdtemp(join(tmpdir(), "opl-auth-operator-"));
   const calls = [];

@@ -24,6 +24,9 @@ function statusTone(value) {
 
 export function WorkspacesPage({ state, wallet, runAction, session }) {
   const planById = Object.fromEntries((state.packages || []).map((plan) => [plan.id, plan]));
+  const computeById = new Map((state.computeAllocations || []).map((compute) => [compute.id, compute]));
+  const storageById = new Map((state.storageVolumes || []).map((storage) => [storage.id, storage]));
+  const attachmentById = new Map((state.storageAttachments || []).map((attachment) => [attachment.id, attachment]));
   const running = state.workspaces.filter((workspace) => workspace.state === "running").length;
   const activeUrls = state.workspaces.filter((workspace) => workspace.access?.tokenStatus === "active").length;
   const activeRuntimes = state.workspaces.filter((workspace) => workspace.currentComputeAllocationId && workspace.currentAttachmentId).length;
@@ -62,9 +65,29 @@ export function WorkspacesPage({ state, wallet, runAction, session }) {
               dataIndex: "state",
               render: (_, row) => <StatusPill label={statusLabel(row)} tone={statusTone(row.state)} />
             },
+            { title: "拥有账号", dataIndex: "ownerAccountId", ellipsis: true },
             { title: "套餐", dataIndex: "packageId", render: (value) => packageText(planById[value]) },
-            { title: "当前计算", render: (_, row) => <Typography.Text ellipsis>{row.currentComputeAllocationId || row.server?.id || "-"}</Typography.Text> },
-            { title: "存储卷", render: (_, row) => <Typography.Text ellipsis>{row.storageId || row.disk?.id || "-"}</Typography.Text> },
+            {
+              title: "独占节点",
+              render: (_, row) => {
+                const compute = computeById.get(row.currentComputeAllocationId);
+                return <Typography.Text ellipsis>{compute?.nodeName || compute?.cvmInstanceId || row.currentComputeAllocationId || row.server?.id || "-"}</Typography.Text>;
+              }
+            },
+            {
+              title: "存储卷",
+              render: (_, row) => {
+                const storage = storageById.get(row.storageId);
+                return <Typography.Text ellipsis>{storage?.name || row.storageId || row.disk?.id || "-"}</Typography.Text>;
+              }
+            },
+            {
+              title: "当前挂载",
+              render: (_, row) => {
+                const attachment = attachmentById.get(row.currentAttachmentId);
+                return <Typography.Text ellipsis>{attachment?.id || row.currentAttachmentId || "-"}</Typography.Text>;
+              }
+            },
             {
               title: "访问 URL",
               dataIndex: "url",

@@ -238,12 +238,16 @@ test("Admin cleanup route exposes orphan URL cleanup without redesigning the Con
 
 test("Billing and Workspace pages explain commercial charging and URL lifecycle", async () => {
   const billingSource = await source("packages/console/ui/pages/billing/BillingPage.jsx");
+  const listSource = await source("packages/console/ui/pages/workspaces/WorkspacesPage.jsx");
   const detailSource = await source("packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx");
 
   assert.match(billingSource, /计费规则|billingPolicy/, "billing page must explain holds, release, and request debit policy");
   assert.match(billingSource, /request_debit|请求扣费/, "billing page must expose request debit evidence");
   for (const signal of ["activeHourlyEstimate", "nextSettlementAt", "runningDuration", "下次结算", "运行时长", "预计每小时"]) {
     assert.match(billingSource, new RegExp(signal), `billing page must show ${signal}`);
+  }
+  for (const signal of ["ownerAccountId", "nodeName", "cvmInstanceId", "currentAttachmentId", "拥有账号", "独占节点", "当前挂载"]) {
+    assert.match(listSource, new RegExp(signal), `Workspace list must expose first-screen maintenance signal ${signal}`);
   }
   assert.match(detailSource, /WorkspaceLifecyclePanel/, "Workspace detail must expose URL/resource lifecycle state");
   assert.match(detailSource, /tokenStatus/, "Workspace detail must show token lifecycle status");
