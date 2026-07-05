@@ -456,6 +456,7 @@ test("Console residual cleanup workflow is API-scoped and gated by exact resourc
   assert.ok(workflow.on.workflow_dispatch.inputs.account_id);
   assert.ok(workflow.on.workflow_dispatch.inputs.compute_allocation_id);
   assert.ok(workflow.on.workflow_dispatch.inputs.storage_id);
+  assert.ok(workflow.on.workflow_dispatch.inputs.attachment_id);
   assert.ok(workflow.on.workflow_dispatch.inputs.legacy_compute_allocation_id);
   assert.ok(workflow.on.workflow_dispatch.inputs.cloud_cleanup_confirmed);
   assert.ok(workflow.on.workflow_dispatch.inputs.confirm_resource_id);
@@ -464,6 +465,7 @@ test("Console residual cleanup workflow is API-scoped and gated by exact resourc
   assert.match(runs, /\/api\/auth\/operator-login/);
   assert.match(runs, /\/api\/compute-allocations\/.*\/destroy/);
   assert.match(runs, /\/api\/storage-volumes\/destroy/);
+  assert.match(runs, /\/api\/storage-attachments\/detach/);
   assert.match(runs, /\/api\/operator\/cleanup-workspace-access/);
   assert.match(runs, /legacyComputeAllocationIds/);
   assert.match(runs, /confirm:\s*true/);
