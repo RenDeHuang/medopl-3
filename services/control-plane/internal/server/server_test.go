@@ -89,6 +89,32 @@ func TestTKENodeSelectorUsesTencentInstanceLabel(t *testing.T) {
 	}
 }
 
+func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
+	t.Setenv("OPL_WORKSPACE_IMAGE", "workspace-image:test")
+	t.Setenv("OPL_IMAGE_PULL_SECRET_NAME", "pull-secret")
+	compute := map[string]any{"id": "compute-alpha", "ownerAccountId": "acct-alpha", "packageId": "basic", "runtime": map[string]any{"nodeSelector": map[string]any{"cloud.tencent.com/node-instance-id": "np-basic-2"}}}
+	storage := map[string]any{"providerResourceId": "pvc/opl-storage-alpha-data"}
+	var manifest map[string]any
+	if err := json.Unmarshal(workspaceManifest("ws-alpha", "Alpha", "token", "opl-compute-alpha", compute, storage), &manifest); err != nil {
+		t.Fatalf("decode workspace manifest: %v", err)
+	}
+	var deployment map[string]any
+	for _, item := range manifest["items"].([]any) {
+		candidate := item.(map[string]any)
+		if candidate["kind"] == "Deployment" {
+			deployment = candidate
+		}
+	}
+	podSpec := nested(deployment, "spec", "template", "spec").(map[string]any)
+	if podSpec["hostNetwork"] != true || podSpec["dnsPolicy"] != "ClusterFirstWithHostNet" {
+		t.Fatalf("workspace pod must use host networking on dedicated TKE nodes: %#v", podSpec)
+	}
+	toleration := podSpec["tolerations"].([]any)[0].(map[string]any)
+	if toleration["key"] != "tke.cloud.tencent.com/eni-ip-unavailable" || toleration["effect"] != "NoSchedule" {
+		t.Fatalf("workspace pod must tolerate TKE ENI readiness taint: %#v", toleration)
+	}
+}
+
 func TestOverviewHTTP(t *testing.T) {
 	server := NewServer(controlplane.NewService(nil, nil))
 	req := httptest.NewRequest(http.MethodGet, "/api/overview", nil)
