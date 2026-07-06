@@ -235,18 +235,23 @@ async function requestWorkspaceJson({ fetchImpl, workspaceUrl, path, method = "G
   return payload;
 }
 
-async function requestWorkspaceBrowserAuth({ fetchImpl, workspaceAuth }) {
-  const response = await fetchImpl(workspaceApiUrl(workspaceAuth.url, "/api/auth/user"), {
-    method: "GET",
-    headers: workspaceAuth.cookie ? { cookie: workspaceAuth.cookie } : undefined
+async function requestWorkspaceWebuiLogin({ fetchImpl, workspaceAuth, username = DEFAULT_AIONUI_ADMIN_USERNAME, password = "" }) {
+  if (!password) return workspaceAuth;
+  const response = await fetchImpl(workspaceApiUrl(workspaceAuth.url, "/login"), {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(workspaceAuth.cookie ? { cookie: workspaceAuth.cookie } : {})
+    },
+    body: JSON.stringify({ username, password, remember: false })
   });
   const payload = await readResponse(response);
   if (!response.ok) {
     const message = typeof payload === "string" ? payload : payload.error || JSON.stringify(payload);
-    throw new Error(`workspace_browser_auth_failed:${response.status}:${message}`);
+    throw new Error(`workspace_webui_login_failed:${response.status}:${message}`);
   }
   const webuiCookie = cookieHeaderFromSetCookie(response.headers?.get?.("set-cookie") || "");
-  if (!webuiCookie) throw new Error("workspace_browser_auth_cookie_missing");
+  if (!webuiCookie) throw new Error("workspace_webui_login_cookie_missing");
   return {
     ...workspaceAuth,
     cookie: mergeCookieHeaders(workspaceAuth.cookie, webuiCookie)
@@ -1167,32 +1172,38 @@ export async function verifyProductionChain({
       retryDelayMs
     });
     addCheck(checks, "workspace_url", true, { url: workspace.url, attempts: workspaceUrlResult.attempts });
+    const webuiUsername = DEFAULT_AIONUI_ADMIN_USERNAME;
+    const webuiPassword = deriveAionUiAdminPassword(
+      process.env.OPL_AIONUI_ADMIN_PASSWORD_SEED,
+      workspace.id,
+      workspace.access?.token || ""
+    );
     if (browserE2E) {
-      const workspaceBrowserAuth = await requestWorkspaceBrowserAuth({
-        fetchImpl,
-        workspaceAuth: workspaceUrlResult
-      });
-      workspaceBrowserAuth.webuiUsername = DEFAULT_AIONUI_ADMIN_USERNAME;
-      workspaceBrowserAuth.webuiPassword = deriveAionUiAdminPassword(
-        process.env.OPL_AIONUI_ADMIN_PASSWORD_SEED,
-        workspace.id,
-        workspace.access?.token || ""
-      );
       await verifyWorkspaceBrowserUi({
         workspaceUrl: workspace.url,
-        workspaceAuth: workspaceBrowserAuth,
+        workspaceAuth: {
+          ...workspaceUrlResult,
+          webuiUsername,
+          webuiPassword
+        },
         runId,
         checks,
         browserFactory,
         screenshotDir
       });
     }
+    const workspaceApiAuth = await requestWorkspaceWebuiLogin({
+      fetchImpl,
+      workspaceAuth: workspaceUrlResult,
+      username: webuiUsername,
+      password: webuiPassword
+    });
     const fileProof = await verifyWorkspaceRuntimeFile({
       fetchImpl,
       checks,
       workspaceUrl: workspace.url,
       runId,
-      workspaceAuth: workspaceUrlResult
+      workspaceAuth: workspaceApiAuth
     });
 
     firstComputeForLedger = compute;
@@ -1285,12 +1296,18 @@ export async function verifyProductionChain({
       url: replacementWorkspace.url,
       attempts: replacementWorkspaceUrlResult.attempts
     });
+    const replacementWorkspaceApiAuth = await requestWorkspaceWebuiLogin({
+      fetchImpl,
+      workspaceAuth: replacementWorkspaceUrlResult,
+      username: webuiUsername,
+      password: webuiPassword
+    });
     await verifyWorkspacePersistedFile({
       fetchImpl,
       checks,
       workspaceUrl: replacementWorkspace.url,
       fileProof,
-      workspaceAuth: replacementWorkspaceUrlResult
+      workspaceAuth: replacementWorkspaceApiAuth
     });
 
     const resourceSettlement = await requestJson({

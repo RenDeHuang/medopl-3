@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import { basename } from "node:path";
 import test from "node:test";
 
@@ -7,6 +8,8 @@ import {
   verifyProductionChain,
   verifyWorkspaceBrowserUi
 } from "../../tools/production-verifier.ts";
+
+process.env.OPL_AIONUI_ADMIN_PASSWORD_SEED = "workspace-secret-2026-very-long";
 
 function jsonResponse(payload, status = 200, headers = new Headers({ "content-type": "application/json" })) {
   return {
@@ -152,13 +155,21 @@ function chainResponses(chain) {
     "POST /api/workspaces/runtime-status": readyRuntimeStatus(chain.workspace),
     "POST /api/workspaces/runtime-status#2": readyRuntimeStatus(chain.replacementWorkspace),
     [`GET ${chain.workspace.url}`]: "<html>one-person-lab-app</html>",
+    [`POST ${workspaceUrl(chain.workspace.url, "/login")}`]: {
+      success: true,
+      user: { id: "opl-webui-admin", username: "admin" }
+    },
     [`GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}`]: {
       success: true,
-      user: { id: "opl-webui-noauth", username: "admin" }
+      user: { id: "opl-webui-admin", username: "admin" }
     },
     [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/write")}`]: { success: true, data: true },
     [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}`]: { success: true, data: persistenceText },
     [`GET ${chain.workspace.url}#2`]: "<html>one-person-lab-app</html>",
+    [`POST ${workspaceUrl(chain.workspace.url, "/login")}#2`]: {
+      success: true,
+      user: { id: "opl-webui-admin", username: "admin" }
+    },
     [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`]: { success: true, data: persistenceText },
     "POST /api/billing/resource-settlements": {
       entries: [
@@ -226,10 +237,16 @@ function keyedFetch({ responses, requests = [], responseHeaders = null, statusBy
     if (typeof payload === "string") return htmlResponse(payload);
     if (payload) {
       if (key === "POST /api/auth/operator-login" && responseHeaders) return jsonResponse(payload, 200, responseHeaders);
+      if (String(key).includes("/login")) {
+        return jsonResponse(payload, 200, new Headers({
+          "content-type": "application/json",
+          "set-cookie": "aionui-session=api-session; Path=/; HttpOnly"
+        }));
+      }
       if (String(key).includes("/api/auth/user")) {
         return jsonResponse(payload, 200, new Headers({
           "content-type": "application/json",
-          "set-cookie": "opl_webui_session=browser-session; Path=/; HttpOnly"
+          "set-cookie": "aionui-session=api-session; Path=/; HttpOnly"
         }));
       }
       return jsonResponse(payload, statusByKey[key] || statusByKey[key.replace(/#\d+$/, "")] || 200);
@@ -271,10 +288,16 @@ function workspaceCookieGatewayFetch({ responses, requests = [] }) {
     requests.push({ key, cookie: requestCookie, redirect: options.redirect || "" });
     const payload = responses[key] ?? responses[key.replace(/#\d+$/, "")];
     if (typeof payload === "string") return htmlResponse(payload);
+    if (payload && String(key).includes("/login")) {
+      return jsonResponse(payload, 200, new Headers({
+        "content-type": "application/json",
+        "set-cookie": "aionui-session=api-session; Path=/; HttpOnly"
+      }));
+    }
     if (payload && String(key).includes("/api/auth/user")) {
       return jsonResponse(payload, 200, new Headers({
         "content-type": "application/json",
-        "set-cookie": "opl_webui_session=browser-session; Path=/; HttpOnly"
+        "set-cookie": "aionui-session=api-session; Path=/; HttpOnly"
       }));
     }
     if (payload) return jsonResponse(payload);
@@ -286,6 +309,14 @@ function workspaceUrl(baseUrl, path) {
   const parsed = new URL(baseUrl);
   parsed.pathname = `${parsed.pathname.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
   return parsed.toString();
+}
+
+function expectedAionUiPassword(workspace) {
+  const digest = createHmac("sha256", process.env.OPL_AIONUI_ADMIN_PASSWORD_SEED)
+    .update(`${workspace.id}:${workspace.access.token}`)
+    .digest("base64url")
+    .slice(0, 24);
+  return `opl_${digest}Aa1!`;
 }
 
 function fakeBrowserFactory(actions = [], { failWaitAt = 0 } = {}) {
@@ -847,6 +878,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "POST /api/workspaces",
     "POST /api/workspaces/runtime-status",
     `GET ${chain.workspace.url}`,
+    `POST ${workspaceUrl(chain.workspace.url, "/login")}`,
     `GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}`,
     `POST ${workspaceUrl(chain.workspace.url, "/api/fs/write")}`,
     `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}`,
@@ -857,6 +889,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "POST /api/workspaces#2",
     "POST /api/workspaces/runtime-status#2",
     `GET ${chain.workspace.url}#2`,
+    `POST ${workspaceUrl(chain.workspace.url, "/login")}#2`,
     `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`,
     "POST /api/billing/resource-settlements",
     "GET /api/state?accountId=pi-prod",
@@ -891,6 +924,13 @@ test("production verifier exercises the public TKE resource provisioning chain",
     path: "/data/opl-e2e-prod-run.txt",
     workspace: "/data"
   });
+  const loginBodies = requests
+    .filter((request) => request.key.startsWith(`POST ${workspaceUrl(chain.workspace.url, "/login")}`))
+    .map((request) => request.body);
+  assert.deepEqual(loginBodies, [
+    { username: "admin", password: expectedAionUiPassword(chain.workspace), remember: false },
+    { username: "admin", password: expectedAionUiPassword(chain.replacementWorkspace), remember: false }
+  ]);
   assert.equal(result.workspaceId, chain.workspace.id);
   assert.equal(result.url, chain.workspace.url);
   assert.deepEqual(result.checks.map((check) => `${check.name}:${check.ok}`), [
@@ -941,7 +981,7 @@ test("production verifier preserves Workspace gateway cookies after token cleanu
     request.redirect === "manual"
   ));
   assert.ok(requests.some((request) =>
-    request.key === `GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}` &&
+    request.key === `POST ${workspaceUrl(chain.workspace.url, "/login")}` &&
     request.cookie.includes("opl_ws_active=ws-tke-prod001") &&
     request.cookie.includes("opl_ws_ws-tke-prod001=share_tke_prod")
   ));
@@ -1165,15 +1205,13 @@ test("production verifier runs optional browser UI checks after Workspace URL is
     .map((check) => `${check.name}:${check.ok}`);
   assert.deepEqual(browserChecks, [
     "workspace_browser_opened:true",
+    "workspace_browser_webui_login:true",
     "workspace_browser_file_uploaded:true",
     "workspace_browser_file_read:true",
     "workspace_browser_message_sent:true",
     "workspace_browser_reply_seen:true"
   ]);
   assert.deepEqual(actions.filter(([name]) => name === "goto").map(([, url]) => url), [chain.workspace.url]);
-  assert.ok(actions.find((action) => action[0] === "addCookies")?.[1].some((cookie) => (
-    cookie.name === "opl_webui_session" && cookie.value === "browser-session"
-  )));
 });
 
 test("production verifier reports browser failure stage with resources, checks, and screenshot", async () => {
@@ -1217,6 +1255,7 @@ test("production verifier reports browser failure stage with resources, checks, 
     "workspace_runtime_status:true",
     "workspace_url:true",
     "workspace_browser_opened:true",
+    "workspace_browser_webui_login:true",
     "workspace_browser_file_uploaded:true",
     "workspace_browser_file_read:true",
     "workspace_browser_message_sent:true",
