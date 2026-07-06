@@ -2,11 +2,13 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -106,6 +108,9 @@ func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 		}
 	}
 	podSpec := nested(deployment, "spec", "template", "spec").(map[string]any)
+	if nested(deployment, "metadata", "labels", "oplcloud.cn/workspace-id") != "ws-alpha" {
+		t.Fatalf("deployment must carry workspace label for stateless runtime lookup: %#v", nested(deployment, "metadata", "labels"))
+	}
 	if podSpec["hostNetwork"] != true || podSpec["dnsPolicy"] != "ClusterFirstWithHostNet" {
 		t.Fatalf("workspace pod must use host networking on dedicated TKE nodes: %#v", podSpec)
 	}
@@ -122,6 +127,47 @@ func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 	}
 	if limits["cpu"] != "2" || limits["memory"] != "4Gi" {
 		t.Fatalf("workspace limits must preserve the package shape: %#v", limits)
+	}
+}
+
+func TestRuntimeStatusRecoversWorkspaceResourcesFromKubernetesLabels(t *testing.T) {
+	t.Setenv("OPL_WORKSPACE_IMAGE", "workspace-image:test")
+	app := newRuntimeApp()
+	deployment := map[string]any{
+		"kind":     "Deployment",
+		"metadata": map[string]any{"name": "opl-compute-alpha", "labels": map[string]any{"oplcloud.cn/workspace-id": "ws-alpha"}},
+		"spec": map[string]any{"template": map[string]any{"metadata": map[string]any{"labels": map[string]any{"app": "workspace"}}, "spec": map[string]any{
+			"containers": []any{map[string]any{"name": "workspace", "image": "workspace-image:test"}},
+			"volumes":    []any{map[string]any{"persistentVolumeClaim": map[string]any{"claimName": "opl-storage-alpha-data"}}},
+		}}},
+		"status": map[string]any{"readyReplicas": 1, "availableReplicas": 1},
+	}
+	service := map[string]any{
+		"kind":     "Service",
+		"metadata": map[string]any{"name": "opl-compute-alpha", "labels": map[string]any{"oplcloud.cn/workspace-id": "ws-alpha"}},
+		"spec":     map[string]any{"selector": map[string]any{"app": "workspace"}},
+	}
+	app.kubectl = func(_ context.Context, args []string, _ []byte) ([]byte, error) {
+		if len(args) == 6 && args[0] == "get" && args[1] == "deployment,service" && args[2] == "-l" && args[3] == "oplcloud.cn/workspace-id=ws-alpha" {
+			return mustJSON(map[string]any{"kind": "List", "items": []any{deployment, service}}), nil
+		}
+		want := []string{"get", "deployment/opl-compute-alpha", "pvc/opl-storage-alpha-data", "service/opl-compute-alpha", "ingress/opl-cloud", "endpoints/opl-compute-alpha", "-o", "json"}
+		if !slices.Equal(args, want) {
+			t.Fatalf("kubectl args = %#v, want %#v", args, want)
+		}
+		return mustJSON(map[string]any{"kind": "List", "items": []any{
+			deployment,
+			map[string]any{"kind": "PersistentVolumeClaim", "metadata": map[string]any{"name": "opl-storage-alpha-data"}, "status": map[string]any{"phase": "Bound"}},
+			service,
+			map[string]any{"kind": "Ingress", "metadata": map[string]any{"name": "opl-cloud"}, "spec": map[string]any{"rules": []any{map[string]any{"http": map[string]any{"paths": []any{map[string]any{"path": "/", "backend": map[string]any{"service": map[string]any{"name": gatewayService, "port": map[string]any{"number": 8787}}}}}}}}}},
+			map[string]any{"kind": "Endpoints", "metadata": map[string]any{"name": "opl-compute-alpha"}, "subsets": []any{map[string]any{"addresses": []any{map[string]any{"ip": "10.0.0.8"}}}}},
+		}}), nil
+	}
+
+	status := app.runtimeStatus(context.Background(), "ws-alpha")
+
+	if status["ready"] != true {
+		t.Fatalf("status = %#v, want ready", status)
 	}
 }
 

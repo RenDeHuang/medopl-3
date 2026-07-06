@@ -496,13 +496,17 @@ func (app *runtimeApp) runtimeStatus(ctx context.Context, workspaceID string) ma
 	app.mu.Unlock()
 	serviceName := stringValue(nested(workspace, "runtime", "serviceName"))
 	pvcName := resourceName(stringValue(nested(workspace, "disk", "id")))
+	if serviceName == "" || pvcName == "" {
+		serviceName, pvcName = app.workspaceRuntimeResources(ctx, workspaceID)
+	}
+	if serviceName == "" || pvcName == "" {
+		return map[string]any{"provider": "tencent-tke", "workspaceId": workspaceID, "ready": false, "checks": []map[string]any{{"name": "workspace_resources_found", "ok": false}}}
+	}
 	raw, err := app.kubectl(ctx, []string{"get", "deployment/" + serviceName, "pvc/" + pvcName, "service/" + serviceName, "ingress/opl-cloud", "endpoints/" + serviceName, "-o", "json"}, nil)
 	if err != nil {
 		return map[string]any{"provider": "tencent-tke", "workspaceId": workspaceID, "ready": false, "checks": []map[string]any{{"name": "kubectl_get", "ok": false}}}
 	}
-	var list map[string]any
-	_ = json.Unmarshal(raw, &list)
-	items, _ := list["items"].([]any)
+	items := kubectlItems(raw)
 	deployment := findK8s(items, "Deployment", serviceName)
 	pvc := findK8s(items, "PersistentVolumeClaim", pvcName)
 	service := findK8s(items, "Service", serviceName)
@@ -528,6 +532,21 @@ func (app *runtimeApp) runtimeStatus(ctx context.Context, workspaceID string) ma
 		}
 	}
 	return map[string]any{"provider": "tencent-tke", "workspaceId": workspaceID, "ready": ready, "checks": checks}
+}
+
+func (app *runtimeApp) workspaceRuntimeResources(ctx context.Context, workspaceID string) (string, string) {
+	if strings.TrimSpace(workspaceID) == "" {
+		return "", ""
+	}
+	raw, err := app.kubectl(ctx, []string{"get", "deployment,service", "-l", "oplcloud.cn/workspace-id=" + workspaceID, "-o", "json"}, nil)
+	if err != nil {
+		return "", ""
+	}
+	items := kubectlItems(raw)
+	deployment := findK8sByLabel(items, "Deployment", "oplcloud.cn/workspace-id", workspaceID)
+	service := findK8sByLabel(items, "Service", "oplcloud.cn/workspace-id", workspaceID)
+	serviceName := firstNonEmpty(stringValue(nested(deployment, "metadata", "name")), stringValue(nested(service, "metadata", "name")))
+	return serviceName, firstPVCClaimName(deployment)
 }
 
 func (app *runtimeApp) settleResources(input map[string]any) map[string]any {
@@ -670,7 +689,7 @@ func pvcManifest(name string, storageID string, accountID string, sizeGB int) []
 }
 
 func workspaceManifest(workspaceID string, workspaceName string, token string, serviceName string, compute map[string]any, storage map[string]any) []byte {
-	labels := map[string]any{"app.kubernetes.io/name": "opl-compute-allocation", "app.kubernetes.io/instance": serviceName, "oplcloud.cn/compute-allocation-id": compute["id"], "oplcloud.cn/account-id": compute["ownerAccountId"]}
+	labels := map[string]any{"app.kubernetes.io/name": "opl-compute-allocation", "app.kubernetes.io/instance": serviceName, "oplcloud.cn/compute-allocation-id": compute["id"], "oplcloud.cn/account-id": compute["ownerAccountId"], "oplcloud.cn/workspace-id": workspaceID}
 	pvcName := resourceName(stringValue(storage["providerResourceId"]))
 	plan := packagePlan(stringValue(compute["packageId"]))
 	secretData := map[string]any{
@@ -967,6 +986,17 @@ func totalDebits(transactions []map[string]any) float64 {
 	return float64(len(transactions))
 }
 
+func kubectlItems(raw []byte) []any {
+	var list map[string]any
+	if err := json.Unmarshal(raw, &list); err != nil {
+		return nil
+	}
+	if items, ok := list["items"].([]any); ok {
+		return items
+	}
+	return []any{list}
+}
+
 func findK8s(items []any, kind string, name string) map[string]any {
 	for _, item := range items {
 		asMap, ok := item.(map[string]any)
@@ -975,6 +1005,27 @@ func findK8s(items []any, kind string, name string) map[string]any {
 		}
 	}
 	return map[string]any{}
+}
+
+func findK8sByLabel(items []any, kind string, key string, value string) map[string]any {
+	for _, item := range items {
+		asMap, ok := item.(map[string]any)
+		if ok && asMap["kind"] == kind && nested(asMap, "metadata", "labels", key) == value {
+			return asMap
+		}
+	}
+	return map[string]any{}
+}
+
+func firstPVCClaimName(deployment map[string]any) string {
+	volumes, _ := nested(deployment, "spec", "template", "spec", "volumes").([]any)
+	for _, volume := range volumes {
+		asMap, _ := volume.(map[string]any)
+		if name := stringValue(nested(asMap, "persistentVolumeClaim", "claimName")); name != "" {
+			return name
+		}
+	}
+	return ""
 }
 
 func firstContainerField(deployment map[string]any, key string) any {
