@@ -762,7 +762,7 @@ export const oplRoutes = Object.freeze([
     objectKind: "ProductionVerification",
     pageModule: "apps/console-ui/src/pages/admin/AdminOverviewPage.tsx",
     apiClient: "apps/console-ui/src/api/console-read-api.ts",
-    apiRoutes: ["GET /api/operator/summary"],
+    apiRoutes: ["POST /api/auth/operator-login", "GET /api/operator/summary"],
     serviceBoundary: "RuntimeOperationService",
     capabilities: ["read", "list", "audit", "evidence"]
   }),

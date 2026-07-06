@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -16,6 +17,18 @@ func NewServer(service *controlplane.Service) http.Handler {
 	})
 	mux.HandleFunc("POST /api/auth/login", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"token": "control-plane-local-token"})
+	})
+	mux.HandleFunc("POST /api/auth/operator-login", func(w http.ResponseWriter, r *http.Request) {
+		input := decodeJSON(r)
+		expectedToken := strings.TrimSpace(os.Getenv("OPL_OPERATOR_SUMMARY_TOKEN"))
+		if expectedToken == "" || stringField(input, "operatorToken", "") != expectedToken {
+			writeError(w, http.StatusUnauthorized, "operator_token_invalid")
+			return
+		}
+		session := sessionPayload()
+		w.Header().Set("Set-Cookie", "opl_session=control-plane-operator; Path=/; HttpOnly; Secure; SameSite=Lax")
+		w.Header().Set("x-opl-csrf-token", session["csrfToken"].(string))
+		writeJSON(w, http.StatusOK, session)
 	})
 	mux.HandleFunc("GET /api/auth/me", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, sessionPayload())

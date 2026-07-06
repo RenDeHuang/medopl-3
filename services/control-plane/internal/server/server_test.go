@@ -42,6 +42,40 @@ func TestOverviewHTTP(t *testing.T) {
 	}
 }
 
+func TestOperatorLoginUsesConfiguredToken(t *testing.T) {
+	t.Setenv("OPL_OPERATOR_SUMMARY_TOKEN", "operator-secret")
+	server := NewServer(controlplane.NewService(nil, nil))
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/operator-login", bytes.NewBufferString(`{"operatorToken":"operator-secret"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	server.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if rec.Header().Get("x-opl-csrf-token") == "" {
+		t.Fatalf("expected csrf response header")
+	}
+	if rec.Header().Get("Set-Cookie") == "" {
+		t.Fatalf("expected session cookie")
+	}
+}
+
+func TestOperatorLoginRejectsInvalidToken(t *testing.T) {
+	t.Setenv("OPL_OPERATOR_SUMMARY_TOKEN", "operator-secret")
+	server := NewServer(controlplane.NewService(nil, nil))
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/operator-login", bytes.NewBufferString(`{"operatorToken":"wrong"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	server.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+}
+
 func TestActiveConsoleAPIRoutesReachControlPlane(t *testing.T) {
 	server := NewServer(controlplane.NewService(nil, nil))
 	cases := []struct {

@@ -1299,6 +1299,7 @@
       "pageModule": "apps/console-ui/src/pages/admin/AdminOverviewPage.tsx",
       "apiClient": "apps/console-ui/src/api/console-read-api.ts",
       "apiRoutes": [
+        "POST /api/auth/operator-login",
         "GET /api/operator/summary"
       ],
       "serviceBoundary": "RuntimeOperationService",
