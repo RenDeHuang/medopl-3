@@ -157,9 +157,19 @@ function sleep(ms) {
 async function requestWorkspaceUrl({ fetchImpl, url, attempts, retryDelayMs }) {
   let lastError = null;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    const response = await fetchImpl(url, { method: "GET" });
+    let requestUrl = url;
+    let cookie = "";
+    let response = await fetchImpl(requestUrl, { method: "GET", redirect: "manual" });
+    if (response.status >= 300 && response.status < 400 && response.headers?.get?.("location")) {
+      cookie = cookieHeaderFromSetCookie(response.headers?.get?.("set-cookie") || "");
+      requestUrl = new URL(response.headers.get("location"), requestUrl).toString();
+      response = await fetchImpl(requestUrl, {
+        method: "GET",
+        headers: cookie ? { cookie } : undefined
+      });
+    }
     const body = await response.text();
-    if (response.ok) return { body, attempts: attempt };
+    if (response.ok) return { body, attempts: attempt, url: requestUrl, cookie };
     lastError = new Error(`workspace_url_failed:${response.status}:${body}`);
     if (attempt < attempts) await sleep(retryDelayMs);
   }
@@ -173,10 +183,13 @@ function workspaceApiUrl(workspaceUrl, path) {
   return parsed.toString();
 }
 
-async function requestWorkspaceJson({ fetchImpl, workspaceUrl, path, method = "GET", body = null }) {
+async function requestWorkspaceJson({ fetchImpl, workspaceUrl, path, method = "GET", body = null, cookie = "" }) {
   const response = await fetchImpl(workspaceApiUrl(workspaceUrl, path), {
     method,
-    headers: body ? { "content-type": "application/json" } : undefined,
+    headers: {
+      ...(body ? { "content-type": "application/json" } : {}),
+      ...(cookie ? { cookie } : {})
+    },
     body: body ? JSON.stringify(body) : undefined
   });
   const payload = await readResponse(response);
@@ -192,13 +205,16 @@ function runtimePayloadData(payload) {
   return payload;
 }
 
-async function verifyWorkspaceRuntimeFile({ fetchImpl, checks, workspaceUrl, runId }) {
+async function verifyWorkspaceRuntimeFile({ fetchImpl, checks, workspaceUrl, runId, workspaceAuth = null }) {
   const filePath = `${WORKSPACE_PERSISTENCE_ROOT}/opl-e2e-${runId}.txt`;
   const content = `opl persistence ${runId}`;
+  const authedWorkspaceUrl = workspaceAuth?.url || workspaceUrl;
+  const cookie = workspaceAuth?.cookie || "";
   const user = await requestWorkspaceJson({
     fetchImpl,
-    workspaceUrl,
-    path: "/api/auth/user"
+    workspaceUrl: authedWorkspaceUrl,
+    path: "/api/auth/user",
+    cookie
   });
   addCheck(checks, "workspace_runtime_auth", Boolean(
     user?.success === true ||
@@ -208,10 +224,11 @@ async function verifyWorkspaceRuntimeFile({ fetchImpl, checks, workspaceUrl, run
 
   const written = await requestWorkspaceJson({
     fetchImpl,
-    workspaceUrl,
+    workspaceUrl: authedWorkspaceUrl,
     path: "/api/fs/write",
     method: "POST",
-    body: { path: filePath, data: content }
+    body: { path: filePath, data: content },
+    cookie
   });
   addCheck(checks, "workspace_file_written", Boolean(
     written?.success === true ||
@@ -220,22 +237,25 @@ async function verifyWorkspaceRuntimeFile({ fetchImpl, checks, workspaceUrl, run
 
   const read = await requestWorkspaceJson({
     fetchImpl,
-    workspaceUrl,
+    workspaceUrl: authedWorkspaceUrl,
     path: "/api/fs/read",
     method: "POST",
-    body: { path: filePath, workspace: WORKSPACE_PERSISTENCE_ROOT }
+    body: { path: filePath, workspace: WORKSPACE_PERSISTENCE_ROOT },
+    cookie
   });
   addCheck(checks, "workspace_file_read", runtimePayloadData(read) === content, { path: filePath });
   return { filePath, content };
 }
 
-async function verifyWorkspacePersistedFile({ fetchImpl, checks, workspaceUrl, fileProof }) {
+async function verifyWorkspacePersistedFile({ fetchImpl, checks, workspaceUrl, fileProof, workspaceAuth = null }) {
+  const authedWorkspaceUrl = workspaceAuth?.url || workspaceUrl;
   const read = await requestWorkspaceJson({
     fetchImpl,
-    workspaceUrl,
+    workspaceUrl: authedWorkspaceUrl,
     path: "/api/fs/read",
     method: "POST",
-    body: { path: fileProof.filePath, workspace: WORKSPACE_PERSISTENCE_ROOT }
+    body: { path: fileProof.filePath, workspace: WORKSPACE_PERSISTENCE_ROOT },
+    cookie: workspaceAuth?.cookie || ""
   });
   addCheck(checks, "workspace_persisted_file_read", runtimePayloadData(read) === fileProof.content, { path: fileProof.filePath });
 }
@@ -1068,7 +1088,13 @@ export async function verifyProductionChain({
         screenshotDir
       });
     }
-    const fileProof = await verifyWorkspaceRuntimeFile({ fetchImpl, checks, workspaceUrl: workspace.url, runId });
+    const fileProof = await verifyWorkspaceRuntimeFile({
+      fetchImpl,
+      checks,
+      workspaceUrl: workspace.url,
+      runId,
+      workspaceAuth: workspaceUrlResult
+    });
 
     firstComputeForLedger = compute;
     firstAttachmentForLedger = attachment;
@@ -1164,7 +1190,8 @@ export async function verifyProductionChain({
       fetchImpl,
       checks,
       workspaceUrl: replacementWorkspace.url,
-      fileProof
+      fileProof,
+      workspaceAuth: replacementWorkspaceUrlResult
     });
 
     const resourceSettlement = await requestJson({

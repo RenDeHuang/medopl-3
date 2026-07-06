@@ -28,6 +28,16 @@ function htmlResponse(html, status = 200) {
   };
 }
 
+function redirectResponse(location, setCookie) {
+  return {
+    status: 302,
+    ok: false,
+    headers: new Headers({ location, "set-cookie": setCookie }),
+    json: async () => ({}),
+    text: async () => ""
+  };
+}
+
 function tkeChain({ workspaceUrl = "https://workspace.medopl.cn/w/ws-tke-prod001/?token=share_tke_prod" } = {}) {
   const compute = {
     id: "compute-prod001",
@@ -218,6 +228,44 @@ function keyedFetch({ responses, requests = [], responseHeaders = null, statusBy
       if (key === "POST /api/auth/operator-login" && responseHeaders) return jsonResponse(payload, 200, responseHeaders);
       return jsonResponse(payload, statusByKey[key] || statusByKey[key.replace(/#1$/, "")] || 200);
     }
+    throw new Error(`unexpected_request:${key}`);
+  };
+}
+
+function workspaceCookieGatewayFetch({ responses, requests = [] }) {
+  const consoleFetch = keyedFetch({ responses, requests });
+  const requestCounts = new Map();
+  const workspaceId = "ws-tke-prod001";
+  const token = "share_tke_prod";
+  const cookie = `opl_ws_active=${workspaceId}; opl_ws_${workspaceId}=${token}`;
+  const setCookie = `opl_ws_active=${workspaceId}; Path=/; HttpOnly, opl_ws_${workspaceId}=${token}; Path=/; HttpOnly`;
+  return async (url, options = {}) => {
+    const parsed = new URL(String(url));
+    if (parsed.origin !== "https://workspace.medopl.cn") return consoleFetch(url, options);
+
+    const method = options.method || "GET";
+    const requestCookie = options.headers?.cookie || "";
+    if (method === "GET" && parsed.searchParams.get("token") === token) {
+      requests.push({ key: `${method} ${String(url)}`, cookie: requestCookie, redirect: options.redirect || "" });
+      const clean = new URL(String(url));
+      clean.searchParams.delete("token");
+      return redirectResponse(`${clean.pathname}${clean.search}`, setCookie);
+    }
+
+    if (!requestCookie.includes(`opl_ws_active=${workspaceId}`) || !requestCookie.includes(`opl_ws_${workspaceId}=${token}`)) {
+      return htmlResponse("<!doctype html><p>OPL Workspace 访问令牌无效。</p>", 403);
+    }
+
+    const tokenUrl = new URL(String(url));
+    tokenUrl.searchParams.set("token", token);
+    let key = `${method} ${tokenUrl.toString()}`;
+    const count = (requestCounts.get(key) || 0) + 1;
+    requestCounts.set(key, count);
+    key = count === 1 ? key : `${key}#${count}`;
+    requests.push({ key, cookie: requestCookie, redirect: options.redirect || "" });
+    const payload = responses[key] ?? responses[key.replace(/#1$/, "")];
+    if (typeof payload === "string") return htmlResponse(payload);
+    if (payload) return jsonResponse(payload);
     throw new Error(`unexpected_request:${key}`);
   };
 }
@@ -757,6 +805,32 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "verification_compute_destroyed:true",
     "verification_storage_destroyed:true"
   ]);
+});
+
+test("production verifier preserves Workspace gateway cookies after token cleanup redirects", async () => {
+  const requests = [];
+  const chain = tkeChain();
+  const result = await verifyProductionChain({
+    origin: "https://console.oplcloud.cn",
+    accountId: "pi-prod",
+    workspaceName: "Production Verification Lab",
+    runId: "prod-run",
+    packageId: "basic",
+    workspaceUrlAttempts: 1,
+    retryDelayMs: 0,
+    fetchImpl: workspaceCookieGatewayFetch({ responses: chainResponses(chain), requests })
+  });
+
+  assert.equal(result.workspaceId, chain.workspace.id);
+  assert.ok(requests.some((request) =>
+    request.key === `GET ${chain.workspace.url}` &&
+    request.redirect === "manual"
+  ));
+  assert.ok(requests.some((request) =>
+    request.key === `GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}` &&
+    request.cookie.includes("opl_ws_active=ws-tke-prod001") &&
+    request.cookie.includes("opl_ws_ws-tke-prod001=share_tke_prod")
+  ));
 });
 
 test("production verifier waits for async compute provisioning before mounting storage", async () => {
