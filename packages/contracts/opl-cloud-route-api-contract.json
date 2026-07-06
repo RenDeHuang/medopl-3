@@ -59,7 +59,7 @@
       "role": "public",
       "requiresAuth": false,
       "routeKind": "static_content",
-      "pageModule": "packages/console/ui/pages/HomePage.jsx",
+      "pageModule": "apps/console-ui/src/pages/HomePage.jsx",
       "serviceBoundary": "StaticPublicContent",
       "requiresAdmin": false
     },
@@ -76,7 +76,7 @@
       "area": "public",
       "role": "public",
       "routeKind": "static_content",
-      "pageModule": "packages/console/ui/pages/HomePage.jsx",
+      "pageModule": "apps/console-ui/src/pages/HomePage.jsx",
       "serviceBoundary": "StaticPublicContent",
       "requiresAdmin": false,
       "requiresAuth": false
@@ -94,7 +94,7 @@
       "area": "public",
       "role": "public",
       "routeKind": "static_content",
-      "pageModule": "packages/console/ui/pages/HomePage.jsx",
+      "pageModule": "apps/console-ui/src/pages/HomePage.jsx",
       "serviceBoundary": "StaticPublicContent",
       "requiresAdmin": false,
       "requiresAuth": false
@@ -112,7 +112,7 @@
       "area": "public",
       "role": "public",
       "routeKind": "static_content",
-      "pageModule": "packages/console/ui/pages/HomePage.jsx",
+      "pageModule": "apps/console-ui/src/pages/HomePage.jsx",
       "serviceBoundary": "StaticPublicContent",
       "requiresAdmin": false,
       "requiresAuth": false
@@ -135,8 +135,8 @@
       "role": "public",
       "requiresAuth": false,
       "routeKind": "auth_flow",
-      "pageModule": "packages/console/ui/pages/LoginPage.jsx",
-      "apiClient": "packages/console/ui/api/auth-api.js",
+      "pageModule": "apps/console-ui/src/pages/LoginPage.jsx",
+      "apiClient": "apps/console-ui/src/api/auth-api.js",
       "apiRoutes": [
         "POST /api/auth/login"
       ],
@@ -158,8 +158,8 @@
       "role": "lab_owner",
       "hiddenInMenu": true,
       "routeKind": "auth_flow",
-      "pageModule": "packages/console/ui/pages/LoginPage.jsx",
-      "apiClient": "packages/console/ui/api/auth-api.js",
+      "pageModule": "apps/console-ui/src/pages/LoginPage.jsx",
+      "apiClient": "apps/console-ui/src/api/auth-api.js",
       "apiRoutes": [
         "POST /api/auth/logout"
       ],
@@ -203,8 +203,8 @@
       "role": "lab_owner",
       "menu": true,
       "routeKind": "read_model",
-      "pageModule": "packages/console/ui/pages/OverviewPage.jsx",
-      "apiClient": "packages/console/ui/api/console-read-api.js",
+      "pageModule": "apps/console-ui/src/pages/OverviewPage.jsx",
+      "apiClient": "apps/console-ui/src/api/console-read-api.js",
       "apiRoutes": [
         "GET /api/state",
         "GET /api/support/tickets"
@@ -231,8 +231,8 @@
       "featureFlag": "workspaces",
       "routeKind": "read_model",
       "objectKind": "ComputePool",
-      "pageModule": "packages/console/ui/pages/resources/ResourceProvisioningPages.jsx",
-      "apiClient": "packages/console/ui/api/resources-api.js",
+      "pageModule": "apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx",
+      "apiClient": "apps/console-ui/src/api/resources-api.js",
       "apiRoutes": [
         "GET /api/compute-pools"
       ],
@@ -258,8 +258,8 @@
       "featureFlag": "workspaces",
       "routeKind": "business_object",
       "objectKind": "ComputeAllocation",
-      "pageModule": "packages/console/ui/pages/resources/ResourceProvisioningPages.jsx",
-      "apiClient": "packages/console/ui/api/resources-api.js",
+      "pageModule": "apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx",
+      "apiClient": "apps/console-ui/src/api/resources-api.js",
       "apiRoutes": [
         "GET /api/state",
         "GET /api/compute-allocations"
@@ -306,8 +306,8 @@
       "featureFlag": "workspaces",
       "routeKind": "business_object",
       "objectKind": "ComputeAllocation",
-      "pageModule": "packages/console/ui/pages/resources/ResourceProvisioningPages.jsx",
-      "apiClient": "packages/console/ui/api/resources-api.js",
+      "pageModule": "apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx",
+      "apiClient": "apps/console-ui/src/api/resources-api.js",
       "apiRoutes": [
         "GET /api/compute-pools",
         "POST /api/compute-allocations"
@@ -376,8 +376,8 @@
       "featureFlag": "workspaces",
       "routeKind": "business_object",
       "objectKind": "ComputeAllocation",
-      "pageModule": "packages/console/ui/pages/resources/ResourceProvisioningPages.jsx",
-      "apiClient": "packages/console/ui/api/resources-api.js",
+      "pageModule": "apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx",
+      "apiClient": "apps/console-ui/src/api/resources-api.js",
       "apiRoutes": [
         "GET /api/compute-allocations/:id",
         "POST /api/compute-allocations/:id/destroy"
@@ -444,8 +444,8 @@
       "featureFlag": "workspaces",
       "routeKind": "business_object",
       "objectKind": "StorageVolume",
-      "pageModule": "packages/console/ui/pages/resources/ResourceProvisioningPages.jsx",
-      "apiClient": "packages/console/ui/api/resources-api.js",
+      "pageModule": "apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx",
+      "apiClient": "apps/console-ui/src/api/resources-api.js",
       "apiRoutes": [
         "GET /api/state"
       ],
@@ -486,8 +486,8 @@
       "featureFlag": "workspaces",
       "routeKind": "business_object",
       "objectKind": "StorageVolume",
-      "pageModule": "packages/console/ui/pages/resources/ResourceProvisioningPages.jsx",
-      "apiClient": "packages/console/ui/api/resources-api.js",
+      "pageModule": "apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx",
+      "apiClient": "apps/console-ui/src/api/resources-api.js",
       "apiRoutes": [
         "GET /api/state",
         "POST /api/storage-volumes"
@@ -542,8 +542,8 @@
       "featureFlag": "workspaces",
       "routeKind": "business_object",
       "objectKind": "StorageVolume",
-      "pageModule": "packages/console/ui/pages/resources/ResourceProvisioningPages.jsx",
-      "apiClient": "packages/console/ui/api/resources-api.js",
+      "pageModule": "apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx",
+      "apiClient": "apps/console-ui/src/api/resources-api.js",
       "apiRoutes": [
         "GET /api/state",
         "POST /api/storage-volumes/destroy"
@@ -600,8 +600,8 @@
       "featureFlag": "workspaces",
       "routeKind": "business_object",
       "objectKind": "StorageAttachment",
-      "pageModule": "packages/console/ui/pages/resources/ResourceProvisioningPages.jsx",
-      "apiClient": "packages/console/ui/api/resources-api.js",
+      "pageModule": "apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx",
+      "apiClient": "apps/console-ui/src/api/resources-api.js",
       "apiRoutes": [
         "GET /api/state"
       ],
@@ -628,8 +628,8 @@
       "featureFlag": "workspaces",
       "routeKind": "business_object",
       "objectKind": "StorageAttachment",
-      "pageModule": "packages/console/ui/pages/resources/ResourceProvisioningPages.jsx",
-      "apiClient": "packages/console/ui/api/resources-api.js",
+      "pageModule": "apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx",
+      "apiClient": "apps/console-ui/src/api/resources-api.js",
       "apiRoutes": [
         "GET /api/state",
         "POST /api/storage-attachments"
@@ -668,8 +668,8 @@
       "featureFlag": "workspaces",
       "routeKind": "business_object",
       "objectKind": "StorageAttachment",
-      "pageModule": "packages/console/ui/pages/resources/ResourceProvisioningPages.jsx",
-      "apiClient": "packages/console/ui/api/resources-api.js",
+      "pageModule": "apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx",
+      "apiClient": "apps/console-ui/src/api/resources-api.js",
       "apiRoutes": [
         "GET /api/state",
         "POST /api/storage-attachments/detach"
@@ -708,8 +708,8 @@
       "featureFlag": "workspaces",
       "routeKind": "read_model",
       "objectKind": "ResourceRelationship",
-      "pageModule": "packages/console/ui/pages/resources/ResourceProvisioningPages.jsx",
-      "apiClient": "packages/console/ui/api/console-read-api.js",
+      "pageModule": "apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx",
+      "apiClient": "apps/console-ui/src/api/console-read-api.js",
       "apiRoutes": [
         "GET /api/state"
       ],
@@ -735,8 +735,8 @@
       "featureFlag": "workspaces",
       "routeKind": "business_object",
       "objectKind": "Workspace",
-      "pageModule": "packages/console/ui/pages/workspaces/WorkspacesPage.jsx",
-      "apiClient": "packages/console/ui/api/workspaces-api.js",
+      "pageModule": "apps/console-ui/src/pages/workspaces/WorkspacesPage.jsx",
+      "apiClient": "apps/console-ui/src/api/workspaces-api.js",
       "apiRoutes": [
         "GET /api/state",
         "POST /api/workspaces/reset-token",
@@ -774,8 +774,8 @@
       "featureFlag": "workspaces",
       "routeKind": "business_object",
       "objectKind": "Workspace",
-      "pageModule": "packages/console/ui/pages/workspaces/CreateWorkspacePage.jsx",
-      "apiClient": "packages/console/ui/api/workspaces-api.js",
+      "pageModule": "apps/console-ui/src/pages/workspaces/CreateWorkspacePage.jsx",
+      "apiClient": "apps/console-ui/src/api/workspaces-api.js",
       "apiRoutes": [
         "GET /api/state",
         "POST /api/workspaces"
@@ -824,8 +824,8 @@
       "featureFlag": "workspaces",
       "routeKind": "business_object",
       "objectKind": "Workspace",
-      "pageModule": "packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx",
-      "apiClient": "packages/console/ui/api/workspaces-api.js",
+      "pageModule": "apps/console-ui/src/pages/workspaces/WorkspaceDetailPage.jsx",
+      "apiClient": "apps/console-ui/src/api/workspaces-api.js",
       "apiRoutes": [
         "GET /api/state",
         "POST /api/workspaces/reset-token",
@@ -872,7 +872,7 @@
       "routeKind": "external_integration",
       "objectKind": "GatewayIntegration",
       "externalUrl": "https://gflabtoken.cn/",
-      "pageModule": "packages/console/ui/pages/gateway/GatewayPage.jsx",
+      "pageModule": "apps/console-ui/src/pages/gateway/GatewayPage.jsx",
       "serviceBoundary": "OPLGatewayExternalIntegration",
       "requiresAdmin": false,
       "requiresAuth": true
@@ -895,8 +895,8 @@
       "featureFlag": "billing",
       "routeKind": "read_model",
       "objectKind": "Wallet",
-      "pageModule": "packages/console/ui/pages/billing/BillingPage.jsx",
-      "apiClient": "packages/console/ui/api/billing-api.js",
+      "pageModule": "apps/console-ui/src/pages/billing/BillingPage.jsx",
+      "apiClient": "apps/console-ui/src/api/billing-api.js",
       "apiRoutes": [
         "GET /api/state"
       ],
@@ -928,8 +928,8 @@
       "featureFlag": "billing",
       "routeKind": "read_model",
       "objectKind": "Wallet",
-      "pageModule": "packages/console/ui/pages/billing/BillingPage.jsx",
-      "apiClient": "packages/console/ui/api/billing-api.js",
+      "pageModule": "apps/console-ui/src/pages/billing/BillingPage.jsx",
+      "apiClient": "apps/console-ui/src/api/billing-api.js",
       "apiRoutes": [
         "GET /api/state"
       ],
@@ -960,8 +960,8 @@
       "menu": true,
       "routeKind": "read_model",
       "objectKind": "User",
-      "pageModule": "packages/console/ui/pages/account/AccountPage.jsx",
-      "apiClient": "packages/console/ui/api/console-read-api.js",
+      "pageModule": "apps/console-ui/src/pages/account/AccountPage.jsx",
+      "apiClient": "apps/console-ui/src/api/console-read-api.js",
       "apiRoutes": [
         "GET /api/state",
         "GET /api/auth/me"
@@ -988,8 +988,8 @@
       "featureFlag": "support",
       "routeKind": "business_object",
       "objectKind": "SupportTicket",
-      "pageModule": "packages/console/ui/pages/support/SupportPage.jsx",
-      "apiClient": "packages/console/ui/api/support-api.js",
+      "pageModule": "apps/console-ui/src/pages/support/SupportPage.jsx",
+      "apiClient": "apps/console-ui/src/api/support-api.js",
       "apiRoutes": [
         "GET /api/support/tickets"
       ],
@@ -1015,8 +1015,8 @@
       "featureFlag": "support",
       "routeKind": "business_object",
       "objectKind": "SupportTicket",
-      "pageModule": "packages/console/ui/pages/support/SupportPage.jsx",
-      "apiClient": "packages/console/ui/api/support-api.js",
+      "pageModule": "apps/console-ui/src/pages/support/SupportPage.jsx",
+      "apiClient": "apps/console-ui/src/api/support-api.js",
       "apiRoutes": [
         "GET /api/support/tickets",
         "POST /api/support/tickets"
@@ -1043,8 +1043,8 @@
       "featureFlag": "support",
       "routeKind": "business_object",
       "objectKind": "SupportTicket",
-      "pageModule": "packages/console/ui/pages/support/SupportPage.jsx",
-      "apiClient": "packages/console/ui/api/support-api.js",
+      "pageModule": "apps/console-ui/src/pages/support/SupportPage.jsx",
+      "apiClient": "apps/console-ui/src/api/support-api.js",
       "apiRoutes": [
         "GET /api/support/tickets"
       ],
@@ -1069,8 +1069,8 @@
       "featureFlag": "alerts",
       "routeKind": "read_model",
       "objectKind": "RuntimeReadiness",
-      "pageModule": "packages/console/ui/pages/catalog/FabricPages.jsx",
-      "apiClient": "packages/console/ui/api/console-read-api.js",
+      "pageModule": "apps/console-ui/src/pages/catalog/FabricPages.jsx",
+      "apiClient": "apps/console-ui/src/api/console-read-api.js",
       "apiRoutes": [
         "GET /api/state",
         "GET /api/support/tickets"
@@ -1115,8 +1115,8 @@
       "role": "admin",
       "adminMenu": true,
       "routeKind": "read_model",
-      "pageModule": "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
-      "apiClient": "packages/console/ui/api/console-read-api.js",
+      "pageModule": "apps/console-ui/src/pages/admin/AdminOverviewPage.jsx",
+      "apiClient": "apps/console-ui/src/api/console-read-api.js",
       "apiRoutes": [
         "GET /api/state",
         "GET /api/operator/summary"
@@ -1143,8 +1143,8 @@
       "adminMenu": true,
       "routeKind": "read_model",
       "objectKind": "User",
-      "pageModule": "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
-      "apiClient": "packages/console/ui/api/console-read-api.js",
+      "pageModule": "apps/console-ui/src/pages/admin/AdminOverviewPage.jsx",
+      "apiClient": "apps/console-ui/src/api/console-read-api.js",
       "apiRoutes": [
         "GET /api/management/state",
         "POST /api/users",
@@ -1175,8 +1175,8 @@
       "featureFlag": "manualTopup",
       "routeKind": "read_model",
       "objectKind": "Wallet",
-      "pageModule": "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
-      "apiClient": "packages/console/ui/api/billing-api.js",
+      "pageModule": "apps/console-ui/src/pages/admin/AdminOverviewPage.jsx",
+      "apiClient": "apps/console-ui/src/api/billing-api.js",
       "apiRoutes": [
         "GET /api/state",
         "POST /api/billing/topups"
@@ -1204,8 +1204,8 @@
       "featureFlag": "ledgerAdmin",
       "routeKind": "read_model",
       "objectKind": "Usage",
-      "pageModule": "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
-      "apiClient": "packages/console/ui/api/ledger-api.js",
+      "pageModule": "apps/console-ui/src/pages/admin/AdminOverviewPage.jsx",
+      "apiClient": "apps/console-ui/src/api/ledger-api.js",
       "apiRoutes": [
         "GET /api/state",
         "GET /api/ledger/task-receipts"
@@ -1232,8 +1232,8 @@
       "featureFlag": "runtimeAdmin",
       "routeKind": "read_model",
       "objectKind": "RuntimeReadiness",
-      "pageModule": "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
-      "apiClient": "packages/console/ui/api/console-read-api.js",
+      "pageModule": "apps/console-ui/src/pages/admin/AdminOverviewPage.jsx",
+      "apiClient": "apps/console-ui/src/api/console-read-api.js",
       "apiRoutes": [
         "GET /api/runtime/readiness",
         "GET /api/production/readiness",
@@ -1262,8 +1262,8 @@
       "featureFlag": "runtimeAdmin",
       "routeKind": "read_model",
       "objectKind": "RuntimeReadiness",
-      "pageModule": "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
-      "apiClient": "packages/console/ui/api/console-read-api.js",
+      "pageModule": "apps/console-ui/src/pages/admin/AdminOverviewPage.jsx",
+      "apiClient": "apps/console-ui/src/api/console-read-api.js",
       "apiRoutes": [
         "GET /api/runtime/readiness",
         "GET /api/production/readiness",
@@ -1292,8 +1292,8 @@
       "featureFlag": "runtimeAdmin",
       "routeKind": "read_model",
       "objectKind": "ProductionVerification",
-      "pageModule": "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
-      "apiClient": "packages/console/ui/api/console-read-api.js",
+      "pageModule": "apps/console-ui/src/pages/admin/AdminOverviewPage.jsx",
+      "apiClient": "apps/console-ui/src/api/console-read-api.js",
       "apiRoutes": [
         "GET /api/operator/summary"
       ],
@@ -1320,8 +1320,8 @@
       "featureFlag": "runtimeAdmin",
       "routeKind": "read_model",
       "objectKind": "RuntimeReadiness",
-      "pageModule": "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
-      "apiClient": "packages/console/ui/api/console-read-api.js",
+      "pageModule": "apps/console-ui/src/pages/admin/AdminOverviewPage.jsx",
+      "apiClient": "apps/console-ui/src/api/console-read-api.js",
       "apiRoutes": [
         "GET /api/management/state",
         "GET /api/operator/summary",
@@ -1357,8 +1357,8 @@
       "featureFlag": "support",
       "routeKind": "business_object",
       "objectKind": "SupportTicket",
-      "pageModule": "packages/console/ui/pages/admin/AdminOverviewPage.jsx",
-      "apiClient": "packages/console/ui/api/support-api.js",
+      "pageModule": "apps/console-ui/src/pages/admin/AdminOverviewPage.jsx",
+      "apiClient": "apps/console-ui/src/api/support-api.js",
       "apiRoutes": [
         "GET /api/support/tickets"
       ],
@@ -1382,7 +1382,7 @@
       "role": "public",
       "hiddenInMenu": true,
       "routeKind": "static_content",
-      "pageModule": "packages/console/ui/pages/shared/page-widgets.jsx",
+      "pageModule": "apps/console-ui/src/pages/shared/page-widgets.jsx",
       "serviceBoundary": "ConsoleRouter",
       "requiresAdmin": false,
       "requiresAuth": false
@@ -1401,7 +1401,7 @@
       "role": "public",
       "hiddenInMenu": true,
       "routeKind": "static_content",
-      "pageModule": "packages/console/ui/pages/shared/page-widgets.jsx",
+      "pageModule": "apps/console-ui/src/pages/shared/page-widgets.jsx",
       "serviceBoundary": "ConsoleRouter",
       "requiresAdmin": false,
       "requiresAuth": false
@@ -1420,7 +1420,7 @@
       "role": "public",
       "hiddenInMenu": true,
       "routeKind": "static_content",
-      "pageModule": "packages/console/ui/pages/shared/page-widgets.jsx",
+      "pageModule": "apps/console-ui/src/pages/shared/page-widgets.jsx",
       "serviceBoundary": "ConsoleRouter",
       "requiresAdmin": false,
       "requiresAuth": false

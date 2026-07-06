@@ -18,7 +18,7 @@ async function files(dir) {
     const child = join(current.pathname, entry.name);
     if (entry.isDirectory()) {
       out.push(...await files(relative(repoRoot.pathname, child)));
-    } else if (/\.(js|jsx)$/.test(entry.name)) {
+    } else if (/\.(js|jsx|ts|tsx)$/.test(entry.name)) {
       out.push(relative(repoRoot.pathname, child));
     }
   }
@@ -31,6 +31,12 @@ async function source(relativePath) {
 
 async function assertFile(relativePath) {
   await access(new URL(relativePath, repoRoot));
+}
+
+function forbiddenMarkerPattern(marker) {
+  if (marker === "pg") return /(^|[^A-Za-z0-9_])pg([^A-Za-z0-9_]|$)/i;
+  const escaped = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(escaped, "i");
 }
 
 test("Console imports Fabric and Ledger only through package boundary exports", async () => {
@@ -79,4 +85,22 @@ test("target service boundaries assign persistence, cloud SDKs, and UI responsib
   assert.ok(boundary.forbiddenRuntimeMarkers.consoleUi.includes("pg"));
   assert.ok(boundary.forbiddenRuntimeMarkers.controlPlane.includes("tencentcloud"));
   assert.ok(boundary.secretPolicy.forbiddenEvidenceMarkers.includes("token"));
+});
+
+test("Console UI is a browser-only app with no persistence or cloud SDK markers", async () => {
+  const boundary = JSON.parse(
+    await readFile(
+      new URL("../../packages/contracts/opl-cloud-service-boundary-contract.json", import.meta.url),
+      "utf8"
+    )
+  );
+  const uiFiles = await files("apps/console-ui/src");
+  assert.ok(uiFiles.length > 0, "apps/console-ui/src must contain UI source files");
+
+  for (const file of uiFiles) {
+    const text = await source(file);
+    for (const marker of boundary.forbiddenRuntimeMarkers.consoleUi) {
+      assert.doesNotMatch(text, forbiddenMarkerPattern(marker), `${file} must not contain ${marker}`);
+    }
+  }
 });

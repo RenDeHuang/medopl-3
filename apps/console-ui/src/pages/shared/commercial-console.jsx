@@ -263,7 +263,7 @@ export function DataRetentionPolicyPanel({ compact = false }) {
   const items = [
     { label: "销毁计算", value: "只删除计算", meta: "存储资源和 /data 数据保留", status: "数据保留", tone: "good" },
     { label: "销毁存储", value: "删除数据", meta: "会删除 /data 用户文件，需要强确认", status: "高风险", tone: "danger" },
-    { label: "迁移 / rollout", value: "不删数据", meta: "用户、账单在 PostgreSQL；用户文件在 PVC/CBS", status: "持久化", tone: "info" }
+    { label: "迁移 / rollout", value: "不删数据", meta: "用户、账单在后端账本；用户文件在持久存储", status: "持久化", tone: "info" }
   ];
   if (compact) return <ResourceSplit items={items} />;
   return (

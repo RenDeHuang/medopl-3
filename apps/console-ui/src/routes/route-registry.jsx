@@ -1,11 +1,5 @@
 import React from "react";
-import { ProLayout } from "@ant-design/pro-components";
-import { Button, Tag } from "antd";
-import { LogOut, UserRound } from "lucide-react";
-import { logout as logoutSession } from "../api/auth-api.js";
-import { navigate, routeTo } from "../consoleRoutes.js";
-import { useConsoleState } from "../store/console-state.js";
-import { AccountPage } from "./account/AccountPage.jsx";
+import { AccountPage } from "../pages/account/AccountPage.jsx";
 import {
   AdminBillingPage,
   AdminCleanupPage,
@@ -17,11 +11,11 @@ import {
   AdminRuntimePage,
   AdminSupportPage,
   AdminUsersPage
-} from "./admin/AdminOverviewPage.jsx";
-import { BillingPage } from "./billing/BillingPage.jsx";
-import { AlertsPage, ApprovalsPage, ReceiptsPage, ResourcesPage } from "./catalog/FabricPages.jsx";
-import { GatewayPage } from "./gateway/GatewayPage.jsx";
-import { OverviewPage } from "./OverviewPage.jsx";
+} from "../pages/admin/AdminOverviewPage.jsx";
+import { BillingPage } from "../pages/billing/BillingPage.jsx";
+import { AlertsPage, ApprovalsPage, ReceiptsPage, ResourcesPage } from "../pages/catalog/FabricPages.jsx";
+import { GatewayPage } from "../pages/gateway/GatewayPage.jsx";
+import { OverviewPage } from "../pages/OverviewPage.jsx";
 import {
   ComputeAllocationDetailPage,
   ComputeAllocationsPage,
@@ -33,68 +27,14 @@ import {
   StorageAttachmentsPage,
   StorageVolumeDetailPage,
   StorageVolumesPage
-} from "./resources/ResourceProvisioningPages.jsx";
-import { buildMenu } from "./shared/console-menu.jsx";
-import { ForbiddenPage } from "./shared/page-widgets.jsx";
-import { NewSupportTicketPage, SupportPage, SupportTicketPage } from "./support/SupportPage.jsx";
-import { CreateWorkspacePage } from "./workspaces/CreateWorkspacePage.jsx";
-import { WorkspaceDetailPage } from "./workspaces/WorkspaceDetailPage.jsx";
-import { WorkspacesPage } from "./workspaces/WorkspacesPage.jsx";
+} from "../pages/resources/ResourceProvisioningPages.jsx";
+import { ForbiddenPage } from "../pages/shared/page-widgets.jsx";
+import { NewSupportTicketPage, SupportPage, SupportTicketPage } from "../pages/support/SupportPage.jsx";
+import { CreateWorkspacePage } from "../pages/workspaces/CreateWorkspacePage.jsx";
+import { WorkspaceDetailPage } from "../pages/workspaces/WorkspaceDetailPage.jsx";
+import { WorkspacesPage } from "../pages/workspaces/WorkspacesPage.jsx";
 
-export default function ConsolePage({ route, session, onLogout }) {
-  const isAdmin = session.user.role === "admin";
-  const path = window.location.pathname;
-  const consoleState = useConsoleState({ isAdmin, path, csrfToken: session.csrfToken });
-
-  async function logout() {
-    try {
-      await logoutSession(session.csrfToken);
-    } finally {
-      onLogout();
-      navigate(routeTo("public.home"));
-    }
-  }
-
-  if (!consoleState.state) return <div className="loading">Loading OPL Console...</div>;
-
-  const ctx = {
-    route,
-    path,
-    session,
-    isAdmin,
-    ...consoleState
-  };
-
-  return (
-    <ProLayout
-      title="OPL Console"
-      logo={<div className="proLogo">OPL</div>}
-      location={{ pathname: path }}
-      layout="mix"
-      navTheme="light"
-      menuDataRender={() => buildMenu(isAdmin)}
-      menuItemRender={(item, dom) => (
-        <a onClick={(event) => {
-          event.preventDefault();
-          navigate(item.path || routeTo("console.overview"));
-        }} href={item.path}>{dom}</a>
-      )}
-      actionsRender={() => [
-        <Tag color={isAdmin ? "purple" : "blue"} key="role">{isAdmin ? "Admin" : "Lab Owner"}</Tag>,
-        <Button key="logout" icon={<LogOut size={15} />} onClick={logout}>退出</Button>
-      ]}
-      avatarProps={{
-        title: <span className="shellEmail">{session.user.email}</span>,
-        size: "small",
-        icon: <UserRound size={16} />
-      }}
-    >
-      {renderRoute(ctx)}
-    </ProLayout>
-  );
-}
-
-function renderRoute(ctx) {
+export function renderConsoleRoute(ctx) {
   const { path, route, isAdmin } = ctx;
   if (route.area === "admin" && !isAdmin) return <ForbiddenPage />;
   if (path.startsWith("/admin/users")) return <AdminUsersPage {...ctx} />;

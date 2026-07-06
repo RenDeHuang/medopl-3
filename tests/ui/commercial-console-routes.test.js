@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { adminMenuRoutes, consoleRoutes, ownerMenuRoutes, routeTo, routesById } from "../../packages/console/ui/consoleRoutes.js";
+import { adminMenuRoutes, consoleRoutes, ownerMenuRoutes, routeTo, routesById } from "../../apps/console-ui/src/consoleRoutes.js";
 
 const contractPath = new URL("../../packages/contracts/opl-cloud-route-api-contract.json", import.meta.url);
 
@@ -193,7 +193,7 @@ test("runtime route registry mirrors contract resource operation protocols", asy
 });
 
 test("current auth UI does not link to reserved account flows", async () => {
-  const source = await readFile(new URL("../../packages/console/ui/pages/LoginPage.jsx", import.meta.url), "utf8");
+  const source = await readFile(new URL("../../apps/console-ui/src/pages/LoginPage.jsx", import.meta.url), "utf8");
 
   for (const path of [
     "/register",

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { consoleActions } from "../../packages/console/ui/routes/opl-actions.js";
-import { routeTo, routesById } from "../../packages/console/ui/consoleRoutes.js";
+import { consoleActions } from "../../apps/console-ui/src/routes/opl-actions.js";
+import { routeTo, routesById } from "../../apps/console-ui/src/consoleRoutes.js";
 
 const repoRoot = new URL("../../", import.meta.url);
 
@@ -72,18 +72,18 @@ test("workspace and support click targets are route/action registry backed", () 
 
 test("page modules do not call raw server APIs directly", async () => {
   for (const page of [
-    "packages/console/ui/pages/ConsolePage.jsx",
-    "packages/console/ui/pages/OverviewPage.jsx",
-    "packages/console/ui/pages/workspaces/WorkspacesPage.jsx",
-    "packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx",
-    "packages/console/ui/pages/workspaces/CreateWorkspacePage.jsx",
-    "packages/console/ui/pages/resources/ResourceProvisioningPages.jsx",
-    "packages/console/ui/pages/billing/BillingPage.jsx",
-    "packages/console/ui/pages/gateway/GatewayPage.jsx",
-    "packages/console/ui/pages/account/AccountPage.jsx",
-    "packages/console/ui/pages/catalog/FabricPages.jsx",
-    "packages/console/ui/pages/support/SupportPage.jsx",
-    "packages/console/ui/pages/admin/AdminOverviewPage.jsx"
+    "apps/console-ui/src/pages/ConsolePage.jsx",
+    "apps/console-ui/src/pages/OverviewPage.jsx",
+    "apps/console-ui/src/pages/workspaces/WorkspacesPage.jsx",
+    "apps/console-ui/src/pages/workspaces/WorkspaceDetailPage.jsx",
+    "apps/console-ui/src/pages/workspaces/CreateWorkspacePage.jsx",
+    "apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx",
+    "apps/console-ui/src/pages/billing/BillingPage.jsx",
+    "apps/console-ui/src/pages/gateway/GatewayPage.jsx",
+    "apps/console-ui/src/pages/account/AccountPage.jsx",
+    "apps/console-ui/src/pages/catalog/FabricPages.jsx",
+    "apps/console-ui/src/pages/support/SupportPage.jsx",
+    "apps/console-ui/src/pages/admin/AdminOverviewPage.jsx"
   ]) {
     const pageSource = await source(page);
     assert.doesNotMatch(pageSource, /fetch\(["']\/api\//, `${page} should not fetch raw APIs`);

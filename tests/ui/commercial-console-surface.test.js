@@ -9,7 +9,7 @@ async function source(relativePath) {
 }
 
 test("commercial Console UI is built from the maintained surface component layer", async () => {
-  const surfaceSource = await source("packages/console/ui/pages/shared/commercial-console.jsx");
+  const surfaceSource = await source("apps/console-ui/src/pages/shared/commercial-console.jsx");
 
   for (const exportName of [
     "ConsoleSurface",
@@ -37,15 +37,15 @@ test("commercial Console UI is built from the maintained surface component layer
 
 test("business-chain pages use the commercial surface instead of old card stacks", async () => {
   for (const page of [
-    "packages/console/ui/pages/OverviewPage.jsx",
-    "packages/console/ui/pages/workspaces/WorkspacesPage.jsx",
-    "packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx",
-    "packages/console/ui/pages/workspaces/CreateWorkspacePage.jsx",
-    "packages/console/ui/pages/billing/BillingPage.jsx",
-    "packages/console/ui/pages/gateway/GatewayPage.jsx",
-    "packages/console/ui/pages/account/AccountPage.jsx",
-    "packages/console/ui/pages/support/SupportPage.jsx",
-    "packages/console/ui/pages/admin/AdminOverviewPage.jsx"
+    "apps/console-ui/src/pages/OverviewPage.jsx",
+    "apps/console-ui/src/pages/workspaces/WorkspacesPage.jsx",
+    "apps/console-ui/src/pages/workspaces/WorkspaceDetailPage.jsx",
+    "apps/console-ui/src/pages/workspaces/CreateWorkspacePage.jsx",
+    "apps/console-ui/src/pages/billing/BillingPage.jsx",
+    "apps/console-ui/src/pages/gateway/GatewayPage.jsx",
+    "apps/console-ui/src/pages/account/AccountPage.jsx",
+    "apps/console-ui/src/pages/support/SupportPage.jsx",
+    "apps/console-ui/src/pages/admin/AdminOverviewPage.jsx"
   ]) {
     const pageSource = await source(page);
     assert.match(pageSource, /shared\/commercial-console\.jsx/, `${page} must import the commercial Console surface`);
@@ -54,13 +54,13 @@ test("business-chain pages use the commercial surface instead of old card stacks
 });
 
 test("public entry is Console-first and does not use the retired marketing hero shell", async () => {
-  const homeSource = await source("packages/console/ui/pages/HomePage.jsx");
+  const homeSource = await source("apps/console-ui/src/pages/HomePage.jsx");
   assert.match(homeSource, /publicConsole/, "public home should present the Console product surface");
   assert.doesNotMatch(homeSource, /homeHero|heroPreview|chainPreview/, "retired marketing hero classes must stay removed");
 });
 
 test("public entry visible copy is concise Chinese without old English labels", async () => {
-  const homeSource = await source("packages/console/ui/pages/HomePage.jsx");
+  const homeSource = await source("apps/console-ui/src/pages/HomePage.jsx");
   for (const chineseCopy of [
     "业务链",
     "钱包",
@@ -79,16 +79,16 @@ test("public entry visible copy is concise Chinese without old English labels", 
 });
 
 test("authenticated shell is branded as OPL Console", async () => {
-  const shellSource = await source("packages/console/ui/pages/ConsolePage.jsx");
+  const shellSource = await source("apps/console-ui/src/pages/ConsolePage.jsx");
   assert.match(shellSource, /title="OPL Console"/, "authenticated app shell must use OPL Console product naming");
   assert.doesNotMatch(shellSource, /title="OPL Cloud"/, "authenticated app shell must not retain old OPL Cloud naming");
 });
 
 test("visible app chrome does not retain old Cloud or reserved backlog copy", async () => {
   for (const page of [
-    "packages/console/ui/main.jsx",
-    "packages/console/ui/pages/LoginPage.jsx",
-    "packages/console/ui/pages/admin/AdminOverviewPage.jsx"
+    "apps/console-ui/src/main.jsx",
+    "apps/console-ui/src/pages/LoginPage.jsx",
+    "apps/console-ui/src/pages/admin/AdminOverviewPage.jsx"
   ]) {
     const pageSource = await source(page);
     assert.doesNotMatch(pageSource, /Loading OPL Cloud|> OPL Cloud</, `${page} must use OPL Console in visible chrome`);
@@ -97,8 +97,8 @@ test("visible app chrome does not retain old Cloud or reserved backlog copy", as
 });
 
 test("create Workspace flow is a single commercial submit action", async () => {
-  const createSource = await source("packages/console/ui/pages/workspaces/CreateWorkspacePage.jsx");
-  const stateSource = await source("packages/console/ui/store/console-state.js");
+  const createSource = await source("apps/console-ui/src/pages/workspaces/CreateWorkspacePage.jsx");
+  const stateSource = await source("apps/console-ui/src/store/console-state.js");
 
   assert.doesNotMatch(createSource, /StepsForm/, "create flow must not hide provisioning behind a multi-step wizard");
   assert.match(createSource, /htmlType="submit"/, "create flow must expose one clear submit button");
@@ -110,10 +110,10 @@ test("create Workspace flow is a single commercial submit action", async () => {
 });
 
 test("shared runAction suppresses duplicate submissions by action key", async () => {
-  const stateSource = await source("packages/console/ui/store/console-state.js");
-  const workspaceListSource = await source("packages/console/ui/pages/workspaces/WorkspacesPage.jsx");
-  const workspaceDetailSource = await source("packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx");
-  const adminSource = await source("packages/console/ui/pages/admin/AdminOverviewPage.jsx");
+  const stateSource = await source("apps/console-ui/src/store/console-state.js");
+  const workspaceListSource = await source("apps/console-ui/src/pages/workspaces/WorkspacesPage.jsx");
+  const workspaceDetailSource = await source("apps/console-ui/src/pages/workspaces/WorkspaceDetailPage.jsx");
+  const adminSource = await source("apps/console-ui/src/pages/admin/AdminOverviewPage.jsx");
 
   assert.match(stateSource, /pendingActions/, "runAction must track pending action keys");
   assert.match(stateSource, /actionKey/, "runAction must accept an action key");
@@ -125,10 +125,10 @@ test("shared runAction suppresses duplicate submissions by action key", async ()
 });
 
 test("Workspace UI treats URL as stable storage subject with current runtime pointer", async () => {
-  const listSource = await source("packages/console/ui/pages/workspaces/WorkspacesPage.jsx");
-  const detailSource = await source("packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx");
-  const routeSource = await source("packages/console/ui/routes/opl-routes.js");
-  const cleanupSource = await source("packages/console/ui/pages/shared/commercial-console.jsx");
+  const listSource = await source("apps/console-ui/src/pages/workspaces/WorkspacesPage.jsx");
+  const detailSource = await source("apps/console-ui/src/pages/workspaces/WorkspaceDetailPage.jsx");
+  const routeSource = await source("apps/console-ui/src/routes/opl-routes.js");
+  const cleanupSource = await source("apps/console-ui/src/pages/shared/commercial-console.jsx");
 
   assert.match(listSource, /currentComputeAllocationId/, "Workspace list must show current compute pointer");
   assert.match(listSource, /workspaceHourlyEstimate/, "Workspace list must use current resource pointers for per-Workspace billing");
@@ -140,7 +140,7 @@ test("Workspace UI treats URL as stable storage subject with current runtime poi
 });
 
 test("resource provisioning pages call resource APIs instead of disabled placeholders", async () => {
-  const resourceSource = await source("packages/console/ui/pages/resources/ResourceProvisioningPages.jsx");
+  const resourceSource = await source("apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx");
 
   for (const apiName of ["createComputeAllocation", "createStorageVolume", "attachStorage"]) {
     assert.match(resourceSource, new RegExp(`${apiName}\\(`), `resource UI must call ${apiName}`);
@@ -149,8 +149,8 @@ test("resource provisioning pages call resource APIs instead of disabled placeho
 });
 
 test("create forms do not prefill demo-style resource names", async () => {
-  const resourceSource = await source("packages/console/ui/pages/resources/ResourceProvisioningPages.jsx");
-  const workspaceSource = await source("packages/console/ui/pages/workspaces/CreateWorkspacePage.jsx");
+  const resourceSource = await source("apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx");
+  const workspaceSource = await source("apps/console-ui/src/pages/workspaces/CreateWorkspacePage.jsx");
 
   assert.doesNotMatch(resourceSource, /initialValues=\{\{ name:/, "resource creation forms must not prefill demo names");
   assert.doesNotMatch(workspaceSource, /initialValues=\{\{ workspaceName:/, "Workspace creation must not prefill a demo name");
@@ -161,9 +161,9 @@ test("create forms do not prefill demo-style resource names", async () => {
 });
 
 test("resource provisioning failures preserve provider details in the visible result", async () => {
-  const stateSource = await source("packages/console/ui/store/console-state.js");
-  const apiSource = await source("packages/console/ui/api/console-api.js");
-  const resourceSource = await source("packages/console/ui/pages/resources/ResourceProvisioningPages.jsx");
+  const stateSource = await source("apps/console-ui/src/store/console-state.js");
+  const apiSource = await source("apps/console-ui/src/api/console-api.js");
+  const resourceSource = await source("apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx");
 
   assert.match(apiSource, /payload\.safeMessage \|\| payload\.error/, "API client must prefer safe provider messages");
   assert.match(stateSource, /returnFailure = false/, "runAction must keep false-return behavior by default");
@@ -174,8 +174,8 @@ test("resource provisioning failures preserve provider details in the visible re
 });
 
 test("resource provisioning UI shows price, hold, balance impact, and operation state", async () => {
-  const resourceSource = await source("packages/console/ui/pages/resources/ResourceProvisioningPages.jsx");
-  const billingSource = await source("packages/console/ui/pages/billing/BillingPage.jsx");
+  const resourceSource = await source("apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx");
+  const billingSource = await source("apps/console-ui/src/pages/billing/BillingPage.jsx");
 
   for (const requiredSignal of [
     "computeHourlyPrice",
@@ -200,11 +200,11 @@ test("resource provisioning UI shows price, hold, balance impact, and operation 
 });
 
 test("resource mutations use confirmation, waiting state, result receipts, and concise Chinese copy", async () => {
-  const resourceSource = await source("packages/console/ui/pages/resources/ResourceProvisioningPages.jsx");
-  const surfaceSource = await source("packages/console/ui/pages/shared/commercial-console.jsx");
-  const actionsSource = await source("packages/console/ui/routes/opl-actions.js");
-  const routesSource = await source("packages/console/ui/routes/opl-routes.js");
-  const apiSource = await source("packages/console/ui/api/resources-api.js");
+  const resourceSource = await source("apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx");
+  const surfaceSource = await source("apps/console-ui/src/pages/shared/commercial-console.jsx");
+  const actionsSource = await source("apps/console-ui/src/routes/opl-actions.js");
+  const routesSource = await source("apps/console-ui/src/routes/opl-routes.js");
+  const apiSource = await source("apps/console-ui/src/api/resources-api.js");
 
   assert.match(surfaceSource, /Popconfirm/, "confirmed operation buttons must use Ant Design confirmation");
   assert.match(surfaceSource, /confirmText/, "strong destructive operations must show required confirmation text");
@@ -249,22 +249,22 @@ test("resource mutations use confirmation, waiting state, result receipts, and c
 });
 
 test("Admin cleanup route exposes orphan URL cleanup without redesigning the Console shell", async () => {
-  const routesSource = await source("packages/console/ui/routes/opl-routes.js");
-  const shellSource = await source("packages/console/ui/pages/ConsolePage.jsx");
-  const adminSource = await source("packages/console/ui/pages/admin/AdminOverviewPage.jsx");
-  const apiSource = await source("packages/console/ui/api/console-read-api.js");
+  const routesSource = await source("apps/console-ui/src/routes/opl-routes.js");
+  const routeRegistrySource = await source("apps/console-ui/src/routes/route-registry.jsx");
+  const adminSource = await source("apps/console-ui/src/pages/admin/AdminOverviewPage.jsx");
+  const apiSource = await source("apps/console-ui/src/api/console-read-api.js");
 
   assert.match(routesSource, /id: "admin\.cleanup"/, "admin cleanup must be a first-class route id");
   assert.match(routesSource, /path: "\/admin\/cleanup"/, "admin cleanup must have a refreshable route");
   assert.match(routesSource, /"POST \/api\/operator\/cleanup-workspace-access"/, "admin cleanup route must declare its cleanup API");
-  assert.match(shellSource, /AdminCleanupPage/, "Console shell must render the cleanup page through the route");
+  assert.match(routeRegistrySource, /AdminCleanupPage/, "route registry must render the cleanup page through the route");
   assert.match(adminSource, /CleanupResourceTable/, "cleanup UI must use the maintained cleanup table component");
   assert.match(adminSource, /cleanupWorkspaceAccess/, "cleanup UI must call the cleanup API client");
   assert.match(apiSource, /"\/api\/operator\/cleanup-workspace-access"/, "cleanup API client must call the operator cleanup route");
 });
 
 test("Admin money and cleanup operations require explicit operator safeguards", async () => {
-  const adminSource = await source("packages/console/ui/pages/admin/AdminOverviewPage.jsx");
+  const adminSource = await source("apps/console-ui/src/pages/admin/AdminOverviewPage.jsx");
 
   assert.match(adminSource, /idempotencyKey/, "manual top-up UI must send a backend idempotency key");
   assert.match(adminSource, /manual-topup/, "manual top-up idempotency key must be operation scoped");
@@ -275,9 +275,9 @@ test("Admin money and cleanup operations require explicit operator safeguards", 
 });
 
 test("Billing and Workspace pages explain commercial charging and URL lifecycle", async () => {
-  const billingSource = await source("packages/console/ui/pages/billing/BillingPage.jsx");
-  const listSource = await source("packages/console/ui/pages/workspaces/WorkspacesPage.jsx");
-  const detailSource = await source("packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx");
+  const billingSource = await source("apps/console-ui/src/pages/billing/BillingPage.jsx");
+  const listSource = await source("apps/console-ui/src/pages/workspaces/WorkspacesPage.jsx");
+  const detailSource = await source("apps/console-ui/src/pages/workspaces/WorkspaceDetailPage.jsx");
 
   assert.match(billingSource, /计费规则|billingPolicy/, "billing page must explain holds, release, and resource debit policy");
   assert.doesNotMatch(billingSource, /request_debit|请求扣费|token|tokens|model pricing/i, "OPL Cloud billing must not expose request-level charging");
@@ -296,9 +296,9 @@ test("Billing and Workspace pages explain commercial charging and URL lifecycle"
 });
 
 test("resource UI exposes dedicated node identity and cold-start progress without generic cloud-resource copy", async () => {
-  const resourceSource = await source("packages/console/ui/pages/resources/ResourceProvisioningPages.jsx");
-  const createWorkspaceSource = await source("packages/console/ui/pages/workspaces/CreateWorkspacePage.jsx");
-  const surfaceSource = await source("packages/console/ui/pages/shared/commercial-console.jsx");
+  const resourceSource = await source("apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx");
+  const createWorkspaceSource = await source("apps/console-ui/src/pages/workspaces/CreateWorkspacePage.jsx");
+  const surfaceSource = await source("apps/console-ui/src/pages/shared/commercial-console.jsx");
 
   for (const signal of [
     "ownerAccountId",
@@ -336,10 +336,10 @@ test("resource UI exposes dedicated node identity and cold-start progress withou
 });
 
 test("Admin users surface is backed by management state and can create login users", async () => {
-  const adminSource = await source("packages/console/ui/pages/admin/AdminOverviewPage.jsx");
-  const stateSource = await source("packages/console/ui/store/console-state.js");
-  const apiSource = await source("packages/console/ui/api/console-read-api.js");
-  const routesSource = await source("packages/console/ui/routes/opl-routes.js");
+  const adminSource = await source("apps/console-ui/src/pages/admin/AdminOverviewPage.jsx");
+  const stateSource = await source("apps/console-ui/src/store/console-state.js");
+  const apiSource = await source("apps/console-ui/src/api/console-read-api.js");
+  const routesSource = await source("apps/console-ui/src/routes/opl-routes.js");
 
   assert.match(stateSource, /getManagementState/, "admin state hook must load the management read model");
   assert.match(apiSource, /createUser/, "admin API client must expose user creation");
@@ -361,12 +361,12 @@ test("Admin users surface is backed by management state and can create login use
 });
 
 test("resource pages expose relationship map, wallet risk, support context, and data retention policy", async () => {
-  const resourceSource = await source("packages/console/ui/pages/resources/ResourceProvisioningPages.jsx");
-  const workspaceSource = await source("packages/console/ui/pages/workspaces/WorkspacesPage.jsx");
-  const detailSource = await source("packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx");
-  const supportSource = await source("packages/console/ui/pages/support/SupportPage.jsx");
-  const routeSource = await source("packages/console/ui/routes/opl-routes.js");
-  const surfaceSource = await source("packages/console/ui/pages/shared/commercial-console.jsx");
+  const resourceSource = await source("apps/console-ui/src/pages/resources/ResourceProvisioningPages.jsx");
+  const workspaceSource = await source("apps/console-ui/src/pages/workspaces/WorkspacesPage.jsx");
+  const detailSource = await source("apps/console-ui/src/pages/workspaces/WorkspaceDetailPage.jsx");
+  const supportSource = await source("apps/console-ui/src/pages/support/SupportPage.jsx");
+  const routeSource = await source("apps/console-ui/src/routes/opl-routes.js");
+  const surfaceSource = await source("apps/console-ui/src/pages/shared/commercial-console.jsx");
 
   assert.match(routeSource, /id: "resources\.relationships"/, "resource relationship map must have a first-class route");
   assert.match(resourceSource, /ResourceRelationshipPage/, "resources module must render the relationship route");
@@ -383,15 +383,15 @@ test("resource pages expose relationship map, wallet risk, support context, and 
 });
 
 test("Admin diagnostics and E2E records are read-only operator surfaces", async () => {
-  const adminSource = await source("packages/console/ui/pages/admin/AdminOverviewPage.jsx");
-  const shellSource = await source("packages/console/ui/pages/ConsolePage.jsx");
-  const routesSource = await source("packages/console/ui/routes/opl-routes.js");
+  const adminSource = await source("apps/console-ui/src/pages/admin/AdminOverviewPage.jsx");
+  const routeRegistrySource = await source("apps/console-ui/src/routes/route-registry.jsx");
+  const routesSource = await source("apps/console-ui/src/routes/opl-routes.js");
 
   assert.match(routesSource, /id: "admin\.diagnostics"/, "admin diagnostics must have a refreshable route");
   assert.match(routesSource, /id: "admin\.e2e"/, "admin E2E records must have a refreshable route");
   assert.match(routesSource, /"GET \/api\/operator\/summary"/, "admin read-only surfaces must use operator summary");
-  assert.match(shellSource, /AdminDiagnosticsPage/, "Console shell must render admin diagnostics route");
-  assert.match(shellSource, /AdminE2EPage/, "Console shell must render admin E2E route");
+  assert.match(routeRegistrySource, /AdminDiagnosticsPage/, "route registry must render admin diagnostics route");
+  assert.match(routeRegistrySource, /AdminE2EPage/, "route registry must render admin E2E route");
   assert.match(adminSource, /AdminDiagnosticsPage/, "Admin diagnostics page must exist");
   assert.match(adminSource, /ProductionE2EPanel/, "Admin E2E page must use safe E2E panel");
   assert.match(adminSource, /failedOperations|resourceAnomalies|productionE2E/, "Admin diagnostics must show failed operations, resource anomalies, and E2E records");
@@ -408,7 +408,7 @@ test("Admin diagnostics and E2E records are read-only operator surfaces", async 
 });
 
 test("Admin diagnostics exposes resource ledger evidence chain without operator guesswork", async () => {
-  const adminSource = await source("packages/console/ui/pages/admin/AdminOverviewPage.jsx");
+  const adminSource = await source("apps/console-ui/src/pages/admin/AdminOverviewPage.jsx");
   const readModelSource = await source("packages/console/src/services/console-read-model-service.js");
 
   for (const signal of [
@@ -428,8 +428,8 @@ test("Admin diagnostics exposes resource ledger evidence chain without operator 
 });
 
 test("Workspace detail links to first-class resources and excludes retired compute lifecycle controls", async () => {
-  const listSource = await source("packages/console/ui/pages/workspaces/WorkspacesPage.jsx");
-  const detailSource = await source("packages/console/ui/pages/workspaces/WorkspaceDetailPage.jsx");
+  const listSource = await source("apps/console-ui/src/pages/workspaces/WorkspacesPage.jsx");
+  const detailSource = await source("apps/console-ui/src/pages/workspaces/WorkspaceDetailPage.jsx");
 
   assert.match(listSource, /详情/, "Workspace list must expose a secondary detail entry");
   assert.match(listSource, /routeTo\("workspace.detail"/, "Workspace list detail entry must route to Workspace detail");
@@ -445,11 +445,11 @@ test("active UI and docs describe the ComputeAllocation, StorageVolume, attachme
     "README.md",
     "docs/invariants.md",
     "docs/runtime/production-runbook.md",
-    "packages/console/ui/pages/HomePage.jsx",
-    "packages/console/ui/pages/OverviewPage.jsx",
-    "packages/console/ui/pages/billing/BillingPage.jsx",
-    "packages/console/ui/pages/workspaces/WorkspacesPage.jsx",
-    "packages/console/ui/pages/admin/AdminOverviewPage.jsx"
+    "apps/console-ui/src/pages/HomePage.jsx",
+    "apps/console-ui/src/pages/OverviewPage.jsx",
+    "apps/console-ui/src/pages/billing/BillingPage.jsx",
+    "apps/console-ui/src/pages/workspaces/WorkspacesPage.jsx",
+    "apps/console-ui/src/pages/admin/AdminOverviewPage.jsx"
   ]) {
     const text = await source(file);
     assert.match(text, /ComputeAllocation|compute allocation|计算分配|计算/, `${file} must describe compute allocation capability`);
