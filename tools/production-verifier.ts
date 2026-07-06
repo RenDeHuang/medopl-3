@@ -1178,11 +1178,17 @@ export async function verifyProductionChain({
       workspace.id,
       workspace.access?.token || ""
     );
+    const workspaceApiAuth = await requestWorkspaceWebuiLogin({
+      fetchImpl,
+      workspaceAuth: workspaceUrlResult,
+      username: webuiUsername,
+      password: webuiPassword
+    });
     if (browserE2E) {
       await verifyWorkspaceBrowserUi({
         workspaceUrl: workspace.url,
         workspaceAuth: {
-          ...workspaceUrlResult,
+          ...workspaceApiAuth,
           webuiUsername,
           webuiPassword
         },
@@ -1192,12 +1198,6 @@ export async function verifyProductionChain({
         screenshotDir
       });
     }
-    const workspaceApiAuth = await requestWorkspaceWebuiLogin({
-      fetchImpl,
-      workspaceAuth: workspaceUrlResult,
-      username: webuiUsername,
-      password: webuiPassword
-    });
     const fileProof = await verifyWorkspaceRuntimeFile({
       fetchImpl,
       checks,

@@ -1212,6 +1212,9 @@ test("production verifier runs optional browser UI checks after Workspace URL is
     "workspace_browser_reply_seen:true"
   ]);
   assert.deepEqual(actions.filter(([name]) => name === "goto").map(([, url]) => url), [chain.workspace.url]);
+  assert.ok(actions.find((action) => action[0] === "addCookies")?.[1].some((cookie) => (
+    cookie.name === "aionui-session" && cookie.value === "api-session"
+  )));
 });
 
 test("production verifier reports browser failure stage with resources, checks, and screenshot", async () => {
