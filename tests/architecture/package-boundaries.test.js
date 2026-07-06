@@ -60,3 +60,23 @@ test("server routes and OPL Cloud facade follow the package boundary contract", 
     assert.match(facade, new RegExp(delegate));
   }
 });
+
+test("target service boundaries assign persistence, cloud SDKs, and UI responsibilities", async () => {
+  const boundary = JSON.parse(
+    await readFile(
+      new URL("../../packages/contracts/opl-cloud-service-boundary-contract.json", import.meta.url),
+      "utf8"
+    )
+  );
+
+  assert.equal(boundary.state, "current");
+  assert.equal(boundary.services.consoleUi.persistence, "none");
+  assert.equal(boundary.services.ledger.persistence, "postgresql");
+  assert.equal(boundary.services.fabric.cloudSdkOwner, true);
+  assert.equal(boundary.services.controlPlane.calls.ledger, "http");
+  assert.equal(boundary.services.controlPlane.calls.fabric, "http");
+  assert.equal(boundary.migration.compatibilityLayer, "forbidden");
+  assert.ok(boundary.forbiddenRuntimeMarkers.consoleUi.includes("pg"));
+  assert.ok(boundary.forbiddenRuntimeMarkers.controlPlane.includes("tencentcloud"));
+  assert.ok(boundary.secretPolicy.forbiddenEvidenceMarkers.includes("token"));
+});

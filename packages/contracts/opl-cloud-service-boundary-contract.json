@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 1,
+  "owner": "OPL Platform Architecture",
+  "purpose": "Target service ownership contract for splitting Console UI, Control Plane, Ledger, and Fabric.",
+  "state": "current",
+  "services": {
+    "consoleUi": {
+      "path": "apps/console-ui",
+      "language": "typescript",
+      "framework": "react",
+      "persistence": "none",
+      "calls": {
+        "controlPlane": "http"
+      }
+    },
+    "controlPlane": {
+      "path": "services/control-plane",
+      "language": "go",
+      "persistence": "postgresql",
+      "owns": [
+        "auth",
+        "organizations",
+        "memberships",
+        "workspaces",
+        "supportTickets",
+        "operationRequests"
+      ],
+      "calls": {
+        "ledger": "http",
+        "fabric": "http"
+      }
+    },
+    "ledger": {
+      "path": "services/ledger",
+      "language": "go",
+      "persistence": "postgresql",
+      "owns": [
+        "wallets",
+        "holds",
+        "manualTopups",
+        "ledgerEntries",
+        "walletTransactions",
+        "evidenceReceipts",
+        "auditEvents",
+        "idempotencyKeys",
+        "reconciliationReports"
+      ],
+      "writeProtocol": "append_first_with_idempotency"
+    },
+    "fabric": {
+      "path": "services/fabric",
+      "language": "go",
+      "persistence": "optional_postgresql_for_async_operations",
+      "owns": [
+        "resourceCatalog",
+        "computeAllocations",
+        "storageVolumes",
+        "storageAttachments",
+        "workspaceRuntimes",
+        "providerRequests"
+      ],
+      "cloudSdkOwner": true,
+      "cloudSdks": [
+        "tencentcloud-sdk-go",
+        "kubernetes-client-go"
+      ]
+    }
+  },
+  "migration": {
+    "compatibilityLayer": "forbidden",
+    "allowedBridge": "one_time_state_migration_only",
+    "retireNodeApi": true,
+    "retireNodeStore": true
+  },
+  "forbiddenRuntimeMarkers": {
+    "consoleUi": [
+      "pg",
+      "postgres",
+      "DATABASE_URL",
+      "tencentcloud",
+      "kubernetes",
+      "SecretId",
+      "SecretKey"
+    ],
+    "controlPlane": [
+      "tencentcloud",
+      "kubernetes/client-go",
+      "ledger_entries INSERT",
+      "manual_topups INSERT",
+      "wallet_transactions INSERT"
+    ],
+    "ledger": [
+      "tencentcloud",
+      "kubernetes/client-go",
+      "workspace runtime deployment"
+    ],
+    "fabric": [
+      "manual_topups",
+      "wallet_transactions",
+      "ledger_entries"
+    ]
+  },
+  "secretPolicy": {
+    "forbiddenEvidenceMarkers": [
+      "token",
+      "secret",
+      "signedUrl",
+      "presignedUrl",
+      "objectKey",
+      "SecretId",
+      "SecretKey",
+      "kubeconfig"
+    ],
+    "allowedEvidenceReferences": [
+      "workspaceId",
+      "tokenVersion",
+      "redactedUrl",
+      "providerRequestId",
+      "ledgerEntryId",
+      "operationId"
+    ]
+  }
+}
