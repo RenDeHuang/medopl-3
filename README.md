@@ -289,6 +289,7 @@ The current production templates set:
 
 ```text
 ALLOW_REMOTE=true
+AIONUI_ALLOW_REMOTE=true
 DATA_DIR=/data
 AIONUI_DATA_DIR=/data
 OPL_PROJECTS_DIR=/projects

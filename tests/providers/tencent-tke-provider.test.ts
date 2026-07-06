@@ -247,6 +247,7 @@ test("Tencent TKE provider exposes split compute, storage, attachment, and Works
       DATA_DIR: "/data",
       AIONUI_DATA_DIR: "/data",
       OPL_PROJECTS_DIR: "/projects",
+      AIONUI_ALLOW_REMOTE: "true",
       ALLOW_REMOTE: "true",
       WEBUI_AUTH: "False",
       ENABLE_PERSISTENT_CONFIG: "False",

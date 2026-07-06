@@ -129,7 +129,7 @@ func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 		t.Fatalf("workspace limits must preserve the package shape: %#v", limits)
 	}
 	env := envMap(container["env"].([]any))
-	if env["WEBUI_AUTH"] != "False" || env["ENABLE_PERSISTENT_CONFIG"] != "False" {
+	if env["AIONUI_ALLOW_REMOTE"] != "true" || env["WEBUI_AUTH"] != "False" || env["ENABLE_PERSISTENT_CONFIG"] != "False" {
 		t.Fatalf("workspace must disable app login through the runtime auth contract: %#v", env)
 	}
 }

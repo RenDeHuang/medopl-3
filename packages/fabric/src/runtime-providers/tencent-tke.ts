@@ -663,6 +663,7 @@ export class TencentTkeProvider {
                       { name: "DATA_DIR", value: "/data" },
                       { name: "AIONUI_DATA_DIR", value: "/data" },
                       { name: "OPL_PROJECTS_DIR", value: "/projects" },
+                      { name: "AIONUI_ALLOW_REMOTE", value: "true" },
                       { name: "ALLOW_REMOTE", value: "true" },
                       { name: "WEBUI_AUTH", value: "False" },
                       { name: "ENABLE_PERSISTENT_CONFIG", value: "False" },
