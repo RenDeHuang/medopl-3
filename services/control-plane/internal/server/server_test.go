@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"opl-cloud/services/control-plane/internal/controlplane"
 )
 
-func TestCreateWorkspaceHTTPRequiresIdempotencyKey(t *testing.T) {
+func TestCreateWorkspaceHTTPRequiresAttachment(t *testing.T) {
 	server := NewServer(controlplane.NewService(nil, nil))
 	body := bytes.NewBufferString(`{"accountId":"acct-alpha","ownerId":"usr-owner","name":"Alpha Lab","packageId":"basic"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/workspaces", body)
@@ -18,8 +20,41 @@ func TestCreateWorkspaceHTTPRequiresIdempotencyKey(t *testing.T) {
 
 	server.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	if rec.Code != http.StatusBadGateway {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadGateway)
+	}
+}
+
+func TestCreateComputeAllocationUsesProvisionerShape(t *testing.T) {
+	bin := filepath.Join(t.TempDir(), "provisioner")
+	script := `#!/bin/sh
+cat >/dev/null
+printf '{"ok":true,"operationId":"op-alpha","poolId":"pool-basic","nodePoolId":"np-basic","instanceId":"ins-alpha","nodeName":"10.0.0.8","privateIp":"10.0.0.8","status":"running","providerRequestId":"req-alpha","providerData":{"machineName":"machine-alpha"}}\n'
+`
+	if err := os.WriteFile(bin, []byte(script), 0o700); err != nil {
+		t.Fatalf("write fake provisioner: %v", err)
+	}
+	t.Setenv("OPL_TENCENT_PROVISIONER_BIN", bin)
+	t.Setenv("OPL_WORKSPACE_IMAGE", "workspace-image:test")
+	server := NewServer(controlplane.NewService(nil, nil))
+	req := httptest.NewRequest(http.MethodPost, "/api/compute-allocations", bytes.NewBufferString(`{"accountId":"acct-alpha","packageId":"basic","name":"Production Compute"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	server.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusAccepted, rec.Body.String())
+	}
+	var body map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if body["id"] == "compute-local" {
+		t.Fatalf("compute allocation still uses local stub id")
+	}
+	if body["provider"] != "tencent-tke" || body["nodeName"] == "" || body["instanceId"] == "" || body["billingStatus"] != "active" {
+		t.Fatalf("unexpected compute shape: %#v", body)
 	}
 }
 
@@ -130,7 +165,7 @@ func TestActiveConsoleAPIRoutesReachControlPlane(t *testing.T) {
 
 			server.ServeHTTP(rec, req)
 
-			if rec.Code == http.StatusNotFound || rec.Code == http.StatusMethodNotAllowed {
+			if rec.Code == http.StatusMethodNotAllowed {
 				t.Fatalf("status = %d for %s %s", rec.Code, tc.method, tc.path)
 			}
 			if rec.Header().Get("Content-Type") != "application/json" {
