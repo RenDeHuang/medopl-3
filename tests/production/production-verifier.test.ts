@@ -1030,6 +1030,61 @@ test("production verifier uses AionUI login token when Set-Cookie is unavailable
   )));
 });
 
+test("production verifier keeps workspace API calls on the discovered prefixed base", async () => {
+  const requests = [];
+  const chain = tkeChain();
+  const responses = chainResponses(chain);
+  const baseFetch = keyedFetch({ responses, requests });
+  const prefixedBase = "https://workspace.medopl.cn/w/ws-tke-prod001/";
+  const prefixedEndpoint = (path) => `${prefixedBase}${path.replace(/^\//, "")}`;
+  const fetchImpl = async (url, options = {}) => {
+    const parsed = new URL(String(url));
+    const method = options.method || "GET";
+    if (parsed.origin === "https://workspace.medopl.cn" && method === "POST" && parsed.pathname === "/login") {
+      requests.push({ key: `POST ${String(url)}`, body: options.body ? JSON.parse(options.body) : null });
+      return jsonResponse({ error: "404 page not found" }, 404);
+    }
+    if (parsed.origin === "https://workspace.medopl.cn" && parsed.pathname.startsWith("/api/")) {
+      requests.push({ key: `${method} ${String(url)}`, body: options.body ? JSON.parse(options.body) : null });
+      return jsonResponse({ error: "root api unavailable" }, 404);
+    }
+    if (String(url) === prefixedEndpoint("/login")) {
+      requests.push({ key: `POST ${String(url)}`, body: options.body ? JSON.parse(options.body) : null });
+      return jsonResponse({ success: true, token: "prefixed-session-token" });
+    }
+    if (String(url) === prefixedEndpoint("/api/auth/user")) {
+      requests.push({ key: `GET ${String(url)}` });
+      return jsonResponse({ success: true, user: { id: "opl-webui-admin", username: "admin" } });
+    }
+    if (String(url) === prefixedEndpoint("/api/fs/write")) {
+      requests.push({ key: `POST ${String(url)}`, body: options.body ? JSON.parse(options.body) : null });
+      return jsonResponse({ success: true, data: true });
+    }
+    if (String(url) === prefixedEndpoint("/api/fs/read")) {
+      requests.push({ key: `POST ${String(url)}`, body: options.body ? JSON.parse(options.body) : null });
+      return jsonResponse({ success: true, data: "opl persistence prod-run" });
+    }
+    return baseFetch(url, options);
+  };
+
+  const result = await verifyProductionChain({
+    origin: "https://console.oplcloud.cn",
+    accountId: "pi-prod",
+    workspaceName: "Production Verification Lab",
+    runId: "prod-run",
+    packageId: "basic",
+    fetchImpl
+  });
+
+  assert.equal(result.ok, true);
+  assert.ok(requests.some((request) => request.key === "POST https://workspace.medopl.cn/login"));
+  assert.ok(requests.some((request) => request.key === `POST ${prefixedEndpoint("/login")}`));
+  assert.ok(requests.some((request) => request.key === `GET ${prefixedEndpoint("/api/auth/user")}`));
+  assert.ok(requests.some((request) => request.key === `POST ${prefixedEndpoint("/api/fs/write")}`));
+  assert.ok(requests.some((request) => request.key === `POST ${prefixedEndpoint("/api/fs/read")}`));
+  assert.ok(!requests.some((request) => request.key === "GET https://workspace.medopl.cn/api/auth/user"));
+});
+
 test("production verifier waits for async compute provisioning before mounting storage", async () => {
   const requests = [];
   const chain = tkeChain();

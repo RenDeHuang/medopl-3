@@ -218,17 +218,29 @@ async function requestWorkspaceUrl({ fetchImpl, url, attempts, retryDelayMs }) {
   throw lastError;
 }
 
-function workspaceApiUrl(workspaceUrl, path) {
-  const parsed = new URL(workspaceUrl);
+function workspaceApiEndpoint(baseUrl, path) {
+  const parsed = new URL(baseUrl);
   const normalizedPath = String(path || "").replace(/^\//, "");
-  parsed.pathname = `/${normalizedPath}`;
+  parsed.pathname = `${parsed.pathname.replace(/\/$/, "")}/${normalizedPath}`;
   parsed.search = "";
   parsed.hash = "";
   return parsed.toString();
 }
 
+function workspaceApiBaseCandidates(workspaceUrl) {
+  const root = new URL(workspaceUrl);
+  root.pathname = "/";
+  root.search = "";
+  root.hash = "";
+  const prefixed = new URL(workspaceUrl);
+  prefixed.search = "";
+  prefixed.hash = "";
+  prefixed.pathname = prefixed.pathname.endsWith("/") ? prefixed.pathname : `${prefixed.pathname}/`;
+  return [...new Set([root.toString(), prefixed.toString()])];
+}
+
 async function requestWorkspaceJson({ fetchImpl, workspaceUrl, path, method = "GET", body = null, cookie = "" }) {
-  const response = await fetchImpl(workspaceApiUrl(workspaceUrl, path), {
+  const response = await fetchImpl(workspaceApiEndpoint(workspaceUrl, path), {
     method,
     headers: {
       ...(body ? { "content-type": "application/json" } : {}),
@@ -246,26 +258,42 @@ async function requestWorkspaceJson({ fetchImpl, workspaceUrl, path, method = "G
 
 async function requestWorkspaceWebuiLogin({ fetchImpl, workspaceAuth, username = DEFAULT_AIONUI_ADMIN_USERNAME, password = "" }) {
   if (!password) return workspaceAuth;
-  const response = await fetchImpl(workspaceApiUrl(workspaceAuth.url, "/login"), {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      ...(workspaceAuth.cookie ? { cookie: workspaceAuth.cookie } : {})
-    },
-    body: JSON.stringify({ username, password, remember: false })
-  });
-  const payload = await readResponse(response);
-  if (!response.ok) {
-    const message = typeof payload === "string" ? payload : payload.error || JSON.stringify(payload);
-    throw new Error(`workspace_webui_login_failed:${response.status}:${message}`);
+  let lastError = null;
+  for (const apiBaseUrl of workspaceApiBaseCandidates(workspaceAuth.url)) {
+    let response;
+    let payload;
+    try {
+      response = await fetchImpl(workspaceApiEndpoint(apiBaseUrl, "/login"), {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...(workspaceAuth.cookie ? { cookie: workspaceAuth.cookie } : {})
+        },
+        body: JSON.stringify({ username, password, remember: false })
+      });
+      payload = await readResponse(response);
+    } catch (error) {
+      lastError = error;
+      continue;
+    }
+    if (!response.ok) {
+      const message = typeof payload === "string" ? payload : payload.error || JSON.stringify(payload);
+      lastError = new Error(`workspace_webui_login_failed:${response.status}:${message}`);
+      continue;
+    }
+    const webuiCookie = cookieHeaderFromSetCookie(setCookieHeader(response.headers)) ||
+      (typeof payload?.token === "string" ? `aionui-session=${payload.token}` : "");
+    if (!webuiCookie) {
+      lastError = new Error("workspace_webui_login_cookie_missing");
+      continue;
+    }
+    return {
+      ...workspaceAuth,
+      apiBaseUrl,
+      cookie: mergeCookieHeaders(workspaceAuth.cookie, webuiCookie)
+    };
   }
-  const webuiCookie = cookieHeaderFromSetCookie(setCookieHeader(response.headers)) ||
-    (typeof payload?.token === "string" ? `aionui-session=${payload.token}` : "");
-  if (!webuiCookie) throw new Error("workspace_webui_login_cookie_missing");
-  return {
-    ...workspaceAuth,
-    cookie: mergeCookieHeaders(workspaceAuth.cookie, webuiCookie)
-  };
+  throw lastError || new Error("workspace_webui_login_failed");
 }
 
 function runtimePayloadData(payload) {
@@ -276,7 +304,7 @@ function runtimePayloadData(payload) {
 async function verifyWorkspaceRuntimeFile({ fetchImpl, checks, workspaceUrl, runId, workspaceAuth = null }) {
   const filePath = `${WORKSPACE_PERSISTENCE_ROOT}/opl-e2e-${runId}.txt`;
   const content = `opl persistence ${runId}`;
-  const authedWorkspaceUrl = workspaceAuth?.url || workspaceUrl;
+  const authedWorkspaceUrl = workspaceAuth?.apiBaseUrl || workspaceAuth?.url || workspaceUrl;
   const cookie = workspaceAuth?.cookie || "";
   const user = await requestWorkspaceJson({
     fetchImpl,
@@ -316,7 +344,7 @@ async function verifyWorkspaceRuntimeFile({ fetchImpl, checks, workspaceUrl, run
 }
 
 async function verifyWorkspacePersistedFile({ fetchImpl, checks, workspaceUrl, fileProof, workspaceAuth = null }) {
-  const authedWorkspaceUrl = workspaceAuth?.url || workspaceUrl;
+  const authedWorkspaceUrl = workspaceAuth?.apiBaseUrl || workspaceAuth?.url || workspaceUrl;
   const read = await requestWorkspaceJson({
     fetchImpl,
     workspaceUrl: authedWorkspaceUrl,
