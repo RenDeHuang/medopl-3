@@ -11,10 +11,7 @@ import (
 )
 
 func main() {
-	addr := os.Getenv("CONTROL_PLANE_ADDR")
-	if addr == "" {
-		addr = ":8080"
-	}
+	addr := controlPlaneAddr()
 	ledgerURL := os.Getenv("LEDGER_URL")
 	fabricURL := os.Getenv("FABRIC_URL")
 
@@ -26,4 +23,15 @@ func main() {
 	if err := http.ListenAndServe(addr, controlserver.NewServer(service)); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func controlPlaneAddr() string {
+	addr := os.Getenv("CONTROL_PLANE_ADDR")
+	if addr == "" && os.Getenv("PORT") != "" {
+		addr = ":" + os.Getenv("PORT")
+	}
+	if addr == "" {
+		addr = ":8787"
+	}
+	return addr
 }

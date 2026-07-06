@@ -50,6 +50,7 @@ func TestActiveConsoleAPIRoutesReachControlPlane(t *testing.T) {
 		body   string
 	}{
 		{http.MethodGet, "/api/auth/me", ""},
+		{http.MethodGet, "/api/healthz", ""},
 		{http.MethodGet, "/api/state", ""},
 		{http.MethodGet, "/api/management/state", ""},
 		{http.MethodGet, "/api/operator/summary", ""},

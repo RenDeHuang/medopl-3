@@ -11,6 +11,9 @@ import (
 
 func NewServer(service *controlplane.Service) http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /api/healthz", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	})
 	mux.HandleFunc("POST /api/auth/login", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"token": "control-plane-local-token"})
 	})
