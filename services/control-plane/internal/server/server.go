@@ -13,6 +13,10 @@ func NewServer(service *controlplane.Service) http.Handler {
 	app := newRuntimeApp()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/w/", app.proxyWorkspace)
+	mux.HandleFunc("/login", app.proxyWorkspaceRoot)
+	mux.HandleFunc("/logout", app.proxyWorkspaceRoot)
+	mux.HandleFunc("/api/", app.proxyWorkspaceRoot)
+	mux.HandleFunc("/ws", app.proxyWorkspaceRoot)
 	mux.HandleFunc("GET /api/healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})

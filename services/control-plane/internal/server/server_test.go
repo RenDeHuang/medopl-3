@@ -201,6 +201,74 @@ func TestRuntimeStatusRecoversWorkspaceResourcesFromKubernetesLabels(t *testing.
 	}
 }
 
+func TestWorkspaceGatewayRoutesRootRuntimeApiByReferer(t *testing.T) {
+	t.Setenv("OPL_WORKSPACE_DOMAIN", "workspace.medopl.cn")
+	var gotPath string
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		writeJSON(w, http.StatusOK, map[string]string{"proxied": r.URL.Path})
+	}))
+	defer backend.Close()
+	app := newRuntimeApp()
+	app.workspaces["ws-alpha"] = map[string]any{
+		"runtime": map[string]any{"serviceName": strings.TrimPrefix(backend.URL, "http://")},
+	}
+	req := httptest.NewRequest(http.MethodPost, "https://workspace.medopl.cn/login", bytes.NewBufferString(`{"username":"admin"}`))
+	req.Header.Set("Referer", "https://workspace.medopl.cn/w/ws-alpha/")
+	rec := httptest.NewRecorder()
+
+	app.proxyWorkspaceRoot(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if gotPath != "/login" {
+		t.Fatalf("proxied path = %q, want /login", gotPath)
+	}
+}
+
+func TestWorkspaceGatewaySetsActiveCookieForRootRuntimeApi(t *testing.T) {
+	t.Setenv("OPL_WORKSPACE_DOMAIN", "workspace.medopl.cn")
+	var gotPaths []string
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPaths = append(gotPaths, r.URL.Path)
+		writeJSON(w, http.StatusOK, map[string]string{"proxied": r.URL.Path})
+	}))
+	defer backend.Close()
+	app := newRuntimeApp()
+	app.workspaces["ws-alpha"] = map[string]any{
+		"runtime": map[string]any{"serviceName": strings.TrimPrefix(backend.URL, "http://")},
+	}
+	entryReq := httptest.NewRequest(http.MethodGet, "https://workspace.medopl.cn/w/ws-alpha/?token=share_alpha", nil)
+	entryRec := httptest.NewRecorder()
+
+	app.proxyWorkspace(entryRec, entryReq)
+
+	if entryRec.Code != http.StatusOK {
+		t.Fatalf("entry status = %d, want %d: %s", entryRec.Code, http.StatusOK, entryRec.Body.String())
+	}
+	cookies := entryRec.Result().Cookies()
+	if !slices.ContainsFunc(cookies, func(cookie *http.Cookie) bool {
+		return cookie.Name == "opl_ws_active" && cookie.Value == "ws-alpha"
+	}) {
+		t.Fatalf("entry response must set active workspace cookie, got %#v", cookies)
+	}
+	apiReq := httptest.NewRequest(http.MethodGet, "https://workspace.medopl.cn/api/auth/user", nil)
+	for _, cookie := range cookies {
+		apiReq.AddCookie(cookie)
+	}
+	apiRec := httptest.NewRecorder()
+
+	app.proxyWorkspaceRoot(apiRec, apiReq)
+
+	if apiRec.Code != http.StatusOK {
+		t.Fatalf("api status = %d, want %d: %s", apiRec.Code, http.StatusOK, apiRec.Body.String())
+	}
+	if !slices.Equal(gotPaths, []string{"/", "/api/auth/user"}) {
+		t.Fatalf("proxied paths = %#v, want entry and root API paths", gotPaths)
+	}
+}
+
 func TestExecuteKubectlKeepsStderrWarningsOutOfJSON(t *testing.T) {
 	binDir := t.TempDir()
 	kubectl := filepath.Join(binDir, "kubectl")

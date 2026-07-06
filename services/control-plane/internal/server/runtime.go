@@ -584,12 +584,32 @@ func (app *runtimeApp) settleResources(input map[string]any) map[string]any {
 }
 
 func (app *runtimeApp) proxyWorkspace(w http.ResponseWriter, r *http.Request) {
-	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/w/"), "/")
-	if len(parts) == 0 || parts[0] == "" {
+	workspaceID := workspaceIDFromPath(r.URL.Path)
+	if workspaceID == "" {
 		http.NotFound(w, r)
 		return
 	}
-	workspaceID := parts[0]
+	if token := r.URL.Query().Get("token"); token != "" {
+		setWorkspaceGatewayCookies(w, workspaceID, token)
+	}
+	suffix := strings.TrimPrefix(r.URL.Path, "/w/"+workspaceID)
+	app.proxyWorkspaceTo(w, r, workspaceID, suffix)
+}
+
+func (app *runtimeApp) proxyWorkspaceRoot(w http.ResponseWriter, r *http.Request) {
+	if !isWorkspaceRequest(r) {
+		http.NotFound(w, r)
+		return
+	}
+	workspaceID := workspaceIDFromGatewayRequest(r)
+	if workspaceID == "" {
+		http.NotFound(w, r)
+		return
+	}
+	app.proxyWorkspaceTo(w, r, workspaceID, r.URL.Path)
+}
+
+func (app *runtimeApp) proxyWorkspaceTo(w http.ResponseWriter, r *http.Request, workspaceID string, proxyPath string) {
 	app.mu.Lock()
 	workspace := cloneMap(app.workspaces[workspaceID])
 	app.mu.Unlock()
@@ -598,16 +618,19 @@ func (app *runtimeApp) proxyWorkspace(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	target, _ := url.Parse("http://" + serviceName + ":3000")
+	target, err := workspaceServiceTarget(serviceName)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return
+	}
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	originalDirector := proxy.Director
 	proxy.Director = func(req *http.Request) {
 		originalDirector(req)
-		suffix := strings.TrimPrefix(r.URL.Path, "/w/"+workspaceID)
-		if suffix == "" {
-			suffix = "/"
+		if proxyPath == "" {
+			proxyPath = "/"
 		}
-		req.URL.Path = suffix
+		req.URL.Path = proxyPath
 		req.URL.RawPath = ""
 		req.Host = target.Host
 	}
@@ -615,6 +638,53 @@ func (app *runtimeApp) proxyWorkspace(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadGateway, err.Error())
 	}
 	proxy.ServeHTTP(w, r)
+}
+
+func workspaceServiceTarget(serviceName string) (*url.URL, error) {
+	if strings.HasPrefix(serviceName, "http://") || strings.HasPrefix(serviceName, "https://") {
+		return url.Parse(serviceName)
+	}
+	if strings.Contains(serviceName, ":") {
+		return url.Parse("http://" + serviceName)
+	}
+	return url.Parse("http://" + serviceName + ":3000")
+}
+
+func workspaceIDFromPath(path string) string {
+	parts := strings.Split(strings.TrimPrefix(path, "/w/"), "/")
+	if len(parts) == 0 {
+		return ""
+	}
+	return parts[0]
+}
+
+func workspaceIDFromGatewayRequest(r *http.Request) string {
+	if id := workspaceIDFromPath(r.URL.Path); strings.HasPrefix(r.URL.Path, "/w/") && id != "" {
+		return id
+	}
+	if cookie, err := r.Cookie("opl_ws_active"); err == nil && cookie.Value != "" {
+		return cookie.Value
+	}
+	if ref := r.Referer(); ref != "" {
+		parsed, err := url.Parse(ref)
+		if err == nil && isWorkspaceHost(parsed.Host) {
+			return workspaceIDFromPath(parsed.Path)
+		}
+	}
+	return ""
+}
+
+func setWorkspaceGatewayCookies(w http.ResponseWriter, workspaceID string, token string) {
+	http.SetCookie(w, &http.Cookie{Name: "opl_ws_active", Value: workspaceID, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode})
+	http.SetCookie(w, &http.Cookie{Name: "opl_ws_" + workspaceID, Value: token, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode})
+}
+
+func isWorkspaceRequest(r *http.Request) bool {
+	return isWorkspaceHost(r.Host)
+}
+
+func isWorkspaceHost(host string) bool {
+	return strings.Trim(strings.Split(host, ":")[0], " ") == workspaceDomain()
 }
 
 func (app *runtimeApp) addLedgerLocked(accountID string, entryType string, ids map[string]any) map[string]any {
