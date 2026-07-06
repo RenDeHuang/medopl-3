@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"opl-cloud/services/control-plane/internal/controlplane"
 )
@@ -52,6 +53,18 @@ printf '{"ok":true,"operationId":"op-alpha","poolId":"pool-basic","nodePoolId":"
 	}
 	if body["id"] == "compute-local" {
 		t.Fatalf("compute allocation still uses local stub id")
+	}
+	for attempt := 0; attempt < 20 && body["status"] != "running"; attempt++ {
+		time.Sleep(10 * time.Millisecond)
+		getReq := httptest.NewRequest(http.MethodGet, "/api/compute-allocations/"+body["id"].(string), nil)
+		getRec := httptest.NewRecorder()
+		server.ServeHTTP(getRec, getReq)
+		if getRec.Code != http.StatusOK {
+			t.Fatalf("get status = %d, want %d: %s", getRec.Code, http.StatusOK, getRec.Body.String())
+		}
+		if err := json.NewDecoder(getRec.Body).Decode(&body); err != nil {
+			t.Fatalf("decode get response: %v", err)
+		}
 	}
 	if body["provider"] != "tencent-tke" || body["nodeName"] == "" || body["instanceId"] == "" || body["billingStatus"] != "active" {
 		t.Fatalf("unexpected compute shape: %#v", body)

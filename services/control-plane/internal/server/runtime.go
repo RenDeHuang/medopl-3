@@ -236,14 +236,6 @@ func (app *runtimeApp) createCompute(ctx context.Context, input map[string]any) 
 		NodePoolID:   plan.NodePoolID,
 		Labels:       map[string]string{"oplcloud.cn/package-id": packageID, "oplcloud.cn/instance-type": plan.InstanceType},
 	}
-	response, err := app.provision(ctx, provisionerRequest{Action: "create_compute_allocation", AccountID: accountID, PackageID: packageID, Pool: pool, Allocation: provisionerAllocation{ID: id}})
-	if err != nil {
-		return nil, err
-	}
-	if !response.OK {
-		return nil, provisionerError(response)
-	}
-	nodeName := firstNonEmpty(response.NodeName, response.ProviderData["nodeName"])
 	serviceName := k8sName(id)
 	compute := map[string]any{
 		"id":                 id,
@@ -252,30 +244,63 @@ func (app *runtimeApp) createCompute(ctx context.Context, input map[string]any) 
 		"accountId":          accountID,
 		"packageId":          packageID,
 		"provider":           "tencent-tke",
-		"providerResourceId": "node/" + nodeName,
-		"poolId":             firstNonEmpty(response.PoolID, pool.ID),
-		"nodePoolId":         firstNonEmpty(response.NodePoolID, pool.NodePoolID),
-		"instanceId":         response.InstanceID,
-		"cvmInstanceId":      response.InstanceID,
-		"nodeName":           nodeName,
-		"privateIp":          response.PrivateIP,
-		"publicIp":           response.PublicIP,
-		"status":             firstNonEmpty(response.Status, "running"),
+		"providerResourceId": "",
+		"poolId":             pool.ID,
+		"nodePoolId":         pool.NodePoolID,
+		"instanceId":         "",
+		"cvmInstanceId":      "",
+		"nodeName":           "",
+		"privateIp":          "",
+		"publicIp":           "",
+		"status":             "provisioning",
 		"billingStatus":      "active",
 		"spec":               plan.Server,
 		"cpu":                plan.CPU,
 		"memoryGb":           plan.MemoryGB,
 		"image":              os.Getenv("OPL_WORKSPACE_IMAGE"),
-		"operationId":        response.OperationID,
-		"providerRequestId":  response.ProviderRequestID,
-		"providerData":       response.ProviderData,
-		"runtime":            map[string]any{"service": "service/" + serviceName, "serviceName": serviceName, "nodeName": nodeName, "nodeSelector": map[string]any{"kubernetes.io/hostname": nodeName}},
-		"nodeSelector":       map[string]any{"kubernetes.io/hostname": nodeName},
+		"operationId":        "",
+		"providerRequestId":  "",
+		"providerData":       map[string]string{},
+		"runtime":            map[string]any{"service": "service/" + serviceName, "serviceName": serviceName, "nodeName": "", "nodeSelector": map[string]any{}},
+		"nodeSelector":       map[string]any{},
 	}
 	app.mu.Lock()
 	app.computes[id] = compute
 	app.mu.Unlock()
+	go app.finishComputeProvision(provisionerRequest{Action: "create_compute_allocation", AccountID: accountID, PackageID: packageID, Pool: pool, Allocation: provisionerAllocation{ID: id}}, id)
 	return cloneMap(compute), nil
+}
+
+func (app *runtimeApp) finishComputeProvision(request provisionerRequest, id string) {
+	response, err := app.provision(context.Background(), request)
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	compute := app.computes[id]
+	if compute == nil {
+		return
+	}
+	if err != nil || !response.OK {
+		compute["status"] = "failed"
+		compute["error"] = firstNonEmpty(provisionerError(response).Error(), errString(err))
+		app.computes[id] = compute
+		return
+	}
+	nodeName := firstNonEmpty(response.NodeName, response.ProviderData["nodeName"])
+	compute["providerResourceId"] = "node/" + nodeName
+	compute["poolId"] = firstNonEmpty(response.PoolID, stringValue(compute["poolId"]))
+	compute["nodePoolId"] = firstNonEmpty(response.NodePoolID, stringValue(compute["nodePoolId"]))
+	compute["instanceId"] = response.InstanceID
+	compute["cvmInstanceId"] = response.InstanceID
+	compute["nodeName"] = nodeName
+	compute["privateIp"] = response.PrivateIP
+	compute["publicIp"] = response.PublicIP
+	compute["status"] = firstNonEmpty(response.Status, "running")
+	compute["operationId"] = response.OperationID
+	compute["providerRequestId"] = response.ProviderRequestID
+	compute["providerData"] = response.ProviderData
+	compute["runtime"] = map[string]any{"service": "service/" + stringValue(nested(compute, "runtime", "serviceName")), "serviceName": nested(compute, "runtime", "serviceName"), "nodeName": nodeName, "nodeSelector": map[string]any{"kubernetes.io/hostname": nodeName}}
+	compute["nodeSelector"] = map[string]any{"kubernetes.io/hostname": nodeName}
+	app.computes[id] = compute
 }
 
 func (app *runtimeApp) getCompute(id string) (map[string]any, bool) {
@@ -830,6 +855,13 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func errString(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }
 
 func cloneMap(input map[string]any) map[string]any {
