@@ -7,7 +7,7 @@ import (
 
 	"opl-cloud/services/control-plane/internal/clients"
 	"opl-cloud/services/control-plane/internal/controlplane"
-	controlhttp "opl-cloud/services/control-plane/internal/http"
+	controlserver "opl-cloud/services/control-plane/internal/server"
 )
 
 func main() {
@@ -23,7 +23,7 @@ func main() {
 		clients.NewFabricHTTPClient(fabricURL, nil),
 	)
 	log.Printf("control-plane listening on %s", addr)
-	if err := http.ListenAndServe(addr, controlhttp.NewServer(service)); err != nil {
+	if err := http.ListenAndServe(addr, controlserver.NewServer(service)); err != nil {
 		log.Fatal(err)
 	}
 }
