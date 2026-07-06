@@ -12,7 +12,13 @@ async function contract() {
 
 async function files(dir) {
   const current = new URL(dir, repoRoot);
-  const entries = await readdir(current, { withFileTypes: true });
+  let entries = [];
+  try {
+    entries = await readdir(current, { withFileTypes: true });
+  } catch (error) {
+    if (error?.code === "ENOENT") return [];
+    throw error;
+  }
   const out = [];
   for (const entry of entries) {
     const child = join(current.pathname, entry.name);
@@ -62,6 +68,11 @@ test("legacy Node package boundary no longer requires API routes or facade deleg
   assert.deepEqual(spec.facadeDelegates, []);
 });
 
+test("packages/console does not keep business service implementations or compatibility facades", async () => {
+  await assert.rejects(() => access(new URL("../../packages/console", import.meta.url)));
+  await assert.rejects(() => access(new URL("../../packages/console/src/services", import.meta.url)));
+});
+
 test("target service boundaries assign persistence, cloud SDKs, and UI responsibilities", async () => {
   const boundary = JSON.parse(
     await readFile(
@@ -97,6 +108,19 @@ test("Console UI is a browser-only app with no persistence or cloud SDK markers"
     for (const marker of boundary.forbiddenRuntimeMarkers.consoleUi) {
       assert.doesNotMatch(text, forbiddenMarkerPattern(marker), `${file} must not contain ${marker}`);
     }
+  }
+});
+
+test("Control Plane does not import Fabric or Ledger internals directly", async () => {
+  const controlPlaneFiles = await files("services/control-plane");
+  assert.ok(controlPlaneFiles.length > 0, "services/control-plane must contain source files");
+
+  for (const file of controlPlaneFiles) {
+    assert.doesNotMatch(
+      await source(file),
+      /"opl-cloud\/services\/(?:fabric|ledger)\/internal\//,
+      `${file} must use clients or contracts instead of service internals`
+    );
   }
 });
 

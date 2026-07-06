@@ -141,7 +141,7 @@ func (app *runtimeApp) managementState() map[string]any {
 		"computeAllocations":     values(app.computes),
 		"storageVolumes":         values(app.storages),
 		"storageAttachments":     values(app.attachments),
-		"resourceLedgerEvidence": []any{},
+		"resourceLedgerEvidence": app.resourceLedgerEvidenceLocked(),
 		"walletTransactions":     copySlice(app.walletTx),
 		"manualTopups":           copySlice(app.topups),
 	}
@@ -704,6 +704,59 @@ func (app *runtimeApp) addUsageLocked(accountID string, resourceType string, ids
 	app.usage = append(app.usage, entry)
 }
 
+func (app *runtimeApp) resourceLedgerEvidenceLocked() []any {
+	rows := []any{}
+	for _, workspace := range app.workspaces {
+		workspaceID := stringValue(workspace["id"])
+		computeID := stringValue(workspace["currentComputeAllocationId"])
+		storageID := stringValue(workspace["storageId"])
+		attachmentID := stringValue(workspace["currentAttachmentId"])
+		compute := app.computes[computeID]
+		storage := app.storages[storageID]
+		attachment := app.attachments[attachmentID]
+		ownerAccountID := firstNonEmpty(stringValue(workspace["ownerAccountId"]), stringValue(compute["ownerAccountId"]), stringValue(storage["ownerAccountId"]), stringValue(attachment["ownerAccountId"]))
+		ownerUserID := firstNonEmpty(stringValue(workspace["ownerUserId"]), stringValue(compute["ownerUserId"]), stringValue(storage["ownerUserId"]), stringValue(attachment["ownerUserId"]))
+		rows = append(rows, map[string]any{
+			"id":                   firstNonEmpty(workspaceID, computeID, storageID, attachmentID),
+			"accountId":            ownerAccountID,
+			"ownerAccountId":       ownerAccountID,
+			"ownerUserId":          ownerUserID,
+			"workspaceId":          workspaceID,
+			"workspaceIds":         uniqueStrings([]string{workspaceID}),
+			"computeAllocationId":  computeID,
+			"storageId":            storageID,
+			"attachmentId":         attachmentID,
+			"cvmInstanceId":        firstNonEmpty(stringValue(compute["cvmInstanceId"]), stringValue(compute["providerResourceId"])),
+			"nodeName":             firstNonEmpty(stringValue(compute["nodeName"]), stringValue(compute["machineName"])),
+			"providerRequestId":    firstNonEmpty(stringValue(compute["providerRequestId"]), stringValue(storage["providerRequestId"]), stringValue(attachment["providerRequestId"])),
+			"ledgerEntryIds":       app.ledgerEntryIDsLocked(workspaceID, computeID, storageID, attachmentID),
+			"walletTransactionIds": app.walletTransactionIDsLocked(workspaceID, computeID, storageID, attachmentID),
+		})
+	}
+	return rows
+}
+
+func (app *runtimeApp) ledgerEntryIDsLocked(ids ...string) []string {
+	output := []string{}
+	for _, entry := range app.ledger {
+		if mapContainsAnyID(entry, ids...) {
+			output = append(output, stringValue(entry["id"]))
+		}
+	}
+	return uniqueStrings(output)
+}
+
+func (app *runtimeApp) walletTransactionIDsLocked(ids ...string) []string {
+	output := []string{}
+	for _, tx := range app.walletTx {
+		metadata, _ := tx["metadata"].(map[string]any)
+		if mapContainsAnyID(metadata, ids...) {
+			output = append(output, stringValue(tx["id"]))
+		}
+	}
+	return uniqueStrings(output)
+}
+
 func (app *runtimeApp) addWalletTxLocked(accountID string, txType string, metadata map[string]any) {
 	app.walletTx = append(app.walletTx, map[string]any{"id": "wallet-" + stableID(accountID, txType, time.Now().UTC().String())[:12], "accountId": accountID, "type": txType, "metadata": metadata})
 }
@@ -1086,6 +1139,20 @@ func uniqueStrings(input []string) []string {
 		output = append(output, value)
 	}
 	return output
+}
+
+func mapContainsAnyID(input map[string]any, ids ...string) bool {
+	for _, id := range ids {
+		if id == "" {
+			continue
+		}
+		for _, value := range input {
+			if stringValue(value) == id {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func countStatus(input map[string]map[string]any, status string) int {

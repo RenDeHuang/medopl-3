@@ -1,25 +1,14 @@
 {
   "schemaVersion": 1,
   "owner": "OPL Console",
-  "purpose": "Retired Node package boundary record. Active service ownership lives in opl-cloud-service-boundary-contract.json.",
+  "purpose": "Retired Console package boundary record. Active service ownership lives in opl-cloud-service-boundary-contract.json.",
   "state": "current",
-  "machineBoundary": "Cross-package imports only. Node API route modules and Console facade delegates are retired.",
+  "machineBoundary": "The shared Console implementation package is retired. Runtime code belongs under services/*, UI code under apps/console-ui, and contracts under packages/contracts.",
   "lifecycle": {
     "type": "long_term_contract",
     "removalCondition": "Replace only with a newer current contract for the same boundary."
   },
-  "consoleImportRules": [
-    {
-      "package": "OPL Fabric",
-      "forbiddenImportPattern": "from\\s+[\"'][^\"']*fabric\\/src\\/(?!index\\.ts)",
-      "allowedBoundary": "packages/fabric/src/index.ts"
-    },
-    {
-      "package": "OPL Ledger",
-      "forbiddenImportPattern": "from\\s+[\"']\\.\\.\\/\\.\\.\\/ledger\\/src\\/(?!index\\.ts)",
-      "allowedBoundary": "packages/ledger/src/index.ts"
-    }
-  ],
+  "consoleImportRules": [],
   "apiRouteModules": [],
   "consoleServiceModules": [],
   "facadeDelegates": []

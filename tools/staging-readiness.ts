@@ -29,7 +29,7 @@ let runtimeReport = null;
 
 if (envReport.ready) {
   const [{ productionReadiness }, { createRuntimeProvider }] = await Promise.all([
-    import("../packages/console/src/production-readiness.ts"),
+    import("../services/control-plane/ops/production-readiness.ts"),
     import("../packages/fabric/src/runtime-provider-factory.ts")
   ]);
   productionReport = await productionReadiness({ env: process.env });

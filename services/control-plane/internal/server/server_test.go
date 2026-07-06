@@ -160,6 +160,53 @@ func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 	}
 }
 
+func TestManagementStateIncludesResourceLedgerEvidenceChain(t *testing.T) {
+	app := newRuntimeApp()
+	app.mu.Lock()
+	app.workspaces["ws-alpha"] = map[string]any{
+		"id":                         "ws-alpha",
+		"ownerAccountId":             "acct-alpha",
+		"ownerUserId":                "usr-alpha",
+		"currentComputeAllocationId": "compute-alpha",
+		"currentAttachmentId":        "attach-alpha",
+		"storageId":                  "storage-alpha",
+	}
+	app.computes["compute-alpha"] = map[string]any{
+		"id":             "compute-alpha",
+		"ownerAccountId": "acct-alpha",
+		"ownerUserId":    "usr-alpha",
+		"cvmInstanceId":  "ins-alpha",
+		"nodeName":       "node-alpha",
+	}
+	app.storages["storage-alpha"] = map[string]any{
+		"id":             "storage-alpha",
+		"ownerAccountId": "acct-alpha",
+	}
+	ledger := app.addLedgerLocked("acct-alpha", "compute_debit", map[string]any{"workspaceId": "ws-alpha", "computeAllocationId": "compute-alpha"})
+	app.addWalletTxLocked("acct-alpha", "compute_debit", map[string]any{"workspaceId": "ws-alpha", "computeAllocationId": "compute-alpha"})
+	wallet := app.walletTx[len(app.walletTx)-1]
+	app.mu.Unlock()
+
+	state := app.managementState()
+	rows := state["resourceLedgerEvidence"].([]any)
+	if len(rows) != 1 {
+		t.Fatalf("resourceLedgerEvidence rows = %d, want 1: %#v", len(rows), rows)
+	}
+	row := rows[0].(map[string]any)
+	if row["ownerAccountId"] != "acct-alpha" || row["ownerUserId"] != "usr-alpha" || row["cvmInstanceId"] != "ins-alpha" || row["nodeName"] != "node-alpha" || row["storageId"] != "storage-alpha" {
+		t.Fatalf("unexpected ownership evidence: %#v", row)
+	}
+	if !slices.Contains(row["workspaceIds"].([]string), "ws-alpha") {
+		t.Fatalf("workspaceIds missing ws-alpha: %#v", row["workspaceIds"])
+	}
+	if !slices.Contains(row["ledgerEntryIds"].([]string), ledger["id"].(string)) {
+		t.Fatalf("ledgerEntryIds missing ledger id: %#v", row["ledgerEntryIds"])
+	}
+	if !slices.Contains(row["walletTransactionIds"].([]string), wallet["id"].(string)) {
+		t.Fatalf("walletTransactionIds missing wallet id: %#v", row["walletTransactionIds"])
+	}
+}
+
 func TestRuntimeStatusRecoversWorkspaceResourcesFromKubernetesLabels(t *testing.T) {
 	t.Setenv("OPL_WORKSPACE_IMAGE", "workspace-image:test")
 	app := newRuntimeApp()

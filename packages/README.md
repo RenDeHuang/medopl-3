@@ -1,12 +1,11 @@
 # OPL Cloud Implementation Packages
 
-This directory is the current implementation boundary map. The repository deploys one OPL Console control-plane service while keeping Console, Fabric, Ledger, and contract responsibilities explicit.
+This directory contains shared package boundaries only. Runtime ownership now lives under `services/*`; browser ownership lives under `apps/console-ui`.
 
 ## Packages
 
 | Package | Current role | Ownership target |
 | --- | --- | --- |
-| `console` | OPL Console API, control-plane service, minimal commercial management model, PostgreSQL store, production readiness, production manifest validation, and Console UI | `opl-console` |
 | `fabric` | Resource catalog, runtime provider factory, and Tencent TKE adapter | `opl-fabric` or `opl-fabric-adapters` |
 | `ledger` | Tencent bill normalization, reconciliation guard helpers, control-plane evidence helpers, and task evidence receipt helpers; billing and evidence contracts are still called by Console service | `opl-ledger` |
 | `contracts` | Machine-readable product, management, billing, resource allocation, deployment, and evidence contracts shared by Console, Fabric, Workspace, and Ledger | shared contract package or product contract repository |
@@ -19,7 +18,7 @@ The repository still runs as one deployable OPL Console control-plane service:
 services/control-plane/cmd/control-plane/main.go
 ```
 
-The service may call Fabric and Ledger package code directly for now. New work should keep imports pointed at package boundaries instead of recreating cross-cutting code inside `console`.
+The service may call Fabric and Ledger through service clients or shared contract helpers only. Do not recreate Console business services under `packages/*`.
 
 ## Ownership Rule
 

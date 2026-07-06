@@ -22,22 +22,22 @@ order = 6
 
 [[layers]]
 name = "frontend"
-paths = ["packages/console/ui/*", "packages/console/ui/**/*", "index.html", "vite.config.js"]
+paths = ["apps/console-ui/*", "apps/console-ui/**/*", "index.html", "vite.config.js"]
 order = 1
 
 [[layers]]
-name = "api"
-paths = ["packages/console/api/*", "packages/console/api/**/*", "packages/console/src/*", "packages/console/src/**/*"]
+name = "control_plane"
+paths = ["services/control-plane/*", "services/control-plane/**/*"]
 order = 3
 
 [[layers]]
 name = "fabric"
-paths = ["packages/fabric/*", "packages/fabric/**/*"]
+paths = ["services/fabric/*", "services/fabric/**/*", "packages/fabric/*", "packages/fabric/**/*"]
 order = 4
 
 [[layers]]
 name = "ledger"
-paths = ["packages/ledger/*", "packages/ledger/**/*"]
+paths = ["services/ledger/*", "services/ledger/**/*", "packages/ledger/*", "packages/ledger/**/*"]
 order = 4
 
 [[layers]]
@@ -51,21 +51,26 @@ paths = ["tests/*", "tests/**/*", "package.json"]
 order = 0
 
 [[boundaries]]
-from = "packages/console/api/**/*"
-to = "packages/console/ui/**/*"
-reason = "API control-plane code must not import Console UI implementation."
+from = "services/control-plane/**/*"
+to = "apps/console-ui/**/*"
+reason = "Control Plane must not import Console UI implementation."
 
 [[boundaries]]
-from = "packages/console/ui/**/*"
-to = "packages/fabric/**/*"
+from = "apps/console-ui/**/*"
+to = "services/fabric/**/*"
 reason = "Console UI must call API routes instead of importing runtime providers."
 
 [[boundaries]]
-from = "packages/fabric/**/*"
-to = "packages/console/ui/**/*"
+from = "apps/console-ui/**/*"
+to = "services/ledger/**/*"
+reason = "Console UI must call Control Plane routes instead of importing Ledger internals."
+
+[[boundaries]]
+from = "services/fabric/**/*"
+to = "apps/console-ui/**/*"
 reason = "Runtime providers must not depend on UI code."
 
 [[boundaries]]
 from = "tools/**/*"
-to = "packages/console/ui/**/*"
+to = "apps/console-ui/**/*"
 reason = "Operator tools verify deployed APIs and must not import Console UI implementation."
