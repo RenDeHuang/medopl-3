@@ -257,7 +257,8 @@
       "COPY --from=provisioner-build /out/opl-tencent-provisioner /usr/local/bin/opl-tencent-provisioner",
       "COPY --from=control-plane-build /out/opl-control-plane /usr/local/bin/opl-control-plane",
       "COPY packages ./packages",
-      "EXPOSE 8080",
+      "ENV CONTROL_PLANE_ADDR=:8787",
+      "EXPOSE 8787",
       "CMD [\"/usr/local/bin/opl-control-plane\"]"
     ],
     "dockerignore": [

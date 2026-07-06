@@ -25,7 +25,7 @@ FROM node:22-bookworm-slim AS runtime
 
 WORKDIR /app
 ENV NODE_ENV=production
-ENV CONTROL_PLANE_ADDR=:8080
+ENV CONTROL_PLANE_ADDR=:8787
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends ca-certificates curl \
@@ -43,5 +43,5 @@ COPY --from=control-plane-build /out/opl-control-plane /usr/local/bin/opl-contro
 RUN mkdir -p /app/.runtime && chown -R node:node /app/.runtime
 
 USER node
-EXPOSE 8080
+EXPOSE 8787
 CMD ["/usr/local/bin/opl-control-plane"]
