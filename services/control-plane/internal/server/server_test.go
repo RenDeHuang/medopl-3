@@ -70,8 +70,22 @@ printf '{"ok":true,"operationId":"op-alpha","poolId":"pool-basic","nodePoolId":"
 		t.Fatalf("unexpected compute shape: %#v", body)
 	}
 	nodeSelector, _ := body["nodeSelector"].(map[string]any)
-	if nodeSelector["kubernetes.io/hostname"] != "machine-alpha" {
-		t.Fatalf("node selector = %#v, want machine-alpha", nodeSelector)
+	if nodeSelector["cloud.tencent.com/node-instance-id"] != "machine-alpha" {
+		t.Fatalf("node selector = %#v, want Tencent instance id label machine-alpha", nodeSelector)
+	}
+}
+
+func TestTKENodeSelectorUsesTencentInstanceLabel(t *testing.T) {
+	withMachine := tkeNodeSelector(map[string]string{"machineName": "np-basic-2"}, "10.0.0.8")
+	if withMachine["cloud.tencent.com/node-instance-id"] != "np-basic-2" {
+		t.Fatalf("selector with machineName = %#v", withMachine)
+	}
+	if _, ok := withMachine["kubernetes.io/hostname"]; ok {
+		t.Fatalf("selector must not use machineName as hostname: %#v", withMachine)
+	}
+	withoutMachine := tkeNodeSelector(map[string]string{}, "10.0.0.8")
+	if withoutMachine["kubernetes.io/hostname"] != "10.0.0.8" {
+		t.Fatalf("selector without machineName = %#v", withoutMachine)
 	}
 }
 

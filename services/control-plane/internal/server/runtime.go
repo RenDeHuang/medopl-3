@@ -286,7 +286,7 @@ func (app *runtimeApp) finishComputeProvision(request provisionerRequest, id str
 		return
 	}
 	nodeName := firstNonEmpty(response.NodeName, response.ProviderData["nodeName"])
-	selectorNode := firstNonEmpty(response.ProviderData["machineName"], nodeName)
+	nodeSelector := tkeNodeSelector(response.ProviderData, nodeName)
 	compute["providerResourceId"] = "node/" + nodeName
 	compute["poolId"] = firstNonEmpty(response.PoolID, stringValue(compute["poolId"]))
 	compute["nodePoolId"] = firstNonEmpty(response.NodePoolID, stringValue(compute["nodePoolId"]))
@@ -299,9 +299,19 @@ func (app *runtimeApp) finishComputeProvision(request provisionerRequest, id str
 	compute["operationId"] = response.OperationID
 	compute["providerRequestId"] = response.ProviderRequestID
 	compute["providerData"] = response.ProviderData
-	compute["runtime"] = map[string]any{"service": "service/" + stringValue(nested(compute, "runtime", "serviceName")), "serviceName": nested(compute, "runtime", "serviceName"), "nodeName": nodeName, "nodeSelector": map[string]any{"kubernetes.io/hostname": selectorNode}}
-	compute["nodeSelector"] = map[string]any{"kubernetes.io/hostname": selectorNode}
+	compute["runtime"] = map[string]any{"service": "service/" + stringValue(nested(compute, "runtime", "serviceName")), "serviceName": nested(compute, "runtime", "serviceName"), "nodeName": nodeName, "nodeSelector": nodeSelector}
+	compute["nodeSelector"] = nodeSelector
 	app.computes[id] = compute
+}
+
+func tkeNodeSelector(providerData map[string]string, nodeName string) map[string]any {
+	if machineName := strings.TrimSpace(providerData["machineName"]); machineName != "" {
+		return map[string]any{"cloud.tencent.com/node-instance-id": machineName}
+	}
+	if nodeName := strings.TrimSpace(nodeName); nodeName != "" {
+		return map[string]any{"kubernetes.io/hostname": nodeName}
+	}
+	return map[string]any{}
 }
 
 func (app *runtimeApp) getCompute(id string) (map[string]any, bool) {
