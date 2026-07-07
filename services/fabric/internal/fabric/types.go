@@ -36,6 +36,7 @@ type IngressDomain struct {
 }
 
 type ComputeAllocationInput struct {
+	ID             string `json:"-"`
 	AccountID      string `json:"accountId"`
 	WorkspaceID    string `json:"workspaceId"`
 	PackageID      string `json:"packageId"`

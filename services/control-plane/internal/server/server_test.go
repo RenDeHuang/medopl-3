@@ -28,8 +28,14 @@ func TestCreateWorkspaceHTTPRequiresIdempotencyKey(t *testing.T) {
 }
 
 func TestCreateWorkspaceHTTPUsesControlPlaneService(t *testing.T) {
-	server := NewServer(controlplane.NewService(fakeLedgerClient{}, fakeFabricClient{}))
-	body := bytes.NewBufferString(`{"accountId":"acct-alpha","ownerId":"usr-owner","name":"Alpha Lab","packageId":"basic"}`)
+	calls := []string{}
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{calls: &calls}))
+
+	createResource(t, server, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+	createResource(t, server, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
+	createResource(t, server, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"compute-from-fabric","storageId":"volume-from-fabric","mountPath":"/data"}`)
+
+	body := bytes.NewBufferString(`{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/workspaces", body)
 	req.Header.Set("Idempotency-Key", "workspace-once")
 	rec := httptest.NewRecorder()
@@ -46,8 +52,11 @@ func TestCreateWorkspaceHTTPUsesControlPlaneService(t *testing.T) {
 	if workspace["accountId"] != "acct-alpha" || workspace["ownerId"] != "usr-owner" || workspace["url"] != "https://workspace.medopl.cn/w/ws-from-fabric/" {
 		t.Fatalf("workspace did not come from service boundary: %#v", workspace)
 	}
-	if workspace["holdId"] != "hold-from-ledger" || workspace["computeId"] != "compute-from-fabric" || workspace["evidenceId"] != "evidence-from-ledger" {
+	if workspace["holdId"] != "hold-from-ledger" || workspace["computeAllocationId"] != "compute-from-fabric" || workspace["storageId"] != "volume-from-fabric" || workspace["attachmentId"] != "attachment-from-fabric" || workspace["evidenceId"] != "evidence-from-ledger" {
 		t.Fatalf("workspace missing ledger/fabric evidence: %#v", workspace)
+	}
+	if slices.Contains(calls[3:], "fabric.compute") || slices.Contains(calls[3:], "fabric.storage") {
+		t.Fatalf("workspace create must not allocate replacement resources: %#v", calls)
 	}
 }
 
@@ -78,46 +87,85 @@ func (fakeLedgerClient) RecordReconciliation(_ context.Context, input clients.Re
 	return clients.ReconciliationResult{ID: stringField(input.Report, "id", "reconciliation-from-ledger"), Status: "ok", Report: input.Report, BlockNewWorkspaces: false, Reason: "operator_reconciliation"}, nil
 }
 
-type fakeFabricClient struct{}
-
-func (fakeFabricClient) CreateComputeAllocation(_ context.Context, input clients.ComputeAllocationInput, _ string) (clients.ComputeAllocation, error) {
-	return clients.ComputeAllocation{ID: "compute-from-fabric", ProviderRequestID: "compute-request-from-fabric"}, nil
+type fakeFabricClient struct {
+	calls *[]string
 }
 
-func (fakeFabricClient) DestroyComputeAllocation(_ context.Context, id string, _ string) (clients.ComputeAllocation, error) {
-	return clients.ComputeAllocation{ID: id, ProviderRequestID: "compute-destroy-from-fabric"}, nil
+func (f *fakeFabricClient) record(call string) {
+	if f != nil && f.calls != nil {
+		*f.calls = append(*f.calls, call)
+	}
 }
 
-func (fakeFabricClient) CreateStorageVolume(_ context.Context, input clients.StorageVolumeInput, _ string) (clients.StorageVolume, error) {
-	return clients.StorageVolume{ID: "volume-from-fabric", WorkspaceID: input.WorkspaceID, Status: "ready", ProviderRequestID: "storage-request-from-fabric"}, nil
+func (f *fakeFabricClient) CreateComputeAllocation(_ context.Context, input clients.ComputeAllocationInput, _ string) (clients.ComputeAllocation, error) {
+	f.record("fabric.compute")
+	return clients.ComputeAllocation{ID: "compute-from-fabric", AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, PackageID: input.PackageID, Status: "running", Provider: "tencent-tke", ProviderResourceID: "node/node-from-fabric", ProviderRequestID: "compute-request-from-fabric", InstanceID: "ins-from-fabric", NodeName: "node-from-fabric", BillingStatus: "active", ServiceName: "opl-compute-from-fabric"}, nil
 }
 
-func (fakeFabricClient) DestroyStorageVolume(_ context.Context, id string, _ string) (clients.StorageVolume, error) {
-	return clients.StorageVolume{ID: id, Status: "destroyed", ProviderRequestID: "storage-destroy-from-fabric"}, nil
+func (f *fakeFabricClient) GetComputeAllocation(_ context.Context, id string) (clients.ComputeAllocation, error) {
+	f.record("fabric.compute-get")
+	return clients.ComputeAllocation{ID: id, Status: "running", Provider: "tencent-tke", ProviderResourceID: "node/node-from-fabric", ProviderRequestID: "compute-request-from-fabric", InstanceID: "ins-from-fabric", NodeName: "node-from-fabric", BillingStatus: "active", ServiceName: "opl-compute-from-fabric"}, nil
 }
 
-func (fakeFabricClient) CreateStorageAttachment(_ context.Context, input clients.StorageAttachmentInput, _ string) (clients.StorageAttachment, error) {
-	return clients.StorageAttachment{ID: "attachment-from-fabric", WorkspaceID: input.WorkspaceID, VolumeID: input.VolumeID, Status: "attached", ProviderRequestID: "attachment-request-from-fabric"}, nil
+func (f *fakeFabricClient) DestroyComputeAllocation(_ context.Context, id string, _ string) (clients.ComputeAllocation, error) {
+	f.record("fabric.compute-destroy")
+	return clients.ComputeAllocation{ID: id, Status: "destroyed", Provider: "tencent-tke", ProviderRequestID: "compute-destroy-from-fabric", BillingStatus: "stopped"}, nil
 }
 
-func (fakeFabricClient) DetachStorageAttachment(_ context.Context, id string, _ string) (clients.StorageAttachment, error) {
+func (f *fakeFabricClient) CreateStorageVolume(_ context.Context, input clients.StorageVolumeInput, _ string) (clients.StorageVolume, error) {
+	f.record("fabric.storage")
+	return clients.StorageVolume{ID: "volume-from-fabric", AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, Status: "available", Provider: "tencent-tke", ProviderResourceID: "pvc/volume-from-fabric-data", ProviderRequestID: "storage-request-from-fabric", SizeGB: input.SizeGB, StorageClass: "cbs", BillingStatus: "active"}, nil
+}
+
+func (f *fakeFabricClient) DestroyStorageVolume(_ context.Context, id string, _ string) (clients.StorageVolume, error) {
+	f.record("fabric.storage-destroy")
+	return clients.StorageVolume{ID: id, Status: "destroyed", Provider: "tencent-tke", ProviderRequestID: "storage-destroy-from-fabric", BillingStatus: "stopped"}, nil
+}
+
+func (f *fakeFabricClient) CreateStorageAttachment(_ context.Context, input clients.StorageAttachmentInput, _ string) (clients.StorageAttachment, error) {
+	f.record("fabric.attachment")
+	return clients.StorageAttachment{ID: "attachment-from-fabric", WorkspaceID: input.WorkspaceID, ComputeID: input.ComputeID, VolumeID: input.VolumeID, Status: "attached", Provider: "tencent-tke", ProviderAttachmentID: "deployment/opl-compute-from-fabric:pvc/volume-from-fabric-data:/data", ProviderRequestID: "attachment-request-from-fabric", MountPath: "/data"}, nil
+}
+
+func (f *fakeFabricClient) DetachStorageAttachment(_ context.Context, id string, _ string) (clients.StorageAttachment, error) {
+	f.record("fabric.attachment-detach")
 	return clients.StorageAttachment{ID: id, Status: "detached", ProviderRequestID: "attachment-detach-from-fabric"}, nil
 }
 
-func (fakeFabricClient) CreateWorkspaceRuntime(_ context.Context, input clients.WorkspaceRuntimeInput, _ string) (clients.WorkspaceRuntime, error) {
+func (f *fakeFabricClient) CreateWorkspaceRuntime(_ context.Context, input clients.WorkspaceRuntimeInput, _ string) (clients.WorkspaceRuntime, error) {
+	f.record("fabric.runtime")
 	return clients.WorkspaceRuntime{ID: "runtime-from-fabric", WorkspaceID: input.WorkspaceID, URL: "https://workspace.medopl.cn/w/ws-from-fabric/", ServiceName: "opl-compute-from-fabric"}, nil
 }
 
-func (fakeFabricClient) WorkspaceRuntimeStatus(_ context.Context, workspaceID string) (clients.WorkspaceRuntime, error) {
+func (f *fakeFabricClient) WorkspaceRuntimeStatus(_ context.Context, workspaceID string) (clients.WorkspaceRuntime, error) {
+	f.record("fabric.runtime-status")
 	return clients.WorkspaceRuntime{ID: "runtime-from-fabric", WorkspaceID: workspaceID, URL: "https://workspace.medopl.cn/w/" + workspaceID + "/", Status: "running"}, nil
 }
 
-func (fakeFabricClient) Readiness(_ context.Context) (map[string]any, error) {
+func (f *fakeFabricClient) Readiness(_ context.Context) (map[string]any, error) {
+	f.record("fabric.readiness")
 	return map[string]any{"provider": "tencent-tke", "ready": true, "missingEnv": []string{}, "missingTools": []string{}}, nil
 }
 
+func createResource(t *testing.T, server http.Handler, method string, path string, body string) map[string]any {
+	t.Helper()
+	req := httptest.NewRequest(method, path, bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "test-"+path)
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	if rec.Code < 200 || rec.Code >= 300 {
+		t.Fatalf("%s %s status = %d: %s", method, path, rec.Code, rec.Body.String())
+	}
+	var payload map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode %s %s: %v", method, path, err)
+	}
+	return payload
+}
+
 func TestCreateComputeAllocationUsesFabricService(t *testing.T) {
-	server := NewServer(controlplane.NewService(fakeLedgerClient{}, fakeFabricClient{}))
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	req := httptest.NewRequest(http.MethodPost, "/api/compute-allocations", bytes.NewBufferString(`{"accountId":"acct-alpha","packageId":"basic","name":"Production Compute"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Idempotency-Key", "compute-once")
@@ -134,6 +182,9 @@ func TestCreateComputeAllocationUsesFabricService(t *testing.T) {
 	}
 	if body["id"] != "compute-from-fabric" || body["providerRequestId"] != "compute-request-from-fabric" {
 		t.Fatalf("compute allocation did not come from Fabric: %#v", body)
+	}
+	if body["provider"] != "tencent-tke" || body["billingStatus"] != "active" || body["nodeName"] != "node-from-fabric" || body["instanceId"] != "ins-from-fabric" {
+		t.Fatalf("compute allocation missing route contract fields: %#v", body)
 	}
 	getReq := httptest.NewRequest(http.MethodGet, "/api/compute-allocations/compute-from-fabric", nil)
 	getRec := httptest.NewRecorder()
@@ -312,7 +363,7 @@ func TestOperatorLoginRejectsInvalidToken(t *testing.T) {
 }
 
 func TestActiveConsoleAPIRoutesReachControlPlane(t *testing.T) {
-	server := NewServer(controlplane.NewService(fakeLedgerClient{}, fakeFabricClient{}))
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	cases := []struct {
 		method string
 		path   string

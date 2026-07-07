@@ -9,6 +9,7 @@ import (
 
 type FabricClient interface {
 	CreateComputeAllocation(ctx context.Context, input ComputeAllocationInput, idempotencyKey string) (ComputeAllocation, error)
+	GetComputeAllocation(ctx context.Context, id string) (ComputeAllocation, error)
 	DestroyComputeAllocation(ctx context.Context, id string, idempotencyKey string) (ComputeAllocation, error)
 	CreateStorageVolume(ctx context.Context, input StorageVolumeInput, idempotencyKey string) (StorageVolume, error)
 	DestroyStorageVolume(ctx context.Context, id string, idempotencyKey string) (StorageVolume, error)
@@ -35,6 +36,15 @@ type ComputeAllocation struct {
 	ProviderResourceID string `json:"providerResourceId"`
 	ProviderRequestID  string `json:"providerRequestId"`
 	ServiceName        string `json:"serviceName"`
+	PoolID             string `json:"poolId,omitempty"`
+	NodePoolID         string `json:"nodePoolId,omitempty"`
+	InstanceID         string `json:"instanceId,omitempty"`
+	CVMInstanceID      string `json:"cvmInstanceId,omitempty"`
+	NodeName           string `json:"nodeName,omitempty"`
+	MachineName        string `json:"machineName,omitempty"`
+	PrivateIP          string `json:"privateIp,omitempty"`
+	PublicIP           string `json:"publicIp,omitempty"`
+	BillingStatus      string `json:"billingStatus,omitempty"`
 }
 
 type StorageVolumeInput struct {
@@ -44,10 +54,16 @@ type StorageVolumeInput struct {
 }
 
 type StorageVolume struct {
-	ID                string `json:"id"`
-	ProviderRequestID string `json:"providerRequestId"`
-	WorkspaceID       string `json:"workspaceId"`
-	Status            string `json:"status"`
+	ID                 string `json:"id"`
+	AccountID          string `json:"accountId,omitempty"`
+	Provider           string `json:"provider,omitempty"`
+	ProviderResourceID string `json:"providerResourceId,omitempty"`
+	ProviderRequestID  string `json:"providerRequestId"`
+	WorkspaceID        string `json:"workspaceId"`
+	Status             string `json:"status"`
+	SizeGB             int    `json:"sizeGb,omitempty"`
+	StorageClass       string `json:"storageClass,omitempty"`
+	BillingStatus      string `json:"billingStatus,omitempty"`
 }
 
 type StorageAttachmentInput struct {
@@ -57,11 +73,15 @@ type StorageAttachmentInput struct {
 }
 
 type StorageAttachment struct {
-	ID                string `json:"id"`
-	WorkspaceID       string `json:"workspaceId"`
-	VolumeID          string `json:"volumeId"`
-	Status            string `json:"status"`
-	ProviderRequestID string `json:"providerRequestId"`
+	ID                   string `json:"id"`
+	WorkspaceID          string `json:"workspaceId"`
+	ComputeID            string `json:"computeId,omitempty"`
+	VolumeID             string `json:"volumeId"`
+	Status               string `json:"status"`
+	Provider             string `json:"provider,omitempty"`
+	ProviderAttachmentID string `json:"providerAttachmentId,omitempty"`
+	ProviderRequestID    string `json:"providerRequestId"`
+	MountPath            string `json:"mountPath,omitempty"`
 }
 
 type WorkspaceRuntimeInput struct {
@@ -97,6 +117,20 @@ func (c *fabricHTTPClient) CreateComputeAllocation(ctx context.Context, input Co
 	var result ComputeAllocation
 	err := c.post(ctx, "/fabric/compute-allocations", input, idempotencyKey, &result)
 	return result, err
+}
+
+func (c *fabricHTTPClient) GetComputeAllocation(ctx context.Context, id string) (ComputeAllocation, error) {
+	var result ComputeAllocation
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/fabric/compute-allocations/"+id, nil)
+	if err != nil {
+		return result, err
+	}
+	res, err := c.client.Do(req)
+	if err != nil {
+		return result, err
+	}
+	defer res.Body.Close()
+	return result, json.NewDecoder(res.Body).Decode(&result)
 }
 
 func (c *fabricHTTPClient) DestroyComputeAllocation(ctx context.Context, id string, idempotencyKey string) (ComputeAllocation, error) {

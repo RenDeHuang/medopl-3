@@ -39,6 +39,52 @@ func TestDryRunComputeAllocationRecordsProviderRequestIDWithoutLedgerTypes(t *te
 	}
 }
 
+func TestComputeAllocationReturnsProvisioningBeforeProviderCompletes(t *testing.T) {
+	provider := &blockingProvider{done: make(chan struct{})}
+	service := NewService(provider)
+
+	allocation, err := service.CreateComputeAllocation(context.Background(), ComputeAllocationInput{
+		AccountID:      "acct-alpha",
+		WorkspaceID:    "ws-alpha",
+		PackageID:      "basic",
+		IdempotencyKey: "compute-once",
+	})
+	if err != nil {
+		t.Fatalf("create allocation: %v", err)
+	}
+	if allocation.Status != "provisioning" || allocation.ID == "" {
+		t.Fatalf("initial allocation = %#v, want provisioning with id", allocation)
+	}
+	current, ok := service.GetComputeAllocation(context.Background(), allocation.ID)
+	if !ok || current.Status != "provisioning" {
+		t.Fatalf("stored allocation = %#v ok=%v, want provisioning", current, ok)
+	}
+
+	close(provider.done)
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		current, ok = service.GetComputeAllocation(context.Background(), allocation.ID)
+		if ok && current.Status == "running" {
+			if current.ID != allocation.ID || current.NodeName != "node-alpha" {
+				t.Fatalf("completed allocation lost identity: %#v", current)
+			}
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("allocation did not become running: %#v", current)
+}
+
+type blockingProvider struct {
+	testProvider
+	done chan struct{}
+}
+
+func (p *blockingProvider) CreateComputeAllocation(ctx context.Context, input ComputeAllocationInput) (ComputeAllocation, error) {
+	<-p.done
+	return ComputeAllocation{ID: input.ID, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, PackageID: input.PackageID, Status: "running", Provider: "tencent-tke", ProviderRequestID: providerRequestID("compute", input.IdempotencyKey), NodeName: "node-alpha", CreatedAt: time.Now().UTC()}, nil
+}
+
 type testProvider struct{}
 
 func (testProvider) CreateComputeAllocation(_ context.Context, input ComputeAllocationInput) (ComputeAllocation, error) {

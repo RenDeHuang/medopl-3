@@ -46,14 +46,55 @@ func (s *Service) Catalog(_ context.Context) Catalog {
 }
 
 func (s *Service) CreateComputeAllocation(ctx context.Context, input ComputeAllocationInput) (ComputeAllocation, error) {
-	allocation, err := s.provider.CreateComputeAllocation(ctx, input)
-	if err != nil {
-		return allocation, err
+	now := time.Now().UTC()
+	id := firstNonEmpty(input.ID, fabricID("ca", firstNonEmpty(input.WorkspaceID, input.AccountID, "compute"), now))
+	input.ID = id
+	allocation := ComputeAllocation{
+		ID:                id,
+		AccountID:         input.AccountID,
+		WorkspaceID:       input.WorkspaceID,
+		PackageID:         firstNonEmpty(input.PackageID, "basic"),
+		Status:            "provisioning",
+		Provider:          "tencent-tke",
+		ProviderRequestID: providerRequestID("compute", input.IdempotencyKey),
+		CreatedAt:         now,
 	}
 	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.computes[allocation.ID] = allocation
+	s.mu.Unlock()
+
+	go s.finishComputeAllocation(input, id, allocation)
 	return allocation, nil
+}
+
+func (s *Service) GetComputeAllocation(_ context.Context, allocationID string) (ComputeAllocation, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	allocation, ok := s.computes[allocationID]
+	return allocation, ok
+}
+
+func (s *Service) finishComputeAllocation(input ComputeAllocationInput, id string, pending ComputeAllocation) {
+	allocation, err := s.provider.CreateComputeAllocation(context.Background(), input)
+	if err != nil {
+		allocation = pending
+		allocation.Status = "failed"
+		allocation.ProviderRequestID = firstNonEmpty(allocation.ProviderRequestID, providerRequestID("compute", input.IdempotencyKey))
+	} else {
+		allocation.ID = id
+		if allocation.Status == "" {
+			allocation.Status = "running"
+		}
+		if allocation.Provider == "" {
+			allocation.Provider = "tencent-tke"
+		}
+		if allocation.ProviderRequestID == "" {
+			allocation.ProviderRequestID = providerRequestID("compute", input.IdempotencyKey)
+		}
+	}
+	s.mu.Lock()
+	s.computes[id] = allocation
+	s.mu.Unlock()
 }
 
 func (s *Service) DestroyComputeAllocation(ctx context.Context, allocationID string) (ComputeAllocation, error) {

@@ -32,6 +32,14 @@ func NewServer(service *fabric.Service) http.Handler {
 		allocation, err := service.CreateComputeAllocation(r.Context(), input)
 		writeResult(w, allocation, err)
 	})
+	mux.HandleFunc("GET /fabric/compute-allocations/{id}", func(w http.ResponseWriter, r *http.Request) {
+		allocation, ok := service.GetComputeAllocation(r.Context(), strings.TrimSpace(r.PathValue("id")))
+		if !ok {
+			writeError(w, http.StatusNotFound, "compute_allocation_not_found")
+			return
+		}
+		writeJSON(w, http.StatusOK, allocation)
+	})
 	mux.HandleFunc("POST /fabric/compute-allocations/{id}/destroy", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Idempotency-Key") == "" {
 			writeError(w, http.StatusBadRequest, "missing Idempotency-Key")

@@ -15,10 +15,13 @@ type Service struct {
 }
 
 type CreateWorkspaceInput struct {
-	AccountID string `json:"accountId"`
-	OwnerID   string `json:"ownerId"`
-	Name      string `json:"name"`
-	PackageID string `json:"packageId"`
+	AccountID    string `json:"accountId"`
+	OwnerID      string `json:"ownerId"`
+	Name         string `json:"name"`
+	PackageID    string `json:"packageId"`
+	AttachmentID string `json:"attachmentId"`
+	ComputeID    string `json:"computeAllocationId"`
+	VolumeID     string `json:"storageId"`
 }
 
 type ManualTopUpInput struct {
@@ -101,6 +104,10 @@ func (s *Service) CreateComputeAllocation(ctx context.Context, input ComputeAllo
 	return s.fabric.CreateComputeAllocation(ctx, clients.ComputeAllocationInput{AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, PackageID: input.PackageID}, idempotencyKey)
 }
 
+func (s *Service) GetComputeAllocation(ctx context.Context, id string) (clients.ComputeAllocation, error) {
+	return s.fabric.GetComputeAllocation(ctx, id)
+}
+
 func (s *Service) DestroyComputeAllocation(ctx context.Context, id string, idempotencyKey string) (clients.ComputeAllocation, error) {
 	return s.fabric.DestroyComputeAllocation(ctx, id, idempotencyKey)
 }
@@ -122,20 +129,15 @@ func (s *Service) DetachStorageAttachment(ctx context.Context, id string, idempo
 }
 
 func (s *Service) CreateWorkspace(ctx context.Context, input CreateWorkspaceInput, idempotencyKey string) (domain.WorkspaceProjection, error) {
+	if input.ComputeID == "" || input.VolumeID == "" || input.AttachmentID == "" {
+		return domain.WorkspaceProjection{}, fmt.Errorf("attached_compute_storage_required")
+	}
 	workspaceID := fmt.Sprintf("ws_%d", time.Now().UTC().UnixNano())
 	hold, err := s.ledger.CreateHold(ctx, clients.HoldInput{AccountID: input.AccountID, WorkspaceID: workspaceID, AmountCents: 1000, Currency: "CNY"}, idempotencyKey+":hold")
 	if err != nil {
 		return domain.WorkspaceProjection{}, err
 	}
-	compute, err := s.fabric.CreateComputeAllocation(ctx, clients.ComputeAllocationInput{AccountID: input.AccountID, WorkspaceID: workspaceID, PackageID: input.PackageID}, idempotencyKey+":compute")
-	if err != nil {
-		return domain.WorkspaceProjection{}, err
-	}
-	volume, err := s.fabric.CreateStorageVolume(ctx, clients.StorageVolumeInput{AccountID: input.AccountID, WorkspaceID: workspaceID, SizeGB: 10}, idempotencyKey+":storage")
-	if err != nil {
-		return domain.WorkspaceProjection{}, err
-	}
-	runtime, err := s.fabric.CreateWorkspaceRuntime(ctx, clients.WorkspaceRuntimeInput{WorkspaceID: workspaceID, ComputeID: compute.ID, VolumeID: volume.ID, ImageID: "one-person-lab-app"}, idempotencyKey+":runtime")
+	runtime, err := s.fabric.CreateWorkspaceRuntime(ctx, clients.WorkspaceRuntimeInput{WorkspaceID: workspaceID, ComputeID: input.ComputeID, VolumeID: input.VolumeID, ImageID: "one-person-lab-app"}, idempotencyKey+":runtime")
 	if err != nil {
 		return domain.WorkspaceProjection{}, err
 	}
@@ -150,11 +152,13 @@ func (s *Service) CreateWorkspace(ctx context.Context, input CreateWorkspaceInpu
 		OwnerID:            input.OwnerID,
 		Name:               input.Name,
 		PackageID:          input.PackageID,
+		Provider:           "tencent-tke",
 		URL:                runtime.URL,
 		Status:             "running",
 		HoldID:             hold.ID,
-		ComputeID:          compute.ID,
-		VolumeID:           volume.ID,
+		ComputeID:          input.ComputeID,
+		VolumeID:           input.VolumeID,
+		AttachmentID:       input.AttachmentID,
 		RuntimeID:          runtime.ID,
 		RuntimeServiceName: runtime.ServiceName,
 		EvidenceID:         evidence.ID,

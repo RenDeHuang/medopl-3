@@ -102,11 +102,22 @@ func NewServer(service *controlplane.Service) http.Handler {
 			return
 		}
 		input := decodeJSON(r)
+		attachmentID := stringField(input, "attachmentId", "")
+		attachment, ok := app.getAttachment(attachmentID)
+		if !ok {
+			writeError(w, http.StatusBadRequest, "attached_compute_storage_required")
+			return
+		}
+		computeID := stringValue(attachment["computeAllocationId"])
+		storageID := stringValue(attachment["storageId"])
 		workspace, err := service.CreateWorkspace(r.Context(), controlplane.CreateWorkspaceInput{
-			AccountID: stringField(input, "accountId", "acct-local"),
-			OwnerID:   firstNonEmpty(stringField(input, "ownerId", ""), stringField(input, "ownerUserId", "")),
-			Name:      firstNonEmpty(stringField(input, "name", ""), stringField(input, "workspaceName", "Workspace")),
-			PackageID: stringField(input, "packageId", "basic"),
+			AccountID:    stringField(input, "accountId", "acct-local"),
+			OwnerID:      firstNonEmpty(stringField(input, "ownerId", ""), stringField(input, "ownerUserId", "")),
+			Name:         firstNonEmpty(stringField(input, "name", ""), stringField(input, "workspaceName", "Workspace")),
+			PackageID:    firstNonEmpty(stringField(input, "packageId", ""), stringValue(attachment["packageId"]), "basic"),
+			AttachmentID: attachmentID,
+			ComputeID:    computeID,
+			VolumeID:     storageID,
 		}, idempotencyKey)
 		if err != nil {
 			writeError(w, http.StatusBadGateway, err.Error())
@@ -194,12 +205,24 @@ func NewServer(service *controlplane.Service) http.Handler {
 			writeError(w, http.StatusBadGateway, err.Error())
 			return
 		}
-		body := structToMap(compute)
+		body := computeResponse(structToMap(compute))
 		app.rememberCompute(body)
 		writeJSON(w, http.StatusAccepted, body)
 	})
 	mux.HandleFunc("GET /api/compute-allocations/{id}", func(w http.ResponseWriter, r *http.Request) {
-		compute, ok := app.getCompute(strings.TrimSpace(r.PathValue("id")))
+		id := strings.TrimSpace(r.PathValue("id"))
+		compute, ok := app.getCompute(id)
+		if ok && stringValue(compute["status"]) != "provisioning" {
+			writeJSON(w, http.StatusOK, compute)
+			return
+		}
+		fresh, err := service.GetComputeAllocation(r.Context(), id)
+		if err == nil && fresh.ID != "" {
+			body := computeResponse(structToMap(fresh))
+			app.rememberCompute(body)
+			writeJSON(w, http.StatusOK, body)
+			return
+		}
 		if !ok {
 			writeError(w, http.StatusNotFound, "compute_allocation_not_found")
 			return
@@ -213,7 +236,7 @@ func NewServer(service *controlplane.Service) http.Handler {
 			writeError(w, http.StatusBadGateway, err.Error())
 			return
 		}
-		body := structToMap(compute)
+		body := computeResponse(structToMap(compute))
 		app.rememberCompute(body)
 		writeJSON(w, http.StatusOK, body)
 	})
@@ -228,7 +251,7 @@ func NewServer(service *controlplane.Service) http.Handler {
 			writeError(w, http.StatusBadGateway, err.Error())
 			return
 		}
-		body := structToMap(storage)
+		body := storageResponse(structToMap(storage))
 		app.rememberStorage(body)
 		writeJSON(w, http.StatusAccepted, body)
 	})
@@ -239,7 +262,7 @@ func NewServer(service *controlplane.Service) http.Handler {
 			writeError(w, http.StatusBadGateway, err.Error())
 			return
 		}
-		body := structToMap(storage)
+		body := storageResponse(structToMap(storage))
 		app.rememberStorage(body)
 		writeJSON(w, http.StatusOK, body)
 	})
@@ -254,7 +277,7 @@ func NewServer(service *controlplane.Service) http.Handler {
 			writeError(w, http.StatusBadGateway, err.Error())
 			return
 		}
-		body := structToMap(attachment)
+		body := attachmentResponse(structToMap(attachment), input)
 		app.rememberAttachment(body, input)
 		writeJSON(w, http.StatusAccepted, body)
 	})
@@ -265,7 +288,7 @@ func NewServer(service *controlplane.Service) http.Handler {
 			writeError(w, http.StatusBadGateway, err.Error())
 			return
 		}
-		body := structToMap(attachment)
+		body := attachmentResponse(structToMap(attachment), input)
 		app.rememberAttachment(body, input)
 		writeJSON(w, http.StatusOK, body)
 	})
@@ -360,6 +383,62 @@ func structToMap(value any) map[string]any {
 		return map[string]any{}
 	}
 	return output
+}
+
+func computeResponse(row map[string]any) map[string]any {
+	if row == nil {
+		row = map[string]any{}
+	}
+	row["ownerAccountId"] = firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]))
+	row["provider"] = firstNonEmpty(stringValue(row["provider"]), "tencent-tke")
+	row["status"] = firstNonEmpty(stringValue(row["status"]), "running")
+	row["billingStatus"] = billingStatusFor(row)
+	row["cvmInstanceId"] = firstNonEmpty(stringValue(row["cvmInstanceId"]), stringValue(row["instanceId"]))
+	if serviceName := stringValue(row["serviceName"]); serviceName != "" {
+		row["runtime"] = map[string]any{"serviceName": serviceName, "service": "service/" + serviceName}
+	}
+	return row
+}
+
+func storageResponse(row map[string]any) map[string]any {
+	if row == nil {
+		row = map[string]any{}
+	}
+	row["ownerAccountId"] = firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]))
+	row["provider"] = firstNonEmpty(stringValue(row["provider"]), "tencent-tke")
+	if stringValue(row["status"]) == "ready" {
+		row["status"] = "available"
+	}
+	row["status"] = firstNonEmpty(stringValue(row["status"]), "available")
+	row["billingStatus"] = billingStatusFor(row)
+	if numberField(row, "sizeGb", 0) == 0 {
+		row["sizeGb"] = 10
+	}
+	return row
+}
+
+func attachmentResponse(row map[string]any, input map[string]any) map[string]any {
+	if row == nil {
+		row = map[string]any{}
+	}
+	row["computeAllocationId"] = firstNonEmpty(stringValue(row["computeAllocationId"]), stringValue(row["computeId"]), stringField(input, "computeAllocationId", ""))
+	row["storageId"] = firstNonEmpty(stringValue(row["storageId"]), stringValue(row["volumeId"]), stringField(input, "storageId", ""))
+	row["mountPath"] = firstNonEmpty(stringValue(row["mountPath"]), stringField(input, "mountPath", "/data"))
+	row["provider"] = firstNonEmpty(stringValue(row["provider"]), "tencent-tke")
+	row["status"] = firstNonEmpty(stringValue(row["status"]), "attached")
+	return row
+}
+
+func billingStatusFor(row map[string]any) string {
+	if status := stringValue(row["billingStatus"]); status != "" {
+		return status
+	}
+	switch stringValue(row["status"]) {
+	case "destroyed", "detached", "failed":
+		return "stopped"
+	default:
+		return "active"
+	}
 }
 
 func manualTopUpResponse(result clients.ManualTopUpResult) map[string]any {

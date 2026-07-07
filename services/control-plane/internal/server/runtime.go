@@ -128,22 +128,26 @@ func (app *runtimeApp) rememberWorkspaceProjection(workspace domain.WorkspacePro
 	defer app.mu.Unlock()
 
 	app.workspaces[workspace.ID] = map[string]any{
-		"id":                  workspace.ID,
-		"ownerAccountId":      workspace.AccountID,
-		"ownerUserId":         workspace.OwnerID,
-		"accountId":           workspace.AccountID,
-		"name":                workspace.Name,
-		"packageId":           workspace.PackageID,
-		"state":               workspace.Status,
-		"status":              workspace.Status,
-		"url":                 workspace.URL,
-		"holdId":              workspace.HoldID,
-		"computeAllocationId": workspace.ComputeID,
-		"storageId":           workspace.VolumeID,
-		"runtimeId":           workspace.RuntimeID,
-		"runtime":             map[string]any{"serviceName": workspace.RuntimeServiceName},
-		"evidenceId":          workspace.EvidenceID,
-		"access":              map[string]any{"tokenStatus": "active", "requiresLogin": false},
+		"id":                         workspace.ID,
+		"ownerAccountId":             workspace.AccountID,
+		"ownerUserId":                workspace.OwnerID,
+		"accountId":                  workspace.AccountID,
+		"name":                       workspace.Name,
+		"packageId":                  workspace.PackageID,
+		"provider":                   workspace.Provider,
+		"state":                      workspace.Status,
+		"status":                     workspace.Status,
+		"url":                        workspace.URL,
+		"holdId":                     workspace.HoldID,
+		"computeAllocationId":        workspace.ComputeID,
+		"currentComputeAllocationId": workspace.ComputeID,
+		"storageId":                  workspace.VolumeID,
+		"attachmentId":               workspace.AttachmentID,
+		"currentAttachmentId":        workspace.AttachmentID,
+		"runtimeId":                  workspace.RuntimeID,
+		"runtime":                    map[string]any{"serviceName": workspace.RuntimeServiceName},
+		"evidenceId":                 workspace.EvidenceID,
+		"access":                     map[string]any{"tokenStatus": "active", "requiresLogin": false},
 	}
 }
 
@@ -167,6 +171,7 @@ func (app *runtimeApp) rememberAttachment(attachment any, input map[string]any) 
 	if row, ok := attachment.(map[string]any); ok {
 		row["computeAllocationId"] = stringField(input, "computeAllocationId", "")
 		row["storageId"] = firstNonEmpty(stringValue(row["volumeId"]), stringField(input, "storageId", ""))
+		row["mountPath"] = firstNonEmpty(stringValue(row["mountPath"]), stringField(input, "mountPath", "/data"))
 		app.mu.Lock()
 		defer app.mu.Unlock()
 		app.attachments[stringValue(row["id"])] = row
@@ -220,6 +225,13 @@ func (app *runtimeApp) getCompute(id string) (map[string]any, bool) {
 	defer app.mu.Unlock()
 	compute, ok := app.computes[id]
 	return cloneMap(compute), ok
+}
+
+func (app *runtimeApp) getAttachment(id string) (map[string]any, bool) {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	attachment, ok := app.attachments[id]
+	return cloneMap(attachment), ok
 }
 
 func (app *runtimeApp) proxyWorkspace(w http.ResponseWriter, r *http.Request) {

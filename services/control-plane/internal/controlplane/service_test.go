@@ -15,10 +15,13 @@ func TestCreateWorkspaceOrchestratesLedgerAndFabric(t *testing.T) {
 	service := NewService(ledger, fabric)
 
 	workspace, err := service.CreateWorkspace(context.Background(), CreateWorkspaceInput{
-		AccountID: "acct-alpha",
-		OwnerID:   "usr-owner",
-		Name:      "Alpha Lab",
-		PackageID: "basic",
+		AccountID:    "acct-alpha",
+		OwnerID:      "usr-owner",
+		Name:         "Alpha Lab",
+		PackageID:    "basic",
+		AttachmentID: "attachment-alpha",
+		ComputeID:    "compute-alpha",
+		VolumeID:     "volume-alpha",
 	}, "workspace-once")
 	if err != nil {
 		t.Fatalf("create workspace: %v", err)
@@ -30,7 +33,10 @@ func TestCreateWorkspaceOrchestratesLedgerAndFabric(t *testing.T) {
 	if workspace.URL == "" {
 		t.Fatalf("expected runtime url")
 	}
-	wantCalls := []string{"ledger.hold", "fabric.compute", "fabric.storage", "fabric.runtime", "ledger.evidence"}
+	if workspace.ComputeID != "compute-alpha" || workspace.VolumeID != "volume-alpha" || workspace.AttachmentID != "attachment-alpha" {
+		t.Fatalf("workspace must bind existing resources: %#v", workspace)
+	}
+	wantCalls := []string{"ledger.hold", "fabric.runtime", "ledger.evidence"}
 	if !reflect.DeepEqual(calls, wantCalls) {
 		t.Fatalf("calls = %#v, want %#v", calls, wantCalls)
 	}
@@ -72,6 +78,11 @@ type fakeFabricClient struct {
 func (f *fakeFabricClient) CreateComputeAllocation(ctx context.Context, input clients.ComputeAllocationInput, idempotencyKey string) (clients.ComputeAllocation, error) {
 	*f.calls = append(*f.calls, "fabric.compute")
 	return clients.ComputeAllocation{ID: "compute-alpha", ProviderRequestID: "compute-request-alpha"}, nil
+}
+
+func (f *fakeFabricClient) GetComputeAllocation(ctx context.Context, id string) (clients.ComputeAllocation, error) {
+	*f.calls = append(*f.calls, "fabric.compute-get")
+	return clients.ComputeAllocation{ID: id, ProviderRequestID: "compute-request-alpha"}, nil
 }
 
 func (f *fakeFabricClient) DestroyComputeAllocation(ctx context.Context, id string, idempotencyKey string) (clients.ComputeAllocation, error) {

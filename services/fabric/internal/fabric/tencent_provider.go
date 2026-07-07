@@ -90,7 +90,7 @@ type plan struct {
 func (p *TencentProvider) CreateComputeAllocation(ctx context.Context, input ComputeAllocationInput) (ComputeAllocation, error) {
 	now := time.Now().UTC()
 	packageID := firstNonEmpty(input.PackageID, "basic")
-	id := fabricID("ca", input.WorkspaceID, now)
+	id := firstNonEmpty(input.ID, fabricID("ca", input.WorkspaceID, now))
 	plan := packagePlan(packageID)
 	pool := provisionerPool{
 		ID:           "pool-" + packageID,
