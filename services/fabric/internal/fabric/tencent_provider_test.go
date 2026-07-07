@@ -90,6 +90,9 @@ func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 	if !strings.Contains(strings.Join([]string{command[0].(string), command[1].(string), command[2].(string)}, " "), "/api/webui/change-password") {
 		t.Fatalf("workspace must set the managed WebUI password after startup: %#v", command)
 	}
+	if strings.Contains(command[2].(string), "process.exit(1)") {
+		t.Fatalf("workspace postStart password bootstrap must not kill the workspace on AionUI API failure: %#v", command)
+	}
 }
 
 func TestRuntimeStatusRecoversWorkspaceResourcesFromKubernetesLabels(t *testing.T) {

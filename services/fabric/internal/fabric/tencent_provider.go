@@ -785,7 +785,10 @@ fs.chmodSync(config,0o600);`
 
 func aionUIPasswordBootstrapScript() string {
 	return `const password = String(process.env.OPL_AIONUI_ADMIN_PASSWORD || "").trim();
-if (!password) process.exit(1);
+if (!password) {
+  console.warn("[opl] AionUI admin password is not configured; leaving workspace running");
+  process.exit(0);
+}
 const body = JSON.stringify({ new_password: password });
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 let last = "";
@@ -804,5 +807,5 @@ for (let attempt = 0; attempt < 90; attempt += 1) {
   await sleep(1000);
 }
 console.error("[opl] failed to set AionUI admin password: " + last);
-process.exit(1);`
+process.exit(0);`
 }
