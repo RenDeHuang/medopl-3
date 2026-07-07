@@ -14,7 +14,7 @@ func TestPostgresSchemaUsesAppendFirstLedgerTables(t *testing.T) {
 		"CREATE TABLE IF NOT EXISTS wallet_transactions",
 		"CREATE TABLE IF NOT EXISTS manual_topups",
 		"ALTER TABLE manual_topups ADD COLUMN IF NOT EXISTS idempotency_key TEXT",
-		"UPDATE manual_topups SET idempotency_key = 'migrated:' || id WHERE idempotency_key IS NULL",
+		"UPDATE manual_topups SET idempotency_key = 'migrated:' || ctid::text WHERE idempotency_key IS NULL",
 		"ALTER TABLE manual_topups ALTER COLUMN idempotency_key SET NOT NULL",
 		"ALTER TABLE holds ADD COLUMN IF NOT EXISTS idempotency_key TEXT",
 		"ALTER TABLE holds ALTER COLUMN request_hash SET NOT NULL",
