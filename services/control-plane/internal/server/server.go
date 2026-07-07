@@ -151,18 +151,20 @@ func NewServer(service *controlplane.Service) http.Handler {
 			writeError(w, http.StatusBadRequest, "missing Idempotency-Key")
 			return
 		}
-		result, err := service.SettleResource(r.Context(), controlplane.ResourceSettlementInput{
+		settlement := controlplane.ResourceSettlementInput{
 			AccountID:    stringField(input, "accountId", "acct-local"),
 			WorkspaceID:  stringField(input, "workspaceId", ""),
 			ResourceType: stringField(input, "resourceType", "compute"),
 			ResourceID:   firstNonEmpty(stringField(input, "resourceId", ""), stringField(input, "computeAllocationId", ""), stringField(input, "storageId", "")),
 			AmountCents:  settlementAmountCents(input),
 			Currency:     stringField(input, "currency", "CNY"),
-		}, idempotencyKey)
+		}
+		result, err := service.SettleResource(r.Context(), settlement, idempotencyKey)
 		if err != nil {
 			writeError(w, http.StatusBadGateway, err.Error())
 			return
 		}
+		result = completeSettlementResult(result, settlement)
 		app.rememberResourceSettlement(result)
 		writeJSON(w, http.StatusCreated, settlementResponse(result))
 	})
@@ -496,6 +498,18 @@ func settlementResponse(result clients.ResourceSettlementResult) map[string]any 
 		"walletTransactionId": result.WalletTransactionID,
 		"wallet":              result.Wallet,
 	}
+}
+
+func completeSettlementResult(result clients.ResourceSettlementResult, input controlplane.ResourceSettlementInput) clients.ResourceSettlementResult {
+	result.AccountID = firstNonEmpty(result.AccountID, input.AccountID)
+	result.WorkspaceID = firstNonEmpty(result.WorkspaceID, input.WorkspaceID)
+	result.ResourceType = firstNonEmpty(result.ResourceType, input.ResourceType)
+	result.ResourceID = firstNonEmpty(result.ResourceID, input.ResourceID)
+	if result.AmountCents == 0 {
+		result.AmountCents = input.AmountCents
+	}
+	result.Currency = firstNonEmpty(result.Currency, input.Currency)
+	return result
 }
 
 func reconciliationResponse(result clients.ReconciliationResult) map[string]any {

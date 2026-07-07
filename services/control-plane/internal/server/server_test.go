@@ -130,6 +130,14 @@ func (fakeLedgerClient) SettleResource(_ context.Context, input clients.Resource
 	return clients.ResourceSettlementResult{ID: "settlement-from-ledger", AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: input.ResourceType, ResourceID: input.ResourceID, AmountCents: input.AmountCents, Status: "settled", LedgerEntryID: "ledger-settlement-from-ledger", WalletTransactionID: "wallet-settlement-from-ledger", Wallet: clients.Wallet{AccountID: input.AccountID, BalanceCents: 8800, AvailableCents: 8800, Currency: "CNY"}}, nil
 }
 
+type fakeLedgerClientWithoutSettlementIdentity struct {
+	fakeLedgerClient
+}
+
+func (fakeLedgerClientWithoutSettlementIdentity) SettleResource(_ context.Context, _ clients.ResourceSettlementInput, _ string) (clients.ResourceSettlementResult, error) {
+	return clients.ResourceSettlementResult{ID: "settlement-from-ledger", Status: "settled", LedgerEntryID: "ledger-settlement-from-ledger", WalletTransactionID: "wallet-settlement-from-ledger"}, nil
+}
+
 func (fakeLedgerClient) RecordReconciliation(_ context.Context, input clients.ReconciliationInput, _ string) (clients.ReconciliationResult, error) {
 	return clients.ReconciliationResult{ID: stringField(input.Report, "id", "reconciliation-from-ledger"), Status: "ok", Report: input.Report, BlockNewWorkspaces: false, Reason: "operator_reconciliation"}, nil
 }
@@ -335,6 +343,30 @@ func TestResourceSettlementProjectsLedgerEvidenceIntoConsoleState(t *testing.T) 
 	walletTx := state["walletTransactions"].([]any)
 	if len(walletTx) != 2 {
 		t.Fatalf("wallet transaction rows = %d, want 2: %#v", len(walletTx), walletTx)
+	}
+}
+
+func TestResourceSettlementProjectionKeepsRequestIdentityWhenLedgerOmitsIt(t *testing.T) {
+	server := NewServer(controlplane.NewService(fakeLedgerClientWithoutSettlementIdentity{}, &fakeFabricClient{}))
+
+	createResource(t, server, http.MethodPost, "/api/billing/resource-settlements", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":123}`)
+	req := httptest.NewRequest(http.MethodGet, "/api/state?accountId=acct-alpha", nil)
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("state status = %d: %s", rec.Code, rec.Body.String())
+	}
+	var state map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&state); err != nil {
+		t.Fatalf("decode state: %v", err)
+	}
+
+	ledger := state["billingLedger"].([]any)
+	if !slices.ContainsFunc(ledger, func(row any) bool {
+		entry := row.(map[string]any)
+		return entry["accountId"] == "acct-alpha" && entry["type"] == "compute_debit" && entry["computeAllocationId"] == "compute-alpha" && entry["workspaceId"] == "ws-alpha"
+	}) {
+		t.Fatalf("missing settlement request identity in ledger projection: %#v", ledger)
 	}
 }
 
