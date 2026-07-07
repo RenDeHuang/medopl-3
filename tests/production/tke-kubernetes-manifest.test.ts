@@ -58,7 +58,8 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
 	]);
 	const deployment = deployments.find((item) => item.metadata.name === "opl-cloud-control-plane");
 	assert.equal(deployment.metadata.name, "opl-cloud-control-plane");
-	assert.equal(deployment.spec.selector.matchLabels["app.kubernetes.io/component"], "control-plane");
+	assert.deepEqual(deployment.spec.selector.matchLabels, { "app.kubernetes.io/name": "opl-cloud" });
+	assert.equal(deployment.spec.template.metadata.labels["app.kubernetes.io/component"], "control-plane");
 	assert.equal(deployment.spec.template.spec.serviceAccountName, "opl-cloud-control-plane");
   assert.equal(deployment.spec.template.spec.automountServiceAccountToken, false);
   assert.deepEqual(deployment.spec.template.spec.imagePullSecrets, [{ name: "tcr-pull-secret" }]);

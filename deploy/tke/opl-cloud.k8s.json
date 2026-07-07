@@ -96,8 +96,7 @@
         "replicas": 1,
         "selector": {
           "matchLabels": {
-            "app.kubernetes.io/name": "opl-cloud",
-            "app.kubernetes.io/component": "control-plane"
+            "app.kubernetes.io/name": "opl-cloud"
           }
         },
         "template": {
