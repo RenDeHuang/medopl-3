@@ -416,6 +416,57 @@ async function requireFirstFileInput(page) {
   return input;
 }
 
+async function configureModelAccessIfNeeded(page, { modelAccessKey = "" } = {}) {
+  if (typeof page.evaluate !== "function") return false;
+  const needsSetup = await page.evaluate(() => {
+    const text = document.body?.innerText || "";
+    return /Prepare One Person Lab|Model Access|Enter access key|Finish setup/i.test(text) &&
+      !document.querySelector('input[type="file"]');
+  });
+  if (!needsSetup) return false;
+  if (!modelAccessKey) throw new Error("workspace_browser_model_access_key_missing");
+
+  const result = await page.evaluate(({ key }) => {
+    const visible = (element) => {
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+    };
+    const fields = Array.from(document.querySelectorAll("input, textarea")).filter(visible);
+    const field = fields.find((element) => {
+      const label = [
+        element.getAttribute("aria-label") || "",
+        element.getAttribute("placeholder") || "",
+        element.closest("label, div, section, form")?.innerText || ""
+      ].join(" ");
+      return /access key|api key|token|secret|model access|openai/i.test(label);
+    }) || fields[fields.length - 1];
+    if (!field) return "input_missing";
+
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set ||
+      Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+    if (setter) setter.call(field, key);
+    field.value = key;
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+    field.dispatchEvent(new Event("change", { bubbles: true }));
+
+    const button = Array.from(document.querySelectorAll("button, [role='button']"))
+      .filter((element) => !element.disabled && element.getAttribute("aria-disabled") !== "true" && visible(element))
+      .find((element) => /Finish setup|Continue|Start|Save|完成|继续|保存|开始/i.test(element.innerText || element.textContent || ""));
+    if (!button) return "finish_button_missing";
+    button.click();
+    return true;
+  }, { key: modelAccessKey });
+  if (result !== true) throw new Error(`workspace_browser_model_access_${result}`);
+
+  await page.waitForFunction(() => {
+    const text = document.body?.innerText || "";
+    return Boolean(document.querySelector('input[type="file"]')) ||
+      !/Prepare One Person Lab|Model Access Unknown|Enter access key|Finish setup/i.test(text);
+  }, {}, { timeout: 60_000 });
+  return true;
+}
+
 async function loginAionUiIfNeeded(page, { username = DEFAULT_AIONUI_ADMIN_USERNAME, password = "" } = {}) {
   if (!password || typeof page.locator !== "function") return false;
   const usernameInput = page.locator('input[name="username"], input#username, input[autocomplete="username"]').first();
@@ -691,6 +742,7 @@ export async function verifyWorkspaceBrowserUi({
   checks,
   browserFactory = null,
   screenshotDir = "",
+  modelAccessKey = "",
   launchOptions = { headless: true }
 } = {}) {
   if (!workspaceUrl) throw new Error("workspace_url_required");
@@ -727,6 +779,18 @@ export async function verifyWorkspaceBrowserUi({
         username: workspaceAuth?.webuiUsername,
         password: workspaceAuth?.webuiPassword
       })
+    });
+    await runBrowserCheck({
+      page,
+      checks,
+      name: "workspace_browser_model_access_configured",
+      screenshotDir,
+      runId,
+      recordSuccess: false,
+      task: async () => {
+        const configured = await configureModelAccessIfNeeded(page, { modelAccessKey });
+        if (configured) addCheck(checks, "workspace_browser_model_access_configured", true);
+      }
     });
 
     const fixture = await writeBrowserUploadFixture({ runId });
@@ -1129,6 +1193,7 @@ export async function verifyProductionChain({
   browserE2E = false,
   browserFactory = null,
   screenshotDir = "",
+  modelAccessKey = "",
   cleanupOnFailure = true,
   fetchImpl = globalThis.fetch
 } = {}) {
@@ -1266,6 +1331,7 @@ export async function verifyProductionChain({
         runId,
         checks,
         browserFactory,
+        modelAccessKey,
         screenshotDir
       });
     }
@@ -1520,6 +1586,7 @@ function verifierOptionsFromArgs({ argv, env = process.env, fetchImpl = globalTh
     operatorToken: args["operator-token"] || env.OPL_VERIFY_OPERATOR_TOKEN || "",
     browserE2E: ["1", "true"].includes(String(args["browser-e2e"] || env.OPL_VERIFY_BROWSER_E2E || "").toLowerCase()),
     screenshotDir: args["screenshot-dir"] || env.OPL_VERIFY_SCREENSHOT_DIR || "",
+    modelAccessKey: args["model-access-key"] || env.OPL_VERIFY_MODEL_ACCESS_KEY || env.OPL_CODEX_API_KEY || "",
     cleanupOnFailure: !["0", "false", "no"].includes(String(args["cleanup-on-failure"] || env.OPL_VERIFY_CLEANUP_ON_FAILURE || "true").toLowerCase()),
     fetchImpl
   };

@@ -628,10 +628,12 @@ function fakeAionUiLoginBrowserFactory(actions = []) {
   };
 }
 
-function fakeGuidDomBrowserFactory(actions = []) {
+function fakeGuidDomBrowserFactory(actions = [], { firstRun = false } = {}) {
   const state = {
+    setup: firstRun,
     hash: "#/home",
     bodyText: "Select an assistant to start a task\n@MAS\n@Research",
+    accessKey: "",
     prompt: "",
     fileName: "",
     selected: false
@@ -652,6 +654,44 @@ function fakeGuidDomBrowserFactory(actions = []) {
     }
   }
   const textarea = new FakeTextArea();
+  const accessInput = {
+    type: "password",
+    placeholder: "Enter access key",
+    get value() {
+      return state.accessKey;
+    },
+    set value(next) {
+      state.accessKey = String(next || "");
+    },
+    dispatchEvent(event) {
+      actions.push(["accessDispatchEvent", event.type]);
+      return true;
+    },
+    getAttribute(name) {
+      if (name === "placeholder") return this.placeholder;
+      return "";
+    },
+    closest() {
+      return { innerText: "Model Access Enter access key" };
+    },
+    getBoundingClientRect() {
+      return { width: 320, height: 40, top: 220, bottom: 260, left: 32, right: 352 };
+    }
+  };
+  const finishButton = {
+    disabled: false,
+    innerText: "Finish setup",
+    click() {
+      actions.push(["domClick", "finish-setup"]);
+      if (state.accessKey) state.setup = false;
+    },
+    getAttribute() {
+      return "";
+    },
+    getBoundingClientRect() {
+      return { width: 140, height: 40, top: 280, bottom: 320, left: 32, right: 172 };
+    }
+  };
   const card = {
     textContent: "@MAS",
     click() {
@@ -711,11 +751,16 @@ function fakeGuidDomBrowserFactory(actions = []) {
     globalThis.document = {
       body: {
         get innerText() {
-          return [state.bodyText, state.fileName].filter(Boolean).join("\n");
+          const screen = state.setup
+            ? "Prepare One Person Lab\nWorkspace root Ready\nLocal assistant Ready\nModel Access Unknown\nEnter access key\nFinish setup"
+            : state.bodyText;
+          return [screen, state.fileName].filter(Boolean).join("\n");
         }
       },
       querySelector(selector) {
         actions.push(["querySelector", selector]);
+        if (state.setup) return null;
+        if (selector.includes('input[type="file"]')) return { getBoundingClientRect: () => ({ width: 1, height: 1 }) };
         if (selector.includes("preset-pill-mas")) return card;
         if (selector.includes("guid-input")) return textarea;
         if (selector.includes("guid-send-btn")) return sendButton;
@@ -723,6 +768,11 @@ function fakeGuidDomBrowserFactory(actions = []) {
       },
       querySelectorAll(selector) {
         actions.push(["querySelectorAll", selector]);
+        if (state.setup) {
+          if (selector.includes("input") || selector.includes("textarea")) return [accessInput];
+          if (selector.includes("button")) return [finishButton];
+          return [];
+        }
         if (selector.includes("textarea") || selector.includes("guid-input")) return [textarea];
         if (selector.includes("button") || selector.includes("guid-send-btn")) return [sendButton];
         return [];
@@ -745,7 +795,7 @@ function fakeGuidDomBrowserFactory(actions = []) {
           return this;
         },
         async count() {
-          return selector === 'input[type="file"]' ? 1 : 0;
+          return selector === 'input[type="file"]' && !state.setup ? 1 : 0;
         },
         async setInputFiles(filePath) {
           actions.push(["setInputFiles", filePath]);
@@ -1338,6 +1388,32 @@ test("production verifier uses one-person-lab-app guid DOM contract for assistan
   assert.ok(actions.some((action) => action[0] === "domClick" && action[1] === "guid-send-btn"));
   assert.deepEqual(checks.map((check) => `${check.name}:${check.ok}`), [
     "workspace_browser_opened:true",
+    "workspace_browser_file_uploaded:true",
+    "workspace_browser_file_read:true",
+    "workspace_browser_message_sent:true",
+    "workspace_browser_reply_seen:true"
+  ]);
+});
+
+test("production verifier completes first-run model access before file upload", async () => {
+  const checks = [];
+  const actions = [];
+
+  await verifyWorkspaceBrowserUi({
+    workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+    runId: "browser-run",
+    checks,
+    browserFactory: fakeGuidDomBrowserFactory(actions, { firstRun: true }),
+    modelAccessKey: "test-access-key",
+    screenshotDir: ""
+  });
+
+  assert.ok(actions.some((action) => action[0] === "accessDispatchEvent" && action[1] === "input"));
+  assert.ok(actions.some((action) => action[0] === "domClick" && action[1] === "finish-setup"));
+  assert.ok(actions.findIndex((action) => action[0] === "domClick" && action[1] === "finish-setup") < actions.findIndex((action) => action[0] === "setInputFiles"));
+  assert.deepEqual(checks.map((check) => `${check.name}:${check.ok}`), [
+    "workspace_browser_opened:true",
+    "workspace_browser_model_access_configured:true",
     "workspace_browser_file_uploaded:true",
     "workspace_browser_file_read:true",
     "workspace_browser_message_sent:true",

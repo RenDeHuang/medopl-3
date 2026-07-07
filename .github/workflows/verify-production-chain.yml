@@ -70,6 +70,7 @@ jobs:
       OPL_VERIFY_SCREENSHOT_DIR: "artifacts/production-browser-e2e"
       OPL_VERIFY_CLEANUP_ON_FAILURE: ${{ inputs.cleanup_on_failure }}
       OPL_AIONUI_ADMIN_PASSWORD_SEED: ${{ secrets.OPL_AIONUI_ADMIN_PASSWORD_SEED }}
+      OPL_VERIFY_MODEL_ACCESS_KEY: ${{ secrets.OPL_CODEX_API_KEY }}
 
     steps:
       - name: Checkout
