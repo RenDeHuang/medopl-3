@@ -96,11 +96,6 @@ func NewServer(service *controlplane.Service) http.Handler {
 		writeJSON(w, http.StatusOK, workspaceRuntimeStatusResponse(runtime))
 	})
 	mux.HandleFunc("POST /api/workspaces", func(w http.ResponseWriter, r *http.Request) {
-		idempotencyKey := r.Header.Get("Idempotency-Key")
-		if idempotencyKey == "" {
-			writeError(w, http.StatusBadRequest, "missing Idempotency-Key")
-			return
-		}
 		input := decodeJSON(r)
 		attachmentID := stringField(input, "attachmentId", "")
 		attachment, ok := app.getAttachment(attachmentID)
@@ -118,7 +113,7 @@ func NewServer(service *controlplane.Service) http.Handler {
 			AttachmentID: attachmentID,
 			ComputeID:    computeID,
 			VolumeID:     storageID,
-		}, idempotencyKey)
+		}, mutationKey(r, input))
 		if err != nil {
 			writeError(w, http.StatusBadGateway, err.Error())
 			return

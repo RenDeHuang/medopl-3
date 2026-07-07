@@ -14,16 +14,26 @@ import (
 	"opl-cloud/services/control-plane/internal/controlplane"
 )
 
-func TestCreateWorkspaceHTTPRequiresIdempotencyKey(t *testing.T) {
-	server := NewServer(controlplane.NewService(nil, nil))
-	body := bytes.NewBufferString(`{"accountId":"acct-alpha","ownerId":"usr-owner","name":"Alpha Lab","packageId":"basic"}`)
+func TestCreateWorkspaceHTTPUsesMutationKeyWhenHeaderIsAbsent(t *testing.T) {
+	calls := []string{}
+	ledger := &fakeLedgerClientWithKeys{fakeLedgerClient{}, []string{}}
+	server := NewServer(controlplane.NewService(ledger, &fakeFabricClient{calls: &calls}))
+
+	createResource(t, server, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+	createResource(t, server, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
+	createResource(t, server, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"compute-from-fabric","storageId":"volume-from-fabric","mountPath":"/data"}`)
+
+	body := bytes.NewBufferString(`{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/workspaces", body)
 	rec := httptest.NewRecorder()
 
 	server.ServeHTTP(rec, req)
 
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status = %d, want %d: %s", rec.Code, http.StatusCreated, rec.Body.String())
+	}
+	if len(ledger.keys) == 0 || ledger.keys[0] == "" {
+		t.Fatalf("expected generated workspace idempotency key, got %#v", ledger.keys)
 	}
 }
 
@@ -61,6 +71,16 @@ func TestCreateWorkspaceHTTPUsesControlPlaneService(t *testing.T) {
 }
 
 type fakeLedgerClient struct{}
+
+type fakeLedgerClientWithKeys struct {
+	fakeLedgerClient
+	keys []string
+}
+
+func (f *fakeLedgerClientWithKeys) CreateHold(ctx context.Context, input clients.HoldInput, idempotencyKey string) (clients.HoldResult, error) {
+	f.keys = append(f.keys, idempotencyKey)
+	return f.fakeLedgerClient.CreateHold(ctx, input, idempotencyKey)
+}
 
 func (fakeLedgerClient) ManualTopUp(_ context.Context, input clients.ManualTopUpInput, _ string) (clients.ManualTopUpResult, error) {
 	return clients.ManualTopUpResult{
