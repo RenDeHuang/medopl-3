@@ -119,7 +119,7 @@ func NewServer(service *controlplane.Service) http.Handler {
 			return
 		}
 		app.rememberWorkspaceProjection(workspace)
-		writeJSON(w, http.StatusCreated, workspace)
+		writeJSON(w, http.StatusCreated, workspaceResponse(structToMap(workspace)))
 	})
 	mux.HandleFunc("GET /api/billing/summary", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"currency": "CNY", "balanceCents": 0})
@@ -421,6 +421,22 @@ func attachmentResponse(row map[string]any, input map[string]any) map[string]any
 	row["mountPath"] = firstNonEmpty(stringValue(row["mountPath"]), stringField(input, "mountPath", "/data"))
 	row["provider"] = firstNonEmpty(stringValue(row["provider"]), "tencent-tke")
 	row["status"] = firstNonEmpty(stringValue(row["status"]), "attached")
+	return row
+}
+
+func workspaceResponse(row map[string]any) map[string]any {
+	if row == nil {
+		row = map[string]any{}
+	}
+	row["ownerAccountId"] = firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]))
+	row["ownerUserId"] = firstNonEmpty(stringValue(row["ownerUserId"]), stringValue(row["ownerId"]))
+	row["state"] = firstNonEmpty(stringValue(row["state"]), stringValue(row["status"]))
+	row["currentComputeAllocationId"] = firstNonEmpty(stringValue(row["currentComputeAllocationId"]), stringValue(row["computeAllocationId"]))
+	row["currentAttachmentId"] = firstNonEmpty(stringValue(row["currentAttachmentId"]), stringValue(row["attachmentId"]))
+	if serviceName := stringValue(row["runtimeServiceName"]); serviceName != "" {
+		row["runtime"] = map[string]any{"serviceName": serviceName}
+	}
+	row["access"] = map[string]any{"tokenStatus": "active", "requiresLogin": false}
 	return row
 }
 

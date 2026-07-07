@@ -65,6 +65,9 @@ func TestCreateWorkspaceHTTPUsesControlPlaneService(t *testing.T) {
 	if workspace["holdId"] != "hold-from-ledger" || workspace["computeAllocationId"] != "compute-from-fabric" || workspace["storageId"] != "volume-from-fabric" || workspace["attachmentId"] != "attachment-from-fabric" || workspace["evidenceId"] != "evidence-from-ledger" {
 		t.Fatalf("workspace missing ledger/fabric evidence: %#v", workspace)
 	}
+	if access, ok := workspace["access"].(map[string]any); !ok || access["tokenStatus"] != "active" {
+		t.Fatalf("workspace response must include active URL access state: %#v", workspace)
+	}
 	if slices.Contains(calls[3:], "fabric.compute") || slices.Contains(calls[3:], "fabric.storage") {
 		t.Fatalf("workspace create must not allocate replacement resources: %#v", calls)
 	}
