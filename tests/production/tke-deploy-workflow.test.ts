@@ -444,6 +444,8 @@ test("TKE production diagnostics workflow is read-only and matches the deploymen
   assertWorkflowContract(workflow, contract.diagnosticsWorkflow, contract);
   const text = JSON.stringify(workflow);
   assert.match(text, /app\.kubernetes\.io\/name=opl-compute-allocation/, "diagnostics must inspect current compute allocation pods");
+  assert.match(text, /for component in control-plane ledger fabric/, "diagnostics must inspect all service component logs");
+  assert.match(text, /app\.kubernetes\.io\/component=\$component/, "diagnostics must use component-scoped service log selectors");
   assert.match(text, /--all-containers=true --previous --tail=300/, "diagnostics must print previous Workspace crash logs");
   assert.doesNotMatch(text, /app\.kubernetes\.io\/name=opl-workspace/, "diagnostics must not use retired workspace pod labels");
 });

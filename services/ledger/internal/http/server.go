@@ -3,6 +3,7 @@ package http
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 
@@ -32,6 +33,7 @@ func NewServer(store ledger.Store) http.Handler {
 			return
 		}
 		if err != nil {
+			log.Printf("manual top-up failed: %v", err)
 			writeError(w, http.StatusInternalServerError, "manual top-up failed")
 			return
 		}
