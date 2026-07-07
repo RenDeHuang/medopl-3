@@ -93,6 +93,55 @@ func TestHoldAndEvidenceHTTP(t *testing.T) {
 	}
 }
 
+func TestReleaseHoldHTTP(t *testing.T) {
+	server := NewServer(ledger.NewMemoryStore())
+	topup := httptest.NewRequest(http.MethodPost, "/ledger/topups", bytes.NewBufferString(`{"accountId":"acct-alpha","amountCents":2000,"currency":"CNY","operatorUserId":"usr-admin","reason":"operator_credit"}`))
+	topup.Header.Set("Idempotency-Key", "http-release-topup")
+	topupRec := httptest.NewRecorder()
+	server.ServeHTTP(topupRec, topup)
+	if topupRec.Code != http.StatusCreated {
+		t.Fatalf("topup status = %d, want %d: %s", topupRec.Code, http.StatusCreated, topupRec.Body.String())
+	}
+
+	hold := httptest.NewRequest(http.MethodPost, "/ledger/holds", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","amountCents":1000,"currency":"CNY"}`))
+	hold.Header.Set("Idempotency-Key", "http-release-hold")
+	holdRec := httptest.NewRecorder()
+	server.ServeHTTP(holdRec, hold)
+	if holdRec.Code != http.StatusCreated {
+		t.Fatalf("hold status = %d, want %d: %s", holdRec.Code, http.StatusCreated, holdRec.Body.String())
+	}
+	var holdBody ledger.HoldResult
+	if err := json.NewDecoder(holdRec.Body).Decode(&holdBody); err != nil {
+		t.Fatalf("decode hold: %v", err)
+	}
+
+	release := httptest.NewRequest(http.MethodPost, "/ledger/holds/release", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","holdId":"`+holdBody.ID+`","amountCents":600,"currency":"CNY","reason":"destroy_compute"}`))
+	release.Header.Set("Idempotency-Key", "http-release-once")
+	releaseRec := httptest.NewRecorder()
+	server.ServeHTTP(releaseRec, release)
+	if releaseRec.Code != http.StatusCreated {
+		t.Fatalf("release status = %d, want %d: %s", releaseRec.Code, http.StatusCreated, releaseRec.Body.String())
+	}
+	var releaseBody ledger.HoldReleaseResult
+	if err := json.NewDecoder(releaseRec.Body).Decode(&releaseBody); err != nil {
+		t.Fatalf("decode release: %v", err)
+	}
+	if releaseBody.Status != "released" || releaseBody.Wallet.BalanceCents != 2000 || releaseBody.Wallet.FrozenCents != 400 || releaseBody.Wallet.AvailableCents != 1600 {
+		t.Fatalf("unexpected release body: %#v", releaseBody)
+	}
+
+	walletReq := httptest.NewRequest(http.MethodGet, "/ledger/accounts/acct-alpha/wallet", nil)
+	walletRec := httptest.NewRecorder()
+	server.ServeHTTP(walletRec, walletReq)
+	var wallet ledger.Wallet
+	if err := json.NewDecoder(walletRec.Body).Decode(&wallet); err != nil {
+		t.Fatalf("decode wallet: %v", err)
+	}
+	if wallet.BalanceCents != 2000 || wallet.FrozenCents != 400 || wallet.AvailableCents != 1600 {
+		t.Fatalf("unexpected wallet: %#v", wallet)
+	}
+}
+
 func TestSettlementAndReconciliationHTTP(t *testing.T) {
 	server := NewServer(ledger.NewMemoryStore())
 	topup := httptest.NewRequest(http.MethodPost, "/ledger/topups", bytes.NewBufferString(`{"accountId":"acct-alpha","amountCents":5000,"currency":"CNY","operatorUserId":"usr-admin"}`))

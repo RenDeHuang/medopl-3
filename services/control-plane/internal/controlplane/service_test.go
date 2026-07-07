@@ -56,6 +56,11 @@ func (f *fakeLedgerClient) CreateHold(ctx context.Context, input clients.HoldInp
 	return clients.HoldResult{ID: "hold-alpha", AccountID: input.AccountID, AmountCents: 1000}, nil
 }
 
+func (f *fakeLedgerClient) ReleaseHold(ctx context.Context, input clients.HoldReleaseInput, idempotencyKey string) (clients.HoldReleaseResult, error) {
+	*f.calls = append(*f.calls, "ledger.release")
+	return clients.HoldReleaseResult{ID: "release-alpha", AccountID: input.AccountID, AmountCents: input.AmountCents, Status: "released"}, nil
+}
+
 func (f *fakeLedgerClient) RecordEvidence(ctx context.Context, input clients.EvidenceInput, idempotencyKey string) (clients.EvidenceReceipt, error) {
 	*f.calls = append(*f.calls, "ledger.evidence")
 	return clients.EvidenceReceipt{ID: "ev-alpha", WorkspaceID: input.WorkspaceID}, nil

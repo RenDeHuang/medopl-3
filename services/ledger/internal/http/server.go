@@ -64,6 +64,33 @@ func NewServer(store ledger.Store) http.Handler {
 		}
 		writeJSON(w, http.StatusCreated, result)
 	})
+	mux.HandleFunc("POST /ledger/holds/release", func(w http.ResponseWriter, r *http.Request) {
+		idempotencyKey := r.Header.Get("Idempotency-Key")
+		if idempotencyKey == "" {
+			writeError(w, http.StatusBadRequest, "missing Idempotency-Key")
+			return
+		}
+		var input ledger.HoldReleaseInput
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid JSON body")
+			return
+		}
+		input.IdempotencyKey = idempotencyKey
+		result, err := store.ReleaseHold(r.Context(), input)
+		if errors.Is(err, ledger.ErrIdempotencyConflict) {
+			writeError(w, http.StatusConflict, err.Error())
+			return
+		}
+		if errors.Is(err, ledger.ErrInsufficientFrozen) {
+			writeError(w, http.StatusConflict, err.Error())
+			return
+		}
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "hold release failed")
+			return
+		}
+		writeJSON(w, http.StatusCreated, result)
+	})
 	mux.HandleFunc("POST /ledger/evidence", func(w http.ResponseWriter, r *http.Request) {
 		idempotencyKey := r.Header.Get("Idempotency-Key")
 		if idempotencyKey == "" {

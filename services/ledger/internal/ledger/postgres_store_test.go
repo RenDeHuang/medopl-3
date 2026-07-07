@@ -18,6 +18,8 @@ func TestPostgresSchemaUsesAppendFirstLedgerTables(t *testing.T) {
 		"ALTER TABLE manual_topups ALTER COLUMN idempotency_key SET NOT NULL",
 		"ALTER TABLE holds ADD COLUMN IF NOT EXISTS idempotency_key TEXT",
 		"ALTER TABLE holds ALTER COLUMN request_hash SET NOT NULL",
+		"CREATE TABLE IF NOT EXISTS hold_releases",
+		"CREATE UNIQUE INDEX IF NOT EXISTS hold_releases_idempotency_key_idx",
 		"CREATE TABLE IF NOT EXISTS idempotency_keys",
 		"CREATE UNIQUE INDEX IF NOT EXISTS manual_topups_idempotency_key_idx",
 	}

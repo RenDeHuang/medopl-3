@@ -61,3 +61,48 @@ func TestManualTopUpSameKeyDifferentPayloadConflicts(t *testing.T) {
 		t.Fatalf("expected idempotency conflict, got %v", err)
 	}
 }
+
+func TestReleaseHoldReducesFrozenWithoutDebitingBalance(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	if _, err := store.ManualTopUp(ctx, ManualTopUpInput{AccountID: "acct-alpha", AmountCents: 2000, Currency: "CNY", OperatorUserID: "usr-admin", IdempotencyKey: "topup-release"}); err != nil {
+		t.Fatalf("topup failed: %v", err)
+	}
+	hold, err := store.CreateHold(ctx, HoldInput{AccountID: "acct-alpha", WorkspaceID: "ws-alpha", AmountCents: 1000, Currency: "CNY", IdempotencyKey: "hold-release"})
+	if err != nil {
+		t.Fatalf("hold failed: %v", err)
+	}
+
+	releaseInput := HoldReleaseInput{
+		AccountID:      "acct-alpha",
+		WorkspaceID:    "ws-alpha",
+		ResourceType:   "compute",
+		ResourceID:     "compute-alpha",
+		HoldID:         hold.ID,
+		AmountCents:    600,
+		Currency:       "CNY",
+		Reason:         "destroy_compute",
+		IdempotencyKey: "release-once",
+	}
+	released, err := store.ReleaseHold(ctx, releaseInput)
+	if err != nil {
+		t.Fatalf("release failed: %v", err)
+	}
+	if released.Status != "released" || released.Wallet.BalanceCents != 2000 || released.Wallet.FrozenCents != 400 || released.Wallet.AvailableCents != 1600 || released.Wallet.TotalSpentCents != 0 {
+		t.Fatalf("unexpected release wallet: %#v", released)
+	}
+
+	replayed, err := store.ReleaseHold(ctx, releaseInput)
+	if err != nil {
+		t.Fatalf("release replay failed: %v", err)
+	}
+	if !replayed.Replayed || replayed.ID != released.ID {
+		t.Fatalf("expected same replayed release, got %#v", replayed)
+	}
+
+	releaseInput.AmountCents = 700
+	_, err = store.ReleaseHold(ctx, releaseInput)
+	if !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("expected idempotency conflict, got %v", err)
+	}
+}

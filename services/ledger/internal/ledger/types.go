@@ -7,6 +7,7 @@ import (
 
 var ErrIdempotencyConflict = errors.New("idempotency key already used with different payload")
 var ErrInsufficientBalance = errors.New("insufficient available balance")
+var ErrInsufficientFrozen = errors.New("insufficient frozen balance")
 
 type ManualTopUpInput struct {
 	AccountID      string `json:"accountId"`
@@ -80,6 +81,35 @@ type HoldResult struct {
 	ID                  string    `json:"id"`
 	AccountID           string    `json:"accountId"`
 	WorkspaceID         string    `json:"workspaceId"`
+	AmountCents         int64     `json:"amountCents"`
+	Currency            string    `json:"currency"`
+	Status              string    `json:"status"`
+	LedgerEntryID       string    `json:"ledgerEntryId"`
+	WalletTransactionID string    `json:"walletTransactionId"`
+	Wallet              Wallet    `json:"wallet"`
+	CreatedAt           time.Time `json:"createdAt"`
+	Replayed            bool      `json:"replayed"`
+}
+
+type HoldReleaseInput struct {
+	AccountID      string `json:"accountId"`
+	WorkspaceID    string `json:"workspaceId"`
+	ResourceType   string `json:"resourceType"`
+	ResourceID     string `json:"resourceId"`
+	HoldID         string `json:"holdId"`
+	AmountCents    int64  `json:"amountCents"`
+	Currency       string `json:"currency"`
+	Reason         string `json:"reason,omitempty"`
+	IdempotencyKey string `json:"-"`
+}
+
+type HoldReleaseResult struct {
+	ID                  string    `json:"id"`
+	AccountID           string    `json:"accountId"`
+	WorkspaceID         string    `json:"workspaceId"`
+	ResourceType        string    `json:"resourceType"`
+	ResourceID          string    `json:"resourceId"`
+	HoldID              string    `json:"holdId"`
 	AmountCents         int64     `json:"amountCents"`
 	Currency            string    `json:"currency"`
 	Status              string    `json:"status"`

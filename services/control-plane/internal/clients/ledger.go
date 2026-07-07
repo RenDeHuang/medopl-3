@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 )
 
 type LedgerClient interface {
 	ManualTopUp(ctx context.Context, input ManualTopUpInput, idempotencyKey string) (ManualTopUpResult, error)
 	CreateHold(ctx context.Context, input HoldInput, idempotencyKey string) (HoldResult, error)
+	ReleaseHold(ctx context.Context, input HoldReleaseInput, idempotencyKey string) (HoldReleaseResult, error)
 	RecordEvidence(ctx context.Context, input EvidenceInput, idempotencyKey string) (EvidenceReceipt, error)
 	SettleResource(ctx context.Context, input ResourceSettlementInput, idempotencyKey string) (ResourceSettlementResult, error)
 	RecordReconciliation(ctx context.Context, input ReconciliationInput, idempotencyKey string) (ReconciliationResult, error)
@@ -121,6 +124,33 @@ type HoldResult struct {
 	Status      string `json:"status"`
 }
 
+type HoldReleaseInput struct {
+	AccountID    string `json:"accountId"`
+	WorkspaceID  string `json:"workspaceId"`
+	ResourceType string `json:"resourceType"`
+	ResourceID   string `json:"resourceId"`
+	HoldID       string `json:"holdId"`
+	AmountCents  int64  `json:"amountCents"`
+	Currency     string `json:"currency"`
+	Reason       string `json:"reason,omitempty"`
+}
+
+type HoldReleaseResult struct {
+	ID                  string `json:"id"`
+	AccountID           string `json:"accountId"`
+	WorkspaceID         string `json:"workspaceId"`
+	ResourceType        string `json:"resourceType"`
+	ResourceID          string `json:"resourceId"`
+	HoldID              string `json:"holdId"`
+	AmountCents         int64  `json:"amountCents"`
+	Currency            string `json:"currency"`
+	Status              string `json:"status"`
+	LedgerEntryID       string `json:"ledgerEntryId"`
+	WalletTransactionID string `json:"walletTransactionId"`
+	Wallet              Wallet `json:"wallet"`
+	Replayed            bool   `json:"replayed"`
+}
+
 type EvidenceInput struct {
 	WorkspaceID       string `json:"workspaceId"`
 	ProviderRequestID string `json:"providerRequestId"`
@@ -154,6 +184,12 @@ func (c *ledgerHTTPClient) ManualTopUp(ctx context.Context, input ManualTopUpInp
 func (c *ledgerHTTPClient) CreateHold(ctx context.Context, input HoldInput, idempotencyKey string) (HoldResult, error) {
 	var result HoldResult
 	err := c.post(ctx, "/ledger/holds", input, idempotencyKey, &result)
+	return result, err
+}
+
+func (c *ledgerHTTPClient) ReleaseHold(ctx context.Context, input HoldReleaseInput, idempotencyKey string) (HoldReleaseResult, error) {
+	var result HoldReleaseResult
+	err := c.post(ctx, "/ledger/holds/release", input, idempotencyKey, &result)
 	return result, err
 }
 
@@ -191,5 +227,9 @@ func (c *ledgerHTTPClient) post(ctx context.Context, path string, input any, ide
 		return err
 	}
 	defer res.Body.Close()
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		body, _ := io.ReadAll(res.Body)
+		return fmt.Errorf("ledger request failed: status %d: %s", res.StatusCode, string(body))
+	}
 	return json.NewDecoder(res.Body).Decode(output)
 }

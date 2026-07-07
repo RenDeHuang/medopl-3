@@ -122,6 +122,10 @@ func (fakeLedgerClient) CreateHold(_ context.Context, input clients.HoldInput, _
 	return clients.HoldResult{ID: "hold-from-ledger", AccountID: input.AccountID, AmountCents: input.AmountCents}, nil
 }
 
+func (fakeLedgerClient) ReleaseHold(_ context.Context, input clients.HoldReleaseInput, _ string) (clients.HoldReleaseResult, error) {
+	return clients.HoldReleaseResult{ID: "release-from-ledger", AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: input.ResourceType, ResourceID: input.ResourceID, HoldID: input.HoldID, AmountCents: input.AmountCents, Status: "released", Wallet: clients.Wallet{AccountID: input.AccountID, BalanceCents: 8800, FrozenCents: 0, AvailableCents: 8800, Currency: "CNY"}}, nil
+}
+
 func (fakeLedgerClient) RecordEvidence(_ context.Context, input clients.EvidenceInput, _ string) (clients.EvidenceReceipt, error) {
 	return clients.EvidenceReceipt{ID: "evidence-from-ledger", WorkspaceID: input.WorkspaceID}, nil
 }

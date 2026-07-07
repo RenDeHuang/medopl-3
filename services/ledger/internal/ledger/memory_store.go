@@ -167,6 +167,75 @@ func (s *MemoryStore) CreateHold(_ context.Context, input HoldInput) (HoldResult
 	return result, nil
 }
 
+func (s *MemoryStore) ReleaseHold(_ context.Context, input HoldReleaseInput) (HoldReleaseResult, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	payloadHash, err := hashHoldRelease(input)
+	if err != nil {
+		return HoldReleaseResult{}, err
+	}
+	if existing, ok := s.idempotency[input.IdempotencyKey]; ok {
+		if existing.payloadHash != payloadHash {
+			return HoldReleaseResult{}, ErrIdempotencyConflict
+		}
+		result := existing.result.(HoldReleaseResult)
+		result.Replayed = true
+		return result, nil
+	}
+
+	now := time.Now().UTC()
+	wallet := s.wallets[input.AccountID]
+	if wallet.AccountID == "" {
+		wallet = Wallet{AccountID: input.AccountID, Currency: input.Currency}
+	}
+	if wallet.FrozenCents < input.AmountCents {
+		return HoldReleaseResult{}, ErrInsufficientFrozen
+	}
+	wallet.FrozenCents -= input.AmountCents
+	wallet.Currency = input.Currency
+	wallet.AvailableCents = wallet.BalanceCents - wallet.FrozenCents
+	wallet.UpdatedAt = now
+
+	entry := LedgerEntry{
+		ID:          s.newID("le"),
+		AccountID:   input.AccountID,
+		AmountCents: input.AmountCents,
+		Currency:    input.Currency,
+		Direction:   "release",
+		Source:      input.ResourceType + "_hold_released",
+		Reason:      input.Reason,
+		CreatedAt:   now,
+	}
+	tx := WalletTransaction{
+		ID:            s.newID("wtx"),
+		AccountID:     input.AccountID,
+		LedgerEntryID: entry.ID,
+		AmountCents:   0,
+		BalanceCents:  wallet.BalanceCents,
+		Currency:      input.Currency,
+		CreatedAt:     now,
+	}
+	result := HoldReleaseResult{
+		ID:                  s.newID("hrel"),
+		AccountID:           input.AccountID,
+		WorkspaceID:         input.WorkspaceID,
+		ResourceType:        input.ResourceType,
+		ResourceID:          input.ResourceID,
+		HoldID:              input.HoldID,
+		AmountCents:         input.AmountCents,
+		Currency:            input.Currency,
+		Status:              "released",
+		LedgerEntryID:       entry.ID,
+		WalletTransactionID: tx.ID,
+		Wallet:              wallet,
+		CreatedAt:           now,
+	}
+	s.wallets[input.AccountID] = wallet
+	s.idempotency[input.IdempotencyKey] = idempotencyRecord{payloadHash: payloadHash, result: result}
+	return result, nil
+}
+
 func (s *MemoryStore) RecordEvidence(_ context.Context, input EvidenceInput) (EvidenceReceipt, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -312,6 +381,28 @@ func hashManualTopUp(input ManualTopUpInput) (string, error) {
 		Reason:         input.Reason,
 	}
 	return hashJSON(payload)
+}
+
+func hashHoldRelease(input HoldReleaseInput) (string, error) {
+	return hashJSON(struct {
+		AccountID    string `json:"accountId"`
+		WorkspaceID  string `json:"workspaceId"`
+		ResourceType string `json:"resourceType"`
+		ResourceID   string `json:"resourceId"`
+		HoldID       string `json:"holdId"`
+		AmountCents  int64  `json:"amountCents"`
+		Currency     string `json:"currency"`
+		Reason       string `json:"reason,omitempty"`
+	}{
+		AccountID:    input.AccountID,
+		WorkspaceID:  input.WorkspaceID,
+		ResourceType: input.ResourceType,
+		ResourceID:   input.ResourceID,
+		HoldID:       input.HoldID,
+		AmountCents:  input.AmountCents,
+		Currency:     input.Currency,
+		Reason:       input.Reason,
+	})
 }
 
 func hashJSON(payload any) (string, error) {

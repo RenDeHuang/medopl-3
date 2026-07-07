@@ -51,6 +51,26 @@
     "unpaidComputeOperationAllowed": false,
     "unpaidStorageOperationAllowed": false
   },
+  "holdReleasePolicy": {
+    "api": "POST /ledger/holds/release",
+    "requiredClientField": "idempotencyKey",
+    "requiredResourceFields": [
+      "accountId",
+      "workspaceId",
+      "resourceType",
+      "resourceId",
+      "holdId",
+      "amountCents",
+      "currency"
+    ],
+    "ledgerEntrySources": [
+      "compute_hold_released",
+      "storage_hold_released"
+    ],
+    "walletEffect": "Release reduces frozen balance and increases available balance without increasing balance or total spent.",
+    "replayBehavior": "Same idempotencyKey with the same accountId, resource identity, holdId, amount, currency, and reason returns the existing release receipt.",
+    "conflictBehavior": "Same idempotencyKey with a different release payload fails closed."
+  },
   "ledgerEvidencePolicy": {
     "priceSnapshotFields": [
       "priceBasis",
