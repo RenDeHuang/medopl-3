@@ -69,6 +69,7 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
   assert.equal(container.readinessProbe.httpGet.path, "/api/production/readiness");
   assert.equal(container.livenessProbe.httpGet.path, "/api/healthz");
   assert.deepEqual(container.envFrom, [{ configMapRef: { name: "opl-cloud-config" } }]);
+  assert.equal(container.env.find((item) => item.name === "PGSSLMODE").value, "disable");
   assert.deepEqual(container.env.filter((item) => item.valueFrom).map((item) => `${item.name}->${item.valueFrom.secretKeyRef.name}/${item.valueFrom.secretKeyRef.key}`), [
     "DATABASE_URL->opl-cloud-database/DATABASE_URL",
     "OPL_CONSOLE_USERS_JSON->opl-cloud-auth/OPL_CONSOLE_USERS_JSON",
