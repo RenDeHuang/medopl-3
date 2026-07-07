@@ -28,6 +28,7 @@ type readModelSnapshot struct {
 	Users       map[string]map[string]any `json:"users,omitempty"`
 	Orgs        map[string]map[string]any `json:"orgs,omitempty"`
 	Memberships map[string]map[string]any `json:"memberships,omitempty"`
+	Support     map[string]map[string]any `json:"support,omitempty"`
 	Wallets     map[string]map[string]any `json:"wallets,omitempty"`
 	Ledger      []map[string]any          `json:"ledger,omitempty"`
 	Usage       []map[string]any          `json:"usage,omitempty"`

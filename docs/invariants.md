@@ -57,7 +57,7 @@ Usage debits must be idempotent by source event or request fingerprint.
 
 Lab Owner sees Workspace distribution, URL actions, package, state, balance, bill explanation, usage, support, alerts, and human-readable receipts.
 
-Admin sees users, roles, manual recharge, audit, runtime readiness, production readiness, raw Ledger evidence, Fabric internals, and support queues.
+Admin sees users, roles, manual recharge, audit, runtime readiness, production readiness, raw Ledger evidence, Fabric internals, and external support ticket mappings.
 
 Lab Owner must not see request fingerprints, dedup rows, runtime evidence, production readiness, manual settlement, or raw Ledger event internals.
 

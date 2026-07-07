@@ -739,13 +739,15 @@ export function AdminCleanupPage({ managementState, session, runAction }: any) {
 
 export function AdminSupportPage({ tickets }: any) {
   return (
-    <ConsoleSurface title="工单运营" eyebrow="管理" subtitle="全部可见工单">
-      <InsightPanel title="工单队列" eyebrow="支持">
+    <ConsoleSurface title="工单运营" eyebrow="管理" subtitle="外部工单映射和资源定位">
+      <InsightPanel title="外部工单映射" eyebrow="支持">
         <ObjectTable
           rowKey="id"
           data={tickets.tickets}
-          emptyText="暂无工单"
+          emptyText="暂无外部工单映射"
           columns={[
+            { title: "外部编号", dataIndex: "externalTicketId", ellipsis: true },
+            { title: "外部系统", dataIndex: "externalSystem", ellipsis: true },
             { title: "标题", dataIndex: "title" },
             { title: "分类", dataIndex: "category" },
             { title: "账号", dataIndex: "accountId", ellipsis: true },

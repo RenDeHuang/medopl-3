@@ -208,9 +208,9 @@
       "evidenceRequired": true
     },
     {
-      "kind": "SupportTicket",
+      "kind": "SupportTicketMapping",
       "ownerRepo": "opl-console",
-      "routeKind": "business_object",
+      "routeKind": "external_integration",
       "lifecycle": "current",
       "requiredCapabilitiesForImplemented": [
         "list",

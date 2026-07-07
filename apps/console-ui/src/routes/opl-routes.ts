@@ -587,12 +587,12 @@ export const oplRoutes = Object.freeze([
     role: "lab_owner",
     hiddenInMenu: true,
     featureFlag: "support",
-    routeKind: "business_object",
-    objectKind: "SupportTicket",
+    routeKind: "external_integration",
+    objectKind: "SupportTicketMapping",
     pageModule: "apps/console-ui/src/pages/support/SupportPage.tsx",
     apiClient: "apps/console-ui/src/api/support-api.ts",
     apiRoutes: ["GET /api/support/tickets"],
-    serviceBoundary: "SupportTicketService",
+    serviceBoundary: "ExternalSupportMappingService",
     capabilities: ["list", "read", "audit"]
   }),
   currentRoute({
@@ -603,12 +603,12 @@ export const oplRoutes = Object.freeze([
     role: "lab_owner",
     hiddenInMenu: true,
     featureFlag: "support",
-    routeKind: "business_object",
-    objectKind: "SupportTicket",
+    routeKind: "external_integration",
+    objectKind: "SupportTicketMapping",
     pageModule: "apps/console-ui/src/pages/support/SupportPage.tsx",
     apiClient: "apps/console-ui/src/api/support-api.ts",
     apiRoutes: ["GET /api/support/tickets", "POST /api/support/tickets"],
-    serviceBoundary: "SupportTicketService",
+    serviceBoundary: "ExternalSupportMappingService",
     capabilities: ["read", "write", "audit"]
   }),
   currentRoute({
@@ -619,12 +619,12 @@ export const oplRoutes = Object.freeze([
     role: "lab_owner",
     hiddenInMenu: true,
     featureFlag: "support",
-    routeKind: "business_object",
-    objectKind: "SupportTicket",
+    routeKind: "external_integration",
+    objectKind: "SupportTicketMapping",
     pageModule: "apps/console-ui/src/pages/support/SupportPage.tsx",
     apiClient: "apps/console-ui/src/api/support-api.ts",
     apiRoutes: ["GET /api/support/tickets"],
-    serviceBoundary: "SupportTicketService",
+    serviceBoundary: "ExternalSupportMappingService",
     capabilities: ["detail", "read", "audit"]
   }),
   currentRoute({
@@ -791,12 +791,12 @@ export const oplRoutes = Object.freeze([
     role: "admin",
     adminMenu: true,
     featureFlag: "support",
-    routeKind: "business_object",
-    objectKind: "SupportTicket",
+    routeKind: "external_integration",
+    objectKind: "SupportTicketMapping",
     pageModule: "apps/console-ui/src/pages/admin/AdminOverviewPage.tsx",
     apiClient: "apps/console-ui/src/api/support-api.ts",
     apiRoutes: ["GET /api/support/tickets"],
-    serviceBoundary: "SupportTicketService",
+    serviceBoundary: "ExternalSupportMappingService",
     capabilities: ["list", "read", "audit"]
   }),
   currentRoute({

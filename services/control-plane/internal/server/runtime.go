@@ -28,6 +28,7 @@ type runtimeApp struct {
 	users       map[string]map[string]any
 	orgs        map[string]map[string]any
 	memberships map[string]map[string]any
+	support     map[string]map[string]any
 	wallets     map[string]map[string]any
 	ledger      []map[string]any
 	usage       []map[string]any
@@ -71,6 +72,7 @@ func newRuntimeAppEmpty() *runtimeApp {
 		users:       map[string]map[string]any{"usr-admin": {"id": "usr-admin", "email": "owner@example.com", "accountId": "acct-admin", "role": "admin", "status": "active"}},
 		orgs:        map[string]map[string]any{},
 		memberships: map[string]map[string]any{},
+		support:     map[string]map[string]any{},
 		wallets:     map[string]map[string]any{},
 		sessions:    map[string]sessionRecord{},
 	}
@@ -86,6 +88,7 @@ func (app *runtimeApp) snapshotLocked() readModelSnapshot {
 		Users:       cloneMapMap(app.users),
 		Orgs:        cloneMapMap(app.orgs),
 		Memberships: cloneMapMap(app.memberships),
+		Support:     cloneMapMap(app.support),
 		Wallets:     cloneMapMap(app.wallets),
 		Ledger:      cloneMapSlice(app.ledger),
 		Usage:       cloneMapSlice(app.usage),
@@ -115,6 +118,9 @@ func (app *runtimeApp) applySnapshot(snapshot readModelSnapshot) {
 	}
 	if len(snapshot.Memberships) > 0 {
 		app.memberships = cloneMapMap(snapshot.Memberships)
+	}
+	if len(snapshot.Support) > 0 {
+		app.support = cloneMapMap(snapshot.Support)
 	}
 	if len(snapshot.Wallets) > 0 {
 		app.wallets = cloneMapMap(snapshot.Wallets)
@@ -160,6 +166,7 @@ func (app *runtimeApp) state(accountID string) map[string]any {
 		"resourceUsageLogs":     copySlice(app.usage),
 		"walletTransactions":    copySlice(app.walletTx),
 		"manualTopups":          copySlice(app.topups),
+		"supportTickets":        values(app.support),
 		"billingReconciliation": map[string]any{"guard": map[string]any{"status": "not_required", "blockNewWorkspaces": false, "reason": "billing_reconciliation_not_required"}},
 		"evidenceLedger":        []any{},
 		"audit":                 []any{},
@@ -195,6 +202,56 @@ func (app *runtimeApp) createMembership(input map[string]any) (map[string]any, e
 	membership := map[string]any{"id": id, "organizationId": orgID, "userId": userID, "role": stringField(input, "role", "member"), "status": "active"}
 	app.memberships[id] = membership
 	return cloneMap(membership), app.persistLocked()
+}
+
+func (app *runtimeApp) supportTickets(scopeAll bool, accountID string) []any {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	if scopeAll || accountID == "" {
+		return values(app.support)
+	}
+	return filteredValues(app.support, func(item map[string]any) bool {
+		return stringValue(item["accountId"]) == accountID
+	})
+}
+
+func (app *runtimeApp) createSupportMapping(input map[string]any) (map[string]any, error) {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	externalTicketID := stringField(input, "externalTicketId", "")
+	if externalTicketID == "" {
+		return nil, errors.New("missing_external_ticket_id")
+	}
+	accountID := stringField(input, "accountId", "")
+	if accountID == "" {
+		return nil, errors.New("missing_account_id")
+	}
+	now := time.Now().UTC().Format(time.RFC3339)
+	id := "support-" + stableID(accountID, externalTicketID)[:12]
+	message := strings.TrimSpace(stringField(input, "description", ""))
+	row := map[string]any{
+		"id":               id,
+		"externalSystem":   stringField(input, "externalSystem", "external-helpdesk"),
+		"externalTicketId": externalTicketID,
+		"externalUrl":      stringField(input, "externalUrl", ""),
+		"accountId":        accountID,
+		"userId":           stringField(input, "userId", ""),
+		"workspaceId":      stringField(input, "workspaceId", ""),
+		"resourceIds":      stringSliceField(input, "resourceIds"),
+		"operationId":      stringField(input, "operationId", ""),
+		"title":            stringField(input, "title", externalTicketID),
+		"category":         stringField(input, "category", "Workspace"),
+		"priority":         stringField(input, "priority", "normal"),
+		"status":           stringField(input, "status", "external_open"),
+		"createdAt":        now,
+		"updatedAt":        now,
+		"messages":         []any{},
+	}
+	if message != "" {
+		row["messages"] = []any{map[string]any{"author": "requester", "text": message, "createdAt": now}}
+	}
+	app.support[id] = row
+	return cloneMap(row), app.persistLocked()
 }
 
 func (app *runtimeApp) createUser(input map[string]any) (map[string]any, error) {
@@ -358,12 +415,20 @@ func (app *runtimeApp) session(r *http.Request) (map[string]any, bool) {
 }
 
 func (app *runtimeApp) sessionUserID(r *http.Request) string {
-	payload, ok := app.session(r)
+	user, ok := app.sessionUserContext(r)
 	if !ok {
 		return ""
 	}
-	user, _ := payload["user"].(map[string]any)
 	return stringValue(user["id"])
+}
+
+func (app *runtimeApp) sessionUserContext(r *http.Request) (map[string]any, bool) {
+	payload, ok := app.session(r)
+	if !ok {
+		return nil, false
+	}
+	user, _ := payload["user"].(map[string]any)
+	return user, user != nil
 }
 
 func (app *runtimeApp) logout(r *http.Request) {
@@ -550,6 +615,7 @@ func (app *runtimeApp) managementState(includeDeleted bool) map[string]any {
 		"organizations":          values(app.orgs),
 		"users":                  sanitizedUserValues(app.users, includeDeleted),
 		"memberships":            values(app.memberships),
+		"supportTickets":         values(app.support),
 		"accounts":               app.accountsLocked(),
 		"packages":               packageList(),
 		"computePools":           computePools(),
@@ -1098,6 +1164,18 @@ func values(input map[string]map[string]any) []any {
 	output := make([]any, 0, len(keys))
 	for _, key := range keys {
 		output = append(output, cloneMap(input[key]))
+	}
+	return output
+}
+
+func filteredValues(input map[string]map[string]any, include func(map[string]any) bool) []any {
+	rows := values(input)
+	output := make([]any, 0, len(rows))
+	for _, row := range rows {
+		item := row.(map[string]any)
+		if include(item) {
+			output = append(output, item)
+		}
 	}
 	return output
 }

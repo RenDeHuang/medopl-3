@@ -190,7 +190,7 @@ export const consoleActions = Object.freeze([
     label: "提交工单",
     type: "route",
     role: "lab_owner",
-    objectKind: "SupportTicket",
+    objectKind: "SupportTicketMapping",
     routeId: "support.create"
   },
   {
@@ -198,7 +198,7 @@ export const consoleActions = Object.freeze([
     label: "查看工单",
     type: "route",
     role: "lab_owner",
-    objectKind: "SupportTicket",
+    objectKind: "SupportTicketMapping",
     routeId: "support.detail"
   },
   {

@@ -27,7 +27,7 @@
         "organizations",
         "memberships",
         "workspaces",
-        "supportTickets",
+        "supportTicketMappings",
         "operationRequests"
       ],
       "calls": {

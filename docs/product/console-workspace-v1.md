@@ -53,7 +53,7 @@ Admin:
 - Runtime readiness
 - Fabric catalog internals
 - Ledger events and receipts
-- Support queue
+- External support ticket mappings
 
 ## Lab Owner Surface
 
@@ -67,7 +67,7 @@ Lab Owner sees:
 - Storage creation flow: capacity, GB-month price, hourly estimate, hold, balance sufficiency, provisioning status, and failure details.
 - Attachment flow: selected compute allocation, selected storage volume, mount path, runtime template, and Workspace URL behavior.
 - Billing: balance, frozen amount, available balance, recent charges, usage, and top-ups.
-- Support tickets and alerts.
+- Support ticket mappings and alerts.
 
 Lab Owner must not see:
 
@@ -90,7 +90,7 @@ Admin sees:
 - runtime and production readiness;
 - Fabric resource catalog internals;
 - raw Ledger evidence;
-- support queue.
+- external support ticket mapping queue.
 
 ## Resource Creation
 

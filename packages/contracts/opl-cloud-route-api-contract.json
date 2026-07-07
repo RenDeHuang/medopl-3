@@ -986,14 +986,14 @@
       "role": "lab_owner",
       "hiddenInMenu": true,
       "featureFlag": "support",
-      "routeKind": "business_object",
-      "objectKind": "SupportTicket",
+      "routeKind": "external_integration",
+      "objectKind": "SupportTicketMapping",
       "pageModule": "apps/console-ui/src/pages/support/SupportPage.tsx",
       "apiClient": "apps/console-ui/src/api/support-api.ts",
       "apiRoutes": [
         "GET /api/support/tickets"
       ],
-      "serviceBoundary": "SupportTicketService",
+      "serviceBoundary": "ExternalSupportMappingService",
       "requiresAdmin": false,
       "requiresAuth": true
     },
@@ -1013,15 +1013,15 @@
       "role": "lab_owner",
       "hiddenInMenu": true,
       "featureFlag": "support",
-      "routeKind": "business_object",
-      "objectKind": "SupportTicket",
+      "routeKind": "external_integration",
+      "objectKind": "SupportTicketMapping",
       "pageModule": "apps/console-ui/src/pages/support/SupportPage.tsx",
       "apiClient": "apps/console-ui/src/api/support-api.ts",
       "apiRoutes": [
         "GET /api/support/tickets",
         "POST /api/support/tickets"
       ],
-      "serviceBoundary": "SupportTicketService",
+      "serviceBoundary": "ExternalSupportMappingService",
       "requiresAdmin": false,
       "requiresAuth": true
     },
@@ -1041,14 +1041,14 @@
       "role": "lab_owner",
       "hiddenInMenu": true,
       "featureFlag": "support",
-      "routeKind": "business_object",
-      "objectKind": "SupportTicket",
+      "routeKind": "external_integration",
+      "objectKind": "SupportTicketMapping",
       "pageModule": "apps/console-ui/src/pages/support/SupportPage.tsx",
       "apiClient": "apps/console-ui/src/api/support-api.ts",
       "apiRoutes": [
         "GET /api/support/tickets"
       ],
-      "serviceBoundary": "SupportTicketService",
+      "serviceBoundary": "ExternalSupportMappingService",
       "requiresAdmin": false,
       "requiresAuth": true
     },
@@ -1360,14 +1360,14 @@
       "role": "admin",
       "adminMenu": true,
       "featureFlag": "support",
-      "routeKind": "business_object",
-      "objectKind": "SupportTicket",
+      "routeKind": "external_integration",
+      "objectKind": "SupportTicketMapping",
       "pageModule": "apps/console-ui/src/pages/admin/AdminOverviewPage.tsx",
       "apiClient": "apps/console-ui/src/api/support-api.ts",
       "apiRoutes": [
         "GET /api/support/tickets"
       ],
-      "serviceBoundary": "SupportTicketService",
+      "serviceBoundary": "ExternalSupportMappingService",
       "requiresAdmin": true,
       "requiresAuth": true
     }

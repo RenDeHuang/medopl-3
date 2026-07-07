@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createSupportTicket, getSupportTickets } from "../../api/support-api.ts";
+import { createSupportTicketMapping, getSupportTicketMappings } from "../../api/support-api.ts";
 
 export function useTickets({ csrfToken = "", all = false }: any = {}) {
   const [tickets, setTickets] = useState([]);
@@ -8,7 +8,7 @@ export function useTickets({ csrfToken = "", all = false }: any = {}) {
   async function refresh() {
     setLoading(true);
     try {
-      const payload = await getSupportTickets({ all });
+      const payload = await getSupportTicketMappings({ all });
       setTickets(payload.tickets || []);
     } finally {
       setLoading(false);
@@ -16,7 +16,7 @@ export function useTickets({ csrfToken = "", all = false }: any = {}) {
   }
 
   async function createTicket(input) {
-    const ticket = await createSupportTicket(input, csrfToken);
+    const ticket = await createSupportTicketMapping(input, csrfToken);
     setTickets((current) => [ticket, ...current]);
     return ticket;
   }

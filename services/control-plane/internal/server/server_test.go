@@ -909,6 +909,52 @@ func TestUserLifecycleProtectsLastActiveAdmin(t *testing.T) {
 	}
 }
 
+func TestSupportTicketMappingRequiresExternalTicket(t *testing.T) {
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	req := httptest.NewRequest(http.MethodPost, "/api/support/tickets", bytes.NewBufferString(`{"accountId":"acct-alpha","title":"Need help"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+
+	server.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "missing_external_ticket_id") {
+		t.Fatalf("status=%d body=%s, want missing external ticket id", rec.Code, rec.Body.String())
+	}
+}
+
+func TestSupportTicketMappingPersistsExternalContext(t *testing.T) {
+	path := t.TempDir() + "/control-plane-state.json"
+	service := controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{})
+	server, err := NewPersistentServer(service, NewJSONReadModelStore(path))
+	if err != nil {
+		t.Fatalf("create persistent server: %v", err)
+	}
+	body := `{"accountId":"acct-alpha","userId":"usr-alpha","workspaceId":"ws-alpha","externalSystem":"zammad","externalTicketId":"ZAM-42","externalUrl":"https://support.example/tickets/42","resourceIds":["compute-alpha"],"operationId":"op-alpha","title":"Workspace failed","description":"provider timeout"}`
+	created := createResource(t, server, http.MethodPost, "/api/support/tickets", body)
+	if !strings.HasPrefix(stringValue(created["id"]), "support-") || created["externalTicketId"] != "ZAM-42" || created["accountId"] != "acct-alpha" {
+		t.Fatalf("support mapping did not keep external context: %#v", created)
+	}
+
+	restarted, err := NewPersistentServer(service, NewJSONReadModelStore(path))
+	if err != nil {
+		t.Fatalf("restart persistent server: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/support/tickets?scope=all", nil)
+	rec := httptest.NewRecorder()
+	restarted.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("list status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var listed map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&listed); err != nil {
+		t.Fatalf("decode support mappings: %v", err)
+	}
+	tickets := listed["tickets"].([]any)
+	if len(tickets) != 1 || tickets[0].(map[string]any)["externalTicketId"] != "ZAM-42" {
+		t.Fatalf("support mapping did not persist: %#v", tickets)
+	}
+}
+
 func TestActiveConsoleAPIRoutesReachControlPlane(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	cases := []struct {

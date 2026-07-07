@@ -62,7 +62,7 @@ test("business object contract uses compute pools and account allocations as cur
     "RuntimeReadiness",
     "StorageAttachment",
     "StorageVolume",
-    "SupportTicket",
+    "SupportTicketMapping",
     "Usage",
     "User",
     "Wallet",

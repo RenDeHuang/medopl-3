@@ -381,11 +381,19 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 		writeJSON(w, http.StatusOK, body)
 	})
 	mux.HandleFunc("GET /api/support/tickets", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{"tickets": []any{}})
+		user, _ := app.sessionUserContext(r)
+		writeJSON(w, http.StatusOK, map[string]any{"tickets": app.supportTickets(r.URL.Query().Get("scope") == "all", stringValue(user["accountId"]))})
 	})
 	mux.HandleFunc("POST /api/support/tickets", func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
-		writeJSON(w, http.StatusCreated, map[string]any{"id": "ticket-local", "title": stringField(input, "title", "Support"), "status": "open"})
+		user, ok := app.sessionUserContext(r)
+		withSessionUserContext(input, user, ok)
+		body, err := app.createSupportMapping(input)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusCreated, body)
 	})
 	mux.HandleFunc("GET /api/ledger/task-receipts", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"receipts": []any{}})
@@ -472,6 +480,18 @@ func writeUserLifecycleError(w http.ResponseWriter, err error) {
 func withOperatorUserID(input map[string]any, userID string) {
 	if userID != "" && stringValue(input["operatorUserId"]) == "" {
 		input["operatorUserId"] = userID
+	}
+}
+
+func withSessionUserContext(input map[string]any, user map[string]any, ok bool) {
+	if !ok {
+		return
+	}
+	if stringValue(input["userId"]) == "" {
+		input["userId"] = stringValue(user["id"])
+	}
+	if stringValue(input["accountId"]) == "" {
+		input["accountId"] = stringValue(user["accountId"])
 	}
 }
 

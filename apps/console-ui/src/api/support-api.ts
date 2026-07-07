@@ -1,10 +1,10 @@
 import { getJson, postJson } from "./console-api.ts";
 
-export function getSupportTickets({ all = false }: any = {}) {
+export function getSupportTicketMappings({ all = false }: any = {}) {
   const params = all ? "?scope=all" : "";
   return getJson(`/api/support/tickets${params}`);
 }
 
-export function createSupportTicket(input, csrfToken) {
+export function createSupportTicketMapping(input, csrfToken) {
   return postJson("/api/support/tickets", input, csrfToken);
 }

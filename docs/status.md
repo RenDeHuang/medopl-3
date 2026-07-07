@@ -18,7 +18,7 @@ Supported:
 - Explicit storage destruction.
 - Seven-day compute and storage holds.
 - Resource usage, request usage, wallet transactions, manual top-up audit, billing ledger, and reconciliation records.
-- Server-backed support ticket list, creation, detail, and admin queue.
+- External support ticket mapping API and admin lookup queue.
 - Local-to-staging operator mode using the same staging PostgreSQL and Tencent TKE resource pool as cloud staging.
 - Tencent TKE production handoff.
 - PostgreSQL persistence when `DATABASE_URL` is configured.

@@ -29,7 +29,7 @@ import {
   StorageVolumesPage
 } from "../pages/resources/ResourceProvisioningPages.tsx";
 import { ForbiddenPage } from "../pages/shared/page-widgets.tsx";
-import { NewSupportTicketPage, SupportPage, SupportTicketPage } from "../pages/support/SupportPage.tsx";
+import { NewSupportMappingPage, SupportMappingPage, SupportPage } from "../pages/support/SupportPage.tsx";
 import { CreateWorkspacePage } from "../pages/workspaces/CreateWorkspacePage.tsx";
 import { WorkspaceDetailPage } from "../pages/workspaces/WorkspaceDetailPage.tsx";
 import { WorkspacesPage } from "../pages/workspaces/WorkspacesPage.tsx";
@@ -64,8 +64,8 @@ export function renderConsoleRoute(ctx) {
   if (path.startsWith("/console/gateway")) return <GatewayPage {...ctx} />;
   if (path.startsWith("/console/billing")) return <BillingPage {...ctx} />;
   if (path.startsWith("/console/account")) return <AccountPage {...ctx} />;
-  if (path.startsWith("/console/support/new")) return <NewSupportTicketPage {...ctx} />;
-  if (path.startsWith("/console/support/")) return <SupportTicketPage {...ctx} />;
+  if (path.startsWith("/console/support/new")) return <NewSupportMappingPage {...ctx} />;
+  if (path.startsWith("/console/support/")) return <SupportMappingPage {...ctx} />;
   if (path.startsWith("/console/support")) return <SupportPage {...ctx} />;
   if (path.startsWith("/console/resources")) return <ResourcesPage {...ctx} />;
   if (path.startsWith("/console/approvals")) return <ApprovalsPage {...ctx} />;
