@@ -1630,6 +1630,41 @@ test("production verifier reports cleanup failures without hiding the original v
   ]);
 });
 
+test("production verifier can leave failed resources for live diagnosis", async () => {
+  const chain = tkeChain();
+  const responses = chainResponses(chain);
+  responses["POST /api/auth/operator-login"] = { accountId: "operator", role: "operator" };
+  responses["POST /api/workspaces/runtime-status"] = {
+    ready: false,
+    checks: [{ name: "deployment_ready", ok: false }]
+  };
+  const requests = [];
+
+  await assert.rejects(
+    verifyProductionChain({
+      origin: "https://cloud.medopl.cn",
+      operatorToken: "operator-token",
+      runId: "diag",
+      workspaceUrlAttempts: 1,
+      retryDelayMs: 0,
+      cleanupOnFailure: false,
+      fetchImpl: keyedFetch({
+        responses,
+        requests,
+        consoleOrigin: "https://cloud.medopl.cn",
+        statusByKey: { [`GET ${chain.workspace.url}`]: 503 }
+      })
+    }),
+    (error) => {
+      assert.equal(error.cleanupSkipped, true);
+      return true;
+    }
+  );
+
+  assert.equal(requests.some((request) => request.key === `POST /api/compute-allocations/${chain.compute.id}/destroy`), false);
+  assert.equal(requests.some((request) => request.key === "POST /api/storage-volumes/destroy"), false);
+});
+
 test("production verifier CLI writes structured failure JSON with cleanup errors", async () => {
   let stdout = "";
   let stderr = "";

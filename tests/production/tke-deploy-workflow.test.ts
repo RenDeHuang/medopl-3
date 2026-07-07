@@ -105,6 +105,14 @@ test("production verifier workflow defaults run id to GitHub run id", async () =
   );
 });
 
+test("production verifier workflow can leave failed resources for diagnosis", async () => {
+  const workflow = await readWorkflow(new URL("../../.github/workflows/verify-production-chain.yml", import.meta.url));
+  const currentJob = job(workflow, "verify");
+
+  assert.ok(workflow.on.workflow_dispatch.inputs.cleanup_on_failure);
+  assert.equal(currentJob.env.OPL_VERIFY_CLEANUP_ON_FAILURE, "${{ inputs.cleanup_on_failure }}");
+});
+
 test("TKE deploy can roll forward with an existing auth seed secret", async () => {
   const contract = await readJson(deploymentContractPath);
   const workflow = await readWorkflow(contract.deployWorkflow.file);
@@ -436,6 +444,7 @@ test("TKE production diagnostics workflow is read-only and matches the deploymen
   assertWorkflowContract(workflow, contract.diagnosticsWorkflow, contract);
   const text = JSON.stringify(workflow);
   assert.match(text, /app\.kubernetes\.io\/name=opl-compute-allocation/, "diagnostics must inspect current compute allocation pods");
+  assert.match(text, /--all-containers=true --previous --tail=300/, "diagnostics must print previous Workspace crash logs");
   assert.doesNotMatch(text, /app\.kubernetes\.io\/name=opl-workspace/, "diagnostics must not use retired workspace pod labels");
 });
 
@@ -492,6 +501,9 @@ test("Console residual cleanup workflow is API-scoped and gated by exact resourc
   assert.match(runs, /\/api\/compute-allocations\/.*\/destroy/);
   assert.match(runs, /\/api\/storage-volumes\/destroy/);
   assert.match(runs, /\/api\/storage-attachments\/detach/);
+  assert.match(runs, /\^ca_\[A-Za-z0-9_-]\+\$/);
+  assert.match(runs, /\^vol__\[A-Za-z0-9_-]\+\$/);
+  assert.match(runs, /\^att__\[A-Za-z0-9_-]\+\$/);
   assert.match(runs, /confirm:\s*true/);
   assert.equal(workflow.on.workflow_dispatch.inputs.legacy_compute_allocation_id, undefined);
   assert.equal(workflow.on.workflow_dispatch.inputs.cloud_cleanup_confirmed, undefined);

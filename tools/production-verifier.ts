@@ -1129,6 +1129,7 @@ export async function verifyProductionChain({
   browserE2E = false,
   browserFactory = null,
   screenshotDir = "",
+  cleanupOnFailure = true,
   fetchImpl = globalThis.fetch
 } = {}) {
   if (typeof fetchImpl !== "function") throw new Error("fetch_required");
@@ -1451,6 +1452,10 @@ export async function verifyProductionChain({
       replacementWorkspace
     });
     error.checks = checks;
+    if (!cleanupOnFailure) {
+      error.cleanupSkipped = true;
+      throw error;
+    }
     const cleanupErrors = [];
     if (replacementCompute?.id || replacementAttachment?.id) {
       const replacementCleanupErrors = await cleanupVerificationResources({
@@ -1515,6 +1520,7 @@ function verifierOptionsFromArgs({ argv, env = process.env, fetchImpl = globalTh
     operatorToken: args["operator-token"] || env.OPL_VERIFY_OPERATOR_TOKEN || "",
     browserE2E: ["1", "true"].includes(String(args["browser-e2e"] || env.OPL_VERIFY_BROWSER_E2E || "").toLowerCase()),
     screenshotDir: args["screenshot-dir"] || env.OPL_VERIFY_SCREENSHOT_DIR || "",
+    cleanupOnFailure: !["0", "false", "no"].includes(String(args["cleanup-on-failure"] || env.OPL_VERIFY_CLEANUP_ON_FAILURE || "true").toLowerCase()),
     fetchImpl
   };
 }
@@ -1533,6 +1539,7 @@ function errorPayload(error) {
     ...(error.runId ? { runId: error.runId } : {}),
     ...(error.workspaceName ? { workspaceName: error.workspaceName } : {}),
     ...(error.checks ? { checks: error.checks } : {}),
+    ...(error.cleanupSkipped ? { cleanupSkipped: true } : {}),
     ...(error.cleanupErrors ? { cleanupErrors: error.cleanupErrors } : {})
   };
 }

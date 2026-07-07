@@ -183,8 +183,9 @@
         "get deploy,rs,pod,svc,ingress -o wide"
       ],
       "Describe pending workspace pods": [
-        "status.phase=Pending",
-        "describe \"$pod\""
+        "oplcloud.cn/compute-allocation-id=$OPL_DIAG_COMPUTE_ALLOCATION_ID",
+        "describe \"$pod\"",
+        "logs \"$pod\" --all-containers=true --previous"
       ],
       "Show TLS secret inventory": [
         "qcloud_cert_id",

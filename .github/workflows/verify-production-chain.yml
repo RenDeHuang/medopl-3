@@ -40,6 +40,14 @@ on:
         required: false
         default: "10000"
         type: string
+      cleanup_on_failure:
+        description: Destroy verifier resources after a failed run. Set false only for live diagnosis.
+        required: false
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
 
 permissions:
   contents: read
@@ -60,6 +68,7 @@ jobs:
       OPL_VERIFY_RUN_ID: ${{ inputs.run_id || github.run_id }}
       OPL_VERIFY_BROWSER_E2E: "1"
       OPL_VERIFY_SCREENSHOT_DIR: "artifacts/production-browser-e2e"
+      OPL_VERIFY_CLEANUP_ON_FAILURE: ${{ inputs.cleanup_on_failure }}
       OPL_AIONUI_ADMIN_PASSWORD_SEED: ${{ secrets.OPL_AIONUI_ADMIN_PASSWORD_SEED }}
 
     steps:

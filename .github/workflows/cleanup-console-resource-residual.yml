@@ -86,22 +86,22 @@ jobs:
           targets=0
           if [ -n "$COMPUTE_ALLOCATION_ID" ]; then
             targets=$((targets + 1))
-            if ! printf '%s' "$COMPUTE_ALLOCATION_ID" | grep -Eq '^compute-[a-z0-9-]+$'; then
-              echo "compute_allocation_id must match ^compute-[a-z0-9-]+$" >&2
+            if ! printf '%s' "$COMPUTE_ALLOCATION_ID" | grep -Eq '^ca_[A-Za-z0-9_-]+$'; then
+              echo "compute_allocation_id must match ^ca_[A-Za-z0-9_-]+$" >&2
               exit 1
             fi
           fi
           if [ -n "$STORAGE_ID" ]; then
             targets=$((targets + 1))
-            if ! printf '%s' "$STORAGE_ID" | grep -Eq '^storage-[a-z0-9-]+$'; then
-              echo "storage_id must match ^storage-[a-z0-9-]+$" >&2
+            if ! printf '%s' "$STORAGE_ID" | grep -Eq '^vol__[A-Za-z0-9_-]+$'; then
+              echo "storage_id must match ^vol__[A-Za-z0-9_-]+$" >&2
               exit 1
             fi
           fi
           if [ -n "$ATTACHMENT_ID" ]; then
             targets=$((targets + 1))
-            if ! printf '%s' "$ATTACHMENT_ID" | grep -Eq '^attach-[a-z0-9-]+$'; then
-              echo "attachment_id must match ^attach-[a-z0-9-]+$" >&2
+            if ! printf '%s' "$ATTACHMENT_ID" | grep -Eq '^att__[A-Za-z0-9_-]+$'; then
+              echo "attachment_id must match ^att__[A-Za-z0-9_-]+$" >&2
               exit 1
             fi
           fi
