@@ -11,6 +11,7 @@ func TestPostgresSchemaUsesAppendFirstLedgerTables(t *testing.T) {
 	required := []string{
 		"CREATE TABLE IF NOT EXISTS wallets",
 		"CREATE TABLE IF NOT EXISTS ledger_entries",
+		"ALTER TABLE ledger_entries ADD COLUMN IF NOT EXISTS reason TEXT",
 		"CREATE TABLE IF NOT EXISTS wallet_transactions",
 		"CREATE TABLE IF NOT EXISTS manual_topups",
 		"ALTER TABLE manual_topups ADD COLUMN IF NOT EXISTS idempotency_key TEXT",

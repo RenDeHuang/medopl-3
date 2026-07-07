@@ -34,6 +34,8 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+ALTER TABLE ledger_entries ADD COLUMN IF NOT EXISTS reason TEXT;
+
 CREATE TABLE IF NOT EXISTS wallet_transactions (
   id TEXT PRIMARY KEY,
   account_id TEXT NOT NULL REFERENCES wallets(account_id),

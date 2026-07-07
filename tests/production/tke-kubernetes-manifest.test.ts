@@ -87,6 +87,7 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
 	const ledgerMigration = ledger.spec.template.spec.initContainers[0];
 	assert.equal(ledgerMigration.name, "ledger-schema-migration");
 	assert.equal(ledgerMigration.command[0], "node");
+	assert.match(ledgerMigration.args.join(" "), /ALTER TABLE ledger_entries ADD COLUMN IF NOT EXISTS reason TEXT/);
 	assert.equal(ledgerMigration.env.find((item) => item.name === "PGSSLMODE").value, "disable");
 	assert.deepEqual(ledgerMigration.env.filter((item) => item.valueFrom).map((item) => `${item.name}->${item.valueFrom.secretKeyRef.name}/${item.valueFrom.secretKeyRef.key}`), [
 		"DATABASE_URL->opl-cloud-database/DATABASE_URL"
