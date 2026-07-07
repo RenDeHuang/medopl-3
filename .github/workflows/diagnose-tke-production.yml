@@ -230,25 +230,30 @@ jobs:
           kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec -i deploy/opl-cloud-ledger -c ledger -- node <<'NODE'
           const { Client } = require("pg");
           const tables = ["wallets", "ledger_entries", "wallet_transactions", "manual_topups", "idempotency_keys", "holds", "hold_releases"];
-          const client = new Client({ connectionString: process.env.DATABASE_URL, ssl: false });
-          await client.connect();
-          try {
-            const result = await client.query(
-              `SELECT table_name, column_name
-               FROM information_schema.columns
-               WHERE table_schema = 'public' AND table_name = ANY($1)
-               ORDER BY table_name, ordinal_position`,
-              [tables]
-            );
-            const summary = {};
-            for (const row of result.rows) {
-              summary[row.table_name] ||= [];
-              summary[row.table_name].push(row.column_name);
+          (async () => {
+            const client = new Client({ connectionString: process.env.DATABASE_URL, ssl: false });
+            await client.connect();
+            try {
+              const result = await client.query(
+                `SELECT table_name, column_name
+                 FROM information_schema.columns
+                 WHERE table_schema = 'public' AND table_name = ANY($1)
+                 ORDER BY table_name, ordinal_position`,
+                [tables]
+              );
+              const summary = {};
+              for (const row of result.rows) {
+                summary[row.table_name] ||= [];
+                summary[row.table_name].push(row.column_name);
+              }
+              console.log(`LEDGER_SCHEMA_COLUMNS=${JSON.stringify(summary)}`);
+            } finally {
+              await client.end();
             }
-            console.log(`LEDGER_SCHEMA_COLUMNS=${JSON.stringify(summary)}`);
-          } finally {
-            await client.end();
-          }
+          })().catch((error) => {
+            console.error(error.message);
+            process.exit(1);
+          });
           NODE
 
       - name: Show previous control plane crash logs

@@ -452,6 +452,18 @@ test("TKE production diagnostics workflow is read-only and matches the deploymen
   assert.doesNotMatch(text, /app\.kubernetes\.io\/name=opl-workspace/, "diagnostics must not use retired workspace pod labels");
 });
 
+test("TKE diagnostics ledger schema probe is valid CommonJS", async () => {
+  const contract = await readJson(deploymentContractPath);
+  const workflow = await readWorkflow(contract.diagnosticsWorkflow.file);
+  const currentJob = job(workflow, contract.diagnosticsWorkflow.job);
+  const step = stepsByName(currentJob).get("Show ledger schema columns");
+  const text = serializedStep(step);
+
+  assert.match(text, /const \{ Client \} = require\("pg"\)/, "ledger schema probe must use the runtime's installed CommonJS pg package");
+  assert.match(text, /\(async \(\) => \{/, "CommonJS stdin script must wrap awaits in an async function");
+  assert.doesNotMatch(text, /^await /m, "CommonJS stdin script must not use top-level await");
+});
+
 test("TKE diagnostics do not print account state or Workspace URL tokens", async () => {
   const contract = await readJson(deploymentContractPath);
   const workflow = await readWorkflow(contract.diagnosticsWorkflow.file);
