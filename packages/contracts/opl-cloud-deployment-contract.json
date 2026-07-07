@@ -173,6 +173,7 @@
       "Describe control plane pods",
       "Show recent namespace events",
       "Show control plane logs",
+      "Show ledger schema columns",
       "Show previous control plane crash logs",
       "Show control plane container status",
       "Check control plane API through port-forward",
