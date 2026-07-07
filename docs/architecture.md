@@ -5,7 +5,7 @@
 OPL Cloud has five product layers:
 
 - OPL Gateway: AI provider routing, token policy, and request usage policy.
-- OPL Workspace: URL-delivered working environment running `one-person-lab-app`.
+- OPL Workspace: stable URL entry and lifecycle record backed by persistent storage and the current runtime pointer.
 - OPL Console: account, workspace, billing, access, support, and admin control surface.
 - OPL Fabric: compute, storage, image, route, and infrastructure handoff.
 - OPL Ledger: billing ledger, wallet transactions, audit events, receipts, verifier evidence, and reconciliation.
@@ -17,7 +17,7 @@ This repository is moving from one Node Console control-plane process to four ex
 - `apps/console-ui`: React + TypeScript browser UI. It owns no persistence and calls only the Control Plane API.
 - `services/control-plane`: Go UI-facing API and product orchestrator. It owns auth, organizations, users, workspaces, support, operation requests, and UI projections. It calls Ledger and Fabric through typed HTTP clients.
 - `services/ledger`: Go service backed by PostgreSQL. It owns wallets, holds, manual top-ups, ledger entries, wallet transactions, receipts, audit events, evidence references, idempotency keys, and reconciliation.
-- `services/fabric`: Go service boundary for Tencent Cloud and Kubernetes operations. It owns resource catalog, compute, storage, attachments, runtimes, provider request ids, and retryable resource operations.
+- `services/fabric`: Go service boundary for Tencent Cloud and Kubernetes operations. It owns resource catalog, compute, storage, attachments, runtime templates, runtimes, provider request ids, and retryable resource operations.
 - `packages/contracts`: machine-readable product, route, lifecycle, billing, management, storage, evidence, and service-boundary contracts.
 
 ## Boundaries
@@ -30,7 +30,9 @@ Ledger owns money and evidence persistence. All Ledger write APIs require idempo
 
 Fabric owns cloud resource operations. Tencent Cloud SDK and Kubernetes client-go imports live under `services/fabric` only.
 
-Fabric details such as TKE, Docker, Ingress, PVC/CBS, node-pool allocation, and runtime operation evidence are admin/operator surfaces. Lab Owner UI should expose product status and allowed actions, not raw infrastructure evidence.
+Fabric details such as TKE, runtime images, Ingress, PVC/CBS, node-pool allocation, and runtime operation evidence are admin/operator surfaces. Lab Owner UI should expose product status and allowed actions, not raw infrastructure evidence.
+
+`one-person-lab-app` is the default Workspace runtime template image. It is not a billable business object, storage owner, or lifecycle owner. ComputeAllocation, StorageVolume, StorageAttachment, Workspace URL, and Ledger records remain the commercial object truth.
 
 Ledger details such as dedup rows, request fingerprints, and raw event payloads are admin/operator surfaces. Lab Owner UI should expose wallet balance, holds, recent charges, usage, top-ups, and human-readable receipts.
 

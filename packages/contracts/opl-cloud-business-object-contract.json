@@ -23,10 +23,11 @@
   ],
   "principles": [
     "Active business object contract contains only current commercial objects.",
-    "Workspace is the stable commercial object: stable URL, persistent StorageVolume, and current runtime pointer.",
+    "Workspace is the stable commercial object: stable URL, access state, lifecycle, persistent StorageVolume, and current runtime pointer.",
     "ComputePool is the package-level TKE node pool; ComputeAllocation is one replaceable account-owned dedicated CVM or Kubernetes node in that pool.",
     "Fabric-managed ComputePools must not auto-scale or auto-repair user nodes; every account CVM must be created, owned, billed, and destroyed as a Console ComputeAllocation.",
     "StorageVolume can exist without compute; StorageAttachment mounts one volume to one current ComputeAllocation runtime.",
+    "RuntimeTemplate/ImageRef is deployable runtime configuration only; it is not a billing object, storage owner, or Workspace identity.",
     "Destroying compute suspends the Workspace URL and retains storage; rebuilding compute reuses the same Workspace URL and StorageVolume.",
     "Destroying storage makes the Workspace unrecoverable because the file body is gone.",
     "Business objects are protected by route ids, action ids, API clients, permission boundaries, and tests.",
@@ -79,7 +80,7 @@
         "action"
       ],
       "evidenceRequired": true,
-      "boundary": "Stable URL/token subject backed by one persistent StorageVolume and a current replaceable ComputeAllocation/StorageAttachment runtime pointer.",
+      "boundary": "Stable URL/token subject backed by one persistent StorageVolume, access state, lifecycle state, and a current replaceable ComputeAllocation/StorageAttachment runtime pointer.",
       "requiredFields": [
         "storageId",
         "currentComputeAllocationId",
@@ -180,6 +181,18 @@
       ],
       "evidenceRequired": true,
       "boundary": "Mounts one StorageVolume to one ComputeAllocation runtime."
+    },
+    {
+      "kind": "RuntimeTemplate",
+      "ownerRepo": "opl-fabric",
+      "routeKind": "read_model",
+      "lifecycle": "current",
+      "requiredCapabilitiesForImplemented": [
+        "list",
+        "read"
+      ],
+      "evidenceRequired": true,
+      "boundary": "Deployable application image and runtime contract used by Fabric to create Workspace runtimes. RuntimeTemplate is not a billing object and must not own compute, storage, attachment, or Workspace URL lifecycle."
     },
     {
       "kind": "Usage",

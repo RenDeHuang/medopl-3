@@ -26,6 +26,6 @@ When a package becomes independently deployable, keep this repository depending 
 - Fabric owns resource catalog, runtime execution, and cloud adapter details under `services/fabric`.
 - Ledger owns billing events, reconciliation guard semantics, control-plane evidence, and task evidence receipts under `services/ledger`.
 - ComputePool, ComputeAllocation, StorageVolume, and StorageAttachment contracts should stay shared: Console owns user-visible operations and receipts, while Fabric owns provider-specific execution mechanics.
-- Workspace runtime behavior remains owned by `one-person-lab-app`.
+- The default Workspace runtime template remains `one-person-lab-app`; template behavior belongs to that app contract, not to Console billing or resource ownership.
 
 Do not move OPL Gateway internals, one-person-lab framework internals, or domain-agent marketplaces into this repository.

@@ -1,6 +1,8 @@
 # OPL Cloud Product Design
 
-Status: v1 product design freeze
+Status: superseded product design record
+
+Superseded by the active contracts in `packages/contracts/` and the current product notes in `docs/product/console-workspace-v1.md`. This record no longer defines product truth where it conflicts with account-owned ComputeAllocation, StorageVolume, StorageAttachment, stable Workspace URL, and RuntimeTemplate boundaries.
 
 ## Naming
 
@@ -8,7 +10,7 @@ OPL Cloud is the external product name. It means the online hosted version of OP
 
 OPL Console is the management entry. It handles workspace creation, configuration, access links, billing, resource lifecycle, and settings.
 
-OPL Workspace is the real working environment users access. It is delivered as a URL and runs one dedicated `one-person-lab-app` Docker instance.
+OPL Workspace is the stable URL entry and lifecycle record users access. The current runtime behind that URL uses a RuntimeTemplate image, with `one-person-lab-app` as the default template.
 
 Product copy, user-facing UI, and future design documents must use only the fixed OPL Cloud names.
 
@@ -20,14 +22,14 @@ The primary job is workspace distribution. A PI creates an OPL Workspace in OPL 
 
 ## Core Resource Model
 
-One OPL Workspace maps to exactly:
+The active OPL Workspace model maps to:
 
 ```text
 1 OPL Workspace
-= 1 runtime compute unit
-= 1 one-person-lab-app Docker container
 = 1 persistent workspace storage volume
-= 1 URL
+= 1 stable URL entry
+= current ComputeAllocation/StorageAttachment runtime pointer
+= RuntimeTemplate image for the deployed app
 ```
 
 One PI account can own multiple OPL Workspaces:
@@ -36,19 +38,19 @@ One PI account can own multiple OPL Workspaces:
 PI Account
   -> Workspace 1
      -> Server 1
-     -> Docker 1
+     -> RuntimeTemplate 1
      -> Disk 1
      -> URL 1
 
   -> Workspace 2
      -> Server 2
-     -> Docker 2
+     -> RuntimeTemplate 2
      -> Disk 2
      -> URL 2
 
   -> Workspace 3
      -> Server 3
-     -> Docker 3
+     -> RuntimeTemplate 3
      -> Disk 3
      -> URL 3
 ```
@@ -62,7 +64,7 @@ OPL Cloud owns the online hosted product experience.
 The fixed OPL Cloud product layers are:
 
 - OPL Gateway: AI capability gateway, provider routing, token policy, and usage policy boundary.
-- OPL Workspace: the URL-delivered working environment running `one-person-lab-app`.
+- OPL Workspace: the stable URL entry backed by persistent storage and the current runtime pointer.
 - OPL Console: the account, billing, access, settings, and lifecycle control surface.
 - OPL Fabric: the compute, storage, image, route, and infrastructure handoff layer.
 - OPL Ledger: billing ledger, audit events, usage receipts, verifier output, and reconciliation evidence.
@@ -107,10 +109,10 @@ PI signs in to OPL Console
 -> Create OPL Workspace
 -> Choose compute and storage package
 -> Confirm hourly billing and 7-day compute plus storage pre-freeze
--> OPL Cloud creates the runtime compute unit
+-> OPL Cloud creates the ComputeAllocation
 -> OPL Cloud creates the persistent workspace storage volume
--> OPL Cloud deploys one-person-lab-app Docker
--> OPL Cloud mounts persistent storage into the Docker runtime
+-> OPL Cloud deploys the configured RuntimeTemplate image
+-> OPL Cloud mounts persistent storage into the runtime
 -> OPL Cloud configures the workspace URL
 -> OPL Console shows the URL
 -> PI copies the URL and shares it with members
@@ -202,7 +204,7 @@ Compute and storage are independent resources.
 
 ### Running
 
-Compute is active, the Docker runtime is running, persistent storage is mounted, and the URL is usable.
+Compute is active, the configured RuntimeTemplate runtime is ready, persistent storage is mounted, and the URL is usable.
 
 Billing:
 
@@ -338,7 +340,7 @@ A database may be added for metadata, session records, indexing, and audit refer
 For v1, the default assumption is:
 
 ```text
-one-person-lab-app Docker
+RuntimeTemplate image
 -> mounted persistent storage at /data and /projects
 -> application data persists on storage
 ```

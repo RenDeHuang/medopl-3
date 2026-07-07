@@ -58,6 +58,7 @@ test("business object contract uses compute pools and account allocations as cur
     "GatewayIntegration",
     "ProductionVerification",
     "ResourceRelationship",
+    "RuntimeTemplate",
     "RuntimeReadiness",
     "StorageAttachment",
     "StorageVolume",

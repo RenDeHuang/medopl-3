@@ -15,7 +15,7 @@ OPL Cloud sells account-owned compute, storage, and workspace access as a closed
 3. If the matching node pool does not exist, OPL Cloud creates it.
 4. OPL Cloud opens one CVM node in that pool for the user.
 5. OPL Cloud records which account and user own that CVM allocation.
-6. OPL Cloud deploys the one-person-lab-app Docker runtime onto that CVM node.
+6. OPL Cloud deploys the configured RuntimeTemplate image onto that CVM node.
 7. OPL Cloud mounts the user's cloud disk into that runtime.
 8. OPL Cloud creates one Workspace URL for that runtime.
 9. OPL Cloud starts billing for compute and storage using ledger records.
@@ -122,7 +122,7 @@ Fields:
 
 Invariant:
 
-- Attachment deploys or reconciles one-person-lab-app on the selected compute allocation.
+- Attachment deploys or reconciles the configured RuntimeTemplate image on the selected compute allocation.
 - Attachment must mount the selected StorageVolume into the runtime.
 
 ### Workspace

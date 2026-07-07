@@ -21,10 +21,16 @@
   "resourceMapping": {
     "workspaceUrlEntry": 1,
     "computeAllocation": 1,
-    "onePersonLabAppDocker": 1,
     "storageVolume": 1,
     "storageAttachment": 1,
-    "urlToken": 1
+    "urlToken": 1,
+    "runtimeTemplate": 1,
+    "runtimeImageRef": "default:one-person-lab-app"
+  },
+  "runtimeTemplatePolicy": {
+    "defaultTemplateId": "one-person-lab-app",
+    "billingObject": false,
+    "ownershipRule": "Runtime templates never own accounts, compute allocations, storage volumes, storage attachments, Workspace URL entries, holds, debits, or lifecycle records."
   },
   "access": {
     "urlPattern": "https://workspace.medopl.cn/w/<workspaceId>/?token=<share-token>",

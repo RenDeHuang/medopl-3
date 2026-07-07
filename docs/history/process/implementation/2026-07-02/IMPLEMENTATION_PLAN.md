@@ -36,8 +36,10 @@ Support this business chain:
 
 ```text
 PI signs in to OPL Console
--> creates an OPL Workspace
--> OPL Cloud creates one workspace runtime compute unit, one persistent workspace storage volume, one one-person-lab-app runtime container, and one URL
+-> opens a ComputeAllocation and StorageVolume
+-> attaches storage to compute
+-> creates an OPL Workspace stable URL entry
+-> OPL Cloud deploys the configured RuntimeTemplate image behind that URL
 -> PI shares the URL
 -> members enter the OPL Workspace without login
 -> OPL Console manages lifecycle, billing, audit, readiness, recovery, and evidence
@@ -47,10 +49,10 @@ Resource invariant:
 
 ```text
 1 OPL Workspace
-= 1 runtime compute unit
-= 1 one-person-lab-app runtime container
 = 1 persistent workspace storage volume
-= 1 URL
+= 1 stable URL entry
+= current ComputeAllocation/StorageAttachment runtime pointer
+= RuntimeTemplate image for the deployed app
 ```
 
 Compute and storage lifecycles stay separate. Stopping or recreating compute must not destroy workspace storage. Storage destruction is explicit and is the only action that stops storage billing.

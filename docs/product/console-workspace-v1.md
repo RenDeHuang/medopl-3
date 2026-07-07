@@ -2,13 +2,15 @@
 
 ## Target User
 
-Target users are Lab Owners and administrators who create, fund, operate, and distribute OPL Workspaces.
+Target users are Lab Owners and administrators who create, fund, operate, and distribute OPL Workspace URL entries backed by independently purchased compute and storage resources.
 
 The primary Lab Owner job is:
 
 ```text
 sign in -> open compute allocation -> open or select storage -> attach storage -> create Workspace URL -> copy URL -> share URL with members
 ```
+
+OPL Workspace is the stable URL entry and lifecycle record. The running application is a runtime template image deployed behind that URL. The default runtime template is `one-person-lab-app`, but that image is not a billing object and does not own the Workspace, compute allocation, storage volume, or attachment.
 
 ## Commercial Information Architecture
 
@@ -63,7 +65,7 @@ Lab Owner sees:
 - Package, ComputePool, ComputeAllocation state, storage state, hourly estimate, and seven-day hold estimate.
 - Compute creation flow: package, hourly price, hold, balance sufficiency, provisioning status, and failure details.
 - Storage creation flow: capacity, GB-month price, hourly estimate, hold, balance sufficiency, provisioning status, and failure details.
-- Attachment flow: selected compute allocation, selected storage volume, mount path, runtime image, and Workspace URL behavior.
+- Attachment flow: selected compute allocation, selected storage volume, mount path, runtime template, and Workspace URL behavior.
 - Billing: balance, frozen amount, available balance, recent charges, usage, and top-ups.
 - Support tickets and alerts.
 

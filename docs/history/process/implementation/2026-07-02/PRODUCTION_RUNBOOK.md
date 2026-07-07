@@ -109,11 +109,11 @@ Use a dedicated verification account. If the verifier reports `cleanupErrors`, i
 3. Confirm `npm run validate:production-manifest -- --manifest <manifest.json>` passes for the deployment manifest.
 4. Create one Basic Workspace from OPL Console.
 5. Create one Pro Workspace from OPL Console only after the TKE node pool has enough allocatable CPU and memory.
-6. Verify TKE creates exactly one runtime compute unit and one persistent storage binding for each Workspace.
-7. Verify the runtime starts one `one-person-lab-app` container.
+6. Verify TKE creates the ComputeAllocation runtime deployment and persistent storage binding for each Workspace.
+7. Verify the runtime starts the configured RuntimeTemplate container.
 8. Verify Ingress serves `https://workspace.medopl.cn/w/<workspaceId>?token=<token>`.
 9. Verify the runtime maps persistent storage to `/data` and `/projects`.
-10. Stop runtime compute and confirm workspace storage remains active.
+10. Stop compute and confirm workspace storage remains active.
 11. Restart runtime compute and confirm the Workspace URL/token still works.
 12. Destroy runtime compute and confirm storage is retained and still billable.
 13. Recreate the runtime from retained storage and confirm the same Workspace URL/token works.

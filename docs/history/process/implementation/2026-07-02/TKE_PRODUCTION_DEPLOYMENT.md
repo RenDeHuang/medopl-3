@@ -125,9 +125,9 @@ Do not treat a green entrypoint check as proof of the full Workspace lifecycle. 
 
 ## TKE Runtime Provider
 
-The `tencent-tke` runtime provider maps one OPL Workspace to:
+The `tencent-tke` runtime provider maps the current OPL Workspace runtime pointer to:
 
-- one Deployment for the one-person-lab-app runtime compute
+- one Deployment for the configured RuntimeTemplate image
 - one Service
 - one Ingress path under `workspace.medopl.cn/w/<workspaceId>`
 - one Secret for the Workspace token
