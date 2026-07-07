@@ -509,6 +509,8 @@ func completeSettlementResult(result clients.ResourceSettlementResult, input con
 		result.AmountCents = input.AmountCents
 	}
 	result.Currency = firstNonEmpty(result.Currency, input.Currency)
+	result.Wallet.AccountID = firstNonEmpty(result.Wallet.AccountID, result.AccountID)
+	result.Wallet.Currency = firstNonEmpty(result.Wallet.Currency, result.Currency)
 	return result
 }
 

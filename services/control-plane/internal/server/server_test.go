@@ -368,6 +368,10 @@ func TestResourceSettlementProjectionKeepsRequestIdentityWhenLedgerOmitsIt(t *te
 	}) {
 		t.Fatalf("missing settlement request identity in ledger projection: %#v", ledger)
 	}
+	wallet := state["wallet"].(map[string]any)
+	if wallet["accountId"] != "acct-alpha" {
+		t.Fatalf("wallet lost settlement request account: %#v", wallet)
+	}
 }
 
 func TestWorkspaceGatewayRoutesRootRuntimeApiByReferer(t *testing.T) {
