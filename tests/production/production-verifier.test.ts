@@ -231,6 +231,7 @@ function keyedFetch({ responses, requests = [], responseHeaders = null, statusBy
       key,
       cookie: options.headers?.cookie || "",
       csrf: options.headers?.["x-opl-csrf-token"] || "",
+      idempotencyKey: options.headers?.["Idempotency-Key"] || "",
       body: options.body ? JSON.parse(options.body) : null
     });
     const payload = responses[key] ?? responses[key.replace(/#\d+$/, "")];
@@ -940,6 +941,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
     `POST /api/compute-allocations/${chain.replacementCompute.id}/destroy`,
     "POST /api/storage-volumes/destroy"
   ]);
+  assert.equal(requests.find((request) => request.key === "POST /api/billing/topups").idempotencyKey, "production_verification_credit:prod-run");
   assert.deepEqual(requests.find((request) => request.key === "POST /api/workspaces").body, {
     accountId: "pi-prod",
     workspaceName: "Production Verification Lab",

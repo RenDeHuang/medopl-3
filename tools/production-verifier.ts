@@ -94,18 +94,19 @@ function authHeaderValues(auth = null) {
   return headers;
 }
 
-function requestHeaders({ body = null, auth = null } = {}) {
+function requestHeaders({ body = null, auth = null, idempotencyKey = "" } = {}) {
   const headers = {
     ...(body ? { "content-type": "application/json" } : {}),
+    ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
     ...authHeaderValues(auth)
   };
   return Object.keys(headers).length > 0 ? headers : undefined;
 }
 
-async function requestJsonWithResponse({ fetchImpl, origin, path, method = "GET", body = null, auth = null }) {
+async function requestJsonWithResponse({ fetchImpl, origin, path, method = "GET", body = null, auth = null, idempotencyKey = "" }) {
   const response = await fetchImpl(endpoint(origin, path), {
     method,
-    headers: requestHeaders({ body, auth }),
+    headers: requestHeaders({ body, auth, idempotencyKey }),
     body: body ? JSON.stringify(body) : undefined
   });
   const payload = await readResponse(response);
@@ -1163,6 +1164,7 @@ export async function verifyProductionChain({
       path: "/api/billing/topups",
       method: "POST",
       auth,
+      idempotencyKey: creditSourceEventId,
       body: { accountId, amount: creditAmount, reason: creditSourceEventId }
     });
 
