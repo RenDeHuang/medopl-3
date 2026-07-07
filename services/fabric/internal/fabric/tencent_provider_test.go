@@ -113,6 +113,23 @@ func TestRuntimeStatusRecoversWorkspaceResourcesFromKubernetesLabels(t *testing.
 		if len(args) == 6 && args[0] == "get" && args[1] == "deployment,service" && args[2] == "-l" && args[3] == "oplcloud.cn/workspace-id=ws-alpha" {
 			return mustJSON(map[string]any{"kind": "List", "items": []any{deployment, service}}), nil
 		}
+		if slices.Equal(args, []string{"get", "pod", "-l", "oplcloud.cn/workspace-id=ws-alpha", "-o", "json"}) {
+			return mustJSON(map[string]any{"kind": "List", "items": []any{map[string]any{
+				"kind": "Pod",
+				"metadata": map[string]any{"name": "opl-compute-alpha-7d6c", "labels": map[string]any{
+					"oplcloud.cn/workspace-id": "ws-alpha",
+				}},
+				"spec": map[string]any{"nodeName": "10.0.0.8"},
+				"status": map[string]any{
+					"phase": "Running",
+					"conditions": []any{
+						map[string]any{"type": "PodScheduled", "status": "True"},
+						map[string]any{"type": "Ready", "status": "True"},
+					},
+					"containerStatuses": []any{map[string]any{"name": "workspace", "ready": true, "restartCount": 0, "state": map[string]any{"running": map[string]any{}}}},
+				},
+			}}}), nil
+		}
 		want := []string{"get", "deployment/opl-compute-alpha", "pvc/opl-storage-alpha-data", "service/opl-compute-alpha", "ingress/opl-cloud", "endpoints/opl-compute-alpha", "-o", "json"}
 		if !slices.Equal(args, want) {
 			t.Fatalf("kubectl args = %#v, want %#v", args, want)
@@ -133,6 +150,35 @@ func TestRuntimeStatusRecoversWorkspaceResourcesFromKubernetesLabels(t *testing.
 	}
 	if !status.Ready {
 		t.Fatalf("status = %#v, want ready", status)
+	}
+}
+
+func TestPodRuntimeDetailsReportsWaitingReason(t *testing.T) {
+	details := podRuntimeDetails([]any{map[string]any{
+		"kind":     "Pod",
+		"metadata": map[string]any{"name": "opl-compute-alpha-7d6c"},
+		"spec":     map[string]any{"nodeName": "10.0.0.8"},
+		"status": map[string]any{
+			"phase": "Pending",
+			"conditions": []any{
+				map[string]any{"type": "PodScheduled", "status": "True"},
+				map[string]any{"type": "Ready", "status": "False"},
+			},
+			"containerStatuses": []any{map[string]any{
+				"name":         "workspace",
+				"ready":        false,
+				"restartCount": 3,
+				"state":        map[string]any{"waiting": map[string]any{"reason": "CrashLoopBackOff"}},
+			}},
+		},
+	}})
+
+	if details["phase"] != "Pending" || details["podReady"] != false {
+		t.Fatalf("unexpected pod details: %#v", details)
+	}
+	containers := details["containers"].([]map[string]any)
+	if containers[0]["state"] != "waiting" || containers[0]["reason"] != "CrashLoopBackOff" {
+		t.Fatalf("container waiting reason missing: %#v", containers)
 	}
 }
 

@@ -1540,7 +1540,7 @@ test("production verifier reports failed runtime checks with ok state", async ()
     workspaceId: chain.workspace.id,
     ready: false,
     checks: [
-      { name: "deployment_ready", ok: false },
+      { name: "deployment_ready", ok: false, details: { phase: "Pending", containers: [{ name: "workspace", state: "waiting", reason: "CrashLoopBackOff" }] } },
       { name: "pvc_bound", ok: true },
       { name: "service_endpoints_ready", ok: false }
     ]
@@ -1559,7 +1559,7 @@ test("production verifier reports failed runtime checks with ok state", async ()
       assert.equal(error.message, "workspace_runtime_status_failed");
       assert.deepEqual(error.details?.failedChecks, ["deployment_ready", "service_endpoints_ready"]);
       assert.deepEqual(error.details?.runtimeChecks, [
-        { name: "deployment_ready", ok: false },
+        { name: "deployment_ready", ok: false, details: { phase: "Pending", containers: [{ name: "workspace", state: "waiting", reason: "CrashLoopBackOff" }] } },
         { name: "pvc_bound", ok: true },
         { name: "service_endpoints_ready", ok: false }
       ]);

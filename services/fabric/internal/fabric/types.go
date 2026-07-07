@@ -127,6 +127,7 @@ type WorkspaceRuntime struct {
 }
 
 type Check struct {
-	Name string `json:"name"`
-	OK   bool   `json:"ok"`
+	Name    string         `json:"name"`
+	OK      bool           `json:"ok"`
+	Details map[string]any `json:"details,omitempty"`
 }

@@ -251,16 +251,19 @@ func (p *TencentProvider) WorkspaceRuntimeStatus(ctx context.Context, workspaceI
 	service := findK8s(items, "Service", serviceName)
 	ingress := findK8s(items, "Ingress", "opl-cloud")
 	endpoints := findK8s(items, "Endpoints", serviceName)
+	pods := p.workspacePods(ctx, workspaceID)
+	podDetails := podRuntimeDetails(pods)
 	readyReplicas := number(nested(deployment, "status", "readyReplicas"))
 	availableReplicas := number(nested(deployment, "status", "availableReplicas"))
 	image := stringValue(firstContainerField(deployment, "image"))
+	readyAddresses := endpointReadyAddresses(endpoints)
 	checks := []Check{
-		{Name: "deployment_ready", OK: readyReplicas > 0 && availableReplicas > 0},
+		{Name: "deployment_ready", OK: readyReplicas > 0 && availableReplicas > 0, Details: mergeDetails(map[string]any{"readyReplicas": readyReplicas, "availableReplicas": availableReplicas}, podDetails)},
 		{Name: "workspace_image_pulled", OK: image == os.Getenv("OPL_WORKSPACE_IMAGE")},
 		{Name: "pvc_bound", OK: stringValue(nested(pvc, "status", "phase")) == "Bound"},
 		{Name: "deployment_uses_retained_pvc", OK: deploymentUsesPVC(deployment, pvcName)},
 		{Name: "service_targets_workspace", OK: selectorMatches(service, deployment)},
-		{Name: "service_endpoints_ready", OK: endpointReadyAddresses(endpoints) > 0},
+		{Name: "service_endpoints_ready", OK: readyAddresses > 0, Details: mergeDetails(map[string]any{"readyAddresses": readyAddresses}, podDetails)},
 		{Name: "ingress_routes_workspace_gateway", OK: ingressRoutesGateway(ingress)},
 	}
 	ready := true
@@ -274,6 +277,14 @@ func (p *TencentProvider) WorkspaceRuntimeStatus(ctx context.Context, workspaceI
 		status = "unready"
 	}
 	return WorkspaceRuntime{WorkspaceID: workspaceID, URL: fmt.Sprintf("https://%s/w/%s/", workspaceDomain(), workspaceID), Status: status, ServiceName: serviceName, Ready: ready, Checks: checks}, nil
+}
+
+func (p *TencentProvider) workspacePods(ctx context.Context, workspaceID string) []any {
+	raw, err := p.kubectl(ctx, []string{"get", "pod", "-l", "oplcloud.cn/workspace-id=" + workspaceID, "-o", "json"}, nil)
+	if err != nil {
+		return nil
+	}
+	return kubectlItems(raw)
 }
 
 func (p *TencentProvider) Readiness(ctx context.Context) (map[string]any, error) {
@@ -673,6 +684,68 @@ func endpointReadyAddresses(endpoints map[string]any) int {
 		count += len(addresses)
 	}
 	return count
+}
+
+func podRuntimeDetails(pods []any) map[string]any {
+	details := map[string]any{"podCount": len(pods)}
+	if len(pods) == 0 {
+		return details
+	}
+	pod, _ := pods[0].(map[string]any)
+	conditions := conditionStatuses(nested(pod, "status", "conditions"))
+	details["podName"] = stringValue(nested(pod, "metadata", "name"))
+	details["phase"] = stringValue(nested(pod, "status", "phase"))
+	details["nodeName"] = stringValue(nested(pod, "spec", "nodeName"))
+	details["podIP"] = stringValue(nested(pod, "status", "podIP"))
+	details["podReady"] = conditions["Ready"] == "True"
+	details["podScheduled"] = conditions["PodScheduled"] == "True"
+	details["initContainers"] = containerStateSummaries(nested(pod, "status", "initContainerStatuses"))
+	details["containers"] = containerStateSummaries(nested(pod, "status", "containerStatuses"))
+	return details
+}
+
+func conditionStatuses(value any) map[string]string {
+	statuses := map[string]string{}
+	conditions, _ := value.([]any)
+	for _, condition := range conditions {
+		asMap, _ := condition.(map[string]any)
+		statuses[stringValue(asMap["type"])] = stringValue(asMap["status"])
+	}
+	return statuses
+}
+
+func containerStateSummaries(value any) []map[string]any {
+	statuses, _ := value.([]any)
+	summaries := []map[string]any{}
+	for _, status := range statuses {
+		asMap, _ := status.(map[string]any)
+		summary := map[string]any{"name": stringValue(asMap["name"]), "ready": asMap["ready"] == true, "restartCount": number(asMap["restartCount"])}
+		state, _ := asMap["state"].(map[string]any)
+		for _, key := range []string{"waiting", "terminated", "running"} {
+			if state[key] == nil {
+				continue
+			}
+			summary["state"] = key
+			if stateMap, ok := state[key].(map[string]any); ok {
+				if reason := stringValue(stateMap["reason"]); reason != "" {
+					summary["reason"] = reason
+				}
+				if exitCode := number(stateMap["exitCode"]); exitCode != 0 {
+					summary["exitCode"] = exitCode
+				}
+			}
+			break
+		}
+		summaries = append(summaries, summary)
+	}
+	return summaries
+}
+
+func mergeDetails(base map[string]any, extra map[string]any) map[string]any {
+	for key, value := range extra {
+		base[key] = value
+	}
+	return base
 }
 
 func ingressRoutesGateway(ingress map[string]any) bool {
