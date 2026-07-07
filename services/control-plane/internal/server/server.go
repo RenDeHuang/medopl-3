@@ -163,6 +163,7 @@ func NewServer(service *controlplane.Service) http.Handler {
 			writeError(w, http.StatusBadGateway, err.Error())
 			return
 		}
+		app.rememberResourceSettlement(result)
 		writeJSON(w, http.StatusCreated, settlementResponse(result))
 	})
 	mux.HandleFunc("POST /api/billing/reconciliation", func(w http.ResponseWriter, r *http.Request) {

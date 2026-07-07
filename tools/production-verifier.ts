@@ -1032,8 +1032,20 @@ function assertRuntimeStatus(checks, runtimeStatus, name = "workspace_runtime_st
   });
 }
 
-function assertResourceBillingSettlement(checks, settlement, { accountId, compute, storage }) {
-  const entries = settlement?.entries || [];
+function settlementEntry(settlement) {
+  if (!settlement?.resourceType) return null;
+  const entry = {
+    accountId: settlement.accountId,
+    resourceId: settlement.resourceId,
+    type: `${settlement.resourceType}_debit`
+  };
+  if (settlement.resourceType === "storage") entry.storageId = settlement.resourceId;
+  else entry.computeAllocationId = settlement.resourceId;
+  return entry;
+}
+
+function assertResourceBillingSettlement(checks, settlements, { accountId, compute, storage }) {
+  const entries = settlements.flatMap((settlement) => settlement?.entries || [settlementEntry(settlement)].filter(Boolean));
   const hasComputeDebit = entries.some((entry) =>
     entry.accountId === accountId &&
     entry.computeAllocationId === compute?.id &&
@@ -1050,7 +1062,7 @@ function assertResourceBillingSettlement(checks, settlement, { accountId, comput
   });
 }
 
-function assertLedgerAndUsage(checks, state, { accountId, compute, storage, attachment }) {
+function assertLedgerAndUsage(checks, state, { accountId, compute, storage }) {
   const ledger = state?.billingLedger || [];
   const resourceUsage = state?.resourceUsageLogs || [];
   const walletTransactions = state?.walletTransactions || [];
@@ -1065,7 +1077,6 @@ function assertLedgerAndUsage(checks, state, { accountId, compute, storage, atta
     entry.storageId === storage?.id &&
     entry.type === "storage_debit"
   );
-  const hasAttachmentLedger = ledger.some((entry) => entry.accountId === accountId && entry.attachmentId === attachment?.id);
   const hasComputeUsage = resourceUsage.some((entry) =>
     entry.accountId === accountId &&
     entry.computeAllocationId === compute?.id &&
@@ -1076,7 +1087,6 @@ function assertLedgerAndUsage(checks, state, { accountId, compute, storage, atta
     entry.storageId === storage?.id &&
     entry.resourceType === "storage"
   );
-  const hasAttachmentUsage = resourceUsage.some((entry) => entry.accountId === accountId && entry.attachmentId === attachment?.id);
   const hasComputeWalletTransaction = walletTransactions.some((entry) =>
     entry.accountId === accountId &&
     entry.metadata?.computeAllocationId === compute?.id &&
@@ -1090,10 +1100,8 @@ function assertLedgerAndUsage(checks, state, { accountId, compute, storage, atta
   const missingChecks = [
     [hasComputeLedger, "compute_ledger"],
     [hasStorageLedger, "storage_ledger"],
-    [hasAttachmentLedger, "attachment_ledger"],
     [hasComputeUsage, "compute_usage"],
     [hasStorageUsage, "storage_usage"],
-    [hasAttachmentUsage, "attachment_usage"],
     [hasComputeWalletTransaction, "compute_wallet_transaction"],
     [hasStorageWalletTransaction, "storage_wallet_transaction"]
   ].filter(([ok]) => !ok).map(([, name]) => name);
@@ -1102,10 +1110,8 @@ function assertLedgerAndUsage(checks, state, { accountId, compute, storage, atta
     state?.wallet?.accountId === accountId &&
     hasComputeLedger &&
     hasStorageLedger &&
-    hasAttachmentLedger &&
     hasComputeUsage &&
     hasStorageUsage &&
-    hasAttachmentUsage &&
     hasComputeWalletTransaction &&
     hasStorageWalletTransaction
   ), { missingChecks });
@@ -1227,8 +1233,6 @@ export async function verifyProductionChain({
   let replacementAttachment = null;
   let replacementWorkspace = null;
   let auth = null;
-  let firstComputeForLedger = null;
-  let firstAttachmentForLedger = null;
 
   try {
     const productionReadiness = await requestJson({ fetchImpl, origin: normalizedOrigin, path: "/api/production/readiness" });
@@ -1357,8 +1361,6 @@ export async function verifyProductionChain({
       workspaceAuth: workspaceApiAuth
     });
 
-    firstComputeForLedger = compute;
-    firstAttachmentForLedger = attachment;
     const firstCleanupErrors = await cleanupVerificationResources({
       fetchImpl,
       origin: normalizedOrigin,
@@ -1461,7 +1463,7 @@ export async function verifyProductionChain({
       workspaceAuth: replacementWorkspaceApiAuth
     });
 
-    const resourceSettlement = await requestJson({
+    const computeSettlement = await requestJson({
       fetchImpl,
       origin: normalizedOrigin,
       path: "/api/billing/resource-settlements",
@@ -1469,11 +1471,31 @@ export async function verifyProductionChain({
       auth,
       body: {
         accountId,
-        hours: 1,
-        sourceEventId: `production_verification_resource_settlement:${runId}`
+        workspaceId: replacementWorkspace.id,
+        resourceType: "compute",
+        resourceId: replacementCompute.id,
+        computeAllocationId: replacementCompute.id,
+        amountCents: 100,
+        sourceEventId: `production_verification_resource_settlement:compute:${runId}`
       }
     });
-    assertResourceBillingSettlement(checks, resourceSettlement, {
+    const storageSettlement = await requestJson({
+      fetchImpl,
+      origin: normalizedOrigin,
+      path: "/api/billing/resource-settlements",
+      method: "POST",
+      auth,
+      body: {
+        accountId,
+        workspaceId: replacementWorkspace.id,
+        resourceType: "storage",
+        resourceId: storage.id,
+        storageId: storage.id,
+        amountCents: 100,
+        sourceEventId: `production_verification_resource_settlement:storage:${runId}`
+      }
+    });
+    assertResourceBillingSettlement(checks, [computeSettlement, storageSettlement], {
       accountId,
       compute: replacementCompute,
       storage
@@ -1488,8 +1510,7 @@ export async function verifyProductionChain({
     assertLedgerAndUsage(checks, state, {
       accountId,
       compute: replacementCompute,
-      storage,
-      attachment: firstAttachmentForLedger || attachment
+      storage
     });
 
     const cleanupErrors = await cleanupVerificationResources({

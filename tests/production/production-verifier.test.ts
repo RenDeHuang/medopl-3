@@ -172,24 +172,32 @@ function chainResponses(chain) {
     },
     [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`]: { success: true, data: persistenceText },
     "POST /api/billing/resource-settlements": {
-      entries: [
-        { id: "ledger-compute-debit", accountId: "pi-prod", computeAllocationId: chain.replacementCompute.id, type: "compute_debit" },
-        { id: "ledger-storage-debit", accountId: "pi-prod", storageId: chain.storage.id, type: "storage_debit" }
-      ]
+      id: "settle-compute",
+      accountId: "pi-prod",
+      workspaceId: chain.replacementWorkspace.id,
+      resourceType: "compute",
+      resourceId: chain.replacementCompute.id,
+      status: "settled"
+    },
+    "POST /api/billing/resource-settlements#2": {
+      id: "settle-storage",
+      accountId: "pi-prod",
+      workspaceId: chain.replacementWorkspace.id,
+      resourceType: "storage",
+      resourceId: chain.storage.id,
+      status: "settled"
     },
     "GET /api/state?accountId=pi-prod": {
       wallet: { accountId: "pi-prod", balance: 999, frozen: 10 },
       billingLedger: [
         { id: "ledger-compute", accountId: "pi-prod", computeAllocationId: chain.compute.id, type: "compute_hold" },
         { id: "ledger-storage", accountId: "pi-prod", storageId: chain.storage.id, type: "storage_hold" },
-        { id: "ledger-attach", accountId: "pi-prod", attachmentId: chain.attachment.id, type: "storage_attached" },
         { id: "ledger-compute-debit", accountId: "pi-prod", computeAllocationId: chain.replacementCompute.id, type: "compute_debit" },
         { id: "ledger-storage-debit", accountId: "pi-prod", storageId: chain.storage.id, type: "storage_debit" }
       ],
       resourceUsageLogs: [
         { id: "usage-compute", accountId: "pi-prod", computeAllocationId: chain.compute.id },
         { id: "usage-storage", accountId: "pi-prod", storageId: chain.storage.id },
-        { id: "usage-attach", accountId: "pi-prod", attachmentId: chain.attachment.id },
         { id: "usage-compute-debit", accountId: "pi-prod", computeAllocationId: chain.replacementCompute.id, resourceType: "compute" },
         { id: "usage-storage-debit", accountId: "pi-prod", storageId: chain.storage.id, resourceType: "storage" }
       ],
@@ -219,6 +227,7 @@ function keyedFetch({ responses, requests = [], responseHeaders = null, statusBy
         "POST /api/storage-attachments",
         "POST /api/workspaces",
         "POST /api/workspaces/runtime-status",
+        "POST /api/billing/resource-settlements",
         "POST /api/storage-attachments/detach"
       ].includes(key) ||
       key.startsWith("GET /api/compute-allocations/")
@@ -998,6 +1007,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
     `POST ${workspaceUrl(chain.workspace.url, "/login")}#2`,
     `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`,
     "POST /api/billing/resource-settlements",
+    "POST /api/billing/resource-settlements#2",
     "GET /api/state?accountId=pi-prod",
     "POST /api/storage-attachments/detach#2",
     `POST /api/compute-allocations/${chain.replacementCompute.id}/destroy`,

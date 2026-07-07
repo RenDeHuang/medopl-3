@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"opl-cloud/services/control-plane/internal/clients"
 	"opl-cloud/services/control-plane/internal/domain"
 )
 
@@ -355,6 +356,35 @@ func (app *runtimeApp) addUsageLocked(accountID string, resourceType string, ids
 	app.usage = append(app.usage, entry)
 }
 
+func (app *runtimeApp) rememberResourceSettlement(result clients.ResourceSettlementResult) {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+
+	resourceType := firstNonEmpty(result.ResourceType, "compute")
+	debitType := resourceType + "_debit"
+	ids := map[string]any{"workspaceId": result.WorkspaceID, "resourceId": result.ResourceID}
+	switch resourceType {
+	case "storage":
+		ids["storageId"] = result.ResourceID
+	default:
+		ids["computeAllocationId"] = result.ResourceID
+	}
+
+	ledger := map[string]any{"id": result.LedgerEntryID, "accountId": result.AccountID, "type": debitType, "amountCents": -result.AmountCents}
+	for key, value := range ids {
+		ledger[key] = value
+	}
+	app.ledger = append(app.ledger, ledger)
+
+	usage := map[string]any{"id": "usage-" + result.ID, "accountId": result.AccountID, "resourceType": resourceType, "amountCents": result.AmountCents}
+	for key, value := range ids {
+		usage[key] = value
+	}
+	app.usage = append(app.usage, usage)
+	app.walletTx = append(app.walletTx, map[string]any{"id": result.WalletTransactionID, "accountId": result.AccountID, "type": debitType, "metadata": ids})
+	app.wallets[result.AccountID] = walletProjection(result.Wallet)
+}
+
 func (app *runtimeApp) resourceLedgerEvidenceLocked() []any {
 	rows := []any{}
 	for _, workspace := range app.workspaces {
@@ -422,6 +452,22 @@ func (app *runtimeApp) wallet(accountID string) map[string]any {
 	wallet := map[string]any{"id": accountID, "accountId": accountID, "balance": float64(0), "frozen": float64(0), "available": float64(0), "totalRecharged": float64(0)}
 	app.wallets[accountID] = wallet
 	return wallet
+}
+
+func walletProjection(wallet clients.Wallet) map[string]any {
+	return map[string]any{
+		"id":              wallet.AccountID,
+		"accountId":       wallet.AccountID,
+		"balance":         float64(wallet.BalanceCents) / 100,
+		"balanceCents":    wallet.BalanceCents,
+		"frozen":          float64(wallet.FrozenCents) / 100,
+		"frozenCents":     wallet.FrozenCents,
+		"available":       float64(wallet.AvailableCents) / 100,
+		"availableCents":  wallet.AvailableCents,
+		"totalSpent":      float64(wallet.TotalSpentCents) / 100,
+		"totalSpentCents": wallet.TotalSpentCents,
+		"currency":        wallet.Currency,
+	}
 }
 
 func packageList() []any {

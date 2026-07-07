@@ -299,6 +299,45 @@ func TestManagementStateIncludesResourceLedgerEvidenceChain(t *testing.T) {
 	}
 }
 
+func TestResourceSettlementProjectsLedgerEvidenceIntoConsoleState(t *testing.T) {
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+
+	createResource(t, server, http.MethodPost, "/api/billing/resource-settlements", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":123}`)
+	createResource(t, server, http.MethodPost, "/api/billing/resource-settlements", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"storage","resourceId":"storage-alpha","amountCents":45}`)
+	req := httptest.NewRequest(http.MethodGet, "/api/state?accountId=acct-alpha", nil)
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("state status = %d: %s", rec.Code, rec.Body.String())
+	}
+	var state map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&state); err != nil {
+		t.Fatalf("decode state: %v", err)
+	}
+
+	ledger := state["billingLedger"].([]any)
+	if !slices.ContainsFunc(ledger, func(row any) bool {
+		entry := row.(map[string]any)
+		return entry["type"] == "compute_debit" && entry["computeAllocationId"] == "compute-alpha" && entry["workspaceId"] == "ws-alpha"
+	}) {
+		t.Fatalf("missing compute debit ledger projection: %#v", ledger)
+	}
+	if !slices.ContainsFunc(ledger, func(row any) bool {
+		entry := row.(map[string]any)
+		return entry["type"] == "storage_debit" && entry["storageId"] == "storage-alpha" && entry["workspaceId"] == "ws-alpha"
+	}) {
+		t.Fatalf("missing storage debit ledger projection: %#v", ledger)
+	}
+	usage := state["resourceUsageLogs"].([]any)
+	if len(usage) != 2 {
+		t.Fatalf("usage rows = %d, want 2: %#v", len(usage), usage)
+	}
+	walletTx := state["walletTransactions"].([]any)
+	if len(walletTx) != 2 {
+		t.Fatalf("wallet transaction rows = %d, want 2: %#v", len(walletTx), walletTx)
+	}
+}
+
 func TestWorkspaceGatewayRoutesRootRuntimeApiByReferer(t *testing.T) {
 	t.Setenv("OPL_WORKSPACE_DOMAIN", "workspace.medopl.cn")
 	var gotPath string
