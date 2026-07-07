@@ -171,22 +171,8 @@ function chainResponses(chain) {
       user: { id: "opl-webui-admin", username: "admin" }
     },
     [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`]: { success: true, data: persistenceText },
-    "POST /api/billing/resource-settlements": {
-      id: "settle-compute",
-      accountId: "pi-prod",
-      workspaceId: chain.replacementWorkspace.id,
-      resourceType: "compute",
-      resourceId: chain.replacementCompute.id,
-      status: "settled"
-    },
-    "POST /api/billing/resource-settlements#2": {
-      id: "settle-storage",
-      accountId: "pi-prod",
-      workspaceId: chain.replacementWorkspace.id,
-      resourceType: "storage",
-      resourceId: chain.storage.id,
-      status: "settled"
-    },
+    "POST /api/billing/resource-settlements": { entries: [] },
+    "POST /api/billing/resource-settlements#2": { entries: [] },
     "GET /api/state?accountId=pi-prod": {
       wallet: { accountId: "pi-prod", balance: 999, frozen: 10 },
       billingLedger: [

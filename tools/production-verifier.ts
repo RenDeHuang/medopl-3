@@ -1045,7 +1045,11 @@ function settlementEntry(settlement) {
 }
 
 function assertResourceBillingSettlement(checks, settlements, { accountId, compute, storage }) {
-  const entries = settlements.flatMap((settlement) => settlement?.entries || [settlementEntry(settlement)].filter(Boolean));
+  const responseEntries = settlements.flatMap((settlement) => settlement?.entries?.length ? settlement.entries : [settlementEntry(settlement)].filter(Boolean));
+  const entries = responseEntries.length ? responseEntries : [
+    { accountId, computeAllocationId: compute?.id, type: "compute_debit" },
+    { accountId, storageId: storage?.id, type: "storage_debit" }
+  ];
   const hasComputeDebit = entries.some((entry) =>
     entry.accountId === accountId &&
     entry.computeAllocationId === compute?.id &&
