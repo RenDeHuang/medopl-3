@@ -74,15 +74,12 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
     "OPL_CONSOLE_USERS_JSON->opl-cloud-auth/OPL_CONSOLE_USERS_JSON",
     "OPL_OPERATOR_SUMMARY_TOKEN->opl-cloud-operator/OPL_OPERATOR_SUMMARY_TOKEN",
     "OPL_AIONUI_ADMIN_PASSWORD_SEED->opl-cloud-aionui/OPL_AIONUI_ADMIN_PASSWORD_SEED",
-    "OPL_CODEX_API_KEY->opl-cloud-workspace-codex/OPL_CODEX_API_KEY",
-    "TENCENTCLOUD_SECRET_ID->opl-cloud-tencent-mutation/TENCENTCLOUD_SECRET_ID",
-    "TENCENTCLOUD_SECRET_KEY->opl-cloud-tencent-mutation/TENCENTCLOUD_SECRET_KEY"
+    "OPL_CODEX_API_KEY->opl-cloud-workspace-codex/OPL_CODEX_API_KEY"
   ]);
   assert.equal(container.env.find((item) => item.name === "OPL_OPERATOR_SUMMARY_TOKEN").valueFrom.secretKeyRef.optional, true);
   assert.equal(container.env.find((item) => item.name === "OPL_CODEX_API_KEY").valueFrom.secretKeyRef.optional, true);
 	assert.deepEqual(deployment.spec.template.spec.volumes.map((volume) => volume.name), [
 		"runtime-state",
-		"deploy-kubeconfig",
 		"tmp"
 	]);
 	const ledger = deployments.find((item) => item.metadata.name === "opl-cloud-ledger");
@@ -94,6 +91,16 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
 	const fabric = deployments.find((item) => item.metadata.name === "opl-cloud-fabric");
 	assert.equal(fabric.spec.template.spec.containers[0].command[0], "/usr/local/bin/opl-fabric");
 	assert.equal(fabric.spec.template.spec.containers[0].ports[0].containerPort, 8082);
+	assert.deepEqual(fabric.spec.template.spec.containers[0].env.map((item) => `${item.name}->${item.valueFrom.secretKeyRef.name}/${item.valueFrom.secretKeyRef.key}`), [
+		"TENCENTCLOUD_SECRET_ID->opl-cloud-tencent-mutation/TENCENTCLOUD_SECRET_ID",
+		"TENCENTCLOUD_SECRET_KEY->opl-cloud-tencent-mutation/TENCENTCLOUD_SECRET_KEY"
+	]);
+	assert.deepEqual(fabric.spec.template.spec.containers[0].volumeMounts, [
+		{ name: "deploy-kubeconfig", mountPath: "/var/run/opl-cloud/kubeconfig", readOnly: true }
+	]);
+	assert.deepEqual(fabric.spec.template.spec.volumes, [
+		{ name: "deploy-kubeconfig", secret: { secretName: "opl-cloud-deploy-kubeconfig" } }
+	]);
 	const services = items.filter((item) => item.kind === "Service");
 	assert.deepEqual(services.map((item) => item.metadata.name), [
 		"opl-cloud-control-plane",

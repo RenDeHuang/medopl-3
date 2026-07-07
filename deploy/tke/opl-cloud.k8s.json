@@ -188,24 +188,6 @@
                         "optional": true
                       }
                     }
-                  },
-                  {
-                    "name": "TENCENTCLOUD_SECRET_ID",
-                    "valueFrom": {
-                      "secretKeyRef": {
-                        "name": "opl-cloud-tencent-mutation",
-                        "key": "TENCENTCLOUD_SECRET_ID"
-                      }
-                    }
-                  },
-                  {
-                    "name": "TENCENTCLOUD_SECRET_KEY",
-                    "valueFrom": {
-                      "secretKeyRef": {
-                        "name": "opl-cloud-tencent-mutation",
-                        "key": "TENCENTCLOUD_SECRET_KEY"
-                      }
-                    }
                   }
                 ],
                 "readinessProbe": {
@@ -249,11 +231,6 @@
                     "mountPath": "/app/.runtime"
                   },
                   {
-                    "name": "deploy-kubeconfig",
-                    "mountPath": "/var/run/opl-cloud/kubeconfig",
-                    "readOnly": true
-                  },
-                  {
                     "name": "tmp",
                     "mountPath": "/tmp"
                   }
@@ -264,12 +241,6 @@
               {
                 "name": "runtime-state",
                 "emptyDir": {}
-              },
-              {
-                "name": "deploy-kubeconfig",
-                "secret": {
-                  "secretName": "opl-cloud-deploy-kubeconfig"
-                }
               },
               {
                 "name": "tmp",
@@ -540,7 +511,26 @@
                     }
                   }
                 ],
-                "env": [],
+                "env": [
+                  {
+                    "name": "TENCENTCLOUD_SECRET_ID",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "opl-cloud-tencent-mutation",
+                        "key": "TENCENTCLOUD_SECRET_ID"
+                      }
+                    }
+                  },
+                  {
+                    "name": "TENCENTCLOUD_SECRET_KEY",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "opl-cloud-tencent-mutation",
+                        "key": "TENCENTCLOUD_SECRET_KEY"
+                      }
+                    }
+                  }
+                ],
                 "readinessProbe": {
                   "httpGet": {
                     "path": "/healthz",
@@ -576,13 +566,26 @@
                     ]
                   }
                 },
-                "volumeMounts": [],
+                "volumeMounts": [
+                  {
+                    "name": "deploy-kubeconfig",
+                    "mountPath": "/var/run/opl-cloud/kubeconfig",
+                    "readOnly": true
+                  }
+                ],
                 "command": [
                   "/usr/local/bin/opl-fabric"
                 ]
               }
             ],
-            "volumes": []
+            "volumes": [
+              {
+                "name": "deploy-kubeconfig",
+                "secret": {
+                  "secretName": "opl-cloud-deploy-kubeconfig"
+                }
+              }
+            ]
           }
         }
       }

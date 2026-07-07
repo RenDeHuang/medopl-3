@@ -242,6 +242,7 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
   const namespace = items.find((item) => item.kind === "Namespace");
   const config = items.find((item) => item.kind === "ConfigMap");
   const deployment = items.find((item) => item.kind === "Deployment");
+  const fabricDeployment = items.find((item) => item.kind === "Deployment" && item.metadata.name === "opl-cloud-fabric");
   const ingress = items.find((item) => item.kind === "Ingress");
   const serviceConfig = items.find((item) => item.kind === "TkeServiceConfig");
 
@@ -269,18 +270,19 @@ test("TKE manifest renderer replaces deploy-time values without rendering secret
   assert.equal(config.data.RUN_TENCENT_CREATE_RELEASE_EXECUTION, "1");
   assert.equal(config.data.TENCENT_DEPLOY_CLUSTER_ID, "cls-oplcloud");
   assert.equal(config.data.TENCENT_TCR_REGISTRY, "uswccr.ccs.tencentyun.com");
-  assert.ok(
-    deployment.spec.template.spec.containers[0].env.some((entry) =>
-      entry.name === "TENCENTCLOUD_SECRET_ID" &&
-      entry.valueFrom?.secretKeyRef?.name === "opl-cloud-tencent-mutation"
-    )
-  );
-  assert.ok(
-    deployment.spec.template.spec.containers[0].env.some((entry) =>
-      entry.name === "TENCENTCLOUD_SECRET_KEY" &&
-      entry.valueFrom?.secretKeyRef?.name === "opl-cloud-tencent-mutation"
-    )
-  );
+  assert.equal(deployment.spec.template.spec.containers[0].env.some((entry) => entry.name === "TENCENTCLOUD_SECRET_ID"), false);
+  assert.equal(deployment.spec.template.spec.containers[0].env.some((entry) => entry.name === "TENCENTCLOUD_SECRET_KEY"), false);
+  assert.ok(fabricDeployment.spec.template.spec.containers[0].env.some((entry) =>
+    entry.name === "TENCENTCLOUD_SECRET_ID" &&
+    entry.valueFrom?.secretKeyRef?.name === "opl-cloud-tencent-mutation"
+  ));
+  assert.ok(fabricDeployment.spec.template.spec.containers[0].env.some((entry) =>
+    entry.name === "TENCENTCLOUD_SECRET_KEY" &&
+    entry.valueFrom?.secretKeyRef?.name === "opl-cloud-tencent-mutation"
+  ));
+  assert.deepEqual(fabricDeployment.spec.template.spec.containers[0].volumeMounts, [
+    { name: "deploy-kubeconfig", mountPath: "/var/run/opl-cloud/kubeconfig", readOnly: true }
+  ]);
   assert.equal(deployment.spec.template.spec.containers[0].image, "uswccr.ccs.tencentyun.com/oplcloud/opl-cloud:test");
   assert.deepEqual(deployment.spec.template.spec.imagePullSecrets, [{ name: "tcr-pull-secret" }]);
   assert.equal(ingress.spec.ingressClassName, "qcloud");
