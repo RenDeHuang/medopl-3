@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -29,6 +30,9 @@ func NewPersistentServer(service *controlplane.Service, store FactStore) (http.H
 	app, err := newControlPlaneAppWithStore(store)
 	if err != nil {
 		return nil, err
+	}
+	if settlementWorkerEnabled() {
+		app.startPeriodicSettlementWorker(context.Background(), service, settlementWorkerInterval())
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/w/", app.proxyWorkspace)

@@ -5,8 +5,11 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 
 	_ "github.com/lib/pq"
@@ -133,33 +136,217 @@ var postgresFactEventTables = []string{
 	"control_plane_admin_audit_events",
 }
 
+type factColumn struct {
+	Name string
+	Path []string
+	Kind string
+}
+
+var postgresFactColumns = []factColumn{
+	{Name: "owner_account_id", Path: []string{"ownerAccountId"}, Kind: "text"},
+	{Name: "owner_user_id", Path: []string{"ownerUserId"}, Kind: "text"},
+	{Name: "user_id", Path: []string{"userId"}, Kind: "text"},
+	{Name: "email", Path: []string{"email"}, Kind: "text"},
+	{Name: "role", Path: []string{"role"}, Kind: "text"},
+	{Name: "status", Path: []string{"status"}, Kind: "text"},
+	{Name: "password_hash", Path: []string{"passwordHash"}, Kind: "text"},
+	{Name: "disabled_at", Path: []string{"disabledAt"}, Kind: "text"},
+	{Name: "disabled_by", Path: []string{"disabledBy"}, Kind: "text"},
+	{Name: "disabled_reason", Path: []string{"disabledReason"}, Kind: "text"},
+	{Name: "deleted_at", Path: []string{"deletedAt"}, Kind: "text"},
+	{Name: "deleted_by", Path: []string{"deletedBy"}, Kind: "text"},
+	{Name: "delete_reason", Path: []string{"deleteReason"}, Kind: "text"},
+	{Name: "organization_id", Path: []string{"organizationId"}, Kind: "text"},
+	{Name: "billing_account_id", Path: []string{"billingAccountId"}, Kind: "text"},
+	{Name: "name", Path: []string{"name"}, Kind: "text"},
+	{Name: "package_id", Path: []string{"packageId"}, Kind: "text"},
+	{Name: "provider", Path: []string{"provider"}, Kind: "text"},
+	{Name: "provider_resource_id", Path: []string{"providerResourceId"}, Kind: "text"},
+	{Name: "provider_request_id", Path: []string{"providerRequestId"}, Kind: "text"},
+	{Name: "operation_id", Path: []string{"operationId"}, Kind: "text"},
+	{Name: "workspace_id", Path: []string{"workspaceId"}, Kind: "text"},
+	{Name: "compute_allocation_id", Path: []string{"computeAllocationId"}, Kind: "text"},
+	{Name: "current_compute_allocation_id", Path: []string{"currentComputeAllocationId"}, Kind: "text"},
+	{Name: "storage_id", Path: []string{"storageId"}, Kind: "text"},
+	{Name: "volume_id", Path: []string{"volumeId"}, Kind: "text"},
+	{Name: "attachment_id", Path: []string{"attachmentId"}, Kind: "text"},
+	{Name: "current_attachment_id", Path: []string{"currentAttachmentId"}, Kind: "text"},
+	{Name: "runtime_id", Path: []string{"runtimeId"}, Kind: "text"},
+	{Name: "runtime_service_name", Path: []string{"runtime", "serviceName"}, Kind: "text"},
+	{Name: "runtime_service_name_root", Path: []string{"runtimeServiceName"}, Kind: "text"},
+	{Name: "service_name", Path: []string{"serviceName"}, Kind: "text"},
+	{Name: "url", Path: []string{"url"}, Kind: "text"},
+	{Name: "state", Path: []string{"state"}, Kind: "text"},
+	{Name: "evidence_id", Path: []string{"evidenceId"}, Kind: "text"},
+	{Name: "cvm_instance_id", Path: []string{"cvmInstanceId"}, Kind: "text"},
+	{Name: "instance_id", Path: []string{"instanceId"}, Kind: "text"},
+	{Name: "node_name", Path: []string{"nodeName"}, Kind: "text"},
+	{Name: "machine_name", Path: []string{"machineName"}, Kind: "text"},
+	{Name: "mount_path", Path: []string{"mountPath"}, Kind: "text"},
+	{Name: "billing_status", Path: []string{"billingStatus"}, Kind: "text"},
+	{Name: "hold_id", Path: []string{"holdId"}, Kind: "text"},
+	{Name: "hold_release_id", Path: []string{"holdReleaseId"}, Kind: "text"},
+	{Name: "ledger_entry_id", Path: []string{"ledgerEntryId"}, Kind: "text"},
+	{Name: "wallet_transaction_id", Path: []string{"walletTransactionId"}, Kind: "text"},
+	{Name: "settlement_id", Path: []string{"settlementId"}, Kind: "text"},
+	{Name: "type", Path: []string{"type"}, Kind: "text"},
+	{Name: "resource_id", Path: []string{"resourceId"}, Kind: "text"},
+	{Name: "pricing_version", Path: []string{"pricingVersion"}, Kind: "text"},
+	{Name: "usage_period_start", Path: []string{"usagePeriodStart"}, Kind: "text"},
+	{Name: "usage_period_end", Path: []string{"usagePeriodEnd"}, Kind: "text"},
+	{Name: "unit", Path: []string{"unit"}, Kind: "text"},
+	{Name: "provider_cost_evidence_ref", Path: []string{"providerCostEvidenceRef"}, Kind: "text"},
+	{Name: "currency", Path: []string{"currency"}, Kind: "text"},
+	{Name: "source", Path: []string{"source"}, Kind: "text"},
+	{Name: "direction", Path: []string{"direction"}, Kind: "text"},
+	{Name: "reason", Path: []string{"reason"}, Kind: "text"},
+	{Name: "operator_user_id", Path: []string{"operatorUserId"}, Kind: "text"},
+	{Name: "actor_user_id", Path: []string{"actorUserId"}, Kind: "text"},
+	{Name: "actor_role", Path: []string{"actorRole"}, Kind: "text"},
+	{Name: "actor_account_id", Path: []string{"actorAccountId"}, Kind: "text"},
+	{Name: "target_account_id", Path: []string{"targetAccountId"}, Kind: "text"},
+	{Name: "action", Path: []string{"action"}, Kind: "text"},
+	{Name: "resource_kind", Path: []string{"resourceKind"}, Kind: "text"},
+	{Name: "ip_address", Path: []string{"ipAddress"}, Kind: "text"},
+	{Name: "user_agent", Path: []string{"userAgent"}, Kind: "text"},
+	{Name: "result", Path: []string{"result"}, Kind: "text"},
+	{Name: "created_at_text", Path: []string{"createdAt"}, Kind: "text"},
+	{Name: "csrf", Path: []string{"csrf"}, Kind: "text"},
+	{Name: "expires_at", Path: []string{"expiresAt"}, Kind: "text"},
+	{Name: "access_token_status", Path: []string{"access", "tokenStatus"}, Kind: "text"},
+	{Name: "access_account", Path: []string{"access", "account"}, Kind: "text"},
+	{Name: "access_username", Path: []string{"access", "username"}, Kind: "text"},
+	{Name: "access_password", Path: []string{"access", "password"}, Kind: "text"},
+	{Name: "credential_status", Path: []string{"access", "credentialStatus"}, Kind: "text"},
+	{Name: "credential_version", Path: []string{"access", "credentialVersion"}, Kind: "text"},
+	{Name: "credential_secret_ref", Path: []string{"access", "secretRef"}, Kind: "text"},
+	{Name: "metadata_workspace_id", Path: []string{"metadata", "workspaceId"}, Kind: "text"},
+	{Name: "metadata_resource_id", Path: []string{"metadata", "resourceId"}, Kind: "text"},
+	{Name: "metadata_settlement_id", Path: []string{"metadata", "settlementId"}, Kind: "text"},
+	{Name: "metadata_ledger_entry_id", Path: []string{"metadata", "ledgerEntryId"}, Kind: "text"},
+	{Name: "metadata_compute_allocation_id", Path: []string{"metadata", "computeAllocationId"}, Kind: "text"},
+	{Name: "metadata_storage_id", Path: []string{"metadata", "storageId"}, Kind: "text"},
+	{Name: "price_snapshot_package_id", Path: []string{"priceSnapshot", "packageId"}, Kind: "text"},
+	{Name: "price_snapshot_resource_type", Path: []string{"priceSnapshot", "resourceType"}, Kind: "text"},
+	{Name: "price_snapshot_currency", Path: []string{"priceSnapshot", "currency"}, Kind: "text"},
+	{Name: "price_snapshot_source", Path: []string{"priceSnapshot", "source"}, Kind: "text"},
+	{Name: "price_snapshot_sku", Path: []string{"priceSnapshot", "sku"}, Kind: "text"},
+	{Name: "guard_status", Path: []string{"guard", "status"}, Kind: "text"},
+	{Name: "guard_reason", Path: []string{"guard", "reason"}, Kind: "text"},
+	{Name: "message_author", Path: []string{"messageAuthor"}, Kind: "text"},
+	{Name: "message_text", Path: []string{"messageText"}, Kind: "text"},
+	{Name: "message_created_at", Path: []string{"messageCreatedAt"}, Kind: "text"},
+	{Name: "size_gb", Path: []string{"sizeGb"}, Kind: "double"},
+	{Name: "cpu", Path: []string{"cpu"}, Kind: "double"},
+	{Name: "memory_gb", Path: []string{"memoryGb"}, Kind: "double"},
+	{Name: "disk_gb", Path: []string{"diskGb"}, Kind: "double"},
+	{Name: "hold_amount_cents", Path: []string{"holdAmountCents"}, Kind: "bigint"},
+	{Name: "hold_amount", Path: []string{"holdAmount"}, Kind: "double"},
+	{Name: "amount_cents", Path: []string{"amountCents"}, Kind: "bigint"},
+	{Name: "balance_cents", Path: []string{"balanceCents"}, Kind: "bigint"},
+	{Name: "frozen_cents", Path: []string{"frozenCents"}, Kind: "bigint"},
+	{Name: "available_cents", Path: []string{"availableCents"}, Kind: "bigint"},
+	{Name: "total_spent_cents", Path: []string{"totalSpentCents"}, Kind: "bigint"},
+	{Name: "balance", Path: []string{"balance"}, Kind: "double"},
+	{Name: "frozen", Path: []string{"frozen"}, Kind: "double"},
+	{Name: "available", Path: []string{"available"}, Kind: "double"},
+	{Name: "total_spent", Path: []string{"totalSpent"}, Kind: "double"},
+	{Name: "total_recharged", Path: []string{"totalRecharged"}, Kind: "double"},
+	{Name: "quantity", Path: []string{"quantity"}, Kind: "double"},
+	{Name: "reports", Path: []string{"reports"}, Kind: "bigint"},
+	{Name: "price_snapshot_unit_price_cents", Path: []string{"priceSnapshot", "unitPriceCents"}, Kind: "bigint"},
+	{Name: "price_snapshot_compute_hourly", Path: []string{"priceSnapshot", "computeHourly"}, Kind: "double"},
+	{Name: "price_snapshot_storage_gb_month", Path: []string{"priceSnapshot", "storageGbMonth"}, Kind: "double"},
+	{Name: "price_snapshot_size_gb", Path: []string{"priceSnapshot", "sizeGb"}, Kind: "double"},
+	{Name: "access_requires_login", Path: []string{"access", "requiresLogin"}, Kind: "bool"},
+	{Name: "guard_block_new_workspaces", Path: []string{"guard", "blockNewWorkspaces"}, Kind: "bool"},
+}
+
 func (s *postgresFactStore) install(ctx context.Context) error {
 	for _, table := range postgresFactTables {
-		if _, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS `+table+` (
-  id TEXT PRIMARY KEY,
-  account_id TEXT NOT NULL DEFAULT '',
-  payload JSONB NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-)`); err != nil {
+		if err := s.installFactTable(ctx, table, "updated_at"); err != nil {
 			return err
 		}
 	}
 	for _, table := range postgresFactEventTables {
-		if _, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS `+table+` (
-  id TEXT PRIMARY KEY,
-  account_id TEXT NOT NULL DEFAULT '',
-  payload JSONB NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-)`); err != nil {
+		if err := s.installFactTable(ctx, table, "created_at"); err != nil {
 			return err
 		}
 	}
-	_, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS control_plane_billing_reconciliation (
+	return s.installFactTable(ctx, "control_plane_billing_reconciliation", "updated_at")
+}
+
+func (s *postgresFactStore) installFactTable(ctx context.Context, table string, timestampColumn string) error {
+	if _, err := s.db.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS `+table+` (
   id TEXT PRIMARY KEY,
-  payload JSONB NOT NULL,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-)`)
+  account_id TEXT NOT NULL DEFAULT '',
+  `+timestampColumn+` TIMESTAMPTZ NOT NULL DEFAULT now()
+)`); err != nil {
+		return err
+	}
+	for _, column := range postgresFactColumns {
+		if _, err := s.db.ExecContext(ctx, `ALTER TABLE `+table+` ADD COLUMN IF NOT EXISTS `+column.Name+` `+postgresColumnType(column.Kind)); err != nil {
+			return err
+		}
+	}
+	return s.migrateLegacyPayload(ctx, table)
+}
+
+func postgresColumnType(kind string) string {
+	switch kind {
+	case "bigint":
+		return "BIGINT"
+	case "double":
+		return "DOUBLE PRECISION"
+	case "bool":
+		return "BOOLEAN"
+	default:
+		return "TEXT"
+	}
+}
+
+func (s *postgresFactStore) migrateLegacyPayload(ctx context.Context, table string) error {
+	if !s.columnExists(ctx, table, "payload") {
+		return nil
+	}
+	set := []string{}
+	for _, column := range postgresFactColumns {
+		expr := legacyPayloadExpr(column)
+		if expr == "" {
+			continue
+		}
+		set = append(set, fmt.Sprintf("%s = COALESCE(%s, %s)", column.Name, column.Name, expr))
+	}
+	set = append(set, "account_id = COALESCE(NULLIF(account_id, ''), NULLIF(payload #>> '{accountId}', ''), '')")
+	if _, err := s.db.ExecContext(ctx, `UPDATE `+table+` SET `+strings.Join(set, ", ")); err != nil {
+		return err
+	}
+	_, err := s.db.ExecContext(ctx, `ALTER TABLE `+table+` DROP COLUMN IF EXISTS payload`)
 	return err
+}
+
+func (s *postgresFactStore) columnExists(ctx context.Context, table string, column string) bool {
+	var exists bool
+	err := s.db.QueryRowContext(ctx, `SELECT EXISTS (
+ SELECT 1 FROM information_schema.columns
+ WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2
+)`, table, column).Scan(&exists)
+	return err == nil && exists
+}
+
+func legacyPayloadExpr(column factColumn) string {
+	path := strings.Join(column.Path, ",")
+	raw := "NULLIF(payload #>> '{" + path + "}', '')"
+	switch column.Kind {
+	case "bigint":
+		return "CASE WHEN " + raw + " ~ '^-?[0-9]+(\\.0+)?$' THEN (" + raw + ")::numeric::bigint ELSE NULL END"
+	case "double":
+		return "CASE WHEN " + raw + " ~ '^-?[0-9]+(\\.[0-9]+)?$' THEN (" + raw + ")::double precision ELSE NULL END"
+	case "bool":
+		return "CASE WHEN lower(" + raw + ") IN ('true','t','1','yes') THEN true WHEN lower(" + raw + ") IN ('false','f','0','no') THEN false ELSE NULL END"
+	default:
+		return raw
+	}
 }
 
 func (s *postgresFactStore) Load(ctx context.Context) (controlPlaneFacts, error) {
@@ -271,41 +458,32 @@ func (s *postgresFactStore) Save(ctx context.Context, facts controlPlaneFacts) e
 }
 
 func (s *postgresFactStore) loadFactTable(ctx context.Context, table string) (factTable, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id, payload FROM `+table)
+	rows, err := s.db.QueryContext(ctx, selectFactSQL(table, ""))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	out := factTable{}
 	for rows.Next() {
-		var id string
-		var data []byte
-		if err := rows.Scan(&id, &data); err != nil {
+		row, err := scanFactRow(rows)
+		if err != nil {
 			return nil, err
 		}
-		var row factRow
-		if err := json.Unmarshal(data, &row); err != nil {
-			return nil, err
-		}
-		out[id] = row
+		out[stringValue(row["id"])] = row
 	}
 	return out, rows.Err()
 }
 
 func (s *postgresFactStore) loadFactEvents(ctx context.Context, table string) ([]factRow, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT payload FROM `+table+` ORDER BY created_at, id`)
+	rows, err := s.db.QueryContext(ctx, selectFactSQL(table, " ORDER BY created_at, id"))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var out []factRow
 	for rows.Next() {
-		var data []byte
-		if err := rows.Scan(&data); err != nil {
-			return nil, err
-		}
-		var row factRow
-		if err := json.Unmarshal(data, &row); err != nil {
+		row, err := scanFactRow(rows)
+		if err != nil {
 			return nil, err
 		}
 		out = append(out, row)
@@ -314,16 +492,22 @@ func (s *postgresFactStore) loadFactEvents(ctx context.Context, table string) ([
 }
 
 func (s *postgresFactStore) loadSingleton(ctx context.Context, table string) (factRow, error) {
-	var data []byte
-	err := s.db.QueryRowContext(ctx, `SELECT payload FROM `+table+` WHERE id = $1`, singletonFactID).Scan(&data)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
+	rows, err := s.db.QueryContext(ctx, selectFactSQL(table, " WHERE id = $1"), singletonFactID)
 	if err != nil {
 		return nil, err
 	}
-	var row factRow
-	return row, json.Unmarshal(data, &row)
+	defer rows.Close()
+	if !rows.Next() {
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}
+	row, err := scanFactRow(rows)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return row, err
 }
 
 func replaceFactTable(ctx context.Context, tx *sql.Tx, table string, rows factTable) error {
@@ -331,11 +515,7 @@ func replaceFactTable(ctx context.Context, tx *sql.Tx, table string, rows factTa
 		return err
 	}
 	for id, row := range rows {
-		data, err := json.Marshal(row)
-		if err != nil {
-			return err
-		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO `+table+` (id, account_id, payload, updated_at) VALUES ($1, $2, $3, now())`, id, stringValue(row["accountId"]), data); err != nil {
+		if _, err := tx.ExecContext(ctx, insertFactSQL(table, "updated_at"), factValues(id, row, stringValue(row["accountId"]))...); err != nil {
 			return err
 		}
 	}
@@ -348,11 +528,9 @@ func replaceFactEvents(ctx context.Context, tx *sql.Tx, table string, rows []fac
 	}
 	for index, row := range rows {
 		id := firstNonEmpty(stringValue(row["id"]), stableID(table, stringValue(row["accountId"]), stringValue(row["createdAt"]), stringValue(row["type"]))[:12])
-		data, err := json.Marshal(row)
-		if err != nil {
-			return err
-		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO `+table+` (id, account_id, payload, created_at) VALUES ($1, $2, $3, now() + ($4 || ' microseconds')::interval)`, id, stringValue(row["accountId"]), data, index); err != nil {
+		values := factValues(id, row, stringValue(row["accountId"]))
+		values = append(values, index)
+		if _, err := tx.ExecContext(ctx, insertFactSQL(table, "created_at"), values...); err != nil {
 			return err
 		}
 	}
@@ -366,12 +544,160 @@ func replaceSingleton(ctx context.Context, tx *sql.Tx, table string, row factRow
 	if row == nil {
 		return nil
 	}
-	data, err := json.Marshal(row)
-	if err != nil {
-		return err
-	}
-	_, err = tx.ExecContext(ctx, `INSERT INTO `+table+` (id, payload, updated_at) VALUES ($1, $2, now())`, singletonFactID, data)
+	_, err := tx.ExecContext(ctx, insertFactSQL(table, "updated_at"), factValues(singletonFactID, row, "")...)
 	return err
+}
+
+func selectFactSQL(table string, suffix string) string {
+	columns := []string{"id", "account_id"}
+	for _, column := range postgresFactColumns {
+		columns = append(columns, column.Name+"::text")
+	}
+	return `SELECT ` + strings.Join(columns, ", ") + ` FROM ` + table + suffix
+}
+
+func scanFactRow(rows *sql.Rows) (factRow, error) {
+	values := make([]sql.NullString, len(postgresFactColumns)+2)
+	dest := make([]any, len(values))
+	for index := range values {
+		dest[index] = &values[index]
+	}
+	if err := rows.Scan(dest...); err != nil {
+		return nil, err
+	}
+	row := factRow{"id": values[0].String}
+	if values[1].Valid && values[1].String != "" {
+		row["accountId"] = values[1].String
+	}
+	for index, column := range postgresFactColumns {
+		value := values[index+2]
+		if !value.Valid || value.String == "" {
+			continue
+		}
+		parsed, ok := parseColumnValue(value.String, column.Kind)
+		if ok {
+			setPath(row, column.Path, parsed)
+		}
+	}
+	return row, nil
+}
+
+func parseColumnValue(value string, kind string) (any, bool) {
+	switch kind {
+	case "bigint":
+		parsed, err := strconv.ParseInt(value, 10, 64)
+		return parsed, err == nil
+	case "double":
+		parsed, err := strconv.ParseFloat(value, 64)
+		return parsed, err == nil
+	case "bool":
+		parsed, err := strconv.ParseBool(value)
+		return parsed, err == nil
+	default:
+		return value, true
+	}
+}
+
+func insertFactSQL(table string, timestampColumn string) string {
+	columns := []string{"id", "account_id"}
+	placeholders := []string{"$1", "$2"}
+	for index, column := range postgresFactColumns {
+		columns = append(columns, column.Name)
+		placeholders = append(placeholders, fmt.Sprintf("$%d", index+3))
+	}
+	timestampExpr := "now()"
+	if timestampColumn == "created_at" {
+		timestampExpr = fmt.Sprintf("now() + ($%d || ' microseconds')::interval", len(placeholders)+1)
+	}
+	columns = append(columns, timestampColumn)
+	placeholders = append(placeholders, timestampExpr)
+	return `INSERT INTO ` + table + ` (` + strings.Join(columns, ", ") + `) VALUES (` + strings.Join(placeholders, ", ") + `)`
+}
+
+func factValues(id string, row factRow, accountID string) []any {
+	values := []any{id, accountID}
+	for _, column := range postgresFactColumns {
+		values = append(values, columnValue(row, column))
+	}
+	return values
+}
+
+func columnValue(row factRow, column factColumn) any {
+	value, ok := valueAtPath(row, column.Path)
+	if !ok || value == nil {
+		return nil
+	}
+	switch column.Kind {
+	case "bigint":
+		return int64(numberValue(value))
+	case "double":
+		return numberValue(value)
+	case "bool":
+		if parsed, ok := value.(bool); ok {
+			return parsed
+		}
+		parsed, err := strconv.ParseBool(stringValue(value))
+		if err != nil {
+			return nil
+		}
+		return parsed
+	default:
+		text := stringValue(value)
+		if text == "" {
+			return nil
+		}
+		return text
+	}
+}
+
+func valueAtPath(row factRow, path []string) (any, bool) {
+	var current any = row
+	for _, part := range path {
+		asMap, ok := current.(map[string]any)
+		if !ok {
+			return nil, false
+		}
+		current, ok = asMap[part]
+		if !ok {
+			return nil, false
+		}
+	}
+	return current, true
+}
+
+func setPath(row factRow, path []string, value any) {
+	if len(path) == 0 {
+		return
+	}
+	current := row
+	for _, part := range path[:len(path)-1] {
+		next, _ := current[part].(map[string]any)
+		if next == nil {
+			next = map[string]any{}
+			current[part] = next
+		}
+		current = next
+	}
+	current[path[len(path)-1]] = value
+}
+
+func numberValue(value any) float64 {
+	switch typed := value.(type) {
+	case int:
+		return float64(typed)
+	case int64:
+		return float64(typed)
+	case float64:
+		return typed
+	case float32:
+		return float64(typed)
+	case json.Number:
+		parsed, _ := typed.Float64()
+		return parsed
+	default:
+		parsed, _ := strconv.ParseFloat(stringValue(value), 64)
+		return parsed
+	}
 }
 
 func rollback(tx *sql.Tx, err error) error {
