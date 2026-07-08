@@ -844,6 +844,9 @@ func (app *runtimeApp) rememberRuntimeOperationResourceLocked(operation map[stri
 		}
 	case "storage_attachment":
 		row := attachmentResponse(cloneMap(resource), nil)
+		row["ownerAccountId"] = firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]), stringValue(operation["accountId"]))
+		row["accountId"] = firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"]))
+		row["workspaceId"] = firstNonEmpty(stringValue(row["workspaceId"]), stringValue(operation["workspaceId"]))
 		if id := stringValue(row["id"]); id != "" {
 			app.attachments[id] = row
 		}

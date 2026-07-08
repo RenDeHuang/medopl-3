@@ -587,6 +587,33 @@ func (f *fabricClientWithResourceOperations) ListOperations(_ context.Context) (
 			FinishedAt: "2026-07-07T00:01:00Z",
 			CreatedAt:  "2026-07-07T00:01:01Z",
 		},
+		{
+			ID:                "fop-attachment-alpha",
+			OperationID:       "op-attach-alpha",
+			CallerService:     "control-plane",
+			Action:            "create_storage_attachment",
+			ResourceKind:      "storage_attachment",
+			ResourceID:        "attachment-alpha",
+			AccountID:         "acct-alpha",
+			WorkspaceID:       "ws-alpha",
+			Provider:          "tencent-tke",
+			ProviderRequestID: "attachment-request-from-fabric",
+			RequestHash:       "request-hash-attachment-alpha",
+			RedactedProviderPayload: map[string]any{"resource": map[string]any{
+				"id":                   "attachment-alpha",
+				"workspaceId":          "ws-alpha",
+				"computeId":            "compute-alpha",
+				"volumeId":             "storage-alpha",
+				"status":               "attached",
+				"provider":             "tencent-tke",
+				"providerAttachmentId": "deployment/compute-alpha:pvc/storage-alpha-data:/data",
+				"providerRequestId":    "attachment-request-from-fabric",
+			}},
+			Status:     "succeeded",
+			StartedAt:  "2026-07-07T00:00:00Z",
+			FinishedAt: "2026-07-07T00:01:00Z",
+			CreatedAt:  "2026-07-07T00:01:02Z",
+		},
 	}, nil
 }
 
@@ -976,6 +1003,17 @@ func TestConsoleStateHydratesResourceListsFromFabricOperations(t *testing.T) {
 		return storage["id"] == "storage-alpha" && storage["status"] == "available" && storage["providerResourceId"] == "pvc/storage-alpha-data"
 	}) {
 		t.Fatalf("state did not hydrate storage resource from Fabric operation: %#v", storageVolumes)
+	}
+	attachments := state["storageAttachments"].([]any)
+	if !slices.ContainsFunc(attachments, func(row any) bool {
+		attachment := row.(map[string]any)
+		return attachment["id"] == "attachment-alpha" &&
+			attachment["ownerAccountId"] == "acct-alpha" &&
+			attachment["computeAllocationId"] == "compute-alpha" &&
+			attachment["storageId"] == "storage-alpha" &&
+			attachment["status"] == "attached"
+	}) {
+		t.Fatalf("state did not hydrate attachment resource from Fabric operation: %#v", attachments)
 	}
 }
 
