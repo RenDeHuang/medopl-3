@@ -31,6 +31,32 @@ These are external environment blockers, not passing evidence:
 - `OPL_CONFIRM_REAL_CLOUD_E2E=1 npm run staging:e2e` fails with `staging_env_file_missing:/home/dev/medopl-3/.env.staging.local`.
 - `npm run verify:production` fails with `origin_required` because `OPL_CONSOLE_ORIGIN` is not set.
 
+## GitHub rollout sequence
+
+After `commercial-chain-closure` is pushed, run the production workflows in this order:
+
+1. `Release OPL Cloud Image`
+2. `Deploy TKE Production`
+3. `Diagnose TKE Production`
+4. `Verify Production Chain`
+
+The verifier now fails unless the live chain proves:
+
+- Workspace token handoff redirects to a URL without `token`.
+- Ledger debit entries include `pricingVersion`, `priceSnapshot`, quantity/unit, and provider cost evidence refs.
+- Wallet transactions include wallet-after balance, frozen, available, and total spent fields.
+- Fabric evidence includes operation IDs, provider cost tags, and links back to Ledger rows.
+
+Recommended manual dispatch:
+
+```bash
+gh workflow run verify-production-chain.yml \
+  --ref commercial-chain-closure \
+  -f origin=https://cloud.medopl.cn \
+  -f account_id=pi-production-verifier \
+  -f package_id=basic
+```
+
 ## Required next inputs
 
 - Create `/home/dev/medopl-3/.env.staging.local` or set `OPL_STAGING_ENV_FILE` to a valid staging env file.

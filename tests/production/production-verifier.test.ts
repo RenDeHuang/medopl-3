@@ -139,6 +139,15 @@ function readyRuntimeStatus(workspace) {
 
 function chainResponses(chain) {
   const persistenceText = "opl persistence prod-run";
+  const pricingVersion = "opl-tencent-v1";
+  const computePriceSnapshot = { packageId: "basic", unitPriceCents: 100, currency: "CNY" };
+  const storagePriceSnapshot = { packageId: "basic", unitPriceCents: 100, currency: "CNY" };
+  const costTags = {
+    opl_account_id: "pi-prod",
+    opl_workspace_id: chain.workspace.id,
+    opl_resource_id: chain.replacementCompute.id,
+    opl_operation_id: "op-runtime-prod002"
+  };
   return {
     "GET /api/production/readiness": { ready: true, missingEnv: [], missingTools: [], failedChecks: [], checks: [] },
     "GET /api/runtime/readiness": { provider: "tencent-tke", ready: true, missingEnv: [], missingTools: [] },
@@ -171,19 +180,29 @@ function chainResponses(chain) {
       user: { id: "opl-webui-admin", username: "admin" }
     },
     [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`]: { success: true, data: persistenceText },
-    "POST /api/billing/resource-settlements": { entries: [] },
-    "POST /api/billing/resource-settlements#2": { entries: [] },
+    "POST /api/billing/resource-settlements": { entries: [
+      { accountId: "pi-prod", computeAllocationId: chain.replacementCompute.id, type: "compute_debit", pricingVersion, priceSnapshot: computePriceSnapshot, providerCostEvidenceRef: "fabric:op-runtime-prod002", quantity: 1, unit: "verification" }
+    ] },
+    "POST /api/billing/resource-settlements#2": { entries: [
+      { accountId: "pi-prod", storageId: chain.storage.id, type: "storage_debit", pricingVersion, priceSnapshot: storagePriceSnapshot, providerCostEvidenceRef: "fabric:op-runtime-prod002", quantity: 1, unit: "verification" }
+    ] },
     "GET /api/state?accountId=pi-prod": {
-      wallet: { accountId: "pi-prod", balance: 999, frozen: 10 },
+      wallet: { accountId: "pi-prod", balance: 999, frozen: 10, available: 989, totalSpentCents: 200 },
       billingLedger: [
         { id: "ledger-compute", accountId: "pi-prod", computeAllocationId: chain.compute.id, type: "compute_hold" },
         { id: "ledger-storage", accountId: "pi-prod", storageId: chain.storage.id, type: "storage_hold" },
-        { id: "ledger-compute-debit", accountId: "pi-prod", computeAllocationId: chain.replacementCompute.id, type: "compute_debit" },
-        { id: "ledger-storage-debit", accountId: "pi-prod", storageId: chain.storage.id, type: "storage_debit" }
+        { id: "ledger-compute-debit", accountId: "pi-prod", computeAllocationId: chain.replacementCompute.id, type: "compute_debit", pricingVersion, priceSnapshot: computePriceSnapshot, providerCostEvidenceRef: "fabric:op-runtime-prod002", quantity: 1, unit: "verification" },
+        { id: "ledger-storage-debit", accountId: "pi-prod", storageId: chain.storage.id, type: "storage_debit", pricingVersion, priceSnapshot: storagePriceSnapshot, providerCostEvidenceRef: "fabric:op-runtime-prod002", quantity: 1, unit: "verification" }
       ],
       walletTransactions: [
-        { id: "wallet-compute-debit", accountId: "pi-prod", metadata: { computeAllocationId: chain.replacementCompute.id }, type: "compute_debit" },
-        { id: "wallet-storage-debit", accountId: "pi-prod", metadata: { storageId: chain.storage.id }, type: "storage_debit" }
+        { id: "wallet-compute-debit", accountId: "pi-prod", metadata: { computeAllocationId: chain.replacementCompute.id }, type: "compute_debit", balanceCents: 900, frozenCents: 10, availableCents: 890, totalSpentCents: 100 },
+        { id: "wallet-storage-debit", accountId: "pi-prod", metadata: { storageId: chain.storage.id }, type: "storage_debit", balanceCents: 800, frozenCents: 10, availableCents: 790, totalSpentCents: 200 }
+      ],
+      resourceLedgerEvidence: [
+        { accountId: "pi-prod", workspaceId: chain.replacementWorkspace.id, computeAllocationId: chain.replacementCompute.id, storageId: chain.storage.id, attachmentId: chain.replacementAttachment.id, operationId: "op-runtime-prod002", costTags, ledgerEntryIds: ["ledger-compute-debit", "ledger-storage-debit"], walletTransactionIds: ["wallet-compute-debit", "wallet-storage-debit"] }
+      ],
+      runtimeOperations: [
+        { operationId: "op-runtime-prod002", resourceKind: "runtime", resourceId: chain.replacementWorkspace.id, workspaceId: chain.replacementWorkspace.id, status: "succeeded", providerRequestId: "req-runtime-prod002", costTags }
       ]
     },
     "POST /api/storage-attachments/detach": { ...chain.attachment, status: "detached" },
@@ -200,6 +219,25 @@ function keyedFetch({ responses, requests = [], responseHeaders = null, statusBy
     const parsed = new URL(String(url));
     const method = options.method || "GET";
     let key = parsed.origin === consoleOrigin ? `${method} ${parsed.pathname}${parsed.search}` : `${method} ${String(url)}`;
+    if (parsed.origin !== consoleOrigin && method === "GET" && parsed.searchParams.has("token") && options.redirect === "manual") {
+      const count = (requestCounts.get(key) || 0) + 1;
+      requestCounts.set(key, count);
+      key = count === 1 ? key : `${key}#${count}`;
+      requests.push({
+        key,
+        cookie: options.headers?.cookie || "",
+        csrf: options.headers?.["x-opl-csrf-token"] || "",
+        operatorToken: options.headers?.["x-opl-operator-token"] || "",
+        idempotencyKey: options.headers?.["Idempotency-Key"] || "",
+        body: options.body ? JSON.parse(options.body) : null,
+        redirect: options.redirect || ""
+      });
+      const workspaceId = parsed.pathname.split("/").filter(Boolean).pop() || "workspace";
+      const token = parsed.searchParams.get("token") || "";
+      const clean = new URL(String(url));
+      clean.searchParams.delete("token");
+      return redirectResponse(`${clean.pathname}${clean.search}`, `opl_ws_active=${workspaceId}; Path=/; HttpOnly, opl_ws_${workspaceId}=${token}; Path=/; HttpOnly`);
+    }
     if (
       parsed.origin !== consoleOrigin ||
       [
@@ -224,7 +262,20 @@ function keyedFetch({ responses, requests = [], responseHeaders = null, statusBy
       idempotencyKey: options.headers?.["Idempotency-Key"] || "",
       body: options.body ? JSON.parse(options.body) : null
     });
-    const payload = responses[key] ?? responses[key.replace(/#\d+$/, "")];
+    let responseKey = key;
+    if (parsed.origin !== consoleOrigin && method === "GET" && parsed.pathname.startsWith("/w/") && !parsed.searchParams.has("token")) {
+      const cookies = Object.fromEntries(String(options.headers?.cookie || "").split(";").map((entry) => {
+        const [name, ...value] = entry.trim().split("=");
+        return [name, value.join("=")];
+      }).filter(([name]) => name));
+      const token = cookies[`opl_ws_${cookies.opl_ws_active}`] || "";
+      if (token) {
+        const lookup = new URL(String(url));
+        lookup.searchParams.set("token", token);
+        responseKey = `${method} ${lookup.toString()}${key.match(/#\d+$/)?.[0] || ""}`;
+      }
+    }
+    const payload = responses[responseKey] ?? responses[responseKey.replace(/#\d+$/, "")] ?? responses[key] ?? responses[key.replace(/#\d+$/, "")];
     if (typeof payload === "string") return htmlResponse(payload);
     if (payload) {
       if (key === "POST /api/auth/operator-login" && responseHeaders) return jsonResponse(payload, 200, responseHeaders);
@@ -303,6 +354,12 @@ function workspaceUrl(baseUrl, path) {
   parsed.pathname = `/${path.replace(/^\//, "")}`;
   parsed.search = "";
   parsed.hash = "";
+  return parsed.toString();
+}
+
+function scrubbedWorkspaceUrl(baseUrl) {
+  const parsed = new URL(baseUrl);
+  parsed.searchParams.delete("token");
   return parsed.toString();
 }
 
@@ -974,6 +1031,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "POST /api/workspaces",
     "POST /api/workspaces/runtime-status",
     `GET ${chain.workspace.url}`,
+    `GET ${scrubbedWorkspaceUrl(chain.workspace.url)}`,
     `POST ${workspaceUrl(chain.workspace.url, "/login")}`,
     `GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}`,
     `POST ${workspaceUrl(chain.workspace.url, "/api/fs/write")}`,
@@ -985,6 +1043,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "POST /api/workspaces#2",
     "POST /api/workspaces/runtime-status#2",
     `GET ${chain.workspace.url}#2`,
+    `GET ${scrubbedWorkspaceUrl(chain.workspace.url)}#2`,
     `POST ${workspaceUrl(chain.workspace.url, "/login")}#2`,
     `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`,
     "POST /api/billing/resource-settlements",
@@ -1040,6 +1099,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "workspace_created:true",
     "workspace_runtime_status:true",
     "workspace_url:true",
+    "workspace_url_token_scrubbed:true",
     "workspace_runtime_auth:true",
     "workspace_file_written:true",
     "workspace_file_read:true",
@@ -1050,9 +1110,11 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "replacement_workspace_created:true",
     "replacement_workspace_runtime_status:true",
     "replacement_workspace_url:true",
+    "replacement_workspace_url_token_scrubbed:true",
     "workspace_persisted_file_read:true",
     "resource_billing_settled:true",
     "ledger_and_wallet_transactions_verified:true",
+    "fabric_audit_evidence_verified:true",
     "verification_storage_detached:true",
     "verification_compute_destroyed:true",
     "verification_storage_destroyed:true"
@@ -1450,7 +1512,7 @@ test("production verifier runs optional browser UI checks after Workspace URL is
     "workspace_browser_message_sent:true",
     "workspace_browser_reply_seen:true"
   ]);
-  assert.deepEqual(actions.filter(([name]) => name === "goto").map(([, url]) => url), [chain.workspace.url]);
+  assert.deepEqual(actions.filter(([name]) => name === "goto").map(([, url]) => url), [scrubbedWorkspaceUrl(chain.workspace.url)]);
   assert.ok(actions.find((action) => action[0] === "addCookies")?.[1].some((cookie) => (
     cookie.name === "aionui-session" && cookie.value === "api-session"
   )));
@@ -1496,6 +1558,7 @@ test("production verifier reports browser failure stage with resources, checks, 
     "workspace_created:true",
     "workspace_runtime_status:true",
     "workspace_url:true",
+    "workspace_url_token_scrubbed:true",
     "workspace_browser_opened:true",
     "workspace_browser_webui_login:true",
     "workspace_browser_file_uploaded:true",
@@ -1567,7 +1630,9 @@ test("production verifier reports safe ledger mismatch details", async () => {
       assert.equal(error.message, "ledger_and_wallet_transactions_verified_failed");
       assert.deepEqual(error.details?.missingChecks, [
         "compute_wallet_transaction",
-        "storage_wallet_transaction"
+        "storage_wallet_transaction",
+        "compute_wallet_after",
+        "storage_wallet_after"
       ]);
       return true;
     }

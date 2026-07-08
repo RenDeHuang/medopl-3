@@ -87,7 +87,7 @@ jobs:
       - name: Install browser
         run: npx playwright install --with-deps chromium
 
-      - name: Verify production chain
+      - name: Verify production audit evidence chain
         run: npm run verify:production
 
       - name: Upload browser E2E screenshots

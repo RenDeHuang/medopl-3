@@ -204,17 +204,19 @@ async function requestWorkspaceUrl({ fetchImpl, url, attempts, retryDelayMs }) {
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     let requestUrl = url;
     let cookie = "";
+    let redirected = false;
     let response = await fetchImpl(requestUrl, { method: "GET", redirect: "manual" });
     if (response.status >= 300 && response.status < 400 && response.headers?.get?.("location")) {
       cookie = cookieHeaderFromSetCookie(setCookieHeader(response.headers));
       requestUrl = new URL(response.headers.get("location"), requestUrl).toString();
+      redirected = true;
       response = await fetchImpl(requestUrl, {
         method: "GET",
         headers: cookie ? { cookie } : undefined
       });
     }
     const body = await response.text();
-    if (response.ok) return { body, attempts: attempt, url: requestUrl, cookie };
+    if (response.ok) return { body, attempts: attempt, url: requestUrl, cookie, redirected };
     lastError = new Error(`workspace_url_failed:${response.status}:${body}`);
     if (attempt < attempts) await sleep(retryDelayMs);
   }
@@ -1034,6 +1036,20 @@ function assertRuntimeStatus(checks, runtimeStatus, name = "workspace_runtime_st
   });
 }
 
+function assertWorkspaceUrlTokenScrubbed(checks, workspaceAuth, name = "workspace_url_token_scrubbed") {
+  let parsed = null;
+  try {
+    parsed = new URL(workspaceAuth?.url || "");
+  } catch {
+    parsed = null;
+  }
+  addCheck(checks, name, Boolean(
+    workspaceAuth?.redirected === true &&
+    parsed &&
+    !parsed.searchParams.has("token")
+  ), { path: parsed ? `${parsed.pathname}${parsed.search}` : "" });
+}
+
 function settlementEntry(settlement) {
   if (!settlement?.resourceType) return null;
   const entry = {
@@ -1044,6 +1060,28 @@ function settlementEntry(settlement) {
   if (settlement.resourceType === "storage") entry.storageId = settlement.resourceId;
   else entry.computeAllocationId = settlement.resourceId;
   return entry;
+}
+
+function hasSettlementEvidence(entry) {
+  return Boolean(
+    entry?.pricingVersion &&
+    entry?.providerCostEvidenceRef &&
+    entry?.priceSnapshot &&
+    typeof entry.priceSnapshot === "object" &&
+    Object.keys(entry.priceSnapshot).length > 0 &&
+    entry?.quantity != null &&
+    entry?.unit
+  );
+}
+
+function hasWalletAfterFields(entry) {
+  return Boolean(
+    entry &&
+    entry.balanceCents != null &&
+    entry.frozenCents != null &&
+    entry.availableCents != null &&
+    entry.totalSpentCents != null
+  );
 }
 
 function assertResourceBillingSettlement(checks, settlements, { accountId, compute, storage }) {
@@ -1072,31 +1110,43 @@ function assertLedgerAndWalletTransactions(checks, state, { accountId, compute, 
   const ledger = state?.billingLedger || [];
   const walletTransactions = state?.walletTransactions || [];
 
-  const hasComputeLedger = ledger.some((entry) =>
+  const computeLedger = ledger.find((entry) =>
     entry.accountId === accountId &&
     entry.computeAllocationId === compute?.id &&
     entry.type === "compute_debit"
   );
-  const hasStorageLedger = ledger.some((entry) =>
+  const storageLedger = ledger.find((entry) =>
     entry.accountId === accountId &&
     entry.storageId === storage?.id &&
     entry.type === "storage_debit"
   );
-  const hasComputeWalletTransaction = walletTransactions.some((entry) =>
+  const computeWalletTransaction = walletTransactions.find((entry) =>
     entry.accountId === accountId &&
     entry.metadata?.computeAllocationId === compute?.id &&
     entry.type === "compute_debit"
   );
-  const hasStorageWalletTransaction = walletTransactions.some((entry) =>
+  const storageWalletTransaction = walletTransactions.find((entry) =>
     entry.accountId === accountId &&
     entry.metadata?.storageId === storage?.id &&
     entry.type === "storage_debit"
   );
+  const hasComputeLedger = Boolean(computeLedger);
+  const hasStorageLedger = Boolean(storageLedger);
+  const hasComputeWalletTransaction = Boolean(computeWalletTransaction);
+  const hasStorageWalletTransaction = Boolean(storageWalletTransaction);
+  const hasComputeSettlementEvidence = hasSettlementEvidence(computeLedger);
+  const hasStorageSettlementEvidence = hasSettlementEvidence(storageLedger);
+  const hasComputeWalletAfter = hasWalletAfterFields(computeWalletTransaction);
+  const hasStorageWalletAfter = hasWalletAfterFields(storageWalletTransaction);
   const missingChecks = [
     [hasComputeLedger, "compute_ledger"],
     [hasStorageLedger, "storage_ledger"],
     [hasComputeWalletTransaction, "compute_wallet_transaction"],
-    [hasStorageWalletTransaction, "storage_wallet_transaction"]
+    [hasStorageWalletTransaction, "storage_wallet_transaction"],
+    [hasComputeSettlementEvidence, "compute_price_snapshot"],
+    [hasStorageSettlementEvidence, "storage_price_snapshot"],
+    [hasComputeWalletAfter, "compute_wallet_after"],
+    [hasStorageWalletAfter, "storage_wallet_after"]
   ].filter(([ok]) => !ok).map(([, name]) => name);
 
   addCheck(checks, "ledger_and_wallet_transactions_verified", Boolean(
@@ -1104,8 +1154,49 @@ function assertLedgerAndWalletTransactions(checks, state, { accountId, compute, 
     hasComputeLedger &&
     hasStorageLedger &&
     hasComputeWalletTransaction &&
-    hasStorageWalletTransaction
+    hasStorageWalletTransaction &&
+    hasComputeSettlementEvidence &&
+    hasStorageSettlementEvidence &&
+    hasComputeWalletAfter &&
+    hasStorageWalletAfter
   ), { missingChecks });
+}
+
+function assertFabricAuditEvidence(checks, state, { accountId, workspace, compute, storage, attachment }) {
+  const rows = state?.resourceLedgerEvidence || [];
+  const operations = state?.runtimeOperations || [];
+  const row = rows.find((entry) =>
+    (entry.accountId === accountId || entry.ownerAccountId === accountId) &&
+    entry.workspaceId === workspace?.id &&
+    entry.computeAllocationId === compute?.id &&
+    entry.storageId === storage?.id &&
+    entry.attachmentId === attachment?.id
+  );
+  const operation = operations.find((entry) =>
+    entry.operationId === row?.operationId ||
+    [compute?.id, storage?.id, attachment?.id, workspace?.id].includes(entry.resourceId)
+  );
+  const tags = row?.costTags || operation?.costTags || operation?.redactedProviderPayload?.costTags || {};
+  const hasCostTags = Boolean(
+    tags.opl_account_id === accountId &&
+    tags.opl_workspace_id === workspace?.id &&
+    tags.opl_resource_id &&
+    tags.opl_operation_id
+  );
+  const hasLedgerLinks = Boolean(row?.ledgerEntryIds?.length && row?.walletTransactionIds?.length);
+  addCheck(checks, "fabric_audit_evidence_verified", Boolean(
+    row?.operationId &&
+    operation?.operationId &&
+    hasCostTags &&
+    hasLedgerLinks
+  ), {
+    missingChecks: [
+      [row?.operationId, "resource_operation"],
+      [operation?.operationId, "runtime_operation"],
+      [hasCostTags, "provider_cost_tags"],
+      [hasLedgerLinks, "ledger_links"]
+    ].filter(([ok]) => !ok).map(([, name]) => name)
+  });
 }
 
 function compactObject(payload) {
@@ -1317,6 +1408,7 @@ export async function verifyProductionChain({
       retryDelayMs
     });
     addCheck(checks, "workspace_url", true, { url: workspace.url, attempts: workspaceUrlResult.attempts });
+    assertWorkspaceUrlTokenScrubbed(checks, workspaceUrlResult);
     const webuiUsername = DEFAULT_AIONUI_ADMIN_USERNAME;
     const webuiPassword = deriveAionUiAdminPassword(
       process.env.OPL_AIONUI_ADMIN_PASSWORD_SEED,
@@ -1440,6 +1532,7 @@ export async function verifyProductionChain({
       url: replacementWorkspace.url,
       attempts: replacementWorkspaceUrlResult.attempts
     });
+    assertWorkspaceUrlTokenScrubbed(checks, replacementWorkspaceUrlResult, "replacement_workspace_url_token_scrubbed");
     const replacementWorkspaceApiAuth = await requestWorkspaceWebuiLogin({
       fetchImpl,
       workspaceAuth: replacementWorkspaceUrlResult,
@@ -1504,6 +1597,13 @@ export async function verifyProductionChain({
       accountId,
       compute: replacementCompute,
       storage
+    });
+    assertFabricAuditEvidence(checks, state, {
+      accountId,
+      workspace: replacementWorkspace,
+      compute: replacementCompute,
+      storage,
+      attachment: replacementAttachment
     });
 
     const cleanupErrors = await cleanupVerificationResources({
