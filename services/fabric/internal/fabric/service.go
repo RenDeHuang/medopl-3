@@ -121,7 +121,11 @@ func (s *Service) DestroyComputeAllocation(ctx context.Context, allocationID str
 	existing := s.computes[allocationID]
 	s.mu.Unlock()
 	if existing.ID == "" {
-		existing = ComputeAllocation{ID: allocationID}
+		operation := newOperation("destroy_compute_allocation", "compute_allocation", allocationID, "", "", "", hashInput(map[string]string{"id": allocationID}), time.Now().UTC())
+		operation.ProviderRequestID = providerRequestID("destroy-compute", allocationID)
+		err := fmt.Errorf("compute_allocation_not_found")
+		_ = s.recordOperation(ctx, operation, "rejected", ComputeAllocation{ID: allocationID}, err)
+		return ComputeAllocation{}, err
 	}
 	operation := newOperation("destroy_compute_allocation", "compute_allocation", allocationID, existing.AccountID, existing.WorkspaceID, "", hashInput(map[string]string{"id": allocationID}), time.Now().UTC())
 	if err := s.recordOperation(ctx, operation, "started", existing, nil); err != nil {
@@ -170,7 +174,11 @@ func (s *Service) DestroyStorageVolume(ctx context.Context, volumeID string) (St
 	existing := s.volumes[volumeID]
 	s.mu.Unlock()
 	if existing.ID == "" {
-		existing = StorageVolume{ID: volumeID}
+		operation := newOperation("destroy_storage_volume", "storage_volume", volumeID, "", "", "", hashInput(map[string]string{"id": volumeID}), time.Now().UTC())
+		operation.ProviderRequestID = providerRequestID("destroy-storage", volumeID)
+		err := fmt.Errorf("storage_volume_not_found")
+		_ = s.recordOperation(ctx, operation, "rejected", StorageVolume{ID: volumeID}, err)
+		return StorageVolume{}, err
 	}
 	operation := newOperation("destroy_storage_volume", "storage_volume", volumeID, existing.AccountID, existing.WorkspaceID, "", hashInput(map[string]string{"id": volumeID}), time.Now().UTC())
 	if err := s.recordOperation(ctx, operation, "started", existing, nil); err != nil {
@@ -195,8 +203,13 @@ func (s *Service) CreateStorageAttachment(ctx context.Context, input StorageAtta
 	compute := s.computes[input.ComputeID]
 	volume := s.volumes[input.VolumeID]
 	s.mu.Unlock()
-	operation := newOperation("create_storage_attachment", "storage_attachment", firstNonEmpty(input.WorkspaceID, input.ComputeID, input.VolumeID, "pending"), compute.AccountID, input.WorkspaceID, input.IdempotencyKey, hashInput(input), time.Now().UTC())
+	operation := newOperation("create_storage_attachment", "storage_attachment", firstNonEmpty(input.IdempotencyKey, input.WorkspaceID, input.ComputeID, input.VolumeID, "pending"), compute.AccountID, input.WorkspaceID, input.IdempotencyKey, hashInput(input), time.Now().UTC())
 	input.OperationID = operation.OperationID
+	if err := validateAttachmentInput(input, compute, volume); err != nil {
+		operation.ProviderRequestID = providerRequestID("storage-attach", input.IdempotencyKey)
+		_ = s.recordOperation(ctx, operation, "rejected", StorageAttachment{ID: operation.ResourceID, WorkspaceID: input.WorkspaceID, ComputeID: input.ComputeID, VolumeID: input.VolumeID, ProviderRequestID: operation.ProviderRequestID}, err)
+		return StorageAttachment{}, err
+	}
 	if err := s.recordOperation(ctx, operation, "started", StorageAttachment{ID: operation.ResourceID, WorkspaceID: input.WorkspaceID, ComputeID: input.ComputeID, VolumeID: input.VolumeID, Provider: "tencent-tke", ProviderRequestID: providerRequestID("storage-attach", input.IdempotencyKey)}, nil); err != nil {
 		return StorageAttachment{}, err
 	}
@@ -220,7 +233,11 @@ func (s *Service) DetachStorageAttachment(ctx context.Context, attachmentID stri
 	existing := s.attachments[attachmentID]
 	s.mu.Unlock()
 	if existing.ID == "" {
-		existing = StorageAttachment{ID: attachmentID}
+		operation := newOperation("detach_storage_attachment", "storage_attachment", attachmentID, "", "", "", hashInput(map[string]string{"id": attachmentID}), time.Now().UTC())
+		operation.ProviderRequestID = providerRequestID("detach-attachment", attachmentID)
+		err := fmt.Errorf("storage_attachment_not_found")
+		_ = s.recordOperation(ctx, operation, "rejected", StorageAttachment{ID: attachmentID}, err)
+		return StorageAttachment{}, err
 	}
 	operation := newOperation("detach_storage_attachment", "storage_attachment", attachmentID, "", existing.WorkspaceID, "", hashInput(map[string]string{"id": attachmentID}), time.Now().UTC())
 	if err := s.recordOperation(ctx, operation, "started", existing, nil); err != nil {
@@ -247,6 +264,11 @@ func (s *Service) CreateWorkspaceRuntime(ctx context.Context, input WorkspaceRun
 	s.mu.Unlock()
 	operation := newOperation("create_workspace_runtime", "workspace_runtime", input.WorkspaceID, compute.AccountID, input.WorkspaceID, input.IdempotencyKey, hashInput(input), time.Now().UTC())
 	input.OperationID = operation.OperationID
+	if err := validateRuntimeInput(input, compute, volume); err != nil {
+		operation.ProviderRequestID = providerRequestID("runtime", input.IdempotencyKey)
+		_ = s.recordOperation(ctx, operation, "rejected", WorkspaceRuntime{WorkspaceID: input.WorkspaceID, ProviderRequestID: operation.ProviderRequestID}, err)
+		return WorkspaceRuntime{}, err
+	}
 	if err := s.recordOperation(ctx, operation, "started", WorkspaceRuntime{WorkspaceID: input.WorkspaceID, ProviderRequestID: providerRequestID("runtime", input.IdempotencyKey)}, nil); err != nil {
 		return WorkspaceRuntime{}, err
 	}
@@ -425,6 +447,47 @@ func errorCode(err error) string {
 		return "provider_error"
 	}
 	return strings.Fields(text)[0]
+}
+
+func validateAttachmentInput(input StorageAttachmentInput, compute ComputeAllocation, volume StorageVolume) error {
+	if compute.ID == "" {
+		return fmt.Errorf("compute_allocation_not_found")
+	}
+	if volume.ID == "" {
+		return fmt.Errorf("storage_volume_not_found")
+	}
+	if compute.AccountID == "" || volume.AccountID == "" || compute.AccountID != volume.AccountID {
+		return fmt.Errorf("resource_account_mismatch")
+	}
+	if isTerminalResourceStatus(compute.Status) || isTerminalResourceStatus(volume.Status) {
+		return fmt.Errorf("resource_status_invalid")
+	}
+	return nil
+}
+
+func validateRuntimeInput(input WorkspaceRuntimeInput, compute ComputeAllocation, volume StorageVolume) error {
+	if compute.ID == "" {
+		return fmt.Errorf("compute_allocation_not_found")
+	}
+	if volume.ID == "" {
+		return fmt.Errorf("storage_volume_not_found")
+	}
+	if compute.AccountID == "" || volume.AccountID == "" || compute.AccountID != volume.AccountID {
+		return fmt.Errorf("resource_account_mismatch")
+	}
+	if isTerminalResourceStatus(compute.Status) || isTerminalResourceStatus(volume.Status) {
+		return fmt.Errorf("resource_status_invalid")
+	}
+	return nil
+}
+
+func isTerminalResourceStatus(status string) bool {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "destroyed", "deleted", "failed", "detached", "unrecoverable":
+		return true
+	default:
+		return false
+	}
 }
 
 func hashInput(input any) string {

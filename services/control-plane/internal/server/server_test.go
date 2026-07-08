@@ -207,6 +207,90 @@ func TestWorkspaceTokenStatePersistsAcrossRestart(t *testing.T) {
 	}
 }
 
+func TestBootstrapImportsAdminSeedAndDoesNotExposeLegacyOwner(t *testing.T) {
+	t.Setenv("OPL_CONSOLE_USERS_JSON", `[{"id":"usr-admin-production","email":"admin@medopl.cn","password":"StableAdminPass2026!","name":"Admin","role":"admin","accountId":"acct-admin"}]`)
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+
+	loginRec := loginForTest(t, server, "admin@medopl.cn", "StableAdminPass2026!")
+	if loginRec.Header().Get("x-opl-csrf-token") == "" {
+		t.Fatalf("admin login did not return csrf token")
+	}
+	ownerRec := loginAttemptForTest(server, "owner@example.com", "StableAdminPass2026!", "203.0.113.50:1000")
+	if ownerRec.Code != http.StatusUnauthorized {
+		t.Fatalf("legacy owner@example.com login status = %d, want 401", ownerRec.Code)
+	}
+}
+
+func TestLoginAcceptsLegacyScryptPasswordHash(t *testing.T) {
+	app := newRuntimeApp()
+	app.users["usr-admin"]["passwordHash"] = "scrypt:00112233445566778899aabbccddeeff:4904ad313c8dcfe466e3babafef2471d2f5bcc7b0d4d893d5eb6c57666c8c5c1e9a26e8e1b9035f6625718daa983ae2798cbeb16b404e8418c901315147f642f"
+	if _, _, err := app.login(map[string]any{"email": "admin@medopl.cn", "password": "legacy-secret"}); err != nil {
+		t.Fatalf("legacy scrypt password did not verify: %v", err)
+	}
+}
+
+func TestNonAdminRequestsCannotSelectAnotherAccount(t *testing.T) {
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	admin := operatorSessionForTest(t, server)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"alpha@lab.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"beta@lab.example","accountId":"acct-beta","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	alpha := loginForTest(t, server, "alpha@lab.example", "CorrectHorseBatteryStaple!")
+
+	readOther := httptest.NewRequest(http.MethodGet, "/api/state?accountId=acct-beta", nil)
+	addSessionCookies(readOther, alpha)
+	readOtherRec := httptest.NewRecorder()
+	server.ServeHTTP(readOtherRec, readOther)
+	if readOtherRec.Code != http.StatusForbidden {
+		t.Fatalf("cross-account state status = %d, want 403: %s", readOtherRec.Code, readOtherRec.Body.String())
+	}
+
+	writeOther := requestWithSession(t, server, alpha, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-beta","packageId":"basic"}`)
+	if writeOther.Code != http.StatusForbidden {
+		t.Fatalf("cross-account compute create status = %d, want 403: %s", writeOther.Code, writeOther.Body.String())
+	}
+
+	mapOtherTicket := requestWithSession(t, server, alpha, http.MethodPost, "/api/support/tickets", `{"accountId":"acct-beta","externalTicketId":"ZAM-403","title":"wrong account"}`)
+	if mapOtherTicket.Code != http.StatusForbidden {
+		t.Fatalf("cross-account support mapping status = %d, want 403: %s", mapOtherTicket.Code, mapOtherTicket.Body.String())
+	}
+
+	writeOwn := requestWithSession(t, server, alpha, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+	if writeOwn.Code != http.StatusAccepted {
+		t.Fatalf("own-account compute create status = %d, want 202: %s", writeOwn.Code, writeOwn.Body.String())
+	}
+
+	mapOwnTicket := requestWithSession(t, server, alpha, http.MethodPost, "/api/support/tickets", `{"accountId":"acct-alpha","externalTicketId":"ZAM-200","title":"own account"}`)
+	if mapOwnTicket.Code != http.StatusCreated {
+		t.Fatalf("own-account support mapping status = %d, want 201: %s", mapOwnTicket.Code, mapOwnTicket.Body.String())
+	}
+}
+
+func TestAdminMutationsAppendAuditEvents(t *testing.T) {
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	admin := operatorSessionForTest(t, server)
+
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/billing/topups", `{"accountId":"acct-alpha","amount":100,"idempotencyKey":"audit-topup","confirm":true}`)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/management/state", nil)
+	addSessionCookies(req, admin)
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("management state status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var state map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&state); err != nil {
+		t.Fatalf("decode state: %v", err)
+	}
+	events := state["auditEvents"].([]any)
+	if !slices.ContainsFunc(events, func(item any) bool {
+		event := item.(map[string]any)
+		return event["action"] == "billing.topup" && event["targetAccountId"] == "acct-alpha" && event["actorUserId"] != "" && event["result"] == "succeeded"
+	}) {
+		t.Fatalf("missing billing topup audit event: %#v", events)
+	}
+}
+
 type fakeLedgerClient struct{}
 
 type fakeLedgerClientWithKeys struct {
@@ -1564,7 +1648,7 @@ func TestActiveConsoleAPIRoutesReachControlPlane(t *testing.T) {
 		{http.MethodPost, "/api/auth/logout", `{}`},
 		{http.MethodPost, "/api/organizations", `{"name":"Lab","billingAccountId":"acct-lab"}`},
 		{http.MethodPost, "/api/organizations/members", `{"organizationId":"org-lab","userId":"usr-owner","role":"member"}`},
-		{http.MethodPost, "/api/users", `{"email":"owner@example.com","accountId":"acct-lab","password":"secret"}`},
+		{http.MethodPost, "/api/users", `{"email":"pi@medopl.cn","accountId":"acct-lab","password":"secret"}`},
 		{http.MethodPost, "/api/users/disable", `{"userId":"usr-owner"}`},
 		{http.MethodPost, "/api/users/delete", `{"userId":"usr-owner"}`},
 		{http.MethodPost, "/api/billing/topups", `{"accountId":"acct-lab","amount":100,"idempotencyKey":"topup-test"}`},

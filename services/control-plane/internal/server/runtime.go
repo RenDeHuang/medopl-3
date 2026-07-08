@@ -35,6 +35,7 @@ type runtimeApp struct {
 	walletTx    []map[string]any
 	topups      []map[string]any
 	runtimeOps  []map[string]any
+	auditEvents []map[string]any
 	reconcile   map[string]any
 	sessions    map[string]sessionRecord
 	// ponytail: per-process limiter; move to Redis when login traffic spans multiple replicas.
@@ -78,7 +79,7 @@ func newRuntimeAppEmpty() *runtimeApp {
 		storages:      map[string]map[string]any{},
 		attachments:   map[string]map[string]any{},
 		workspaces:    map[string]map[string]any{},
-		users:         map[string]map[string]any{"usr-admin": {"id": "usr-admin", "email": "owner@example.com", "accountId": "acct-admin", "role": "admin", "status": "active"}},
+		users:         map[string]map[string]any{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}},
 		orgs:          map[string]map[string]any{},
 		memberships:   map[string]map[string]any{},
 		support:       map[string]map[string]any{},
@@ -104,6 +105,7 @@ func (app *runtimeApp) snapshotLocked() readModelSnapshot {
 		WalletTx:    cloneMapSlice(app.walletTx),
 		Topups:      cloneMapSlice(app.topups),
 		RuntimeOps:  cloneMapSlice(app.runtimeOps),
+		AuditEvents: cloneMapSlice(app.auditEvents),
 		Reconcile:   cloneMap(app.reconcile),
 	}
 }
@@ -148,6 +150,9 @@ func (app *runtimeApp) applySnapshot(snapshot readModelSnapshot) {
 	if snapshot.RuntimeOps != nil {
 		app.runtimeOps = cloneMapSlice(snapshot.RuntimeOps)
 	}
+	if snapshot.AuditEvents != nil {
+		app.auditEvents = cloneMapSlice(snapshot.AuditEvents)
+	}
 	if snapshot.Reconcile != nil {
 		app.reconcile = cloneMap(snapshot.Reconcile)
 	}
@@ -164,33 +169,36 @@ func (app *runtimeApp) state(accountID string) map[string]any {
 	app.mu.Lock()
 	defer app.mu.Unlock()
 	return map[string]any{
-		"product":               map[string]any{"name": "OPL Cloud", "console": "OPL Console", "workspace": "OPL Workspace"},
-		"billingPolicy":         map[string]any{"holdDays": 7, "priceBasis": "OPL price list"},
-		"packages":              packageList(),
-		"computePools":          computePools(),
-		"wallet":                app.wallet(accountID),
-		"account":               app.wallet(accountID),
-		"user":                  app.currentUserLocked(),
-		"workspaces":            values(app.workspaces),
-		"computeAllocations":    values(app.computes),
-		"storageVolumes":        values(app.storages),
-		"storageAttachments":    values(app.attachments),
-		"accounts":              app.accountsLocked(),
-		"billingLedger":         copySlice(app.ledger),
-		"walletTransactions":    copySlice(app.walletTx),
-		"manualTopups":          copySlice(app.topups),
-		"supportTickets":        values(app.support),
+		"product":                map[string]any{"name": "OPL Cloud", "console": "OPL Console", "workspace": "OPL Workspace"},
+		"billingPolicy":          map[string]any{"holdDays": 7, "priceBasis": "OPL price list"},
+		"packages":               packageList(),
+		"computePools":           computePools(),
+		"wallet":                 app.wallet(accountID),
+		"account":                app.wallet(accountID),
+		"user":                   app.currentUserLocked(),
+		"workspaces":             accountValues(app.workspaces, accountID),
+		"computeAllocations":     accountValues(app.computes, accountID),
+		"storageVolumes":         accountValues(app.storages, accountID),
+		"storageAttachments":     accountValues(app.attachments, accountID),
+		"accounts":               app.accountsLocked(),
+		"billingLedger":          copySlice(app.ledger),
+		"walletTransactions":     copySlice(app.walletTx),
+		"manualTopups":           copySlice(app.topups),
+		"supportTickets":         values(app.support),
+		"auditEvents":            auditEventsForAccount(app.auditEvents, accountID),
 		"resourceLedgerEvidence": app.resourceLedgerEvidenceLocked(),
-		"billingReconciliation": app.reconciliationProjectionLocked(),
-		"notifications":         []any{},
-		"runtimeOperations":     copySlice(app.runtimeOps),
-		"generatedAt":           time.Now().UTC().Format(time.RFC3339),
+		"billingReconciliation":  app.reconciliationProjectionLocked(),
+		"notifications":          []any{},
+		"runtimeOperations":      copySlice(app.runtimeOps),
+		"generatedAt":            time.Now().UTC().Format(time.RFC3339),
 	}
 }
 
 func (app *runtimeApp) currentUserLocked() map[string]any {
-	if user, ok := app.users["usr-admin"]; ok {
-		return sanitizeUser(user)
+	for _, user := range app.users {
+		if stringValue(user["role"]) == "admin" && stringValue(user["status"]) == "active" {
+			return sanitizeUser(user)
+		}
 	}
 	return nil
 }
@@ -269,7 +277,7 @@ func (app *runtimeApp) createSupportMapping(input map[string]any) (map[string]an
 func (app *runtimeApp) createUser(input map[string]any) (map[string]any, error) {
 	app.mu.Lock()
 	defer app.mu.Unlock()
-	email := stringField(input, "email", "owner@example.com")
+	email := stringField(input, "email", "admin@medopl.cn")
 	id := "usr-" + compactID(email+"-"+time.Now().UTC().Format("20060102150405.000000000"))
 	password := stringField(input, "password", "")
 	if password == "" {
@@ -351,18 +359,40 @@ func (app *runtimeApp) importBootstrapUsers() error {
 	if err != nil {
 		return err
 	}
-	if len(users) == 0 {
-		return nil
-	}
 	app.mu.Lock()
 	defer app.mu.Unlock()
-	if len(app.users) > 0 {
-		return nil
-	}
+	app.dropLegacyOwnerUserLocked()
 	for _, user := range users {
-		app.users[stringValue(user["id"])] = user
+		app.upsertBootstrapUserLocked(user)
 	}
 	return app.persistLocked()
+}
+
+func (app *runtimeApp) dropLegacyOwnerUserLocked() {
+	for id, user := range app.users {
+		if strings.EqualFold(stringValue(user["email"]), "owner@example.com") {
+			delete(app.users, id)
+		}
+	}
+}
+
+func (app *runtimeApp) upsertBootstrapUserLocked(seed map[string]any) {
+	id := stringValue(seed["id"])
+	for existingID, existing := range app.users {
+		if existingID == id || strings.EqualFold(stringValue(existing["email"]), stringValue(seed["email"])) {
+			for key, value := range seed {
+				if key == "passwordHash" && stringValue(existing["passwordHash"]) != "" {
+					continue
+				}
+				if key == "id" {
+					continue
+				}
+				existing[key] = value
+			}
+			return
+		}
+	}
+	app.users[id] = seed
 }
 
 func (app *runtimeApp) login(input map[string]any) (map[string]any, string, error) {
@@ -611,6 +641,18 @@ func (app *runtimeApp) rememberAttachment(attachment any, input map[string]any) 
 		row["mountPath"] = firstNonEmpty(stringValue(row["mountPath"]), stringField(input, "mountPath", "/data"))
 		app.mu.Lock()
 		defer app.mu.Unlock()
+		ownerAccountID := firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]))
+		if ownerAccountID == "" {
+			compute := app.computes[stringValue(row["computeAllocationId"])]
+			storage := app.storages[stringValue(row["storageId"])]
+			if stringValue(compute["ownerAccountId"]) != "" && stringValue(compute["ownerAccountId"]) == stringValue(storage["ownerAccountId"]) {
+				ownerAccountID = stringValue(compute["ownerAccountId"])
+			}
+		}
+		if ownerAccountID != "" {
+			row["ownerAccountId"] = ownerAccountID
+			row["accountId"] = firstNonEmpty(stringValue(row["accountId"]), ownerAccountID)
+		}
 		app.attachments[stringValue(row["id"])] = row
 		if stringValue(row["status"]) == "detached" {
 			app.clearWorkspacesForAttachmentLocked(stringValue(row["id"]))
@@ -680,6 +722,7 @@ func (app *runtimeApp) managementState(includeDeleted bool) map[string]any {
 		"walletTransactions":     copySlice(app.walletTx),
 		"manualTopups":           copySlice(app.topups),
 		"runtimeOperations":      copySlice(app.runtimeOps),
+		"auditEvents":            copySlice(app.auditEvents),
 		"billingReconciliation":  app.reconciliationProjectionLocked(),
 	}
 }
@@ -704,6 +747,38 @@ func (app *runtimeApp) operatorSummary() map[string]any {
 		"productionE2E":          map[string]any{},
 		"billingReconciliation":  app.reconciliationProjectionLocked(),
 	}
+}
+
+func (app *runtimeApp) resourceBelongsToAccount(row map[string]any, accountID string) bool {
+	if accountID == "" {
+		return false
+	}
+	return firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"])) == accountID
+}
+
+func (app *runtimeApp) appendAuditEvent(r *http.Request, action string, resourceKind string, resourceID string, targetAccountID string, before any, after any, result string) error {
+	user, _ := app.sessionUserContext(r)
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	now := time.Now().UTC().Format(time.RFC3339)
+	event := map[string]any{
+		"id":              "audit-" + stableID(action, resourceKind, resourceID, now)[:12],
+		"actorUserId":     stringValue(user["id"]),
+		"actorRole":       stringValue(user["role"]),
+		"actorAccountId":  stringValue(user["accountId"]),
+		"targetAccountId": targetAccountID,
+		"action":          action,
+		"resourceKind":    resourceKind,
+		"resourceId":      resourceID,
+		"ipAddress":       requestIP(r),
+		"userAgent":       r.UserAgent(),
+		"before":          before,
+		"after":           after,
+		"result":          result,
+		"createdAt":       now,
+	}
+	app.auditEvents = append(app.auditEvents, event)
+	return app.persistLocked()
 }
 
 func (app *runtimeApp) reconciliationProjectionLocked() map[string]any {
@@ -815,6 +890,24 @@ func (app *runtimeApp) getAttachment(id string) (map[string]any, bool) {
 	defer app.mu.Unlock()
 	attachment, ok := app.attachments[id]
 	return cloneMap(attachment), ok
+}
+
+func (app *runtimeApp) getWorkspace(id string) (map[string]any, bool) {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	workspace, ok := app.workspaces[id]
+	return cloneMap(workspace), ok
+}
+
+func (app *runtimeApp) canAccessResource(r *http.Request, row map[string]any) bool {
+	user, ok := app.sessionUserContext(r)
+	if !ok {
+		return false
+	}
+	if stringValue(user["role"]) == "admin" {
+		return true
+	}
+	return app.resourceBelongsToAccount(row, stringValue(user["accountId"]))
 }
 
 func (app *runtimeApp) cleanupWorkspaceAccess(input map[string]any) (map[string]any, error) {
@@ -1448,6 +1541,25 @@ func values(input map[string]map[string]any) []any {
 	output := make([]any, 0, len(keys))
 	for _, key := range keys {
 		output = append(output, cloneMap(input[key]))
+	}
+	return output
+}
+
+func accountValues(input map[string]map[string]any, accountID string) []any {
+	if accountID == "" {
+		return values(input)
+	}
+	return filteredValues(input, func(item map[string]any) bool {
+		return firstNonEmpty(stringValue(item["accountId"]), stringValue(item["ownerAccountId"])) == accountID
+	})
+}
+
+func auditEventsForAccount(events []map[string]any, accountID string) []any {
+	output := []any{}
+	for _, event := range events {
+		if accountID == "" || stringValue(event["targetAccountId"]) == accountID || stringValue(event["actorAccountId"]) == accountID {
+			output = append(output, cloneMap(event))
+		}
 	}
 	return output
 }

@@ -34,6 +34,7 @@ type readModelSnapshot struct {
 	WalletTx    []map[string]any          `json:"walletTx,omitempty"`
 	Topups      []map[string]any          `json:"topups,omitempty"`
 	RuntimeOps  []map[string]any          `json:"runtimeOperations,omitempty"`
+	AuditEvents []map[string]any          `json:"auditEvents,omitempty"`
 	Reconcile   map[string]any            `json:"billingReconciliation,omitempty"`
 }
 

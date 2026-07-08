@@ -129,6 +129,40 @@ func TestResourceMutationsAppendFabricOperationFacts(t *testing.T) {
 	}
 }
 
+func TestFabricRejectsIllegalResourceMutationsWithOperationFacts(t *testing.T) {
+	store := NewMemoryOperationStore()
+	service := NewServiceWithOperationStore(testProvider{}, store)
+	ctx := context.Background()
+
+	if _, err := service.DestroyComputeAllocation(ctx, "missing-compute"); err == nil {
+		t.Fatalf("destroy missing compute must fail")
+	}
+	if _, err := service.CreateStorageAttachment(ctx, StorageAttachmentInput{WorkspaceID: "ws-alpha", ComputeID: "missing-compute", VolumeID: "missing-volume", IdempotencyKey: "reject-missing-attach"}); err == nil {
+		t.Fatalf("attach missing compute/storage must fail")
+	}
+
+	compute, err := service.CreateComputeAllocation(ctx, ComputeAllocationInput{AccountID: "acct-alpha", WorkspaceID: "ws-alpha", PackageID: "basic", IdempotencyKey: "reject-compute"})
+	if err != nil {
+		t.Fatalf("create compute: %v", err)
+	}
+	waitForOperation(t, service, "create_compute_allocation", "compute_allocation", compute.ID, "succeeded")
+	volume, err := service.CreateStorageVolume(ctx, StorageVolumeInput{AccountID: "acct-beta", WorkspaceID: "ws-beta", SizeGB: 10, IdempotencyKey: "reject-storage"})
+	if err != nil {
+		t.Fatalf("create storage: %v", err)
+	}
+	if _, err := service.CreateStorageAttachment(ctx, StorageAttachmentInput{WorkspaceID: "ws-alpha", ComputeID: compute.ID, VolumeID: volume.ID, IdempotencyKey: "reject-cross-account-attach"}); err == nil {
+		t.Fatalf("attach cross-account compute/storage must fail")
+	}
+
+	operations, err := service.ListOperations(ctx)
+	if err != nil {
+		t.Fatalf("list operations: %v", err)
+	}
+	assertOperationFact(t, operations, "destroy_compute_allocation", "compute_allocation", "missing-compute", "rejected")
+	assertOperationFact(t, operations, "create_storage_attachment", "storage_attachment", "reject-missing-attach", "rejected")
+	assertOperationFact(t, operations, "create_storage_attachment", "storage_attachment", "reject-cross-account-attach", "rejected")
+}
+
 func TestServiceReplaysResourceStateFromOperationStore(t *testing.T) {
 	store := NewMemoryOperationStore()
 	ctx := context.Background()

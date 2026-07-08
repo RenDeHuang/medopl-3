@@ -306,7 +306,7 @@ function CreateUserDrawer({ open, setOpen, form, session, runAction }: any) {
         }}
       >
         <Form.Item name="email" label="登录邮箱" rules={[{ required: true, message: "请输入邮箱" }, { type: "email", message: "邮箱格式不正确" }]}>
-          <Input placeholder="owner@example.com" />
+          <Input placeholder="admin@medopl.cn" />
         </Form.Item>
         <Form.Item name="password" label="初始密码" rules={[{ required: true, message: "请输入初始密码" }]}>
           <Input.Password />
@@ -369,7 +369,7 @@ function TopUpDrawer({ open, setOpen, form, session, runAction }: any) {
   );
 }
 
-export function AdminBillingPage({ state, adminOps, session, runAction }: any) {
+export function AdminBillingPage({ state, managementState, adminOps, session, runAction }: any) {
   const [reconciliationOpen, setReconciliationOpen] = React.useState(false);
   const [reconciliationForm] = Form.useForm();
   const totalSpent = adminOps.operator?.accounts?.totalSpent ?? totalDebited(state.walletTransactions || state.billingLedger || []);
@@ -433,6 +433,22 @@ export function AdminBillingPage({ state, adminOps, session, runAction }: any) {
               description: `${event.accountId || ""} · ${walletAfterLabel(event)}`,
               meta: money(event.amount),
               tone: Number(event.amount || 0) < 0 ? "warn" : "good"
+            }))}
+          />
+        </InsightPanel>
+        <InsightPanel title="操作审计" eyebrow="审计">
+          <TimelineList
+            emptyText="暂无操作审计"
+            items={(managementState.auditEvents || []).slice(-8).reverse().map((event) => ({
+              title: event.action,
+              description: [
+                event.targetAccountId || event.actorAccountId,
+                event.resourceKind && event.resourceId ? `${event.resourceKind} ${event.resourceId}` : "",
+                event.actorUserId ? `actor ${event.actorUserId}` : "",
+                event.result
+              ].filter(Boolean).join(" · "),
+              meta: event.createdAt,
+              tone: event.result === "succeeded" ? "good" : "warn"
             }))}
           />
         </InsightPanel>

@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -12,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/crypto/scrypt"
 )
 
 const (
@@ -37,6 +40,9 @@ func hashPassword(password string) (string, error) {
 }
 
 func verifyPassword(password string, encoded string) bool {
+	if verifyLegacyScryptPassword(password, encoded) {
+		return true
+	}
 	parts := strings.Split(encoded, "$")
 	if len(parts) != 4 || parts[0] != passwordHashPrefix {
 		return false
@@ -51,6 +57,23 @@ func verifyPassword(password string, encoded string) bool {
 	}
 	got := pbkdf2SHA256([]byte(password), []byte(parts[2]), iterations, len(want))
 	return hmac.Equal(got, want)
+}
+
+func verifyLegacyScryptPassword(password string, encoded string) bool {
+	parts := strings.Split(encoded, ":")
+	if len(parts) != 3 || parts[0] != "scrypt" {
+		return false
+	}
+	salt, err := hex.DecodeString(parts[1])
+	if err != nil {
+		return false
+	}
+	want, err := hex.DecodeString(parts[2])
+	if err != nil {
+		return false
+	}
+	got, err := scrypt.Key([]byte(password), salt, 1<<14, 8, 1, len(want))
+	return err == nil && hmac.Equal(got, want)
 }
 
 func pbkdf2SHA256(password []byte, salt []byte, iterations int, keyLen int) []byte {

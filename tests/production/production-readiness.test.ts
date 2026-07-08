@@ -168,10 +168,10 @@ test("productionReadiness rejects weak auth credentials", async () => {
     env: {
       ...tkeProductionEnv,
       OPL_CONSOLE_USERS_JSON: "",
-      OPL_PI_EMAIL: "owner@example.com",
+      OPL_PI_EMAIL: "weak-pi@medopl.cn",
       OPL_PI_ACCOUNT_ID: "acct-owner",
       OPL_PI_PASSWORD: "password",
-      OPL_ADMIN_EMAIL: "admin@example.com",
+      OPL_ADMIN_EMAIL: "admin@medopl.cn",
       OPL_ADMIN_ACCOUNT_ID: "acct-admin",
       OPL_ADMIN_PASSWORD: "placeholder"
     },
