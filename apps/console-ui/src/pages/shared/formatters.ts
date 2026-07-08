@@ -60,8 +60,15 @@ export function usageAmount(logs, resourceType = "") {
     .reduce((sum, log) => sum + Number(log.amount || 0), 0);
 }
 
-export function usageQuantity(logs, resourceType) {
-  return (logs || [])
-    .filter((log) => log.resourceType === resourceType)
-    .reduce((sum, log) => sum + Number(log.quantity || 0), 0);
+export function moneyValue(event) {
+  if (!event) return 0;
+  if (event.amount != null) return Number(event.amount || 0);
+  if (event.amountCents != null) return Number(event.amountCents || 0) / 100;
+  return 0;
+}
+
+export function resourceDebitEvents(state = {}, resourceType = "") {
+  return (state.billingLedger || [])
+    .filter((event) => ["compute_debit", "storage_debit"].includes(event.type))
+    .filter((event) => !resourceType || event.type === `${resourceType}_debit`);
 }

@@ -36,11 +36,18 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
 	mux.HandleFunc("POST /api/auth/login", func(w http.ResponseWriter, r *http.Request) {
-		payload, sessionID, err := app.login(decodeJSON(r))
+		input := decodeJSON(r)
+		if app.loginRateLimited(r, input) {
+			writeError(w, http.StatusTooManyRequests, "login_rate_limited")
+			return
+		}
+		payload, sessionID, err := app.login(input)
 		if err != nil {
+			app.recordLoginFailure(r, input)
 			writeError(w, http.StatusUnauthorized, "invalid_credentials")
 			return
 		}
+		app.clearLoginFailures(r, input)
 		http.SetCookie(w, sessionCookie(sessionID, 12*60*60))
 		w.Header().Set("x-opl-csrf-token", stringValue(payload["csrfToken"]))
 		writeJSON(w, http.StatusOK, payload)
@@ -60,45 +67,54 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 		w.Header().Set("x-opl-csrf-token", stringValue(payload["csrfToken"]))
 		writeJSON(w, http.StatusOK, payload)
 	})
-	mux.HandleFunc("GET /api/auth/me", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/auth/me", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		payload, ok := app.session(r)
 		if !ok {
 			writeError(w, http.StatusUnauthorized, "not_authenticated")
 			return
 		}
 		writeJSON(w, http.StatusOK, payload)
-	})
-	mux.HandleFunc("POST /api/auth/logout", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/auth/logout", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		app.logout(r)
 		http.SetCookie(w, sessionCookie("", -1))
 		writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
-	})
-	mux.HandleFunc("GET /api/me", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/me", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		payload, ok := app.session(r)
 		if !ok {
 			writeError(w, http.StatusUnauthorized, "not_authenticated")
 			return
 		}
 		writeJSON(w, http.StatusOK, payload["user"])
-	})
-	mux.HandleFunc("GET /api/state", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/state", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
+		if !app.syncRuntimeOperations(w, r, service) {
+			return
+		}
 		writeJSON(w, http.StatusOK, app.state(r.URL.Query().Get("accountId")))
-	})
-	mux.HandleFunc("GET /api/management/state", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/management/state", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
+		if !app.syncRuntimeOperations(w, r, service) {
+			return
+		}
 		writeJSON(w, http.StatusOK, app.managementState(r.URL.Query().Get("includeDeleted") == "true"))
-	})
-	mux.HandleFunc("GET /api/operator/summary", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/operator/summary", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
+		if !app.syncRuntimeOperations(w, r, service) {
+			return
+		}
 		writeJSON(w, http.StatusOK, app.operatorSummary())
-	})
-	mux.HandleFunc("GET /api/runtime/readiness", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/runtime/readiness", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		readiness, err := service.RuntimeReadiness(r.Context())
 		if err != nil {
 			writeError(w, http.StatusBadGateway, err.Error())
 			return
 		}
 		writeJSON(w, http.StatusOK, readiness)
-	})
-	mux.HandleFunc("GET /api/production/readiness", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/production/readiness", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		readiness, err := service.RuntimeReadiness(r.Context())
 		if err != nil {
 			writeError(w, http.StatusBadGateway, err.Error())
@@ -106,14 +122,14 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 		}
 		readiness["checks"] = []any{}
 		writeJSON(w, http.StatusOK, readiness)
-	})
-	mux.HandleFunc("GET /api/overview", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/overview", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"service": "control-plane", "workspaces": 0})
-	})
-	mux.HandleFunc("GET /api/workspaces", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/workspaces", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, app.state(r.URL.Query().Get("accountId"))["workspaces"])
-	})
-	mux.HandleFunc("POST /api/workspaces/reset-token", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/workspaces/reset-token", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		workspace, ok, err := app.setWorkspaceAccess(stringField(input, "workspaceId", ""), "active")
 		if err != nil {
@@ -125,8 +141,8 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"id": workspace["id"], "tokenStatus": nested(workspace, "access", "tokenStatus"), "access": workspace["access"]})
-	})
-	mux.HandleFunc("POST /api/workspaces/delete-token", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/workspaces/delete-token", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		workspace, ok, err := app.setWorkspaceAccess(stringField(input, "workspaceId", ""), "disabled")
 		if err != nil {
@@ -138,8 +154,8 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]any{"id": workspace["id"], "tokenStatus": nested(workspace, "access", "tokenStatus"), "access": workspace["access"]})
-	})
-	mux.HandleFunc("POST /api/workspaces/runtime-status", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/workspaces/runtime-status", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		runtime, err := service.WorkspaceRuntimeStatus(r.Context(), stringField(input, "workspaceId", ""))
 		if err != nil {
@@ -147,8 +163,8 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusOK, workspaceRuntimeStatusResponse(runtime))
-	})
-	mux.HandleFunc("POST /api/workspaces", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/workspaces", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		attachmentID := stringField(input, "attachmentId", "")
 		attachment, ok := app.getAttachment(attachmentID)
@@ -176,12 +192,16 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusCreated, workspaceResponse(structToMap(workspace)))
-	})
-	mux.HandleFunc("GET /api/billing/summary", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/billing/summary", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"currency": "CNY", "balanceCents": 0})
-	})
-	mux.HandleFunc("POST /api/billing/topups", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/billing/topups", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
+		if !confirmed(input, "confirm") {
+			writeError(w, http.StatusBadRequest, "confirmation_required")
+			return
+		}
 		idempotencyKey := firstNonEmpty(r.Header.Get("Idempotency-Key"), stringField(input, "idempotencyKey", ""))
 		if idempotencyKey == "" {
 			writeError(w, http.StatusBadRequest, "missing Idempotency-Key")
@@ -203,9 +223,13 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusCreated, manualTopUpResponse(result))
-	})
-	mux.HandleFunc("POST /api/billing/resource-settlements", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/billing/resource-settlements", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
+		if !confirmed(input, "confirm") {
+			writeError(w, http.StatusBadRequest, "confirmation_required")
+			return
+		}
 		idempotencyKey := firstNonEmpty(r.Header.Get("Idempotency-Key"), stringField(input, "idempotencyKey", ""), stringField(input, "sourceEventId", ""))
 		if idempotencyKey == "" {
 			writeError(w, http.StatusBadRequest, "missing Idempotency-Key")
@@ -230,9 +254,13 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusCreated, settlementResponse(result))
-	})
-	mux.HandleFunc("POST /api/billing/reconciliation", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/billing/reconciliation", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
+		if !confirmed(input, "confirm") {
+			writeError(w, http.StatusBadRequest, "confirmation_required")
+			return
+		}
 		report, _ := input["report"].(map[string]any)
 		if report == nil {
 			report = map[string]any{}
@@ -247,16 +275,24 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			writeError(w, http.StatusBadGateway, err.Error())
 			return
 		}
+		if err := app.rememberReconciliation(result); err != nil {
+			writeError(w, http.StatusInternalServerError, "read_model_persist_failed")
+			return
+		}
 		writeJSON(w, http.StatusCreated, reconciliationResponse(result))
-	})
-	mux.HandleFunc("GET /api/compute-pools", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/compute-pools", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, computePools())
-	})
-	mux.HandleFunc("GET /api/compute-allocations", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/compute-allocations", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, app.state(r.URL.Query().Get("accountId"))["computeAllocations"])
-	})
-	mux.HandleFunc("POST /api/compute-allocations", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/compute-allocations", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
+		if guard, blocked := app.reconciliationBlocksNewWorkspaces(); blocked {
+			writeJSON(w, http.StatusConflict, map[string]any{"error": "billing_reconciliation_blocked", "billingReconciliation": guard})
+			return
+		}
 		compute, err := service.CreateComputeAllocation(r.Context(), controlplane.ComputeAllocationInput{
 			AccountID:       stringField(input, "accountId", "acct-local"),
 			WorkspaceID:     stringField(input, "workspaceId", ""),
@@ -273,8 +309,8 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusAccepted, body)
-	})
-	mux.HandleFunc("GET /api/compute-allocations/{id}", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/compute-allocations/{id}", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		id := strings.TrimSpace(r.PathValue("id"))
 		compute, ok := app.getCompute(id)
 		if ok && stringValue(compute["status"]) != "provisioning" {
@@ -296,9 +332,13 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusOK, compute)
-	})
-	mux.HandleFunc("POST /api/compute-allocations/{id}/destroy", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/compute-allocations/{id}/destroy", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
+		if !confirmed(input, "confirm") {
+			writeError(w, http.StatusBadRequest, "confirmation_required")
+			return
+		}
 		id := strings.TrimSpace(r.PathValue("id"))
 		existing, _ := app.getCompute(id)
 		compute, err := service.DestroyComputeAllocation(r.Context(), destroyResourceInput(id, existing), mutationKey(r, input))
@@ -312,9 +352,13 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusOK, body)
-	})
-	mux.HandleFunc("POST /api/storage-volumes", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/storage-volumes", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
+		if guard, blocked := app.reconciliationBlocksNewWorkspaces(); blocked {
+			writeJSON(w, http.StatusConflict, map[string]any{"error": "billing_reconciliation_blocked", "billingReconciliation": guard})
+			return
+		}
 		storage, err := service.CreateStorageVolume(r.Context(), controlplane.StorageVolumeInput{
 			AccountID:       stringField(input, "accountId", "acct-local"),
 			WorkspaceID:     stringField(input, "workspaceId", ""),
@@ -331,9 +375,13 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusAccepted, body)
-	})
-	mux.HandleFunc("POST /api/storage-volumes/destroy", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/storage-volumes/destroy", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
+		if !confirmed(input, "confirmDataLoss") {
+			writeError(w, http.StatusBadRequest, "confirmation_required")
+			return
+		}
 		id := stringField(input, "storageId", "")
 		existing, _ := app.getStorage(id)
 		storage, err := service.DestroyStorageVolume(r.Context(), destroyResourceInput(id, existing), mutationKey(r, input))
@@ -347,8 +395,8 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusOK, body)
-	})
-	mux.HandleFunc("POST /api/storage-attachments", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/storage-attachments", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		attachment, err := service.CreateStorageAttachment(r.Context(), controlplane.StorageAttachmentInput{
 			WorkspaceID: stringField(input, "workspaceId", ""),
@@ -365,8 +413,8 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusAccepted, body)
-	})
-	mux.HandleFunc("POST /api/storage-attachments/detach", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/storage-attachments/detach", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		attachment, err := service.DetachStorageAttachment(r.Context(), stringField(input, "attachmentId", ""), mutationKey(r, input))
 		if err != nil {
@@ -379,12 +427,16 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusOK, body)
-	})
-	mux.HandleFunc("GET /api/support/tickets", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/support/tickets", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		user, _ := app.sessionUserContext(r)
+		if r.URL.Query().Get("scope") == "all" && stringValue(user["role"]) != "admin" {
+			writeError(w, http.StatusForbidden, "admin_required")
+			return
+		}
 		writeJSON(w, http.StatusOK, map[string]any{"tickets": app.supportTickets(r.URL.Query().Get("scope") == "all", stringValue(user["accountId"]))})
-	})
-	mux.HandleFunc("POST /api/support/tickets", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/support/tickets", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		user, ok := app.sessionUserContext(r)
 		withSessionUserContext(input, user, ok)
@@ -394,35 +446,35 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusCreated, body)
-	})
-	mux.HandleFunc("GET /api/ledger/task-receipts", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/ledger/task-receipts", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"receipts": []any{}})
-	})
-	mux.HandleFunc("POST /api/organizations", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/organizations", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		body, err := app.createOrganization(decodeJSON(r))
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "read_model_persist_failed")
 			return
 		}
 		writeJSON(w, http.StatusCreated, body)
-	})
-	mux.HandleFunc("POST /api/organizations/members", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/organizations/members", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		body, err := app.createMembership(decodeJSON(r))
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "read_model_persist_failed")
 			return
 		}
 		writeJSON(w, http.StatusCreated, body)
-	})
-	mux.HandleFunc("POST /api/users", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/users", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		body, err := app.createUser(decodeJSON(r))
 		if err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		writeJSON(w, http.StatusCreated, body)
-	})
-	mux.HandleFunc("POST /api/users/disable", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/users/disable", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		withOperatorUserID(input, app.sessionUserID(r))
 		body, err := app.disableUser(input)
@@ -431,9 +483,13 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusOK, body)
-	})
-	mux.HandleFunc("POST /api/users/delete", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("POST /api/users/delete", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
+		if !confirmed(input, "confirm") {
+			writeError(w, http.StatusBadRequest, "confirmation_required")
+			return
+		}
 		withOperatorUserID(input, app.sessionUserID(r))
 		body, err := app.softDeleteUser(input)
 		if err != nil {
@@ -441,19 +497,59 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 			return
 		}
 		writeJSON(w, http.StatusOK, body)
-	})
-	mux.HandleFunc("POST /api/operator/cleanup-workspace-access", func(w http.ResponseWriter, r *http.Request) {
-		result, err := app.cleanupWorkspaceAccess(decodeJSON(r))
+	}))
+	mux.HandleFunc("POST /api/operator/cleanup-workspace-access", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
+		input := decodeJSON(r)
+		if !confirmed(input, "confirm") {
+			writeError(w, http.StatusBadRequest, "confirmation_required")
+			return
+		}
+		result, err := app.cleanupWorkspaceAccess(input)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "read_model_persist_failed")
 			return
 		}
 		writeJSON(w, http.StatusOK, result)
-	})
-	mux.HandleFunc("GET /api/admin/diagnostics", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	mux.HandleFunc("GET /api/admin/diagnostics", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"service": "control-plane", "status": "ok"})
-	})
+	}))
 	return mux, nil
+}
+
+func (app *runtimeApp) protected(requiresAdmin bool, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		payload, ok := app.session(r)
+		if !ok {
+			writeError(w, http.StatusUnauthorized, "not_authenticated")
+			return
+		}
+		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions {
+			if r.Header.Get("x-opl-csrf") != stringValue(payload["csrfToken"]) {
+				writeError(w, http.StatusForbidden, "csrf_token_invalid")
+				return
+			}
+		}
+		user, _ := payload["user"].(map[string]any)
+		if requiresAdmin && stringValue(user["role"]) != "admin" {
+			writeError(w, http.StatusForbidden, "admin_required")
+			return
+		}
+		next(w, r)
+	}
+}
+
+func (app *runtimeApp) syncRuntimeOperations(w http.ResponseWriter, r *http.Request, service *controlplane.Service) bool {
+	operations, err := service.FabricOperations(r.Context())
+	if err != nil {
+		writeError(w, http.StatusBadGateway, err.Error())
+		return false
+	}
+	if err := app.rememberRuntimeOperations(operations); err != nil {
+		writeError(w, http.StatusInternalServerError, "read_model_persist_failed")
+		return false
+	}
+	return true
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {
@@ -519,6 +615,11 @@ func numberField(input map[string]any, key string, fallback float64) float64 {
 	default:
 		return fallback
 	}
+}
+
+func confirmed(input map[string]any, key string) bool {
+	value, ok := input[key].(bool)
+	return ok && value
 }
 
 func moneyToCents(input map[string]any) int64 {

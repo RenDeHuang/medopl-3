@@ -11,7 +11,7 @@ import {
   ObjectTable,
   StatusPill
 } from "../shared/commercial-console.tsx";
-import { available, money, statusColor, statusLabel } from "../shared/formatters.ts";
+import { available, money, moneyValue, resourceDebitEvents, statusColor, statusLabel } from "../shared/formatters.ts";
 
 type AnyRecord = Record<string, any>;
 
@@ -51,9 +51,9 @@ function workspaceHourlyEstimate({ workspace, compute, storage }: any) {
 }
 
 function workspaceChargeTotal(state: AnyRecord = {}, workspaceId = "") {
-  return (state.resourceUsageLogs || [])
+  return resourceDebitEvents(state)
     .filter((item) => item.workspaceId === workspaceId)
-    .reduce((sum, item) => sum + Math.abs(Number(item.amount || item.charge || 0)), 0);
+    .reduce((sum, item) => sum + Math.abs(moneyValue(item)), 0);
 }
 
 export function WorkspacesPage({ state, wallet, runAction, session }: any) {

@@ -75,6 +75,95 @@ func TestComputeAllocationReturnsProvisioningBeforeProviderCompletes(t *testing.
 	t.Fatalf("allocation did not become running: %#v", current)
 }
 
+func TestResourceMutationsAppendFabricOperationFacts(t *testing.T) {
+	store := NewMemoryOperationStore()
+	service := NewServiceWithOperationStore(testProvider{}, store)
+	ctx := context.Background()
+
+	compute, err := service.CreateComputeAllocation(ctx, ComputeAllocationInput{AccountID: "acct-alpha", WorkspaceID: "ws-alpha", PackageID: "basic", IdempotencyKey: "ops-compute"})
+	if err != nil {
+		t.Fatalf("create compute: %v", err)
+	}
+	waitForOperation(t, service, "create_compute_allocation", "compute_allocation", compute.ID, "succeeded")
+
+	volume, err := service.CreateStorageVolume(ctx, StorageVolumeInput{AccountID: "acct-alpha", WorkspaceID: "ws-alpha", SizeGB: 10, IdempotencyKey: "ops-storage"})
+	if err != nil {
+		t.Fatalf("create storage: %v", err)
+	}
+	attachment, err := service.CreateStorageAttachment(ctx, StorageAttachmentInput{WorkspaceID: "ws-alpha", ComputeID: compute.ID, VolumeID: volume.ID, IdempotencyKey: "ops-attach"})
+	if err != nil {
+		t.Fatalf("attach storage: %v", err)
+	}
+	runtime, err := service.CreateWorkspaceRuntime(ctx, WorkspaceRuntimeInput{WorkspaceID: "ws-alpha", ComputeID: compute.ID, VolumeID: volume.ID, ImageID: "one-person-lab-app", IdempotencyKey: "ops-runtime"})
+	if err != nil {
+		t.Fatalf("create runtime: %v", err)
+	}
+	if _, err := service.DetachStorageAttachment(ctx, attachment.ID); err != nil {
+		t.Fatalf("detach storage: %v", err)
+	}
+	if _, err := service.DestroyStorageVolume(ctx, volume.ID); err != nil {
+		t.Fatalf("destroy storage: %v", err)
+	}
+	if _, err := service.DestroyComputeAllocation(ctx, compute.ID); err != nil {
+		t.Fatalf("destroy compute: %v", err)
+	}
+
+	operations, err := service.ListOperations(ctx)
+	if err != nil {
+		t.Fatalf("list operations: %v", err)
+	}
+	for _, expected := range []struct {
+		action       string
+		resourceKind string
+		resourceID   string
+		status       string
+	}{
+		{"create_storage_volume", "storage_volume", volume.ID, "succeeded"},
+		{"create_storage_attachment", "storage_attachment", attachment.ID, "succeeded"},
+		{"create_workspace_runtime", "workspace_runtime", runtime.WorkspaceID, "succeeded"},
+		{"detach_storage_attachment", "storage_attachment", attachment.ID, "succeeded"},
+		{"destroy_storage_volume", "storage_volume", volume.ID, "succeeded"},
+		{"destroy_compute_allocation", "compute_allocation", compute.ID, "succeeded"},
+	} {
+		assertOperationFact(t, operations, expected.action, expected.resourceKind, expected.resourceID, expected.status)
+	}
+}
+
+func waitForOperation(t *testing.T, service *Service, action string, resourceKind string, resourceID string, status string) {
+	t.Helper()
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		operations, err := service.ListOperations(context.Background())
+		if err != nil {
+			t.Fatalf("list operations: %v", err)
+		}
+		for _, operation := range operations {
+			if operation.Action == action && operation.ResourceKind == resourceKind && operation.ResourceID == resourceID && operation.Status == status {
+				if operation.OperationID == "" || operation.ProviderRequestID == "" || operation.RequestHash == "" || operation.StartedAt.IsZero() || operation.FinishedAt.IsZero() {
+					t.Fatalf("operation missing audit fields: %#v", operation)
+				}
+				return
+			}
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	t.Fatalf("missing operation %s/%s/%s/%s", action, resourceKind, resourceID, status)
+}
+
+func assertOperationFact(t *testing.T, operations []FabricOperation, action string, resourceKind string, resourceID string, status string) {
+	t.Helper()
+	for _, operation := range operations {
+		if operation.Action != action || operation.ResourceKind != resourceKind || operation.ResourceID != resourceID || operation.Status != status {
+			continue
+		}
+		if operation.OperationID == "" || operation.ProviderRequestID == "" || operation.RequestHash == "" || operation.StartedAt.IsZero() || operation.FinishedAt.IsZero() {
+			t.Fatalf("operation missing audit fields: %#v", operation)
+		}
+		return
+	}
+	t.Fatalf("missing operation %s/%s/%s/%s in %#v", action, resourceKind, resourceID, status, operations)
+}
+
 type blockingProvider struct {
 	testProvider
 	done chan struct{}

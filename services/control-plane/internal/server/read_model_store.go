@@ -31,9 +31,10 @@ type readModelSnapshot struct {
 	Support     map[string]map[string]any `json:"support,omitempty"`
 	Wallets     map[string]map[string]any `json:"wallets,omitempty"`
 	Ledger      []map[string]any          `json:"ledger,omitempty"`
-	Usage       []map[string]any          `json:"usage,omitempty"`
 	WalletTx    []map[string]any          `json:"walletTx,omitempty"`
 	Topups      []map[string]any          `json:"topups,omitempty"`
+	RuntimeOps  []map[string]any          `json:"runtimeOperations,omitempty"`
+	Reconcile   map[string]any            `json:"billingReconciliation,omitempty"`
 }
 
 func ReadModelStoreFromEnv() (ReadModelStore, error) {

@@ -1068,9 +1068,8 @@ function assertResourceBillingSettlement(checks, settlements, { accountId, compu
   });
 }
 
-function assertLedgerAndUsage(checks, state, { accountId, compute, storage }) {
+function assertLedgerAndWalletTransactions(checks, state, { accountId, compute, storage }) {
   const ledger = state?.billingLedger || [];
-  const resourceUsage = state?.resourceUsageLogs || [];
   const walletTransactions = state?.walletTransactions || [];
 
   const hasComputeLedger = ledger.some((entry) =>
@@ -1082,16 +1081,6 @@ function assertLedgerAndUsage(checks, state, { accountId, compute, storage }) {
     entry.accountId === accountId &&
     entry.storageId === storage?.id &&
     entry.type === "storage_debit"
-  );
-  const hasComputeUsage = resourceUsage.some((entry) =>
-    entry.accountId === accountId &&
-    entry.computeAllocationId === compute?.id &&
-    entry.resourceType === "compute"
-  );
-  const hasStorageUsage = resourceUsage.some((entry) =>
-    entry.accountId === accountId &&
-    entry.storageId === storage?.id &&
-    entry.resourceType === "storage"
   );
   const hasComputeWalletTransaction = walletTransactions.some((entry) =>
     entry.accountId === accountId &&
@@ -1106,18 +1095,14 @@ function assertLedgerAndUsage(checks, state, { accountId, compute, storage }) {
   const missingChecks = [
     [hasComputeLedger, "compute_ledger"],
     [hasStorageLedger, "storage_ledger"],
-    [hasComputeUsage, "compute_usage"],
-    [hasStorageUsage, "storage_usage"],
     [hasComputeWalletTransaction, "compute_wallet_transaction"],
     [hasStorageWalletTransaction, "storage_wallet_transaction"]
   ].filter(([ok]) => !ok).map(([, name]) => name);
 
-  addCheck(checks, "ledger_and_usage_verified", Boolean(
+  addCheck(checks, "ledger_and_wallet_transactions_verified", Boolean(
     state?.wallet?.accountId === accountId &&
     hasComputeLedger &&
     hasStorageLedger &&
-    hasComputeUsage &&
-    hasStorageUsage &&
     hasComputeWalletTransaction &&
     hasStorageWalletTransaction
   ), { missingChecks });
@@ -1256,7 +1241,7 @@ export async function verifyProductionChain({
       method: "POST",
       auth,
       idempotencyKey: creditSourceEventId,
-      body: { accountId, amount: creditAmount, reason: creditSourceEventId }
+      body: { accountId, amount: creditAmount, reason: creditSourceEventId, confirm: true }
     });
 
     compute = await requestJson({
@@ -1482,7 +1467,8 @@ export async function verifyProductionChain({
         resourceId: replacementCompute.id,
         computeAllocationId: replacementCompute.id,
         amountCents: 100,
-        sourceEventId: `production_verification_resource_settlement:compute:${runId}`
+        sourceEventId: `production_verification_resource_settlement:compute:${runId}`,
+        confirm: true
       }
     });
     const storageSettlement = await requestJson({
@@ -1498,7 +1484,8 @@ export async function verifyProductionChain({
         resourceId: storage.id,
         storageId: storage.id,
         amountCents: 100,
-        sourceEventId: `production_verification_resource_settlement:storage:${runId}`
+        sourceEventId: `production_verification_resource_settlement:storage:${runId}`,
+        confirm: true
       }
     });
     assertResourceBillingSettlement(checks, [computeSettlement, storageSettlement], {
@@ -1513,7 +1500,7 @@ export async function verifyProductionChain({
       path: `/api/state?accountId=${encodeURIComponent(accountId)}`,
       auth
     });
-    assertLedgerAndUsage(checks, state, {
+    assertLedgerAndWalletTransactions(checks, state, {
       accountId,
       compute: replacementCompute,
       storage

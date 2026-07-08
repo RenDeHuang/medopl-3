@@ -82,6 +82,6 @@ Completion requires:
   - second attachment created
   - second Workspace URL open
   - persisted file read after compute replacement
-  - ledger/resource usage verified
+  - Ledger settlement and wallet transaction facts verified
   - cleanup completed
 - Post-run account state showing no active compute, storage, or attachment for the verifier account.

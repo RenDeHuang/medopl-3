@@ -169,7 +169,8 @@ export async function provisionManualWorkspace(options = {}) {
       body: {
         accountId,
         amount: creditAmount,
-        reason: `manual_workspace_credit:${runId}`
+        reason: `manual_workspace_credit:${runId}`,
+        confirm: true
       }
     });
   }

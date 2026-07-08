@@ -187,7 +187,7 @@ export const consoleActions = Object.freeze([
   },
   {
     id: "support.create",
-    label: "提交工单",
+    label: "登记外部工单",
     type: "route",
     role: "lab_owner",
     objectKind: "SupportTicketMapping",
@@ -195,7 +195,7 @@ export const consoleActions = Object.freeze([
   },
   {
     id: "support.detail",
-    label: "查看工单",
+    label: "查看外部工单",
     type: "route",
     role: "lab_owner",
     objectKind: "SupportTicketMapping",

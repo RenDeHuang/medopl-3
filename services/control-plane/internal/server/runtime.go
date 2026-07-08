@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -31,10 +32,18 @@ type runtimeApp struct {
 	support     map[string]map[string]any
 	wallets     map[string]map[string]any
 	ledger      []map[string]any
-	usage       []map[string]any
 	walletTx    []map[string]any
 	topups      []map[string]any
+	runtimeOps  []map[string]any
+	reconcile   map[string]any
 	sessions    map[string]sessionRecord
+	// ponytail: per-process limiter; move to Redis when login traffic spans multiple replicas.
+	loginFailures map[string]loginFailure
+}
+
+type loginFailure struct {
+	Count   int
+	FirstAt time.Time
 }
 
 var (
@@ -65,16 +74,17 @@ func newRuntimeAppWithStore(store ReadModelStore) (*runtimeApp, error) {
 
 func newRuntimeAppEmpty() *runtimeApp {
 	return &runtimeApp{
-		computes:    map[string]map[string]any{},
-		storages:    map[string]map[string]any{},
-		attachments: map[string]map[string]any{},
-		workspaces:  map[string]map[string]any{},
-		users:       map[string]map[string]any{"usr-admin": {"id": "usr-admin", "email": "owner@example.com", "accountId": "acct-admin", "role": "admin", "status": "active"}},
-		orgs:        map[string]map[string]any{},
-		memberships: map[string]map[string]any{},
-		support:     map[string]map[string]any{},
-		wallets:     map[string]map[string]any{},
-		sessions:    map[string]sessionRecord{},
+		computes:      map[string]map[string]any{},
+		storages:      map[string]map[string]any{},
+		attachments:   map[string]map[string]any{},
+		workspaces:    map[string]map[string]any{},
+		users:         map[string]map[string]any{"usr-admin": {"id": "usr-admin", "email": "owner@example.com", "accountId": "acct-admin", "role": "admin", "status": "active"}},
+		orgs:          map[string]map[string]any{},
+		memberships:   map[string]map[string]any{},
+		support:       map[string]map[string]any{},
+		wallets:       map[string]map[string]any{},
+		sessions:      map[string]sessionRecord{},
+		loginFailures: map[string]loginFailure{},
 	}
 }
 
@@ -91,9 +101,10 @@ func (app *runtimeApp) snapshotLocked() readModelSnapshot {
 		Support:     cloneMapMap(app.support),
 		Wallets:     cloneMapMap(app.wallets),
 		Ledger:      cloneMapSlice(app.ledger),
-		Usage:       cloneMapSlice(app.usage),
 		WalletTx:    cloneMapSlice(app.walletTx),
 		Topups:      cloneMapSlice(app.topups),
+		RuntimeOps:  cloneMapSlice(app.runtimeOps),
+		Reconcile:   cloneMap(app.reconcile),
 	}
 }
 
@@ -128,14 +139,17 @@ func (app *runtimeApp) applySnapshot(snapshot readModelSnapshot) {
 	if snapshot.Ledger != nil {
 		app.ledger = cloneMapSlice(snapshot.Ledger)
 	}
-	if snapshot.Usage != nil {
-		app.usage = cloneMapSlice(snapshot.Usage)
-	}
 	if snapshot.WalletTx != nil {
 		app.walletTx = cloneMapSlice(snapshot.WalletTx)
 	}
 	if snapshot.Topups != nil {
 		app.topups = cloneMapSlice(snapshot.Topups)
+	}
+	if snapshot.RuntimeOps != nil {
+		app.runtimeOps = cloneMapSlice(snapshot.RuntimeOps)
+	}
+	if snapshot.Reconcile != nil {
+		app.reconcile = cloneMap(snapshot.Reconcile)
 	}
 }
 
@@ -163,15 +177,12 @@ func (app *runtimeApp) state(accountID string) map[string]any {
 		"storageAttachments":    values(app.attachments),
 		"accounts":              app.accountsLocked(),
 		"billingLedger":         copySlice(app.ledger),
-		"resourceUsageLogs":     copySlice(app.usage),
 		"walletTransactions":    copySlice(app.walletTx),
 		"manualTopups":          copySlice(app.topups),
 		"supportTickets":        values(app.support),
-		"billingReconciliation": map[string]any{"guard": map[string]any{"status": "not_required", "blockNewWorkspaces": false, "reason": "billing_reconciliation_not_required"}},
-		"evidenceLedger":        []any{},
-		"audit":                 []any{},
+		"billingReconciliation": app.reconciliationProjectionLocked(),
 		"notifications":         []any{},
-		"runtimeOperations":     []any{},
+		"runtimeOperations":     copySlice(app.runtimeOps),
 		"generatedAt":           time.Now().UTC().Format(time.RFC3339),
 	}
 }
@@ -368,6 +379,46 @@ func (app *runtimeApp) login(input map[string]any) (map[string]any, string, erro
 		return app.createSessionLocked(user)
 	}
 	return nil, "", errors.New("invalid_credentials")
+}
+
+func (app *runtimeApp) loginRateLimited(r *http.Request, input map[string]any) bool {
+	key := loginFailureKey(r, input)
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	failure := app.loginFailures[key]
+	if !failure.FirstAt.IsZero() && time.Since(failure.FirstAt) > 15*time.Minute {
+		delete(app.loginFailures, key)
+		return false
+	}
+	return failure.Count >= 5
+}
+
+func (app *runtimeApp) recordLoginFailure(r *http.Request, input map[string]any) {
+	key := loginFailureKey(r, input)
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	failure := app.loginFailures[key]
+	if failure.FirstAt.IsZero() || time.Since(failure.FirstAt) > 15*time.Minute {
+		failure = loginFailure{FirstAt: time.Now().UTC()}
+	}
+	failure.Count++
+	app.loginFailures[key] = failure
+}
+
+func (app *runtimeApp) clearLoginFailures(r *http.Request, input map[string]any) {
+	key := loginFailureKey(r, input)
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	delete(app.loginFailures, key)
+}
+
+func loginFailureKey(r *http.Request, input map[string]any) string {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil || host == "" {
+		host = r.RemoteAddr
+	}
+	email := strings.ToLower(strings.TrimSpace(stringField(input, "email", "")))
+	return email + "|" + host
 }
 
 func (app *runtimeApp) operatorLogin() (map[string]any, string, error) {
@@ -625,9 +676,10 @@ func (app *runtimeApp) managementState(includeDeleted bool) map[string]any {
 		"storageAttachments":     values(app.attachments),
 		"resourceLedgerEvidence": app.resourceLedgerEvidenceLocked(),
 		"billingLedger":          copySlice(app.ledger),
-		"resourceUsageLogs":      copySlice(app.usage),
 		"walletTransactions":     copySlice(app.walletTx),
 		"manualTopups":           copySlice(app.topups),
+		"runtimeOperations":      copySlice(app.runtimeOps),
+		"billingReconciliation":  app.reconciliationProjectionLocked(),
 	}
 }
 
@@ -644,13 +696,67 @@ func (app *runtimeApp) operatorSummary() map[string]any {
 		"workspaces":             map[string]any{"total": len(app.workspaces), "running": countStatus(app.workspaces, "running"), "urlActive": countActiveURLs(app.workspaces), "destroyed": countStatus(app.workspaces, "destroyed"), "needsAttention": 0},
 		"computeAllocations":     map[string]any{"total": len(app.computes), "running": running, "failed": countStatus(app.computes, "failed")},
 		"notifications":          map[string]any{"total": 0, "error": 0, "warning": 0, "recent": []any{}},
-		"runtimeOperations":      map[string]any{"total": 0, "failed": 0, "recentFailed": []any{}},
-		"failedOperations":       []any{},
+		"runtimeOperations":      app.runtimeOperationSummaryLocked(),
+		"failedOperations":       failedRuntimeOperations(app.runtimeOps),
 		"resourceAnomalies":      []any{},
 		"resourceLedgerEvidence": map[string]any{"total": len(app.ledger), "recent": copySlice(app.ledger)},
 		"productionE2E":          map[string]any{},
-		"billingReconciliation":  map[string]any{"reports": 0, "guard": map[string]any{"status": "not_required", "blockNewWorkspaces": false, "reason": "billing_reconciliation_not_required"}},
+		"billingReconciliation":  app.reconciliationProjectionLocked(),
 	}
+}
+
+func (app *runtimeApp) reconciliationProjectionLocked() map[string]any {
+	if app.reconcile == nil {
+		return map[string]any{"reports": 0, "guard": map[string]any{"status": "not_required", "blockNewWorkspaces": false, "reason": "billing_reconciliation_not_required"}}
+	}
+	row := cloneMap(app.reconcile)
+	row["reports"] = 1
+	return row
+}
+
+func (app *runtimeApp) reconciliationBlocksNewWorkspaces() (map[string]any, bool) {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	projection := app.reconciliationProjectionLocked()
+	guard, _ := projection["guard"].(map[string]any)
+	if guard == nil {
+		return projection, false
+	}
+	blocked, _ := guard["blockNewWorkspaces"].(bool)
+	return projection, blocked
+}
+
+func (app *runtimeApp) rememberRuntimeOperations(operations []clients.FabricOperation) error {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	rows := make([]map[string]any, 0, len(operations))
+	for _, operation := range operations {
+		rows = append(rows, structToMap(operation))
+	}
+	app.runtimeOps = rows
+	return app.persistLocked()
+}
+
+func (app *runtimeApp) rememberReconciliation(result clients.ReconciliationResult) error {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	app.reconcile = reconciliationResponse(result)
+	return app.persistLocked()
+}
+
+func (app *runtimeApp) runtimeOperationSummaryLocked() map[string]any {
+	failed := failedRuntimeOperations(app.runtimeOps)
+	return map[string]any{"total": len(app.runtimeOps), "failed": len(failed), "recentFailed": failed}
+}
+
+func failedRuntimeOperations(operations []map[string]any) []any {
+	failed := make([]any, 0)
+	for i := len(operations) - 1; i >= 0 && len(failed) < 10; i-- {
+		if stringValue(operations[i]["status"]) == "failed" {
+			failed = append(failed, cloneMap(operations[i]))
+		}
+	}
+	return failed
 }
 
 func (app *runtimeApp) accountsLocked() []any {
@@ -920,11 +1026,6 @@ func (app *runtimeApp) rememberResourceSettlement(result clients.ResourceSettlem
 	}
 	app.ledger = append(app.ledger, ledger)
 
-	usage := map[string]any{"id": "usage-" + result.ID, "accountId": result.AccountID, "resourceType": resourceType, "amountCents": result.AmountCents}
-	for key, value := range ids {
-		usage[key] = value
-	}
-	app.usage = append(app.usage, usage)
 	app.walletTx = append(app.walletTx, map[string]any{"id": result.WalletTransactionID, "accountId": result.AccountID, "type": debitType, "metadata": ids})
 	app.wallets[result.AccountID] = walletProjection(result.Wallet)
 	return app.persistLocked()

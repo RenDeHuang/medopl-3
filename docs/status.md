@@ -17,7 +17,7 @@ Supported:
 - Storage attachment to a compute allocation.
 - Explicit storage destruction.
 - Seven-day compute and storage holds.
-- Resource usage, request usage, wallet transactions, manual top-up audit, billing ledger, and reconciliation records.
+- Holds, hold releases, resource settlements, wallet transactions, manual top-up audit, billing ledger, evidence receipts, and reconciliation records.
 - External support ticket mapping API and admin lookup queue.
 - Local-to-staging operator mode using the same staging PostgreSQL and Tencent TKE resource pool as cloud staging.
 - Tencent TKE production handoff.

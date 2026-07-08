@@ -199,3 +199,8 @@ func (f *fakeFabricClient) Readiness(ctx context.Context) (map[string]any, error
 	*f.calls = append(*f.calls, "fabric.readiness")
 	return map[string]any{"provider": "tencent-tke", "ready": true}, nil
 }
+
+func (f *fakeFabricClient) ListOperations(ctx context.Context) ([]clients.FabricOperation, error) {
+	*f.calls = append(*f.calls, "fabric.operations")
+	return []clients.FabricOperation{{ID: "fop-alpha", OperationID: "op-alpha", Action: "create_compute_allocation", ResourceKind: "compute_allocation", ResourceID: "compute-alpha", ProviderRequestID: "compute-request-alpha", RequestHash: "hash-alpha", Status: "succeeded"}}, nil
+}

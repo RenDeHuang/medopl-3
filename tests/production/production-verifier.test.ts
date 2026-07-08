@@ -181,12 +181,6 @@ function chainResponses(chain) {
         { id: "ledger-compute-debit", accountId: "pi-prod", computeAllocationId: chain.replacementCompute.id, type: "compute_debit" },
         { id: "ledger-storage-debit", accountId: "pi-prod", storageId: chain.storage.id, type: "storage_debit" }
       ],
-      resourceUsageLogs: [
-        { id: "usage-compute", accountId: "pi-prod", computeAllocationId: chain.compute.id },
-        { id: "usage-storage", accountId: "pi-prod", storageId: chain.storage.id },
-        { id: "usage-compute-debit", accountId: "pi-prod", computeAllocationId: chain.replacementCompute.id, resourceType: "compute" },
-        { id: "usage-storage-debit", accountId: "pi-prod", storageId: chain.storage.id, resourceType: "storage" }
-      ],
       walletTransactions: [
         { id: "wallet-compute-debit", accountId: "pi-prod", metadata: { computeAllocationId: chain.replacementCompute.id }, type: "compute_debit" },
         { id: "wallet-storage-debit", accountId: "pi-prod", metadata: { storageId: chain.storage.id }, type: "storage_debit" }
@@ -1058,7 +1052,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "replacement_workspace_url:true",
     "workspace_persisted_file_read:true",
     "resource_billing_settled:true",
-    "ledger_and_usage_verified:true",
+    "ledger_and_wallet_transactions_verified:true",
     "verification_storage_detached:true",
     "verification_compute_destroyed:true",
     "verification_storage_destroyed:true"
@@ -1570,7 +1564,7 @@ test("production verifier reports safe ledger mismatch details", async () => {
       fetchImpl: keyedFetch({ responses })
     }),
     (error) => {
-      assert.equal(error.message, "ledger_and_usage_verified_failed");
+      assert.equal(error.message, "ledger_and_wallet_transactions_verified_failed");
       assert.deepEqual(error.details?.missingChecks, [
         "compute_wallet_transaction",
         "storage_wallet_transaction"

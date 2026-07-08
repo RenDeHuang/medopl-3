@@ -17,7 +17,7 @@ import {
   StatusPill,
   TimelineList
 } from "../shared/commercial-console.tsx";
-import { money } from "../shared/formatters.ts";
+import { money, moneyValue } from "../shared/formatters.ts";
 
 type AnyRecord = Record<string, any>;
 
@@ -171,7 +171,7 @@ export function AdminUsersPage({ managementState, topUpOpen, setTopUpOpen, topUp
                     danger
                     disabled={row.status === "deleted"}
                     onConfirm={() => runAction(
-                      () => deleteUser({ userId: row.id, reason: "admin_deleted" }, session.csrfToken),
+                      () => deleteUser({ userId: row.id, reason: "admin_deleted", confirm: true }, session.csrfToken),
                       "用户已删除",
                       { actionKey: `admin-delete-${row.id}` }
                     )}
@@ -326,7 +326,8 @@ function TopUpDrawer({ open, setOpen, form, session, runAction }: any) {
             ...values,
             operatorUserId: session.user?.id || "",
             operatorAccountId: session.user?.accountId || "",
-            idempotencyKey: topUpOperationKey.current
+            idempotencyKey: topUpOperationKey.current,
+            confirm: true
           }, session.csrfToken),
           "充值已记录",
           { actionKey: "admin-manual-topup" }
@@ -365,7 +366,8 @@ export function AdminBillingPage({ state, adminOps, session, runAction }: any) {
             onConfirm={() => runAction(
               () => settleResourceBilling({
                 hours: 1,
-                sourceEventId: `admin_resource_settlement:${Date.now()}`
+                sourceEventId: `admin_resource_settlement:${Date.now()}`,
+                confirm: true
               }, session.csrfToken),
               "资源结算已记录",
               { actionKey: "admin-resource-settlement" }
@@ -428,6 +430,7 @@ function ReconciliationDrawer({ open, setOpen, form, session, runAction }: any) 
           const recorded = await runAction(
             () => recordBillingReconciliation({
               source: "operator",
+              confirm: true,
               report: {
                 id: `operator-reconciliation-${Date.now()}`,
                 generatedAt: new Date().toISOString(),
@@ -500,7 +503,7 @@ export function AdminLedgerPage({ state }: any) {
             { title: "事件", dataIndex: "type" },
             { title: "账号", dataIndex: "accountId", ellipsis: true },
             { title: "工作区", dataIndex: "workspaceId", ellipsis: true },
-            { title: "金额", dataIndex: "amount", render: (value) => money(value) }
+            { title: "金额", render: (_, row) => money(moneyValue(row)) }
           ]}
         />
       </InsightPanel>
@@ -705,7 +708,7 @@ export function AdminCleanupPage({ managementState, session, runAction }: any) {
             danger
             disabled={cleanupCandidateCount === 0}
             onConfirm={() => runAction(
-              () => cleanupWorkspaceAccess({ reason: "operator_cleanup_all" }, session.csrfToken),
+              () => cleanupWorkspaceAccess({ reason: "operator_cleanup_all", confirm: true }, session.csrfToken),
               "无效访问 URL 已清理",
               { actionKey: "admin-cleanup-workspace-access" }
             )}
@@ -718,7 +721,7 @@ export function AdminCleanupPage({ managementState, session, runAction }: any) {
           storageVolumes={managementState.storageVolumes || []}
           storageAttachments={managementState.storageAttachments || []}
           onCleanup={(row) => runAction(
-            () => cleanupWorkspaceAccess({ workspaceIds: [row.id], reason: "operator_cleanup_single" }, session.csrfToken),
+            () => cleanupWorkspaceAccess({ workspaceIds: [row.id], reason: "operator_cleanup_single", confirm: true }, session.csrfToken),
             "访问 URL 已清理",
             { actionKey: `admin-cleanup-workspace-${row.id}` }
           )}

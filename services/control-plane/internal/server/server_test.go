@@ -25,6 +25,9 @@ func TestCreateWorkspaceHTTPUsesMutationKeyWhenHeaderIsAbsent(t *testing.T) {
 
 	body := bytes.NewBufferString(`{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/workspaces", body)
+	session := operatorSessionForTest(t, server)
+	addSessionCookies(req, session)
+	req.Header.Set("x-opl-csrf", session.Header().Get("x-opl-csrf-token"))
 	rec := httptest.NewRecorder()
 
 	server.ServeHTTP(rec, req)
@@ -47,6 +50,9 @@ func TestCreateWorkspaceHTTPUsesControlPlaneService(t *testing.T) {
 
 	body := bytes.NewBufferString(`{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/workspaces", body)
+	session := operatorSessionForTest(t, server)
+	addSessionCookies(req, session)
+	req.Header.Set("x-opl-csrf", session.Header().Get("x-opl-csrf-token"))
 	req.Header.Set("Idempotency-Key", "workspace-once")
 	rec := httptest.NewRecorder()
 
@@ -77,6 +83,9 @@ func TestWorkspaceRuntimeStatusPassesFabricChecks(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	req := httptest.NewRequest(http.MethodPost, "/api/workspaces/runtime-status", bytes.NewBufferString(`{"workspaceId":"ws-alpha"}`))
 	req.Header.Set("Content-Type", "application/json")
+	session := operatorSessionForTest(t, server)
+	addSessionCookies(req, session)
+	req.Header.Set("x-opl-csrf", session.Header().Get("x-opl-csrf-token"))
 	rec := httptest.NewRecorder()
 
 	server.ServeHTTP(rec, req)
@@ -111,6 +120,7 @@ func TestPersistentReadModelSurvivesServerRestart(t *testing.T) {
 		t.Fatalf("restart persistent server: %v", err)
 	}
 	req := httptest.NewRequest(http.MethodGet, "/api/state?accountId=acct-alpha", nil)
+	addSessionCookies(req, operatorSessionForTest(t, restarted))
 	rec := httptest.NewRecorder()
 	restarted.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -152,6 +162,7 @@ func TestWorkspaceTokenStatePersistsAcrossRestart(t *testing.T) {
 		t.Fatalf("restart persistent server: %v", err)
 	}
 	req := httptest.NewRequest(http.MethodGet, "/api/state?accountId=acct-alpha", nil)
+	addSessionCookies(req, operatorSessionForTest(t, restarted))
 	rec := httptest.NewRecorder()
 	restarted.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -214,6 +225,14 @@ func (fakeLedgerClientWithoutSettlementIdentity) SettleResource(_ context.Contex
 
 func (fakeLedgerClient) RecordReconciliation(_ context.Context, input clients.ReconciliationInput, _ string) (clients.ReconciliationResult, error) {
 	return clients.ReconciliationResult{ID: stringField(input.Report, "id", "reconciliation-from-ledger"), Status: "ok", Report: input.Report, BlockNewWorkspaces: false, Reason: "operator_reconciliation"}, nil
+}
+
+type fakeBlockingReconciliationLedgerClient struct {
+	fakeLedgerClient
+}
+
+func (fakeBlockingReconciliationLedgerClient) RecordReconciliation(_ context.Context, input clients.ReconciliationInput, _ string) (clients.ReconciliationResult, error) {
+	return clients.ReconciliationResult{ID: stringField(input.Report, "id", "reconciliation-from-ledger"), Status: "mismatch", Report: input.Report, BlockNewWorkspaces: true, Reason: "tencent_bill_reconciliation_failed"}, nil
 }
 
 type fakeFabricClient struct {
@@ -287,13 +306,35 @@ func (f *fakeFabricClient) Readiness(_ context.Context) (map[string]any, error) 
 	return map[string]any{"provider": "tencent-tke", "ready": true, "missingEnv": []string{}, "missingTools": []string{}}, nil
 }
 
+func (f *fakeFabricClient) ListOperations(_ context.Context) ([]clients.FabricOperation, error) {
+	f.record("fabric.operations")
+	return []clients.FabricOperation{{
+		ID:                "fop-alpha",
+		OperationID:       "op-create-compute-alpha",
+		CallerService:     "control-plane",
+		Action:            "create_compute_allocation",
+		ResourceKind:      "compute_allocation",
+		ResourceID:        "compute-alpha",
+		AccountID:         "acct-alpha",
+		WorkspaceID:       "ws-alpha",
+		Provider:          "tencent-tke",
+		ProviderRequestID: "compute-request-from-fabric",
+		RequestHash:       "request-hash-alpha",
+		Status:            "succeeded",
+		StartedAt:         "2026-07-07T00:00:00Z",
+		FinishedAt:        "2026-07-07T00:01:00Z",
+		CreatedAt:         "2026-07-07T00:01:00Z",
+	}}, nil
+}
+
 func createResource(t *testing.T, server http.Handler, method string, path string, body string) map[string]any {
 	t.Helper()
-	req := httptest.NewRequest(method, path, bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Idempotency-Key", "test-"+path)
-	rec := httptest.NewRecorder()
-	server.ServeHTTP(rec, req)
+	return createResourceWithSession(t, server, operatorSessionForTest(t, server), method, path, body)
+}
+
+func createResourceWithSession(t *testing.T, server http.Handler, loginRec *httptest.ResponseRecorder, method string, path string, body string) map[string]any {
+	t.Helper()
+	rec := requestWithSession(t, server, loginRec, method, path, body)
 	if rec.Code < 200 || rec.Code >= 300 {
 		t.Fatalf("%s %s status = %d: %s", method, path, rec.Code, rec.Body.String())
 	}
@@ -304,11 +345,48 @@ func createResource(t *testing.T, server http.Handler, method string, path strin
 	return payload
 }
 
+func requestWithSession(t *testing.T, server http.Handler, loginRec *httptest.ResponseRecorder, method string, path string, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(method, path, bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Idempotency-Key", "test-"+path)
+	addAuth(req, loginRec)
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	return rec
+}
+
+func operatorSessionForTest(t *testing.T, server http.Handler) *httptest.ResponseRecorder {
+	t.Helper()
+	t.Setenv("OPL_OPERATOR_SUMMARY_TOKEN", "operator-secret")
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/operator-login", bytes.NewBufferString(`{}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-opl-operator-token", "operator-secret")
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("operator login status = %d: %s", rec.Code, rec.Body.String())
+	}
+	return rec
+}
+
+func addSessionCookies(req *http.Request, loginRec *httptest.ResponseRecorder) {
+	for _, cookie := range loginRec.Result().Cookies() {
+		req.AddCookie(cookie)
+	}
+}
+
+func addAuth(req *http.Request, loginRec *httptest.ResponseRecorder) {
+	addSessionCookies(req, loginRec)
+	req.Header.Set("x-opl-csrf", loginRec.Header().Get("x-opl-csrf-token"))
+}
+
 func TestCreateComputeAllocationUsesFabricService(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	req := httptest.NewRequest(http.MethodPost, "/api/compute-allocations", bytes.NewBufferString(`{"accountId":"acct-alpha","packageId":"basic","name":"Production Compute"}`))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Idempotency-Key", "compute-once")
+	addAuth(req, operatorSessionForTest(t, server))
 	rec := httptest.NewRecorder()
 
 	server.ServeHTTP(rec, req)
@@ -327,6 +405,7 @@ func TestCreateComputeAllocationUsesFabricService(t *testing.T) {
 		t.Fatalf("compute allocation missing route contract fields: %#v", body)
 	}
 	getReq := httptest.NewRequest(http.MethodGet, "/api/compute-allocations/"+stringValue(body["id"]), nil)
+	addSessionCookies(getReq, operatorSessionForTest(t, server))
 	getRec := httptest.NewRecorder()
 	server.ServeHTTP(getRec, getReq)
 	if getRec.Code != http.StatusOK {
@@ -438,11 +517,12 @@ func TestManagementStateUsesRealAccountsAndLedger(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 
 	createResource(t, server, http.MethodPost, "/api/users", `{"email":"owner@lab.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
-	createResource(t, server, http.MethodPost, "/api/billing/topups", `{"accountId":"acct-alpha","amount":100,"idempotencyKey":"topup-alpha"}`)
+	createResource(t, server, http.MethodPost, "/api/billing/topups", `{"accountId":"acct-alpha","amount":100,"idempotencyKey":"topup-alpha","confirm":true}`)
 	createResource(t, server, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
-	createResource(t, server, http.MethodPost, "/api/billing/resource-settlements", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":123}`)
+	createResource(t, server, http.MethodPost, "/api/billing/resource-settlements", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":123,"confirm":true}`)
 
 	stateReq := httptest.NewRequest(http.MethodGet, "/api/management/state", nil)
+	addSessionCookies(stateReq, operatorSessionForTest(t, server))
 	stateRec := httptest.NewRecorder()
 	server.ServeHTTP(stateRec, stateReq)
 	if stateRec.Code != http.StatusOK {
@@ -464,6 +544,7 @@ func TestManagementStateUsesRealAccountsAndLedger(t *testing.T) {
 	}
 
 	operatorReq := httptest.NewRequest(http.MethodGet, "/api/operator/summary", nil)
+	addSessionCookies(operatorReq, operatorSessionForTest(t, server))
 	operatorRec := httptest.NewRecorder()
 	server.ServeHTTP(operatorRec, operatorReq)
 	if operatorRec.Code != http.StatusOK {
@@ -500,9 +581,10 @@ func TestCleanupWorkspaceAccessDisablesInvalidActiveURL(t *testing.T) {
 func TestResourceSettlementProjectsLedgerEvidenceIntoConsoleState(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 
-	createResource(t, server, http.MethodPost, "/api/billing/resource-settlements", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":123}`)
-	createResource(t, server, http.MethodPost, "/api/billing/resource-settlements", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"storage","resourceId":"storage-alpha","amountCents":45}`)
+	createResource(t, server, http.MethodPost, "/api/billing/resource-settlements", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":123,"confirm":true}`)
+	createResource(t, server, http.MethodPost, "/api/billing/resource-settlements", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"storage","resourceId":"storage-alpha","amountCents":45,"confirm":true}`)
 	req := httptest.NewRequest(http.MethodGet, "/api/state?accountId=acct-alpha", nil)
+	addSessionCookies(req, operatorSessionForTest(t, server))
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -526,21 +608,34 @@ func TestResourceSettlementProjectsLedgerEvidenceIntoConsoleState(t *testing.T) 
 	}) {
 		t.Fatalf("missing storage debit ledger projection: %#v", ledger)
 	}
-	usage := state["resourceUsageLogs"].([]any)
-	if len(usage) != 2 {
-		t.Fatalf("usage rows = %d, want 2: %#v", len(usage), usage)
+	if _, ok := state["resourceUsageLogs"]; ok {
+		t.Fatalf("state must not expose retired resource usage projection: %#v", state["resourceUsageLogs"])
 	}
 	walletTx := state["walletTransactions"].([]any)
 	if len(walletTx) != 2 {
 		t.Fatalf("wallet transaction rows = %d, want 2: %#v", len(walletTx), walletTx)
+	}
+	runtimeOps := state["runtimeOperations"].([]any)
+	if !slices.ContainsFunc(runtimeOps, func(row any) bool {
+		operation := row.(map[string]any)
+		return operation["operationId"] == "op-create-compute-alpha" && operation["providerRequestId"] == "compute-request-from-fabric" && operation["requestHash"] == "request-hash-alpha"
+	}) {
+		t.Fatalf("state missing Fabric runtime operation facts: %#v", runtimeOps)
+	}
+	if _, ok := state["audit"]; ok {
+		t.Fatalf("state must not expose empty audit facts when no audit source is synced: %#v", state["audit"])
+	}
+	if _, ok := state["evidenceLedger"]; ok {
+		t.Fatalf("state must not expose empty evidence facts when no evidence source is synced: %#v", state["evidenceLedger"])
 	}
 }
 
 func TestResourceSettlementProjectionKeepsRequestIdentityWhenLedgerOmitsIt(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClientWithoutSettlementIdentity{}, &fakeFabricClient{}))
 
-	createResource(t, server, http.MethodPost, "/api/billing/resource-settlements", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":123}`)
+	createResource(t, server, http.MethodPost, "/api/billing/resource-settlements", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":123,"confirm":true}`)
 	req := httptest.NewRequest(http.MethodGet, "/api/state?accountId=acct-alpha", nil)
+	addSessionCookies(req, operatorSessionForTest(t, server))
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -561,6 +656,42 @@ func TestResourceSettlementProjectionKeepsRequestIdentityWhenLedgerOmitsIt(t *te
 	wallet := state["wallet"].(map[string]any)
 	if wallet["accountId"] != "acct-alpha" {
 		t.Fatalf("wallet lost settlement request account: %#v", wallet)
+	}
+}
+
+func TestReconciliationGuardBlocksNewResourceProvisioning(t *testing.T) {
+	var calls []string
+	server := NewServer(controlplane.NewService(fakeBlockingReconciliationLedgerClient{}, &fakeFabricClient{calls: &calls}))
+	session := operatorSessionForTest(t, server)
+
+	createResourceWithSession(t, server, session, http.MethodPost, "/api/billing/reconciliation", `{"confirm":true,"report":{"id":"recon-mismatch","status":"mismatch"}}`)
+
+	stateReq := httptest.NewRequest(http.MethodGet, "/api/state?accountId=acct-alpha", nil)
+	addAuth(stateReq, session)
+	stateRec := httptest.NewRecorder()
+	server.ServeHTTP(stateRec, stateReq)
+	if stateRec.Code != http.StatusOK {
+		t.Fatalf("state status = %d: %s", stateRec.Code, stateRec.Body.String())
+	}
+	var state map[string]any
+	if err := json.NewDecoder(stateRec.Body).Decode(&state); err != nil {
+		t.Fatalf("decode state: %v", err)
+	}
+	guard := state["billingReconciliation"].(map[string]any)["guard"].(map[string]any)
+	if guard["blockNewWorkspaces"] != true || guard["reason"] != "tencent_bill_reconciliation_failed" {
+		t.Fatalf("state missing blocking reconciliation guard: %#v", guard)
+	}
+
+	computeRec := requestWithSession(t, server, session, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+	if computeRec.Code != http.StatusConflict {
+		t.Fatalf("compute status = %d, want 409: %s", computeRec.Code, computeRec.Body.String())
+	}
+	storageRec := requestWithSession(t, server, session, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
+	if storageRec.Code != http.StatusConflict {
+		t.Fatalf("storage status = %d, want 409: %s", storageRec.Code, storageRec.Body.String())
+	}
+	if slices.Contains(calls, "fabric.compute") || slices.Contains(calls, "fabric.storage") {
+		t.Fatalf("reconciliation guard must block before Fabric mutation, calls=%#v", calls)
 	}
 }
 
@@ -661,6 +792,7 @@ func TestWorkspaceGatewayBlocksInactiveWorkspace(t *testing.T) {
 func TestOverviewHTTP(t *testing.T) {
 	server := NewServer(controlplane.NewService(nil, nil))
 	req := httptest.NewRequest(http.MethodGet, "/api/overview", nil)
+	addSessionCookies(req, operatorSessionForTest(t, server))
 	rec := httptest.NewRecorder()
 
 	server.ServeHTTP(rec, req)
@@ -713,6 +845,74 @@ func TestOperatorLoginRejectsInvalidToken(t *testing.T) {
 	}
 }
 
+func TestProtectedAPIRoutesRequireSessionCSRFAndAdminRole(t *testing.T) {
+	t.Setenv("OPL_OPERATOR_SUMMARY_TOKEN", "operator-secret")
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+
+	postWithoutSession := httptest.NewRequest(http.MethodPost, "/api/compute-allocations", bytes.NewBufferString(`{"accountId":"acct-alpha","packageId":"basic"}`))
+	postWithoutSession.Header.Set("Content-Type", "application/json")
+	postWithoutSession.Header.Set("Idempotency-Key", "compute-no-session")
+	postWithoutSessionRec := httptest.NewRecorder()
+	server.ServeHTTP(postWithoutSessionRec, postWithoutSession)
+	if postWithoutSessionRec.Code != http.StatusUnauthorized {
+		t.Fatalf("write without session status = %d, want 401: %s", postWithoutSessionRec.Code, postWithoutSessionRec.Body.String())
+	}
+
+	admin := operatorSessionForTest(t, server)
+	postWithoutCSRF := httptest.NewRequest(http.MethodPost, "/api/compute-allocations", bytes.NewBufferString(`{"accountId":"acct-alpha","packageId":"basic"}`))
+	postWithoutCSRF.Header.Set("Content-Type", "application/json")
+	postWithoutCSRF.Header.Set("Idempotency-Key", "compute-no-csrf")
+	addSessionCookies(postWithoutCSRF, admin)
+	postWithoutCSRFRec := httptest.NewRecorder()
+	server.ServeHTTP(postWithoutCSRFRec, postWithoutCSRF)
+	if postWithoutCSRFRec.Code != http.StatusForbidden {
+		t.Fatalf("write without csrf status = %d, want 403: %s", postWithoutCSRFRec.Code, postWithoutCSRFRec.Body.String())
+	}
+
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"owner@lab.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	owner := loginForTest(t, server, "owner@lab.example", "CorrectHorseBatteryStaple!")
+	adminReq := httptest.NewRequest(http.MethodPost, "/api/billing/topups", bytes.NewBufferString(`{"accountId":"acct-alpha","amount":100,"idempotencyKey":"topup-nonadmin"}`))
+	adminReq.Header.Set("Content-Type", "application/json")
+	adminReq.Header.Set("Idempotency-Key", "topup-nonadmin")
+	addSessionCookies(adminReq, owner)
+	adminReq.Header.Set("x-opl-csrf", owner.Header().Get("x-opl-csrf-token"))
+	adminReqRec := httptest.NewRecorder()
+	server.ServeHTTP(adminReqRec, adminReq)
+	if adminReqRec.Code != http.StatusForbidden {
+		t.Fatalf("admin route as owner status = %d, want 403: %s", adminReqRec.Code, adminReqRec.Body.String())
+	}
+
+	allowed := createResourceWithSession(t, server, admin, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+	if allowed["providerRequestId"] != "compute-request-from-fabric" {
+		t.Fatalf("admin csrf request did not reach protected route: %#v", allowed)
+	}
+}
+
+func TestHighRiskMutationsRequireBackendConfirmation(t *testing.T) {
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	admin := operatorSessionForTest(t, server)
+	created := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"member@lab.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+
+	for _, tc := range []struct {
+		method string
+		path   string
+		body   string
+	}{
+		{http.MethodPost, "/api/billing/topups", `{"accountId":"acct-alpha","amount":100,"idempotencyKey":"topup-confirm"}`},
+		{http.MethodPost, "/api/billing/resource-settlements", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":123}`},
+		{http.MethodPost, "/api/billing/reconciliation", `{"report":{"id":"recon-confirm","generatedAt":"2026-07-06T00:00:00Z"}}`},
+		{http.MethodPost, "/api/users/delete", `{"userId":"` + stringValue(created["id"]) + `","reason":"left_lab"}`},
+		{http.MethodPost, "/api/compute-allocations/compute-alpha/destroy", `{}`},
+		{http.MethodPost, "/api/storage-volumes/destroy", `{"storageId":"storage-alpha"}`},
+		{http.MethodPost, "/api/operator/cleanup-workspace-access", `{"reason":"test"}`},
+	} {
+		rec := requestWithSession(t, server, admin, tc.method, tc.path, tc.body)
+		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "confirmation_required") {
+			t.Fatalf("%s %s status=%d body=%s, want confirmation_required", tc.method, tc.path, rec.Code, rec.Body.String())
+		}
+	}
+}
+
 func TestLoginSessionMeAndLogoutUseStoredPasswordHash(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	createResource(t, server, http.MethodPost, "/api/users", `{"email":"owner@lab.example","accountId":"acct-alpha","role":"admin","password":"CorrectHorseBatteryStaple!"}`)
@@ -750,6 +950,7 @@ func TestLoginSessionMeAndLogoutUseStoredPasswordHash(t *testing.T) {
 	for _, cookie := range loginRec.Result().Cookies() {
 		logoutReq.AddCookie(cookie)
 	}
+	logoutReq.Header.Set("x-opl-csrf", loginRec.Header().Get("x-opl-csrf-token"))
 	logoutRec := httptest.NewRecorder()
 	server.ServeHTTP(logoutRec, logoutReq)
 	if logoutRec.Code != http.StatusOK {
@@ -766,6 +967,7 @@ func TestLoginSessionMeAndLogoutUseStoredPasswordHash(t *testing.T) {
 	}
 
 	managementReq := httptest.NewRequest(http.MethodGet, "/api/management/state", nil)
+	addSessionCookies(managementReq, operatorSessionForTest(t, server))
 	managementRec := httptest.NewRecorder()
 	server.ServeHTTP(managementRec, managementReq)
 	var management map[string]any
@@ -778,10 +980,40 @@ func TestLoginSessionMeAndLogoutUseStoredPasswordHash(t *testing.T) {
 	}
 }
 
+func TestLoginRateLimitBlocksRepeatedFailuresAndResetsAfterSuccess(t *testing.T) {
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	createResource(t, server, http.MethodPost, "/api/users", `{"email":"owner@lab.example","accountId":"acct-alpha","role":"admin","password":"CorrectHorseBatteryStaple!"}`)
+
+	for i := 0; i < 2; i++ {
+		rec := loginAttemptForTest(server, "owner@lab.example", "wrong", "203.0.113.10:1000")
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("warmup failure %d status = %d, want 401: %s", i, rec.Code, rec.Body.String())
+		}
+	}
+	if rec := loginAttemptForTest(server, "owner@lab.example", "CorrectHorseBatteryStaple!", "203.0.113.10:1000"); rec.Code != http.StatusOK {
+		t.Fatalf("successful login did not reset limiter: status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	for i := 0; i < 5; i++ {
+		rec := loginAttemptForTest(server, "owner@lab.example", "wrong", "203.0.113.10:1000")
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("failure %d status = %d, want 401 before limit: %s", i, rec.Code, rec.Body.String())
+		}
+	}
+	blocked := loginAttemptForTest(server, "owner@lab.example", "wrong", "203.0.113.10:1000")
+	if blocked.Code != http.StatusTooManyRequests {
+		t.Fatalf("blocked status = %d, want 429: %s", blocked.Code, blocked.Body.String())
+	}
+	otherIP := loginAttemptForTest(server, "owner@lab.example", "CorrectHorseBatteryStaple!", "203.0.113.11:1000")
+	if otherIP.Code != http.StatusOK {
+		t.Fatalf("rate limit must be scoped to email and IP: status=%d body=%s", otherIP.Code, otherIP.Body.String())
+	}
+}
+
 func TestUserDeleteLifecycleReturnsNotFoundWithoutStub(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
-	req := httptest.NewRequest(http.MethodPost, "/api/users/delete", bytes.NewBufferString(`{"userId":"usr-missing","reason":"test"}`))
+	req := httptest.NewRequest(http.MethodPost, "/api/users/delete", bytes.NewBufferString(`{"userId":"usr-missing","reason":"test","confirm":true}`))
 	req.Header.Set("Content-Type", "application/json")
+	addAuth(req, operatorSessionForTest(t, server))
 	rec := httptest.NewRecorder()
 
 	server.ServeHTTP(rec, req)
@@ -790,6 +1022,7 @@ func TestUserDeleteLifecycleReturnsNotFoundWithoutStub(t *testing.T) {
 		t.Fatalf("delete missing status = %d, want 404: %s", rec.Code, rec.Body.String())
 	}
 	stateReq := httptest.NewRequest(http.MethodGet, "/api/management/state?includeDeleted=true", nil)
+	addSessionCookies(stateReq, operatorSessionForTest(t, server))
 	stateRec := httptest.NewRecorder()
 	server.ServeHTTP(stateRec, stateReq)
 	var state map[string]any
@@ -808,11 +1041,9 @@ func TestUserSoftDeleteRevokesSessionsAndHidesByDefault(t *testing.T) {
 	created := createResource(t, server, http.MethodPost, "/api/users", `{"email":"member@lab.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
 	loginRec := loginForTest(t, server, "member@lab.example", "CorrectHorseBatteryStaple!")
 
-	deleteReq := httptest.NewRequest(http.MethodPost, "/api/users/delete", bytes.NewBufferString(`{"userId":"`+stringValue(created["id"])+`","reason":"left_lab"}`))
+	deleteReq := httptest.NewRequest(http.MethodPost, "/api/users/delete", bytes.NewBufferString(`{"userId":"`+stringValue(created["id"])+`","reason":"left_lab","confirm":true}`))
 	deleteReq.Header.Set("Content-Type", "application/json")
-	for _, cookie := range loginRec.Result().Cookies() {
-		deleteReq.AddCookie(cookie)
-	}
+	addAuth(deleteReq, operatorSessionForTest(t, server))
 	deleteRec := httptest.NewRecorder()
 	server.ServeHTTP(deleteRec, deleteReq)
 	if deleteRec.Code != http.StatusOK {
@@ -822,7 +1053,7 @@ func TestUserSoftDeleteRevokesSessionsAndHidesByDefault(t *testing.T) {
 	if err := json.NewDecoder(deleteRec.Body).Decode(&deleted); err != nil {
 		t.Fatalf("decode deleted user: %v", err)
 	}
-	if deleted["status"] != "deleted" || deleted["deletedAt"] == nil || deleted["deletedBy"] != created["id"] || deleted["deleteReason"] != "left_lab" {
+	if deleted["status"] != "deleted" || deleted["deletedAt"] == nil || deleted["deletedBy"] != "usr-admin" || deleted["deleteReason"] != "left_lab" {
 		t.Fatalf("delete metadata incomplete: %#v", deleted)
 	}
 
@@ -833,7 +1064,7 @@ func TestUserSoftDeleteRevokesSessionsAndHidesByDefault(t *testing.T) {
 
 func loginForTest(t *testing.T, server http.Handler, email string, password string) *httptest.ResponseRecorder {
 	t.Helper()
-	loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"`+email+`","password":"`+password+`"}`))
+	loginReq := loginRequest(email, password, "")
 	loginReq.Header.Set("Content-Type", "application/json")
 	loginRec := httptest.NewRecorder()
 	server.ServeHTTP(loginRec, loginReq)
@@ -841,6 +1072,22 @@ func loginForTest(t *testing.T, server http.Handler, email string, password stri
 		t.Fatalf("login status = %d: %s", loginRec.Code, loginRec.Body.String())
 	}
 	return loginRec
+}
+
+func loginAttemptForTest(server http.Handler, email string, password string, remoteAddr string) *httptest.ResponseRecorder {
+	req := loginRequest(email, password, remoteAddr)
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	return rec
+}
+
+func loginRequest(email string, password string, remoteAddr string) *http.Request {
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"`+email+`","password":"`+password+`"}`))
+	req.Header.Set("Content-Type", "application/json")
+	if remoteAddr != "" {
+		req.RemoteAddr = remoteAddr
+	}
+	return req
 }
 
 func assertSessionUnauthorized(t *testing.T, server http.Handler, loginRec *httptest.ResponseRecorder) {
@@ -859,6 +1106,7 @@ func assertSessionUnauthorized(t *testing.T, server http.Handler, loginRec *http
 func assertUserAbsentFromManagement(t *testing.T, server http.Handler, path string, userID string) {
 	t.Helper()
 	req := httptest.NewRequest(http.MethodGet, path, nil)
+	addSessionCookies(req, operatorSessionForTest(t, server))
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
 	var defaultState map[string]any
@@ -875,6 +1123,7 @@ func assertUserAbsentFromManagement(t *testing.T, server http.Handler, path stri
 func assertDeletedUserPresent(t *testing.T, server http.Handler, userID string) {
 	t.Helper()
 	includeReq := httptest.NewRequest(http.MethodGet, "/api/management/state?includeDeleted=true", nil)
+	addSessionCookies(includeReq, operatorSessionForTest(t, server))
 	includeRec := httptest.NewRecorder()
 	server.ServeHTTP(includeRec, includeReq)
 	var includeState map[string]any
@@ -897,8 +1146,13 @@ func TestUserLifecycleProtectsLastActiveAdmin(t *testing.T) {
 		{"/api/users/disable"},
 		{"/api/users/delete"},
 	} {
-		req := httptest.NewRequest(http.MethodPost, tc.path, bytes.NewBufferString(`{"userId":"usr-admin","reason":"test"}`))
+		body := `{"userId":"usr-admin","reason":"test"}`
+		if tc.path == "/api/users/delete" {
+			body = `{"userId":"usr-admin","reason":"test","confirm":true}`
+		}
+		req := httptest.NewRequest(http.MethodPost, tc.path, bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")
+		addAuth(req, operatorSessionForTest(t, server))
 		rec := httptest.NewRecorder()
 
 		server.ServeHTTP(rec, req)
@@ -913,6 +1167,7 @@ func TestSupportTicketMappingRequiresExternalTicket(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	req := httptest.NewRequest(http.MethodPost, "/api/support/tickets", bytes.NewBufferString(`{"accountId":"acct-alpha","title":"Need help"}`))
 	req.Header.Set("Content-Type", "application/json")
+	addAuth(req, operatorSessionForTest(t, server))
 	rec := httptest.NewRecorder()
 
 	server.ServeHTTP(rec, req)
@@ -940,6 +1195,7 @@ func TestSupportTicketMappingPersistsExternalContext(t *testing.T) {
 		t.Fatalf("restart persistent server: %v", err)
 	}
 	req := httptest.NewRequest(http.MethodGet, "/api/support/tickets?scope=all", nil)
+	addSessionCookies(req, operatorSessionForTest(t, restarted))
 	rec := httptest.NewRecorder()
 	restarted.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {

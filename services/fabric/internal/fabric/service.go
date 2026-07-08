@@ -2,7 +2,11 @@ package fabric
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 )
@@ -26,10 +30,18 @@ type Service struct {
 	volumes     map[string]StorageVolume
 	attachments map[string]StorageAttachment
 	runtimes    map[string]WorkspaceRuntime
+	operations  OperationStore
 }
 
 func NewService(provider Provider) *Service {
-	return &Service{provider: provider, computes: map[string]ComputeAllocation{}, volumes: map[string]StorageVolume{}, attachments: map[string]StorageAttachment{}, runtimes: map[string]WorkspaceRuntime{}}
+	return NewServiceWithOperationStore(provider, NewMemoryOperationStore())
+}
+
+func NewServiceWithOperationStore(provider Provider, operations OperationStore) *Service {
+	if operations == nil {
+		operations = NewMemoryOperationStore()
+	}
+	return &Service{provider: provider, computes: map[string]ComputeAllocation{}, volumes: map[string]StorageVolume{}, attachments: map[string]StorageAttachment{}, runtimes: map[string]WorkspaceRuntime{}, operations: operations}
 }
 
 func (s *Service) Catalog(_ context.Context) Catalog {
@@ -49,6 +61,10 @@ func (s *Service) CreateComputeAllocation(ctx context.Context, input ComputeAllo
 	now := time.Now().UTC()
 	id := firstNonEmpty(input.ID, fabricID("ca", firstNonEmpty(input.WorkspaceID, input.AccountID, "compute"), now))
 	input.ID = id
+	operation := newOperation("create_compute_allocation", "compute_allocation", id, input.AccountID, input.WorkspaceID, input.IdempotencyKey, hashInput(input), now)
+	if err := s.recordOperation(ctx, operation, "started", ComputeAllocation{ID: id, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, Provider: "tencent-tke", ProviderRequestID: providerRequestID("compute", input.IdempotencyKey)}, nil); err != nil {
+		return ComputeAllocation{}, err
+	}
 	allocation := ComputeAllocation{
 		ID:                id,
 		AccountID:         input.AccountID,
@@ -63,7 +79,7 @@ func (s *Service) CreateComputeAllocation(ctx context.Context, input ComputeAllo
 	s.computes[allocation.ID] = allocation
 	s.mu.Unlock()
 
-	go s.finishComputeAllocation(input, id, allocation)
+	go s.finishComputeAllocation(input, id, allocation, operation)
 	return allocation, nil
 }
 
@@ -74,7 +90,7 @@ func (s *Service) GetComputeAllocation(_ context.Context, allocationID string) (
 	return allocation, ok
 }
 
-func (s *Service) finishComputeAllocation(input ComputeAllocationInput, id string, pending ComputeAllocation) {
+func (s *Service) finishComputeAllocation(input ComputeAllocationInput, id string, pending ComputeAllocation, operation FabricOperation) {
 	allocation, err := s.provider.CreateComputeAllocation(context.Background(), input)
 	if err != nil {
 		allocation = pending
@@ -92,6 +108,7 @@ func (s *Service) finishComputeAllocation(input ComputeAllocationInput, id strin
 			allocation.ProviderRequestID = providerRequestID("compute", input.IdempotencyKey)
 		}
 	}
+	_ = s.recordOperation(context.Background(), operation, operationStatus(err), allocation, err)
 	s.mu.Lock()
 	s.computes[id] = allocation
 	s.mu.Unlock()
@@ -104,8 +121,16 @@ func (s *Service) DestroyComputeAllocation(ctx context.Context, allocationID str
 	if existing.ID == "" {
 		existing = ComputeAllocation{ID: allocationID}
 	}
+	operation := newOperation("destroy_compute_allocation", "compute_allocation", allocationID, existing.AccountID, existing.WorkspaceID, "", hashInput(map[string]string{"id": allocationID}), time.Now().UTC())
+	if err := s.recordOperation(ctx, operation, "started", existing, nil); err != nil {
+		return ComputeAllocation{}, err
+	}
 	allocation, err := s.provider.DestroyComputeAllocation(ctx, existing)
 	if err != nil {
+		_ = s.recordOperation(ctx, operation, "failed", allocation, err)
+		return allocation, err
+	}
+	if err := s.recordOperation(ctx, operation, "succeeded", allocation, nil); err != nil {
 		return allocation, err
 	}
 	s.mu.Lock()
@@ -115,12 +140,21 @@ func (s *Service) DestroyComputeAllocation(ctx context.Context, allocationID str
 }
 
 func (s *Service) CreateStorageVolume(ctx context.Context, input StorageVolumeInput) (StorageVolume, error) {
+	operation := newOperation("create_storage_volume", "storage_volume", firstNonEmpty(input.ID, "pending"), input.AccountID, input.WorkspaceID, input.IdempotencyKey, hashInput(input), time.Now().UTC())
+	if err := s.recordOperation(ctx, operation, "started", StorageVolume{ID: operation.ResourceID, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, Provider: "tencent-tke", ProviderRequestID: providerRequestID("storage", input.IdempotencyKey)}, nil); err != nil {
+		return StorageVolume{}, err
+	}
 	volume, err := s.provider.CreateStorageVolume(ctx, input)
 	if err != nil {
+		_ = s.recordOperation(ctx, operation, "failed", volume, err)
 		return volume, err
 	}
 	if input.ID != "" {
 		volume.ID = input.ID
+	}
+	operation.ResourceID = volume.ID
+	if err := s.recordOperation(ctx, operation, "succeeded", volume, nil); err != nil {
+		return volume, err
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -135,8 +169,16 @@ func (s *Service) DestroyStorageVolume(ctx context.Context, volumeID string) (St
 	if existing.ID == "" {
 		existing = StorageVolume{ID: volumeID}
 	}
+	operation := newOperation("destroy_storage_volume", "storage_volume", volumeID, existing.AccountID, existing.WorkspaceID, "", hashInput(map[string]string{"id": volumeID}), time.Now().UTC())
+	if err := s.recordOperation(ctx, operation, "started", existing, nil); err != nil {
+		return StorageVolume{}, err
+	}
 	volume, err := s.provider.DestroyStorageVolume(ctx, existing)
 	if err != nil {
+		_ = s.recordOperation(ctx, operation, "failed", volume, err)
+		return volume, err
+	}
+	if err := s.recordOperation(ctx, operation, "succeeded", volume, nil); err != nil {
 		return volume, err
 	}
 	s.mu.Lock()
@@ -150,8 +192,17 @@ func (s *Service) CreateStorageAttachment(ctx context.Context, input StorageAtta
 	compute := s.computes[input.ComputeID]
 	volume := s.volumes[input.VolumeID]
 	s.mu.Unlock()
+	operation := newOperation("create_storage_attachment", "storage_attachment", firstNonEmpty(input.WorkspaceID, input.ComputeID, input.VolumeID, "pending"), compute.AccountID, input.WorkspaceID, input.IdempotencyKey, hashInput(input), time.Now().UTC())
+	if err := s.recordOperation(ctx, operation, "started", StorageAttachment{ID: operation.ResourceID, WorkspaceID: input.WorkspaceID, ComputeID: input.ComputeID, VolumeID: input.VolumeID, Provider: "tencent-tke", ProviderRequestID: providerRequestID("storage-attach", input.IdempotencyKey)}, nil); err != nil {
+		return StorageAttachment{}, err
+	}
 	attachment, err := s.provider.CreateStorageAttachment(ctx, input, compute, volume)
 	if err != nil {
+		_ = s.recordOperation(ctx, operation, "failed", attachment, err)
+		return attachment, err
+	}
+	operation.ResourceID = attachment.ID
+	if err := s.recordOperation(ctx, operation, "succeeded", attachment, nil); err != nil {
 		return attachment, err
 	}
 	s.mu.Lock()
@@ -167,8 +218,16 @@ func (s *Service) DetachStorageAttachment(ctx context.Context, attachmentID stri
 	if existing.ID == "" {
 		existing = StorageAttachment{ID: attachmentID}
 	}
+	operation := newOperation("detach_storage_attachment", "storage_attachment", attachmentID, "", existing.WorkspaceID, "", hashInput(map[string]string{"id": attachmentID}), time.Now().UTC())
+	if err := s.recordOperation(ctx, operation, "started", existing, nil); err != nil {
+		return StorageAttachment{}, err
+	}
 	attachment, err := s.provider.DetachStorageAttachment(ctx, existing)
 	if err != nil {
+		_ = s.recordOperation(ctx, operation, "failed", attachment, err)
+		return attachment, err
+	}
+	if err := s.recordOperation(ctx, operation, "succeeded", attachment, nil); err != nil {
 		return attachment, err
 	}
 	s.mu.Lock()
@@ -182,8 +241,16 @@ func (s *Service) CreateWorkspaceRuntime(ctx context.Context, input WorkspaceRun
 	compute := s.computes[input.ComputeID]
 	volume := s.volumes[input.VolumeID]
 	s.mu.Unlock()
+	operation := newOperation("create_workspace_runtime", "workspace_runtime", input.WorkspaceID, compute.AccountID, input.WorkspaceID, input.IdempotencyKey, hashInput(input), time.Now().UTC())
+	if err := s.recordOperation(ctx, operation, "started", WorkspaceRuntime{WorkspaceID: input.WorkspaceID, ProviderRequestID: providerRequestID("runtime", input.IdempotencyKey)}, nil); err != nil {
+		return WorkspaceRuntime{}, err
+	}
 	runtime, err := s.provider.CreateWorkspaceRuntime(ctx, input, compute, volume)
 	if err != nil {
+		_ = s.recordOperation(ctx, operation, "failed", runtime, err)
+		return runtime, err
+	}
+	if err := s.recordOperation(ctx, operation, "succeeded", runtime, nil); err != nil {
 		return runtime, err
 	}
 	s.mu.Lock()
@@ -211,6 +278,104 @@ func (s *Service) WorkspaceRuntimeStatus(ctx context.Context, workspaceID string
 
 func (s *Service) Readiness(ctx context.Context) (map[string]any, error) {
 	return s.provider.Readiness(ctx)
+}
+
+func (s *Service) ListOperations(ctx context.Context) ([]FabricOperation, error) {
+	return s.operations.List(ctx)
+}
+
+func newOperation(action string, resourceKind string, resourceID string, accountID string, workspaceID string, idempotencyKey string, requestHash string, now time.Time) FabricOperation {
+	operationID := "op_" + action + "_" + stableSuffix(firstNonEmpty(idempotencyKey, resourceID, accountID, workspaceID, fmt.Sprintf("%d", now.UnixNano())), resourceKind, action)[:12]
+	return FabricOperation{
+		OperationID:    operationID,
+		CallerService:  "control-plane",
+		Action:         action,
+		ResourceKind:   resourceKind,
+		ResourceID:     resourceID,
+		AccountID:      accountID,
+		WorkspaceID:    workspaceID,
+		IdempotencyKey: idempotencyKey,
+		RequestHash:    requestHash,
+		StartedAt:      now,
+	}
+}
+
+func (s *Service) recordOperation(ctx context.Context, base FabricOperation, status string, resource any, operationErr error) error {
+	now := time.Now().UTC()
+	operation := base
+	operation.ID = fabricID("fop", firstNonEmpty(base.ResourceID, base.OperationID), now)
+	operation.Status = status
+	operation.CreatedAt = now
+	if status != "started" {
+		operation.FinishedAt = now
+	}
+	if operationErr != nil {
+		operation.ErrorCode = errorCode(operationErr)
+	}
+	fillOperationResource(&operation, resource)
+	return s.operations.Append(ctx, operation)
+}
+
+func fillOperationResource(operation *FabricOperation, resource any) {
+	switch value := resource.(type) {
+	case ComputeAllocation:
+		operation.ResourceID = firstNonEmpty(value.ID, operation.ResourceID)
+		operation.AccountID = firstNonEmpty(value.AccountID, operation.AccountID)
+		operation.WorkspaceID = firstNonEmpty(value.WorkspaceID, operation.WorkspaceID)
+		operation.Provider = firstNonEmpty(value.Provider, operation.Provider)
+		operation.ProviderRequestID = firstNonEmpty(value.ProviderRequestID, operation.ProviderRequestID)
+		operation.RedactedProviderPayload = map[string]any{"providerResourceId": value.ProviderResourceID, "nodeName": value.NodeName, "instanceId": firstNonEmpty(value.CVMInstanceID, value.InstanceID)}
+	case StorageVolume:
+		operation.ResourceID = firstNonEmpty(value.ID, operation.ResourceID)
+		operation.AccountID = firstNonEmpty(value.AccountID, operation.AccountID)
+		operation.WorkspaceID = firstNonEmpty(value.WorkspaceID, operation.WorkspaceID)
+		operation.Provider = firstNonEmpty(value.Provider, operation.Provider)
+		operation.ProviderRequestID = firstNonEmpty(value.ProviderRequestID, operation.ProviderRequestID)
+		operation.RedactedProviderPayload = map[string]any{"providerResourceId": value.ProviderResourceID, "storageClass": value.StorageClass, "sizeGb": value.SizeGB}
+	case StorageAttachment:
+		operation.ResourceID = firstNonEmpty(value.ID, operation.ResourceID)
+		operation.WorkspaceID = firstNonEmpty(value.WorkspaceID, operation.WorkspaceID)
+		operation.Provider = firstNonEmpty(value.Provider, operation.Provider)
+		operation.ProviderRequestID = firstNonEmpty(value.ProviderRequestID, operation.ProviderRequestID)
+		operation.RedactedProviderPayload = map[string]any{"providerAttachmentId": value.ProviderAttachmentID, "computeId": value.ComputeID, "volumeId": value.VolumeID}
+	case WorkspaceRuntime:
+		operation.ResourceID = firstNonEmpty(value.WorkspaceID, operation.ResourceID)
+		operation.WorkspaceID = firstNonEmpty(value.WorkspaceID, operation.WorkspaceID)
+		operation.ProviderRequestID = firstNonEmpty(value.ProviderRequestID, operation.ProviderRequestID)
+		operation.RedactedProviderPayload = map[string]any{"serviceName": value.ServiceName, "ready": value.Ready}
+	}
+}
+
+func operationStatus(err error) string {
+	if err != nil {
+		return "failed"
+	}
+	return "succeeded"
+}
+
+func errorCode(err error) string {
+	if err == nil {
+		return ""
+	}
+	text := strings.TrimSpace(err.Error())
+	if text == "" {
+		return "provider_error"
+	}
+	return strings.Fields(text)[0]
+}
+
+func hashInput(input any) string {
+	data, err := json.Marshal(input)
+	if err != nil {
+		return ""
+	}
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+func stableSuffix(values ...string) string {
+	sum := sha256.Sum256([]byte(strings.Join(values, ":")))
+	return hex.EncodeToString(sum[:])
 }
 
 func fabricID(prefix string, owner string, now time.Time) string {

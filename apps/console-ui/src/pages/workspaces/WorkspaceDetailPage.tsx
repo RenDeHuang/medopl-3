@@ -14,7 +14,7 @@ import {
   ResourceSplit,
   StatusPill
 } from "../shared/commercial-console.tsx";
-import { money, packageText, statusColor, statusLabel, valueLabel } from "../shared/formatters.ts";
+import { money, moneyValue, packageText, resourceDebitEvents, statusColor, statusLabel, valueLabel } from "../shared/formatters.ts";
 
 type AnyRecord = Record<string, any>;
 
@@ -49,9 +49,9 @@ function workspaceCredential(workspace: AnyRecord = {}) {
 }
 
 function workspaceChargeTotal(state: AnyRecord = {}, workspaceId = "") {
-  return (state.resourceUsageLogs || [])
+  return resourceDebitEvents(state)
     .filter((item) => item.workspaceId === workspaceId)
-    .reduce((sum, item) => sum + Math.abs(Number(item.amount || item.charge || 0)), 0);
+    .reduce((sum, item) => sum + Math.abs(moneyValue(item)), 0);
 }
 
 function workspaceHourlyEstimate({ workspace, compute, storage }: any) {
@@ -138,7 +138,7 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
         <InsightPanel title="Workspace 计费" eyebrow="按工作区">
           <ResourceSplit
             items={[
-              { label: "当前费用", value: money(currentCost), meta: "已记录资源与请求用量", status: "计费", tone: currentCost > 0 ? "info" : "neutral" },
+              { label: "当前费用", value: money(currentCost), meta: "Ledger 资源扣费", status: "计费", tone: currentCost > 0 ? "info" : "neutral" },
               { label: "预计每小时", value: money(hourlyEstimate), meta: "计算 + 存储", status: "预估", tone: hourlyEstimate > 0 ? "warn" : "neutral" },
               { label: "归属账号", value: selected.ownerAccountId || "-", meta: "钱包和账本归属", status: "钱包", tone: "info" },
               { label: "套餐", value: selectedPlan?.name || "-", meta: packageText(selectedPlan), status: "套餐", tone: "info" },

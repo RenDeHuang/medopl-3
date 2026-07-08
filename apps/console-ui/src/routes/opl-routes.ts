@@ -598,7 +598,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "support.create",
     path: "/console/support/new",
-    label: "新建工单",
+    label: "登记外部工单",
     area: "console",
     role: "lab_owner",
     hiddenInMenu: true,
@@ -614,7 +614,7 @@ export const oplRoutes = Object.freeze([
   currentRoute({
     id: "support.detail",
     path: "/console/support/:id",
-    label: "工单详情",
+    label: "外部工单详情",
     area: "console",
     role: "lab_owner",
     hiddenInMenu: true,

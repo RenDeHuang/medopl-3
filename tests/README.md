@@ -11,7 +11,7 @@ Long-term contract tests protect:
 - StorageVolume independence from compute.
 - StorageAttachment handoff from storage to one dedicated CVM runtime.
 - User auth, role, disabled status, and tenant ownership.
-- User wallet, holds, resource usage, idempotent debits, wallet transactions, manual top-up audit, billing ledger, and reconciliation.
+- User wallet, holds, hold releases, resource settlements, idempotent debits, wallet transactions, manual top-up audit, billing ledger, Fabric operation facts, and reconciliation.
 - PostgreSQL persistence for commercial data objects.
 - Runtime readiness and production manifest secret safety.
 - Ledger receipt and evidence boundaries.

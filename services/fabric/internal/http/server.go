@@ -24,6 +24,14 @@ func NewServer(service *fabric.Service) http.Handler {
 	mux.HandleFunc("GET /fabric/catalog", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, service.Catalog(r.Context()))
 	})
+	mux.HandleFunc("GET /fabric/operations", func(w http.ResponseWriter, r *http.Request) {
+		operations, err := service.ListOperations(r.Context())
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, operations)
+	})
 	mux.HandleFunc("POST /fabric/compute-allocations", func(w http.ResponseWriter, r *http.Request) {
 		var input fabric.ComputeAllocationInput
 		if !decodeWrite(w, r, &input.IdempotencyKey, &input) {

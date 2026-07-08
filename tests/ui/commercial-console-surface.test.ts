@@ -304,6 +304,7 @@ test("Admin commercial operations cover organizations, resource settlement, reco
   for (const signal of ["totalSpent", "debited", "已消费金额", "最近对账", "阻塞原因"]) {
     assert.match(adminSource, new RegExp(signal), `Admin UI must expose ${signal}`);
   }
+  assert.match(adminSource, /moneyValue\(row\)/, "Admin Ledger must render Ledger amountCents facts without NaN");
 });
 
 test("Admin resource and support views expose operator-grade lookup fields", async () => {
@@ -336,7 +337,8 @@ test("Billing and Workspace pages explain commercial charging and URL lifecycle"
 
   assert.match(billingSource, /计费规则|billingPolicy/, "billing page must explain holds, release, and resource debit policy");
   assert.doesNotMatch(billingSource, /request_debit|请求扣费|token|tokens|model pricing/i, "OPL Cloud billing must not expose request-level charging");
-  assert.match(billingSource, /compute_debit|storage_debit|资源扣费|存储扣费|resourceUsageLogs/, "billing page must expose resource debit evidence");
+  assert.match(billingSource, /compute_debit|storage_debit|资源扣费|存储扣费|resourceDebitEvents/, "billing page must expose Ledger resource debit evidence");
+  assert.doesNotMatch(`${billingSource}\n${listSource}\n${detailSource}`, /resourceUsageLogs/, "active UI must not use retired resource usage projection");
   for (const signal of ["activeHourlyEstimate", "nextSettlementAt", "runningDuration", "下次结算", "运行时长", "预计每小时"]) {
     assert.match(billingSource, new RegExp(signal), `billing page must show ${signal}`);
   }

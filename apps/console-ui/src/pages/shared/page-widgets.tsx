@@ -1,5 +1,5 @@
 import React from "react";
-import { PageContainer, ProCard, ProTable } from "@ant-design/pro-components";
+import { PageContainer, ProCard } from "@ant-design/pro-components";
 import { Empty, List, Space, Tag, Typography } from "antd";
 import { AlertTriangle } from "lucide-react";
 import { money } from "./formatters.ts";
@@ -15,24 +15,6 @@ export function CatalogCard({ title, items }: any) {
     <ProCard title={title} colSpan={{ xs: 24, xl: 8 }}>
       <List size="small" dataSource={items} renderItem={(item) => <List.Item><Tag color="blue">Approved</Tag>{item}</List.Item>} />
     </ProCard>
-  );
-}
-
-export function UsageTable({ data, type }: any) {
-  return (
-    <ProTable
-      rowKey={(row) => row.id}
-      search={false}
-      options={false}
-      pagination={false}
-      size="small"
-      dataSource={data.slice(-8).reverse()}
-      columns={[
-        { title: type === "request" ? "请求" : "资源", dataIndex: type === "request" ? "requestId" : "resourceType", ellipsis: true },
-        { title: "Workspace", dataIndex: "workspaceId", ellipsis: true },
-        { title: "金额", dataIndex: "amount", render: (value) => money(value) }
-      ]}
-    />
   );
 }
 

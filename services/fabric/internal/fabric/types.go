@@ -132,3 +132,25 @@ type Check struct {
 	OK      bool           `json:"ok"`
 	Details map[string]any `json:"details,omitempty"`
 }
+
+type FabricOperation struct {
+	ID                      string         `json:"id"`
+	OperationID             string         `json:"operationId"`
+	CallerService           string         `json:"callerService"`
+	Action                  string         `json:"action"`
+	ResourceKind            string         `json:"resourceKind"`
+	ResourceID              string         `json:"resourceId"`
+	AccountID               string         `json:"accountId,omitempty"`
+	WorkspaceID             string         `json:"workspaceId,omitempty"`
+	Provider                string         `json:"provider,omitempty"`
+	ProviderRequestID       string         `json:"providerRequestId,omitempty"`
+	IdempotencyKey          string         `json:"idempotencyKey,omitempty"`
+	RequestHash             string         `json:"requestHash,omitempty"`
+	RedactedProviderPayload map[string]any `json:"redactedProviderPayload,omitempty"`
+	Status                  string         `json:"status"`
+	ErrorCode               string         `json:"errorCode,omitempty"`
+	Retryable               bool           `json:"retryable,omitempty"`
+	StartedAt               time.Time      `json:"startedAt"`
+	FinishedAt              time.Time      `json:"finishedAt,omitempty"`
+	CreatedAt               time.Time      `json:"createdAt"`
+}

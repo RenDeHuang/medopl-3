@@ -15,7 +15,7 @@ This repository owns:
 - OPL Workspace URL delivery control plane.
 - Tencent TKE runtime handoff for v1.
 - ComputePool, ComputeAllocation, StorageVolume, and StorageAttachment contracts.
-- User wallet, resource usage, request usage, manual top-up audit, billing ledger, and reconciliation records.
+- User wallet, holds, hold releases, resource settlements, manual top-up audit, billing ledger, Fabric operation facts, and reconciliation records.
 - Runtime readiness, production readiness, production manifests, and TKE deployment handoff.
 
 ## Out Of Scope

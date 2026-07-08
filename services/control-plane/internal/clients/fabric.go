@@ -18,6 +18,7 @@ type FabricClient interface {
 	CreateWorkspaceRuntime(ctx context.Context, input WorkspaceRuntimeInput, idempotencyKey string) (WorkspaceRuntime, error)
 	WorkspaceRuntimeStatus(ctx context.Context, workspaceID string) (WorkspaceRuntime, error)
 	Readiness(ctx context.Context) (map[string]any, error)
+	ListOperations(ctx context.Context) ([]FabricOperation, error)
 }
 
 type ComputeAllocationInput struct {
@@ -111,6 +112,28 @@ type WorkspaceRuntime struct {
 	Checks      []any  `json:"checks"`
 }
 
+type FabricOperation struct {
+	ID                      string         `json:"id"`
+	OperationID             string         `json:"operationId"`
+	CallerService           string         `json:"callerService"`
+	Action                  string         `json:"action"`
+	ResourceKind            string         `json:"resourceKind"`
+	ResourceID              string         `json:"resourceId"`
+	AccountID               string         `json:"accountId,omitempty"`
+	WorkspaceID             string         `json:"workspaceId,omitempty"`
+	Provider                string         `json:"provider,omitempty"`
+	ProviderRequestID       string         `json:"providerRequestId,omitempty"`
+	IdempotencyKey          string         `json:"idempotencyKey,omitempty"`
+	RequestHash             string         `json:"requestHash,omitempty"`
+	RedactedProviderPayload map[string]any `json:"redactedProviderPayload,omitempty"`
+	Status                  string         `json:"status"`
+	ErrorCode               string         `json:"errorCode,omitempty"`
+	Retryable               bool           `json:"retryable,omitempty"`
+	StartedAt               string         `json:"startedAt"`
+	FinishedAt              string         `json:"finishedAt,omitempty"`
+	CreatedAt               string         `json:"createdAt"`
+}
+
 type fabricHTTPClient struct {
 	baseURL string
 	client  *http.Client
@@ -196,6 +219,20 @@ func (c *fabricHTTPClient) WorkspaceRuntimeStatus(ctx context.Context, workspace
 func (c *fabricHTTPClient) Readiness(ctx context.Context) (map[string]any, error) {
 	result := map[string]any{}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/fabric/readiness", nil)
+	if err != nil {
+		return result, err
+	}
+	res, err := c.client.Do(req)
+	if err != nil {
+		return result, err
+	}
+	defer res.Body.Close()
+	return result, json.NewDecoder(res.Body).Decode(&result)
+}
+
+func (c *fabricHTTPClient) ListOperations(ctx context.Context) ([]FabricOperation, error) {
+	var result []FabricOperation
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/fabric/operations", nil)
 	if err != nil {
 		return result, err
 	}

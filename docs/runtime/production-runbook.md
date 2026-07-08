@@ -51,7 +51,7 @@ Use `npm run staging:e2e` from a local operator shell before rollout when the lo
 
 Use `npm run verify:production` only after cloud staging rollout from an approved operator environment. This command requires public HTTPS Console and Workspace URLs.
 
-Both verifiers create a real ComputeAllocation, StorageVolume, and StorageAttachment, create a Workspace URL entry, open the public URL, record one Gateway request usage event, verify wallet/ledger/usage state, and attempt cleanup.
+Both verifiers create a real ComputeAllocation, StorageVolume, and StorageAttachment, create a Workspace URL entry, open the public URL, verify wallet, Ledger facts, Fabric/provider evidence, and attempt cleanup.
 
 Verification output belongs in runtime evidence or `docs/history/**`, not active docs.
 

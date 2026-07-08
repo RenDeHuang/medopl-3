@@ -163,11 +163,11 @@ test("route table and routeTo do not expose reserved routes in visible owner or 
     assert.equal(consoleRoutes.some((route) => route.path === path), false, `${path} must stay out of runtime routes`);
   }
 
-  assert.equal(routeTo("workspace.detail", { id: "ws_demo" }), "/console/workspaces/ws_demo");
-  assert.equal(routeTo("compute-allocations.detail", { id: "compute_demo" }), "/console/compute/compute_demo");
-  assert.equal(routeTo("storage.detail", { id: "storage_demo" }), "/console/storage/storage_demo");
-  assert.equal(routeTo("attachment.detail", { id: "attachment_demo" }), "/console/attachments/attachment_demo");
-  assert.equal(routeTo("support.detail", { id: "ticket_demo" }), "/console/support/ticket_demo");
+  assert.equal(routeTo("workspace.detail", { id: "ws_sample" }), "/console/workspaces/ws_sample");
+  assert.equal(routeTo("compute-allocations.detail", { id: "compute_sample" }), "/console/compute/compute_sample");
+  assert.equal(routeTo("storage.detail", { id: "storage_sample" }), "/console/storage/storage_sample");
+  assert.equal(routeTo("attachment.detail", { id: "attachment_sample" }), "/console/attachments/attachment_sample");
+  assert.equal(routeTo("support.detail", { id: "ticket_sample" }), "/console/support/ticket_sample");
 });
 
 test("runtime route registry mirrors contract resource operation protocols", async () => {

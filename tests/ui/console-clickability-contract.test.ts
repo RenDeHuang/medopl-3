@@ -25,7 +25,7 @@ test("console actions resolve through route ids or explicit non-route action typ
     if (action.type === "route") {
       const route = routesById.get(action.routeId);
       assert.ok(route, `${action.id} points at missing route ${action.routeId}`);
-      const params = Object.fromEntries([...route.path.matchAll(/:([^/]+)/g)].map(([, key]) => [key, `${key}-demo`]));
+      const params = Object.fromEntries([...route.path.matchAll(/:([^/]+)/g)].map(([, key]) => [key, `${key}-sample`]));
       assert.equal(routeTo(action.routeId, params, { role: action.role }), route.path.replace(/:([^/]+)/g, (_, key) => params[key]));
       assert.equal(action.path, undefined, `${action.id} must not hard-code path`);
     }

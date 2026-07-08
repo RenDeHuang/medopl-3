@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "owner": "OPL Ledger",
-  "purpose": "Commercial resource leasing ledger, wallet transaction, resource usage debit, hold, top-up, and reconciliation policy.",
+  "purpose": "Commercial resource leasing ledger, wallet transaction, resource settlement, hold, top-up, evidence receipt, and reconciliation policy.",
   "state": "current",
-  "machineBoundary": "Ledger entries, wallet transactions, manual top-up audits, resource usage logs, resource usage rollups, and billing reconciliation guards. Request-level product billing is owned outside OPL Cloud.",
+  "machineBoundary": "Ledger entries, wallet transactions, manual top-up audits, holds, hold releases, resource settlements, evidence receipts, and billing reconciliation guards. Request-level product billing is owned outside OPL Cloud.",
   "lifecycle": {
     "type": "long_term_contract",
     "removalCondition": "Replace only with a newer current contract for the same boundary."

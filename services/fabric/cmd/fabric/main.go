@@ -15,7 +15,15 @@ func main() {
 		addr = ":8082"
 	}
 
-	server := fabrichttp.NewServer(fabric.NewService(fabric.NewTencentProvider()))
+	operationStore := fabric.OperationStore(fabric.NewMemoryOperationStore())
+	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
+		store, err := fabric.NewPostgresOperationStore(databaseURL)
+		if err != nil {
+			log.Fatal(err)
+		}
+		operationStore = store
+	}
+	server := fabrichttp.NewServer(fabric.NewServiceWithOperationStore(fabric.NewTencentProvider(), operationStore))
 	log.Printf("fabric listening on %s", addr)
 	if err := http.ListenAndServe(addr, server); err != nil {
 		log.Fatal(err)

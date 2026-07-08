@@ -44,7 +44,7 @@ test("reconciles OPL resource debits against internal provider cost evidence", (
   ]);
 });
 
-test("reports mismatches without treating credits or lifecycle entries as billable resource usage", () => {
+test("reports mismatches without treating credits or lifecycle entries as billable resource settlements", () => {
   const report = reconcileTencentBills({
     tolerance: 0.01,
     ledgerEntries: [

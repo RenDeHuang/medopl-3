@@ -8,7 +8,7 @@ import {
   ResourceSplit,
   TimelineList
 } from "../shared/commercial-console.tsx";
-import { available, money, usageQuantity } from "../shared/formatters.ts";
+import { available, money, moneyValue, resourceDebitEvents } from "../shared/formatters.ts";
 
 type AnyRecord = Record<string, any>;
 
@@ -56,10 +56,11 @@ function oldestActiveResourceStartedAt(state: AnyRecord = {}) {
 
 export function BillingPage({ state, wallet }: any) {
   const billingPolicy = state.billingPolicy || {};
-  const resourceUsage = state.resourceUsageLogs || [];
-  const recent = [
-    ...resourceUsage.map((item) => ({ ...item, billingType: item.resourceType === "compute" ? "计算" : "存储" }))
-  ].slice(-12).reverse();
+  const recent = resourceDebitEvents(state).map((item) => ({
+    ...item,
+    billingType: item.type === "compute_debit" ? "计算" : "存储",
+    amount: Math.abs(moneyValue(item))
+  })).slice(-12).reverse();
   const usable = available(wallet);
   const frozen = Number(wallet.frozen || 0);
   const balance = Number(wallet.balance || 0);
@@ -101,8 +102,8 @@ export function BillingPage({ state, wallet }: any) {
         <InsightPanel title="资源用量" eyebrow="用量">
           <ResourceSplit
             items={[
-              { label: "计算", value: `${usageQuantity(resourceUsage, "compute").toFixed(1)} 小时`, meta: "计算资源用量", status: "按小时", tone: "info" },
-              { label: "存储", value: `${usageQuantity(resourceUsage, "storage").toFixed(1)} GB-小时`, meta: "存储资源用量", status: "保留", tone: "good" },
+              { label: "计算扣费", value: resourceDebitEvents(state, "compute").length, meta: "Ledger compute_debit", status: "账本", tone: "info" },
+              { label: "存储扣费", value: resourceDebitEvents(state, "storage").length, meta: "Ledger storage_debit", status: "账本", tone: "good" },
               { label: "运行时长", value: runningDuration(activeStartedAt), meta: `下次结算 ${nextBillingTime}`, status: "按小时", tone: activeStartedAt ? "info" : "neutral" },
               { label: "预计每小时", value: money(hourlyEstimate), meta: "当前活跃资源", status: "预估", tone: hourlyEstimate > 0 ? "warn" : "neutral" },
               { label: "充值记录", value: state.manualTopups?.length || 0, meta: "人工充值证据", status: "已审计", tone: "good" }
@@ -130,7 +131,7 @@ export function BillingPage({ state, wallet }: any) {
             columns={[
               { title: "类型", dataIndex: "billingType", width: 90 },
               { title: "工作区", dataIndex: "workspaceId", ellipsis: true, render: (value) => <Typography.Text ellipsis>{value || "账号"}</Typography.Text> },
-              { title: "用量", render: (_, row) => `${Number(row.quantity || 0).toFixed(2)} ${row.unit || ""}` },
+              { title: "资源", render: (_, row) => row.computeAllocationId || row.storageId || row.resourceId || "-" },
               { title: "金额", dataIndex: "amount", render: (value) => money(value) }
             ]}
           />

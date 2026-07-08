@@ -43,6 +43,39 @@ func TestCreateComputeAllocationHTTPRequiresIdempotencyKey(t *testing.T) {
 	}
 }
 
+func TestOperationsHTTPReturnsFabricAuditFacts(t *testing.T) {
+	service := fabric.NewService(testProvider{})
+	server := NewServer(service)
+
+	create := httptest.NewRequest(http.MethodPost, "/fabric/storage-volumes", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","sizeGb":10}`))
+	create.Header.Set("Idempotency-Key", "http-ops-storage")
+	createRec := httptest.NewRecorder()
+	server.ServeHTTP(createRec, create)
+	if createRec.Code != http.StatusAccepted {
+		t.Fatalf("create status = %d, want %d: %s", createRec.Code, http.StatusAccepted, createRec.Body.String())
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/fabric/operations", nil)
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("operations status = %d, want %d: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var operations []fabric.FabricOperation
+	if err := json.NewDecoder(rec.Body).Decode(&operations); err != nil {
+		t.Fatalf("decode operations: %v", err)
+	}
+	for _, operation := range operations {
+		if operation.Action == "create_storage_volume" && operation.ResourceKind == "storage_volume" && operation.Status == "succeeded" {
+			if operation.OperationID == "" || operation.ProviderRequestID != "storage-test" || operation.RequestHash == "" {
+				t.Fatalf("operation missing audit identity: %#v", operation)
+			}
+			return
+		}
+	}
+	t.Fatalf("missing storage operation in %#v", operations)
+}
+
 type testProvider struct{}
 
 func (testProvider) CreateComputeAllocation(_ context.Context, input fabric.ComputeAllocationInput) (fabric.ComputeAllocation, error) {
