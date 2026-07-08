@@ -103,6 +103,26 @@ func (s *Service) RecordReconciliation(ctx context.Context, input Reconciliation
 	return s.ledger.RecordReconciliation(ctx, clients.ReconciliationInput{Report: input.Report}, idempotencyKey)
 }
 
+func (s *Service) Wallet(ctx context.Context, accountID string) (clients.Wallet, error) {
+	return s.ledger.Wallet(ctx, accountID)
+}
+
+func (s *Service) ListLedgerEntries(ctx context.Context, accountID string) ([]clients.LedgerEntry, error) {
+	return s.ledger.ListLedgerEntries(ctx, accountID)
+}
+
+func (s *Service) ListWalletTransactions(ctx context.Context, accountID string) ([]clients.WalletTransaction, error) {
+	return s.ledger.ListWalletTransactions(ctx, accountID)
+}
+
+func (s *Service) ListManualTopUps(ctx context.Context, accountID string) ([]clients.ManualTopUp, error) {
+	return s.ledger.ListManualTopUps(ctx, accountID)
+}
+
+func (s *Service) ListResourceSettlements(ctx context.Context, accountID string) ([]clients.ResourceSettlementResult, error) {
+	return s.ledger.ListResourceSettlements(ctx, accountID)
+}
+
 func (s *Service) WorkspaceRuntimeStatus(ctx context.Context, workspaceID string) (clients.WorkspaceRuntime, error) {
 	return s.fabric.WorkspaceRuntimeStatus(ctx, workspaceID)
 }

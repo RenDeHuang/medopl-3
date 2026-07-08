@@ -183,7 +183,47 @@ func NewServer(store ledger.Store) http.Handler {
 		}
 		writeJSON(w, http.StatusOK, wallet)
 	})
+	mux.HandleFunc("GET /ledger/entries", func(w http.ResponseWriter, r *http.Request) {
+		rows, err := store.ListLedgerEntries(r.Context(), "")
+		writeReadResult(w, rows, err)
+	})
+	mux.HandleFunc("GET /ledger/accounts/{accountId}/entries", func(w http.ResponseWriter, r *http.Request) {
+		rows, err := store.ListLedgerEntries(r.Context(), strings.TrimSpace(r.PathValue("accountId")))
+		writeReadResult(w, rows, err)
+	})
+	mux.HandleFunc("GET /ledger/wallet-transactions", func(w http.ResponseWriter, r *http.Request) {
+		rows, err := store.ListWalletTransactions(r.Context(), "")
+		writeReadResult(w, rows, err)
+	})
+	mux.HandleFunc("GET /ledger/accounts/{accountId}/wallet-transactions", func(w http.ResponseWriter, r *http.Request) {
+		rows, err := store.ListWalletTransactions(r.Context(), strings.TrimSpace(r.PathValue("accountId")))
+		writeReadResult(w, rows, err)
+	})
+	mux.HandleFunc("GET /ledger/topups", func(w http.ResponseWriter, r *http.Request) {
+		rows, err := store.ListManualTopUps(r.Context(), "")
+		writeReadResult(w, rows, err)
+	})
+	mux.HandleFunc("GET /ledger/accounts/{accountId}/topups", func(w http.ResponseWriter, r *http.Request) {
+		rows, err := store.ListManualTopUps(r.Context(), strings.TrimSpace(r.PathValue("accountId")))
+		writeReadResult(w, rows, err)
+	})
+	mux.HandleFunc("GET /ledger/resource-settlements", func(w http.ResponseWriter, r *http.Request) {
+		rows, err := store.ListResourceSettlements(r.Context(), "")
+		writeReadResult(w, rows, err)
+	})
+	mux.HandleFunc("GET /ledger/accounts/{accountId}/resource-settlements", func(w http.ResponseWriter, r *http.Request) {
+		rows, err := store.ListResourceSettlements(r.Context(), strings.TrimSpace(r.PathValue("accountId")))
+		writeReadResult(w, rows, err)
+	})
 	return mux
+}
+
+func writeReadResult(w http.ResponseWriter, body any, err error) {
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "ledger read failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, body)
 }
 
 func writeJSON(w http.ResponseWriter, status int, body any) {

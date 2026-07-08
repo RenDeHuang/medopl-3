@@ -228,12 +228,74 @@ func (fakeLedgerClient) RecordReconciliation(_ context.Context, input clients.Re
 	return clients.ReconciliationResult{ID: stringField(input.Report, "id", "reconciliation-from-ledger"), Status: "ok", Report: input.Report, BlockNewWorkspaces: false, Reason: "operator_reconciliation"}, nil
 }
 
+func (fakeLedgerClient) Wallet(_ context.Context, accountID string) (clients.Wallet, error) {
+	return clients.Wallet{AccountID: accountID, Currency: "CNY"}, nil
+}
+
+func (fakeLedgerClient) ListLedgerEntries(_ context.Context, _ string) ([]clients.LedgerEntry, error) {
+	return nil, nil
+}
+
+func (fakeLedgerClient) ListWalletTransactions(_ context.Context, _ string) ([]clients.WalletTransaction, error) {
+	return nil, nil
+}
+
+func (fakeLedgerClient) ListManualTopUps(_ context.Context, _ string) ([]clients.ManualTopUp, error) {
+	return nil, nil
+}
+
+func (fakeLedgerClient) ListResourceSettlements(_ context.Context, _ string) ([]clients.ResourceSettlementResult, error) {
+	return nil, nil
+}
+
 type fakeBlockingReconciliationLedgerClient struct {
 	fakeLedgerClient
 }
 
 func (fakeBlockingReconciliationLedgerClient) RecordReconciliation(_ context.Context, input clients.ReconciliationInput, _ string) (clients.ReconciliationResult, error) {
 	return clients.ReconciliationResult{ID: stringField(input.Report, "id", "reconciliation-from-ledger"), Status: "mismatch", Report: input.Report, BlockNewWorkspaces: true, Reason: "tencent_bill_reconciliation_failed"}, nil
+}
+
+type readBackedLedgerClient struct {
+	fakeLedgerClient
+}
+
+func (readBackedLedgerClient) Wallet(_ context.Context, accountID string) (clients.Wallet, error) {
+	return clients.Wallet{AccountID: accountID, BalanceCents: 9900, FrozenCents: 1200, AvailableCents: 8700, TotalSpentCents: 1200, Currency: "CNY"}, nil
+}
+
+func (readBackedLedgerClient) ListLedgerEntries(_ context.Context, _ string) ([]clients.LedgerEntry, error) {
+	return []clients.LedgerEntry{{ID: "ledger-settlement-alpha", AccountID: "acct-alpha", AmountCents: 1200, Currency: "CNY", Direction: "debit", Source: "compute_settlement", Reason: "ws-alpha"}}, nil
+}
+
+func (readBackedLedgerClient) ListWalletTransactions(_ context.Context, _ string) ([]clients.WalletTransaction, error) {
+	return []clients.WalletTransaction{{ID: "wallet-tx-alpha", AccountID: "acct-alpha", LedgerEntryID: "ledger-settlement-alpha", AmountCents: -1200, BalanceCents: 9900, FrozenCents: 1200, AvailableCents: 8700, TotalSpentCents: 1200, Currency: "CNY"}}, nil
+}
+
+func (readBackedLedgerClient) ListManualTopUps(_ context.Context, _ string) ([]clients.ManualTopUp, error) {
+	return []clients.ManualTopUp{}, nil
+}
+
+func (readBackedLedgerClient) ListResourceSettlements(_ context.Context, _ string) ([]clients.ResourceSettlementResult, error) {
+	return []clients.ResourceSettlementResult{{
+		ID:                      "settlement-alpha",
+		AccountID:               "acct-alpha",
+		WorkspaceID:             "ws-alpha",
+		ResourceType:            "compute",
+		ResourceID:              "compute-alpha",
+		AmountCents:             1200,
+		Currency:                "CNY",
+		Status:                  "settled",
+		LedgerEntryID:           "ledger-settlement-alpha",
+		WalletTransactionID:     "wallet-tx-alpha",
+		PricingVersion:          "pricing-2026-07",
+		PriceSnapshot:           map[string]any{"unitPriceCents": 1200},
+		UsagePeriodStart:        "2026-07-08T00:00:00Z",
+		UsagePeriodEnd:          "2026-07-08T01:00:00Z",
+		Quantity:                1,
+		Unit:                    "hour",
+		ProviderCostEvidenceRef: "tencent-row-alpha",
+	}}, nil
 }
 
 type failingFabricClient struct {
@@ -669,6 +731,53 @@ func TestResourceSettlementProjectionKeepsRequestIdentityWhenLedgerOmitsIt(t *te
 	wallet := state["wallet"].(map[string]any)
 	if wallet["accountId"] != "acct-alpha" {
 		t.Fatalf("wallet lost settlement request account: %#v", wallet)
+	}
+}
+
+func TestStateRefreshesLedgerFactsFromLedgerReads(t *testing.T) {
+	server := NewServer(controlplane.NewService(readBackedLedgerClient{}, &fakeFabricClient{}))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/state?accountId=acct-alpha", nil)
+	addSessionCookies(req, operatorSessionForTest(t, server))
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("state status = %d: %s", rec.Code, rec.Body.String())
+	}
+	var state map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&state); err != nil {
+		t.Fatalf("decode state: %v", err)
+	}
+	wallet := state["wallet"].(map[string]any)
+	if wallet["balanceCents"] != float64(9900) || wallet["totalSpentCents"] != float64(1200) {
+		t.Fatalf("state wallet was not refreshed from Ledger: %#v", wallet)
+	}
+	ledger := state["billingLedger"].([]any)
+	if !slices.ContainsFunc(ledger, func(row any) bool {
+		entry := row.(map[string]any)
+		priceSnapshot, _ := entry["priceSnapshot"].(map[string]any)
+		return entry["type"] == "compute_debit" && entry["computeAllocationId"] == "compute-alpha" && priceSnapshot["unitPriceCents"] == float64(1200)
+	}) {
+		t.Fatalf("state missing Ledger settlement evidence: %#v", ledger)
+	}
+	transactions := state["walletTransactions"].([]any)
+	if len(transactions) != 1 || transactions[0].(map[string]any)["availableCents"] != float64(8700) {
+		t.Fatalf("state missing wallet after snapshot: %#v", transactions)
+	}
+
+	managementReq := httptest.NewRequest(http.MethodGet, "/api/management/state", nil)
+	addSessionCookies(managementReq, operatorSessionForTest(t, server))
+	managementRec := httptest.NewRecorder()
+	server.ServeHTTP(managementRec, managementReq)
+	if managementRec.Code != http.StatusOK {
+		t.Fatalf("management state status = %d: %s", managementRec.Code, managementRec.Body.String())
+	}
+	var management map[string]any
+	if err := json.NewDecoder(managementRec.Body).Decode(&management); err != nil {
+		t.Fatalf("decode management state: %v", err)
+	}
+	if len(management["billingLedger"].([]any)) == 0 || len(management["walletTransactions"].([]any)) == 0 {
+		t.Fatalf("management state did not expose Ledger read facts: %#v", management)
 	}
 }
 

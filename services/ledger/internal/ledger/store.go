@@ -10,4 +10,8 @@ type Store interface {
 	SettleResource(ctx context.Context, input ResourceSettlementInput) (ResourceSettlementResult, error)
 	RecordReconciliation(ctx context.Context, input ReconciliationInput) (ReconciliationResult, error)
 	Wallet(ctx context.Context, accountID string) (Wallet, error)
+	ListLedgerEntries(ctx context.Context, accountID string) ([]LedgerEntry, error)
+	ListWalletTransactions(ctx context.Context, accountID string) ([]WalletTransaction, error)
+	ListManualTopUps(ctx context.Context, accountID string) ([]ManualTopUp, error)
+	ListResourceSettlements(ctx context.Context, accountID string) ([]ResourceSettlementResult, error)
 }

@@ -1037,6 +1037,122 @@ func (app *runtimeApp) rememberResourceSettlement(result clients.ResourceSettlem
 	return app.persistLocked()
 }
 
+func (app *runtimeApp) applyLedgerFacts(accountID string, wallet clients.Wallet, entries []clients.LedgerEntry, transactions []clients.WalletTransaction, topups []clients.ManualTopUp, settlements []clients.ResourceSettlementResult) error {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+
+	if accountID != "" && wallet.AccountID != "" {
+		app.wallets[wallet.AccountID] = walletProjection(wallet)
+	}
+	for _, tx := range transactions {
+		if tx.AccountID != "" {
+			app.wallets[tx.AccountID] = walletProjection(clients.Wallet{
+				AccountID:       tx.AccountID,
+				BalanceCents:    tx.BalanceCents,
+				FrozenCents:     tx.FrozenCents,
+				AvailableCents:  tx.AvailableCents,
+				TotalSpentCents: tx.TotalSpentCents,
+				Currency:        tx.Currency,
+			})
+		}
+	}
+
+	settlementsByEntry := map[string]clients.ResourceSettlementResult{}
+	for _, settlement := range settlements {
+		settlementsByEntry[settlement.LedgerEntryID] = settlement
+	}
+	if entries != nil {
+		app.ledger = ledgerEntryProjections(entries, settlementsByEntry)
+	}
+	if transactions != nil {
+		app.walletTx = walletTransactionProjections(transactions)
+	}
+	if topups != nil {
+		app.topups = manualTopUpProjections(topups)
+	}
+	return app.persistLocked()
+}
+
+func ledgerEntryProjections(entries []clients.LedgerEntry, settlements map[string]clients.ResourceSettlementResult) []map[string]any {
+	rows := make([]map[string]any, 0, len(entries))
+	for _, entry := range entries {
+		row := map[string]any{
+			"id":             entry.ID,
+			"accountId":      entry.AccountID,
+			"type":           ledgerEntryType(entry),
+			"amountCents":    ledgerEntryAmount(entry),
+			"currency":       entry.Currency,
+			"source":         entry.Source,
+			"direction":      entry.Direction,
+			"operatorUserId": entry.OperatorUserID,
+			"reason":         entry.Reason,
+			"createdAt":      entry.CreatedAt,
+		}
+		if settlement, ok := settlements[entry.ID]; ok {
+			row["type"] = settlement.ResourceType + "_debit"
+			row["amountCents"] = -settlement.AmountCents
+			row["workspaceId"] = settlement.WorkspaceID
+			row["resourceId"] = settlement.ResourceID
+			row["settlementId"] = settlement.ID
+			row["pricingVersion"] = settlement.PricingVersion
+			row["priceSnapshot"] = settlement.PriceSnapshot
+			row["usagePeriodStart"] = settlement.UsagePeriodStart
+			row["usagePeriodEnd"] = settlement.UsagePeriodEnd
+			row["quantity"] = settlement.Quantity
+			row["unit"] = settlement.Unit
+			row["providerCostEvidenceRef"] = settlement.ProviderCostEvidenceRef
+			if settlement.ResourceType == "storage" {
+				row["storageId"] = settlement.ResourceID
+			} else {
+				row["computeAllocationId"] = settlement.ResourceID
+			}
+		}
+		rows = append(rows, row)
+	}
+	return rows
+}
+
+func walletTransactionProjections(transactions []clients.WalletTransaction) []map[string]any {
+	rows := make([]map[string]any, 0, len(transactions))
+	for _, tx := range transactions {
+		rows = append(rows, map[string]any{
+			"id":              tx.ID,
+			"accountId":       tx.AccountID,
+			"ledgerEntryId":   tx.LedgerEntryID,
+			"amountCents":     tx.AmountCents,
+			"balanceCents":    tx.BalanceCents,
+			"frozenCents":     tx.FrozenCents,
+			"availableCents":  tx.AvailableCents,
+			"totalSpentCents": tx.TotalSpentCents,
+			"currency":        tx.Currency,
+			"createdAt":       tx.CreatedAt,
+		})
+	}
+	return rows
+}
+
+func manualTopUpProjections(topups []clients.ManualTopUp) []map[string]any {
+	rows := make([]map[string]any, 0, len(topups))
+	for _, topup := range topups {
+		rows = append(rows, structToMap(topup))
+	}
+	return rows
+}
+
+func ledgerEntryType(entry clients.LedgerEntry) string {
+	if entry.Source == "manual_topup" {
+		return "manual_topup"
+	}
+	return entry.Source
+}
+
+func ledgerEntryAmount(entry clients.LedgerEntry) int64 {
+	if entry.Direction == "debit" {
+		return -entry.AmountCents
+	}
+	return entry.AmountCents
+}
+
 func (app *runtimeApp) resourceLedgerEvidenceLocked() []any {
 	rows := []any{}
 	for _, workspace := range app.workspaces {

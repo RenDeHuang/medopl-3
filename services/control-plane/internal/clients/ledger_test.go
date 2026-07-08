@@ -2,6 +2,7 @@ package clients
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -21,5 +22,29 @@ func TestLedgerHTTPClientReturnsErrorForFailedMutation(t *testing.T) {
 	_, err := client.ReleaseHold(context.Background(), HoldReleaseInput{AccountID: "acct-alpha", AmountCents: 1000, Currency: "CNY"}, "release-once")
 	if err == nil || !strings.Contains(err.Error(), "status 409") {
 		t.Fatalf("expected status error, got %v", err)
+	}
+}
+
+func TestLedgerHTTPClientReadsWalletAndSettlementFacts(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/ledger/accounts/acct-alpha/wallet":
+			_ = json.NewEncoder(w).Encode(Wallet{AccountID: "acct-alpha", BalanceCents: 9900, Currency: "CNY"})
+		case "/ledger/accounts/acct-alpha/resource-settlements":
+			_ = json.NewEncoder(w).Encode([]ResourceSettlementResult{{ID: "settlement-alpha", AccountID: "acct-alpha", PriceSnapshot: map[string]any{"unitPriceCents": 1200}}})
+		default:
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	client := NewLedgerHTTPClient(server.URL, server.Client())
+	wallet, err := client.Wallet(context.Background(), "acct-alpha")
+	if err != nil || wallet.BalanceCents != 9900 {
+		t.Fatalf("wallet = %#v err=%v", wallet, err)
+	}
+	settlements, err := client.ListResourceSettlements(context.Background(), "acct-alpha")
+	if err != nil || len(settlements) != 1 || settlements[0].PriceSnapshot["unitPriceCents"] != float64(1200) {
+		t.Fatalf("settlements = %#v err=%v", settlements, err)
 	}
 }

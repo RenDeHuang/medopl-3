@@ -146,6 +146,31 @@ func (f *fakeLedgerClient) RecordReconciliation(ctx context.Context, input clien
 	return clients.ReconciliationResult{ID: "recon-alpha", Status: "ok", Report: input.Report}, nil
 }
 
+func (f *fakeLedgerClient) Wallet(ctx context.Context, accountID string) (clients.Wallet, error) {
+	*f.calls = append(*f.calls, "ledger.wallet")
+	return clients.Wallet{AccountID: accountID, Currency: "CNY"}, nil
+}
+
+func (f *fakeLedgerClient) ListLedgerEntries(ctx context.Context, accountID string) ([]clients.LedgerEntry, error) {
+	*f.calls = append(*f.calls, "ledger.entries")
+	return nil, nil
+}
+
+func (f *fakeLedgerClient) ListWalletTransactions(ctx context.Context, accountID string) ([]clients.WalletTransaction, error) {
+	*f.calls = append(*f.calls, "ledger.wallet-tx")
+	return nil, nil
+}
+
+func (f *fakeLedgerClient) ListManualTopUps(ctx context.Context, accountID string) ([]clients.ManualTopUp, error) {
+	*f.calls = append(*f.calls, "ledger.topups")
+	return nil, nil
+}
+
+func (f *fakeLedgerClient) ListResourceSettlements(ctx context.Context, accountID string) ([]clients.ResourceSettlementResult, error) {
+	*f.calls = append(*f.calls, "ledger.settlements")
+	return nil, nil
+}
+
 type fakeFabricClient struct {
 	calls *[]string
 }

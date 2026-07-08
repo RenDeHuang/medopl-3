@@ -15,6 +15,10 @@ type MemoryStore struct {
 	wallets     map[string]Wallet
 	idempotency map[string]idempotencyRecord
 	evidence    map[string]EvidenceReceipt
+	entries     []LedgerEntry
+	walletTx    []WalletTransaction
+	topups      []ManualTopUp
+	settlements []ResourceSettlementResult
 	nextID      int64
 }
 
@@ -94,6 +98,9 @@ func (s *MemoryStore) ManualTopUp(_ context.Context, input ManualTopUpInput) (Ma
 
 	result := ManualTopUpResult{TopUp: topup, LedgerEntry: entry, WalletTransaction: tx, Wallet: wallet}
 	s.wallets[input.AccountID] = wallet
+	s.entries = append(s.entries, entry)
+	s.walletTx = append(s.walletTx, tx)
+	s.topups = append(s.topups, topup)
 	s.idempotency[input.IdempotencyKey] = idempotencyRecord{payloadHash: payloadHash, result: result}
 	return result, nil
 }
@@ -176,6 +183,8 @@ func (s *MemoryStore) CreateHold(_ context.Context, input HoldInput) (HoldResult
 		CreatedAt:           now,
 	}
 	s.wallets[input.AccountID] = wallet
+	s.entries = append(s.entries, entry)
+	s.walletTx = append(s.walletTx, tx)
 	s.idempotency[input.IdempotencyKey] = idempotencyRecord{payloadHash: payloadHash, result: result}
 	return result, nil
 }
@@ -248,6 +257,8 @@ func (s *MemoryStore) ReleaseHold(_ context.Context, input HoldReleaseInput) (Ho
 		CreatedAt:           now,
 	}
 	s.wallets[input.AccountID] = wallet
+	s.entries = append(s.entries, entry)
+	s.walletTx = append(s.walletTx, tx)
 	s.idempotency[input.IdempotencyKey] = idempotencyRecord{payloadHash: payloadHash, result: result}
 	return result, nil
 }
@@ -338,6 +349,9 @@ func (s *MemoryStore) SettleResource(_ context.Context, input ResourceSettlement
 	tx := WalletTransaction{ID: s.newID("wtx"), AccountID: input.AccountID, LedgerEntryID: entry.ID, AmountCents: -input.AmountCents, BalanceCents: wallet.BalanceCents, FrozenCents: wallet.FrozenCents, AvailableCents: wallet.AvailableCents, TotalSpentCents: wallet.TotalSpentCents, Currency: input.Currency, CreatedAt: now}
 	result := ResourceSettlementResult{ID: s.newID("settle"), AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: input.ResourceType, ResourceID: input.ResourceID, AmountCents: input.AmountCents, Currency: input.Currency, Status: "settled", LedgerEntryID: entry.ID, WalletTransactionID: tx.ID, PricingVersion: input.PricingVersion, PriceSnapshot: cloneAnyMap(input.PriceSnapshot), UsagePeriodStart: input.UsagePeriodStart, UsagePeriodEnd: input.UsagePeriodEnd, Quantity: input.Quantity, Unit: input.Unit, ProviderCostEvidenceRef: input.ProviderCostEvidenceRef, Wallet: wallet, CreatedAt: now}
 	s.wallets[input.AccountID] = wallet
+	s.entries = append(s.entries, entry)
+	s.walletTx = append(s.walletTx, tx)
+	s.settlements = append(s.settlements, result)
 	s.idempotency[input.IdempotencyKey] = idempotencyRecord{payloadHash: payloadHash, result: result}
 	return result, nil
 }
@@ -382,6 +396,54 @@ func (s *MemoryStore) Wallet(_ context.Context, accountID string) (Wallet, error
 	}
 	wallet.AvailableCents = wallet.BalanceCents - wallet.FrozenCents
 	return wallet, nil
+}
+
+func (s *MemoryStore) ListLedgerEntries(_ context.Context, accountID string) ([]LedgerEntry, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	output := []LedgerEntry{}
+	for _, entry := range s.entries {
+		if accountID == "" || entry.AccountID == accountID {
+			output = append(output, entry)
+		}
+	}
+	return output, nil
+}
+
+func (s *MemoryStore) ListWalletTransactions(_ context.Context, accountID string) ([]WalletTransaction, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	output := []WalletTransaction{}
+	for _, tx := range s.walletTx {
+		if accountID == "" || tx.AccountID == accountID {
+			output = append(output, tx)
+		}
+	}
+	return output, nil
+}
+
+func (s *MemoryStore) ListManualTopUps(_ context.Context, accountID string) ([]ManualTopUp, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	output := []ManualTopUp{}
+	for _, topup := range s.topups {
+		if accountID == "" || topup.AccountID == accountID {
+			output = append(output, topup)
+		}
+	}
+	return output, nil
+}
+
+func (s *MemoryStore) ListResourceSettlements(_ context.Context, accountID string) ([]ResourceSettlementResult, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	output := []ResourceSettlementResult{}
+	for _, settlement := range s.settlements {
+		if accountID == "" || settlement.AccountID == accountID {
+			output = append(output, settlement)
+		}
+	}
+	return output, nil
 }
 
 func (s *MemoryStore) newID(prefix string) string {

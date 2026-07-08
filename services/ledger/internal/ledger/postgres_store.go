@@ -440,6 +440,104 @@ func (s *PostgresStore) Wallet(ctx context.Context, accountID string) (Wallet, e
 	return wallet, err
 }
 
+func (s *PostgresStore) ListLedgerEntries(ctx context.Context, accountID string) ([]LedgerEntry, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT id, account_id, amount_cents, currency, direction, source, operator_user_id, COALESCE(reason, ''), created_at
+FROM ledger_entries
+WHERE NULLIF($1, '') IS NULL OR account_id = $1
+ORDER BY created_at, id
+`, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries []LedgerEntry
+	for rows.Next() {
+		var entry LedgerEntry
+		if err := rows.Scan(&entry.ID, &entry.AccountID, &entry.AmountCents, &entry.Currency, &entry.Direction, &entry.Source, &entry.OperatorUserID, &entry.Reason, &entry.CreatedAt); err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+	return entries, rows.Err()
+}
+
+func (s *PostgresStore) ListWalletTransactions(ctx context.Context, accountID string) ([]WalletTransaction, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT id, account_id, ledger_entry_id, amount_cents, balance_cents, frozen_cents, available_cents, total_spent_cents, currency, created_at
+FROM wallet_transactions
+WHERE NULLIF($1, '') IS NULL OR account_id = $1
+ORDER BY created_at, id
+`, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var transactions []WalletTransaction
+	for rows.Next() {
+		var tx WalletTransaction
+		if err := rows.Scan(&tx.ID, &tx.AccountID, &tx.LedgerEntryID, &tx.AmountCents, &tx.BalanceCents, &tx.FrozenCents, &tx.AvailableCents, &tx.TotalSpentCents, &tx.Currency, &tx.CreatedAt); err != nil {
+			return nil, err
+		}
+		transactions = append(transactions, tx)
+	}
+	return transactions, rows.Err()
+}
+
+func (s *PostgresStore) ListManualTopUps(ctx context.Context, accountID string) ([]ManualTopUp, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT id, account_id, amount_cents, currency, operator_user_id, ledger_entry_id, COALESCE(reason, ''), created_at
+FROM manual_topups
+WHERE NULLIF($1, '') IS NULL OR account_id = $1
+ORDER BY created_at, id
+`, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var topups []ManualTopUp
+	for rows.Next() {
+		var topup ManualTopUp
+		if err := rows.Scan(&topup.ID, &topup.AccountID, &topup.AmountCents, &topup.Currency, &topup.OperatorUserID, &topup.LedgerEntryID, &topup.Reason, &topup.CreatedAt); err != nil {
+			return nil, err
+		}
+		topups = append(topups, topup)
+	}
+	return topups, rows.Err()
+}
+
+func (s *PostgresStore) ListResourceSettlements(ctx context.Context, accountID string) ([]ResourceSettlementResult, error) {
+	rows, err := s.db.QueryContext(ctx, `
+SELECT id, account_id, workspace_id, resource_type, resource_id, amount_cents, currency, status, ledger_entry_id,
+  wallet_transaction_id, pricing_version, price_snapshot_json, usage_period_start, usage_period_end, quantity, unit,
+  provider_cost_evidence_ref, created_at
+FROM resource_settlements
+WHERE NULLIF($1, '') IS NULL OR account_id = $1
+ORDER BY created_at, id
+`, accountID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var settlements []ResourceSettlementResult
+	for rows.Next() {
+		var settlement ResourceSettlementResult
+		var priceSnapshotJSON []byte
+		if err := rows.Scan(&settlement.ID, &settlement.AccountID, &settlement.WorkspaceID, &settlement.ResourceType, &settlement.ResourceID, &settlement.AmountCents, &settlement.Currency, &settlement.Status, &settlement.LedgerEntryID, &settlement.WalletTransactionID, &settlement.PricingVersion, &priceSnapshotJSON, &settlement.UsagePeriodStart, &settlement.UsagePeriodEnd, &settlement.Quantity, &settlement.Unit, &settlement.ProviderCostEvidenceRef, &settlement.CreatedAt); err != nil {
+			return nil, err
+		}
+		if len(priceSnapshotJSON) > 0 {
+			_ = json.Unmarshal(priceSnapshotJSON, &settlement.PriceSnapshot)
+		}
+		settlements = append(settlements, settlement)
+	}
+	return settlements, rows.Err()
+}
+
 func (s *PostgresStore) CreateHold(ctx context.Context, input HoldInput) (HoldResult, error) {
 	if input.ResourceType == "" || input.ResourceID == "" || input.AmountCents <= 0 {
 		return HoldResult{}, ErrInvalidHoldInput

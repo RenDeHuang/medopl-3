@@ -107,16 +107,25 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 		if !app.syncRuntimeOperations(w, r, service) {
 			return
 		}
+		if !app.syncLedgerFacts(w, r, service, r.URL.Query().Get("accountId")) {
+			return
+		}
 		writeJSON(w, http.StatusOK, app.state(r.URL.Query().Get("accountId")))
 	}))
 	mux.HandleFunc("GET /api/management/state", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		if !app.syncRuntimeOperations(w, r, service) {
 			return
 		}
+		if !app.syncLedgerFacts(w, r, service, "") {
+			return
+		}
 		writeJSON(w, http.StatusOK, app.managementState(r.URL.Query().Get("includeDeleted") == "true"))
 	}))
 	mux.HandleFunc("GET /api/operator/summary", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		if !app.syncRuntimeOperations(w, r, service) {
+			return
+		}
+		if !app.syncLedgerFacts(w, r, service, "") {
 			return
 		}
 		writeJSON(w, http.StatusOK, app.operatorSummary())
@@ -564,6 +573,42 @@ func (app *runtimeApp) syncRuntimeOperations(w http.ResponseWriter, r *http.Requ
 		return false
 	}
 	if err := app.rememberRuntimeOperations(operations); err != nil {
+		writeError(w, http.StatusInternalServerError, "read_model_persist_failed")
+		return false
+	}
+	return true
+}
+
+func (app *runtimeApp) syncLedgerFacts(w http.ResponseWriter, r *http.Request, service *controlplane.Service, accountID string) bool {
+	entries, err := service.ListLedgerEntries(r.Context(), accountID)
+	if err != nil {
+		writeUpstreamError(w)
+		return false
+	}
+	transactions, err := service.ListWalletTransactions(r.Context(), accountID)
+	if err != nil {
+		writeUpstreamError(w)
+		return false
+	}
+	topups, err := service.ListManualTopUps(r.Context(), accountID)
+	if err != nil {
+		writeUpstreamError(w)
+		return false
+	}
+	settlements, err := service.ListResourceSettlements(r.Context(), accountID)
+	if err != nil {
+		writeUpstreamError(w)
+		return false
+	}
+	var wallet clients.Wallet
+	if accountID != "" {
+		wallet, err = service.Wallet(r.Context(), accountID)
+		if err != nil {
+			writeUpstreamError(w)
+			return false
+		}
+	}
+	if err := app.applyLedgerFacts(accountID, wallet, entries, transactions, topups, settlements); err != nil {
 		writeError(w, http.StatusInternalServerError, "read_model_persist_failed")
 		return false
 	}
