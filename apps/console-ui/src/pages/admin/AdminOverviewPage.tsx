@@ -717,7 +717,7 @@ export function AdminE2EPage({ adminOps }: any) {
 export function AdminCleanupPage({ managementState, session, runAction }: any) {
   const activeWorkspaces = (managementState.workspaces || []).filter((workspace) => workspace.access?.tokenStatus === "active");
   const storageById = new Map<string, AnyRecord>((managementState.storageVolumes || []).map((storage) => [storage.id, storage]));
-  const cleanupCandidateCount = activeWorkspaces.filter((workspace) => {
+  const localCleanupCandidateCount = activeWorkspaces.filter((workspace) => {
     const storageId = String(workspace.storageId || "").trim();
     const storage = storageId ? storageById.get(storageId) : null;
     return !workspace.ownerAccountId ||
@@ -726,14 +726,17 @@ export function AdminCleanupPage({ managementState, session, runAction }: any) {
       storage.status === "destroyed" ||
       storage.billingStatus === "stopped";
   }).length;
-  const destroyedCompute = (managementState.computeAllocations || []).filter((item) => item.status === "destroyed").length;
-  const destroyedStorage = (managementState.storageVolumes || []).filter((item) => item.status === "destroyed").length;
-  const detachedAttachments = (managementState.storageAttachments || []).filter((item) => item.status === "detached").length;
+  const cleanupSummary = managementState.workspaceAccessCleanup || {};
+  const cleanupCandidateCount = Number(cleanupSummary.cleanupCandidateCount ?? localCleanupCandidateCount);
+  const activeUrlCount = Number(cleanupSummary.activeUrlCount ?? activeWorkspaces.length);
+  const destroyedCompute = Number(cleanupSummary.destroyedComputeCount ?? (managementState.computeAllocations || []).filter((item) => item.status === "destroyed").length);
+  const destroyedStorage = Number(cleanupSummary.destroyedStorageCount ?? (managementState.storageVolumes || []).filter((item) => item.status === "destroyed").length);
+  const detachedAttachments = Number(cleanupSummary.detachedAttachmentCount ?? (managementState.storageAttachments || []).filter((item) => item.status === "detached").length);
   return (
     <ConsoleSurface title="入口清理" eyebrow="管理" subtitle="清理已失效资源对应的访问 URL">
       <MetricStrip
         items={[
-          { label: "可用 URL", value: activeWorkspaces.length, caption: "候选工作区入口", tone: activeWorkspaces.length ? "warn" : "good" },
+          { label: "可用 URL", value: activeUrlCount, caption: "候选工作区入口", tone: activeUrlCount ? "warn" : "good" },
           { label: "已销毁计算", value: destroyedCompute, caption: "已停止分配", tone: destroyedCompute ? "info" : "neutral" },
           { label: "已销毁存储", value: destroyedStorage, caption: "已释放数据盘", tone: destroyedStorage ? "info" : "neutral" },
           { label: "已解除挂载", value: detachedAttachments, caption: "非活跃挂载", tone: detachedAttachments ? "info" : "neutral" }

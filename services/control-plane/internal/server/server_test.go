@@ -1113,6 +1113,29 @@ func TestManagementStateUsesRealAccountsAndLedger(t *testing.T) {
 	}
 }
 
+func TestOperatorAccountTotalsIgnoreDeletedUserWalletResiduals(t *testing.T) {
+	app := newControlPlaneApp()
+	app.mu.Lock()
+	app.users["usr-active"] = map[string]any{"id": "usr-active", "accountId": "acct-active", "status": "active", "email": "active@example.test"}
+	app.users["usr-deleted"] = map[string]any{"id": "usr-deleted", "accountId": "acct-deleted", "status": "deleted", "email": "deleted@example.test"}
+	app.wallets["acct-active"] = map[string]any{"accountId": "acct-active", "balance": 10.0, "frozen": 2.0, "totalSpent": 3.0}
+	app.wallets["acct-deleted"] = map[string]any{"accountId": "acct-deleted", "balance": 99.0, "frozen": 88.0, "totalSpent": 77.0}
+	app.wallets["acct-wallet-only"] = map[string]any{"accountId": "acct-wallet-only", "balance": 50.0, "frozen": 40.0, "totalSpent": 30.0}
+	app.mu.Unlock()
+	summary := app.operatorSummary()
+
+	accounts := summary["accounts"].(map[string]any)
+	if accounts["total"] != 2 {
+		t.Fatalf("operator account count should ignore deleted/userless wallet residuals: %#v", accounts)
+	}
+	if number(accounts["frozen"]) != 2 {
+		t.Fatalf("operator frozen total should use active backend account wallets only: %#v", accounts)
+	}
+	if number(accounts["totalSpent"]) != 3 {
+		t.Fatalf("operator spent total should use wallet totalSpent without double-counting ledger rows: %#v", accounts)
+	}
+}
+
 func TestCleanupWorkspaceAccessDisablesInvalidActiveURL(t *testing.T) {
 	app := newControlPlaneApp()
 	app.workspaces["ws-alpha"] = map[string]any{
@@ -1128,6 +1151,27 @@ func TestCleanupWorkspaceAccessDisablesInvalidActiveURL(t *testing.T) {
 	}
 	if len(result["cleaned"].([]any)) != 1 || nested(app.workspaces["ws-alpha"], "access", "tokenStatus") != "disabled" {
 		t.Fatalf("cleanup did not disable invalid URL: result=%#v workspace=%#v", result, app.workspaces["ws-alpha"])
+	}
+}
+
+func TestManagementStateIncludesBackendCleanupAndAnomalySummary(t *testing.T) {
+	app := newControlPlaneApp()
+	app.workspaces["ws-missing-storage"] = map[string]any{
+		"id":             "ws-missing-storage",
+		"ownerAccountId": "acct-alpha",
+		"storageId":      "missing-storage",
+		"access":         map[string]any{"tokenStatus": "active"},
+	}
+
+	management := app.managementState(false, nil)
+	cleanup := management["workspaceAccessCleanup"].(map[string]any)
+	if cleanup["cleanupCandidateCount"] != 1 {
+		t.Fatalf("cleanup summary should come from backend facts: %#v", cleanup)
+	}
+	operator := app.operatorSummary()
+	anomalies := operator["resourceAnomalies"].([]any)
+	if len(anomalies) != 1 || anomalies[0].(map[string]any)["status"] != "missing_storage" {
+		t.Fatalf("operator resource anomalies should include backend cleanup issues: %#v", anomalies)
 	}
 }
 

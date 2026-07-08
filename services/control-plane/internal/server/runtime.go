@@ -815,6 +815,7 @@ func (app *controlPlaneApp) managementState(includeDeleted bool, computePools []
 		"runtimeOperations":      copySlice(app.runtimeOps),
 		"auditEvents":            copySlice(app.auditEvents),
 		"billingReconciliation":  app.reconciliationProjectionLocked(),
+		"workspaceAccessCleanup": app.workspaceAccessCleanupSummaryLocked(),
 	}
 }
 
@@ -827,13 +828,13 @@ func (app *controlPlaneApp) operatorSummary() map[string]any {
 		"product":                "OPL Console",
 		"generatedAt":            time.Now().UTC().Format(time.RFC3339),
 		"accountScope":           "all",
-		"accounts":               map[string]any{"total": len(accounts), "frozen": totalAccountField(accounts, "frozen"), "balance": totalAccountField(accounts, "balance"), "totalSpent": totalDebits(app.walletTx, app.ledger)},
+		"accounts":               map[string]any{"total": len(accounts), "frozen": totalAccountField(accounts, "frozen"), "balance": totalAccountField(accounts, "balance"), "totalSpent": totalAccountField(accounts, "totalSpent")},
 		"workspaces":             map[string]any{"total": len(app.workspaces), "running": countStatus(app.workspaces, "running"), "urlActive": countActiveURLs(app.workspaces), "destroyed": countStatus(app.workspaces, "destroyed"), "needsAttention": 0},
 		"computeAllocations":     map[string]any{"total": len(app.computes), "running": running, "failed": countStatus(app.computes, "failed")},
 		"notifications":          map[string]any{"total": 0, "error": 0, "warning": 0, "recent": []any{}},
 		"runtimeOperations":      app.runtimeOperationSummaryLocked(),
 		"failedOperations":       failedRuntimeOperations(app.runtimeOps),
-		"resourceAnomalies":      []any{},
+		"resourceAnomalies":      app.resourceAnomaliesLocked(),
 		"resourceLedgerEvidence": map[string]any{"total": len(app.ledger), "recent": copySlice(app.ledger)},
 		"productionE2E":          map[string]any{},
 		"billingReconciliation":  app.reconciliationProjectionLocked(),
@@ -961,17 +962,9 @@ func failedRuntimeOperations(operations []map[string]any) []any {
 }
 
 func (app *controlPlaneApp) accountsLocked() []any {
-	accountIDs := map[string]bool{}
-	for accountID := range app.wallets {
-		accountIDs[accountID] = true
-	}
-	for _, user := range app.users {
-		if accountID := stringValue(user["accountId"]); accountID != "" {
-			accountIDs[accountID] = true
-		}
-	}
-	for _, workspace := range app.workspaces {
-		if accountID := firstNonEmpty(stringValue(workspace["ownerAccountId"]), stringValue(workspace["accountId"])); accountID != "" {
+	accountIDs := app.activeBusinessAccountIDsLocked()
+	if len(accountIDs) == 0 {
+		for accountID := range app.wallets {
 			accountIDs[accountID] = true
 		}
 	}
@@ -984,9 +977,11 @@ func (app *controlPlaneApp) accountsLocked() []any {
 	for _, accountID := range keys {
 		row := app.wallet(accountID)
 		row["totalRecharged"] = totalTopupsForAccount(app.topups, accountID)
-		row["totalSpent"] = totalDebitsForAccount(accountID, app.walletTx, app.ledger)
+		if number(row["totalSpent"]) == 0 {
+			row["totalSpent"] = totalDebitsForAccount(accountID, app.walletTx, app.ledger)
+		}
 		for _, user := range app.users {
-			if stringValue(user["accountId"]) == accountID {
+			if stringValue(user["accountId"]) == accountID && stringValue(user["status"]) != "deleted" {
 				row["userId"] = firstNonEmpty(stringValue(row["userId"]), stringValue(user["id"]))
 				row["email"] = firstNonEmpty(stringValue(row["email"]), stringValue(user["email"]))
 			}
@@ -994,6 +989,48 @@ func (app *controlPlaneApp) accountsLocked() []any {
 		rows = append(rows, row)
 	}
 	return rows
+}
+
+func (app *controlPlaneApp) activeBusinessAccountIDsLocked() map[string]bool {
+	accountIDs := map[string]bool{}
+	for _, user := range app.users {
+		if stringValue(user["status"]) != "deleted" {
+			if accountID := stringValue(user["accountId"]); accountID != "" {
+				accountIDs[accountID] = true
+			}
+		}
+	}
+	for _, compute := range app.computes {
+		if stringValue(compute["status"]) != "destroyed" {
+			if accountID := firstNonEmpty(stringValue(compute["ownerAccountId"]), stringValue(compute["accountId"])); accountID != "" {
+				accountIDs[accountID] = true
+			}
+		}
+	}
+	for _, storage := range app.storages {
+		if stringValue(storage["status"]) != "destroyed" && stringValue(storage["billingStatus"]) != "stopped" {
+			if accountID := firstNonEmpty(stringValue(storage["ownerAccountId"]), stringValue(storage["accountId"])); accountID != "" {
+				accountIDs[accountID] = true
+			}
+		}
+	}
+	for _, attachment := range app.attachments {
+		if stringValue(attachment["status"]) != "detached" {
+			if accountID := firstNonEmpty(stringValue(attachment["ownerAccountId"]), stringValue(attachment["accountId"])); accountID != "" {
+				accountIDs[accountID] = true
+			}
+		}
+	}
+	for _, workspace := range app.workspaces {
+		state := stringValue(workspace["state"])
+		if state != "destroyed" && state != "data_deleted" {
+			accountID := firstNonEmpty(stringValue(workspace["ownerAccountId"]), stringValue(workspace["accountId"]))
+			if accountID != "" {
+				accountIDs[accountID] = true
+			}
+		}
+	}
+	return accountIDs
 }
 
 func (app *controlPlaneApp) getCompute(id string) (map[string]any, bool) {
@@ -1092,6 +1129,72 @@ func (app *controlPlaneApp) workspaceCleanupReasonLocked(workspace map[string]an
 		return "attachment_unavailable"
 	}
 	return ""
+}
+
+func (app *controlPlaneApp) workspaceAccessCleanupSummaryLocked() map[string]any {
+	active := 0
+	candidates := []any{}
+	for id, workspace := range app.workspaces {
+		if nested(workspace, "access", "tokenStatus") != "active" {
+			continue
+		}
+		active++
+		if reason := app.workspaceCleanupReasonLocked(workspace); reason != "" {
+			candidates = append(candidates, map[string]any{"id": id, "workspaceId": id, "accountId": firstNonEmpty(stringValue(workspace["ownerAccountId"]), stringValue(workspace["accountId"])), "reason": reason})
+		}
+	}
+	return map[string]any{
+		"activeUrlCount":          active,
+		"cleanupCandidateCount":   len(candidates),
+		"destroyedComputeCount":   countStatus(app.computes, "destroyed"),
+		"destroyedStorageCount":   countStatus(app.storages, "destroyed"),
+		"detachedAttachmentCount": countStatus(app.attachments, "detached"),
+		"candidates":              candidates,
+	}
+}
+
+func (app *controlPlaneApp) resourceAnomaliesLocked() []any {
+	rows := []any{}
+	for _, candidate := range app.workspaceAccessCleanupSummaryLocked()["candidates"].([]any) {
+		row := cloneMap(candidate.(map[string]any))
+		row["type"] = "workspace_access"
+		row["status"] = row["reason"]
+		rows = append(rows, row)
+	}
+	for _, compute := range app.computes {
+		if stringValue(compute["status"]) == "failed" {
+			rows = append(rows, map[string]any{
+				"type":        "compute",
+				"accountId":   firstNonEmpty(stringValue(compute["ownerAccountId"]), stringValue(compute["accountId"])),
+				"workspaceId": compute["workspaceId"],
+				"resourceId":  compute["id"],
+				"status":      "failed",
+			})
+		}
+	}
+	for _, storage := range app.storages {
+		if stringValue(storage["status"]) == "failed" {
+			rows = append(rows, map[string]any{
+				"type":        "storage",
+				"accountId":   firstNonEmpty(stringValue(storage["ownerAccountId"]), stringValue(storage["accountId"])),
+				"workspaceId": storage["workspaceId"],
+				"resourceId":  storage["id"],
+				"status":      "failed",
+			})
+		}
+	}
+	for _, attachment := range app.attachments {
+		if stringValue(attachment["status"]) == "failed" {
+			rows = append(rows, map[string]any{
+				"type":        "attachment",
+				"accountId":   firstNonEmpty(stringValue(attachment["ownerAccountId"]), stringValue(attachment["accountId"])),
+				"workspaceId": attachment["workspaceId"],
+				"resourceId":  attachment["id"],
+				"status":      "failed",
+			})
+		}
+	}
+	return rows
 }
 
 func (app *controlPlaneApp) proxyWorkspace(w http.ResponseWriter, r *http.Request) {

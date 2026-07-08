@@ -37,11 +37,15 @@ func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 		t.Fatalf("decode workspace manifest: %v", err)
 	}
 	var deployment map[string]any
+	var service map[string]any
 	var secret map[string]any
 	for _, item := range manifest["items"].([]any) {
 		candidate := item.(map[string]any)
 		if candidate["kind"] == "Deployment" {
 			deployment = candidate
+		}
+		if candidate["kind"] == "Service" {
+			service = candidate
 		}
 		if candidate["kind"] == "Secret" {
 			secret = candidate
@@ -64,6 +68,13 @@ func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 	}
 	if nested(deployment, "metadata", "labels", "oplcloud.cn/resource-id") != "compute-alpha" {
 		t.Fatalf("deployment must carry OPL cost labels: %#v", nested(deployment, "metadata", "labels"))
+	}
+	selector := nested(service, "spec", "selector").(map[string]any)
+	if selector["oplcloud.cn/workspace-id"] != nil || selector["oplcloud.cn/operation-id"] != nil || selector["oplcloud.cn/resource-id"] != nil {
+		t.Fatalf("service selector must not include mutable workspace cost labels: %#v", selector)
+	}
+	if !selectorMatches(service, deployment) {
+		t.Fatalf("service selector must match deployment pod labels: selector=%#v labels=%#v", selector, nested(deployment, "spec", "template", "metadata", "labels"))
 	}
 	if podSpec["hostNetwork"] != true || podSpec["dnsPolicy"] != "ClusterFirstWithHostNet" {
 		t.Fatalf("workspace pod must use host networking on dedicated TKE nodes: %#v", podSpec)
