@@ -130,15 +130,15 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 		}
 		writeJSON(w, http.StatusOK, app.operatorSummary())
 	}))
-	mux.HandleFunc("GET /api/runtime/readiness", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /api/runtime/readiness", func(w http.ResponseWriter, r *http.Request) {
 		readiness, err := service.RuntimeReadiness(r.Context())
 		if err != nil {
 			writeUpstreamError(w)
 			return
 		}
 		writeJSON(w, http.StatusOK, readiness)
-	}))
-	mux.HandleFunc("GET /api/production/readiness", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
+	})
+	mux.HandleFunc("GET /api/production/readiness", func(w http.ResponseWriter, r *http.Request) {
 		readiness, err := service.RuntimeReadiness(r.Context())
 		if err != nil {
 			writeUpstreamError(w)
@@ -146,7 +146,7 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 		}
 		readiness["checks"] = []any{}
 		writeJSON(w, http.StatusOK, readiness)
-	}))
+	})
 	mux.HandleFunc("GET /api/overview", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"service": "control-plane", "workspaces": 0})
 	}))

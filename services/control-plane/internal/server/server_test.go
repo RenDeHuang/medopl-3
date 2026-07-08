@@ -1017,7 +1017,6 @@ func TestProtectedWriteRejectsOversizedJSONBody(t *testing.T) {
 func TestUpstreamErrorsDoNotLeakProviderDetails(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &failingFabricClient{}))
 	req := httptest.NewRequest(http.MethodGet, "/api/runtime/readiness", nil)
-	addSessionCookies(req, operatorSessionForTest(t, server))
 	rec := httptest.NewRecorder()
 
 	server.ServeHTTP(rec, req)
@@ -1027,6 +1026,30 @@ func TestUpstreamErrorsDoNotLeakProviderDetails(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), "upstream_unavailable") || strings.Contains(rec.Body.String(), "secret leaked") {
 		t.Fatalf("upstream error leaked provider details: %s", rec.Body.String())
+	}
+}
+
+func TestReadinessRoutesArePublicButAdminRoutesStayProtected(t *testing.T) {
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+
+	for _, path := range []string{"/api/runtime/readiness", "/api/production/readiness"} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		rec := httptest.NewRecorder()
+		server.ServeHTTP(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s status = %d, want 200: %s", path, rec.Code, rec.Body.String())
+		}
+		if !strings.Contains(rec.Body.String(), `"ready":true`) {
+			t.Fatalf("%s body missing readiness fact: %s", path, rec.Body.String())
+		}
+	}
+
+	adminReq := httptest.NewRequest(http.MethodGet, "/api/management/state", nil)
+	adminRec := httptest.NewRecorder()
+	server.ServeHTTP(adminRec, adminReq)
+	if adminRec.Code != http.StatusUnauthorized {
+		t.Fatalf("admin route without session status = %d, want 401: %s", adminRec.Code, adminRec.Body.String())
 	}
 }
 
