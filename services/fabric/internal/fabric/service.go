@@ -41,7 +41,8 @@ func NewServiceWithOperationStore(provider Provider, operations OperationStore) 
 	if operations == nil {
 		operations = NewMemoryOperationStore()
 	}
-	return &Service{provider: provider, computes: map[string]ComputeAllocation{}, volumes: map[string]StorageVolume{}, attachments: map[string]StorageAttachment{}, runtimes: map[string]WorkspaceRuntime{}, operations: operations}
+	computes, volumes, attachments, runtimes := replayResourceState(context.Background(), operations)
+	return &Service{provider: provider, computes: computes, volumes: volumes, attachments: attachments, runtimes: runtimes, operations: operations}
 }
 
 func (s *Service) Catalog(_ context.Context) Catalog {
@@ -62,7 +63,7 @@ func (s *Service) CreateComputeAllocation(ctx context.Context, input ComputeAllo
 	id := firstNonEmpty(input.ID, fabricID("ca", firstNonEmpty(input.WorkspaceID, input.AccountID, "compute"), now))
 	input.ID = id
 	operation := newOperation("create_compute_allocation", "compute_allocation", id, input.AccountID, input.WorkspaceID, input.IdempotencyKey, hashInput(input), now)
-	if err := s.recordOperation(ctx, operation, "started", ComputeAllocation{ID: id, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, Provider: "tencent-tke", ProviderRequestID: providerRequestID("compute", input.IdempotencyKey)}, nil); err != nil {
+	if err := s.recordOperation(ctx, operation, "started", ComputeAllocation{ID: id, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, PackageID: firstNonEmpty(input.PackageID, "basic"), Status: "provisioning", Provider: "tencent-tke", ProviderRequestID: providerRequestID("compute", input.IdempotencyKey), CreatedAt: now}, nil); err != nil {
 		return ComputeAllocation{}, err
 	}
 	allocation := ComputeAllocation{
@@ -284,6 +285,64 @@ func (s *Service) ListOperations(ctx context.Context) ([]FabricOperation, error)
 	return s.operations.List(ctx)
 }
 
+func replayResourceState(ctx context.Context, operations OperationStore) (map[string]ComputeAllocation, map[string]StorageVolume, map[string]StorageAttachment, map[string]WorkspaceRuntime) {
+	computes := map[string]ComputeAllocation{}
+	volumes := map[string]StorageVolume{}
+	attachments := map[string]StorageAttachment{}
+	runtimes := map[string]WorkspaceRuntime{}
+	records, err := operations.List(ctx)
+	if err != nil {
+		return computes, volumes, attachments, runtimes
+	}
+	for _, operation := range records {
+		switch operation.ResourceKind {
+		case "compute_allocation":
+			var resource ComputeAllocation
+			if !decodeOperationResource(operation, &resource) {
+				continue
+			}
+			if operation.Status == "started" && operation.Action != "create_compute_allocation" {
+				continue
+			}
+			if operation.Status == "failed" && !strings.HasPrefix(operation.Action, "create_") {
+				continue
+			}
+			computes[resource.ID] = resource
+		case "storage_volume":
+			var resource StorageVolume
+			if operation.Status != "succeeded" || !decodeOperationResource(operation, &resource) {
+				continue
+			}
+			volumes[resource.ID] = resource
+		case "storage_attachment":
+			var resource StorageAttachment
+			if operation.Status != "succeeded" || !decodeOperationResource(operation, &resource) {
+				continue
+			}
+			attachments[resource.ID] = resource
+		case "workspace_runtime":
+			var resource WorkspaceRuntime
+			if operation.Status != "succeeded" || !decodeOperationResource(operation, &resource) {
+				continue
+			}
+			runtimes[resource.WorkspaceID] = resource
+		}
+	}
+	return computes, volumes, attachments, runtimes
+}
+
+func decodeOperationResource(operation FabricOperation, target any) bool {
+	resource, ok := operation.RedactedProviderPayload["resource"]
+	if !ok {
+		return false
+	}
+	data, err := json.Marshal(resource)
+	if err != nil {
+		return false
+	}
+	return json.Unmarshal(data, target) == nil
+}
+
 func newOperation(action string, resourceKind string, resourceID string, accountID string, workspaceID string, idempotencyKey string, requestHash string, now time.Time) FabricOperation {
 	operationID := "op_" + action + "_" + stableSuffix(firstNonEmpty(idempotencyKey, resourceID, accountID, workspaceID, fmt.Sprintf("%d", now.UnixNano())), resourceKind, action)[:12]
 	return FabricOperation{
@@ -324,25 +383,25 @@ func fillOperationResource(operation *FabricOperation, resource any) {
 		operation.WorkspaceID = firstNonEmpty(value.WorkspaceID, operation.WorkspaceID)
 		operation.Provider = firstNonEmpty(value.Provider, operation.Provider)
 		operation.ProviderRequestID = firstNonEmpty(value.ProviderRequestID, operation.ProviderRequestID)
-		operation.RedactedProviderPayload = map[string]any{"providerResourceId": value.ProviderResourceID, "nodeName": value.NodeName, "instanceId": firstNonEmpty(value.CVMInstanceID, value.InstanceID)}
+		operation.RedactedProviderPayload = map[string]any{"resource": value, "providerResourceId": value.ProviderResourceID, "nodeName": value.NodeName, "instanceId": firstNonEmpty(value.CVMInstanceID, value.InstanceID)}
 	case StorageVolume:
 		operation.ResourceID = firstNonEmpty(value.ID, operation.ResourceID)
 		operation.AccountID = firstNonEmpty(value.AccountID, operation.AccountID)
 		operation.WorkspaceID = firstNonEmpty(value.WorkspaceID, operation.WorkspaceID)
 		operation.Provider = firstNonEmpty(value.Provider, operation.Provider)
 		operation.ProviderRequestID = firstNonEmpty(value.ProviderRequestID, operation.ProviderRequestID)
-		operation.RedactedProviderPayload = map[string]any{"providerResourceId": value.ProviderResourceID, "storageClass": value.StorageClass, "sizeGb": value.SizeGB}
+		operation.RedactedProviderPayload = map[string]any{"resource": value, "providerResourceId": value.ProviderResourceID, "storageClass": value.StorageClass, "sizeGb": value.SizeGB}
 	case StorageAttachment:
 		operation.ResourceID = firstNonEmpty(value.ID, operation.ResourceID)
 		operation.WorkspaceID = firstNonEmpty(value.WorkspaceID, operation.WorkspaceID)
 		operation.Provider = firstNonEmpty(value.Provider, operation.Provider)
 		operation.ProviderRequestID = firstNonEmpty(value.ProviderRequestID, operation.ProviderRequestID)
-		operation.RedactedProviderPayload = map[string]any{"providerAttachmentId": value.ProviderAttachmentID, "computeId": value.ComputeID, "volumeId": value.VolumeID}
+		operation.RedactedProviderPayload = map[string]any{"resource": value, "providerAttachmentId": value.ProviderAttachmentID, "computeId": value.ComputeID, "volumeId": value.VolumeID}
 	case WorkspaceRuntime:
 		operation.ResourceID = firstNonEmpty(value.WorkspaceID, operation.ResourceID)
 		operation.WorkspaceID = firstNonEmpty(value.WorkspaceID, operation.WorkspaceID)
 		operation.ProviderRequestID = firstNonEmpty(value.ProviderRequestID, operation.ProviderRequestID)
-		operation.RedactedProviderPayload = map[string]any{"serviceName": value.ServiceName, "ready": value.Ready}
+		operation.RedactedProviderPayload = map[string]any{"resource": value, "serviceName": value.ServiceName, "ready": value.Ready}
 	}
 }
 

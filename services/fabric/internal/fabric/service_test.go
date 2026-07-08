@@ -129,6 +129,45 @@ func TestResourceMutationsAppendFabricOperationFacts(t *testing.T) {
 	}
 }
 
+func TestServiceReplaysResourceStateFromOperationStore(t *testing.T) {
+	store := NewMemoryOperationStore()
+	ctx := context.Background()
+	original := NewServiceWithOperationStore(testProvider{}, store)
+
+	compute, err := original.CreateComputeAllocation(ctx, ComputeAllocationInput{AccountID: "acct-alpha", WorkspaceID: "ws-alpha", PackageID: "basic", IdempotencyKey: "replay-compute"})
+	if err != nil {
+		t.Fatalf("create compute: %v", err)
+	}
+	waitForOperation(t, original, "create_compute_allocation", "compute_allocation", compute.ID, "succeeded")
+	volume, err := original.CreateStorageVolume(ctx, StorageVolumeInput{AccountID: "acct-alpha", WorkspaceID: "ws-alpha", SizeGB: 10, IdempotencyKey: "replay-storage"})
+	if err != nil {
+		t.Fatalf("create storage: %v", err)
+	}
+
+	replayed := NewServiceWithOperationStore(testProvider{}, store)
+	current, ok := replayed.GetComputeAllocation(ctx, compute.ID)
+	if !ok || current.Status == "" || current.AccountID != "acct-alpha" {
+		t.Fatalf("replayed compute = %#v ok=%v", current, ok)
+	}
+	attachment, err := replayed.CreateStorageAttachment(ctx, StorageAttachmentInput{WorkspaceID: "ws-alpha", ComputeID: compute.ID, VolumeID: volume.ID, IdempotencyKey: "replay-attach"})
+	if err != nil {
+		t.Fatalf("attach after replay: %v", err)
+	}
+	runtime, err := replayed.CreateWorkspaceRuntime(ctx, WorkspaceRuntimeInput{WorkspaceID: "ws-alpha", ComputeID: compute.ID, VolumeID: volume.ID, ImageID: "one-person-lab-app", IdempotencyKey: "replay-runtime"})
+	if err != nil {
+		t.Fatalf("runtime after replay: %v", err)
+	}
+
+	replayedAgain := NewServiceWithOperationStore(testProvider{}, store)
+	if detached, err := replayedAgain.DetachStorageAttachment(ctx, attachment.ID); err != nil || detached.Status != "detached" {
+		t.Fatalf("detach replayed attachment = %#v err=%v", detached, err)
+	}
+	status, err := replayedAgain.WorkspaceRuntimeStatus(ctx, runtime.WorkspaceID)
+	if err != nil || status.Status != "running" {
+		t.Fatalf("replayed runtime status = %#v err=%v", status, err)
+	}
+}
+
 func waitForOperation(t *testing.T, service *Service, action string, resourceKind string, resourceID string, status string) {
 	t.Helper()
 	deadline := time.Now().Add(time.Second)
