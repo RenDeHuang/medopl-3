@@ -310,6 +310,8 @@
       "apiClient": "apps/console-ui/src/api/resources-api.ts",
       "apiRoutes": [
         "GET /api/compute-pools",
+        "GET /api/pricing/catalog",
+        "POST /api/pricing/preview",
         "POST /api/compute-allocations"
       ],
       "serviceBoundary": "ComputeAllocationService",
@@ -490,6 +492,8 @@
       "apiClient": "apps/console-ui/src/api/resources-api.ts",
       "apiRoutes": [
         "GET /api/state",
+        "GET /api/pricing/catalog",
+        "POST /api/pricing/preview",
         "POST /api/storage-volumes"
       ],
       "serviceBoundary": "ResourceProvisioningService",

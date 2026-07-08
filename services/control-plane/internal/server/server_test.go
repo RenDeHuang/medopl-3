@@ -111,6 +111,41 @@ func TestCreateWorkspaceHTTPUsesControlPlaneService(t *testing.T) {
 	}
 }
 
+func TestPricingPreviewMatchesResourceHoldAmount(t *testing.T) {
+	ledger := &capturingHoldLedgerClient{}
+	server := NewServer(controlplane.NewService(ledger, &fakeFabricClient{}))
+	session := operatorSessionForTest(t, server)
+
+	previewReq := httptest.NewRequest(http.MethodPost, "/api/pricing/preview", bytes.NewBufferString(`{"accountId":"acct-alpha","resourceType":"compute","packageId":"basic"}`))
+	addSessionCookies(previewReq, session)
+	previewReq.Header.Set("x-opl-csrf", session.Header().Get("x-opl-csrf-token"))
+	previewRec := httptest.NewRecorder()
+	server.ServeHTTP(previewRec, previewReq)
+	if previewRec.Code != http.StatusOK {
+		t.Fatalf("preview status = %d, want 200: %s", previewRec.Code, previewRec.Body.String())
+	}
+	var preview map[string]any
+	if err := json.NewDecoder(previewRec.Body).Decode(&preview); err != nil {
+		t.Fatalf("decode preview: %v", err)
+	}
+	holdAmountCents := int64(numberField(preview, "holdAmountCents", 0))
+	if holdAmountCents <= 0 || stringValue(preview["pricingVersion"]) == "" || preview["priceSnapshot"] == nil {
+		t.Fatalf("preview must return pricingVersion, priceSnapshot and holdAmountCents: %#v", preview)
+	}
+
+	createReq := httptest.NewRequest(http.MethodPost, "/api/compute-allocations", bytes.NewBufferString(`{"accountId":"acct-alpha","packageId":"basic"}`))
+	addSessionCookies(createReq, session)
+	createReq.Header.Set("x-opl-csrf", session.Header().Get("x-opl-csrf-token"))
+	createRec := httptest.NewRecorder()
+	server.ServeHTTP(createRec, createReq)
+	if createRec.Code != http.StatusAccepted {
+		t.Fatalf("create status = %d, want 202: %s", createRec.Code, createRec.Body.String())
+	}
+	if ledger.lastHold.AmountCents != holdAmountCents {
+		t.Fatalf("create hold amount = %d, want preview %d", ledger.lastHold.AmountCents, holdAmountCents)
+	}
+}
+
 func TestWorkspaceRuntimeStatusPassesFabricChecks(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	req := httptest.NewRequest(http.MethodPost, "/api/workspaces/runtime-status", bytes.NewBufferString(`{"workspaceId":"ws-alpha"}`))
@@ -310,6 +345,16 @@ type fakeLedgerClient struct{}
 type fakeLedgerClientWithKeys struct {
 	fakeLedgerClient
 	keys []string
+}
+
+type capturingHoldLedgerClient struct {
+	fakeLedgerClient
+	lastHold clients.HoldInput
+}
+
+func (f *capturingHoldLedgerClient) CreateHold(ctx context.Context, input clients.HoldInput, idempotencyKey string) (clients.HoldResult, error) {
+	f.lastHold = input
+	return f.fakeLedgerClient.CreateHold(ctx, input, idempotencyKey)
 }
 
 func (f *fakeLedgerClientWithKeys) CreateHold(ctx context.Context, input clients.HoldInput, idempotencyKey string) (clients.HoldResult, error) {

@@ -192,15 +192,17 @@ test("resource provisioning UI shows price, hold, balance impact, and operation 
   const resourceSource = await source("apps/console-ui/src/pages/resources/ResourceProvisioningPages.tsx");
   const billingSource = await source("apps/console-ui/src/pages/billing/BillingPage.tsx");
 
-  for (const requiredSignal of [
-    "computeHourlyPrice",
-    "computeHoldAmount",
-    "storageGbMonthPrice",
-    "storageHourlyEstimate",
-    "balanceAfterHold",
-    "operationId",
-    "safeMessage"
+  for (const forbiddenFormula of [
+    "function computeHourlyPrice",
+    "function computeHoldAmount",
+    "function storageGbMonthPrice",
+    "function storageHoldAmount",
+    "price?.computeHourly",
+    "price?.storageGbMonth"
   ]) {
+    assert.doesNotMatch(resourceSource, new RegExp(forbiddenFormula.replace("?", "\\?")), `resource UI must not own pricing formula ${forbiddenFormula}`);
+  }
+  for (const requiredSignal of ["pricingPreview", "holdAmountCents", "walletAfterPreview", "operationId", "safeMessage"]) {
     assert.match(resourceSource, new RegExp(requiredSignal), `resource UI must expose ${requiredSignal}`);
   }
   assert.match(resourceSource, /¥\/小时|每小时/, "compute creation must show hourly pricing before submit");

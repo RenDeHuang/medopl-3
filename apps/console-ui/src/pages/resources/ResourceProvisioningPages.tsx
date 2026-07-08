@@ -9,6 +9,7 @@ import {
   destroyStorageVolume,
   detachStorage
 } from "../../api/resources-api.ts";
+import { previewPricing } from "../../api/pricing-api.ts";
 import { navigate, routeTo } from "../../consoleRoutes.ts";
 import {
   ActionGroup,
@@ -26,7 +27,7 @@ import {
   StatusPill,
   WalletRiskPanel
 } from "../shared/commercial-console.tsx";
-import { available, money } from "../shared/formatters.ts";
+import { money, moneyCents } from "../shared/formatters.ts";
 
 type AnyRecord = Record<string, any>;
 
@@ -49,28 +50,16 @@ function selectedResource(path, items) {
   return items.find((item) => item.id === id);
 }
 
-function computeHourlyPrice(plan) {
-  return Number(plan?.price?.computeHourly || 0);
+function previewAccountId(state: AnyRecord) {
+  return state.account?.accountId || state.wallet?.accountId || state.user?.accountId || "";
 }
 
-function computeHoldAmount(plan) {
-  return computeHourlyPrice(plan) * 24 * 7;
+function previewHoldAmount(pricingPreview: AnyRecord) {
+  return Number(pricingPreview?.holdAmountCents || 0) / 100;
 }
 
-function storageGbMonthPrice(plan) {
-  return Number(plan?.price?.storageGbMonth || 0);
-}
-
-function storageHourlyEstimate(plan, sizeGb) {
-  return storageGbMonthPrice(plan) * Number(sizeGb || plan?.diskGb || 0) / 30 / 24;
-}
-
-function storageHoldAmount(plan, sizeGb) {
-  return storageHourlyEstimate(plan, sizeGb) * 24 * 7;
-}
-
-function balanceAfterHold(wallet, holdAmount) {
-  return Math.max(0, available(wallet) - Number(holdAmount || 0));
+function previewAvailableAmount(pricingPreview: AnyRecord) {
+  return Number(pricingPreview?.walletAfterPreview?.availableCents || 0) / 100;
 }
 
 function workspaceForResource(state: AnyRecord, resource: AnyRecord = {}) {
@@ -195,7 +184,26 @@ export function CreateComputeAllocationPage({ state, session, runAction }: any) 
   const [form] = Form.useForm();
   const selectedPackageId = Form.useWatch("packageId", form) || initialPackageId;
   const selectedPlan = availablePackages.find((plan) => plan.id === selectedPackageId) || availablePackages[0];
-  const selectedComputeHold = computeHoldAmount(selectedPlan);
+  const [pricingPreview, setPricingPreview] = React.useState<AnyRecord | null>(null);
+  React.useEffect(() => {
+    let active = true;
+    setPricingPreview(null);
+    if (!selectedPackageId) return () => { active = false; };
+    previewPricing({
+      accountId: previewAccountId(state),
+      resourceType: "compute",
+      packageId: selectedPackageId
+    }, session.csrfToken)
+      .then((payload) => {
+        if (active) setPricingPreview(payload);
+      })
+      .catch((error) => {
+        if (active) setPricingPreview({ safeMessage: error.message, holdAmountCents: 0, walletAfterPreview: {} });
+      });
+    return () => { active = false; };
+  }, [selectedPackageId, session.csrfToken, state]);
+  const selectedComputeHold = previewHoldAmount(pricingPreview || {});
+  const walletAfterPreview = pricingPreview?.walletAfterPreview || {};
   return (
     <ConsoleSurface title="开通计算资源" eyebrow="资源" subtitle="选择规格后提交开通" compact>
       <InsightPanel title="开通计算" eyebrow="计算">
@@ -227,17 +235,17 @@ export function CreateComputeAllocationPage({ state, session, runAction }: any) 
           <ResourceSplit
             items={availablePackages.map((plan) => ({
               label: plan.name,
-              value: `${money(computeHourlyPrice(plan))}/小时`,
-              meta: `${plan.server} · ${plan.cpu} CPU / ${plan.memoryGb}GB · 冻结 ${money(computeHoldAmount(plan))}`,
+              value: `${plan.server} · ${plan.cpu} CPU / ${plan.memoryGb}GB`,
+              meta: plan.id === selectedPackageId ? `后端预览冻结 ${moneyCents(pricingPreview?.holdAmountCents)}` : "选择后返回价格预览",
               status: "可用",
               tone: "good"
             }))}
           />
           <PriceImpactPanel
             items={[
-              { label: "每小时价格", value: `${money(computeHourlyPrice(selectedPlan))}/小时`, meta: selectedPlan?.server || "-", status: "计费", tone: "info" },
-              { label: "预冻结", value: money(selectedComputeHold), meta: "7 天", status: "冻结", tone: "warn" },
-              { label: "冻结后可用", value: money(balanceAfterHold(state.wallet, selectedComputeHold)), meta: "可用余额", status: "余额", tone: balanceAfterHold(state.wallet, selectedComputeHold) > 0 ? "good" : "warn" },
+              { label: "每小时价格", value: `${money(pricingPreview?.unitPrice)}/小时`, meta: selectedPlan?.server || "-", status: "计费", tone: "info" },
+              { label: "预冻结", value: moneyCents(pricingPreview?.holdAmountCents), meta: `${pricingPreview?.holdDays || 7} 天`, status: "冻结", tone: "warn" },
+              { label: "冻结后可用", value: money(previewAvailableAmount(pricingPreview || {})), meta: walletAfterPreview.currency || "CNY", status: "余额", tone: previewAvailableAmount(pricingPreview || {}) > 0 ? "good" : "warn" },
               { label: "预计等待", value: "3-5 分钟", meta: "扩容节点并部署 Runtime", status: "冷启动", tone: "info" }
             ]}
           />
@@ -247,10 +255,10 @@ export function CreateComputeAllocationPage({ state, session, runAction }: any) 
             <OperationConfirmButton
               label="开通计算"
               title="确认开通计算资源"
-              description={`将按 ${money(computeHourlyPrice(selectedPlan))}/小时计费，并预冻结 ${money(selectedComputeHold)}。`}
+              description={`将按 ${money(pricingPreview?.unitPrice)}/小时计费，并预冻结 ${moneyCents(pricingPreview?.holdAmountCents)}。`}
               type="primary"
               icon={<Server size={15} />}
-              disabled={!availablePackages.length}
+              disabled={!availablePackages.length || !pricingPreview || Boolean(pricingPreview.safeMessage)}
               loading={operationPending}
               onConfirm={() => form.submit()}
             />
@@ -351,7 +359,27 @@ export function CreateStorageVolumePage({ state, session, runAction }: any) {
   const selectedPackageId = Form.useWatch("packageId", form) || initialPackageId;
   const selectedSizeGb = Form.useWatch("sizeGb", form) || availablePackages[0]?.diskGb || 10;
   const selectedPlan = availablePackages.find((plan) => plan.id === selectedPackageId) || availablePackages[0];
-  const selectedStorageHold = storageHoldAmount(selectedPlan, selectedSizeGb);
+  const [pricingPreview, setPricingPreview] = React.useState<AnyRecord | null>(null);
+  React.useEffect(() => {
+    let active = true;
+    setPricingPreview(null);
+    if (!selectedPackageId) return () => { active = false; };
+    previewPricing({
+      accountId: previewAccountId(state),
+      resourceType: "storage",
+      packageId: selectedPackageId,
+      sizeGb: selectedSizeGb
+    }, session.csrfToken)
+      .then((payload) => {
+        if (active) setPricingPreview(payload);
+      })
+      .catch((error) => {
+        if (active) setPricingPreview({ safeMessage: error.message, holdAmountCents: 0, walletAfterPreview: {} });
+      });
+    return () => { active = false; };
+  }, [selectedPackageId, selectedSizeGb, session.csrfToken, state]);
+  const selectedStorageHold = previewHoldAmount(pricingPreview || {});
+  const walletAfterPreview = pricingPreview?.walletAfterPreview || {};
   return (
     <ConsoleSurface title="开通存储资源" eyebrow="资源" subtitle="创建可独立保留的数据盘" compact>
       <InsightPanel title="开通存储" eyebrow="存储">
@@ -384,10 +412,10 @@ export function CreateStorageVolumePage({ state, session, runAction }: any) {
           </Form.Item>
           <PriceImpactPanel
             items={[
-              { label: "存储单价", value: `${money(storageGbMonthPrice(selectedPlan))}/GB月`, meta: "按容量计费", status: "计费", tone: "info" },
-              { label: "每小时估算", value: `${money(storageHourlyEstimate(selectedPlan, selectedSizeGb))}/小时`, meta: "当前容量", status: `${selectedSizeGb}GB`, tone: "info" },
-              { label: "预冻结", value: money(selectedStorageHold), meta: "7 天", status: "冻结", tone: "warn" },
-              { label: "冻结后可用", value: money(balanceAfterHold(state.wallet, selectedStorageHold)), meta: "可用余额", status: "余额", tone: balanceAfterHold(state.wallet, selectedStorageHold) > 0 ? "good" : "warn" }
+              { label: "存储单价", value: `${money(pricingPreview?.unitPrice)}/GB月`, meta: "后端价格单", status: "计费", tone: "info" },
+              { label: "容量", value: `${selectedSizeGb}GB`, meta: selectedPlan?.name || selectedPackageId, status: "当前容量", tone: "info" },
+              { label: "预冻结", value: moneyCents(pricingPreview?.holdAmountCents), meta: `${pricingPreview?.holdDays || 7} 天`, status: "冻结", tone: "warn" },
+              { label: "冻结后可用", value: money(previewAvailableAmount(pricingPreview || {})), meta: walletAfterPreview.currency || "CNY", status: "余额", tone: previewAvailableAmount(pricingPreview || {}) > 0 ? "good" : "warn" }
             ]}
           />
           <WalletRiskPanel wallet={state.wallet} requiredHold={selectedStorageHold} resourceLabel="存储资源" />
@@ -398,10 +426,10 @@ export function CreateStorageVolumePage({ state, session, runAction }: any) {
             <OperationConfirmButton
               label="开通存储"
               title="确认开通存储资源"
-              description={`将按容量计费，并预冻结 ${money(selectedStorageHold)}。`}
+              description={`将按容量计费，并预冻结 ${moneyCents(pricingPreview?.holdAmountCents)}。`}
               type="primary"
               icon={<Database size={15} />}
-              disabled={!availablePackages.length}
+              disabled={!availablePackages.length || !pricingPreview || Boolean(pricingPreview.safeMessage)}
               loading={operationPending}
               onConfirm={() => form.submit()}
             />

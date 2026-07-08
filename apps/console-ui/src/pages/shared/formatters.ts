@@ -2,10 +2,8 @@ export function money(value) {
   return `¥${Number(value || 0).toFixed(2)}`;
 }
 
-export function planHold(plan) {
-  if (!plan) return 0;
-  return Number(plan.price?.computeHourly || 0) * 24 * 7
-    + Number(plan.price?.storageGbMonth || 0) * Number(plan.diskGb || 0) / 30 * 7;
+export function moneyCents(value) {
+  return money(Number(value || 0) / 100);
 }
 
 export function available(wallet) {
