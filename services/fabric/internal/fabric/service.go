@@ -13,8 +13,10 @@ import (
 
 type Provider interface {
 	CreateComputeAllocation(ctx context.Context, input ComputeAllocationInput) (ComputeAllocation, error)
+	SyncComputeAllocation(ctx context.Context, allocation ComputeAllocation) (ComputeAllocation, error)
 	DestroyComputeAllocation(ctx context.Context, allocation ComputeAllocation) (ComputeAllocation, error)
 	CreateStorageVolume(ctx context.Context, input StorageVolumeInput) (StorageVolume, error)
+	SyncStorageVolume(ctx context.Context, volume StorageVolume) (StorageVolume, error)
 	DestroyStorageVolume(ctx context.Context, volume StorageVolume) (StorageVolume, error)
 	CreateStorageAttachment(ctx context.Context, input StorageAttachmentInput, compute ComputeAllocation, volume StorageVolume) (StorageAttachment, error)
 	DetachStorageAttachment(ctx context.Context, attachment StorageAttachment) (StorageAttachment, error)
@@ -92,6 +94,50 @@ func (s *Service) GetComputeAllocation(_ context.Context, allocationID string) (
 	defer s.mu.Unlock()
 	allocation, ok := s.computes[allocationID]
 	return allocation, ok
+}
+
+func (s *Service) SyncComputeAllocation(ctx context.Context, allocationID string) (ComputeAllocation, error) {
+	s.mu.Lock()
+	existing := s.computes[allocationID]
+	s.mu.Unlock()
+	if existing.ID == "" {
+		operation := newOperation("sync_compute_allocation", "compute_allocation", allocationID, "", "", "", hashInput(map[string]string{"id": allocationID}), time.Now().UTC())
+		operation.ProviderRequestID = providerRequestID("sync-compute", allocationID)
+		err := fmt.Errorf("compute_allocation_not_found")
+		_ = s.recordOperation(ctx, operation, "rejected", ComputeAllocation{ID: allocationID}, err)
+		return ComputeAllocation{}, err
+	}
+	operation := newOperation("sync_compute_allocation", "compute_allocation", allocationID, existing.AccountID, existing.WorkspaceID, "", hashInput(existing), time.Now().UTC())
+	if err := s.recordOperation(ctx, operation, "started", existing, nil); err != nil {
+		return ComputeAllocation{}, err
+	}
+	allocation, err := s.provider.SyncComputeAllocation(ctx, existing)
+	if err != nil {
+		_ = s.recordOperation(ctx, operation, "failed", allocation, err)
+		return allocation, err
+	}
+	if allocation.ID == "" {
+		allocation.ID = existing.ID
+	}
+	if allocation.AccountID == "" {
+		allocation.AccountID = existing.AccountID
+	}
+	if allocation.WorkspaceID == "" {
+		allocation.WorkspaceID = existing.WorkspaceID
+	}
+	if allocation.PackageID == "" {
+		allocation.PackageID = existing.PackageID
+	}
+	if allocation.Provider == "" {
+		allocation.Provider = firstNonEmpty(existing.Provider, "tencent-tke")
+	}
+	if err := s.recordOperation(ctx, operation, "succeeded", allocation, nil); err != nil {
+		return allocation, err
+	}
+	s.mu.Lock()
+	s.computes[allocationID] = allocation
+	s.mu.Unlock()
+	return allocation, nil
 }
 
 func (s *Service) finishComputeAllocation(input ComputeAllocationInput, id string, pending ComputeAllocation, operation FabricOperation) {
@@ -190,6 +236,47 @@ func (s *Service) DestroyStorageVolume(ctx context.Context, volumeID string) (St
 	if err != nil {
 		_ = s.recordOperation(ctx, operation, "failed", volume, err)
 		return volume, err
+	}
+	if err := s.recordOperation(ctx, operation, "succeeded", volume, nil); err != nil {
+		return volume, err
+	}
+	s.mu.Lock()
+	s.volumes[volumeID] = volume
+	s.mu.Unlock()
+	return volume, nil
+}
+
+func (s *Service) SyncStorageVolume(ctx context.Context, volumeID string) (StorageVolume, error) {
+	s.mu.Lock()
+	existing := s.volumes[volumeID]
+	s.mu.Unlock()
+	if existing.ID == "" {
+		operation := newOperation("sync_storage_volume", "storage_volume", volumeID, "", "", "", hashInput(map[string]string{"id": volumeID}), time.Now().UTC())
+		operation.ProviderRequestID = providerRequestID("sync-storage", volumeID)
+		err := fmt.Errorf("storage_volume_not_found")
+		_ = s.recordOperation(ctx, operation, "rejected", StorageVolume{ID: volumeID}, err)
+		return StorageVolume{}, err
+	}
+	operation := newOperation("sync_storage_volume", "storage_volume", volumeID, existing.AccountID, existing.WorkspaceID, "", hashInput(existing), time.Now().UTC())
+	if err := s.recordOperation(ctx, operation, "started", existing, nil); err != nil {
+		return StorageVolume{}, err
+	}
+	volume, err := s.provider.SyncStorageVolume(ctx, existing)
+	if err != nil {
+		_ = s.recordOperation(ctx, operation, "failed", volume, err)
+		return volume, err
+	}
+	if volume.ID == "" {
+		volume.ID = existing.ID
+	}
+	if volume.AccountID == "" {
+		volume.AccountID = existing.AccountID
+	}
+	if volume.WorkspaceID == "" {
+		volume.WorkspaceID = existing.WorkspaceID
+	}
+	if volume.Provider == "" {
+		volume.Provider = firstNonEmpty(existing.Provider, "tencent-tke")
 	}
 	if err := s.recordOperation(ctx, operation, "succeeded", volume, nil); err != nil {
 		return volume, err

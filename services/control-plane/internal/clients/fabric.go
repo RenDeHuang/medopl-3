@@ -13,8 +13,10 @@ type FabricClient interface {
 	Catalog(ctx context.Context) (FabricCatalog, error)
 	CreateComputeAllocation(ctx context.Context, input ComputeAllocationInput, idempotencyKey string) (ComputeAllocation, error)
 	GetComputeAllocation(ctx context.Context, id string) (ComputeAllocation, error)
+	SyncComputeAllocation(ctx context.Context, id string) (ComputeAllocation, error)
 	DestroyComputeAllocation(ctx context.Context, id string, idempotencyKey string) (ComputeAllocation, error)
 	CreateStorageVolume(ctx context.Context, input StorageVolumeInput, idempotencyKey string) (StorageVolume, error)
+	SyncStorageVolume(ctx context.Context, id string) (StorageVolume, error)
 	DestroyStorageVolume(ctx context.Context, id string, idempotencyKey string) (StorageVolume, error)
 	CreateStorageAttachment(ctx context.Context, input StorageAttachmentInput, idempotencyKey string) (StorageAttachment, error)
 	DetachStorageAttachment(ctx context.Context, id string, idempotencyKey string) (StorageAttachment, error)
@@ -209,6 +211,12 @@ func (c *fabricHTTPClient) GetComputeAllocation(ctx context.Context, id string) 
 	return result, err
 }
 
+func (c *fabricHTTPClient) SyncComputeAllocation(ctx context.Context, id string) (ComputeAllocation, error) {
+	var result ComputeAllocation
+	err := c.post(ctx, "/fabric/compute-allocations/"+id+"/sync", map[string]string{}, "", &result)
+	return result, err
+}
+
 func (c *fabricHTTPClient) DestroyComputeAllocation(ctx context.Context, id string, idempotencyKey string) (ComputeAllocation, error) {
 	var result ComputeAllocation
 	err := c.post(ctx, "/fabric/compute-allocations/"+id+"/destroy", map[string]string{}, idempotencyKey, &result)
@@ -218,6 +226,12 @@ func (c *fabricHTTPClient) DestroyComputeAllocation(ctx context.Context, id stri
 func (c *fabricHTTPClient) CreateStorageVolume(ctx context.Context, input StorageVolumeInput, idempotencyKey string) (StorageVolume, error) {
 	var result StorageVolume
 	err := c.post(ctx, "/fabric/storage-volumes", input, idempotencyKey, &result)
+	return result, err
+}
+
+func (c *fabricHTTPClient) SyncStorageVolume(ctx context.Context, id string) (StorageVolume, error) {
+	var result StorageVolume
+	err := c.post(ctx, "/fabric/storage-volumes/"+id+"/sync", map[string]string{}, "", &result)
 	return result, err
 }
 

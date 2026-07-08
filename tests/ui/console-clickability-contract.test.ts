@@ -58,6 +58,7 @@ test("workspace and support click targets are route/action registry backed", () 
     "workspace.detail",
     "workspace.openUrl",
     "workspace.resetUrl",
+    "workspace.enableUrl",
     "workspace.deleteUrl",
     "billing.wallet",
     "support.create",

@@ -117,8 +117,12 @@ test("create Workspace flow is a single commercial submit action", async () => {
   assert.doesNotMatch(createSource, /StepsForm/, "create flow must not hide provisioning behind a multi-step wizard");
   assert.match(createSource, /htmlType="submit"/, "create flow must expose one clear submit button");
   assert.match(createSource, /attachmentId/, "Workspace runtime binding must start from an attached compute/storage pair");
-  assert.match(createSource, /const created = await runAction/, "create flow must inspect action success before navigating");
-  assert.match(createSource, /if \(created\) navigate/, "create flow must not navigate away after failed provisioning");
+  assert.match(createSource, /const created = await runAction/, "create flow must inspect action success before showing the receipt");
+  assert.match(createSource, /OperationResultPanel/, "create flow must show a submit receipt instead of silently leaving the page");
+  assert.match(createSource, /operationResult/, "create flow must keep visible operation state");
+  assert.match(createSource, /工作空间创建请求已提交/, "create flow must tell users the request was submitted");
+  assert.match(createSource, /正在分发 Docker/, "create flow must explain cold-start URL availability");
+  assert.doesNotMatch(createSource, /if \(created\) navigate/, "create flow must not auto-navigate before the user sees provisioning feedback");
   assert.match(stateSource, /return result \|\| true/, "runAction must return successful action payloads");
   assert.match(stateSource, /return false/, "runAction must report failed actions");
 });
@@ -175,17 +179,41 @@ test("create forms do not prefill demo-style resource names", async () => {
   }
 });
 
-test("resource provisioning failures preserve provider details in the visible result", async () => {
+test("resource provisioning failures preserve customer-safe provider details in the visible result", async () => {
   const stateSource = await source("apps/console-ui/src/store/console-state.ts");
   const apiSource = await source("apps/console-ui/src/api/console-api.ts");
   const resourceSource = await source("apps/console-ui/src/pages/resources/ResourceProvisioningPages.tsx");
+  const surfaceSource = await source("apps/console-ui/src/pages/shared/commercial-console.tsx");
 
-  assert.match(apiSource, /payload\.safeMessage \|\| payload\.error/, "API client must prefer safe provider messages");
+  assert.match(apiSource, /customerSafeMessage/, "API client must normalize raw upstream failures");
+  assert.match(apiSource, /正在分发 Docker，预计 3-5 分钟/, "API client must show a customer-safe Docker distribution message");
   assert.match(stateSource, /returnFailure = false/, "runAction must keep false-return behavior by default");
   assert.match(stateSource, /await refresh\(\)/, "failed resource mutations must refresh state so failed resources stay visible");
   assert.match(stateSource, /failureReason: err\.message/, "runAction must expose caught provider errors to operation panels");
   assert.match(resourceSource, /returnFailure: true/g, "resource mutations must opt into visible failure envelopes");
+  assert.match(surfaceSource, /customerSafeMessage/, "visible operation panels must sanitize backend failures");
   assert.doesNotMatch(resourceSource, /failureReason: "操作失败，请查看提示后重试。"/, "resource pages must not replace provider failures with generic copy");
+});
+
+test("owner overview answers resource counts and URL cold-start state", async () => {
+  const overviewSource = await source("apps/console-ui/src/pages/OverviewPage.tsx");
+  const workspaceListSource = await source("apps/console-ui/src/pages/workspaces/WorkspacesPage.tsx");
+  const workspaceDetailSource = await source("apps/console-ui/src/pages/workspaces/WorkspaceDetailPage.tsx");
+  const formatterSource = await source("apps/console-ui/src/pages/shared/formatters.ts");
+
+  for (const signal of ["计算节点", "云硬盘", "工作空间", "computeCount", "storageCount", "activeWorkspaceCount"]) {
+    assert.match(overviewSource, new RegExp(signal), `overview must show ${signal}`);
+  }
+  assert.doesNotMatch(overviewSource, /我的计算资源|我的云硬盘|resourceInventoryGrid/, "overview must not promote compute/storage inventory as primary content");
+  assert.match(overviewSource, /routeTo\("workspace\.detail"/, "overview workspace inventory must link to workspace details");
+  for (const signal of ["资源管理", "computeResources", "storageResources", "activeAttachments", "routeTo\\(\"compute-allocations\\.list\"", "routeTo\\(\"storage\\.list\"", "routeTo\\(\"attachment\\.list\""]) {
+    assert.match(workspaceListSource, new RegExp(signal), `Workspace page must expose second-level resource management ${signal}`);
+  }
+  assert.match(`${overviewSource}\n${workspaceListSource}\n${workspaceDetailSource}`, /分发中/, "Workspace URL buttons must show distribution state while unavailable");
+  assert.match(workspaceDetailSource, /正在分发 Docker/, "Workspace detail must explain URL cold start");
+  assert.match(formatterSource, /upstream_unavailable/, "formatters must catch raw upstream error names");
+  assert.match(formatterSource, /workspaceOpenActionLabel[\s\S]*已停用/, "Workspace URL action must distinguish disabled access from Docker distribution");
+  assert.doesNotMatch(`${overviewSource}\n${workspaceListSource}\n${workspaceDetailSource}`, /\{"error":"upstream_unavailable"\}/, "owner screens must not hard-code raw upstream errors");
 });
 
 test("resource provisioning UI shows price, hold, balance impact, and operation state", async () => {
@@ -395,6 +423,8 @@ test("Owner Billing and Workspace pages use production-safe customer copy", asyn
   assert.doesNotMatch(listSource, /title: "归属"|dataIndex: "ownerAccountId"|title: "密码"[\s\S]*credentialCell/, "Workspace list must not expose account ids or plaintext passwords");
   assert.match(detailSource, /showPassword|显示密码|隐藏密码/, "Workspace detail must hide the Workspace password by default with a reveal control");
   assert.match(detailSource, /停用访问|访问已停用/, "Workspace detail must label token removal as access disablement, not Workspace deletion");
+  assert.match(detailSource, /启用访问|访问已启用/, "Workspace detail must let owners re-enable access after it was disabled");
+  assert.match(detailSource, /重置 URL/, "Workspace detail must label token rotation as URL reset");
   assert.match(detailSource, /提交工单/, "Workspace detail must offer a support path");
   assert.match(detailSource, /tokenStatus/, "Workspace detail must show token lifecycle status");
 });

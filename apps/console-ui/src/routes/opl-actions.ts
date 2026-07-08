@@ -50,6 +50,20 @@ export const consoleActions = Object.freeze([
     failureVisible: true
   },
   {
+    id: "workspace.enableUrl",
+    label: "启用工作区入口",
+    type: "api",
+    role: "lab_owner",
+    objectKind: "Workspace",
+    apiClient: "apps/console-ui/src/api/workspaces-api.ts",
+    apiName: "resetWorkspaceToken",
+    requires: ["workspace.url.disabled"],
+    mutation: true,
+    confirmation: "normal",
+    operationTimeline: true,
+    failureVisible: true
+  },
+  {
     id: "workspace.deleteUrl",
     label: "停用工作区入口",
     type: "api",
@@ -85,6 +99,20 @@ export const consoleActions = Object.freeze([
     routeId: "compute-allocations.detail"
   },
   {
+    id: "compute-allocations.sync",
+    label: "同步云端状态",
+    type: "api",
+    role: "lab_owner",
+    objectKind: "ComputeAllocation",
+    apiClient: "apps/console-ui/src/api/resources-api.ts",
+    apiName: "syncComputeAllocation",
+    mutation: true,
+    destructive: false,
+    confirmation: "none",
+    operationTimeline: true,
+    failureVisible: true
+  },
+  {
     id: "compute-allocations.destroy",
     label: "销毁计算资源",
     type: "api",
@@ -118,6 +146,20 @@ export const consoleActions = Object.freeze([
     role: "lab_owner",
     objectKind: "StorageVolume",
     routeId: "storage.detail"
+  },
+  {
+    id: "storage.sync",
+    label: "同步云端状态",
+    type: "api",
+    role: "lab_owner",
+    objectKind: "StorageVolume",
+    apiClient: "apps/console-ui/src/api/resources-api.ts",
+    apiName: "syncStorageVolume",
+    mutation: true,
+    destructive: false,
+    confirmation: "none",
+    operationTimeline: true,
+    failureVisible: true
   },
   {
     id: "storage.destroy",

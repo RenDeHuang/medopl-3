@@ -1,6 +1,14 @@
 type JsonRecord = Record<string, any>;
 type ApiError = Error & { payload?: JsonRecord };
 
+export function customerSafeMessage(payload: JsonRecord = {}, fallback = "request_failed") {
+  const raw = String(payload.safeMessage || payload.error || fallback);
+  if (/upstream_unavailable|bad gateway|workspace_url_failed|workspace_runtime_not_ready|workspace_url_not_ready|502|503/i.test(raw)) {
+    return "正在分发 Docker，预计 3-5 分钟，请稍后再打开 URL。";
+  }
+  return raw;
+}
+
 export async function postJson(path: string, body: JsonRecord = {}, csrfToken = "") {
   const headers: Record<string, string> = {
     "content-type": "application/json"
@@ -13,7 +21,7 @@ export async function postJson(path: string, body: JsonRecord = {}, csrfToken = 
   });
   const payload = await response.json();
   if (!response.ok || payload.ok === false) {
-    const error: ApiError = new Error(payload.safeMessage || payload.error || "request_failed");
+    const error: ApiError = new Error(customerSafeMessage(payload));
     error.payload = payload;
     throw error;
   }
@@ -24,7 +32,9 @@ export const api = postJson;
 
 export function operationEnvelope(payload: JsonRecord = {}, defaults: JsonRecord = {}) {
   const resourceId = payload?.id || payload?.workspaceId || payload?.resourceId || defaults.resourceId || "";
-  const failureReason = payload?.safeMessage || payload?.failureReason || payload?.error || "";
+  const failureReason = payload?.safeMessage || payload?.failureReason || payload?.error
+    ? customerSafeMessage(payload)
+    : "";
   return {
     ok: !failureReason,
     status: failureReason ? "failed" : defaults.status || payload?.operationStatus || "completed",
@@ -46,7 +56,7 @@ export async function getJson(path: string) {
   const response = await fetch(path);
   const payload = await response.json();
   if (!response.ok || payload.ok === false) {
-    const error: ApiError = new Error(payload.safeMessage || payload.error || "request_failed");
+    const error: ApiError = new Error(customerSafeMessage(payload));
     error.payload = payload;
     throw error;
   }

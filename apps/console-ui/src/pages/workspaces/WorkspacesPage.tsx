@@ -1,6 +1,6 @@
 import React from "react";
 import { Button, Empty, Typography } from "antd";
-import { Link as LinkIcon, Plus, Settings2, WalletCards } from "lucide-react";
+import { Cable, HardDrive, Link as LinkIcon, Plus, Server, Settings2, WalletCards } from "lucide-react";
 import { navigate, routeTo } from "../../consoleRoutes.ts";
 import {
   ActionGroup,
@@ -8,9 +8,10 @@ import {
   InsightPanel,
   MetricStrip,
   ObjectTable,
+  ResourceSplit,
   StatusPill
 } from "../shared/commercial-console.tsx";
-import { available, money, statusColor, statusLabel } from "../shared/formatters.ts";
+import { available, money, statusColor, statusLabel, workspaceAccessLabel, workspaceAccessTone, workspaceOpenActionLabel, workspaceUrlReady } from "../shared/formatters.ts";
 
 type AnyRecord = Record<string, any>;
 
@@ -37,6 +38,10 @@ export function WorkspacesPage({ state, wallet }: any) {
   const billingSummary = state.billingSummary || {};
   const billedTotal = Number(billingSummary.recentResourceDebitTotal || 0);
   const hourlyTotal = Number(billingSummary.activeHourlyEstimate || 0);
+  const computeResources = (state.computeAllocations || []).filter((item) => item.status !== "destroyed");
+  const storageResources = (state.storageVolumes || []).filter((item) => item.status !== "destroyed");
+  const attachments = state.storageAttachments || [];
+  const activeAttachments = attachments.filter((item) => item.status === "attached");
 
   return (
     <ConsoleSurface
@@ -55,6 +60,25 @@ export function WorkspacesPage({ state, wallet }: any) {
         ]}
       />
 
+      <InsightPanel title="资源管理" eyebrow="工作区下的计算、存储、挂载">
+        <ResourceSplit
+          items={[
+            { label: "计算资源", value: `${computeResources.length} 个`, meta: "开通和查看计算节点", status: computeResources.length ? "可查看" : "未开通", tone: computeResources.length ? "info" : "neutral" },
+            { label: "云硬盘", value: `${storageResources.length} 个`, meta: "开通和查看数据盘", status: storageResources.length ? "可查看" : "未开通", tone: storageResources.length ? "info" : "neutral" },
+            { label: "挂载关系", value: `${activeAttachments.length} 个`, meta: "存储挂到计算后才能创建入口", status: activeAttachments.length ? "已挂载" : "待挂载", tone: activeAttachments.length ? "good" : "warn" },
+            { label: "资源关系", value: "链路图", meta: "账号、计算、存储、挂载、工作区", status: "可查看", tone: "info" }
+          ]}
+        />
+        <ActionGroup
+          actions={[
+            { label: "计算资源", icon: <Server size={15} />, onClick: () => navigate(routeTo("compute-allocations.list")) },
+            { label: "云硬盘", icon: <HardDrive size={15} />, onClick: () => navigate(routeTo("storage.list")) },
+            { label: "挂载关系", icon: <Cable size={15} />, onClick: () => navigate(routeTo("attachment.list")) },
+            { label: "资源关系", icon: <Settings2 size={15} />, onClick: () => navigate(routeTo("resources.relationships")) }
+          ]}
+        />
+      </InsightPanel>
+
       <InsightPanel title="工作区列表" eyebrow="访问入口、状态、费用">
         <div className="mobileWorkspaceList">
           {state.workspaces.length ? state.workspaces.map((workspace) => {
@@ -70,11 +94,11 @@ export function WorkspacesPage({ state, wallet }: any) {
                   <span>计算 <b>{workspace.currentComputeAllocationId || "-"}</b></span>
                   <span>存储 <b>{workspace.storageId || "-"}</b></span>
                   <span>账号 <b>{workspaceCredential(workspace).account}</b></span>
-                  <span>状态 <b>{workspace.access?.tokenStatus === "active" ? "可用" : "未启用"}</b></span>
+                  <span>访问入口 <b>{workspaceAccessLabel(workspace)}</b></span>
                 </div>
                 <ActionGroup
                   actions={[
-                    { label: "打开", icon: <LinkIcon size={14} />, disabled: workspace.access?.tokenStatus !== "active", onClick: () => window.open(workspace.url, "_blank", "noopener,noreferrer") },
+                    { label: workspaceOpenActionLabel(workspace), icon: <LinkIcon size={14} />, disabled: !workspaceUrlReady(workspace), onClick: () => window.open(workspace.url, "_blank", "noopener,noreferrer") },
                     { label: "详情", icon: <Settings2 size={14} />, onClick: () => navigate(routeTo("workspace.detail", { id: workspace.id })) }
                   ]}
                 />
@@ -130,7 +154,7 @@ export function WorkspacesPage({ state, wallet }: any) {
             {
               title: "访问入口",
               width: 125,
-              render: (_, row) => <StatusPill label={row.access?.tokenStatus === "active" ? "可用" : "未启用"} tone={row.access?.tokenStatus === "active" ? "good" : "warn"} />
+              render: (_, row) => <StatusPill label={workspaceAccessLabel(row)} tone={workspaceAccessTone(row)} />
             },
             {
               title: "账号",
@@ -144,7 +168,7 @@ export function WorkspacesPage({ state, wallet }: any) {
               render: (_, row) => (
                 <ActionGroup
                   actions={[
-                    { label: "打开", icon: <LinkIcon size={14} />, disabled: row.access?.tokenStatus !== "active", onClick: () => window.open(row.url, "_blank", "noopener,noreferrer") },
+                    { label: workspaceOpenActionLabel(row), icon: <LinkIcon size={14} />, disabled: !workspaceUrlReady(row), onClick: () => window.open(row.url, "_blank", "noopener,noreferrer") },
                     { label: "详情", icon: <Settings2 size={14} />, onClick: () => navigate(routeTo("workspace.detail", { id: row.id })) }
                   ]}
                 />

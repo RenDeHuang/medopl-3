@@ -12,6 +12,7 @@ import {
   StatusPill,
   TimelineList
 } from "../shared/commercial-console.tsx";
+import { customerSafeMessage } from "../shared/formatters.ts";
 
 export function SupportPage({ tickets }: any) {
   const openTickets = tickets.tickets.filter((ticket) => ticket.status !== "closed");
@@ -57,7 +58,7 @@ export function NewSupportMappingPage({ state, tickets }: any) {
   const query = new URLSearchParams(window.location.search);
   const resourceId = query.get("resourceId") || "";
   const operationId = query.get("operationId") || "";
-  const failureReason = query.get("failureReason") || "";
+  const failureReason = customerSafeMessage(query.get("failureReason") || "", "");
   const resourceType = query.get("resourceType") || "";
   const initialDescription = [
     failureReason,

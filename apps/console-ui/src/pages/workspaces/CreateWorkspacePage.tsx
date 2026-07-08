@@ -3,7 +3,7 @@ import { Alert, Button, Form, Input, Select } from "antd";
 import { Cable, HardDrive, Link as LinkIcon, Plus, Server } from "lucide-react";
 import { createWorkspace } from "../../api/workspaces-api.ts";
 import { navigate, routeTo } from "../../consoleRoutes.ts";
-import { ActionGroup, ConsoleSurface, InsightPanel, OperationTimeline, ResourceSplit, StatusPill } from "../shared/commercial-console.tsx";
+import { ActionGroup, ConsoleSurface, InsightPanel, OperationResultPanel, OperationTimeline, ResourceSplit, StatusPill } from "../shared/commercial-console.tsx";
 import { valueLabel } from "../shared/formatters.ts";
 
 type AnyRecord = Record<string, any>;
@@ -11,6 +11,8 @@ type AnyRecord = Record<string, any>;
 const workspaceEntryStages = Object.freeze(["已提交", "生成 URL", "URL 可用"]);
 
 export function CreateWorkspacePage({ state, session, runAction }: any) {
+  const [operationPending, setOperationPending] = React.useState(false);
+  const [operationResult, setOperationResult] = React.useState<any>(null);
   const attachments = (state.storageAttachments || []).filter((item) => item.status === "attached");
   const initialAttachmentId = attachments[0]?.id;
   const computeById = new Map<string, AnyRecord>((state.computeAllocations || []).map((item) => [item.id, item]));
@@ -24,14 +26,22 @@ export function CreateWorkspacePage({ state, session, runAction }: any) {
             layout="vertical"
             initialValues={{ attachmentId: initialAttachmentId }}
             onFinish={async (values) => {
+              setOperationPending(true);
+              setOperationResult({ ok: true, status: "submitted", nextStepMessage: "工作空间创建请求已提交，正在生成 URL 并分发 Docker。" });
               const created = await runAction(
                 () => createWorkspace({
                   workspaceName: values.workspaceName,
                   attachmentId: values.attachmentId
                 }, session.csrfToken),
-                "工作区入口已创建"
+                "工作空间创建请求已提交",
+                { returnFailure: true }
               );
-              if (created) navigate(routeTo("workspace.list"));
+              setOperationPending(false);
+              setOperationResult(created && {
+                ...created,
+                status: created.status || "submitted",
+                nextStepMessage: "访问 URL 已生成，正在分发 Docker。通常需要 3-5 分钟，完成后即可打开。"
+              });
             }}
           >
             <Form.Item name="workspaceName" label="名称" rules={[{ required: true, message: "请输入工作区名称" }]}>
@@ -62,6 +72,13 @@ export function CreateWorkspacePage({ state, session, runAction }: any) {
             )}
             {ready && <Alert type="success" showIcon message="工作区入口只生成访问 URL，不再开新计算或新存储。" />}
             <OperationTimeline operations={[]} stages={workspaceEntryStages} emptyText="提交后生成访问 URL" />
+            <OperationResultPanel pending={operationPending} result={operationResult} />
+            {operationResult && operationResult.ok !== false && (
+              <ActionGroup actions={[
+                { label: "查看工作空间", icon: <LinkIcon size={15} />, onClick: () => navigate(routeTo("workspace.list")) },
+                { label: "费用明细", onClick: () => navigate(routeTo("billing.overview")) }
+              ]} />
+            )}
             <Button className="formSubmit" type="primary" htmlType="submit" icon={<Plus size={15} />} disabled={!ready}>
               创建工作区入口
             </Button>

@@ -98,6 +98,23 @@ func TestDestroyComputeAllocationReleasesHoldAfterFabricDestroy(t *testing.T) {
 	}
 }
 
+func TestSyncComputeAllocationReleasesHoldWhenProviderDeleted(t *testing.T) {
+	calls := []string{}
+	service := NewService(&fakeLedgerClient{calls: &calls}, &fakeFabricClient{calls: &calls})
+
+	compute, err := service.SyncComputeAllocation(context.Background(), DestroyResourceInput{ID: "compute-alpha", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", HoldID: "hold-alpha", HoldAmountCents: 7862}, "sync-compute")
+	if err != nil {
+		t.Fatalf("sync compute: %v", err)
+	}
+	if compute.Status != "external_deleted" || compute.BillingStatus != "stopped" || compute.HoldReleaseID != "release-alpha" {
+		t.Fatalf("compute must stop billing on provider deletion: %#v", compute)
+	}
+	wantCalls := []string{"fabric.compute-sync", "ledger.release"}
+	if !reflect.DeepEqual(calls, wantCalls) {
+		t.Fatalf("calls = %#v, want %#v", calls, wantCalls)
+	}
+}
+
 func TestDestroyStorageVolumeReleasesHoldAfterFabricDestroy(t *testing.T) {
 	calls := []string{}
 	service := NewService(&fakeLedgerClient{calls: &calls}, &fakeFabricClient{calls: &calls})
@@ -110,6 +127,23 @@ func TestDestroyStorageVolumeReleasesHoldAfterFabricDestroy(t *testing.T) {
 		t.Fatalf("storage missing release linkage: %#v", volume)
 	}
 	wantCalls := []string{"fabric.storage-destroy", "ledger.release"}
+	if !reflect.DeepEqual(calls, wantCalls) {
+		t.Fatalf("calls = %#v, want %#v", calls, wantCalls)
+	}
+}
+
+func TestSyncStorageVolumeReleasesHoldWhenProviderDeleted(t *testing.T) {
+	calls := []string{}
+	service := NewService(&fakeLedgerClient{calls: &calls}, &fakeFabricClient{calls: &calls})
+
+	volume, err := service.SyncStorageVolume(context.Background(), DestroyResourceInput{ID: "storage-alpha", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", HoldID: "hold-alpha", HoldAmountCents: 101}, "sync-storage")
+	if err != nil {
+		t.Fatalf("sync storage: %v", err)
+	}
+	if volume.Status != "external_deleted" || volume.BillingStatus != "stopped" || volume.HoldReleaseID != "release-alpha" {
+		t.Fatalf("storage must stop billing on provider deletion: %#v", volume)
+	}
+	wantCalls := []string{"fabric.storage-sync", "ledger.release"}
 	if !reflect.DeepEqual(calls, wantCalls) {
 		t.Fatalf("calls = %#v, want %#v", calls, wantCalls)
 	}
@@ -193,6 +227,11 @@ func (f *fakeFabricClient) GetComputeAllocation(ctx context.Context, id string) 
 	return clients.ComputeAllocation{ID: id, ProviderRequestID: "compute-request-alpha"}, nil
 }
 
+func (f *fakeFabricClient) SyncComputeAllocation(ctx context.Context, id string) (clients.ComputeAllocation, error) {
+	*f.calls = append(*f.calls, "fabric.compute-sync")
+	return clients.ComputeAllocation{ID: id, Status: "external_deleted", ProviderRequestID: "sync-request-alpha"}, nil
+}
+
 func (f *fakeFabricClient) DestroyComputeAllocation(ctx context.Context, id string, idempotencyKey string) (clients.ComputeAllocation, error) {
 	*f.calls = append(*f.calls, "fabric.compute-destroy")
 	return clients.ComputeAllocation{ID: id, ProviderRequestID: "compute-destroy-request-alpha"}, nil
@@ -201,6 +240,11 @@ func (f *fakeFabricClient) DestroyComputeAllocation(ctx context.Context, id stri
 func (f *fakeFabricClient) CreateStorageVolume(ctx context.Context, input clients.StorageVolumeInput, idempotencyKey string) (clients.StorageVolume, error) {
 	*f.calls = append(*f.calls, "fabric.storage")
 	return clients.StorageVolume{ID: input.ID, AccountID: input.AccountID, SizeGB: input.SizeGB, ProviderRequestID: "volume-request-alpha"}, nil
+}
+
+func (f *fakeFabricClient) SyncStorageVolume(ctx context.Context, id string) (clients.StorageVolume, error) {
+	*f.calls = append(*f.calls, "fabric.storage-sync")
+	return clients.StorageVolume{ID: id, Status: "external_deleted", ProviderRequestID: "sync-storage-request-alpha"}, nil
 }
 
 func (f *fakeFabricClient) DestroyStorageVolume(ctx context.Context, id string, idempotencyKey string) (clients.StorageVolume, error) {

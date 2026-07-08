@@ -655,7 +655,7 @@ func (app *controlPlaneApp) rememberCompute(allocation any) error {
 		defer app.mu.Unlock()
 		accountID := stringValue(row["accountId"])
 		app.computes[stringValue(row["id"])] = row
-		if stringValue(row["status"]) == "destroyed" {
+		if isTerminalResourceStatus(stringValue(row["status"])) {
 			app.rememberReleaseLocked(accountID, "compute", stringValue(row["id"]), row)
 			app.suspendWorkspacesForComputeLocked(stringValue(row["id"]))
 			return app.persistLocked()
@@ -672,7 +672,7 @@ func (app *controlPlaneApp) rememberStorage(volume any) error {
 		defer app.mu.Unlock()
 		accountID := stringValue(row["accountId"])
 		app.storages[stringValue(row["id"])] = row
-		if stringValue(row["status"]) == "destroyed" {
+		if isTerminalResourceStatus(stringValue(row["status"])) {
 			app.rememberReleaseLocked(accountID, "storage", stringValue(row["id"]), row)
 			app.markWorkspacesStorageDestroyedLocked(stringValue(row["id"]))
 			return app.persistLocked()

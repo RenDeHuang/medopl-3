@@ -289,6 +289,11 @@ func (testProvider) CreateComputeAllocation(_ context.Context, input ComputeAllo
 	return ComputeAllocation{ID: "ca-test", AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, PackageID: input.PackageID, Status: "allocated", Provider: "tencent-tke", ProviderRequestID: providerRequestID("compute", input.IdempotencyKey), ServiceName: "opl-ca-test", CreatedAt: now}, nil
 }
 
+func (testProvider) SyncComputeAllocation(_ context.Context, allocation ComputeAllocation) (ComputeAllocation, error) {
+	allocation.Status = "running"
+	return allocation, nil
+}
+
 func (testProvider) DestroyComputeAllocation(_ context.Context, allocation ComputeAllocation) (ComputeAllocation, error) {
 	allocation.Status = "destroyed"
 	return allocation, nil
@@ -296,6 +301,11 @@ func (testProvider) DestroyComputeAllocation(_ context.Context, allocation Compu
 
 func (testProvider) CreateStorageVolume(_ context.Context, input StorageVolumeInput) (StorageVolume, error) {
 	return StorageVolume{ID: "vol-test", AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, Status: "ready", ProviderRequestID: providerRequestID("storage", input.IdempotencyKey)}, nil
+}
+
+func (testProvider) SyncStorageVolume(_ context.Context, volume StorageVolume) (StorageVolume, error) {
+	volume.Status = "ready"
+	return volume, nil
 }
 
 func (testProvider) DestroyStorageVolume(_ context.Context, volume StorageVolume) (StorageVolume, error) {

@@ -48,6 +48,10 @@ func NewServer(service *fabric.Service) http.Handler {
 		}
 		writeJSON(w, http.StatusOK, allocation)
 	})
+	mux.HandleFunc("POST /fabric/compute-allocations/{id}/sync", func(w http.ResponseWriter, r *http.Request) {
+		allocation, err := service.SyncComputeAllocation(r.Context(), strings.TrimSpace(r.PathValue("id")))
+		writeResult(w, allocation, err)
+	})
 	mux.HandleFunc("POST /fabric/compute-allocations/{id}/destroy", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Idempotency-Key") == "" {
 			writeError(w, http.StatusBadRequest, "missing Idempotency-Key")
@@ -70,6 +74,10 @@ func NewServer(service *fabric.Service) http.Handler {
 			return
 		}
 		volume, err := service.DestroyStorageVolume(r.Context(), strings.TrimSpace(r.PathValue("id")))
+		writeResult(w, volume, err)
+	})
+	mux.HandleFunc("POST /fabric/storage-volumes/{id}/sync", func(w http.ResponseWriter, r *http.Request) {
+		volume, err := service.SyncStorageVolume(r.Context(), strings.TrimSpace(r.PathValue("id")))
 		writeResult(w, volume, err)
 	})
 	mux.HandleFunc("POST /fabric/storage-attachments", func(w http.ResponseWriter, r *http.Request) {

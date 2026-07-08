@@ -10,6 +10,11 @@ export function destroyComputeAllocation(input, csrfToken) {
     .then((payload) => operationEnvelope(payload, { resourceId: input.computeAllocationId, next: { detailRouteId: "compute-allocations.detail" } }));
 }
 
+export function syncComputeAllocation(input, csrfToken) {
+  return postJson(`/api/compute-allocations/${encodeURIComponent(input.computeAllocationId)}/sync`, input, csrfToken)
+    .then((payload) => operationEnvelope(payload, { resourceId: input.computeAllocationId, next: { detailRouteId: "compute-allocations.detail" } }));
+}
+
 export function createStorageVolume(input, csrfToken) {
   return postJson("/api/storage-volumes", input, csrfToken)
     .then((payload) => operationEnvelope(payload, { next: { detailRouteId: "storage.detail" } }));
@@ -17,6 +22,11 @@ export function createStorageVolume(input, csrfToken) {
 
 export function destroyStorageVolume(input, csrfToken) {
   return postJson("/api/storage-volumes/destroy", input, csrfToken)
+    .then((payload) => operationEnvelope(payload, { resourceId: input.storageId, next: { detailRouteId: "storage.detail" } }));
+}
+
+export function syncStorageVolume(input, csrfToken) {
+  return postJson(`/api/storage-volumes/${encodeURIComponent(input.storageId)}/sync`, input, csrfToken)
     .then((payload) => operationEnvelope(payload, { resourceId: input.storageId, next: { detailRouteId: "storage.detail" } }));
 }
 

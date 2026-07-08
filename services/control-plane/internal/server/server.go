@@ -490,6 +490,39 @@ func NewPersistentServer(service *controlplane.Service, store FactStore) (http.H
 		}
 		writeJSON(w, http.StatusOK, compute)
 	}))
+	mux.HandleFunc("POST /api/compute-allocations/{id}/sync", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
+		input := decodeJSON(r)
+		id := strings.TrimSpace(r.PathValue("id"))
+		existing, ok := app.getCompute(id)
+		if !ok {
+			writeError(w, http.StatusNotFound, "compute_allocation_not_found")
+			return
+		}
+		if !app.canAccessResource(r, existing) {
+			writeError(w, http.StatusForbidden, "account_scope_forbidden")
+			return
+		}
+		releaseInput := destroyResourceInput(id, existing)
+		if stringValue(existing["holdReleaseId"]) != "" || billingStatusFor(existing) == "stopped" {
+			releaseInput.HoldID = ""
+			releaseInput.HoldAmountCents = 0
+		}
+		compute, err := service.SyncComputeAllocation(r.Context(), releaseInput, mutationKey(r, input))
+		if err != nil {
+			writeUpstreamError(w)
+			return
+		}
+		body := computeResponse(mergeMaps(existing, structToMap(compute)))
+		if err := app.rememberCompute(body); err != nil {
+			writeError(w, http.StatusInternalServerError, "fact_persist_failed")
+			return
+		}
+		if err := app.appendAuditEvent(r, "compute.sync", "compute_allocation", id, firstNonEmpty(stringValue(existing["accountId"]), stringValue(existing["ownerAccountId"]), stringValue(body["accountId"])), existing, body, "succeeded"); err != nil {
+			writeError(w, http.StatusInternalServerError, "fact_persist_failed")
+			return
+		}
+		writeJSON(w, http.StatusOK, body)
+	}))
 	mux.HandleFunc("POST /api/compute-allocations/{id}/destroy", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		if !confirmed(input, "confirm") {
@@ -572,6 +605,39 @@ func NewPersistentServer(service *controlplane.Service, store FactStore) (http.H
 			return
 		}
 		if err := app.appendAuditEvent(r, "storage.destroy", "storage_volume", id, firstNonEmpty(stringValue(existing["accountId"]), stringValue(existing["ownerAccountId"]), stringValue(body["accountId"])), existing, body, "succeeded"); err != nil {
+			writeError(w, http.StatusInternalServerError, "fact_persist_failed")
+			return
+		}
+		writeJSON(w, http.StatusOK, body)
+	}))
+	mux.HandleFunc("POST /api/storage-volumes/{id}/sync", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
+		input := decodeJSON(r)
+		id := strings.TrimSpace(r.PathValue("id"))
+		existing, ok := app.getStorage(id)
+		if !ok {
+			writeError(w, http.StatusNotFound, "storage_volume_not_found")
+			return
+		}
+		if !app.canAccessResource(r, existing) {
+			writeError(w, http.StatusForbidden, "account_scope_forbidden")
+			return
+		}
+		releaseInput := destroyResourceInput(id, existing)
+		if stringValue(existing["holdReleaseId"]) != "" || billingStatusFor(existing) == "stopped" {
+			releaseInput.HoldID = ""
+			releaseInput.HoldAmountCents = 0
+		}
+		storage, err := service.SyncStorageVolume(r.Context(), releaseInput, mutationKey(r, input))
+		if err != nil {
+			writeUpstreamError(w)
+			return
+		}
+		body := storageResponse(mergeMaps(existing, structToMap(storage)))
+		if err := app.rememberStorage(body); err != nil {
+			writeError(w, http.StatusInternalServerError, "fact_persist_failed")
+			return
+		}
+		if err := app.appendAuditEvent(r, "storage.sync", "storage_volume", id, firstNonEmpty(stringValue(existing["accountId"]), stringValue(existing["ownerAccountId"]), stringValue(body["accountId"])), existing, body, "succeeded"); err != nil {
 			writeError(w, http.StatusInternalServerError, "fact_persist_failed")
 			return
 		}
@@ -1116,11 +1182,45 @@ func billingStatusFor(row map[string]any) string {
 	if status := stringValue(row["billingStatus"]); status != "" {
 		return status
 	}
-	switch stringValue(row["status"]) {
-	case "destroyed", "detached", "failed":
+	status := stringValue(row["status"])
+	if isTerminalResourceStatus(status) {
+		return "stopped"
+	}
+	switch status {
+	case "detached", "failed":
 		return "stopped"
 	default:
 		return "active"
+	}
+}
+
+func isTerminalResourceStatus(status string) bool {
+	switch status {
+	case "destroyed", "external_deleted", "deleted", "missing":
+		return true
+	default:
+		return false
+	}
+}
+
+func mergeMaps(base map[string]any, updates map[string]any) map[string]any {
+	output := cloneMap(base)
+	for key, value := range updates {
+		if !emptyMergeValue(value) {
+			output[key] = value
+		}
+	}
+	return output
+}
+
+func emptyMergeValue(value any) bool {
+	switch typed := value.(type) {
+	case nil:
+		return true
+	case string:
+		return typed == ""
+	default:
+		return false
 	}
 }
 

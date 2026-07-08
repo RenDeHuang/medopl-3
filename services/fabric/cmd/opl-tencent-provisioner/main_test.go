@@ -120,6 +120,7 @@ func TestDestroyComputeAllocationDryRunClosesOwnership(t *testing.T) {
 
 type fakeTencentClient struct {
 	createdRequest   Request
+	syncedRequest    Request
 	destroyedRequest Request
 }
 
@@ -154,6 +155,21 @@ func (client *fakeTencentClient) DestroyComputeAllocation(request Request, env m
 	}
 }
 
+func (client *fakeTencentClient) SyncComputeAllocation(request Request, env map[string]string) Response {
+	client.syncedRequest = request
+	return Response{
+		Ok:          true,
+		OperationId: "op-live-sync",
+		NodePoolId:  request.Pool.NodePoolId,
+		NodeName:    request.Allocation.NodeName,
+		Status:      "external_deleted",
+		ProviderData: map[string]string{
+			"client": "fake",
+			"region": env["TENCENTCLOUD_REGION"],
+		},
+	}
+}
+
 func TestCreateComputeAllocationLiveUsesTencentClientBoundary(t *testing.T) {
 	env := map[string]string{
 		"TENCENTCLOUD_SECRET_ID":               "sid",
@@ -184,6 +200,38 @@ func TestCreateComputeAllocationLiveUsesTencentClientBoundary(t *testing.T) {
 	}
 	if client.createdRequest.Allocation.Id != "compute-alpha" {
 		t.Fatalf("expected request to reach client: %#v", client.createdRequest)
+	}
+}
+
+func TestSyncComputeAllocationLiveUsesTencentClientBoundaryWithoutMutationFlag(t *testing.T) {
+	env := map[string]string{
+		"TENCENTCLOUD_SECRET_ID":    "sid",
+		"TENCENTCLOUD_SECRET_KEY":   "skey",
+		"TENCENTCLOUD_REGION":       "ap-guangzhou",
+		"TENCENT_DEPLOY_CLUSTER_ID": "cls-123",
+	}
+	client := &fakeTencentClient{}
+
+	response := handleWithClient(Request{
+		Action:    "sync_compute_allocation",
+		AccountId: "pi-alpha",
+		Pool:      ComputePoolInput{Id: "pool-basic-2c4g", NodePoolId: "np-basic"},
+		Allocation: ComputeAllocationInput{
+			Id:          "compute-alpha",
+			MachineName: "machine-alpha",
+			NodeName:    "node-alpha",
+			PrivateIp:   "10.0.0.8",
+		},
+	}, env, client)
+
+	if !response.Ok {
+		t.Fatalf("expected ok response: %#v", response)
+	}
+	if response.Status != "external_deleted" {
+		t.Fatalf("expected sync result from client: %#v", response)
+	}
+	if client.syncedRequest.Allocation.MachineName != "machine-alpha" {
+		t.Fatalf("expected request to reach client: %#v", client.syncedRequest)
 	}
 }
 

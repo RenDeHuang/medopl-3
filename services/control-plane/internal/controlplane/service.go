@@ -177,6 +177,25 @@ func (s *Service) GetComputeAllocation(ctx context.Context, id string) (clients.
 	return s.fabric.GetComputeAllocation(ctx, id)
 }
 
+func (s *Service) SyncComputeAllocation(ctx context.Context, input DestroyResourceInput, idempotencyKey string) (clients.ComputeAllocation, error) {
+	allocation, err := s.fabric.SyncComputeAllocation(ctx, input.ID)
+	if err != nil {
+		return allocation, err
+	}
+	if isExternallyDeletedResource(allocation.Status) && input.HoldID != "" && input.HoldAmountCents > 0 {
+		release, err := s.ledger.ReleaseHold(ctx, clients.HoldReleaseInput{AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: "compute", ResourceID: input.ID, HoldID: input.HoldID, AmountCents: input.HoldAmountCents, Currency: "CNY", Reason: "provider_external_deleted"}, idempotencyKey+":hold-release")
+		if err != nil {
+			return allocation, err
+		}
+		allocation.HoldID = input.HoldID
+		allocation.HoldAmountCents = input.HoldAmountCents
+		allocation.HoldReleaseID = release.ID
+		allocation.Wallet = release.Wallet
+		allocation.BillingStatus = "stopped"
+	}
+	return allocation, nil
+}
+
 func (s *Service) DestroyComputeAllocation(ctx context.Context, input DestroyResourceInput, idempotencyKey string) (clients.ComputeAllocation, error) {
 	allocation, err := s.fabric.DestroyComputeAllocation(ctx, input.ID, idempotencyKey)
 	if err != nil {
@@ -193,6 +212,10 @@ func (s *Service) DestroyComputeAllocation(ctx context.Context, input DestroyRes
 		allocation.Wallet = release.Wallet
 	}
 	return allocation, nil
+}
+
+func isExternallyDeletedResource(status string) bool {
+	return status == "external_deleted" || status == "deleted" || status == "missing"
 }
 
 func (s *Service) CreateStorageVolume(ctx context.Context, input StorageVolumeInput, idempotencyKey string) (clients.StorageVolume, error) {
@@ -212,6 +235,25 @@ func (s *Service) CreateStorageVolume(ctx context.Context, input StorageVolumeIn
 	volume.HoldID = hold.ID
 	volume.HoldAmountCents = hold.AmountCents
 	volume.Wallet = hold.Wallet
+	return volume, nil
+}
+
+func (s *Service) SyncStorageVolume(ctx context.Context, input DestroyResourceInput, idempotencyKey string) (clients.StorageVolume, error) {
+	volume, err := s.fabric.SyncStorageVolume(ctx, input.ID)
+	if err != nil {
+		return volume, err
+	}
+	if isExternallyDeletedResource(volume.Status) && input.HoldID != "" && input.HoldAmountCents > 0 {
+		release, err := s.ledger.ReleaseHold(ctx, clients.HoldReleaseInput{AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: "storage", ResourceID: input.ID, HoldID: input.HoldID, AmountCents: input.HoldAmountCents, Currency: "CNY", Reason: "provider_external_deleted"}, idempotencyKey+":hold-release")
+		if err != nil {
+			return volume, err
+		}
+		volume.HoldID = input.HoldID
+		volume.HoldAmountCents = input.HoldAmountCents
+		volume.HoldReleaseID = release.ID
+		volume.Wallet = release.Wallet
+		volume.BillingStatus = "stopped"
+	}
 	return volume, nil
 }
 

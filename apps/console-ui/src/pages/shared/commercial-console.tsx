@@ -1,7 +1,7 @@
 import React from "react";
 import { PageContainer, ProTable } from "@ant-design/pro-components";
 import { Alert, Button, Empty, List, Popconfirm, Space, Tag, Typography } from "antd";
-import { available, money } from "./formatters.ts";
+import { available, customerSafeMessage, money } from "./formatters.ts";
 
 type AnyRecord = Record<string, any>;
 
@@ -187,12 +187,15 @@ export function OperationResultPanel({ result, pending = false }: any) {
   }
   if (!result) return null;
   const failed = result.ok === false || result.status === "failed" || Boolean(result.failureReason);
+  const submitted = ["submitted", "provisioning", "creating", "attaching", "pending"].includes(result.status);
   return (
     <Alert
-      type={failed ? "error" : "success"}
+      type={failed ? "error" : submitted ? "info" : "success"}
       showIcon
-      message={failed ? "操作失败" : "操作完成"}
-      description={failed ? result.failureReason || "请查看失败原因后重试。" : `资源 ${result.resourceId || result.id || "-"} 已更新。`}
+      message={failed ? "操作失败" : submitted ? "操作已提交" : "操作完成"}
+      description={failed
+        ? customerSafeMessage(result.failureReason, "请查看失败原因后重试。")
+        : result.nextStepMessage || `资源 ${result.resourceId || result.id || "-"} 已更新。`}
     />
   );
 }
@@ -341,7 +344,7 @@ export function OperationTimeline({ operations = [], resourceId = "", emptyText 
           attach_storage: "挂载存储资源",
           create_workspace: "创建工作区入口"
         }[operation.operationType || operation.type] || "资源操作",
-        description: operation.safeMessage || operation.error || operation.resourceId || operation.workspaceId,
+        description: customerSafeMessage(operation.safeMessage || operation.error || operation.resourceId || operation.workspaceId),
         meta: statusText(operation.status) || operation.updatedAt || operation.createdAt,
         tone: operation.status === "failed" ? "danger" : operation.status === "completed" ? "good" : "info"
       }))
@@ -371,7 +374,7 @@ export function FailureRecoveryPanel({ resource, supportAction, cleanupAction }:
       <Alert
         type="error"
         showIcon
-        message={resource.safeMessage || resource.error || "资源操作失败"}
+        message={customerSafeMessage(resource.safeMessage || resource.error || "资源操作失败")}
         description={resource.providerRequestId || resource.operationId || resource.id}
       />
       <ActionGroup actions={[

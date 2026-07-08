@@ -40,6 +40,37 @@ export function valueLabel(value) {
   return labels[value] || value || "-";
 }
 
+export function customerSafeMessage(value = "", fallback = "操作正在处理中，请稍后刷新。") {
+  const raw = String(value || fallback);
+  if (/upstream_unavailable|bad gateway|workspace_url_failed|workspace_runtime_not_ready|workspace_url_not_ready|502|503/i.test(raw)) {
+    return "正在分发 Docker，预计 3-5 分钟，请稍后再打开 URL。";
+  }
+  return raw;
+}
+
+export function workspaceUrlReady(workspace: any = {}) {
+  const runtimeStatus = workspace.runtime?.status || workspace.docker?.status || workspace.state;
+  return workspace.access?.tokenStatus === "active" && ["running", "ready", "available", "active"].includes(runtimeStatus);
+}
+
+export function workspaceAccessLabel(workspace: any = {}) {
+  if (workspaceUrlReady(workspace)) return "可打开";
+  if (workspace.access?.tokenStatus === "active") return "分发中";
+  return "未启用";
+}
+
+export function workspaceOpenActionLabel(workspace: any = {}) {
+  if (workspaceUrlReady(workspace)) return "打开";
+  if (workspace.access?.tokenStatus === "active") return "分发中";
+  return "已停用";
+}
+
+export function workspaceAccessTone(workspace: any = {}) {
+  if (workspaceUrlReady(workspace)) return "good";
+  if (workspace.access?.tokenStatus === "active") return "warn";
+  return "neutral";
+}
+
 export function statusColor(value) {
   if (["running", "active", "available", "ready"].includes(value)) return "green";
   if (["failed", "destroyed", "hold_exhausted", "blocked"].includes(value)) return "red";

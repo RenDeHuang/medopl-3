@@ -651,6 +651,11 @@ func (f *fakeFabricClient) GetComputeAllocation(_ context.Context, id string) (c
 	return clients.ComputeAllocation{ID: id, Status: "running", Provider: "tencent-tke", ProviderResourceID: "node/node-from-fabric", ProviderRequestID: "compute-request-from-fabric", InstanceID: "ins-from-fabric", NodeName: "node-from-fabric", BillingStatus: "active", ServiceName: "opl-compute-from-fabric"}, nil
 }
 
+func (f *fakeFabricClient) SyncComputeAllocation(_ context.Context, id string) (clients.ComputeAllocation, error) {
+	f.record("fabric.compute-sync")
+	return clients.ComputeAllocation{ID: id, Status: "external_deleted", Provider: "tencent-tke", ProviderRequestID: "compute-sync-from-fabric", BillingStatus: "stopped"}, nil
+}
+
 func (f *fakeFabricClient) DestroyComputeAllocation(_ context.Context, id string, _ string) (clients.ComputeAllocation, error) {
 	f.record("fabric.compute-destroy")
 	return clients.ComputeAllocation{ID: id, Status: "destroyed", Provider: "tencent-tke", ProviderRequestID: "compute-destroy-from-fabric", BillingStatus: "stopped"}, nil
@@ -659,6 +664,11 @@ func (f *fakeFabricClient) DestroyComputeAllocation(_ context.Context, id string
 func (f *fakeFabricClient) CreateStorageVolume(_ context.Context, input clients.StorageVolumeInput, _ string) (clients.StorageVolume, error) {
 	f.record("fabric.storage")
 	return clients.StorageVolume{ID: input.ID, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, Status: "available", Provider: "tencent-tke", ProviderResourceID: "pvc/volume-from-fabric-data", ProviderRequestID: "storage-request-from-fabric", SizeGB: input.SizeGB, StorageClass: "cbs", BillingStatus: "active"}, nil
+}
+
+func (f *fakeFabricClient) SyncStorageVolume(_ context.Context, id string) (clients.StorageVolume, error) {
+	f.record("fabric.storage-sync")
+	return clients.StorageVolume{ID: id, Status: "external_deleted", Provider: "tencent-tke", ProviderRequestID: "storage-sync-from-fabric", BillingStatus: "stopped"}, nil
 }
 
 func (f *fakeFabricClient) DestroyStorageVolume(_ context.Context, id string, _ string) (clients.StorageVolume, error) {
@@ -898,6 +908,74 @@ func TestCreateComputeAllocationUsesFabricService(t *testing.T) {
 	server.ServeHTTP(getRec, getReq)
 	if getRec.Code != http.StatusOK {
 		t.Fatalf("get status = %d, want %d: %s", getRec.Code, http.StatusOK, getRec.Body.String())
+	}
+}
+
+func TestSyncComputeAllocationExternalDeleteStopsBillingAndSuspendsWorkspace(t *testing.T) {
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	admin := operatorSessionForTest(t, server)
+	compute := createResourceWithSession(t, server, admin, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","packageId":"basic"}`)
+	storage := createResourceWithSession(t, server, admin, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","sizeGb":10}`)
+	attachment := createResourceWithSession(t, server, admin, http.MethodPost, "/api/storage-attachments", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","computeAllocationId":"`+stringValue(compute["id"])+`","storageId":"`+stringValue(storage["id"])+`"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/workspaces", `{"accountId":"acct-alpha","ownerId":"usr-alpha","workspaceId":"ws-alpha","attachmentId":"`+stringValue(attachment["id"])+`","name":"Alpha"}`)
+
+	syncRec := requestWithSession(t, server, admin, http.MethodPost, "/api/compute-allocations/"+stringValue(compute["id"])+"/sync", `{}`)
+	if syncRec.Code != http.StatusOK {
+		t.Fatalf("sync status = %d, want %d: %s", syncRec.Code, http.StatusOK, syncRec.Body.String())
+	}
+	var synced map[string]any
+	if err := json.NewDecoder(syncRec.Body).Decode(&synced); err != nil {
+		t.Fatalf("decode sync: %v", err)
+	}
+	if synced["status"] != "external_deleted" || synced["billingStatus"] != "stopped" || synced["holdReleaseId"] != "release-from-ledger" {
+		t.Fatalf("sync must return stopped backend facts: %#v", synced)
+	}
+
+	stateRec := requestWithSession(t, server, admin, http.MethodGet, "/api/state?accountId=acct-alpha", ``)
+	if stateRec.Code != http.StatusOK {
+		t.Fatalf("state status = %d, want %d: %s", stateRec.Code, http.StatusOK, stateRec.Body.String())
+	}
+	var state map[string]any
+	if err := json.NewDecoder(stateRec.Body).Decode(&state); err != nil {
+		t.Fatalf("decode state: %v", err)
+	}
+	workspace := state["workspaces"].([]any)[0].(map[string]any)
+	if workspace["state"] != "suspended" || workspace["currentComputeAllocationId"] != "" {
+		t.Fatalf("workspace must be suspended after provider deletion: %#v", workspace)
+	}
+}
+
+func TestSyncStorageVolumeExternalDeleteStopsBillingAndDeletesWorkspaceData(t *testing.T) {
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	admin := operatorSessionForTest(t, server)
+	compute := createResourceWithSession(t, server, admin, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","packageId":"basic"}`)
+	storage := createResourceWithSession(t, server, admin, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","sizeGb":10}`)
+	attachment := createResourceWithSession(t, server, admin, http.MethodPost, "/api/storage-attachments", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","computeAllocationId":"`+stringValue(compute["id"])+`","storageId":"`+stringValue(storage["id"])+`"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/workspaces", `{"accountId":"acct-alpha","ownerId":"usr-alpha","workspaceId":"ws-alpha","attachmentId":"`+stringValue(attachment["id"])+`","name":"Alpha"}`)
+
+	syncRec := requestWithSession(t, server, admin, http.MethodPost, "/api/storage-volumes/"+stringValue(storage["id"])+"/sync", `{}`)
+	if syncRec.Code != http.StatusOK {
+		t.Fatalf("sync status = %d, want %d: %s", syncRec.Code, http.StatusOK, syncRec.Body.String())
+	}
+	var synced map[string]any
+	if err := json.NewDecoder(syncRec.Body).Decode(&synced); err != nil {
+		t.Fatalf("decode sync: %v", err)
+	}
+	if synced["status"] != "external_deleted" || synced["billingStatus"] != "stopped" || synced["holdReleaseId"] != "release-from-ledger" {
+		t.Fatalf("sync must return stopped backend facts: %#v", synced)
+	}
+
+	stateRec := requestWithSession(t, server, admin, http.MethodGet, "/api/state?accountId=acct-alpha", ``)
+	if stateRec.Code != http.StatusOK {
+		t.Fatalf("state status = %d, want %d: %s", stateRec.Code, http.StatusOK, stateRec.Body.String())
+	}
+	var state map[string]any
+	if err := json.NewDecoder(stateRec.Body).Decode(&state); err != nil {
+		t.Fatalf("decode state: %v", err)
+	}
+	workspace := state["workspaces"].([]any)[0].(map[string]any)
+	if workspace["state"] != "data_deleted" || workspace["status"] != "unrecoverable" {
+		t.Fatalf("workspace data must be marked deleted after provider storage deletion: %#v", workspace)
 	}
 }
 
@@ -2050,8 +2128,10 @@ func TestActiveConsoleAPIRoutesReachControlPlane(t *testing.T) {
 		{http.MethodPost, "/api/billing/resource-settlements", `{"accountId":"acct-lab","hours":1}`},
 		{http.MethodPost, "/api/billing/reconciliation", `{"report":{"id":"recon-test","generatedAt":"2026-07-06T00:00:00Z"}}`},
 		{http.MethodPost, "/api/compute-allocations", `{"packageId":"basic","name":"compute"}`},
+		{http.MethodPost, "/api/compute-allocations/compute-alpha/sync", `{}`},
 		{http.MethodPost, "/api/compute-allocations/compute-alpha/destroy", `{"confirm":true}`},
 		{http.MethodPost, "/api/storage-volumes", `{"name":"data","sizeGb":10}`},
+		{http.MethodPost, "/api/storage-volumes/storage-alpha/sync", `{}`},
 		{http.MethodPost, "/api/storage-volumes/destroy", `{"storageId":"storage-alpha"}`},
 		{http.MethodPost, "/api/storage-attachments", `{"computeAllocationId":"compute-alpha","storageId":"storage-alpha","mountPath":"/data"}`},
 		{http.MethodPost, "/api/storage-attachments/detach", `{"attachmentId":"attach-alpha"}`},

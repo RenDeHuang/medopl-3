@@ -72,6 +72,7 @@ type Response struct {
 
 type TencentClient interface {
 	CreateComputeAllocation(request Request, env map[string]string) Response
+	SyncComputeAllocation(request Request, env map[string]string) Response
 	DestroyComputeAllocation(request Request, env map[string]string) Response
 }
 
@@ -112,6 +113,15 @@ func (unimplementedTencentClient) DestroyComputeAllocation(_ Request, _ map[stri
 		Ok:        false,
 		ErrorCode: "tencent_live_not_implemented",
 		Message:   "Tencent live compute allocation destroy is not implemented in this build.",
+		Retryable: false,
+	}
+}
+
+func (unimplementedTencentClient) SyncComputeAllocation(_ Request, _ map[string]string) Response {
+	return Response{
+		Ok:        false,
+		ErrorCode: "tencent_live_not_implemented",
+		Message:   "Tencent live compute allocation sync is not implemented in this build.",
 		Retryable: false,
 	}
 }
@@ -431,6 +441,69 @@ func (client *tencentSDKClient) DestroyComputeAllocation(request Request, _ map[
 			"deleteMode":                  "terminate",
 			"describeNodePoolRequestId":   describeRequestId,
 			"modifySelfProvisioningReqId": modifySelfProvisioningRequestId,
+		},
+	}
+}
+
+func (client *tencentSDKClient) SyncComputeAllocation(request Request, _ map[string]string) Response {
+	if client == nil || client.nativeTkeClient == nil {
+		return Response{Ok: false, ErrorCode: "tencent_sdk_client_missing", Message: "Tencent TKE SDK client is missing.", Retryable: false}
+	}
+	machines, requestId, err := client.describeClusterMachines(request.Pool.NodePoolId)
+	if err != nil {
+		response := sdkErrorResponse("tencent_describe_cluster_machines_failed", err)
+		response.ProviderData = map[string]string{"nodePoolId": request.Pool.NodePoolId, "machineName": request.Allocation.MachineName, "nodeName": request.Allocation.NodeName, "privateIp": request.Allocation.PrivateIp}
+		return response
+	}
+	machine := findComputeMachine(machines, request.Allocation)
+	if machine == nil {
+		return Response{
+			Ok:                true,
+			OperationId:       "op-sync-compute-" + stableSuffix(request.AccountId, request.Allocation.Id, request.Pool.NodePoolId, request.Allocation.MachineName, request.Allocation.PrivateIp)[:12],
+			PoolId:            request.Pool.Id,
+			NodePoolId:        request.Pool.NodePoolId,
+			InstanceId:        request.Allocation.InstanceId,
+			NodeName:          request.Allocation.NodeName,
+			PrivateIp:         request.Allocation.PrivateIp,
+			PublicIp:          request.Allocation.PublicIp,
+			Status:            "external_deleted",
+			ProviderRequestId: requestId,
+			ProviderData: map[string]string{
+				"clusterId":                  client.clusterId,
+				"region":                     client.region,
+				"nodePoolId":                 request.Pool.NodePoolId,
+				"machineName":                request.Allocation.MachineName,
+				"nodeName":                   request.Allocation.NodeName,
+				"privateIp":                  request.Allocation.PrivateIp,
+				"syncResult":                 "missing",
+				"describeClusterMachinesReq": requestId,
+			},
+		}
+	}
+	privateIP := firstNonEmpty(stringValue(machine.LanIP), request.Allocation.PrivateIp)
+	nodeName := firstNonEmpty(kubernetesNodeName(machine), request.Allocation.NodeName)
+	machineName := firstNonEmpty(stringValue(machine.MachineName), request.Allocation.MachineName)
+	status := firstNonEmpty(strings.ToLower(strings.TrimSpace(stringValue(machine.MachineState))), "running")
+	return Response{
+		Ok:                true,
+		OperationId:       "op-sync-compute-" + stableSuffix(request.AccountId, request.Allocation.Id, request.Pool.NodePoolId, machineName, privateIP)[:12],
+		PoolId:            request.Pool.Id,
+		NodePoolId:        request.Pool.NodePoolId,
+		InstanceId:        request.Allocation.InstanceId,
+		NodeName:          nodeName,
+		PrivateIp:         privateIP,
+		PublicIp:          request.Allocation.PublicIp,
+		Status:            status,
+		ProviderRequestId: requestId,
+		ProviderData: map[string]string{
+			"clusterId":                  client.clusterId,
+			"region":                     client.region,
+			"nodePoolId":                 request.Pool.NodePoolId,
+			"machineName":                machineName,
+			"nodeName":                   nodeName,
+			"privateIp":                  privateIP,
+			"syncResult":                 "found",
+			"describeClusterMachinesReq": requestId,
 		},
 	}
 }
@@ -865,6 +938,11 @@ func handleWithClient(request Request, env map[string]string, client TencentClie
 			return dryRunCreateComputeAllocation(request, env)
 		}
 		return client.CreateComputeAllocation(request, env)
+	case "sync_compute_allocation":
+		if request.DryRun {
+			return dryRunSyncComputeAllocation(request)
+		}
+		return client.SyncComputeAllocation(request, env)
 	case "destroy_compute_allocation":
 		if request.DryRun {
 			return dryRunDestroyComputeAllocation(request)
@@ -959,6 +1037,49 @@ func dryRunDestroyComputeAllocation(request Request) Response {
 		Status:       "destroyed",
 		ProviderData: providerData,
 	}
+}
+
+func dryRunSyncComputeAllocation(request Request) Response {
+	stable := stableSuffix(request.AccountId, request.Allocation.Id, request.Allocation.MachineName, request.Allocation.PrivateIp)
+	status := firstNonEmpty(request.Allocation.NodeName, request.Allocation.MachineName, request.Allocation.PrivateIp)
+	if status != "" {
+		status = "running"
+	} else {
+		status = "external_deleted"
+	}
+	return Response{
+		Ok:           true,
+		OperationId:  "op-sync-compute-" + stable[:12],
+		PoolId:       request.Pool.Id,
+		NodePoolId:   request.Pool.NodePoolId,
+		InstanceId:   request.Allocation.InstanceId,
+		NodeName:     request.Allocation.NodeName,
+		PrivateIp:    request.Allocation.PrivateIp,
+		PublicIp:     request.Allocation.PublicIp,
+		Status:       status,
+		ProviderData: map[string]string{"accountId": request.AccountId, "syncResult": status},
+	}
+}
+
+func findComputeMachine(machines []*tke2022.Machine, allocation ComputeAllocationInput) *tke2022.Machine {
+	machineName := strings.TrimSpace(allocation.MachineName)
+	nodeName := strings.TrimSpace(allocation.NodeName)
+	privateIP := strings.TrimSpace(allocation.PrivateIp)
+	for _, machine := range machines {
+		if machine == nil {
+			continue
+		}
+		if machineName != "" && stringValue(machine.MachineName) == machineName {
+			return machine
+		}
+		if privateIP != "" && stringValue(machine.LanIP) == privateIP {
+			return machine
+		}
+		if nodeName != "" && kubernetesNodeName(machine) == nodeName {
+			return machine
+		}
+	}
+	return nil
 }
 
 func stableSuffix(parts ...string) string {

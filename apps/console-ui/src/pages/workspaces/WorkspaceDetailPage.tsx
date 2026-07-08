@@ -1,5 +1,5 @@
 import React from "react";
-import { Button, Empty, Typography } from "antd";
+import { Alert, Button, Empty, Typography } from "antd";
 import { Ban, Eye, EyeOff, Headphones, Link as LinkIcon, RefreshCw, WalletCards } from "lucide-react";
 import {
   deleteWorkspaceToken,
@@ -13,7 +13,7 @@ import {
   ResourceSplit,
   StatusPill
 } from "../shared/commercial-console.tsx";
-import { money, packageText, statusColor, statusLabel, valueLabel } from "../shared/formatters.ts";
+import { money, packageText, statusColor, statusLabel, workspaceAccessLabel, workspaceAccessTone, workspaceOpenActionLabel, workspaceUrlReady } from "../shared/formatters.ts";
 
 type AnyRecord = Record<string, any>;
 
@@ -50,6 +50,7 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
   const hourlyEstimate = Number(selected.billing?.activeHourlyEstimate || 0);
   const supportPath = `${routeTo("support.create")}?category=Workspace&resourceId=${encodeURIComponent(selected.id)}&operationId=${encodeURIComponent(selected.currentAttachmentId || selected.currentComputeAllocationId || "")}`;
   const [showPassword, setShowPassword] = React.useState(false);
+  const accessActive = selected.access?.tokenStatus === "active";
   return (
     <ConsoleSurface
       title={selected.name}
@@ -61,12 +62,20 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
         <InsightPanel
           title="访问凭据"
           eyebrow="URL、账号、密码"
-          actions={<StatusPill label={valueLabel(selected.access?.tokenStatus)} tone={selected.access?.tokenStatus === "active" ? "good" : "warn"} />}
+          actions={<StatusPill label={workspaceAccessLabel(selected)} tone={workspaceAccessTone(selected)} />}
         >
           <div className="stackList">
+            {!workspaceUrlReady(selected) && selected.access?.tokenStatus === "active" && (
+              <Alert
+                type="info"
+                showIcon
+                message="正在分发 Docker"
+                description="访问 URL 已生成，Runtime 仍在部署。通常需要 3-5 分钟，请稍后再打开。"
+              />
+            )}
             <div className="credentialStack">
               <span>URL</span>
-              <Typography.Text copyable={selected.access?.tokenStatus === "active"} className="inlineCode">{selected.url}</Typography.Text>
+              <Typography.Text copyable={workspaceUrlReady(selected)} className="inlineCode">{selected.url}</Typography.Text>
             </div>
             <div className="credentialStack">
               <span>账号</span>
@@ -78,10 +87,12 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
             </div>
             <ActionGroup
               actions={[
-                { label: "打开", icon: <LinkIcon size={15} />, disabled: selected.access?.tokenStatus !== "active", onClick: () => window.open(selected.url, "_blank", "noopener,noreferrer") },
+                { label: workspaceOpenActionLabel(selected), icon: <LinkIcon size={15} />, disabled: !workspaceUrlReady(selected), onClick: () => window.open(selected.url, "_blank", "noopener,noreferrer") },
                 { label: showPassword ? "隐藏密码" : "显示密码", icon: showPassword ? <EyeOff size={15} /> : <Eye size={15} />, onClick: () => setShowPassword(!showPassword) },
-                { label: "重置", icon: <RefreshCw size={15} />, disabled: selected.access?.tokenStatus !== "active", onClick: () => runAction(() => resetWorkspaceToken({ workspaceId: selected.id }, session.csrfToken), "URL 已重置", { actionKey: `workspace-reset-${selected.id}` }) },
-                { label: "停用访问", danger: true, icon: <Ban size={15} />, disabled: selected.access?.tokenStatus !== "active", onClick: () => runAction(() => deleteWorkspaceToken({ workspaceId: selected.id }, session.csrfToken), "访问已停用", { actionKey: `workspace-delete-${selected.id}` }) },
+                accessActive
+                  ? { label: "重置 URL", icon: <RefreshCw size={15} />, onClick: () => runAction(() => resetWorkspaceToken({ workspaceId: selected.id }, session.csrfToken), "URL 已重置", { actionKey: `workspace-reset-${selected.id}` }) }
+                  : { label: "启用访问", type: "primary", icon: <RefreshCw size={15} />, onClick: () => runAction(() => resetWorkspaceToken({ workspaceId: selected.id }, session.csrfToken), "访问已启用", { actionKey: `workspace-reset-${selected.id}` }) },
+                { label: "停用访问", danger: true, icon: <Ban size={15} />, disabled: !accessActive, onClick: () => runAction(() => deleteWorkspaceToken({ workspaceId: selected.id }, session.csrfToken), "访问已停用", { actionKey: `workspace-delete-${selected.id}` }) },
                 { label: "提交工单", icon: <Headphones size={15} />, onClick: () => navigate(supportPath) }
               ]}
             />

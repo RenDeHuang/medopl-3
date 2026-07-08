@@ -9,17 +9,30 @@ import {
   MetricStrip,
   StatusPill
 } from "./shared/commercial-console.tsx";
-import { available, money, moneyValue, resourceDebitEvents, statusColor, statusLabel } from "./shared/formatters.ts";
+import {
+  available,
+  money,
+  moneyValue,
+  resourceDebitEvents,
+  statusColor,
+  statusLabel,
+  workspaceAccessLabel,
+  workspaceAccessTone,
+  workspaceUrlReady
+} from "./shared/formatters.ts";
 
 export function OverviewPage({ state, wallet, tickets }: any) {
   const activeTickets = tickets.tickets.filter((ticket) => ticket.status !== "closed").length;
   const usable = available(wallet);
   const spent = resourceDebitEvents(state).reduce((sum, event) => sum + Math.abs(moneyValue(event)), 0);
-  const latestWorkspaces = state.workspaces.slice(-5).reverse();
-  const computeCount = (state.computeAllocations || []).filter((item) => !["destroyed", "failed"].includes(item.status)).length;
-  const storageCount = (state.storageVolumes || []).filter((item) => item.status !== "destroyed").length;
+  const workspaces = state.workspaces || [];
+  const computeResources = (state.computeAllocations || []).filter((item) => item.status !== "destroyed");
+  const storageResources = (state.storageVolumes || []).filter((item) => item.status !== "destroyed");
+  const latestWorkspaces = workspaces.slice(-5).reverse();
+  const computeCount = computeResources.filter((item) => item.status !== "failed").length;
+  const storageCount = storageResources.length;
   const attachmentCount = (state.storageAttachments || []).filter((item) => item.status === "attached").length;
-  const activeWorkspaceCount = state.workspaces.filter((item) => item.access?.tokenStatus === "active").length;
+  const activeWorkspaceCount = workspaces.filter((item) => item.access?.tokenStatus === "active").length;
 
   return (
     <ConsoleSurface
@@ -36,7 +49,9 @@ export function OverviewPage({ state, wallet, tickets }: any) {
     >
       <MetricStrip
         items={[
-          { label: "工作区", value: state.workspaces.length, caption: "当前入口", icon: <Plus size={16} />, tone: state.workspaces.length ? "info" : "neutral" },
+          { label: "计算节点", value: computeCount, caption: "可运行工作空间", icon: <Server size={16} />, tone: computeCount ? "info" : "neutral" },
+          { label: "云硬盘", value: storageCount, caption: "可挂载存储", icon: <HardDrive size={16} />, tone: storageCount ? "info" : "neutral" },
+          { label: "工作空间", value: workspaces.length, caption: `${activeWorkspaceCount} 个可打开`, icon: <Plus size={16} />, tone: workspaces.length ? "info" : "neutral" },
           { label: "可用余额", value: money(usable), caption: `${money(wallet.frozen)} 已冻结`, icon: <WalletCards size={16} />, tone: usable > 0 ? "good" : "warn" },
           { label: "资源费用", value: money(spent), caption: "费用明细", icon: <CreditCard size={16} />, tone: spent > 0 ? "warn" : "neutral" },
           { label: "工单", value: activeTickets, caption: `共 ${tickets.tickets.length} 个`, icon: <Headphones size={16} />, tone: activeTickets ? "warn" : "good" }
@@ -77,10 +92,10 @@ export function OverviewPage({ state, wallet, tickets }: any) {
                 </div>
                 <div className="overviewWorkspaceStatus">
                   <StatusPill label={statusLabel(workspace)} tone={statusColor(workspace.state) === "green" ? "good" : statusColor(workspace.state) === "red" ? "danger" : "warn"} />
-                  <StatusPill label={workspace.access?.tokenStatus === "active" ? "可用" : "未启用"} tone={workspace.access?.tokenStatus === "active" ? "good" : "warn"} />
+                  <StatusPill label={workspaceAccessLabel(workspace)} tone={workspaceAccessTone(workspace)} />
                 </div>
                 <div className="overviewWorkspaceActions">
-                  <Button icon={<LinkIcon size={14} />} disabled={workspace.access?.tokenStatus !== "active"} onClick={() => window.open(workspace.url, "_blank", "noopener,noreferrer")}>打开</Button>
+                  <Button icon={<LinkIcon size={14} />} disabled={!workspaceUrlReady(workspace)} onClick={() => window.open(workspace.url, "_blank", "noopener,noreferrer")}>{workspaceUrlReady(workspace) ? "打开" : "分发中"}</Button>
                   <Button icon={<Settings2 size={14} />} onClick={() => navigate(routeTo("workspace.detail", { id: workspace.id }))}>详情</Button>
                 </div>
               </article>

@@ -136,6 +136,48 @@ func (p *TencentProvider) CreateComputeAllocation(ctx context.Context, input Com
 	}, nil
 }
 
+func (p *TencentProvider) SyncComputeAllocation(ctx context.Context, allocation ComputeAllocation) (ComputeAllocation, error) {
+	if allocation.ID == "" {
+		return ComputeAllocation{}, fmt.Errorf("compute_allocation_id_required")
+	}
+	response, err := p.provision(ctx, provisionerRequest{
+		Action:    "sync_compute_allocation",
+		AccountID: allocation.AccountID,
+		PackageID: allocation.PackageID,
+		Pool:      provisionerPool{ID: allocation.PoolID, NodePoolID: allocation.NodePoolID},
+		Allocation: provisionerAllocation{
+			ID:          allocation.ID,
+			InstanceID:  firstNonEmpty(allocation.InstanceID, allocation.CVMInstanceID),
+			MachineName: firstNonEmpty(allocation.MachineName, allocation.ProviderData["machineName"], allocation.NodeName),
+			NodeName:    allocation.NodeName,
+			PrivateIP:   allocation.PrivateIP,
+			PublicIP:    allocation.PublicIP,
+		},
+	})
+	if err != nil {
+		return ComputeAllocation{}, err
+	}
+	if !response.OK {
+		return ComputeAllocation{}, provisionerError(response)
+	}
+	allocation.Status = firstNonEmpty(response.Status, allocation.Status)
+	allocation.Provider = firstNonEmpty(allocation.Provider, "tencent-tke")
+	allocation.ProviderRequestID = firstNonEmpty(response.ProviderRequestID, allocation.ProviderRequestID)
+	allocation.NodePoolID = firstNonEmpty(response.NodePoolID, allocation.NodePoolID)
+	allocation.InstanceID = firstNonEmpty(response.InstanceID, allocation.InstanceID)
+	allocation.CVMInstanceID = firstNonEmpty(response.InstanceID, allocation.CVMInstanceID)
+	allocation.NodeName = firstNonEmpty(response.NodeName, allocation.NodeName)
+	allocation.PrivateIP = firstNonEmpty(response.PrivateIP, allocation.PrivateIP)
+	allocation.PublicIP = firstNonEmpty(response.PublicIP, allocation.PublicIP)
+	if allocation.ProviderData == nil {
+		allocation.ProviderData = map[string]string{}
+	}
+	for key, value := range response.ProviderData {
+		allocation.ProviderData[key] = value
+	}
+	return allocation, nil
+}
+
 func (p *TencentProvider) DestroyComputeAllocation(ctx context.Context, allocation ComputeAllocation) (ComputeAllocation, error) {
 	if allocation.ID == "" {
 		return ComputeAllocation{}, fmt.Errorf("compute_allocation_id_required")
@@ -184,6 +226,39 @@ func (p *TencentProvider) CreateStorageVolume(ctx context.Context, input Storage
 		return StorageVolume{}, err
 	}
 	return StorageVolume{ID: id, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, Status: "ready", Provider: "tencent-tke", ProviderResourceID: "pvc/" + name + "-data", ProviderRequestID: providerRequestID("storage", input.IdempotencyKey), SizeGB: sizeGB, StorageClass: os.Getenv("OPL_WORKSPACE_STORAGE_CLASS"), CostTags: tags, CreatedAt: now}, nil
+}
+
+func (p *TencentProvider) SyncStorageVolume(ctx context.Context, volume StorageVolume) (StorageVolume, error) {
+	if volume.ID == "" {
+		return StorageVolume{}, fmt.Errorf("storage_volume_id_required")
+	}
+	pvc := firstNonEmpty(resourceName(volume.ProviderResourceID), k8sName(volume.ID)+"-data")
+	raw, err := p.kubectl(ctx, []string{"get", "pvc/" + pvc, "-o", "json"}, nil)
+	if err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "notfound") || strings.Contains(strings.ToLower(err.Error()), "not found") {
+			volume.Status = "external_deleted"
+			volume.ProviderRequestID = providerRequestID("sync-storage", volume.ID)
+			if volume.Provider == "" {
+				volume.Provider = "tencent-tke"
+			}
+			return volume, nil
+		}
+		return StorageVolume{}, err
+	}
+	items := kubectlItems(raw)
+	pvcResource := findK8s(items, "PersistentVolumeClaim", pvc)
+	if pvcResource == nil {
+		volume.Status = "external_deleted"
+	} else if stringValue(nested(pvcResource, "status", "phase")) == "Bound" {
+		volume.Status = "ready"
+	} else {
+		volume.Status = "pending"
+	}
+	volume.ProviderRequestID = providerRequestID("sync-storage", volume.ID)
+	if volume.Provider == "" {
+		volume.Provider = "tencent-tke"
+	}
+	return volume, nil
 }
 
 func (p *TencentProvider) DestroyStorageVolume(ctx context.Context, volume StorageVolume) (StorageVolume, error) {

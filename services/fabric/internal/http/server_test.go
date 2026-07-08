@@ -43,6 +43,64 @@ func TestCreateComputeAllocationHTTPRequiresIdempotencyKey(t *testing.T) {
 	}
 }
 
+func TestSyncComputeAllocationHTTPRefreshesProviderState(t *testing.T) {
+	service := fabric.NewService(testProvider{})
+	server := NewServer(service)
+	create := httptest.NewRequest(http.MethodPost, "/fabric/compute-allocations", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","packageId":"basic"}`))
+	create.Header.Set("Idempotency-Key", "sync-http-create")
+	createRec := httptest.NewRecorder()
+	server.ServeHTTP(createRec, create)
+	if createRec.Code != http.StatusAccepted {
+		t.Fatalf("create status = %d, want %d: %s", createRec.Code, http.StatusAccepted, createRec.Body.String())
+	}
+	var created fabric.ComputeAllocation
+	if err := json.NewDecoder(createRec.Body).Decode(&created); err != nil {
+		t.Fatalf("decode create: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/fabric/compute-allocations/"+created.ID+"/sync", bytes.NewBufferString(`{}`))
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("sync status = %d, want %d: %s", rec.Code, http.StatusAccepted, rec.Body.String())
+	}
+	var allocation fabric.ComputeAllocation
+	if err := json.NewDecoder(rec.Body).Decode(&allocation); err != nil {
+		t.Fatalf("decode sync: %v", err)
+	}
+	if allocation.Status != "external_deleted" {
+		t.Fatalf("sync must return provider state, got %#v", allocation)
+	}
+}
+
+func TestSyncStorageVolumeHTTPRefreshesProviderState(t *testing.T) {
+	service := fabric.NewService(testProvider{})
+	server := NewServer(service)
+	create := httptest.NewRequest(http.MethodPost, "/fabric/storage-volumes", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","sizeGb":10}`))
+	create.Header.Set("Idempotency-Key", "sync-http-storage")
+	createRec := httptest.NewRecorder()
+	server.ServeHTTP(createRec, create)
+	if createRec.Code != http.StatusAccepted {
+		t.Fatalf("create status = %d, want %d: %s", createRec.Code, http.StatusAccepted, createRec.Body.String())
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/fabric/storage-volumes/vol-test/sync", bytes.NewBufferString(`{}`))
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("sync status = %d, want %d: %s", rec.Code, http.StatusAccepted, rec.Body.String())
+	}
+	var volume fabric.StorageVolume
+	if err := json.NewDecoder(rec.Body).Decode(&volume); err != nil {
+		t.Fatalf("decode sync: %v", err)
+	}
+	if volume.Status != "external_deleted" {
+		t.Fatalf("sync must return provider state, got %#v", volume)
+	}
+}
+
 func TestOperationsHTTPReturnsFabricAuditFacts(t *testing.T) {
 	service := fabric.NewService(testProvider{})
 	server := NewServer(service)
@@ -82,6 +140,11 @@ func (testProvider) CreateComputeAllocation(_ context.Context, input fabric.Comp
 	return fabric.ComputeAllocation{ID: "ca-test", AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, PackageID: input.PackageID, Status: "allocated", ProviderRequestID: "compute-test"}, nil
 }
 
+func (testProvider) SyncComputeAllocation(_ context.Context, allocation fabric.ComputeAllocation) (fabric.ComputeAllocation, error) {
+	allocation.Status = "external_deleted"
+	return allocation, nil
+}
+
 func (testProvider) DestroyComputeAllocation(_ context.Context, allocation fabric.ComputeAllocation) (fabric.ComputeAllocation, error) {
 	allocation.Status = "destroyed"
 	return allocation, nil
@@ -89,6 +152,11 @@ func (testProvider) DestroyComputeAllocation(_ context.Context, allocation fabri
 
 func (testProvider) CreateStorageVolume(_ context.Context, input fabric.StorageVolumeInput) (fabric.StorageVolume, error) {
 	return fabric.StorageVolume{ID: "vol-test", AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, Status: "ready", ProviderRequestID: "storage-test"}, nil
+}
+
+func (testProvider) SyncStorageVolume(_ context.Context, volume fabric.StorageVolume) (fabric.StorageVolume, error) {
+	volume.Status = "external_deleted"
+	return volume, nil
 }
 
 func (testProvider) DestroyStorageVolume(_ context.Context, volume fabric.StorageVolume) (fabric.StorageVolume, error) {
