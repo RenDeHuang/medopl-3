@@ -284,6 +284,12 @@ func (s *postgresFactStore) installFactTable(ctx context.Context, table string, 
 )`); err != nil {
 		return err
 	}
+	if _, err := s.db.ExecContext(ctx, `ALTER TABLE `+table+` ADD COLUMN IF NOT EXISTS account_id TEXT NOT NULL DEFAULT ''`); err != nil {
+		return err
+	}
+	if _, err := s.db.ExecContext(ctx, `ALTER TABLE `+table+` ADD COLUMN IF NOT EXISTS `+timestampColumn+` TIMESTAMPTZ NOT NULL DEFAULT now()`); err != nil {
+		return err
+	}
 	for _, column := range postgresFactColumns {
 		if _, err := s.db.ExecContext(ctx, `ALTER TABLE `+table+` ADD COLUMN IF NOT EXISTS `+column.Name+` `+postgresColumnType(column.Kind)); err != nil {
 			return err
