@@ -51,11 +51,11 @@ a {
 
 .appLogoMark,
 .proLogo {
-  display: inline-grid;
+  display: inline-block;
   width: 38px;
   height: 38px;
-  place-items: center;
   border-radius: 8px;
+  object-fit: cover;
 }
 
 .proLogo {
