@@ -49,6 +49,7 @@ type loginFailure struct {
 
 var (
 	errUserNotFound    = errors.New("user_not_found")
+	errUserExists      = errors.New("user_already_exists")
 	errLastActiveAdmin = errors.New("last_active_admin")
 	errUserDeleted     = errors.New("user_deleted")
 )
@@ -278,6 +279,11 @@ func (app *runtimeApp) createUser(input map[string]any) (map[string]any, error) 
 	app.mu.Lock()
 	defer app.mu.Unlock()
 	email := stringField(input, "email", "admin@medopl.cn")
+	for _, existing := range app.users {
+		if strings.EqualFold(stringValue(existing["email"]), email) {
+			return nil, errUserExists
+		}
+	}
 	id := "usr-" + compactID(email+"-"+time.Now().UTC().Format("20060102150405.000000000"))
 	password := stringField(input, "password", "")
 	if password == "" {

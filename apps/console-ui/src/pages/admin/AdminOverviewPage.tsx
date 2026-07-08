@@ -109,7 +109,7 @@ export function AdminUsersPage({ managementState, topUpOpen, setTopUpOpen, topUp
   const [organizationForm] = Form.useForm();
   const [memberForm] = Form.useForm();
   const accountsById = new Map<string, AnyRecord>((managementState.accounts || []).map((account) => [account.id, account]));
-  const users = (managementState.users || []).map((user) => {
+  const users = (managementState.users || []).filter((user) => user.status !== "deleted").map((user) => {
     const account = accountsById.get(user.accountId) || {};
     return {
       ...user,
@@ -297,7 +297,8 @@ function CreateUserDrawer({ open, setOpen, form, session, runAction }: any) {
         onFinish={async (values) => {
           const created = await runAction(
             () => createUser(values, session.csrfToken),
-            "用户已创建"
+            "用户已创建",
+            { actionKey: `admin-create-user-${String(values.email || "").toLowerCase().trim()}` }
           );
           if (created) {
             form.resetFields();

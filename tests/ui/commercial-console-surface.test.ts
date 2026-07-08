@@ -135,6 +135,7 @@ test("shared runAction suppresses duplicate submissions by action key", async ()
   assert.match(workspaceListSource, /actionKey: `workspace-delete-\$\{row\.id\}`/, "Workspace list delete must key duplicate suppression by Workspace");
   assert.match(workspaceDetailSource, /actionKey: `workspace-reset-\$\{selected\.id\}`/, "Workspace detail reset must key duplicate suppression by Workspace");
   assert.match(adminSource, /actionKey: "admin-manual-topup"/, "manual top-up must suppress duplicate submit");
+  assert.match(adminSource, /actionKey: `admin-create-user-\$\{String\(values\.email \|\| ""\)\.toLowerCase\(\)\.trim\(\)\}`/, "user creation must suppress duplicate submit by email");
 });
 
 test("Workspace UI treats URL as stable storage subject with current runtime pointer", async () => {
@@ -422,6 +423,9 @@ test("Admin users surface is backed by management state and can create login use
   assert.match(apiSource, /"\/api\/users\/disable"/, "user disable client must call POST /api/users/disable");
   assert.match(apiSource, /"\/api\/users\/delete"/, "user delete client must call POST /api/users/delete");
   assert.match(adminSource, /managementState\.users/, "Admin Users must list management users, not only session.user");
+  assert.match(adminSource, /filter\(\(user\) => user\.status !== "deleted"\)/, "Admin Users main table must hide deleted users after refresh");
+  assert.match(apiSource, /includeDeleted = false/, "management state must default to hiding deleted users");
+  assert.match(apiSource, /if \(includeDeleted\) params\.set\("includeDeleted", "true"\);/, "deleted users must require an explicit includeDeleted request");
   assert.match(adminSource, /createUser\(/, "Admin Users must submit the new user form");
   assert.match(adminSource, /disableUser\(/, "Admin Users must expose user disable action");
   assert.match(adminSource, /deleteUser\(/, "Admin Users must expose user delete action");

@@ -19,10 +19,10 @@ export function getProductionReadiness() {
   return getJson("/api/production/readiness");
 }
 
-export function getManagementState(organizationId = "") {
+export function getManagementState(organizationId = "", includeDeleted = false) {
   const params = new URLSearchParams();
   if (organizationId) params.set("organizationId", organizationId);
-  params.set("includeDeleted", "true");
+  if (includeDeleted) params.set("includeDeleted", "true");
   const query = params.toString();
   return getJson(`/api/management/state${query ? `?${query}` : ""}`);
 }

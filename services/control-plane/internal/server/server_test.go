@@ -291,6 +291,17 @@ func TestAdminMutationsAppendAuditEvents(t *testing.T) {
 	}
 }
 
+func TestCreateUserRejectsDuplicateEmail(t *testing.T) {
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	admin := operatorSessionForTest(t, server)
+
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"pi@lab.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	duplicate := requestWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"PI@lab.example","accountId":"acct-beta","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	if duplicate.Code != http.StatusConflict || !strings.Contains(duplicate.Body.String(), "user_already_exists") {
+		t.Fatalf("duplicate create status=%d body=%s, want 409 user_already_exists", duplicate.Code, duplicate.Body.String())
+	}
+}
+
 type fakeLedgerClient struct{}
 
 type fakeLedgerClientWithKeys struct {

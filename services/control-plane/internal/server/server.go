@@ -646,7 +646,7 @@ func NewPersistentServer(service *controlplane.Service, store ReadModelStore) (h
 		input := decodeJSON(r)
 		body, err := app.createUser(input)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, err.Error())
+			writeCreateUserError(w, err)
 			return
 		}
 		if err := app.appendAuditEvent(r, "user.create", "user", stringValue(body["id"]), stringValue(body["accountId"]), nil, body, "succeeded"); err != nil {
@@ -852,6 +852,15 @@ func writeUserLifecycleError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadRequest, err.Error())
 	default:
 		writeError(w, http.StatusInternalServerError, "read_model_persist_failed")
+	}
+}
+
+func writeCreateUserError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, errUserExists):
+		writeError(w, http.StatusConflict, err.Error())
+	default:
+		writeError(w, http.StatusBadRequest, err.Error())
 	}
 }
 
