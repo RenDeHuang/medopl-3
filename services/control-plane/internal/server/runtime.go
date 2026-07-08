@@ -813,10 +813,41 @@ func (app *runtimeApp) rememberRuntimeOperations(operations []clients.FabricOper
 	defer app.mu.Unlock()
 	rows := make([]map[string]any, 0, len(operations))
 	for _, operation := range operations {
-		rows = append(rows, structToMap(operation))
+		row := structToMap(operation)
+		rows = append(rows, row)
+		app.rememberRuntimeOperationResourceLocked(row)
 	}
 	app.runtimeOps = rows
 	return app.persistLocked()
+}
+
+func (app *runtimeApp) rememberRuntimeOperationResourceLocked(operation map[string]any) {
+	status := stringValue(operation["status"])
+	if status != "succeeded" && status != "failed" {
+		return
+	}
+	payload, _ := operation["redactedProviderPayload"].(map[string]any)
+	resource, _ := payload["resource"].(map[string]any)
+	if len(resource) == 0 {
+		return
+	}
+	switch stringValue(operation["resourceKind"]) {
+	case "compute_allocation":
+		row := computeResponse(cloneMap(resource))
+		if id := stringValue(row["id"]); id != "" {
+			app.computes[id] = row
+		}
+	case "storage_volume":
+		row := storageResponse(cloneMap(resource))
+		if id := stringValue(row["id"]); id != "" {
+			app.storages[id] = row
+		}
+	case "storage_attachment":
+		row := attachmentResponse(cloneMap(resource), nil)
+		if id := stringValue(row["id"]); id != "" {
+			app.attachments[id] = row
+		}
+	}
 }
 
 func (app *runtimeApp) rememberReconciliation(result clients.ReconciliationResult) error {

@@ -525,6 +525,71 @@ func (f *fakeFabricClient) ListOperations(_ context.Context) ([]clients.FabricOp
 	}}, nil
 }
 
+type fabricClientWithResourceOperations struct {
+	fakeFabricClient
+}
+
+func (f *fabricClientWithResourceOperations) ListOperations(_ context.Context) ([]clients.FabricOperation, error) {
+	f.record("fabric.operations")
+	return []clients.FabricOperation{
+		{
+			ID:                "fop-compute-alpha",
+			OperationID:       "op-create-compute-alpha",
+			CallerService:     "control-plane",
+			Action:            "create_compute_allocation",
+			ResourceKind:      "compute_allocation",
+			ResourceID:        "compute-alpha",
+			AccountID:         "acct-alpha",
+			WorkspaceID:       "ws-alpha",
+			Provider:          "tencent-tke",
+			ProviderRequestID: "compute-request-from-fabric",
+			RequestHash:       "request-hash-alpha",
+			RedactedProviderPayload: map[string]any{"resource": map[string]any{
+				"id":                 "compute-alpha",
+				"accountId":          "acct-alpha",
+				"workspaceId":        "ws-alpha",
+				"packageId":          "basic",
+				"status":             "running",
+				"provider":           "tencent-tke",
+				"providerResourceId": "node/node-from-fabric",
+				"providerRequestId":  "compute-request-from-fabric",
+				"nodeName":           "node-from-fabric",
+			}},
+			Status:     "succeeded",
+			StartedAt:  "2026-07-07T00:00:00Z",
+			FinishedAt: "2026-07-07T00:01:00Z",
+			CreatedAt:  "2026-07-07T00:01:00Z",
+		},
+		{
+			ID:                "fop-storage-alpha",
+			OperationID:       "op-create-storage-alpha",
+			CallerService:     "control-plane",
+			Action:            "create_storage_volume",
+			ResourceKind:      "storage_volume",
+			ResourceID:        "storage-alpha",
+			AccountID:         "acct-alpha",
+			WorkspaceID:       "ws-alpha",
+			Provider:          "tencent-tke",
+			ProviderRequestID: "storage-request-from-fabric",
+			RequestHash:       "request-hash-storage-alpha",
+			RedactedProviderPayload: map[string]any{"resource": map[string]any{
+				"id":                 "storage-alpha",
+				"accountId":          "acct-alpha",
+				"workspaceId":        "ws-alpha",
+				"status":             "ready",
+				"provider":           "tencent-tke",
+				"providerResourceId": "pvc/storage-alpha-data",
+				"providerRequestId":  "storage-request-from-fabric",
+				"sizeGb":             10,
+			}},
+			Status:     "succeeded",
+			StartedAt:  "2026-07-07T00:00:00Z",
+			FinishedAt: "2026-07-07T00:01:00Z",
+			CreatedAt:  "2026-07-07T00:01:01Z",
+		},
+	}, nil
+}
+
 func createResource(t *testing.T, server http.Handler, method string, path string, body string) map[string]any {
 	t.Helper()
 	return createResourceWithSession(t, server, operatorSessionForTest(t, server), method, path, body)
@@ -881,6 +946,36 @@ func TestResourceSettlementProjectsLedgerEvidenceIntoConsoleState(t *testing.T) 
 	}
 	if _, ok := state["evidenceLedger"]; ok {
 		t.Fatalf("state must not expose empty evidence facts when no evidence source is synced: %#v", state["evidenceLedger"])
+	}
+}
+
+func TestConsoleStateHydratesResourceListsFromFabricOperations(t *testing.T) {
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fabricClientWithResourceOperations{}))
+
+	req := httptest.NewRequest(http.MethodGet, "/api/state?accountId=acct-alpha", nil)
+	addSessionCookies(req, operatorSessionForTest(t, server))
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("state status = %d: %s", rec.Code, rec.Body.String())
+	}
+	var state map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&state); err != nil {
+		t.Fatalf("decode state: %v", err)
+	}
+	computes := state["computeAllocations"].([]any)
+	if !slices.ContainsFunc(computes, func(row any) bool {
+		compute := row.(map[string]any)
+		return compute["id"] == "compute-alpha" && compute["status"] == "running" && compute["nodeName"] == "node-from-fabric"
+	}) {
+		t.Fatalf("state did not hydrate compute resource from Fabric operation: %#v", computes)
+	}
+	storageVolumes := state["storageVolumes"].([]any)
+	if !slices.ContainsFunc(storageVolumes, func(row any) bool {
+		storage := row.(map[string]any)
+		return storage["id"] == "storage-alpha" && storage["status"] == "available" && storage["providerResourceId"] == "pvc/storage-alpha-data"
+	}) {
+		t.Fatalf("state did not hydrate storage resource from Fabric operation: %#v", storageVolumes)
 	}
 }
 
