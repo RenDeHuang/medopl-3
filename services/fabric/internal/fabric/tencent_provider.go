@@ -435,28 +435,27 @@ func workspaceManifest(workspaceID string, workspaceName string, token string, s
 	labels := stringAnyMap(mergeStringMaps(runtimeSelectorLabels(serviceName, compute), map[string]string{"oplcloud.cn/account-id": compute.AccountID, "oplcloud.cn/workspace-id": workspaceID}, k8sCostLabels(tags)))
 	pvcName := resourceName(storage.ProviderResourceID)
 	plan := packagePlan(compute.PackageID)
-	secretData := map[string]any{
-		"OPL_SHARE_TOKEN":            b64(token),
-		"OPL_WORKSPACE_ID":           b64(workspaceID),
-		"OPL_WORKSPACE_NAME":         b64(workspaceName),
-		"OPL_OWNER_ACCOUNT_ID":       b64(compute.AccountID),
-		"OPL_PACKAGE_ID":             b64(plan.ID),
-		"OPL_CODEX_MODEL":            b64(os.Getenv("OPL_CODEX_MODEL")),
-		"OPL_CODEX_REASONING_EFFORT": b64(os.Getenv("OPL_CODEX_REASONING_EFFORT")),
-		"OPL_CODEX_BASE_URL":         b64(os.Getenv("OPL_CODEX_BASE_URL")),
-		"OPL_CODEX_API_KEY":          b64(os.Getenv("OPL_CODEX_API_KEY")),
-		"OPL_CODEX_PROVIDER_NAME":    b64(os.Getenv("OPL_CODEX_PROVIDER_NAME")),
-	}
-	if password := deriveAionUIAdminPassword(os.Getenv("OPL_AIONUI_ADMIN_PASSWORD_SEED"), workspaceID, token); password != "" {
-		secretData["OPL_AIONUI_ADMIN_USERNAME"] = b64("admin")
-		secretData["OPL_AIONUI_ADMIN_PASSWORD"] = b64(password)
-	}
+	password := deriveAionUIAdminPassword(os.Getenv("OPL_AIONUI_ADMIN_PASSWORD_SEED"), workspaceID, token)
+	secretData := map[string]any{"webui_password": b64(password), "webui_session_secret": b64(deriveWebUISessionSecret(os.Getenv("OPL_AIONUI_ADMIN_PASSWORD_SEED"), workspaceID, token)), "gateway_api_key": b64(os.Getenv("OPL_CODEX_API_KEY"))}
 	for key, value := range secretData {
 		if value == "" {
 			delete(secretData, key)
 		}
 	}
 	workspaceEnv := []any{
+		map[string]any{"name": "OPL_WEBUI_DEPLOYMENT_MODE", "value": "cloud"},
+		map[string]any{"name": "OPL_WEBUI_AUTH_MODE", "value": "password"},
+		map[string]any{"name": "OPL_WEBUI_USERNAME", "value": "admin"},
+		map[string]any{"name": "OPL_WEBUI_PASSWORD_FILE", "value": "/run/secrets/webui_password"},
+		map[string]any{"name": "OPL_WEBUI_SESSION_SECRET_FILE", "value": "/run/secrets/webui_session_secret"},
+		map[string]any{"name": "OPL_GATEWAY_API_KEY_FILE", "value": "/run/secrets/gateway_api_key"},
+		map[string]any{"name": "OPL_CODEX_MODEL", "value": os.Getenv("OPL_CODEX_MODEL")},
+		map[string]any{"name": "OPL_CODEX_REASONING_EFFORT", "value": os.Getenv("OPL_CODEX_REASONING_EFFORT")},
+		map[string]any{"name": "OPL_CODEX_BASE_URL", "value": os.Getenv("OPL_CODEX_BASE_URL")},
+		map[string]any{"name": "OPL_CODEX_PROVIDER_NAME", "value": os.Getenv("OPL_CODEX_PROVIDER_NAME")},
+		map[string]any{"name": "OPL_WORKSPACE_ID", "value": workspaceID},
+		map[string]any{"name": "OPL_WORKSPACE_NAME", "value": workspaceName},
+		map[string]any{"name": "OPL_SHARE_TOKEN", "value": token},
 		map[string]any{"name": "OPL_COMPUTE_ALLOCATION_ID", "value": compute.ID},
 		map[string]any{"name": "OPL_OWNER_ACCOUNT_ID", "value": compute.AccountID},
 		map[string]any{"name": "OPL_PACKAGE_ID", "value": plan.ID},
@@ -469,11 +468,11 @@ func workspaceManifest(workspaceID string, workspaceName string, token string, s
 		map[string]any{"name": "OPL_WORKSPACE_ROOT", "value": "/projects"},
 		map[string]any{"name": "CODEX_HOME", "value": "/data/codex"},
 	}
-	initContainer := map[string]any{"name": "bootstrap-codex-config", "image": os.Getenv("OPL_WORKSPACE_IMAGE"), "imagePullPolicy": "IfNotPresent", "envFrom": []any{map[string]any{"secretRef": map[string]any{"name": serviceName + "-env"}}}, "env": []any{map[string]any{"name": "CODEX_HOME", "value": "/data/codex"}}, "command": []string{"node", "-e"}, "args": []string{codexBootstrapScript()}, "volumeMounts": []any{map[string]any{"name": "workspace-data", "mountPath": "/data", "subPath": "data"}}, "securityContext": map[string]any{"allowPrivilegeEscalation": false, "readOnlyRootFilesystem": false, "capabilities": map[string]any{"drop": []string{"ALL"}}}}
-	workspaceContainer := map[string]any{"name": "workspace", "image": os.Getenv("OPL_WORKSPACE_IMAGE"), "imagePullPolicy": "IfNotPresent", "ports": []any{map[string]any{"name": "http", "containerPort": 3000}}, "envFrom": []any{map[string]any{"secretRef": map[string]any{"name": serviceName + "-env"}}}, "env": workspaceEnv, "lifecycle": map[string]any{"postStart": map[string]any{"exec": map[string]any{"command": []string{"node", "-e", aionUIPasswordBootstrapScript()}}}}, "volumeMounts": []any{map[string]any{"name": "workspace-data", "mountPath": "/data", "subPath": "data"}, map[string]any{"name": "workspace-data", "mountPath": "/projects", "subPath": "projects"}}, "resources": workspaceResources(plan), "readinessProbe": map[string]any{"httpGet": map[string]any{"path": "/", "port": 3000}, "initialDelaySeconds": 10, "periodSeconds": 10}}
+	workspaceContainer := map[string]any{"name": "workspace", "image": os.Getenv("OPL_WORKSPACE_IMAGE"), "imagePullPolicy": "IfNotPresent", "ports": []any{map[string]any{"name": "http", "containerPort": 3000}}, "env": workspaceEnv, "volumeMounts": []any{map[string]any{"name": "workspace-data", "mountPath": "/data", "subPath": "data"}, map[string]any{"name": "workspace-data", "mountPath": "/projects", "subPath": "projects"}, map[string]any{"name": "workspace-secrets", "mountPath": "/run/secrets", "readOnly": true}}, "resources": workspaceResources(plan), "readinessProbe": map[string]any{"httpGet": map[string]any{"path": "/healthz", "port": 3000}, "initialDelaySeconds": 10, "periodSeconds": 10}}
 	secretLabels := stringAnyMap(mergeStringMaps(map[string]string{"app.kubernetes.io/name": "opl-workspace-entry", "app.kubernetes.io/instance": serviceName, "oplcloud.cn/workspace-id": workspaceID}, k8sCostLabels(tags)))
 	secret := map[string]any{"apiVersion": "v1", "kind": "Secret", "metadata": map[string]any{"name": serviceName + "-env", "labels": secretLabels, "annotations": tags}, "type": "Opaque", "data": secretData}
-	deployment := map[string]any{"apiVersion": "apps/v1", "kind": "Deployment", "metadata": map[string]any{"name": serviceName, "labels": labels, "annotations": tags}, "spec": map[string]any{"replicas": 1, "selector": map[string]any{"matchLabels": selectorLabels}, "template": map[string]any{"metadata": map[string]any{"labels": labels, "annotations": tags}, "spec": map[string]any{"automountServiceAccountToken": false, "hostNetwork": true, "dnsPolicy": "ClusterFirstWithHostNet", "imagePullSecrets": []any{map[string]any{"name": os.Getenv("OPL_IMAGE_PULL_SECRET_NAME")}}, "nodeSelector": compute.NodeSelector, "tolerations": []any{map[string]any{"key": "tke.cloud.tencent.com/eni-ip-unavailable", "operator": "Exists", "effect": "NoSchedule"}}, "initContainers": []any{initContainer}, "containers": []any{workspaceContainer}, "volumes": []any{map[string]any{"name": "workspace-data", "persistentVolumeClaim": map[string]any{"claimName": pvcName}}}}}}}
+	secretVolume := map[string]any{"name": "workspace-secrets", "secret": map[string]any{"secretName": serviceName + "-env", "items": []any{map[string]any{"key": "webui_password", "path": "webui_password"}, map[string]any{"key": "webui_session_secret", "path": "webui_session_secret"}, map[string]any{"key": "gateway_api_key", "path": "gateway_api_key"}}}}
+	deployment := map[string]any{"apiVersion": "apps/v1", "kind": "Deployment", "metadata": map[string]any{"name": serviceName, "labels": labels, "annotations": tags}, "spec": map[string]any{"replicas": 1, "selector": map[string]any{"matchLabels": selectorLabels}, "template": map[string]any{"metadata": map[string]any{"labels": labels, "annotations": tags}, "spec": map[string]any{"automountServiceAccountToken": false, "hostNetwork": true, "dnsPolicy": "ClusterFirstWithHostNet", "imagePullSecrets": []any{map[string]any{"name": os.Getenv("OPL_IMAGE_PULL_SECRET_NAME")}}, "nodeSelector": compute.NodeSelector, "tolerations": []any{map[string]any{"key": "tke.cloud.tencent.com/eni-ip-unavailable", "operator": "Exists", "effect": "NoSchedule"}}, "containers": []any{workspaceContainer}, "volumes": []any{map[string]any{"name": "workspace-data", "persistentVolumeClaim": map[string]any{"claimName": pvcName}}, secretVolume}}}}}
 	service := map[string]any{"apiVersion": "v1", "kind": "Service", "metadata": map[string]any{"name": serviceName, "labels": labels, "annotations": tags}, "spec": map[string]any{"type": "ClusterIP", "selector": selectorLabels, "ports": []any{map[string]any{"name": "http", "port": 3000, "targetPort": "http"}}}}
 	return mustJSON(map[string]any{"apiVersion": "v1", "kind": "List", "items": []any{secret, deployment, service}})
 }
@@ -620,6 +619,16 @@ func deriveAionUIAdminPassword(seed string, workspaceID string, token string) st
 		digest = digest[:24]
 	}
 	return "opl_" + digest + "Aa1!"
+}
+
+func deriveWebUISessionSecret(seed string, workspaceID string, token string) string {
+	secret := strings.TrimSpace(seed)
+	if secret == "" {
+		return ""
+	}
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte("webui-session:" + workspaceID + ":" + token))
+	return hex.EncodeToString(mac.Sum(nil))
 }
 
 func passwordStatus(password string) string {
@@ -896,51 +905,4 @@ func ingressRoutesGateway(ingress map[string]any) bool {
 		}
 	}
 	return false
-}
-
-func codexBootstrapScript() string {
-	return `const fs=require("node:fs");
-const path=require("node:path");
-const home=process.env.CODEX_HOME||"/data/codex";
-const config=path.join(home,"config.toml");
-const apiKey=String(process.env.OPL_CODEX_API_KEY||process.env.CODEX_API_KEY||process.env.OPENAI_API_KEY||"").trim();
-const model=String(process.env.OPL_CODEX_MODEL||process.env.CODEX_MODEL||"gpt-5.5").trim();
-const baseUrl=String(process.env.OPL_CODEX_BASE_URL||process.env.CODEX_BASE_URL||process.env.OPENAI_BASE_URL||"").trim();
-if(!apiKey||!model||!baseUrl)process.exit(0);
-const existing=fs.existsSync(config)?fs.readFileSync(config,"utf8"):"";
-if(/experimental_bearer_token\s*=/.test(existing))process.exit(0);
-const provider=String(process.env.OPL_CODEX_MODEL_PROVIDER||process.env.CODEX_MODEL_PROVIDER||"gflabtoken").trim();
-const effort=String(process.env.OPL_CODEX_REASONING_EFFORT||process.env.CODEX_REASONING_EFFORT||"").trim();
-const q=(value)=>JSON.stringify(String(value));
-const lines=["model_provider = "+q(provider),"model = "+q(model),...(effort?["model_reasoning_effort = "+q(effort)]:[]),"","[model_providers."+provider+"]","name = "+q(provider),"base_url = "+q(baseUrl),"experimental_bearer_token = "+q(apiKey),""];
-fs.mkdirSync(home,{recursive:true});
-fs.writeFileSync(config,lines.join("\n"),{mode:0o600});
-fs.chmodSync(config,0o600);`
-}
-
-func aionUIPasswordBootstrapScript() string {
-	return `const password = String(process.env.OPL_AIONUI_ADMIN_PASSWORD || "").trim();
-if (!password) {
-  console.warn("[opl] AionUI admin password is not configured; leaving workspace running");
-  process.exit(0);
-}
-const body = JSON.stringify({ new_password: password });
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-let last = "";
-for (let attempt = 0; attempt < 90; attempt += 1) {
-  try {
-    const response = await fetch("http://127.0.0.1:3000/api/webui/change-password", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body
-    });
-    if (response.ok) process.exit(0);
-    last = response.status + ":" + await response.text();
-  } catch (error) {
-    last = error && error.message ? error.message : String(error);
-  }
-  await sleep(1000);
-}
-console.error("[opl] failed to set AionUI admin password: " + last);
-process.exit(0);`
 }

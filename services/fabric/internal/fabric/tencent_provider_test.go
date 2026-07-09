@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 	"testing"
 )
 
@@ -29,6 +28,7 @@ func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 	t.Setenv("OPL_WORKSPACE_IMAGE", "workspace-image:test")
 	t.Setenv("OPL_IMAGE_PULL_SECRET_NAME", "pull-secret")
 	t.Setenv("OPL_AIONUI_ADMIN_PASSWORD_SEED", "workspace-secret-2026-very-long")
+	t.Setenv("OPL_CODEX_API_KEY", "gateway-key-secret")
 	compute := ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", PackageID: "basic", NodeSelector: map[string]any{"cloud.tencent.com/node-instance-id": "np-basic-2"}}
 	storage := StorageVolume{ProviderResourceID: "pvc/opl-storage-alpha-data"}
 	tags := map[string]string{"opl_account_id": "acct-alpha", "opl_workspace_id": "ws-alpha", "opl_resource_id": "compute-alpha", "opl_operation_id": "op-alpha"}
@@ -52,12 +52,23 @@ func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 		}
 	}
 	secretData := secret["data"].(map[string]any)
-	passwordBytes, err := base64.StdEncoding.DecodeString(secretData["OPL_AIONUI_ADMIN_PASSWORD"].(string))
-	if err != nil {
-		t.Fatalf("decode webui password: %v", err)
-	}
+	passwordBytes := decodeSecretValue(t, secretData, "webui_password")
 	if string(passwordBytes) != "opl_jngdohVMGgp2Kdvpg4f-OLuNAa1!" {
 		t.Fatalf("workspace must derive a per-workspace WebUI password, got %q", string(passwordBytes))
+	}
+	sessionSecretBytes := decodeSecretValue(t, secretData, "webui_session_secret")
+	if len(sessionSecretBytes) < 32 || string(sessionSecretBytes) == string(passwordBytes) {
+		t.Fatalf("workspace must derive an independent WebUI session secret")
+	}
+	gatewayKeyBytes := decodeSecretValue(t, secretData, "gateway_api_key")
+	if string(gatewayKeyBytes) != "gateway-key-secret" {
+		t.Fatalf("gateway API key must be kept as model access credential secret, got %q", string(gatewayKeyBytes))
+	}
+	if _, ok := secretData["OPL_AIONUI_ADMIN_PASSWORD"]; ok {
+		t.Fatalf("workspace must not expose retired AionUI password env secret: %#v", secretData)
+	}
+	if _, ok := secretData["OPL_CODEX_API_KEY"]; ok {
+		t.Fatalf("workspace must not expose gateway key through env-style OPL_CODEX_API_KEY: %#v", secretData)
 	}
 	podSpec := nested(deployment, "spec", "template", "spec").(map[string]any)
 	if nested(deployment, "metadata", "labels", "oplcloud.cn/workspace-id") != "ws-alpha" {
@@ -84,6 +95,9 @@ func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 		t.Fatalf("workspace pod must tolerate TKE ENI readiness taint: %#v", toleration)
 	}
 	container := podSpec["containers"].([]any)[0].(map[string]any)
+	if _, ok := podSpec["initContainers"]; ok {
+		t.Fatalf("workspace must let one-person-lab-app cloud mode configure gateway access, not run retired bootstrap init containers: %#v", podSpec["initContainers"])
+	}
 	resources := container["resources"].(map[string]any)
 	requests := resources["requests"].(map[string]any)
 	limits := resources["limits"].(map[string]any)
@@ -94,22 +108,31 @@ func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 		t.Fatalf("workspace limits must preserve the package shape: %#v", limits)
 	}
 	env := envMap(container["env"].([]any))
-	for key := range env {
-		if strings.Contains(key, "AUTH_MODE") || strings.Contains(key, "PERSISTENT_CONFIG") || key == "WEBUI"+"_"+"AUTH" {
-			t.Fatalf("workspace must use AionUI login with managed credentials, not retired auth bypass env: %#v", env)
-		}
-	}
 	if env["AIONUI_ALLOW_REMOTE"] != "true" {
 		t.Fatalf("workspace must allow remote AionUI access: %#v", env)
 	}
-	lifecycle := container["lifecycle"].(map[string]any)
-	postStart := nested(lifecycle, "postStart", "exec").(map[string]any)
-	command := postStart["command"].([]any)
-	if !strings.Contains(strings.Join([]string{command[0].(string), command[1].(string), command[2].(string)}, " "), "/api/webui/change-password") {
-		t.Fatalf("workspace must set the managed WebUI password after startup: %#v", command)
+	if env["OPL_WEBUI_DEPLOYMENT_MODE"] != "cloud" || env["OPL_WEBUI_AUTH_MODE"] != "password" {
+		t.Fatalf("workspace must start one-person-lab-app in explicit cloud password mode: %#v", env)
 	}
-	if strings.Contains(command[2].(string), "process.exit(1)") {
-		t.Fatalf("workspace postStart password bootstrap must not kill the workspace on AionUI API failure: %#v", command)
+	if env["OPL_WEBUI_USERNAME"] != "admin" ||
+		env["OPL_WEBUI_PASSWORD_FILE"] != "/run/secrets/webui_password" ||
+		env["OPL_WEBUI_SESSION_SECRET_FILE"] != "/run/secrets/webui_session_secret" ||
+		env["OPL_GATEWAY_API_KEY_FILE"] != "/run/secrets/gateway_api_key" {
+		t.Fatalf("workspace must point one-person-lab-app at mounted secret files: %#v", env)
+	}
+	if _, ok := container["envFrom"]; ok {
+		t.Fatalf("workspace must not import cloud secrets as environment variables: %#v", container["envFrom"])
+	}
+	if _, ok := container["lifecycle"]; ok {
+		t.Fatalf("workspace must not use retired postStart password bootstrap: %#v", container["lifecycle"])
+	}
+	mounts := volumeMountMap(container["volumeMounts"].([]any))
+	if mounts["workspace-secrets"] != "/run/secrets" {
+		t.Fatalf("workspace must mount cloud secrets at /run/secrets: %#v", mounts)
+	}
+	secretVolume := findVolume(podSpec["volumes"].([]any), "workspace-secrets")
+	if secretVolume == nil || nested(secretVolume, "secret", "secretName") != "opl-compute-alpha-env" {
+		t.Fatalf("workspace must source cloud secret files from the workspace Secret: %#v", podSpec["volumes"])
 	}
 }
 
@@ -233,4 +256,36 @@ func envMap(entries []any) map[string]string {
 		values[stringValue(asMap["name"])] = stringValue(asMap["value"])
 	}
 	return values
+}
+
+func decodeSecretValue(t *testing.T, data map[string]any, key string) []byte {
+	t.Helper()
+	encoded, ok := data[key].(string)
+	if !ok || encoded == "" {
+		t.Fatalf("secret missing %s: %#v", key, data)
+	}
+	decoded, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		t.Fatalf("decode %s: %v", key, err)
+	}
+	return decoded
+}
+
+func volumeMountMap(entries []any) map[string]string {
+	values := map[string]string{}
+	for _, entry := range entries {
+		asMap, _ := entry.(map[string]any)
+		values[stringValue(asMap["name"])] = stringValue(asMap["mountPath"])
+	}
+	return values
+}
+
+func findVolume(entries []any, name string) map[string]any {
+	for _, entry := range entries {
+		asMap, _ := entry.(map[string]any)
+		if stringValue(asMap["name"]) == name {
+			return asMap
+		}
+	}
+	return nil
 }
