@@ -62,7 +62,7 @@
 - [ ] Make the periodic settlement worker scan Ent-backed active compute and storage resources.
 - [ ] Update last-settled metadata after successful Ledger settlement.
 - [ ] Keep stable settlement idempotency keys.
-- [ ] Prove repeated worker runs do not double-charge.
+- [x] Prove repeated worker runs do not double-charge.
 
 ## Phase 8: Hard Cut Cleanup
 

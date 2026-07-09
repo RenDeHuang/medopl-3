@@ -64,6 +64,30 @@ func TestPeriodicSettlementWorkerSettlesActiveResources(t *testing.T) {
 	}
 }
 
+func TestPeriodicSettlementWorkerDoesNotDuplicateControlPlaneProjectionsOnReplay(t *testing.T) {
+	app := newControlPlaneAppEmpty()
+	app.computes["compute-alpha"] = map[string]any{"id": "compute-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "packageId": "basic", "status": "running"}
+	ledger := &settlementWorkerLedger{}
+	service := controlPlaneServiceForTest(ledger)
+	now := time.Date(2026, 7, 9, 12, 30, 0, 0, time.UTC)
+
+	if err := app.runPeriodicSettlementOnce(context.Background(), service, now); err != nil {
+		t.Fatalf("first settlement worker run: %v", err)
+	}
+	if err := app.runPeriodicSettlementOnce(context.Background(), service, now); err != nil {
+		t.Fatalf("second settlement worker run: %v", err)
+	}
+	if len(ledger.keys) != 2 || ledger.keys[0] != ledger.keys[1] {
+		t.Fatalf("worker must replay the same period with the same ledger key, got %#v", ledger.keys)
+	}
+	if len(app.ledger) != 1 {
+		t.Fatalf("control-plane ledger projection duplicated replayed settlement: %#v", app.ledger)
+	}
+	if len(app.walletTx) != 1 {
+		t.Fatalf("control-plane wallet transaction projection duplicated replayed settlement: %#v", app.walletTx)
+	}
+}
+
 func controlPlaneServiceForTest(ledger clients.LedgerClient) *controlplane.Service {
 	return controlplane.NewService(ledger, &fakeFabricClient{})
 }

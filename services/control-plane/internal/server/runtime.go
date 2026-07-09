@@ -1360,9 +1360,9 @@ func (app *controlPlaneApp) rememberResourceSettlement(result clients.ResourceSe
 	ledger["quantity"] = result.Quantity
 	ledger["unit"] = result.Unit
 	ledger["providerCostEvidenceRef"] = result.ProviderCostEvidenceRef
-	app.ledger = append(app.ledger, ledger)
+	app.ledger = upsertProjectionByID(app.ledger, ledger)
 
-	app.walletTx = append(app.walletTx, map[string]any{
+	walletTx := map[string]any{
 		"id":              result.WalletTransactionID,
 		"accountId":       result.AccountID,
 		"ledgerEntryId":   result.LedgerEntryID,
@@ -1374,7 +1374,8 @@ func (app *controlPlaneApp) rememberResourceSettlement(result clients.ResourceSe
 		"availableCents":  result.Wallet.AvailableCents,
 		"totalSpentCents": result.Wallet.TotalSpentCents,
 		"currency":        result.Wallet.Currency,
-	})
+	}
+	app.walletTx = upsertProjectionByID(app.walletTx, walletTx)
 	app.wallets[result.AccountID] = walletProjection(result.Wallet)
 	return app.persistLocked()
 }
@@ -1493,6 +1494,34 @@ func settlementMetadata(settlement clients.ResourceSettlementResult) map[string]
 		metadata["computeAllocationId"] = settlement.ResourceID
 	}
 	return metadata
+}
+
+func upsertProjectionByID(rows []stateRow, row stateRow) []stateRow {
+	key := projectionReplayKey(row)
+	if key == "" {
+		return append(rows, row)
+	}
+	for index := range rows {
+		if projectionReplayKey(rows[index]) == key {
+			rows[index] = row
+			return rows
+		}
+	}
+	return append(rows, row)
+}
+
+func projectionReplayKey(row stateRow) string {
+	id := stringValue(row["id"])
+	if id == "" {
+		return ""
+	}
+	resourceID := stringValue(row["resourceId"])
+	if resourceID == "" {
+		if metadata, _ := row["metadata"].(map[string]any); metadata != nil {
+			resourceID = stringValue(metadata["resourceId"])
+		}
+	}
+	return strings.Join([]string{id, stringValue(row["type"]), resourceID}, "\x00")
 }
 
 func manualTopUpProjections(topups []clients.ManualTopUp) []map[string]any {
