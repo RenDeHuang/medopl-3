@@ -23,6 +23,8 @@ type Membership struct {
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// AccountID holds the value of the "account_id" field.
 	AccountID string `json:"account_id,omitempty"`
+	// OrganizationID holds the value of the "organization_id" field.
+	OrganizationID string `json:"organization_id,omitempty"`
 	// UserID holds the value of the "user_id" field.
 	UserID string `json:"user_id,omitempty"`
 	// Role holds the value of the "role" field.
@@ -37,7 +39,7 @@ func (*Membership) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case membership.FieldID, membership.FieldAccountID, membership.FieldUserID, membership.FieldRole, membership.FieldStatus:
+		case membership.FieldID, membership.FieldAccountID, membership.FieldOrganizationID, membership.FieldUserID, membership.FieldRole, membership.FieldStatus:
 			values[i] = new(sql.NullString)
 		case membership.FieldCreatedAt, membership.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -79,6 +81,12 @@ func (m *Membership) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field account_id", values[i])
 			} else if value.Valid {
 				m.AccountID = value.String
+			}
+		case membership.FieldOrganizationID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field organization_id", values[i])
+			} else if value.Valid {
+				m.OrganizationID = value.String
 			}
 		case membership.FieldUserID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -142,6 +150,9 @@ func (m *Membership) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("account_id=")
 	builder.WriteString(m.AccountID)
+	builder.WriteString(", ")
+	builder.WriteString("organization_id=")
+	builder.WriteString(m.OrganizationID)
 	builder.WriteString(", ")
 	builder.WriteString("user_id=")
 	builder.WriteString(m.UserID)

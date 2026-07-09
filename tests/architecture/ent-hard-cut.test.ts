@@ -54,6 +54,7 @@ test("Go services use Ent schema and migrations for production persistence", asy
 test("Control Plane Ent model includes current facts and archive facts", async () => {
   const requiredSchemas = [
     "account.go",
+    "organization.go",
     "user.go",
     "membership.go",
     "session.go",
@@ -147,6 +148,13 @@ test("Control Plane schema and migrations do not inherit a generic wide fact tab
     const text = await source(migration);
     assert.equal(text.includes("LIKE control_plane_accounts"), false, `${migration} must define tables explicitly`);
     assert.match(text, /control_plane_organizations/, `${migration} must include the organization facts read by Control Plane`);
+    const accountsTable = text.split("\n").find((line) => line.includes("CREATE TABLE IF NOT EXISTS control_plane_accounts"));
+    const usersTable = text.split("\n").find((line) => line.includes("CREATE TABLE IF NOT EXISTS control_plane_users"));
+    assert.ok(accountsTable, `${migration} must define control_plane_accounts`);
+    assert.ok(usersTable, `${migration} must define control_plane_users`);
+    assert.equal(accountsTable.includes("password_hash"), false, `${migration} accounts must not inherit user columns`);
+    assert.equal(accountsTable.includes("provider_resource_id"), false, `${migration} accounts must not inherit resource columns`);
+    assert.equal(usersTable.includes("provider_resource_id"), false, `${migration} users must not inherit resource columns`);
   }
 });
 
@@ -157,7 +165,14 @@ test("Control Plane production store does not expose generic state row tables", 
     "type stateTable",
     "postgresStateColumns",
     "postgresFactTables",
-    "postgresFactEventTables"
+    "postgresFactEventTables",
+    "\"database/sql\"",
+    "replaceStateTable",
+    "replaceStateEvents",
+    "replaceSingleton",
+    "controlPlaneRecordColumns",
+    "insertFactSQL",
+    "selectFactSQL"
   ]) {
     assert.equal(storeSource.includes(marker), false, `Control Plane store must not keep ${marker}`);
   }

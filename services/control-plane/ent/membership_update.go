@@ -62,6 +62,20 @@ func (mu *MembershipUpdate) SetNillableAccountID(s *string) *MembershipUpdate {
 	return mu
 }
 
+// SetOrganizationID sets the "organization_id" field.
+func (mu *MembershipUpdate) SetOrganizationID(s string) *MembershipUpdate {
+	mu.mutation.SetOrganizationID(s)
+	return mu
+}
+
+// SetNillableOrganizationID sets the "organization_id" field if the given value is not nil.
+func (mu *MembershipUpdate) SetNillableOrganizationID(s *string) *MembershipUpdate {
+	if s != nil {
+		mu.SetOrganizationID(*s)
+	}
+	return mu
+}
+
 // SetUserID sets the "user_id" field.
 func (mu *MembershipUpdate) SetUserID(s string) *MembershipUpdate {
 	mu.mutation.SetUserID(s)
@@ -181,6 +195,9 @@ func (mu *MembershipUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := mu.mutation.AccountID(); ok {
 		_spec.SetField(membership.FieldAccountID, field.TypeString, value)
 	}
+	if value, ok := mu.mutation.OrganizationID(); ok {
+		_spec.SetField(membership.FieldOrganizationID, field.TypeString, value)
+	}
 	if value, ok := mu.mutation.UserID(); ok {
 		_spec.SetField(membership.FieldUserID, field.TypeString, value)
 	}
@@ -240,6 +257,20 @@ func (muo *MembershipUpdateOne) SetAccountID(s string) *MembershipUpdateOne {
 func (muo *MembershipUpdateOne) SetNillableAccountID(s *string) *MembershipUpdateOne {
 	if s != nil {
 		muo.SetAccountID(*s)
+	}
+	return muo
+}
+
+// SetOrganizationID sets the "organization_id" field.
+func (muo *MembershipUpdateOne) SetOrganizationID(s string) *MembershipUpdateOne {
+	muo.mutation.SetOrganizationID(s)
+	return muo
+}
+
+// SetNillableOrganizationID sets the "organization_id" field if the given value is not nil.
+func (muo *MembershipUpdateOne) SetNillableOrganizationID(s *string) *MembershipUpdateOne {
+	if s != nil {
+		muo.SetOrganizationID(*s)
 	}
 	return muo
 }
@@ -392,6 +423,9 @@ func (muo *MembershipUpdateOne) sqlSave(ctx context.Context) (_node *Membership,
 	}
 	if value, ok := muo.mutation.AccountID(); ok {
 		_spec.SetField(membership.FieldAccountID, field.TypeString, value)
+	}
+	if value, ok := muo.mutation.OrganizationID(); ok {
+		_spec.SetField(membership.FieldOrganizationID, field.TypeString, value)
 	}
 	if value, ok := muo.mutation.UserID(); ok {
 		_spec.SetField(membership.FieldUserID, field.TypeString, value)

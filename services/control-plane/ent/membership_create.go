@@ -54,6 +54,20 @@ func (mc *MembershipCreate) SetAccountID(s string) *MembershipCreate {
 	return mc
 }
 
+// SetOrganizationID sets the "organization_id" field.
+func (mc *MembershipCreate) SetOrganizationID(s string) *MembershipCreate {
+	mc.mutation.SetOrganizationID(s)
+	return mc
+}
+
+// SetNillableOrganizationID sets the "organization_id" field if the given value is not nil.
+func (mc *MembershipCreate) SetNillableOrganizationID(s *string) *MembershipCreate {
+	if s != nil {
+		mc.SetOrganizationID(*s)
+	}
+	return mc
+}
+
 // SetUserID sets the "user_id" field.
 func (mc *MembershipCreate) SetUserID(s string) *MembershipCreate {
 	mc.mutation.SetUserID(s)
@@ -137,6 +151,10 @@ func (mc *MembershipCreate) defaults() {
 		v := membership.DefaultUpdatedAt()
 		mc.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := mc.mutation.OrganizationID(); !ok {
+		v := membership.DefaultOrganizationID
+		mc.mutation.SetOrganizationID(v)
+	}
 	if _, ok := mc.mutation.Role(); !ok {
 		v := membership.DefaultRole
 		mc.mutation.SetRole(v)
@@ -162,6 +180,9 @@ func (mc *MembershipCreate) check() error {
 		if err := membership.AccountIDValidator(v); err != nil {
 			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "Membership.account_id": %w`, err)}
 		}
+	}
+	if _, ok := mc.mutation.OrganizationID(); !ok {
+		return &ValidationError{Name: "organization_id", err: errors.New(`ent: missing required field "Membership.organization_id"`)}
 	}
 	if _, ok := mc.mutation.UserID(); !ok {
 		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "Membership.user_id"`)}
@@ -228,6 +249,10 @@ func (mc *MembershipCreate) createSpec() (*Membership, *sqlgraph.CreateSpec) {
 	if value, ok := mc.mutation.AccountID(); ok {
 		_spec.SetField(membership.FieldAccountID, field.TypeString, value)
 		_node.AccountID = value
+	}
+	if value, ok := mc.mutation.OrganizationID(); ok {
+		_spec.SetField(membership.FieldOrganizationID, field.TypeString, value)
+		_node.OrganizationID = value
 	}
 	if value, ok := mc.mutation.UserID(); ok {
 		_spec.SetField(membership.FieldUserID, field.TypeString, value)

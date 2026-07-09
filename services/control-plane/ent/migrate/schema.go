@@ -310,6 +310,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "account_id", Type: field.TypeString},
+		{Name: "organization_id", Type: field.TypeString, Default: ""},
 		{Name: "user_id", Type: field.TypeString},
 		{Name: "role", Type: field.TypeString, Default: "member"},
 		{Name: "status", Type: field.TypeString, Default: "active"},
@@ -319,6 +320,21 @@ var (
 		Name:       "control_plane_memberships",
 		Columns:    ControlPlaneMembershipsColumns,
 		PrimaryKey: []*schema.Column{ControlPlaneMembershipsColumns[0]},
+	}
+	// ControlPlaneOrganizationsColumns holds the columns for the "control_plane_organizations" table.
+	ControlPlaneOrganizationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "billing_account_id", Type: field.TypeString, Default: ""},
+		{Name: "name", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: "active"},
+	}
+	// ControlPlaneOrganizationsTable holds the schema information for the "control_plane_organizations" table.
+	ControlPlaneOrganizationsTable = &schema.Table{
+		Name:       "control_plane_organizations",
+		Columns:    ControlPlaneOrganizationsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneOrganizationsColumns[0]},
 	}
 	// ControlPlaneProductionE2eRecordsColumns holds the columns for the "control_plane_production_e2e_records" table.
 	ControlPlaneProductionE2eRecordsColumns = []*schema.Column{
@@ -590,6 +606,7 @@ var (
 		ControlPlaneLedgerProjectionsTable,
 		ControlPlaneManualTopupProjectionsTable,
 		ControlPlaneMembershipsTable,
+		ControlPlaneOrganizationsTable,
 		ControlPlaneProductionE2eRecordsTable,
 		ControlPlaneRuntimeOperationsTable,
 		ControlPlaneSessionsTable,
@@ -645,6 +662,9 @@ func init() {
 	}
 	ControlPlaneMembershipsTable.Annotation = &entsql.Annotation{
 		Table: "control_plane_memberships",
+	}
+	ControlPlaneOrganizationsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_organizations",
 	}
 	ControlPlaneProductionE2eRecordsTable.Annotation = &entsql.Annotation{
 		Table: "control_plane_production_e2e_records",

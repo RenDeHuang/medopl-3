@@ -29,6 +29,14 @@ func accountFields() []ent.Field {
 	)
 }
 
+func organizationFields() []ent.Field {
+	return append(baseFields(),
+		field.String("billing_account_id").Default(""),
+		field.String("name").Default(""),
+		field.String("status").Default("active"),
+	)
+}
+
 func userFields() []ent.Field {
 	return append(baseFields(),
 		field.String("account_id").NotEmpty(),
@@ -48,6 +56,7 @@ func userFields() []ent.Field {
 func membershipFields() []ent.Field {
 	return append(baseFields(),
 		field.String("account_id").NotEmpty(),
+		field.String("organization_id").Default(""),
 		field.String("user_id").NotEmpty(),
 		field.String("role").Default("member"),
 		field.String("status").Default("active"),
@@ -364,11 +373,12 @@ func archivedResourceFields() []ent.Field {
 	)
 }
 
-func (Account) Annotations() []schema.Annotation     { return table("control_plane_accounts") }
-func (User) Annotations() []schema.Annotation        { return table("control_plane_users") }
-func (Membership) Annotations() []schema.Annotation  { return table("control_plane_memberships") }
-func (Session) Annotations() []schema.Annotation     { return table("control_plane_sessions") }
-func (AuthAttempt) Annotations() []schema.Annotation { return table("control_plane_auth_attempts") }
+func (Account) Annotations() []schema.Annotation      { return table("control_plane_accounts") }
+func (Organization) Annotations() []schema.Annotation { return table("control_plane_organizations") }
+func (User) Annotations() []schema.Annotation         { return table("control_plane_users") }
+func (Membership) Annotations() []schema.Annotation   { return table("control_plane_memberships") }
+func (Session) Annotations() []schema.Annotation      { return table("control_plane_sessions") }
+func (AuthAttempt) Annotations() []schema.Annotation  { return table("control_plane_auth_attempts") }
 func (ComputeAllocation) Annotations() []schema.Annotation {
 	return table("control_plane_compute_allocations")
 }

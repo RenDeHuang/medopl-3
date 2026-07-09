@@ -29,7 +29,7 @@
 
 ## Phase 3: Control Plane Ent Store
 
-- [ ] Replace `FactStore` with typed Ent repositories.
+- [x] Replace `FactStore` with typed Ent repositories.
 - [x] Remove file fact store and `OPL_CONTROL_PLANE_FACTS_FILE`.
 - [ ] Make `/api/state` and `/api/management/state` aggregate Ent facts plus Ledger/Fabric HTTP reads only.
 - [ ] Delete old fact-store tests once Ent repository tests cover the behavior.
@@ -51,7 +51,7 @@
 
 ## Phase 6: Archive Domain
 
-- [ ] Add archive tables for destroyed compute allocations, storage volumes, storage attachments, workspaces, and admin audit events.
+- [x] Add archive tables for destroyed compute allocations, storage volumes, storage attachments, workspaces, and admin audit events.
 - [ ] Add `ArchiveService` and retention worker for terminal Control Plane facts.
 - [ ] Exclude archived resources from customer current-state pages.
 - [ ] Add admin archive API and frontend API client surface.
@@ -59,7 +59,7 @@
 
 ## Phase 7: Periodic Settlement Ent Path
 
-- [ ] Make the periodic settlement worker scan Ent-backed active compute and storage resources.
+- [x] Make the periodic settlement worker scan Ent-backed active compute and storage resources.
 - [x] Update last-settled metadata after successful Ledger settlement.
 - [x] Keep stable settlement idempotency keys.
 - [x] Prove repeated worker runs do not double-charge.

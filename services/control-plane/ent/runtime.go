@@ -17,6 +17,7 @@ import (
 	"opl-cloud/services/control-plane/ent/ledgerprojection"
 	"opl-cloud/services/control-plane/ent/manualtopupprojection"
 	"opl-cloud/services/control-plane/ent/membership"
+	"opl-cloud/services/control-plane/ent/organization"
 	"opl-cloud/services/control-plane/ent/productione2erecord"
 	"opl-cloud/services/control-plane/ent/runtimeoperation"
 	"opl-cloud/services/control-plane/ent/schema"
@@ -799,22 +800,54 @@ func init() {
 	membershipDescAccountID := membershipFields[3].Descriptor()
 	// membership.AccountIDValidator is a validator for the "account_id" field. It is called by the builders before save.
 	membership.AccountIDValidator = membershipDescAccountID.Validators[0].(func(string) error)
+	// membershipDescOrganizationID is the schema descriptor for organization_id field.
+	membershipDescOrganizationID := membershipFields[4].Descriptor()
+	// membership.DefaultOrganizationID holds the default value on creation for the organization_id field.
+	membership.DefaultOrganizationID = membershipDescOrganizationID.Default.(string)
 	// membershipDescUserID is the schema descriptor for user_id field.
-	membershipDescUserID := membershipFields[4].Descriptor()
+	membershipDescUserID := membershipFields[5].Descriptor()
 	// membership.UserIDValidator is a validator for the "user_id" field. It is called by the builders before save.
 	membership.UserIDValidator = membershipDescUserID.Validators[0].(func(string) error)
 	// membershipDescRole is the schema descriptor for role field.
-	membershipDescRole := membershipFields[5].Descriptor()
+	membershipDescRole := membershipFields[6].Descriptor()
 	// membership.DefaultRole holds the default value on creation for the role field.
 	membership.DefaultRole = membershipDescRole.Default.(string)
 	// membershipDescStatus is the schema descriptor for status field.
-	membershipDescStatus := membershipFields[6].Descriptor()
+	membershipDescStatus := membershipFields[7].Descriptor()
 	// membership.DefaultStatus holds the default value on creation for the status field.
 	membership.DefaultStatus = membershipDescStatus.Default.(string)
 	// membershipDescID is the schema descriptor for id field.
 	membershipDescID := membershipFields[0].Descriptor()
 	// membership.IDValidator is a validator for the "id" field. It is called by the builders before save.
 	membership.IDValidator = membershipDescID.Validators[0].(func(string) error)
+	organizationFields := schema.Organization{}.Fields()
+	_ = organizationFields
+	// organizationDescCreatedAt is the schema descriptor for created_at field.
+	organizationDescCreatedAt := organizationFields[1].Descriptor()
+	// organization.DefaultCreatedAt holds the default value on creation for the created_at field.
+	organization.DefaultCreatedAt = organizationDescCreatedAt.Default.(func() time.Time)
+	// organizationDescUpdatedAt is the schema descriptor for updated_at field.
+	organizationDescUpdatedAt := organizationFields[2].Descriptor()
+	// organization.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	organization.DefaultUpdatedAt = organizationDescUpdatedAt.Default.(func() time.Time)
+	// organization.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	organization.UpdateDefaultUpdatedAt = organizationDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// organizationDescBillingAccountID is the schema descriptor for billing_account_id field.
+	organizationDescBillingAccountID := organizationFields[3].Descriptor()
+	// organization.DefaultBillingAccountID holds the default value on creation for the billing_account_id field.
+	organization.DefaultBillingAccountID = organizationDescBillingAccountID.Default.(string)
+	// organizationDescName is the schema descriptor for name field.
+	organizationDescName := organizationFields[4].Descriptor()
+	// organization.DefaultName holds the default value on creation for the name field.
+	organization.DefaultName = organizationDescName.Default.(string)
+	// organizationDescStatus is the schema descriptor for status field.
+	organizationDescStatus := organizationFields[5].Descriptor()
+	// organization.DefaultStatus holds the default value on creation for the status field.
+	organization.DefaultStatus = organizationDescStatus.Default.(string)
+	// organizationDescID is the schema descriptor for id field.
+	organizationDescID := organizationFields[0].Descriptor()
+	// organization.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	organization.IDValidator = organizationDescID.Validators[0].(func(string) error)
 	productione2erecordFields := schema.ProductionE2ERecord{}.Fields()
 	_ = productione2erecordFields
 	// productione2erecordDescCreatedAt is the schema descriptor for created_at field.

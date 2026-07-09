@@ -48,6 +48,9 @@ type ManualTopupProjection func(*sql.Selector)
 // Membership is the predicate function for membership builders.
 type Membership func(*sql.Selector)
 
+// Organization is the predicate function for organization builders.
+type Organization func(*sql.Selector)
+
 // ProductionE2ERecord is the predicate function for productione2erecord builders.
 type ProductionE2ERecord func(*sql.Selector)
 

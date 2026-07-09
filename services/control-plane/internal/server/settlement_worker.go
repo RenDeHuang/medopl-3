@@ -60,7 +60,11 @@ func (app *controlPlaneApp) runPeriodicSettlementOnce(ctx context.Context, servi
 		periodEnd = now.UTC()
 	}
 	periodStart := periodEnd.Add(-time.Hour)
-	for _, input := range app.periodicSettlementInputs(periodStart, periodEnd) {
+	inputs, err := app.periodicSettlementInputs(ctx, periodStart, periodEnd)
+	if err != nil {
+		return err
+	}
+	for _, input := range inputs {
 		key := periodicSettlementKey(input)
 		result, err := service.SettleResource(ctx, input, key)
 		if err != nil {
@@ -77,23 +81,38 @@ func (app *controlPlaneApp) runPeriodicSettlementOnce(ctx context.Context, servi
 	return nil
 }
 
-func (app *controlPlaneApp) periodicSettlementInputs(periodStart time.Time, periodEnd time.Time) []controlplane.ResourceSettlementInput {
-	app.mu.Lock()
-	defer app.mu.Unlock()
+type settlementResourceStore interface {
+	SettlementResourceRows(ctx context.Context) (controlPlaneRecordSet, controlPlaneRecordSet, error)
+}
+
+func (app *controlPlaneApp) periodicSettlementInputs(ctx context.Context, periodStart time.Time, periodEnd time.Time) ([]controlplane.ResourceSettlementInput, error) {
+	computes, storages, err := app.settlementResourceRows(ctx)
+	if err != nil {
+		return nil, err
+	}
 	inputs := []controlplane.ResourceSettlementInput{}
-	for _, row := range app.computes {
+	for _, row := range computes {
 		if !billableCompute(row) || alreadySettledForPeriod(row, periodEnd) {
 			continue
 		}
 		inputs = append(inputs, periodicSettlementInput(row, "compute", periodStart, periodEnd))
 	}
-	for _, row := range app.storages {
+	for _, row := range storages {
 		if !billableStorage(row) || alreadySettledForPeriod(row, periodEnd) {
 			continue
 		}
 		inputs = append(inputs, periodicSettlementInput(row, "storage", periodStart, periodEnd))
 	}
-	return inputs
+	return inputs, nil
+}
+
+func (app *controlPlaneApp) settlementResourceRows(ctx context.Context) (controlPlaneRecordSet, controlPlaneRecordSet, error) {
+	if store, ok := app.store.(settlementResourceStore); ok {
+		return store.SettlementResourceRows(ctx)
+	}
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	return cloneStateTable(app.computes), cloneStateTable(app.storages), nil
 }
 
 func billableCompute(row map[string]any) bool {
