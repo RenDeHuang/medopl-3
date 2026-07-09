@@ -347,11 +347,6 @@ func (rsu *ResourceSettlementUpdate) check() error {
 			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "ResourceSettlement.account_id": %w`, err)}
 		}
 	}
-	if v, ok := rsu.mutation.WorkspaceID(); ok {
-		if err := resourcesettlement.WorkspaceIDValidator(v); err != nil {
-			return &ValidationError{Name: "workspace_id", err: fmt.Errorf(`ent: validator failed for field "ResourceSettlement.workspace_id": %w`, err)}
-		}
-	}
 	if v, ok := rsu.mutation.ResourceType(); ok {
 		if err := resourcesettlement.ResourceTypeValidator(v); err != nil {
 			return &ValidationError{Name: "resource_type", err: fmt.Errorf(`ent: validator failed for field "ResourceSettlement.resource_type": %w`, err)}
@@ -815,11 +810,6 @@ func (rsuo *ResourceSettlementUpdateOne) check() error {
 	if v, ok := rsuo.mutation.AccountID(); ok {
 		if err := resourcesettlement.AccountIDValidator(v); err != nil {
 			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "ResourceSettlement.account_id": %w`, err)}
-		}
-	}
-	if v, ok := rsuo.mutation.WorkspaceID(); ok {
-		if err := resourcesettlement.WorkspaceIDValidator(v); err != nil {
-			return &ValidationError{Name: "workspace_id", err: fmt.Errorf(`ent: validator failed for field "ResourceSettlement.workspace_id": %w`, err)}
 		}
 	}
 	if v, ok := rsuo.mutation.ResourceType(); ok {

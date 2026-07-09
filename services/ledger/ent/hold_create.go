@@ -32,6 +32,14 @@ func (hc *HoldCreate) SetWorkspaceID(s string) *HoldCreate {
 	return hc
 }
 
+// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
+func (hc *HoldCreate) SetNillableWorkspaceID(s *string) *HoldCreate {
+	if s != nil {
+		hc.SetWorkspaceID(*s)
+	}
+	return hc
+}
+
 // SetResourceType sets the "resource_type" field.
 func (hc *HoldCreate) SetResourceType(s string) *HoldCreate {
 	hc.mutation.SetResourceType(s)
@@ -149,6 +157,10 @@ func (hc *HoldCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (hc *HoldCreate) defaults() {
+	if _, ok := hc.mutation.WorkspaceID(); !ok {
+		v := hold.DefaultWorkspaceID
+		hc.mutation.SetWorkspaceID(v)
+	}
 	if _, ok := hc.mutation.Currency(); !ok {
 		v := hold.DefaultCurrency
 		hc.mutation.SetCurrency(v)
@@ -171,11 +183,6 @@ func (hc *HoldCreate) check() error {
 	}
 	if _, ok := hc.mutation.WorkspaceID(); !ok {
 		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "Hold.workspace_id"`)}
-	}
-	if v, ok := hc.mutation.WorkspaceID(); ok {
-		if err := hold.WorkspaceIDValidator(v); err != nil {
-			return &ValidationError{Name: "workspace_id", err: fmt.Errorf(`ent: validator failed for field "Hold.workspace_id": %w`, err)}
-		}
 	}
 	if _, ok := hc.mutation.ResourceType(); !ok {
 		return &ValidationError{Name: "resource_type", err: errors.New(`ent: missing required field "Hold.resource_type"`)}

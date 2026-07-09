@@ -71,8 +71,8 @@ func ValidColumn(column string) bool {
 var (
 	// AccountIDValidator is a validator for the "account_id" field. It is called by the builders before save.
 	AccountIDValidator func(string) error
-	// WorkspaceIDValidator is a validator for the "workspace_id" field. It is called by the builders before save.
-	WorkspaceIDValidator func(string) error
+	// DefaultWorkspaceID holds the default value on creation for the "workspace_id" field.
+	DefaultWorkspaceID string
 	// ResourceTypeValidator is a validator for the "resource_type" field. It is called by the builders before save.
 	ResourceTypeValidator func(string) error
 	// ResourceIDValidator is a validator for the "resource_id" field. It is called by the builders before save.

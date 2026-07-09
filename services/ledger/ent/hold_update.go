@@ -242,11 +242,6 @@ func (hu *HoldUpdate) check() error {
 			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "Hold.account_id": %w`, err)}
 		}
 	}
-	if v, ok := hu.mutation.WorkspaceID(); ok {
-		if err := hold.WorkspaceIDValidator(v); err != nil {
-			return &ValidationError{Name: "workspace_id", err: fmt.Errorf(`ent: validator failed for field "Hold.workspace_id": %w`, err)}
-		}
-	}
 	if v, ok := hu.mutation.ResourceType(); ok {
 		if err := hold.ResourceTypeValidator(v); err != nil {
 			return &ValidationError{Name: "resource_type", err: fmt.Errorf(`ent: validator failed for field "Hold.resource_type": %w`, err)}
@@ -581,11 +576,6 @@ func (huo *HoldUpdateOne) check() error {
 	if v, ok := huo.mutation.AccountID(); ok {
 		if err := hold.AccountIDValidator(v); err != nil {
 			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "Hold.account_id": %w`, err)}
-		}
-	}
-	if v, ok := huo.mutation.WorkspaceID(); ok {
-		if err := hold.WorkspaceIDValidator(v); err != nil {
-			return &ValidationError{Name: "workspace_id", err: fmt.Errorf(`ent: validator failed for field "Hold.workspace_id": %w`, err)}
 		}
 	}
 	if v, ok := huo.mutation.ResourceType(); ok {

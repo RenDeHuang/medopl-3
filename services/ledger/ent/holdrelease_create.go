@@ -32,6 +32,14 @@ func (hrc *HoldReleaseCreate) SetWorkspaceID(s string) *HoldReleaseCreate {
 	return hrc
 }
 
+// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
+func (hrc *HoldReleaseCreate) SetNillableWorkspaceID(s *string) *HoldReleaseCreate {
+	if s != nil {
+		hrc.SetWorkspaceID(*s)
+	}
+	return hrc
+}
+
 // SetResourceType sets the "resource_type" field.
 func (hrc *HoldReleaseCreate) SetResourceType(s string) *HoldReleaseCreate {
 	hrc.mutation.SetResourceType(s)
@@ -155,6 +163,10 @@ func (hrc *HoldReleaseCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (hrc *HoldReleaseCreate) defaults() {
+	if _, ok := hrc.mutation.WorkspaceID(); !ok {
+		v := holdrelease.DefaultWorkspaceID
+		hrc.mutation.SetWorkspaceID(v)
+	}
 	if _, ok := hrc.mutation.Currency(); !ok {
 		v := holdrelease.DefaultCurrency
 		hrc.mutation.SetCurrency(v)
@@ -177,11 +189,6 @@ func (hrc *HoldReleaseCreate) check() error {
 	}
 	if _, ok := hrc.mutation.WorkspaceID(); !ok {
 		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "HoldRelease.workspace_id"`)}
-	}
-	if v, ok := hrc.mutation.WorkspaceID(); ok {
-		if err := holdrelease.WorkspaceIDValidator(v); err != nil {
-			return &ValidationError{Name: "workspace_id", err: fmt.Errorf(`ent: validator failed for field "HoldRelease.workspace_id": %w`, err)}
-		}
 	}
 	if _, ok := hrc.mutation.ResourceType(); !ok {
 		return &ValidationError{Name: "resource_type", err: errors.New(`ent: missing required field "HoldRelease.resource_type"`)}

@@ -256,11 +256,6 @@ func (hru *HoldReleaseUpdate) check() error {
 			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "HoldRelease.account_id": %w`, err)}
 		}
 	}
-	if v, ok := hru.mutation.WorkspaceID(); ok {
-		if err := holdrelease.WorkspaceIDValidator(v); err != nil {
-			return &ValidationError{Name: "workspace_id", err: fmt.Errorf(`ent: validator failed for field "HoldRelease.workspace_id": %w`, err)}
-		}
-	}
 	if v, ok := hru.mutation.ResourceType(); ok {
 		if err := holdrelease.ResourceTypeValidator(v); err != nil {
 			return &ValidationError{Name: "resource_type", err: fmt.Errorf(`ent: validator failed for field "HoldRelease.resource_type": %w`, err)}
@@ -617,11 +612,6 @@ func (hruo *HoldReleaseUpdateOne) check() error {
 	if v, ok := hruo.mutation.AccountID(); ok {
 		if err := holdrelease.AccountIDValidator(v); err != nil {
 			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "HoldRelease.account_id": %w`, err)}
-		}
-	}
-	if v, ok := hruo.mutation.WorkspaceID(); ok {
-		if err := holdrelease.WorkspaceIDValidator(v); err != nil {
-			return &ValidationError{Name: "workspace_id", err: fmt.Errorf(`ent: validator failed for field "HoldRelease.workspace_id": %w`, err)}
 		}
 	}
 	if v, ok := hruo.mutation.ResourceType(); ok {

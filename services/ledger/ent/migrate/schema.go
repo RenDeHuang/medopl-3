@@ -29,7 +29,7 @@ var (
 	HoldsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true},
 		{Name: "account_id", Type: field.TypeString},
-		{Name: "workspace_id", Type: field.TypeString},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
 		{Name: "resource_type", Type: field.TypeString},
 		{Name: "resource_id", Type: field.TypeString},
 		{Name: "amount_cents", Type: field.TypeInt64},
@@ -51,7 +51,7 @@ var (
 	HoldReleasesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true},
 		{Name: "account_id", Type: field.TypeString},
-		{Name: "workspace_id", Type: field.TypeString},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
 		{Name: "resource_type", Type: field.TypeString},
 		{Name: "resource_id", Type: field.TypeString},
 		{Name: "hold_id", Type: field.TypeString},
@@ -144,7 +144,7 @@ var (
 	ResourceSettlementsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true},
 		{Name: "account_id", Type: field.TypeString},
-		{Name: "workspace_id", Type: field.TypeString},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
 		{Name: "resource_type", Type: field.TypeString},
 		{Name: "resource_id", Type: field.TypeString},
 		{Name: "amount_cents", Type: field.TypeInt64},

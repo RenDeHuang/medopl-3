@@ -63,8 +63,8 @@ func init() {
 	hold.AccountIDValidator = holdDescAccountID.Validators[0].(func(string) error)
 	// holdDescWorkspaceID is the schema descriptor for workspace_id field.
 	holdDescWorkspaceID := holdFields[2].Descriptor()
-	// hold.WorkspaceIDValidator is a validator for the "workspace_id" field. It is called by the builders before save.
-	hold.WorkspaceIDValidator = holdDescWorkspaceID.Validators[0].(func(string) error)
+	// hold.DefaultWorkspaceID holds the default value on creation for the workspace_id field.
+	hold.DefaultWorkspaceID = holdDescWorkspaceID.Default.(string)
 	// holdDescResourceType is the schema descriptor for resource_type field.
 	holdDescResourceType := holdFields[3].Descriptor()
 	// hold.ResourceTypeValidator is a validator for the "resource_type" field. It is called by the builders before save.
@@ -113,8 +113,8 @@ func init() {
 	holdrelease.AccountIDValidator = holdreleaseDescAccountID.Validators[0].(func(string) error)
 	// holdreleaseDescWorkspaceID is the schema descriptor for workspace_id field.
 	holdreleaseDescWorkspaceID := holdreleaseFields[2].Descriptor()
-	// holdrelease.WorkspaceIDValidator is a validator for the "workspace_id" field. It is called by the builders before save.
-	holdrelease.WorkspaceIDValidator = holdreleaseDescWorkspaceID.Validators[0].(func(string) error)
+	// holdrelease.DefaultWorkspaceID holds the default value on creation for the workspace_id field.
+	holdrelease.DefaultWorkspaceID = holdreleaseDescWorkspaceID.Default.(string)
 	// holdreleaseDescResourceType is the schema descriptor for resource_type field.
 	holdreleaseDescResourceType := holdreleaseFields[3].Descriptor()
 	// holdrelease.ResourceTypeValidator is a validator for the "resource_type" field. It is called by the builders before save.
@@ -303,8 +303,8 @@ func init() {
 	resourcesettlement.AccountIDValidator = resourcesettlementDescAccountID.Validators[0].(func(string) error)
 	// resourcesettlementDescWorkspaceID is the schema descriptor for workspace_id field.
 	resourcesettlementDescWorkspaceID := resourcesettlementFields[2].Descriptor()
-	// resourcesettlement.WorkspaceIDValidator is a validator for the "workspace_id" field. It is called by the builders before save.
-	resourcesettlement.WorkspaceIDValidator = resourcesettlementDescWorkspaceID.Validators[0].(func(string) error)
+	// resourcesettlement.DefaultWorkspaceID holds the default value on creation for the workspace_id field.
+	resourcesettlement.DefaultWorkspaceID = resourcesettlementDescWorkspaceID.Default.(string)
 	// resourcesettlementDescResourceType is the schema descriptor for resource_type field.
 	resourcesettlementDescResourceType := resourcesettlementFields[3].Descriptor()
 	// resourcesettlement.ResourceTypeValidator is a validator for the "resource_type" field. It is called by the builders before save.

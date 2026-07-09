@@ -107,6 +107,28 @@ func TestReleaseHoldReducesFrozenWithoutDebitingBalance(t *testing.T) {
 	}
 }
 
+func TestHoldCanBeAccountResourceScopedBeforeWorkspaceExists(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	if _, err := store.ManualTopUp(ctx, ManualTopUpInput{AccountID: "acct-alpha", AmountCents: 2000, Currency: "CNY", OperatorUserID: "usr-admin", IdempotencyKey: "topup-unbound-hold"}); err != nil {
+		t.Fatalf("topup failed: %v", err)
+	}
+	hold, err := store.CreateHold(ctx, HoldInput{AccountID: "acct-alpha", ResourceType: "compute", ResourceID: "compute-alpha", AmountCents: 1000, Currency: "CNY", IdempotencyKey: "hold-unbound-workspace"})
+	if err != nil {
+		t.Fatalf("hold without workspace failed: %v", err)
+	}
+	if hold.WorkspaceID != "" || hold.Wallet.FrozenCents != 1000 {
+		t.Fatalf("unexpected hold: %#v", hold)
+	}
+	release, err := store.ReleaseHold(ctx, HoldReleaseInput{AccountID: "acct-alpha", ResourceType: "compute", ResourceID: "compute-alpha", HoldID: hold.ID, AmountCents: 1000, Currency: "CNY", Reason: "destroy_compute", IdempotencyKey: "release-unbound-workspace"})
+	if err != nil {
+		t.Fatalf("release without workspace failed: %v", err)
+	}
+	if release.WorkspaceID != "" || release.Wallet.FrozenCents != 0 || release.Wallet.BalanceCents != 2000 {
+		t.Fatalf("unexpected release: %#v", release)
+	}
+}
+
 func TestCreateHoldRequiresResourceIdentity(t *testing.T) {
 	store := NewMemoryStore()
 	_, err := store.CreateHold(context.Background(), HoldInput{AccountID: "acct-alpha", WorkspaceID: "ws-alpha", AmountCents: 1000, Currency: "CNY", IdempotencyKey: "hold-missing-resource"})

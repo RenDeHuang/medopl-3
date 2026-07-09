@@ -32,6 +32,14 @@ func (rsc *ResourceSettlementCreate) SetWorkspaceID(s string) *ResourceSettlemen
 	return rsc
 }
 
+// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
+func (rsc *ResourceSettlementCreate) SetNillableWorkspaceID(s *string) *ResourceSettlementCreate {
+	if s != nil {
+		rsc.SetWorkspaceID(*s)
+	}
+	return rsc
+}
+
 // SetResourceType sets the "resource_type" field.
 func (rsc *ResourceSettlementCreate) SetResourceType(s string) *ResourceSettlementCreate {
 	rsc.mutation.SetResourceType(s)
@@ -247,6 +255,10 @@ func (rsc *ResourceSettlementCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (rsc *ResourceSettlementCreate) defaults() {
+	if _, ok := rsc.mutation.WorkspaceID(); !ok {
+		v := resourcesettlement.DefaultWorkspaceID
+		rsc.mutation.SetWorkspaceID(v)
+	}
 	if _, ok := rsc.mutation.Currency(); !ok {
 		v := resourcesettlement.DefaultCurrency
 		rsc.mutation.SetCurrency(v)
@@ -297,11 +309,6 @@ func (rsc *ResourceSettlementCreate) check() error {
 	}
 	if _, ok := rsc.mutation.WorkspaceID(); !ok {
 		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "ResourceSettlement.workspace_id"`)}
-	}
-	if v, ok := rsc.mutation.WorkspaceID(); ok {
-		if err := resourcesettlement.WorkspaceIDValidator(v); err != nil {
-			return &ValidationError{Name: "workspace_id", err: fmt.Errorf(`ent: validator failed for field "ResourceSettlement.workspace_id": %w`, err)}
-		}
 	}
 	if _, ok := rsc.mutation.ResourceType(); !ok {
 		return &ValidationError{Name: "resource_type", err: errors.New(`ent: missing required field "ResourceSettlement.resource_type"`)}

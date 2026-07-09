@@ -11,7 +11,7 @@ func (HoldRelease) Fields() []ent.Field {
 	return []ent.Field{
 		idField(),
 		field.String("account_id").NotEmpty(),
-		field.String("workspace_id").NotEmpty(),
+		field.String("workspace_id").Default(""),
 		field.String("resource_type").NotEmpty(),
 		field.String("resource_id").NotEmpty(),
 		field.String("hold_id").NotEmpty(),
