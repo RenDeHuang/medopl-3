@@ -22,21 +22,21 @@ import (
 type controlPlaneApp struct {
 	mu          sync.Mutex
 	store       StateStore
-	computes    stateTable
-	storages    stateTable
-	attachments stateTable
-	workspaces  stateTable
-	users       stateTable
-	orgs        stateTable
-	memberships stateTable
-	support     stateTable
-	wallets     stateTable
-	ledger      []stateRow
-	walletTx    []stateRow
-	topups      []stateRow
-	runtimeOps  []stateRow
-	auditEvents []stateRow
-	reconcile   stateRow
+	computes    controlPlaneRecordSet
+	storages    controlPlaneRecordSet
+	attachments controlPlaneRecordSet
+	workspaces  controlPlaneRecordSet
+	users       controlPlaneRecordSet
+	orgs        controlPlaneRecordSet
+	memberships controlPlaneRecordSet
+	support     controlPlaneRecordSet
+	wallets     controlPlaneRecordSet
+	ledger      []controlPlaneRecord
+	walletTx    []controlPlaneRecord
+	topups      []controlPlaneRecord
+	runtimeOps  []controlPlaneRecord
+	auditEvents []controlPlaneRecord
+	reconcile   controlPlaneRecord
 	sessions    map[string]sessionRecord
 	// ponytail: per-process limiter; move to Redis when login traffic spans multiple replicas.
 	loginFailures map[string]loginFailure
@@ -76,15 +76,15 @@ func newControlPlaneAppWithStore(store StateStore) (*controlPlaneApp, error) {
 
 func newControlPlaneAppEmpty() *controlPlaneApp {
 	return &controlPlaneApp{
-		computes:      stateTable{},
-		storages:      stateTable{},
-		attachments:   stateTable{},
-		workspaces:    stateTable{},
-		users:         stateTable{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}},
-		orgs:          stateTable{},
-		memberships:   stateTable{},
-		support:       stateTable{},
-		wallets:       stateTable{},
+		computes:      controlPlaneRecordSet{},
+		storages:      controlPlaneRecordSet{},
+		attachments:   controlPlaneRecordSet{},
+		workspaces:    controlPlaneRecordSet{},
+		users:         controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}},
+		orgs:          controlPlaneRecordSet{},
+		memberships:   controlPlaneRecordSet{},
+		support:       controlPlaneRecordSet{},
+		wallets:       controlPlaneRecordSet{},
 		sessions:      map[string]sessionRecord{},
 		loginFailures: map[string]loginFailure{},
 	}
@@ -1496,7 +1496,7 @@ func settlementMetadata(settlement clients.ResourceSettlementResult) map[string]
 	return metadata
 }
 
-func upsertProjectionByID(rows []stateRow, row stateRow) []stateRow {
+func upsertProjectionByID(rows []controlPlaneRecord, row controlPlaneRecord) []controlPlaneRecord {
 	key := projectionReplayKey(row)
 	if key == "" {
 		return append(rows, row)
@@ -1510,7 +1510,7 @@ func upsertProjectionByID(rows []stateRow, row stateRow) []stateRow {
 	return append(rows, row)
 }
 
-func projectionReplayKey(row stateRow) string {
+func projectionReplayKey(row controlPlaneRecord) string {
 	id := stringValue(row["id"])
 	if id == "" {
 		return ""
@@ -1764,37 +1764,37 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
-func cloneMap(input map[string]any) stateRow {
+func cloneMap(input map[string]any) controlPlaneRecord {
 	if input == nil {
-		return stateRow{}
+		return controlPlaneRecord{}
 	}
-	output := stateRow{}
+	output := controlPlaneRecord{}
 	for key, value := range input {
 		output[key] = value
 	}
 	return output
 }
 
-func cloneStateTable(input stateTable) stateTable {
-	output := stateTable{}
+func cloneStateTable(input controlPlaneRecordSet) controlPlaneRecordSet {
+	output := controlPlaneRecordSet{}
 	for key, value := range input {
 		output[key] = cloneMap(value)
 	}
 	return output
 }
 
-func cloneStateRows(input []stateRow) []stateRow {
-	output := make([]stateRow, 0, len(input))
+func cloneStateRows(input []controlPlaneRecord) []controlPlaneRecord {
+	output := make([]controlPlaneRecord, 0, len(input))
 	for _, item := range input {
 		output = append(output, cloneMap(item))
 	}
 	return output
 }
 
-func (app *controlPlaneApp) sessionFactsLocked() stateTable {
-	output := stateTable{}
+func (app *controlPlaneApp) sessionFactsLocked() controlPlaneRecordSet {
+	output := controlPlaneRecordSet{}
 	for id, session := range app.sessions {
-		output[id] = stateRow{
+		output[id] = controlPlaneRecord{
 			"id":        session.ID,
 			"userId":    session.UserID,
 			"csrf":      session.CSRF,
@@ -1804,7 +1804,7 @@ func (app *controlPlaneApp) sessionFactsLocked() stateTable {
 	return output
 }
 
-func sessionsFromFacts(input stateTable) map[string]sessionRecord {
+func sessionsFromFacts(input controlPlaneRecordSet) map[string]sessionRecord {
 	output := map[string]sessionRecord{}
 	now := time.Now().UTC()
 	for id, row := range input {
@@ -1823,7 +1823,7 @@ func sessionsFromFacts(input stateTable) map[string]sessionRecord {
 	return output
 }
 
-func copySlice(input []stateRow) []any {
+func copySlice(input []controlPlaneRecord) []any {
 	output := make([]any, 0, len(input))
 	for _, item := range input {
 		output = append(output, cloneMap(item))
@@ -1831,7 +1831,7 @@ func copySlice(input []stateRow) []any {
 	return output
 }
 
-func values(input stateTable) []any {
+func values(input controlPlaneRecordSet) []any {
 	keys := make([]string, 0, len(input))
 	for key := range input {
 		keys = append(keys, key)
@@ -1844,7 +1844,7 @@ func values(input stateTable) []any {
 	return output
 }
 
-func accountValues(input stateTable, accountID string) []any {
+func accountValues(input controlPlaneRecordSet, accountID string) []any {
 	if accountID == "" {
 		return values(input)
 	}
@@ -1853,7 +1853,7 @@ func accountValues(input stateTable, accountID string) []any {
 	})
 }
 
-func auditEventsForAccount(events []stateRow, accountID string) []any {
+func auditEventsForAccount(events []controlPlaneRecord, accountID string) []any {
 	output := []any{}
 	for _, event := range events {
 		if accountID == "" || stringValue(event["targetAccountId"]) == accountID || stringValue(event["actorAccountId"]) == accountID {
@@ -1863,7 +1863,7 @@ func auditEventsForAccount(events []stateRow, accountID string) []any {
 	return output
 }
 
-func filteredValues(input stateTable, include func(map[string]any) bool) []any {
+func filteredValues(input controlPlaneRecordSet, include func(map[string]any) bool) []any {
 	rows := values(input)
 	output := make([]any, 0, len(rows))
 	for _, row := range rows {
@@ -1875,7 +1875,7 @@ func filteredValues(input stateTable, include func(map[string]any) bool) []any {
 	return output
 }
 
-func sanitizedUserValues(input stateTable, includeDeleted bool) []any {
+func sanitizedUserValues(input controlPlaneRecordSet, includeDeleted bool) []any {
 	keys := make([]string, 0, len(input))
 	for key := range input {
 		keys = append(keys, key)
@@ -1951,7 +1951,7 @@ func mapContainsAnyID(input map[string]any, ids ...string) bool {
 	return false
 }
 
-func countStatus(input stateTable, status string) int {
+func countStatus(input controlPlaneRecordSet, status string) int {
 	count := 0
 	for _, item := range input {
 		if item["status"] == status || item["state"] == status {
@@ -1961,7 +1961,7 @@ func countStatus(input stateTable, status string) int {
 	return count
 }
 
-func countActiveURLs(input stateTable) int {
+func countActiveURLs(input controlPlaneRecordSet) int {
 	count := 0
 	for _, item := range input {
 		if nested(item, "access", "tokenStatus") == "active" {

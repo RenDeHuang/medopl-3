@@ -19,8 +19,8 @@ const singletonFactID = "default"
 //go:embed ent_migrations/*.sql
 var controlPlaneMigrations embed.FS
 
-type stateRow = map[string]any
-type stateTable = map[string]stateRow
+type controlPlaneRecord = map[string]any
+type controlPlaneRecordSet = map[string]controlPlaneRecord
 
 type StateStore interface {
 	Load(ctx context.Context) (controlPlaneState, error)
@@ -28,23 +28,23 @@ type StateStore interface {
 }
 
 type controlPlaneState struct {
-	Version     int        `json:"version"`
-	Computes    stateTable `json:"computes,omitempty"`
-	Storages    stateTable `json:"storages,omitempty"`
-	Attachments stateTable `json:"attachments,omitempty"`
-	Workspaces  stateTable `json:"workspaces,omitempty"`
-	Users       stateTable `json:"users,omitempty"`
-	Sessions    stateTable `json:"sessions,omitempty"`
-	Orgs        stateTable `json:"orgs,omitempty"`
-	Memberships stateTable `json:"memberships,omitempty"`
-	Support     stateTable `json:"support,omitempty"`
-	Wallets     stateTable `json:"wallets,omitempty"`
-	Ledger      []stateRow `json:"ledger,omitempty"`
-	WalletTx    []stateRow `json:"walletTx,omitempty"`
-	Topups      []stateRow `json:"topups,omitempty"`
-	RuntimeOps  []stateRow `json:"runtimeOperations,omitempty"`
-	AuditEvents []stateRow `json:"auditEvents,omitempty"`
-	Reconcile   stateRow   `json:"billingReconciliation,omitempty"`
+	Version     int                   `json:"version"`
+	Computes    controlPlaneRecordSet `json:"computes,omitempty"`
+	Storages    controlPlaneRecordSet `json:"storages,omitempty"`
+	Attachments controlPlaneRecordSet `json:"attachments,omitempty"`
+	Workspaces  controlPlaneRecordSet `json:"workspaces,omitempty"`
+	Users       controlPlaneRecordSet `json:"users,omitempty"`
+	Sessions    controlPlaneRecordSet `json:"sessions,omitempty"`
+	Orgs        controlPlaneRecordSet `json:"orgs,omitempty"`
+	Memberships controlPlaneRecordSet `json:"memberships,omitempty"`
+	Support     controlPlaneRecordSet `json:"support,omitempty"`
+	Wallets     controlPlaneRecordSet `json:"wallets,omitempty"`
+	Ledger      []controlPlaneRecord  `json:"ledger,omitempty"`
+	WalletTx    []controlPlaneRecord  `json:"walletTx,omitempty"`
+	Topups      []controlPlaneRecord  `json:"topups,omitempty"`
+	RuntimeOps  []controlPlaneRecord  `json:"runtimeOperations,omitempty"`
+	AuditEvents []controlPlaneRecord  `json:"auditEvents,omitempty"`
+	Reconcile   controlPlaneRecord    `json:"billingReconciliation,omitempty"`
 }
 
 func StateStoreFromEnv() (StateStore, error) {
@@ -71,7 +71,7 @@ func NewPostgresEntStateStore(databaseURL string) (StateStore, error) {
 	return store, nil
 }
 
-var postgresFactTables = []string{
+var controlPlaneRecordTables = []string{
 	"control_plane_compute_allocations",
 	"control_plane_storage_volumes",
 	"control_plane_storage_attachments",
@@ -84,7 +84,7 @@ var postgresFactTables = []string{
 	"control_plane_wallet_projections",
 }
 
-var postgresFactEventTables = []string{
+var controlPlaneRecordEventTables = []string{
 	"control_plane_ledger_projections",
 	"control_plane_wallet_transaction_projections",
 	"control_plane_manual_topup_projections",
@@ -98,7 +98,7 @@ type stateColumn struct {
 	Kind string
 }
 
-var postgresStateColumns = []stateColumn{
+var controlPlaneRecordColumns = []stateColumn{
 	{Name: "owner_account_id", Path: []string{"ownerAccountId"}, Kind: "text"},
 	{Name: "owner_user_id", Path: []string{"ownerUserId"}, Kind: "text"},
 	{Name: "user_id", Path: []string{"userId"}, Kind: "text"},
@@ -346,13 +346,13 @@ func (s *postgresEntStateStore) Save(ctx context.Context, facts controlPlaneStat
 	return tx.Commit()
 }
 
-func (s *postgresEntStateStore) loadFactTable(ctx context.Context, table string) (stateTable, error) {
+func (s *postgresEntStateStore) loadFactTable(ctx context.Context, table string) (controlPlaneRecordSet, error) {
 	rows, err := s.db.QueryContext(ctx, selectFactSQL(table, ""))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	out := stateTable{}
+	out := controlPlaneRecordSet{}
 	for rows.Next() {
 		row, err := scanStateRow(rows)
 		if err != nil {
@@ -363,13 +363,13 @@ func (s *postgresEntStateStore) loadFactTable(ctx context.Context, table string)
 	return out, rows.Err()
 }
 
-func (s *postgresEntStateStore) loadFactEvents(ctx context.Context, table string) ([]stateRow, error) {
+func (s *postgresEntStateStore) loadFactEvents(ctx context.Context, table string) ([]controlPlaneRecord, error) {
 	rows, err := s.db.QueryContext(ctx, selectFactSQL(table, " ORDER BY created_at, id"))
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []stateRow
+	var out []controlPlaneRecord
 	for rows.Next() {
 		row, err := scanStateRow(rows)
 		if err != nil {
@@ -380,7 +380,7 @@ func (s *postgresEntStateStore) loadFactEvents(ctx context.Context, table string
 	return out, rows.Err()
 }
 
-func (s *postgresEntStateStore) loadSingleton(ctx context.Context, table string) (stateRow, error) {
+func (s *postgresEntStateStore) loadSingleton(ctx context.Context, table string) (controlPlaneRecord, error) {
 	rows, err := s.db.QueryContext(ctx, selectFactSQL(table, " WHERE id = $1"), singletonFactID)
 	if err != nil {
 		return nil, err
@@ -399,7 +399,7 @@ func (s *postgresEntStateStore) loadSingleton(ctx context.Context, table string)
 	return row, err
 }
 
-func replaceStateTable(ctx context.Context, tx *sql.Tx, table string, rows stateTable) error {
+func replaceStateTable(ctx context.Context, tx *sql.Tx, table string, rows controlPlaneRecordSet) error {
 	if _, err := tx.ExecContext(ctx, `DELETE FROM `+table); err != nil {
 		return err
 	}
@@ -411,7 +411,7 @@ func replaceStateTable(ctx context.Context, tx *sql.Tx, table string, rows state
 	return nil
 }
 
-func replaceStateEvents(ctx context.Context, tx *sql.Tx, table string, rows []stateRow) error {
+func replaceStateEvents(ctx context.Context, tx *sql.Tx, table string, rows []controlPlaneRecord) error {
 	if _, err := tx.ExecContext(ctx, `DELETE FROM `+table); err != nil {
 		return err
 	}
@@ -426,7 +426,7 @@ func replaceStateEvents(ctx context.Context, tx *sql.Tx, table string, rows []st
 	return nil
 }
 
-func replaceSingleton(ctx context.Context, tx *sql.Tx, table string, row stateRow) error {
+func replaceSingleton(ctx context.Context, tx *sql.Tx, table string, row controlPlaneRecord) error {
 	if _, err := tx.ExecContext(ctx, `DELETE FROM `+table); err != nil {
 		return err
 	}
@@ -439,14 +439,14 @@ func replaceSingleton(ctx context.Context, tx *sql.Tx, table string, row stateRo
 
 func selectFactSQL(table string, suffix string) string {
 	columns := []string{"id", "account_id"}
-	for _, column := range postgresStateColumns {
+	for _, column := range controlPlaneRecordColumns {
 		columns = append(columns, column.Name+"::text")
 	}
 	return `SELECT ` + strings.Join(columns, ", ") + ` FROM ` + table + suffix
 }
 
-func scanStateRow(rows *sql.Rows) (stateRow, error) {
-	values := make([]sql.NullString, len(postgresStateColumns)+2)
+func scanStateRow(rows *sql.Rows) (controlPlaneRecord, error) {
+	values := make([]sql.NullString, len(controlPlaneRecordColumns)+2)
 	dest := make([]any, len(values))
 	for index := range values {
 		dest[index] = &values[index]
@@ -454,11 +454,11 @@ func scanStateRow(rows *sql.Rows) (stateRow, error) {
 	if err := rows.Scan(dest...); err != nil {
 		return nil, err
 	}
-	row := stateRow{"id": values[0].String}
+	row := controlPlaneRecord{"id": values[0].String}
 	if values[1].Valid && values[1].String != "" {
 		row["accountId"] = values[1].String
 	}
-	for index, column := range postgresStateColumns {
+	for index, column := range controlPlaneRecordColumns {
 		value := values[index+2]
 		if !value.Valid || value.String == "" {
 			continue
@@ -490,7 +490,7 @@ func parseColumnValue(value string, kind string) (any, bool) {
 func insertFactSQL(table string, timestampColumn string) string {
 	columns := []string{"id", "account_id"}
 	placeholders := []string{"$1", "$2"}
-	for index, column := range postgresStateColumns {
+	for index, column := range controlPlaneRecordColumns {
 		columns = append(columns, column.Name)
 		placeholders = append(placeholders, fmt.Sprintf("$%d", index+3))
 	}
@@ -503,15 +503,15 @@ func insertFactSQL(table string, timestampColumn string) string {
 	return `INSERT INTO ` + table + ` (` + strings.Join(columns, ", ") + `) VALUES (` + strings.Join(placeholders, ", ") + `)`
 }
 
-func stateValues(id string, row stateRow, accountID string) []any {
+func stateValues(id string, row controlPlaneRecord, accountID string) []any {
 	values := []any{id, accountID}
-	for _, column := range postgresStateColumns {
+	for _, column := range controlPlaneRecordColumns {
 		values = append(values, columnValue(row, column))
 	}
 	return values
 }
 
-func columnValue(row stateRow, column stateColumn) any {
+func columnValue(row controlPlaneRecord, column stateColumn) any {
 	value, ok := valueAtPath(row, column.Path)
 	if !ok || value == nil {
 		return nil
@@ -539,7 +539,7 @@ func columnValue(row stateRow, column stateColumn) any {
 	}
 }
 
-func valueAtPath(row stateRow, path []string) (any, bool) {
+func valueAtPath(row controlPlaneRecord, path []string) (any, bool) {
 	var current any = row
 	for _, part := range path {
 		asMap, ok := current.(map[string]any)
@@ -554,7 +554,7 @@ func valueAtPath(row stateRow, path []string) (any, bool) {
 	return current, true
 }
 
-func setPath(row stateRow, path []string, value any) {
+func setPath(row controlPlaneRecord, path []string, value any) {
 	if len(path) == 0 {
 		return
 	}

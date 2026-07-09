@@ -147,7 +147,7 @@ func periodicSettlementKey(input controlplane.ResourceSettlementInput) string {
 func (app *controlPlaneApp) markResourceSettlement(result clients.ResourceSettlementResult) error {
 	app.mu.Lock()
 	defer app.mu.Unlock()
-	var table stateTable
+	var table controlPlaneRecordSet
 	switch result.ResourceType {
 	case "storage":
 		table = app.storages

@@ -149,3 +149,16 @@ test("Control Plane schema and migrations do not inherit a generic wide fact tab
     assert.match(text, /control_plane_organizations/, `${migration} must include the organization facts read by Control Plane`);
   }
 });
+
+test("Control Plane production store does not expose generic state row tables", async () => {
+  const storeSource = await source("services/control-plane/internal/server/ent_state_store.go");
+  for (const marker of [
+    "type stateRow",
+    "type stateTable",
+    "postgresStateColumns",
+    "postgresFactTables",
+    "postgresFactEventTables"
+  ]) {
+    assert.equal(storeSource.includes(marker), false, `Control Plane store must not keep ${marker}`);
+  }
+});
