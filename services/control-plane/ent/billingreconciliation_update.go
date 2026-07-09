@@ -28,496 +28,6 @@ func (bru *BillingReconciliationUpdate) Where(ps ...predicate.BillingReconciliat
 	return bru
 }
 
-// SetAccountID sets the "account_id" field.
-func (bru *BillingReconciliationUpdate) SetAccountID(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetAccountID(s)
-	return bru
-}
-
-// SetNillableAccountID sets the "account_id" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableAccountID(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetAccountID(*s)
-	}
-	return bru
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (bru *BillingReconciliationUpdate) SetOwnerAccountID(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetOwnerAccountID(s)
-	return bru
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableOwnerAccountID(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetOwnerAccountID(*s)
-	}
-	return bru
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (bru *BillingReconciliationUpdate) SetOwnerUserID(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetOwnerUserID(s)
-	return bru
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableOwnerUserID(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetOwnerUserID(*s)
-	}
-	return bru
-}
-
-// SetUserID sets the "user_id" field.
-func (bru *BillingReconciliationUpdate) SetUserID(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetUserID(s)
-	return bru
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableUserID(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetUserID(*s)
-	}
-	return bru
-}
-
-// SetEmail sets the "email" field.
-func (bru *BillingReconciliationUpdate) SetEmail(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetEmail(s)
-	return bru
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableEmail(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetEmail(*s)
-	}
-	return bru
-}
-
-// SetRole sets the "role" field.
-func (bru *BillingReconciliationUpdate) SetRole(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetRole(s)
-	return bru
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableRole(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetRole(*s)
-	}
-	return bru
-}
-
-// SetStatus sets the "status" field.
-func (bru *BillingReconciliationUpdate) SetStatus(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetStatus(s)
-	return bru
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableStatus(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetStatus(*s)
-	}
-	return bru
-}
-
-// SetName sets the "name" field.
-func (bru *BillingReconciliationUpdate) SetName(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetName(s)
-	return bru
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableName(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetName(*s)
-	}
-	return bru
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (bru *BillingReconciliationUpdate) SetWorkspaceID(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetWorkspaceID(s)
-	return bru
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableWorkspaceID(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetWorkspaceID(*s)
-	}
-	return bru
-}
-
-// SetResourceID sets the "resource_id" field.
-func (bru *BillingReconciliationUpdate) SetResourceID(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetResourceID(s)
-	return bru
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableResourceID(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetResourceID(*s)
-	}
-	return bru
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (bru *BillingReconciliationUpdate) SetResourceKind(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetResourceKind(s)
-	return bru
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableResourceKind(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetResourceKind(*s)
-	}
-	return bru
-}
-
-// SetOperationID sets the "operation_id" field.
-func (bru *BillingReconciliationUpdate) SetOperationID(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetOperationID(s)
-	return bru
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableOperationID(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetOperationID(*s)
-	}
-	return bru
-}
-
-// SetProvider sets the "provider" field.
-func (bru *BillingReconciliationUpdate) SetProvider(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetProvider(s)
-	return bru
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableProvider(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetProvider(*s)
-	}
-	return bru
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (bru *BillingReconciliationUpdate) SetProviderResourceID(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetProviderResourceID(s)
-	return bru
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableProviderResourceID(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetProviderResourceID(*s)
-	}
-	return bru
-}
-
-// SetURL sets the "url" field.
-func (bru *BillingReconciliationUpdate) SetURL(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetURL(s)
-	return bru
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableURL(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetURL(*s)
-	}
-	return bru
-}
-
-// SetHoldID sets the "hold_id" field.
-func (bru *BillingReconciliationUpdate) SetHoldID(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetHoldID(s)
-	return bru
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableHoldID(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetHoldID(*s)
-	}
-	return bru
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (bru *BillingReconciliationUpdate) SetHoldReleaseID(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetHoldReleaseID(s)
-	return bru
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableHoldReleaseID(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetHoldReleaseID(*s)
-	}
-	return bru
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (bru *BillingReconciliationUpdate) SetLedgerEntryID(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetLedgerEntryID(s)
-	return bru
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableLedgerEntryID(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetLedgerEntryID(*s)
-	}
-	return bru
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (bru *BillingReconciliationUpdate) SetWalletTransactionID(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetWalletTransactionID(s)
-	return bru
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableWalletTransactionID(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetWalletTransactionID(*s)
-	}
-	return bru
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (bru *BillingReconciliationUpdate) SetSettlementID(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetSettlementID(s)
-	return bru
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableSettlementID(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetSettlementID(*s)
-	}
-	return bru
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (bru *BillingReconciliationUpdate) SetPricingVersion(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetPricingVersion(s)
-	return bru
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillablePricingVersion(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetPricingVersion(*s)
-	}
-	return bru
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (bru *BillingReconciliationUpdate) SetAmountCents(i int64) *BillingReconciliationUpdate {
-	bru.mutation.ResetAmountCents()
-	bru.mutation.SetAmountCents(i)
-	return bru
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableAmountCents(i *int64) *BillingReconciliationUpdate {
-	if i != nil {
-		bru.SetAmountCents(*i)
-	}
-	return bru
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (bru *BillingReconciliationUpdate) AddAmountCents(i int64) *BillingReconciliationUpdate {
-	bru.mutation.AddAmountCents(i)
-	return bru
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (bru *BillingReconciliationUpdate) SetBalanceCents(i int64) *BillingReconciliationUpdate {
-	bru.mutation.ResetBalanceCents()
-	bru.mutation.SetBalanceCents(i)
-	return bru
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableBalanceCents(i *int64) *BillingReconciliationUpdate {
-	if i != nil {
-		bru.SetBalanceCents(*i)
-	}
-	return bru
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (bru *BillingReconciliationUpdate) AddBalanceCents(i int64) *BillingReconciliationUpdate {
-	bru.mutation.AddBalanceCents(i)
-	return bru
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (bru *BillingReconciliationUpdate) SetFrozenCents(i int64) *BillingReconciliationUpdate {
-	bru.mutation.ResetFrozenCents()
-	bru.mutation.SetFrozenCents(i)
-	return bru
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableFrozenCents(i *int64) *BillingReconciliationUpdate {
-	if i != nil {
-		bru.SetFrozenCents(*i)
-	}
-	return bru
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (bru *BillingReconciliationUpdate) AddFrozenCents(i int64) *BillingReconciliationUpdate {
-	bru.mutation.AddFrozenCents(i)
-	return bru
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (bru *BillingReconciliationUpdate) SetAvailableCents(i int64) *BillingReconciliationUpdate {
-	bru.mutation.ResetAvailableCents()
-	bru.mutation.SetAvailableCents(i)
-	return bru
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableAvailableCents(i *int64) *BillingReconciliationUpdate {
-	if i != nil {
-		bru.SetAvailableCents(*i)
-	}
-	return bru
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (bru *BillingReconciliationUpdate) AddAvailableCents(i int64) *BillingReconciliationUpdate {
-	bru.mutation.AddAvailableCents(i)
-	return bru
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (bru *BillingReconciliationUpdate) SetTotalSpentCents(i int64) *BillingReconciliationUpdate {
-	bru.mutation.ResetTotalSpentCents()
-	bru.mutation.SetTotalSpentCents(i)
-	return bru
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableTotalSpentCents(i *int64) *BillingReconciliationUpdate {
-	if i != nil {
-		bru.SetTotalSpentCents(*i)
-	}
-	return bru
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (bru *BillingReconciliationUpdate) AddTotalSpentCents(i int64) *BillingReconciliationUpdate {
-	bru.mutation.AddTotalSpentCents(i)
-	return bru
-}
-
-// SetQuantity sets the "quantity" field.
-func (bru *BillingReconciliationUpdate) SetQuantity(f float64) *BillingReconciliationUpdate {
-	bru.mutation.ResetQuantity()
-	bru.mutation.SetQuantity(f)
-	return bru
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableQuantity(f *float64) *BillingReconciliationUpdate {
-	if f != nil {
-		bru.SetQuantity(*f)
-	}
-	return bru
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (bru *BillingReconciliationUpdate) AddQuantity(f float64) *BillingReconciliationUpdate {
-	bru.mutation.AddQuantity(f)
-	return bru
-}
-
-// SetUnit sets the "unit" field.
-func (bru *BillingReconciliationUpdate) SetUnit(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetUnit(s)
-	return bru
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableUnit(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetUnit(*s)
-	}
-	return bru
-}
-
-// SetReason sets the "reason" field.
-func (bru *BillingReconciliationUpdate) SetReason(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetReason(s)
-	return bru
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableReason(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetReason(*s)
-	}
-	return bru
-}
-
-// SetResult sets the "result" field.
-func (bru *BillingReconciliationUpdate) SetResult(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetResult(s)
-	return bru
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableResult(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetResult(*s)
-	}
-	return bru
-}
-
-// SetSource sets the "source" field.
-func (bru *BillingReconciliationUpdate) SetSource(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetSource(s)
-	return bru
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableSource(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetSource(*s)
-	}
-	return bru
-}
-
-// SetDirection sets the "direction" field.
-func (bru *BillingReconciliationUpdate) SetDirection(s string) *BillingReconciliationUpdate {
-	bru.mutation.SetDirection(s)
-	return bru
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableDirection(s *string) *BillingReconciliationUpdate {
-	if s != nil {
-		bru.SetDirection(*s)
-	}
-	return bru
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (bru *BillingReconciliationUpdate) SetCreatedAt(t time.Time) *BillingReconciliationUpdate {
 	bru.mutation.SetCreatedAt(t)
@@ -538,23 +48,122 @@ func (bru *BillingReconciliationUpdate) SetUpdatedAt(t time.Time) *BillingReconc
 	return bru
 }
 
-// SetArchivedAt sets the "archived_at" field.
-func (bru *BillingReconciliationUpdate) SetArchivedAt(t time.Time) *BillingReconciliationUpdate {
-	bru.mutation.SetArchivedAt(t)
+// SetStatus sets the "status" field.
+func (bru *BillingReconciliationUpdate) SetStatus(s string) *BillingReconciliationUpdate {
+	bru.mutation.SetStatus(s)
 	return bru
 }
 
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (bru *BillingReconciliationUpdate) SetNillableArchivedAt(t *time.Time) *BillingReconciliationUpdate {
-	if t != nil {
-		bru.SetArchivedAt(*t)
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (bru *BillingReconciliationUpdate) SetNillableStatus(s *string) *BillingReconciliationUpdate {
+	if s != nil {
+		bru.SetStatus(*s)
 	}
 	return bru
 }
 
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (bru *BillingReconciliationUpdate) ClearArchivedAt() *BillingReconciliationUpdate {
-	bru.mutation.ClearArchivedAt()
+// SetGuardStatus sets the "guard_status" field.
+func (bru *BillingReconciliationUpdate) SetGuardStatus(s string) *BillingReconciliationUpdate {
+	bru.mutation.SetGuardStatus(s)
+	return bru
+}
+
+// SetNillableGuardStatus sets the "guard_status" field if the given value is not nil.
+func (bru *BillingReconciliationUpdate) SetNillableGuardStatus(s *string) *BillingReconciliationUpdate {
+	if s != nil {
+		bru.SetGuardStatus(*s)
+	}
+	return bru
+}
+
+// SetGuardReason sets the "guard_reason" field.
+func (bru *BillingReconciliationUpdate) SetGuardReason(s string) *BillingReconciliationUpdate {
+	bru.mutation.SetGuardReason(s)
+	return bru
+}
+
+// SetNillableGuardReason sets the "guard_reason" field if the given value is not nil.
+func (bru *BillingReconciliationUpdate) SetNillableGuardReason(s *string) *BillingReconciliationUpdate {
+	if s != nil {
+		bru.SetGuardReason(*s)
+	}
+	return bru
+}
+
+// SetMessageAuthor sets the "message_author" field.
+func (bru *BillingReconciliationUpdate) SetMessageAuthor(s string) *BillingReconciliationUpdate {
+	bru.mutation.SetMessageAuthor(s)
+	return bru
+}
+
+// SetNillableMessageAuthor sets the "message_author" field if the given value is not nil.
+func (bru *BillingReconciliationUpdate) SetNillableMessageAuthor(s *string) *BillingReconciliationUpdate {
+	if s != nil {
+		bru.SetMessageAuthor(*s)
+	}
+	return bru
+}
+
+// SetMessageText sets the "message_text" field.
+func (bru *BillingReconciliationUpdate) SetMessageText(s string) *BillingReconciliationUpdate {
+	bru.mutation.SetMessageText(s)
+	return bru
+}
+
+// SetNillableMessageText sets the "message_text" field if the given value is not nil.
+func (bru *BillingReconciliationUpdate) SetNillableMessageText(s *string) *BillingReconciliationUpdate {
+	if s != nil {
+		bru.SetMessageText(*s)
+	}
+	return bru
+}
+
+// SetMessageCreatedAt sets the "message_created_at" field.
+func (bru *BillingReconciliationUpdate) SetMessageCreatedAt(s string) *BillingReconciliationUpdate {
+	bru.mutation.SetMessageCreatedAt(s)
+	return bru
+}
+
+// SetNillableMessageCreatedAt sets the "message_created_at" field if the given value is not nil.
+func (bru *BillingReconciliationUpdate) SetNillableMessageCreatedAt(s *string) *BillingReconciliationUpdate {
+	if s != nil {
+		bru.SetMessageCreatedAt(*s)
+	}
+	return bru
+}
+
+// SetGuardBlockNewWorkspaces sets the "guard_block_new_workspaces" field.
+func (bru *BillingReconciliationUpdate) SetGuardBlockNewWorkspaces(b bool) *BillingReconciliationUpdate {
+	bru.mutation.SetGuardBlockNewWorkspaces(b)
+	return bru
+}
+
+// SetNillableGuardBlockNewWorkspaces sets the "guard_block_new_workspaces" field if the given value is not nil.
+func (bru *BillingReconciliationUpdate) SetNillableGuardBlockNewWorkspaces(b *bool) *BillingReconciliationUpdate {
+	if b != nil {
+		bru.SetGuardBlockNewWorkspaces(*b)
+	}
+	return bru
+}
+
+// SetReports sets the "reports" field.
+func (bru *BillingReconciliationUpdate) SetReports(i int64) *BillingReconciliationUpdate {
+	bru.mutation.ResetReports()
+	bru.mutation.SetReports(i)
+	return bru
+}
+
+// SetNillableReports sets the "reports" field if the given value is not nil.
+func (bru *BillingReconciliationUpdate) SetNillableReports(i *int64) *BillingReconciliationUpdate {
+	if i != nil {
+		bru.SetReports(*i)
+	}
+	return bru
+}
+
+// AddReports adds i to the "reports" field.
+func (bru *BillingReconciliationUpdate) AddReports(i int64) *BillingReconciliationUpdate {
+	bru.mutation.AddReports(i)
 	return bru
 }
 
@@ -608,131 +217,38 @@ func (bru *BillingReconciliationUpdate) sqlSave(ctx context.Context) (n int, err
 			}
 		}
 	}
-	if value, ok := bru.mutation.AccountID(); ok {
-		_spec.SetField(billingreconciliation.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.OwnerAccountID(); ok {
-		_spec.SetField(billingreconciliation.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.OwnerUserID(); ok {
-		_spec.SetField(billingreconciliation.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.UserID(); ok {
-		_spec.SetField(billingreconciliation.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.Email(); ok {
-		_spec.SetField(billingreconciliation.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.Role(); ok {
-		_spec.SetField(billingreconciliation.FieldRole, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.Status(); ok {
-		_spec.SetField(billingreconciliation.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.Name(); ok {
-		_spec.SetField(billingreconciliation.FieldName, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.WorkspaceID(); ok {
-		_spec.SetField(billingreconciliation.FieldWorkspaceID, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.ResourceID(); ok {
-		_spec.SetField(billingreconciliation.FieldResourceID, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.ResourceKind(); ok {
-		_spec.SetField(billingreconciliation.FieldResourceKind, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.OperationID(); ok {
-		_spec.SetField(billingreconciliation.FieldOperationID, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.Provider(); ok {
-		_spec.SetField(billingreconciliation.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.ProviderResourceID(); ok {
-		_spec.SetField(billingreconciliation.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.URL(); ok {
-		_spec.SetField(billingreconciliation.FieldURL, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.HoldID(); ok {
-		_spec.SetField(billingreconciliation.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.HoldReleaseID(); ok {
-		_spec.SetField(billingreconciliation.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.LedgerEntryID(); ok {
-		_spec.SetField(billingreconciliation.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.WalletTransactionID(); ok {
-		_spec.SetField(billingreconciliation.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.SettlementID(); ok {
-		_spec.SetField(billingreconciliation.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.PricingVersion(); ok {
-		_spec.SetField(billingreconciliation.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.AmountCents(); ok {
-		_spec.SetField(billingreconciliation.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := bru.mutation.AddedAmountCents(); ok {
-		_spec.AddField(billingreconciliation.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := bru.mutation.BalanceCents(); ok {
-		_spec.SetField(billingreconciliation.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := bru.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(billingreconciliation.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := bru.mutation.FrozenCents(); ok {
-		_spec.SetField(billingreconciliation.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := bru.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(billingreconciliation.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := bru.mutation.AvailableCents(); ok {
-		_spec.SetField(billingreconciliation.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := bru.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(billingreconciliation.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := bru.mutation.TotalSpentCents(); ok {
-		_spec.SetField(billingreconciliation.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := bru.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(billingreconciliation.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := bru.mutation.Quantity(); ok {
-		_spec.SetField(billingreconciliation.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := bru.mutation.AddedQuantity(); ok {
-		_spec.AddField(billingreconciliation.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := bru.mutation.Unit(); ok {
-		_spec.SetField(billingreconciliation.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.Reason(); ok {
-		_spec.SetField(billingreconciliation.FieldReason, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.Result(); ok {
-		_spec.SetField(billingreconciliation.FieldResult, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.Source(); ok {
-		_spec.SetField(billingreconciliation.FieldSource, field.TypeString, value)
-	}
-	if value, ok := bru.mutation.Direction(); ok {
-		_spec.SetField(billingreconciliation.FieldDirection, field.TypeString, value)
-	}
 	if value, ok := bru.mutation.CreatedAt(); ok {
 		_spec.SetField(billingreconciliation.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := bru.mutation.UpdatedAt(); ok {
 		_spec.SetField(billingreconciliation.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := bru.mutation.ArchivedAt(); ok {
-		_spec.SetField(billingreconciliation.FieldArchivedAt, field.TypeTime, value)
+	if value, ok := bru.mutation.Status(); ok {
+		_spec.SetField(billingreconciliation.FieldStatus, field.TypeString, value)
 	}
-	if bru.mutation.ArchivedAtCleared() {
-		_spec.ClearField(billingreconciliation.FieldArchivedAt, field.TypeTime)
+	if value, ok := bru.mutation.GuardStatus(); ok {
+		_spec.SetField(billingreconciliation.FieldGuardStatus, field.TypeString, value)
+	}
+	if value, ok := bru.mutation.GuardReason(); ok {
+		_spec.SetField(billingreconciliation.FieldGuardReason, field.TypeString, value)
+	}
+	if value, ok := bru.mutation.MessageAuthor(); ok {
+		_spec.SetField(billingreconciliation.FieldMessageAuthor, field.TypeString, value)
+	}
+	if value, ok := bru.mutation.MessageText(); ok {
+		_spec.SetField(billingreconciliation.FieldMessageText, field.TypeString, value)
+	}
+	if value, ok := bru.mutation.MessageCreatedAt(); ok {
+		_spec.SetField(billingreconciliation.FieldMessageCreatedAt, field.TypeString, value)
+	}
+	if value, ok := bru.mutation.GuardBlockNewWorkspaces(); ok {
+		_spec.SetField(billingreconciliation.FieldGuardBlockNewWorkspaces, field.TypeBool, value)
+	}
+	if value, ok := bru.mutation.Reports(); ok {
+		_spec.SetField(billingreconciliation.FieldReports, field.TypeInt64, value)
+	}
+	if value, ok := bru.mutation.AddedReports(); ok {
+		_spec.AddField(billingreconciliation.FieldReports, field.TypeInt64, value)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, bru.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -752,496 +268,6 @@ type BillingReconciliationUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *BillingReconciliationMutation
-}
-
-// SetAccountID sets the "account_id" field.
-func (bruo *BillingReconciliationUpdateOne) SetAccountID(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetAccountID(s)
-	return bruo
-}
-
-// SetNillableAccountID sets the "account_id" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableAccountID(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetAccountID(*s)
-	}
-	return bruo
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (bruo *BillingReconciliationUpdateOne) SetOwnerAccountID(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetOwnerAccountID(s)
-	return bruo
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableOwnerAccountID(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetOwnerAccountID(*s)
-	}
-	return bruo
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (bruo *BillingReconciliationUpdateOne) SetOwnerUserID(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetOwnerUserID(s)
-	return bruo
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableOwnerUserID(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetOwnerUserID(*s)
-	}
-	return bruo
-}
-
-// SetUserID sets the "user_id" field.
-func (bruo *BillingReconciliationUpdateOne) SetUserID(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetUserID(s)
-	return bruo
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableUserID(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetUserID(*s)
-	}
-	return bruo
-}
-
-// SetEmail sets the "email" field.
-func (bruo *BillingReconciliationUpdateOne) SetEmail(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetEmail(s)
-	return bruo
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableEmail(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetEmail(*s)
-	}
-	return bruo
-}
-
-// SetRole sets the "role" field.
-func (bruo *BillingReconciliationUpdateOne) SetRole(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetRole(s)
-	return bruo
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableRole(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetRole(*s)
-	}
-	return bruo
-}
-
-// SetStatus sets the "status" field.
-func (bruo *BillingReconciliationUpdateOne) SetStatus(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetStatus(s)
-	return bruo
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableStatus(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetStatus(*s)
-	}
-	return bruo
-}
-
-// SetName sets the "name" field.
-func (bruo *BillingReconciliationUpdateOne) SetName(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetName(s)
-	return bruo
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableName(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetName(*s)
-	}
-	return bruo
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (bruo *BillingReconciliationUpdateOne) SetWorkspaceID(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetWorkspaceID(s)
-	return bruo
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableWorkspaceID(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetWorkspaceID(*s)
-	}
-	return bruo
-}
-
-// SetResourceID sets the "resource_id" field.
-func (bruo *BillingReconciliationUpdateOne) SetResourceID(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetResourceID(s)
-	return bruo
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableResourceID(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetResourceID(*s)
-	}
-	return bruo
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (bruo *BillingReconciliationUpdateOne) SetResourceKind(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetResourceKind(s)
-	return bruo
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableResourceKind(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetResourceKind(*s)
-	}
-	return bruo
-}
-
-// SetOperationID sets the "operation_id" field.
-func (bruo *BillingReconciliationUpdateOne) SetOperationID(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetOperationID(s)
-	return bruo
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableOperationID(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetOperationID(*s)
-	}
-	return bruo
-}
-
-// SetProvider sets the "provider" field.
-func (bruo *BillingReconciliationUpdateOne) SetProvider(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetProvider(s)
-	return bruo
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableProvider(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetProvider(*s)
-	}
-	return bruo
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (bruo *BillingReconciliationUpdateOne) SetProviderResourceID(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetProviderResourceID(s)
-	return bruo
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableProviderResourceID(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetProviderResourceID(*s)
-	}
-	return bruo
-}
-
-// SetURL sets the "url" field.
-func (bruo *BillingReconciliationUpdateOne) SetURL(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetURL(s)
-	return bruo
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableURL(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetURL(*s)
-	}
-	return bruo
-}
-
-// SetHoldID sets the "hold_id" field.
-func (bruo *BillingReconciliationUpdateOne) SetHoldID(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetHoldID(s)
-	return bruo
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableHoldID(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetHoldID(*s)
-	}
-	return bruo
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (bruo *BillingReconciliationUpdateOne) SetHoldReleaseID(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetHoldReleaseID(s)
-	return bruo
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableHoldReleaseID(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetHoldReleaseID(*s)
-	}
-	return bruo
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (bruo *BillingReconciliationUpdateOne) SetLedgerEntryID(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetLedgerEntryID(s)
-	return bruo
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableLedgerEntryID(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetLedgerEntryID(*s)
-	}
-	return bruo
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (bruo *BillingReconciliationUpdateOne) SetWalletTransactionID(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetWalletTransactionID(s)
-	return bruo
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableWalletTransactionID(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetWalletTransactionID(*s)
-	}
-	return bruo
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (bruo *BillingReconciliationUpdateOne) SetSettlementID(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetSettlementID(s)
-	return bruo
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableSettlementID(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetSettlementID(*s)
-	}
-	return bruo
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (bruo *BillingReconciliationUpdateOne) SetPricingVersion(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetPricingVersion(s)
-	return bruo
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillablePricingVersion(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetPricingVersion(*s)
-	}
-	return bruo
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (bruo *BillingReconciliationUpdateOne) SetAmountCents(i int64) *BillingReconciliationUpdateOne {
-	bruo.mutation.ResetAmountCents()
-	bruo.mutation.SetAmountCents(i)
-	return bruo
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableAmountCents(i *int64) *BillingReconciliationUpdateOne {
-	if i != nil {
-		bruo.SetAmountCents(*i)
-	}
-	return bruo
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (bruo *BillingReconciliationUpdateOne) AddAmountCents(i int64) *BillingReconciliationUpdateOne {
-	bruo.mutation.AddAmountCents(i)
-	return bruo
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (bruo *BillingReconciliationUpdateOne) SetBalanceCents(i int64) *BillingReconciliationUpdateOne {
-	bruo.mutation.ResetBalanceCents()
-	bruo.mutation.SetBalanceCents(i)
-	return bruo
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableBalanceCents(i *int64) *BillingReconciliationUpdateOne {
-	if i != nil {
-		bruo.SetBalanceCents(*i)
-	}
-	return bruo
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (bruo *BillingReconciliationUpdateOne) AddBalanceCents(i int64) *BillingReconciliationUpdateOne {
-	bruo.mutation.AddBalanceCents(i)
-	return bruo
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (bruo *BillingReconciliationUpdateOne) SetFrozenCents(i int64) *BillingReconciliationUpdateOne {
-	bruo.mutation.ResetFrozenCents()
-	bruo.mutation.SetFrozenCents(i)
-	return bruo
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableFrozenCents(i *int64) *BillingReconciliationUpdateOne {
-	if i != nil {
-		bruo.SetFrozenCents(*i)
-	}
-	return bruo
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (bruo *BillingReconciliationUpdateOne) AddFrozenCents(i int64) *BillingReconciliationUpdateOne {
-	bruo.mutation.AddFrozenCents(i)
-	return bruo
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (bruo *BillingReconciliationUpdateOne) SetAvailableCents(i int64) *BillingReconciliationUpdateOne {
-	bruo.mutation.ResetAvailableCents()
-	bruo.mutation.SetAvailableCents(i)
-	return bruo
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableAvailableCents(i *int64) *BillingReconciliationUpdateOne {
-	if i != nil {
-		bruo.SetAvailableCents(*i)
-	}
-	return bruo
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (bruo *BillingReconciliationUpdateOne) AddAvailableCents(i int64) *BillingReconciliationUpdateOne {
-	bruo.mutation.AddAvailableCents(i)
-	return bruo
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (bruo *BillingReconciliationUpdateOne) SetTotalSpentCents(i int64) *BillingReconciliationUpdateOne {
-	bruo.mutation.ResetTotalSpentCents()
-	bruo.mutation.SetTotalSpentCents(i)
-	return bruo
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableTotalSpentCents(i *int64) *BillingReconciliationUpdateOne {
-	if i != nil {
-		bruo.SetTotalSpentCents(*i)
-	}
-	return bruo
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (bruo *BillingReconciliationUpdateOne) AddTotalSpentCents(i int64) *BillingReconciliationUpdateOne {
-	bruo.mutation.AddTotalSpentCents(i)
-	return bruo
-}
-
-// SetQuantity sets the "quantity" field.
-func (bruo *BillingReconciliationUpdateOne) SetQuantity(f float64) *BillingReconciliationUpdateOne {
-	bruo.mutation.ResetQuantity()
-	bruo.mutation.SetQuantity(f)
-	return bruo
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableQuantity(f *float64) *BillingReconciliationUpdateOne {
-	if f != nil {
-		bruo.SetQuantity(*f)
-	}
-	return bruo
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (bruo *BillingReconciliationUpdateOne) AddQuantity(f float64) *BillingReconciliationUpdateOne {
-	bruo.mutation.AddQuantity(f)
-	return bruo
-}
-
-// SetUnit sets the "unit" field.
-func (bruo *BillingReconciliationUpdateOne) SetUnit(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetUnit(s)
-	return bruo
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableUnit(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetUnit(*s)
-	}
-	return bruo
-}
-
-// SetReason sets the "reason" field.
-func (bruo *BillingReconciliationUpdateOne) SetReason(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetReason(s)
-	return bruo
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableReason(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetReason(*s)
-	}
-	return bruo
-}
-
-// SetResult sets the "result" field.
-func (bruo *BillingReconciliationUpdateOne) SetResult(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetResult(s)
-	return bruo
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableResult(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetResult(*s)
-	}
-	return bruo
-}
-
-// SetSource sets the "source" field.
-func (bruo *BillingReconciliationUpdateOne) SetSource(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetSource(s)
-	return bruo
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableSource(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetSource(*s)
-	}
-	return bruo
-}
-
-// SetDirection sets the "direction" field.
-func (bruo *BillingReconciliationUpdateOne) SetDirection(s string) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetDirection(s)
-	return bruo
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableDirection(s *string) *BillingReconciliationUpdateOne {
-	if s != nil {
-		bruo.SetDirection(*s)
-	}
-	return bruo
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -1264,23 +290,122 @@ func (bruo *BillingReconciliationUpdateOne) SetUpdatedAt(t time.Time) *BillingRe
 	return bruo
 }
 
-// SetArchivedAt sets the "archived_at" field.
-func (bruo *BillingReconciliationUpdateOne) SetArchivedAt(t time.Time) *BillingReconciliationUpdateOne {
-	bruo.mutation.SetArchivedAt(t)
+// SetStatus sets the "status" field.
+func (bruo *BillingReconciliationUpdateOne) SetStatus(s string) *BillingReconciliationUpdateOne {
+	bruo.mutation.SetStatus(s)
 	return bruo
 }
 
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (bruo *BillingReconciliationUpdateOne) SetNillableArchivedAt(t *time.Time) *BillingReconciliationUpdateOne {
-	if t != nil {
-		bruo.SetArchivedAt(*t)
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (bruo *BillingReconciliationUpdateOne) SetNillableStatus(s *string) *BillingReconciliationUpdateOne {
+	if s != nil {
+		bruo.SetStatus(*s)
 	}
 	return bruo
 }
 
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (bruo *BillingReconciliationUpdateOne) ClearArchivedAt() *BillingReconciliationUpdateOne {
-	bruo.mutation.ClearArchivedAt()
+// SetGuardStatus sets the "guard_status" field.
+func (bruo *BillingReconciliationUpdateOne) SetGuardStatus(s string) *BillingReconciliationUpdateOne {
+	bruo.mutation.SetGuardStatus(s)
+	return bruo
+}
+
+// SetNillableGuardStatus sets the "guard_status" field if the given value is not nil.
+func (bruo *BillingReconciliationUpdateOne) SetNillableGuardStatus(s *string) *BillingReconciliationUpdateOne {
+	if s != nil {
+		bruo.SetGuardStatus(*s)
+	}
+	return bruo
+}
+
+// SetGuardReason sets the "guard_reason" field.
+func (bruo *BillingReconciliationUpdateOne) SetGuardReason(s string) *BillingReconciliationUpdateOne {
+	bruo.mutation.SetGuardReason(s)
+	return bruo
+}
+
+// SetNillableGuardReason sets the "guard_reason" field if the given value is not nil.
+func (bruo *BillingReconciliationUpdateOne) SetNillableGuardReason(s *string) *BillingReconciliationUpdateOne {
+	if s != nil {
+		bruo.SetGuardReason(*s)
+	}
+	return bruo
+}
+
+// SetMessageAuthor sets the "message_author" field.
+func (bruo *BillingReconciliationUpdateOne) SetMessageAuthor(s string) *BillingReconciliationUpdateOne {
+	bruo.mutation.SetMessageAuthor(s)
+	return bruo
+}
+
+// SetNillableMessageAuthor sets the "message_author" field if the given value is not nil.
+func (bruo *BillingReconciliationUpdateOne) SetNillableMessageAuthor(s *string) *BillingReconciliationUpdateOne {
+	if s != nil {
+		bruo.SetMessageAuthor(*s)
+	}
+	return bruo
+}
+
+// SetMessageText sets the "message_text" field.
+func (bruo *BillingReconciliationUpdateOne) SetMessageText(s string) *BillingReconciliationUpdateOne {
+	bruo.mutation.SetMessageText(s)
+	return bruo
+}
+
+// SetNillableMessageText sets the "message_text" field if the given value is not nil.
+func (bruo *BillingReconciliationUpdateOne) SetNillableMessageText(s *string) *BillingReconciliationUpdateOne {
+	if s != nil {
+		bruo.SetMessageText(*s)
+	}
+	return bruo
+}
+
+// SetMessageCreatedAt sets the "message_created_at" field.
+func (bruo *BillingReconciliationUpdateOne) SetMessageCreatedAt(s string) *BillingReconciliationUpdateOne {
+	bruo.mutation.SetMessageCreatedAt(s)
+	return bruo
+}
+
+// SetNillableMessageCreatedAt sets the "message_created_at" field if the given value is not nil.
+func (bruo *BillingReconciliationUpdateOne) SetNillableMessageCreatedAt(s *string) *BillingReconciliationUpdateOne {
+	if s != nil {
+		bruo.SetMessageCreatedAt(*s)
+	}
+	return bruo
+}
+
+// SetGuardBlockNewWorkspaces sets the "guard_block_new_workspaces" field.
+func (bruo *BillingReconciliationUpdateOne) SetGuardBlockNewWorkspaces(b bool) *BillingReconciliationUpdateOne {
+	bruo.mutation.SetGuardBlockNewWorkspaces(b)
+	return bruo
+}
+
+// SetNillableGuardBlockNewWorkspaces sets the "guard_block_new_workspaces" field if the given value is not nil.
+func (bruo *BillingReconciliationUpdateOne) SetNillableGuardBlockNewWorkspaces(b *bool) *BillingReconciliationUpdateOne {
+	if b != nil {
+		bruo.SetGuardBlockNewWorkspaces(*b)
+	}
+	return bruo
+}
+
+// SetReports sets the "reports" field.
+func (bruo *BillingReconciliationUpdateOne) SetReports(i int64) *BillingReconciliationUpdateOne {
+	bruo.mutation.ResetReports()
+	bruo.mutation.SetReports(i)
+	return bruo
+}
+
+// SetNillableReports sets the "reports" field if the given value is not nil.
+func (bruo *BillingReconciliationUpdateOne) SetNillableReports(i *int64) *BillingReconciliationUpdateOne {
+	if i != nil {
+		bruo.SetReports(*i)
+	}
+	return bruo
+}
+
+// AddReports adds i to the "reports" field.
+func (bruo *BillingReconciliationUpdateOne) AddReports(i int64) *BillingReconciliationUpdateOne {
+	bruo.mutation.AddReports(i)
 	return bruo
 }
 
@@ -1364,131 +489,38 @@ func (bruo *BillingReconciliationUpdateOne) sqlSave(ctx context.Context) (_node 
 			}
 		}
 	}
-	if value, ok := bruo.mutation.AccountID(); ok {
-		_spec.SetField(billingreconciliation.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.OwnerAccountID(); ok {
-		_spec.SetField(billingreconciliation.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.OwnerUserID(); ok {
-		_spec.SetField(billingreconciliation.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.UserID(); ok {
-		_spec.SetField(billingreconciliation.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.Email(); ok {
-		_spec.SetField(billingreconciliation.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.Role(); ok {
-		_spec.SetField(billingreconciliation.FieldRole, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.Status(); ok {
-		_spec.SetField(billingreconciliation.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.Name(); ok {
-		_spec.SetField(billingreconciliation.FieldName, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.WorkspaceID(); ok {
-		_spec.SetField(billingreconciliation.FieldWorkspaceID, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.ResourceID(); ok {
-		_spec.SetField(billingreconciliation.FieldResourceID, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.ResourceKind(); ok {
-		_spec.SetField(billingreconciliation.FieldResourceKind, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.OperationID(); ok {
-		_spec.SetField(billingreconciliation.FieldOperationID, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.Provider(); ok {
-		_spec.SetField(billingreconciliation.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.ProviderResourceID(); ok {
-		_spec.SetField(billingreconciliation.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.URL(); ok {
-		_spec.SetField(billingreconciliation.FieldURL, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.HoldID(); ok {
-		_spec.SetField(billingreconciliation.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.HoldReleaseID(); ok {
-		_spec.SetField(billingreconciliation.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.LedgerEntryID(); ok {
-		_spec.SetField(billingreconciliation.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.WalletTransactionID(); ok {
-		_spec.SetField(billingreconciliation.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.SettlementID(); ok {
-		_spec.SetField(billingreconciliation.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.PricingVersion(); ok {
-		_spec.SetField(billingreconciliation.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.AmountCents(); ok {
-		_spec.SetField(billingreconciliation.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := bruo.mutation.AddedAmountCents(); ok {
-		_spec.AddField(billingreconciliation.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := bruo.mutation.BalanceCents(); ok {
-		_spec.SetField(billingreconciliation.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := bruo.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(billingreconciliation.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := bruo.mutation.FrozenCents(); ok {
-		_spec.SetField(billingreconciliation.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := bruo.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(billingreconciliation.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := bruo.mutation.AvailableCents(); ok {
-		_spec.SetField(billingreconciliation.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := bruo.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(billingreconciliation.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := bruo.mutation.TotalSpentCents(); ok {
-		_spec.SetField(billingreconciliation.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := bruo.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(billingreconciliation.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := bruo.mutation.Quantity(); ok {
-		_spec.SetField(billingreconciliation.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := bruo.mutation.AddedQuantity(); ok {
-		_spec.AddField(billingreconciliation.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := bruo.mutation.Unit(); ok {
-		_spec.SetField(billingreconciliation.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.Reason(); ok {
-		_spec.SetField(billingreconciliation.FieldReason, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.Result(); ok {
-		_spec.SetField(billingreconciliation.FieldResult, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.Source(); ok {
-		_spec.SetField(billingreconciliation.FieldSource, field.TypeString, value)
-	}
-	if value, ok := bruo.mutation.Direction(); ok {
-		_spec.SetField(billingreconciliation.FieldDirection, field.TypeString, value)
-	}
 	if value, ok := bruo.mutation.CreatedAt(); ok {
 		_spec.SetField(billingreconciliation.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := bruo.mutation.UpdatedAt(); ok {
 		_spec.SetField(billingreconciliation.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := bruo.mutation.ArchivedAt(); ok {
-		_spec.SetField(billingreconciliation.FieldArchivedAt, field.TypeTime, value)
+	if value, ok := bruo.mutation.Status(); ok {
+		_spec.SetField(billingreconciliation.FieldStatus, field.TypeString, value)
 	}
-	if bruo.mutation.ArchivedAtCleared() {
-		_spec.ClearField(billingreconciliation.FieldArchivedAt, field.TypeTime)
+	if value, ok := bruo.mutation.GuardStatus(); ok {
+		_spec.SetField(billingreconciliation.FieldGuardStatus, field.TypeString, value)
+	}
+	if value, ok := bruo.mutation.GuardReason(); ok {
+		_spec.SetField(billingreconciliation.FieldGuardReason, field.TypeString, value)
+	}
+	if value, ok := bruo.mutation.MessageAuthor(); ok {
+		_spec.SetField(billingreconciliation.FieldMessageAuthor, field.TypeString, value)
+	}
+	if value, ok := bruo.mutation.MessageText(); ok {
+		_spec.SetField(billingreconciliation.FieldMessageText, field.TypeString, value)
+	}
+	if value, ok := bruo.mutation.MessageCreatedAt(); ok {
+		_spec.SetField(billingreconciliation.FieldMessageCreatedAt, field.TypeString, value)
+	}
+	if value, ok := bruo.mutation.GuardBlockNewWorkspaces(); ok {
+		_spec.SetField(billingreconciliation.FieldGuardBlockNewWorkspaces, field.TypeBool, value)
+	}
+	if value, ok := bruo.mutation.Reports(); ok {
+		_spec.SetField(billingreconciliation.FieldReports, field.TypeInt64, value)
+	}
+	if value, ok := bruo.mutation.AddedReports(); ok {
+		_spec.AddField(billingreconciliation.FieldReports, field.TypeInt64, value)
 	}
 	_node = &BillingReconciliation{config: bruo.config}
 	_spec.Assign = _node.assignValues

@@ -261,12 +261,12 @@ func (awq *ArchivedWorkspaceQuery) Clone() *ArchivedWorkspaceQuery {
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.ArchivedWorkspace.Query().
-//		GroupBy(archivedworkspace.FieldAccountID).
+//		GroupBy(archivedworkspace.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (awq *ArchivedWorkspaceQuery) GroupBy(field string, fields ...string) *ArchivedWorkspaceGroupBy {
@@ -284,11 +284,11 @@ func (awq *ArchivedWorkspaceQuery) GroupBy(field string, fields ...string) *Arch
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.ArchivedWorkspace.Query().
-//		Select(archivedworkspace.FieldAccountID).
+//		Select(archivedworkspace.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (awq *ArchivedWorkspaceQuery) Select(fields ...string) *ArchivedWorkspaceSelect {
 	awq.ctx.Fields = append(awq.ctx.Fields, fields...)

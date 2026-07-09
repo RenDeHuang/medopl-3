@@ -17,76 +17,22 @@ type ProductionE2ERecord struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID string `json:"id,omitempty"`
-	// AccountID holds the value of the "account_id" field.
-	AccountID string `json:"account_id,omitempty"`
-	// OwnerAccountID holds the value of the "owner_account_id" field.
-	OwnerAccountID string `json:"owner_account_id,omitempty"`
-	// OwnerUserID holds the value of the "owner_user_id" field.
-	OwnerUserID string `json:"owner_user_id,omitempty"`
-	// UserID holds the value of the "user_id" field.
-	UserID string `json:"user_id,omitempty"`
-	// Email holds the value of the "email" field.
-	Email string `json:"email,omitempty"`
-	// Role holds the value of the "role" field.
-	Role string `json:"role,omitempty"`
-	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
-	// Name holds the value of the "name" field.
-	Name string `json:"name,omitempty"`
-	// WorkspaceID holds the value of the "workspace_id" field.
-	WorkspaceID string `json:"workspace_id,omitempty"`
-	// ResourceID holds the value of the "resource_id" field.
-	ResourceID string `json:"resource_id,omitempty"`
-	// ResourceKind holds the value of the "resource_kind" field.
-	ResourceKind string `json:"resource_kind,omitempty"`
-	// OperationID holds the value of the "operation_id" field.
-	OperationID string `json:"operation_id,omitempty"`
-	// Provider holds the value of the "provider" field.
-	Provider string `json:"provider,omitempty"`
-	// ProviderResourceID holds the value of the "provider_resource_id" field.
-	ProviderResourceID string `json:"provider_resource_id,omitempty"`
-	// URL holds the value of the "url" field.
-	URL string `json:"url,omitempty"`
-	// HoldID holds the value of the "hold_id" field.
-	HoldID string `json:"hold_id,omitempty"`
-	// HoldReleaseID holds the value of the "hold_release_id" field.
-	HoldReleaseID string `json:"hold_release_id,omitempty"`
-	// LedgerEntryID holds the value of the "ledger_entry_id" field.
-	LedgerEntryID string `json:"ledger_entry_id,omitempty"`
-	// WalletTransactionID holds the value of the "wallet_transaction_id" field.
-	WalletTransactionID string `json:"wallet_transaction_id,omitempty"`
-	// SettlementID holds the value of the "settlement_id" field.
-	SettlementID string `json:"settlement_id,omitempty"`
-	// PricingVersion holds the value of the "pricing_version" field.
-	PricingVersion string `json:"pricing_version,omitempty"`
-	// AmountCents holds the value of the "amount_cents" field.
-	AmountCents int64 `json:"amount_cents,omitempty"`
-	// BalanceCents holds the value of the "balance_cents" field.
-	BalanceCents int64 `json:"balance_cents,omitempty"`
-	// FrozenCents holds the value of the "frozen_cents" field.
-	FrozenCents int64 `json:"frozen_cents,omitempty"`
-	// AvailableCents holds the value of the "available_cents" field.
-	AvailableCents int64 `json:"available_cents,omitempty"`
-	// TotalSpentCents holds the value of the "total_spent_cents" field.
-	TotalSpentCents int64 `json:"total_spent_cents,omitempty"`
-	// Quantity holds the value of the "quantity" field.
-	Quantity float64 `json:"quantity,omitempty"`
-	// Unit holds the value of the "unit" field.
-	Unit string `json:"unit,omitempty"`
-	// Reason holds the value of the "reason" field.
-	Reason string `json:"reason,omitempty"`
-	// Result holds the value of the "result" field.
-	Result string `json:"result,omitempty"`
-	// Source holds the value of the "source" field.
-	Source string `json:"source,omitempty"`
-	// Direction holds the value of the "direction" field.
-	Direction string `json:"direction,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// ArchivedAt holds the value of the "archived_at" field.
-	ArchivedAt   *time.Time `json:"archived_at,omitempty"`
+	// AccountID holds the value of the "account_id" field.
+	AccountID string `json:"account_id,omitempty"`
+	// WorkspaceID holds the value of the "workspace_id" field.
+	WorkspaceID string `json:"workspace_id,omitempty"`
+	// Status holds the value of the "status" field.
+	Status string `json:"status,omitempty"`
+	// Result holds the value of the "result" field.
+	Result string `json:"result,omitempty"`
+	// Reason holds the value of the "reason" field.
+	Reason string `json:"reason,omitempty"`
+	// URL holds the value of the "url" field.
+	URL          string `json:"url,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -95,13 +41,9 @@ func (*ProductionE2ERecord) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case productione2erecord.FieldQuantity:
-			values[i] = new(sql.NullFloat64)
-		case productione2erecord.FieldAmountCents, productione2erecord.FieldBalanceCents, productione2erecord.FieldFrozenCents, productione2erecord.FieldAvailableCents, productione2erecord.FieldTotalSpentCents:
-			values[i] = new(sql.NullInt64)
-		case productione2erecord.FieldID, productione2erecord.FieldAccountID, productione2erecord.FieldOwnerAccountID, productione2erecord.FieldOwnerUserID, productione2erecord.FieldUserID, productione2erecord.FieldEmail, productione2erecord.FieldRole, productione2erecord.FieldStatus, productione2erecord.FieldName, productione2erecord.FieldWorkspaceID, productione2erecord.FieldResourceID, productione2erecord.FieldResourceKind, productione2erecord.FieldOperationID, productione2erecord.FieldProvider, productione2erecord.FieldProviderResourceID, productione2erecord.FieldURL, productione2erecord.FieldHoldID, productione2erecord.FieldHoldReleaseID, productione2erecord.FieldLedgerEntryID, productione2erecord.FieldWalletTransactionID, productione2erecord.FieldSettlementID, productione2erecord.FieldPricingVersion, productione2erecord.FieldUnit, productione2erecord.FieldReason, productione2erecord.FieldResult, productione2erecord.FieldSource, productione2erecord.FieldDirection:
+		case productione2erecord.FieldID, productione2erecord.FieldAccountID, productione2erecord.FieldWorkspaceID, productione2erecord.FieldStatus, productione2erecord.FieldResult, productione2erecord.FieldReason, productione2erecord.FieldURL:
 			values[i] = new(sql.NullString)
-		case productione2erecord.FieldCreatedAt, productione2erecord.FieldUpdatedAt, productione2erecord.FieldArchivedAt:
+		case productione2erecord.FieldCreatedAt, productione2erecord.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -124,198 +66,6 @@ func (per *ProductionE2ERecord) assignValues(columns []string, values []any) err
 			} else if value.Valid {
 				per.ID = value.String
 			}
-		case productione2erecord.FieldAccountID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field account_id", values[i])
-			} else if value.Valid {
-				per.AccountID = value.String
-			}
-		case productione2erecord.FieldOwnerAccountID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field owner_account_id", values[i])
-			} else if value.Valid {
-				per.OwnerAccountID = value.String
-			}
-		case productione2erecord.FieldOwnerUserID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field owner_user_id", values[i])
-			} else if value.Valid {
-				per.OwnerUserID = value.String
-			}
-		case productione2erecord.FieldUserID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field user_id", values[i])
-			} else if value.Valid {
-				per.UserID = value.String
-			}
-		case productione2erecord.FieldEmail:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field email", values[i])
-			} else if value.Valid {
-				per.Email = value.String
-			}
-		case productione2erecord.FieldRole:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field role", values[i])
-			} else if value.Valid {
-				per.Role = value.String
-			}
-		case productione2erecord.FieldStatus:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field status", values[i])
-			} else if value.Valid {
-				per.Status = value.String
-			}
-		case productione2erecord.FieldName:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field name", values[i])
-			} else if value.Valid {
-				per.Name = value.String
-			}
-		case productione2erecord.FieldWorkspaceID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field workspace_id", values[i])
-			} else if value.Valid {
-				per.WorkspaceID = value.String
-			}
-		case productione2erecord.FieldResourceID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field resource_id", values[i])
-			} else if value.Valid {
-				per.ResourceID = value.String
-			}
-		case productione2erecord.FieldResourceKind:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field resource_kind", values[i])
-			} else if value.Valid {
-				per.ResourceKind = value.String
-			}
-		case productione2erecord.FieldOperationID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field operation_id", values[i])
-			} else if value.Valid {
-				per.OperationID = value.String
-			}
-		case productione2erecord.FieldProvider:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider", values[i])
-			} else if value.Valid {
-				per.Provider = value.String
-			}
-		case productione2erecord.FieldProviderResourceID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider_resource_id", values[i])
-			} else if value.Valid {
-				per.ProviderResourceID = value.String
-			}
-		case productione2erecord.FieldURL:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field url", values[i])
-			} else if value.Valid {
-				per.URL = value.String
-			}
-		case productione2erecord.FieldHoldID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field hold_id", values[i])
-			} else if value.Valid {
-				per.HoldID = value.String
-			}
-		case productione2erecord.FieldHoldReleaseID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field hold_release_id", values[i])
-			} else if value.Valid {
-				per.HoldReleaseID = value.String
-			}
-		case productione2erecord.FieldLedgerEntryID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field ledger_entry_id", values[i])
-			} else if value.Valid {
-				per.LedgerEntryID = value.String
-			}
-		case productione2erecord.FieldWalletTransactionID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field wallet_transaction_id", values[i])
-			} else if value.Valid {
-				per.WalletTransactionID = value.String
-			}
-		case productione2erecord.FieldSettlementID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field settlement_id", values[i])
-			} else if value.Valid {
-				per.SettlementID = value.String
-			}
-		case productione2erecord.FieldPricingVersion:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field pricing_version", values[i])
-			} else if value.Valid {
-				per.PricingVersion = value.String
-			}
-		case productione2erecord.FieldAmountCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field amount_cents", values[i])
-			} else if value.Valid {
-				per.AmountCents = value.Int64
-			}
-		case productione2erecord.FieldBalanceCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field balance_cents", values[i])
-			} else if value.Valid {
-				per.BalanceCents = value.Int64
-			}
-		case productione2erecord.FieldFrozenCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field frozen_cents", values[i])
-			} else if value.Valid {
-				per.FrozenCents = value.Int64
-			}
-		case productione2erecord.FieldAvailableCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field available_cents", values[i])
-			} else if value.Valid {
-				per.AvailableCents = value.Int64
-			}
-		case productione2erecord.FieldTotalSpentCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field total_spent_cents", values[i])
-			} else if value.Valid {
-				per.TotalSpentCents = value.Int64
-			}
-		case productione2erecord.FieldQuantity:
-			if value, ok := values[i].(*sql.NullFloat64); !ok {
-				return fmt.Errorf("unexpected type %T for field quantity", values[i])
-			} else if value.Valid {
-				per.Quantity = value.Float64
-			}
-		case productione2erecord.FieldUnit:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field unit", values[i])
-			} else if value.Valid {
-				per.Unit = value.String
-			}
-		case productione2erecord.FieldReason:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field reason", values[i])
-			} else if value.Valid {
-				per.Reason = value.String
-			}
-		case productione2erecord.FieldResult:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field result", values[i])
-			} else if value.Valid {
-				per.Result = value.String
-			}
-		case productione2erecord.FieldSource:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field source", values[i])
-			} else if value.Valid {
-				per.Source = value.String
-			}
-		case productione2erecord.FieldDirection:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field direction", values[i])
-			} else if value.Valid {
-				per.Direction = value.String
-			}
 		case productione2erecord.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -328,12 +78,41 @@ func (per *ProductionE2ERecord) assignValues(columns []string, values []any) err
 			} else if value.Valid {
 				per.UpdatedAt = value.Time
 			}
-		case productione2erecord.FieldArchivedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field archived_at", values[i])
+		case productione2erecord.FieldAccountID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field account_id", values[i])
 			} else if value.Valid {
-				per.ArchivedAt = new(time.Time)
-				*per.ArchivedAt = value.Time
+				per.AccountID = value.String
+			}
+		case productione2erecord.FieldWorkspaceID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field workspace_id", values[i])
+			} else if value.Valid {
+				per.WorkspaceID = value.String
+			}
+		case productione2erecord.FieldStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field status", values[i])
+			} else if value.Valid {
+				per.Status = value.String
+			}
+		case productione2erecord.FieldResult:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field result", values[i])
+			} else if value.Valid {
+				per.Result = value.String
+			}
+		case productione2erecord.FieldReason:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field reason", values[i])
+			} else if value.Valid {
+				per.Reason = value.String
+			}
+		case productione2erecord.FieldURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field url", values[i])
+			} else if value.Valid {
+				per.URL = value.String
 			}
 		default:
 			per.selectValues.Set(columns[i], values[i])
@@ -371,112 +150,29 @@ func (per *ProductionE2ERecord) String() string {
 	var builder strings.Builder
 	builder.WriteString("ProductionE2ERecord(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", per.ID))
-	builder.WriteString("account_id=")
-	builder.WriteString(per.AccountID)
-	builder.WriteString(", ")
-	builder.WriteString("owner_account_id=")
-	builder.WriteString(per.OwnerAccountID)
-	builder.WriteString(", ")
-	builder.WriteString("owner_user_id=")
-	builder.WriteString(per.OwnerUserID)
-	builder.WriteString(", ")
-	builder.WriteString("user_id=")
-	builder.WriteString(per.UserID)
-	builder.WriteString(", ")
-	builder.WriteString("email=")
-	builder.WriteString(per.Email)
-	builder.WriteString(", ")
-	builder.WriteString("role=")
-	builder.WriteString(per.Role)
-	builder.WriteString(", ")
-	builder.WriteString("status=")
-	builder.WriteString(per.Status)
-	builder.WriteString(", ")
-	builder.WriteString("name=")
-	builder.WriteString(per.Name)
-	builder.WriteString(", ")
-	builder.WriteString("workspace_id=")
-	builder.WriteString(per.WorkspaceID)
-	builder.WriteString(", ")
-	builder.WriteString("resource_id=")
-	builder.WriteString(per.ResourceID)
-	builder.WriteString(", ")
-	builder.WriteString("resource_kind=")
-	builder.WriteString(per.ResourceKind)
-	builder.WriteString(", ")
-	builder.WriteString("operation_id=")
-	builder.WriteString(per.OperationID)
-	builder.WriteString(", ")
-	builder.WriteString("provider=")
-	builder.WriteString(per.Provider)
-	builder.WriteString(", ")
-	builder.WriteString("provider_resource_id=")
-	builder.WriteString(per.ProviderResourceID)
-	builder.WriteString(", ")
-	builder.WriteString("url=")
-	builder.WriteString(per.URL)
-	builder.WriteString(", ")
-	builder.WriteString("hold_id=")
-	builder.WriteString(per.HoldID)
-	builder.WriteString(", ")
-	builder.WriteString("hold_release_id=")
-	builder.WriteString(per.HoldReleaseID)
-	builder.WriteString(", ")
-	builder.WriteString("ledger_entry_id=")
-	builder.WriteString(per.LedgerEntryID)
-	builder.WriteString(", ")
-	builder.WriteString("wallet_transaction_id=")
-	builder.WriteString(per.WalletTransactionID)
-	builder.WriteString(", ")
-	builder.WriteString("settlement_id=")
-	builder.WriteString(per.SettlementID)
-	builder.WriteString(", ")
-	builder.WriteString("pricing_version=")
-	builder.WriteString(per.PricingVersion)
-	builder.WriteString(", ")
-	builder.WriteString("amount_cents=")
-	builder.WriteString(fmt.Sprintf("%v", per.AmountCents))
-	builder.WriteString(", ")
-	builder.WriteString("balance_cents=")
-	builder.WriteString(fmt.Sprintf("%v", per.BalanceCents))
-	builder.WriteString(", ")
-	builder.WriteString("frozen_cents=")
-	builder.WriteString(fmt.Sprintf("%v", per.FrozenCents))
-	builder.WriteString(", ")
-	builder.WriteString("available_cents=")
-	builder.WriteString(fmt.Sprintf("%v", per.AvailableCents))
-	builder.WriteString(", ")
-	builder.WriteString("total_spent_cents=")
-	builder.WriteString(fmt.Sprintf("%v", per.TotalSpentCents))
-	builder.WriteString(", ")
-	builder.WriteString("quantity=")
-	builder.WriteString(fmt.Sprintf("%v", per.Quantity))
-	builder.WriteString(", ")
-	builder.WriteString("unit=")
-	builder.WriteString(per.Unit)
-	builder.WriteString(", ")
-	builder.WriteString("reason=")
-	builder.WriteString(per.Reason)
-	builder.WriteString(", ")
-	builder.WriteString("result=")
-	builder.WriteString(per.Result)
-	builder.WriteString(", ")
-	builder.WriteString("source=")
-	builder.WriteString(per.Source)
-	builder.WriteString(", ")
-	builder.WriteString("direction=")
-	builder.WriteString(per.Direction)
-	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(per.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(per.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
-	if v := per.ArchivedAt; v != nil {
-		builder.WriteString("archived_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
+	builder.WriteString("account_id=")
+	builder.WriteString(per.AccountID)
+	builder.WriteString(", ")
+	builder.WriteString("workspace_id=")
+	builder.WriteString(per.WorkspaceID)
+	builder.WriteString(", ")
+	builder.WriteString("status=")
+	builder.WriteString(per.Status)
+	builder.WriteString(", ")
+	builder.WriteString("result=")
+	builder.WriteString(per.Result)
+	builder.WriteString(", ")
+	builder.WriteString("reason=")
+	builder.WriteString(per.Reason)
+	builder.WriteString(", ")
+	builder.WriteString("url=")
+	builder.WriteString(per.URL)
 	builder.WriteByte(')')
 	return builder.String()
 }

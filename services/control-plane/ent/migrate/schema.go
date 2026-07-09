@@ -3,1119 +3,677 @@
 package migrate
 
 import (
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
 
 var (
-	// AccountsColumns holds the columns for the "accounts" table.
-	AccountsColumns = []*schema.Column{
+	// ControlPlaneAccountsColumns holds the columns for the "control_plane_accounts" table.
+	ControlPlaneAccountsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
 		{Name: "name", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: "active"},
+	}
+	// ControlPlaneAccountsTable holds the schema information for the "control_plane_accounts" table.
+	ControlPlaneAccountsTable = &schema.Table{
+		Name:       "control_plane_accounts",
+		Columns:    ControlPlaneAccountsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneAccountsColumns[0]},
+	}
+	// ControlPlaneAdminAuditEventsColumns holds the columns for the "control_plane_admin_audit_events" table.
+	ControlPlaneAdminAuditEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "actor_user_id", Type: field.TypeString, Default: ""},
+		{Name: "actor_role", Type: field.TypeString, Default: ""},
+		{Name: "actor_account_id", Type: field.TypeString, Default: ""},
+		{Name: "target_account_id", Type: field.TypeString, Default: ""},
+		{Name: "action", Type: field.TypeString, Default: ""},
+		{Name: "resource_kind", Type: field.TypeString, Default: ""},
+		{Name: "resource_id", Type: field.TypeString, Default: ""},
+		{Name: "ip_address", Type: field.TypeString, Default: ""},
+		{Name: "user_agent", Type: field.TypeString, Default: ""},
+		{Name: "result", Type: field.TypeString, Default: ""},
+	}
+	// ControlPlaneAdminAuditEventsTable holds the schema information for the "control_plane_admin_audit_events" table.
+	ControlPlaneAdminAuditEventsTable = &schema.Table{
+		Name:       "control_plane_admin_audit_events",
+		Columns:    ControlPlaneAdminAuditEventsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneAdminAuditEventsColumns[0]},
+	}
+	// ControlPlaneArchiveJobsColumns holds the columns for the "control_plane_archive_jobs" table.
+	ControlPlaneArchiveJobsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "resource_kind", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "reason", Type: field.TypeString, Default: ""},
+		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
+	}
+	// ControlPlaneArchiveJobsTable holds the schema information for the "control_plane_archive_jobs" table.
+	ControlPlaneArchiveJobsTable = &schema.Table{
+		Name:       "control_plane_archive_jobs",
+		Columns:    ControlPlaneArchiveJobsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneArchiveJobsColumns[0]},
+	}
+	// ControlPlaneArchivedAdminAuditEventsColumns holds the columns for the "control_plane_archived_admin_audit_events" table.
+	ControlPlaneArchivedAdminAuditEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "actor_user_id", Type: field.TypeString, Default: ""},
+		{Name: "actor_role", Type: field.TypeString, Default: ""},
+		{Name: "actor_account_id", Type: field.TypeString, Default: ""},
+		{Name: "target_account_id", Type: field.TypeString, Default: ""},
+		{Name: "action", Type: field.TypeString, Default: ""},
+		{Name: "resource_kind", Type: field.TypeString, Default: ""},
+		{Name: "resource_id", Type: field.TypeString, Default: ""},
+		{Name: "ip_address", Type: field.TypeString, Default: ""},
+		{Name: "user_agent", Type: field.TypeString, Default: ""},
+		{Name: "result", Type: field.TypeString, Default: ""},
+	}
+	// ControlPlaneArchivedAdminAuditEventsTable holds the schema information for the "control_plane_archived_admin_audit_events" table.
+	ControlPlaneArchivedAdminAuditEventsTable = &schema.Table{
+		Name:       "control_plane_archived_admin_audit_events",
+		Columns:    ControlPlaneArchivedAdminAuditEventsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneArchivedAdminAuditEventsColumns[0]},
+	}
+	// ControlPlaneArchivedComputeAllocationsColumns holds the columns for the "control_plane_archived_compute_allocations" table.
+	ControlPlaneArchivedComputeAllocationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "account_id", Type: field.TypeString, Default: ""},
 		{Name: "workspace_id", Type: field.TypeString, Default: ""},
 		{Name: "resource_id", Type: field.TypeString, Default: ""},
 		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
+		{Name: "name", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "reason", Type: field.TypeString, Default: ""},
+		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
+	}
+	// ControlPlaneArchivedComputeAllocationsTable holds the schema information for the "control_plane_archived_compute_allocations" table.
+	ControlPlaneArchivedComputeAllocationsTable = &schema.Table{
+		Name:       "control_plane_archived_compute_allocations",
+		Columns:    ControlPlaneArchivedComputeAllocationsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneArchivedComputeAllocationsColumns[0]},
+	}
+	// ControlPlaneArchivedStorageAttachmentsColumns holds the columns for the "control_plane_archived_storage_attachments" table.
+	ControlPlaneArchivedStorageAttachmentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "account_id", Type: field.TypeString, Default: ""},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "resource_id", Type: field.TypeString, Default: ""},
+		{Name: "resource_kind", Type: field.TypeString, Default: ""},
+		{Name: "name", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "reason", Type: field.TypeString, Default: ""},
+		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
+	}
+	// ControlPlaneArchivedStorageAttachmentsTable holds the schema information for the "control_plane_archived_storage_attachments" table.
+	ControlPlaneArchivedStorageAttachmentsTable = &schema.Table{
+		Name:       "control_plane_archived_storage_attachments",
+		Columns:    ControlPlaneArchivedStorageAttachmentsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneArchivedStorageAttachmentsColumns[0]},
+	}
+	// ControlPlaneArchivedStorageVolumesColumns holds the columns for the "control_plane_archived_storage_volumes" table.
+	ControlPlaneArchivedStorageVolumesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "account_id", Type: field.TypeString, Default: ""},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "resource_id", Type: field.TypeString, Default: ""},
+		{Name: "resource_kind", Type: field.TypeString, Default: ""},
+		{Name: "name", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "reason", Type: field.TypeString, Default: ""},
+		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
+	}
+	// ControlPlaneArchivedStorageVolumesTable holds the schema information for the "control_plane_archived_storage_volumes" table.
+	ControlPlaneArchivedStorageVolumesTable = &schema.Table{
+		Name:       "control_plane_archived_storage_volumes",
+		Columns:    ControlPlaneArchivedStorageVolumesColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneArchivedStorageVolumesColumns[0]},
+	}
+	// ControlPlaneArchivedWorkspacesColumns holds the columns for the "control_plane_archived_workspaces" table.
+	ControlPlaneArchivedWorkspacesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "account_id", Type: field.TypeString, Default: ""},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "resource_id", Type: field.TypeString, Default: ""},
+		{Name: "resource_kind", Type: field.TypeString, Default: ""},
+		{Name: "name", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "reason", Type: field.TypeString, Default: ""},
+		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
+	}
+	// ControlPlaneArchivedWorkspacesTable holds the schema information for the "control_plane_archived_workspaces" table.
+	ControlPlaneArchivedWorkspacesTable = &schema.Table{
+		Name:       "control_plane_archived_workspaces",
+		Columns:    ControlPlaneArchivedWorkspacesColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneArchivedWorkspacesColumns[0]},
+	}
+	// ControlPlaneAuthAttemptsColumns holds the columns for the "control_plane_auth_attempts" table.
+	ControlPlaneAuthAttemptsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "email", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "reason", Type: field.TypeString, Default: ""},
+		{Name: "ip_address", Type: field.TypeString, Default: ""},
+		{Name: "user_agent", Type: field.TypeString, Default: ""},
+	}
+	// ControlPlaneAuthAttemptsTable holds the schema information for the "control_plane_auth_attempts" table.
+	ControlPlaneAuthAttemptsTable = &schema.Table{
+		Name:       "control_plane_auth_attempts",
+		Columns:    ControlPlaneAuthAttemptsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneAuthAttemptsColumns[0]},
+	}
+	// ControlPlaneBillingReconciliationColumns holds the columns for the "control_plane_billing_reconciliation" table.
+	ControlPlaneBillingReconciliationColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "guard_status", Type: field.TypeString, Default: ""},
+		{Name: "guard_reason", Type: field.TypeString, Default: ""},
+		{Name: "message_author", Type: field.TypeString, Default: ""},
+		{Name: "message_text", Type: field.TypeString, Default: ""},
+		{Name: "message_created_at", Type: field.TypeString, Default: ""},
+		{Name: "guard_block_new_workspaces", Type: field.TypeBool, Default: false},
+		{Name: "reports", Type: field.TypeInt64, Default: 0},
+	}
+	// ControlPlaneBillingReconciliationTable holds the schema information for the "control_plane_billing_reconciliation" table.
+	ControlPlaneBillingReconciliationTable = &schema.Table{
+		Name:       "control_plane_billing_reconciliation",
+		Columns:    ControlPlaneBillingReconciliationColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneBillingReconciliationColumns[0]},
+	}
+	// ControlPlaneComputeAllocationsColumns holds the columns for the "control_plane_compute_allocations" table.
+	ControlPlaneComputeAllocationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "account_id", Type: field.TypeString},
+		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "name", Type: field.TypeString, Default: ""},
+		{Name: "package_id", Type: field.TypeString, Default: ""},
 		{Name: "provider", Type: field.TypeString, Default: ""},
 		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
+		{Name: "provider_request_id", Type: field.TypeString, Default: ""},
+		{Name: "operation_id", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "billing_status", Type: field.TypeString, Default: ""},
 		{Name: "hold_id", Type: field.TypeString, Default: ""},
 		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
+		{Name: "settlement_id", Type: field.TypeString, Default: ""},
 		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
 		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
+		{Name: "pricing_version", Type: field.TypeString, Default: ""},
+		{Name: "usage_period_end", Type: field.TypeString, Default: ""},
+		{Name: "evidence_id", Type: field.TypeString, Default: ""},
+		{Name: "cvm_instance_id", Type: field.TypeString, Default: ""},
+		{Name: "instance_id", Type: field.TypeString, Default: ""},
+		{Name: "node_name", Type: field.TypeString, Default: ""},
+		{Name: "machine_name", Type: field.TypeString, Default: ""},
+		{Name: "hold_amount_cents", Type: field.TypeInt64, Default: 0},
+		{Name: "hold_amount", Type: field.TypeFloat64, Default: 0},
+		{Name: "cpu", Type: field.TypeFloat64, Default: 0},
+		{Name: "memory_gb", Type: field.TypeFloat64, Default: 0},
+		{Name: "disk_gb", Type: field.TypeFloat64, Default: 0},
+		{Name: "price_snapshot_package_id", Type: field.TypeString, Default: ""},
+		{Name: "price_snapshot_resource_type", Type: field.TypeString, Default: ""},
+		{Name: "price_snapshot_currency", Type: field.TypeString, Default: ""},
+		{Name: "price_snapshot_source", Type: field.TypeString, Default: ""},
+		{Name: "price_snapshot_sku", Type: field.TypeString, Default: ""},
+		{Name: "price_snapshot_unit_price_cents", Type: field.TypeInt64, Default: 0},
+		{Name: "price_snapshot_compute_hourly", Type: field.TypeFloat64, Default: 0},
+	}
+	// ControlPlaneComputeAllocationsTable holds the schema information for the "control_plane_compute_allocations" table.
+	ControlPlaneComputeAllocationsTable = &schema.Table{
+		Name:       "control_plane_compute_allocations",
+		Columns:    ControlPlaneComputeAllocationsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneComputeAllocationsColumns[0]},
+	}
+	// ControlPlaneLedgerProjectionsColumns holds the columns for the "control_plane_ledger_projections" table.
+	ControlPlaneLedgerProjectionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "account_id", Type: field.TypeString},
+		{Name: "type", Type: field.TypeString, Default: ""},
+		{Name: "resource_id", Type: field.TypeString, Default: ""},
+		{Name: "resource_kind", Type: field.TypeString, Default: ""},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "compute_allocation_id", Type: field.TypeString, Default: ""},
+		{Name: "storage_id", Type: field.TypeString, Default: ""},
 		{Name: "settlement_id", Type: field.TypeString, Default: ""},
 		{Name: "pricing_version", Type: field.TypeString, Default: ""},
+		{Name: "usage_period_start", Type: field.TypeString, Default: ""},
+		{Name: "usage_period_end", Type: field.TypeString, Default: ""},
+		{Name: "unit", Type: field.TypeString, Default: ""},
+		{Name: "provider_cost_evidence_ref", Type: field.TypeString, Default: ""},
+		{Name: "currency", Type: field.TypeString, Default: "CNY"},
 		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
+		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
+		{Name: "direction", Type: field.TypeString, Default: ""},
+		{Name: "price_snapshot_package_id", Type: field.TypeString, Default: ""},
+		{Name: "price_snapshot_resource_type", Type: field.TypeString, Default: ""},
+		{Name: "price_snapshot_currency", Type: field.TypeString, Default: ""},
+		{Name: "price_snapshot_source", Type: field.TypeString, Default: ""},
+		{Name: "price_snapshot_sku", Type: field.TypeString, Default: ""},
+		{Name: "price_snapshot_unit_price_cents", Type: field.TypeInt64, Default: 0},
+		{Name: "price_snapshot_compute_hourly", Type: field.TypeFloat64, Default: 0},
+		{Name: "price_snapshot_storage_gb_month", Type: field.TypeFloat64, Default: 0},
+		{Name: "price_snapshot_size_gb", Type: field.TypeFloat64, Default: 0},
+	}
+	// ControlPlaneLedgerProjectionsTable holds the schema information for the "control_plane_ledger_projections" table.
+	ControlPlaneLedgerProjectionsTable = &schema.Table{
+		Name:       "control_plane_ledger_projections",
+		Columns:    ControlPlaneLedgerProjectionsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneLedgerProjectionsColumns[0]},
+	}
+	// ControlPlaneManualTopupProjectionsColumns holds the columns for the "control_plane_manual_topup_projections" table.
+	ControlPlaneManualTopupProjectionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "account_id", Type: field.TypeString},
+		{Name: "operator_user_id", Type: field.TypeString, Default: ""},
+		{Name: "currency", Type: field.TypeString, Default: "CNY"},
+		{Name: "source", Type: field.TypeString, Default: "manual"},
+		{Name: "reason", Type: field.TypeString, Default: ""},
+		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
+	}
+	// ControlPlaneManualTopupProjectionsTable holds the schema information for the "control_plane_manual_topup_projections" table.
+	ControlPlaneManualTopupProjectionsTable = &schema.Table{
+		Name:       "control_plane_manual_topup_projections",
+		Columns:    ControlPlaneManualTopupProjectionsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneManualTopupProjectionsColumns[0]},
+	}
+	// ControlPlaneMembershipsColumns holds the columns for the "control_plane_memberships" table.
+	ControlPlaneMembershipsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "account_id", Type: field.TypeString},
+		{Name: "user_id", Type: field.TypeString},
+		{Name: "role", Type: field.TypeString, Default: "member"},
+		{Name: "status", Type: field.TypeString, Default: "active"},
+	}
+	// ControlPlaneMembershipsTable holds the schema information for the "control_plane_memberships" table.
+	ControlPlaneMembershipsTable = &schema.Table{
+		Name:       "control_plane_memberships",
+		Columns:    ControlPlaneMembershipsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneMembershipsColumns[0]},
+	}
+	// ControlPlaneProductionE2eRecordsColumns holds the columns for the "control_plane_production_e2e_records" table.
+	ControlPlaneProductionE2eRecordsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "account_id", Type: field.TypeString, Default: ""},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "result", Type: field.TypeString, Default: ""},
+		{Name: "reason", Type: field.TypeString, Default: ""},
+		{Name: "url", Type: field.TypeString, Default: ""},
+	}
+	// ControlPlaneProductionE2eRecordsTable holds the schema information for the "control_plane_production_e2e_records" table.
+	ControlPlaneProductionE2eRecordsTable = &schema.Table{
+		Name:       "control_plane_production_e2e_records",
+		Columns:    ControlPlaneProductionE2eRecordsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneProductionE2eRecordsColumns[0]},
+	}
+	// ControlPlaneRuntimeOperationsColumns holds the columns for the "control_plane_runtime_operations" table.
+	ControlPlaneRuntimeOperationsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "operation_id", Type: field.TypeString, Default: ""},
+		{Name: "account_id", Type: field.TypeString, Default: ""},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "resource_id", Type: field.TypeString, Default: ""},
+		{Name: "resource_kind", Type: field.TypeString, Default: ""},
+		{Name: "action", Type: field.TypeString, Default: ""},
+		{Name: "provider", Type: field.TypeString, Default: ""},
+		{Name: "provider_request_id", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "result", Type: field.TypeString, Default: ""},
+		{Name: "compute_allocation_id", Type: field.TypeString, Default: ""},
+		{Name: "storage_id", Type: field.TypeString, Default: ""},
+		{Name: "attachment_id", Type: field.TypeString, Default: ""},
+		{Name: "runtime_service_name", Type: field.TypeString, Default: ""},
+		{Name: "cvm_instance_id", Type: field.TypeString, Default: ""},
+		{Name: "instance_id", Type: field.TypeString, Default: ""},
+		{Name: "node_name", Type: field.TypeString, Default: ""},
+		{Name: "machine_name", Type: field.TypeString, Default: ""},
+	}
+	// ControlPlaneRuntimeOperationsTable holds the schema information for the "control_plane_runtime_operations" table.
+	ControlPlaneRuntimeOperationsTable = &schema.Table{
+		Name:       "control_plane_runtime_operations",
+		Columns:    ControlPlaneRuntimeOperationsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneRuntimeOperationsColumns[0]},
+	}
+	// ControlPlaneSessionsColumns holds the columns for the "control_plane_sessions" table.
+	ControlPlaneSessionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "user_id", Type: field.TypeString},
+		{Name: "csrf", Type: field.TypeString},
+		{Name: "expires_at", Type: field.TypeString},
+	}
+	// ControlPlaneSessionsTable holds the schema information for the "control_plane_sessions" table.
+	ControlPlaneSessionsTable = &schema.Table{
+		Name:       "control_plane_sessions",
+		Columns:    ControlPlaneSessionsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneSessionsColumns[0]},
+	}
+	// ControlPlaneStorageAttachmentsColumns holds the columns for the "control_plane_storage_attachments" table.
+	ControlPlaneStorageAttachmentsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "account_id", Type: field.TypeString},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "compute_allocation_id", Type: field.TypeString, Default: ""},
+		{Name: "storage_id", Type: field.TypeString, Default: ""},
+		{Name: "volume_id", Type: field.TypeString, Default: ""},
+		{Name: "operation_id", Type: field.TypeString, Default: ""},
+		{Name: "provider", Type: field.TypeString, Default: ""},
+		{Name: "provider_request_id", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "mount_path", Type: field.TypeString, Default: ""},
+	}
+	// ControlPlaneStorageAttachmentsTable holds the schema information for the "control_plane_storage_attachments" table.
+	ControlPlaneStorageAttachmentsTable = &schema.Table{
+		Name:       "control_plane_storage_attachments",
+		Columns:    ControlPlaneStorageAttachmentsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneStorageAttachmentsColumns[0]},
+	}
+	// ControlPlaneStorageVolumesColumns holds the columns for the "control_plane_storage_volumes" table.
+	ControlPlaneStorageVolumesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "account_id", Type: field.TypeString},
+		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "name", Type: field.TypeString, Default: ""},
+		{Name: "provider", Type: field.TypeString, Default: ""},
+		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
+		{Name: "provider_request_id", Type: field.TypeString, Default: ""},
+		{Name: "operation_id", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "billing_status", Type: field.TypeString, Default: ""},
+		{Name: "hold_id", Type: field.TypeString, Default: ""},
+		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
+		{Name: "settlement_id", Type: field.TypeString, Default: ""},
+		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
+		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
+		{Name: "pricing_version", Type: field.TypeString, Default: ""},
+		{Name: "usage_period_end", Type: field.TypeString, Default: ""},
+		{Name: "mount_path", Type: field.TypeString, Default: ""},
+		{Name: "hold_amount_cents", Type: field.TypeInt64, Default: 0},
+		{Name: "hold_amount", Type: field.TypeFloat64, Default: 0},
+		{Name: "size_gb", Type: field.TypeFloat64, Default: 0},
+		{Name: "price_snapshot_resource_type", Type: field.TypeString, Default: ""},
+		{Name: "price_snapshot_currency", Type: field.TypeString, Default: ""},
+		{Name: "price_snapshot_source", Type: field.TypeString, Default: ""},
+		{Name: "price_snapshot_unit_price_cents", Type: field.TypeInt64, Default: 0},
+		{Name: "price_snapshot_storage_gb_month", Type: field.TypeFloat64, Default: 0},
+		{Name: "price_snapshot_size_gb", Type: field.TypeFloat64, Default: 0},
+	}
+	// ControlPlaneStorageVolumesTable holds the schema information for the "control_plane_storage_volumes" table.
+	ControlPlaneStorageVolumesTable = &schema.Table{
+		Name:       "control_plane_storage_volumes",
+		Columns:    ControlPlaneStorageVolumesColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneStorageVolumesColumns[0]},
+	}
+	// ControlPlaneSupportTicketMappingsColumns holds the columns for the "control_plane_support_ticket_mappings" table.
+	ControlPlaneSupportTicketMappingsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "account_id", Type: field.TypeString, Default: ""},
+		{Name: "user_id", Type: field.TypeString, Default: ""},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "resource_id", Type: field.TypeString, Default: ""},
+		{Name: "resource_kind", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "source", Type: field.TypeString, Default: ""},
+		{Name: "url", Type: field.TypeString, Default: ""},
+		{Name: "reason", Type: field.TypeString, Default: ""},
+	}
+	// ControlPlaneSupportTicketMappingsTable holds the schema information for the "control_plane_support_ticket_mappings" table.
+	ControlPlaneSupportTicketMappingsTable = &schema.Table{
+		Name:       "control_plane_support_ticket_mappings",
+		Columns:    ControlPlaneSupportTicketMappingsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneSupportTicketMappingsColumns[0]},
+	}
+	// ControlPlaneUsersColumns holds the columns for the "control_plane_users" table.
+	ControlPlaneUsersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "account_id", Type: field.TypeString},
+		{Name: "email", Type: field.TypeString},
+		{Name: "role", Type: field.TypeString, Default: "owner"},
+		{Name: "status", Type: field.TypeString, Default: "active"},
+		{Name: "password_hash", Type: field.TypeString, Default: ""},
+		{Name: "disabled_at", Type: field.TypeString, Default: ""},
+		{Name: "disabled_by", Type: field.TypeString, Default: ""},
+		{Name: "disabled_reason", Type: field.TypeString, Default: ""},
+		{Name: "deleted_at", Type: field.TypeString, Default: ""},
+		{Name: "deleted_by", Type: field.TypeString, Default: ""},
+		{Name: "delete_reason", Type: field.TypeString, Default: ""},
+	}
+	// ControlPlaneUsersTable holds the schema information for the "control_plane_users" table.
+	ControlPlaneUsersTable = &schema.Table{
+		Name:       "control_plane_users",
+		Columns:    ControlPlaneUsersColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneUsersColumns[0]},
+	}
+	// ControlPlaneWalletProjectionsColumns holds the columns for the "control_plane_wallet_projections" table.
+	ControlPlaneWalletProjectionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "account_id", Type: field.TypeString},
+		{Name: "currency", Type: field.TypeString, Default: "CNY"},
 		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
 		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
 		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
 		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
+		{Name: "balance", Type: field.TypeFloat64, Default: 0},
+		{Name: "frozen", Type: field.TypeFloat64, Default: 0},
+		{Name: "available", Type: field.TypeFloat64, Default: 0},
+		{Name: "total_spent", Type: field.TypeFloat64, Default: 0},
+		{Name: "total_recharged", Type: field.TypeFloat64, Default: 0},
+	}
+	// ControlPlaneWalletProjectionsTable holds the schema information for the "control_plane_wallet_projections" table.
+	ControlPlaneWalletProjectionsTable = &schema.Table{
+		Name:       "control_plane_wallet_projections",
+		Columns:    ControlPlaneWalletProjectionsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneWalletProjectionsColumns[0]},
+	}
+	// ControlPlaneWalletTransactionProjectionsColumns holds the columns for the "control_plane_wallet_transaction_projections" table.
+	ControlPlaneWalletTransactionProjectionsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
+		{Name: "account_id", Type: field.TypeString},
+		{Name: "type", Type: field.TypeString, Default: ""},
+		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
+		{Name: "resource_id", Type: field.TypeString, Default: ""},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "compute_allocation_id", Type: field.TypeString, Default: ""},
+		{Name: "storage_id", Type: field.TypeString, Default: ""},
+		{Name: "settlement_id", Type: field.TypeString, Default: ""},
+		{Name: "currency", Type: field.TypeString, Default: "CNY"},
+		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
+		{Name: "metadata_workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "metadata_resource_id", Type: field.TypeString, Default: ""},
+		{Name: "metadata_settlement_id", Type: field.TypeString, Default: ""},
+		{Name: "metadata_ledger_entry_id", Type: field.TypeString, Default: ""},
+		{Name: "metadata_compute_allocation_id", Type: field.TypeString, Default: ""},
+		{Name: "metadata_storage_id", Type: field.TypeString, Default: ""},
 	}
-	// AccountsTable holds the schema information for the "accounts" table.
-	AccountsTable = &schema.Table{
-		Name:       "accounts",
-		Columns:    AccountsColumns,
-		PrimaryKey: []*schema.Column{AccountsColumns[0]},
+	// ControlPlaneWalletTransactionProjectionsTable holds the schema information for the "control_plane_wallet_transaction_projections" table.
+	ControlPlaneWalletTransactionProjectionsTable = &schema.Table{
+		Name:       "control_plane_wallet_transaction_projections",
+		Columns:    ControlPlaneWalletTransactionProjectionsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneWalletTransactionProjectionsColumns[0]},
 	}
-	// AdminAuditEventsColumns holds the columns for the "admin_audit_events" table.
-	AdminAuditEventsColumns = []*schema.Column{
+	// ControlPlaneWorkspacesColumns holds the columns for the "control_plane_workspaces" table.
+	ControlPlaneWorkspacesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "account_id", Type: field.TypeString, Default: ""},
 		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
 		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
 		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
 		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
 		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// AdminAuditEventsTable holds the schema information for the "admin_audit_events" table.
-	AdminAuditEventsTable = &schema.Table{
-		Name:       "admin_audit_events",
-		Columns:    AdminAuditEventsColumns,
-		PrimaryKey: []*schema.Column{AdminAuditEventsColumns[0]},
-	}
-	// ArchiveJobsColumns holds the columns for the "archive_jobs" table.
-	ArchiveJobsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
+		{Name: "state", Type: field.TypeString, Default: ""},
 		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
+		{Name: "storage_id", Type: field.TypeString, Default: ""},
+		{Name: "current_compute_allocation_id", Type: field.TypeString, Default: ""},
+		{Name: "current_attachment_id", Type: field.TypeString, Default: ""},
+		{Name: "runtime_id", Type: field.TypeString, Default: ""},
+		{Name: "runtime_service_name", Type: field.TypeString, Default: ""},
+		{Name: "runtime_service_name_root", Type: field.TypeString, Default: ""},
+		{Name: "service_name", Type: field.TypeString, Default: ""},
+		{Name: "access_token_status", Type: field.TypeString, Default: ""},
+		{Name: "access_account", Type: field.TypeString, Default: ""},
+		{Name: "access_username", Type: field.TypeString, Default: ""},
+		{Name: "access_password", Type: field.TypeString, Default: ""},
+		{Name: "credential_status", Type: field.TypeString, Default: ""},
+		{Name: "credential_version", Type: field.TypeString, Default: ""},
+		{Name: "credential_secret_ref", Type: field.TypeString, Default: ""},
+		{Name: "access_requires_login", Type: field.TypeBool, Default: false},
 	}
-	// ArchiveJobsTable holds the schema information for the "archive_jobs" table.
-	ArchiveJobsTable = &schema.Table{
-		Name:       "archive_jobs",
-		Columns:    ArchiveJobsColumns,
-		PrimaryKey: []*schema.Column{ArchiveJobsColumns[0]},
-	}
-	// ArchivedAdminAuditEventsColumns holds the columns for the "archived_admin_audit_events" table.
-	ArchivedAdminAuditEventsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// ArchivedAdminAuditEventsTable holds the schema information for the "archived_admin_audit_events" table.
-	ArchivedAdminAuditEventsTable = &schema.Table{
-		Name:       "archived_admin_audit_events",
-		Columns:    ArchivedAdminAuditEventsColumns,
-		PrimaryKey: []*schema.Column{ArchivedAdminAuditEventsColumns[0]},
-	}
-	// ArchivedComputeAllocationsColumns holds the columns for the "archived_compute_allocations" table.
-	ArchivedComputeAllocationsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// ArchivedComputeAllocationsTable holds the schema information for the "archived_compute_allocations" table.
-	ArchivedComputeAllocationsTable = &schema.Table{
-		Name:       "archived_compute_allocations",
-		Columns:    ArchivedComputeAllocationsColumns,
-		PrimaryKey: []*schema.Column{ArchivedComputeAllocationsColumns[0]},
-	}
-	// ArchivedStorageAttachmentsColumns holds the columns for the "archived_storage_attachments" table.
-	ArchivedStorageAttachmentsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// ArchivedStorageAttachmentsTable holds the schema information for the "archived_storage_attachments" table.
-	ArchivedStorageAttachmentsTable = &schema.Table{
-		Name:       "archived_storage_attachments",
-		Columns:    ArchivedStorageAttachmentsColumns,
-		PrimaryKey: []*schema.Column{ArchivedStorageAttachmentsColumns[0]},
-	}
-	// ArchivedStorageVolumesColumns holds the columns for the "archived_storage_volumes" table.
-	ArchivedStorageVolumesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// ArchivedStorageVolumesTable holds the schema information for the "archived_storage_volumes" table.
-	ArchivedStorageVolumesTable = &schema.Table{
-		Name:       "archived_storage_volumes",
-		Columns:    ArchivedStorageVolumesColumns,
-		PrimaryKey: []*schema.Column{ArchivedStorageVolumesColumns[0]},
-	}
-	// ArchivedWorkspacesColumns holds the columns for the "archived_workspaces" table.
-	ArchivedWorkspacesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// ArchivedWorkspacesTable holds the schema information for the "archived_workspaces" table.
-	ArchivedWorkspacesTable = &schema.Table{
-		Name:       "archived_workspaces",
-		Columns:    ArchivedWorkspacesColumns,
-		PrimaryKey: []*schema.Column{ArchivedWorkspacesColumns[0]},
-	}
-	// AuthAttemptsColumns holds the columns for the "auth_attempts" table.
-	AuthAttemptsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// AuthAttemptsTable holds the schema information for the "auth_attempts" table.
-	AuthAttemptsTable = &schema.Table{
-		Name:       "auth_attempts",
-		Columns:    AuthAttemptsColumns,
-		PrimaryKey: []*schema.Column{AuthAttemptsColumns[0]},
-	}
-	// BillingReconciliationsColumns holds the columns for the "billing_reconciliations" table.
-	BillingReconciliationsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// BillingReconciliationsTable holds the schema information for the "billing_reconciliations" table.
-	BillingReconciliationsTable = &schema.Table{
-		Name:       "billing_reconciliations",
-		Columns:    BillingReconciliationsColumns,
-		PrimaryKey: []*schema.Column{BillingReconciliationsColumns[0]},
-	}
-	// ComputeAllocationsColumns holds the columns for the "compute_allocations" table.
-	ComputeAllocationsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// ComputeAllocationsTable holds the schema information for the "compute_allocations" table.
-	ComputeAllocationsTable = &schema.Table{
-		Name:       "compute_allocations",
-		Columns:    ComputeAllocationsColumns,
-		PrimaryKey: []*schema.Column{ComputeAllocationsColumns[0]},
-	}
-	// LedgerProjectionsColumns holds the columns for the "ledger_projections" table.
-	LedgerProjectionsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// LedgerProjectionsTable holds the schema information for the "ledger_projections" table.
-	LedgerProjectionsTable = &schema.Table{
-		Name:       "ledger_projections",
-		Columns:    LedgerProjectionsColumns,
-		PrimaryKey: []*schema.Column{LedgerProjectionsColumns[0]},
-	}
-	// ManualTopupProjectionsColumns holds the columns for the "manual_topup_projections" table.
-	ManualTopupProjectionsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// ManualTopupProjectionsTable holds the schema information for the "manual_topup_projections" table.
-	ManualTopupProjectionsTable = &schema.Table{
-		Name:       "manual_topup_projections",
-		Columns:    ManualTopupProjectionsColumns,
-		PrimaryKey: []*schema.Column{ManualTopupProjectionsColumns[0]},
-	}
-	// MembershipsColumns holds the columns for the "memberships" table.
-	MembershipsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// MembershipsTable holds the schema information for the "memberships" table.
-	MembershipsTable = &schema.Table{
-		Name:       "memberships",
-		Columns:    MembershipsColumns,
-		PrimaryKey: []*schema.Column{MembershipsColumns[0]},
-	}
-	// ProductionE2eRecordsColumns holds the columns for the "production_e2e_records" table.
-	ProductionE2eRecordsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// ProductionE2eRecordsTable holds the schema information for the "production_e2e_records" table.
-	ProductionE2eRecordsTable = &schema.Table{
-		Name:       "production_e2e_records",
-		Columns:    ProductionE2eRecordsColumns,
-		PrimaryKey: []*schema.Column{ProductionE2eRecordsColumns[0]},
-	}
-	// RuntimeOperationsColumns holds the columns for the "runtime_operations" table.
-	RuntimeOperationsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// RuntimeOperationsTable holds the schema information for the "runtime_operations" table.
-	RuntimeOperationsTable = &schema.Table{
-		Name:       "runtime_operations",
-		Columns:    RuntimeOperationsColumns,
-		PrimaryKey: []*schema.Column{RuntimeOperationsColumns[0]},
-	}
-	// SessionsColumns holds the columns for the "sessions" table.
-	SessionsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// SessionsTable holds the schema information for the "sessions" table.
-	SessionsTable = &schema.Table{
-		Name:       "sessions",
-		Columns:    SessionsColumns,
-		PrimaryKey: []*schema.Column{SessionsColumns[0]},
-	}
-	// StorageAttachmentsColumns holds the columns for the "storage_attachments" table.
-	StorageAttachmentsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// StorageAttachmentsTable holds the schema information for the "storage_attachments" table.
-	StorageAttachmentsTable = &schema.Table{
-		Name:       "storage_attachments",
-		Columns:    StorageAttachmentsColumns,
-		PrimaryKey: []*schema.Column{StorageAttachmentsColumns[0]},
-	}
-	// StorageVolumesColumns holds the columns for the "storage_volumes" table.
-	StorageVolumesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// StorageVolumesTable holds the schema information for the "storage_volumes" table.
-	StorageVolumesTable = &schema.Table{
-		Name:       "storage_volumes",
-		Columns:    StorageVolumesColumns,
-		PrimaryKey: []*schema.Column{StorageVolumesColumns[0]},
-	}
-	// SupportTicketMappingsColumns holds the columns for the "support_ticket_mappings" table.
-	SupportTicketMappingsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// SupportTicketMappingsTable holds the schema information for the "support_ticket_mappings" table.
-	SupportTicketMappingsTable = &schema.Table{
-		Name:       "support_ticket_mappings",
-		Columns:    SupportTicketMappingsColumns,
-		PrimaryKey: []*schema.Column{SupportTicketMappingsColumns[0]},
-	}
-	// UsersColumns holds the columns for the "users" table.
-	UsersColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// UsersTable holds the schema information for the "users" table.
-	UsersTable = &schema.Table{
-		Name:       "users",
-		Columns:    UsersColumns,
-		PrimaryKey: []*schema.Column{UsersColumns[0]},
-	}
-	// WalletProjectionsColumns holds the columns for the "wallet_projections" table.
-	WalletProjectionsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// WalletProjectionsTable holds the schema information for the "wallet_projections" table.
-	WalletProjectionsTable = &schema.Table{
-		Name:       "wallet_projections",
-		Columns:    WalletProjectionsColumns,
-		PrimaryKey: []*schema.Column{WalletProjectionsColumns[0]},
-	}
-	// WalletTransactionProjectionsColumns holds the columns for the "wallet_transaction_projections" table.
-	WalletTransactionProjectionsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// WalletTransactionProjectionsTable holds the schema information for the "wallet_transaction_projections" table.
-	WalletTransactionProjectionsTable = &schema.Table{
-		Name:       "wallet_transaction_projections",
-		Columns:    WalletTransactionProjectionsColumns,
-		PrimaryKey: []*schema.Column{WalletTransactionProjectionsColumns[0]},
-	}
-	// WorkspacesColumns holds the columns for the "workspaces" table.
-	WorkspacesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString, Unique: true},
-		{Name: "account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_account_id", Type: field.TypeString, Default: ""},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString, Default: ""},
-		{Name: "email", Type: field.TypeString, Default: ""},
-		{Name: "role", Type: field.TypeString, Default: ""},
-		{Name: "status", Type: field.TypeString, Default: ""},
-		{Name: "name", Type: field.TypeString, Default: ""},
-		{Name: "workspace_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_id", Type: field.TypeString, Default: ""},
-		{Name: "resource_kind", Type: field.TypeString, Default: ""},
-		{Name: "operation_id", Type: field.TypeString, Default: ""},
-		{Name: "provider", Type: field.TypeString, Default: ""},
-		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
-		{Name: "url", Type: field.TypeString, Default: ""},
-		{Name: "hold_id", Type: field.TypeString, Default: ""},
-		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
-		{Name: "ledger_entry_id", Type: field.TypeString, Default: ""},
-		{Name: "wallet_transaction_id", Type: field.TypeString, Default: ""},
-		{Name: "settlement_id", Type: field.TypeString, Default: ""},
-		{Name: "pricing_version", Type: field.TypeString, Default: ""},
-		{Name: "amount_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "balance_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "frozen_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "available_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "total_spent_cents", Type: field.TypeInt64, Default: 0},
-		{Name: "quantity", Type: field.TypeFloat64, Default: 0},
-		{Name: "unit", Type: field.TypeString, Default: ""},
-		{Name: "reason", Type: field.TypeString, Default: ""},
-		{Name: "result", Type: field.TypeString, Default: ""},
-		{Name: "source", Type: field.TypeString, Default: ""},
-		{Name: "direction", Type: field.TypeString, Default: ""},
-		{Name: "created_at", Type: field.TypeTime},
-		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "archived_at", Type: field.TypeTime, Nullable: true},
-	}
-	// WorkspacesTable holds the schema information for the "workspaces" table.
-	WorkspacesTable = &schema.Table{
-		Name:       "workspaces",
-		Columns:    WorkspacesColumns,
-		PrimaryKey: []*schema.Column{WorkspacesColumns[0]},
+	// ControlPlaneWorkspacesTable holds the schema information for the "control_plane_workspaces" table.
+	ControlPlaneWorkspacesTable = &schema.Table{
+		Name:       "control_plane_workspaces",
+		Columns:    ControlPlaneWorkspacesColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneWorkspacesColumns[0]},
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
-		AccountsTable,
-		AdminAuditEventsTable,
-		ArchiveJobsTable,
-		ArchivedAdminAuditEventsTable,
-		ArchivedComputeAllocationsTable,
-		ArchivedStorageAttachmentsTable,
-		ArchivedStorageVolumesTable,
-		ArchivedWorkspacesTable,
-		AuthAttemptsTable,
-		BillingReconciliationsTable,
-		ComputeAllocationsTable,
-		LedgerProjectionsTable,
-		ManualTopupProjectionsTable,
-		MembershipsTable,
-		ProductionE2eRecordsTable,
-		RuntimeOperationsTable,
-		SessionsTable,
-		StorageAttachmentsTable,
-		StorageVolumesTable,
-		SupportTicketMappingsTable,
-		UsersTable,
-		WalletProjectionsTable,
-		WalletTransactionProjectionsTable,
-		WorkspacesTable,
+		ControlPlaneAccountsTable,
+		ControlPlaneAdminAuditEventsTable,
+		ControlPlaneArchiveJobsTable,
+		ControlPlaneArchivedAdminAuditEventsTable,
+		ControlPlaneArchivedComputeAllocationsTable,
+		ControlPlaneArchivedStorageAttachmentsTable,
+		ControlPlaneArchivedStorageVolumesTable,
+		ControlPlaneArchivedWorkspacesTable,
+		ControlPlaneAuthAttemptsTable,
+		ControlPlaneBillingReconciliationTable,
+		ControlPlaneComputeAllocationsTable,
+		ControlPlaneLedgerProjectionsTable,
+		ControlPlaneManualTopupProjectionsTable,
+		ControlPlaneMembershipsTable,
+		ControlPlaneProductionE2eRecordsTable,
+		ControlPlaneRuntimeOperationsTable,
+		ControlPlaneSessionsTable,
+		ControlPlaneStorageAttachmentsTable,
+		ControlPlaneStorageVolumesTable,
+		ControlPlaneSupportTicketMappingsTable,
+		ControlPlaneUsersTable,
+		ControlPlaneWalletProjectionsTable,
+		ControlPlaneWalletTransactionProjectionsTable,
+		ControlPlaneWorkspacesTable,
 	}
 )
 
 func init() {
+	ControlPlaneAccountsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_accounts",
+	}
+	ControlPlaneAdminAuditEventsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_admin_audit_events",
+	}
+	ControlPlaneArchiveJobsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_archive_jobs",
+	}
+	ControlPlaneArchivedAdminAuditEventsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_archived_admin_audit_events",
+	}
+	ControlPlaneArchivedComputeAllocationsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_archived_compute_allocations",
+	}
+	ControlPlaneArchivedStorageAttachmentsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_archived_storage_attachments",
+	}
+	ControlPlaneArchivedStorageVolumesTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_archived_storage_volumes",
+	}
+	ControlPlaneArchivedWorkspacesTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_archived_workspaces",
+	}
+	ControlPlaneAuthAttemptsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_auth_attempts",
+	}
+	ControlPlaneBillingReconciliationTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_billing_reconciliation",
+	}
+	ControlPlaneComputeAllocationsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_compute_allocations",
+	}
+	ControlPlaneLedgerProjectionsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_ledger_projections",
+	}
+	ControlPlaneManualTopupProjectionsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_manual_topup_projections",
+	}
+	ControlPlaneMembershipsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_memberships",
+	}
+	ControlPlaneProductionE2eRecordsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_production_e2e_records",
+	}
+	ControlPlaneRuntimeOperationsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_runtime_operations",
+	}
+	ControlPlaneSessionsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_sessions",
+	}
+	ControlPlaneStorageAttachmentsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_storage_attachments",
+	}
+	ControlPlaneStorageVolumesTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_storage_volumes",
+	}
+	ControlPlaneSupportTicketMappingsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_support_ticket_mappings",
+	}
+	ControlPlaneUsersTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_users",
+	}
+	ControlPlaneWalletProjectionsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_wallet_projections",
+	}
+	ControlPlaneWalletTransactionProjectionsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_wallet_transaction_projections",
+	}
+	ControlPlaneWorkspacesTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_workspaces",
+	}
 }

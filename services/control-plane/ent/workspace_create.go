@@ -20,6 +20,34 @@ type WorkspaceCreate struct {
 	hooks    []Hook
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (wc *WorkspaceCreate) SetCreatedAt(t time.Time) *WorkspaceCreate {
+	wc.mutation.SetCreatedAt(t)
+	return wc
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableCreatedAt(t *time.Time) *WorkspaceCreate {
+	if t != nil {
+		wc.SetCreatedAt(*t)
+	}
+	return wc
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (wc *WorkspaceCreate) SetUpdatedAt(t time.Time) *WorkspaceCreate {
+	wc.mutation.SetUpdatedAt(t)
+	return wc
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableUpdatedAt(t *time.Time) *WorkspaceCreate {
+	if t != nil {
+		wc.SetUpdatedAt(*t)
+	}
+	return wc
+}
+
 // SetAccountID sets the "account_id" field.
 func (wc *WorkspaceCreate) SetAccountID(s string) *WorkspaceCreate {
 	wc.mutation.SetAccountID(s)
@@ -76,48 +104,6 @@ func (wc *WorkspaceCreate) SetNillableUserID(s *string) *WorkspaceCreate {
 	return wc
 }
 
-// SetEmail sets the "email" field.
-func (wc *WorkspaceCreate) SetEmail(s string) *WorkspaceCreate {
-	wc.mutation.SetEmail(s)
-	return wc
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableEmail(s *string) *WorkspaceCreate {
-	if s != nil {
-		wc.SetEmail(*s)
-	}
-	return wc
-}
-
-// SetRole sets the "role" field.
-func (wc *WorkspaceCreate) SetRole(s string) *WorkspaceCreate {
-	wc.mutation.SetRole(s)
-	return wc
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableRole(s *string) *WorkspaceCreate {
-	if s != nil {
-		wc.SetRole(*s)
-	}
-	return wc
-}
-
-// SetStatus sets the "status" field.
-func (wc *WorkspaceCreate) SetStatus(s string) *WorkspaceCreate {
-	wc.mutation.SetStatus(s)
-	return wc
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableStatus(s *string) *WorkspaceCreate {
-	if s != nil {
-		wc.SetStatus(*s)
-	}
-	return wc
-}
-
 // SetName sets the "name" field.
 func (wc *WorkspaceCreate) SetName(s string) *WorkspaceCreate {
 	wc.mutation.SetName(s)
@@ -128,90 +114,6 @@ func (wc *WorkspaceCreate) SetName(s string) *WorkspaceCreate {
 func (wc *WorkspaceCreate) SetNillableName(s *string) *WorkspaceCreate {
 	if s != nil {
 		wc.SetName(*s)
-	}
-	return wc
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (wc *WorkspaceCreate) SetWorkspaceID(s string) *WorkspaceCreate {
-	wc.mutation.SetWorkspaceID(s)
-	return wc
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableWorkspaceID(s *string) *WorkspaceCreate {
-	if s != nil {
-		wc.SetWorkspaceID(*s)
-	}
-	return wc
-}
-
-// SetResourceID sets the "resource_id" field.
-func (wc *WorkspaceCreate) SetResourceID(s string) *WorkspaceCreate {
-	wc.mutation.SetResourceID(s)
-	return wc
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableResourceID(s *string) *WorkspaceCreate {
-	if s != nil {
-		wc.SetResourceID(*s)
-	}
-	return wc
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (wc *WorkspaceCreate) SetResourceKind(s string) *WorkspaceCreate {
-	wc.mutation.SetResourceKind(s)
-	return wc
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableResourceKind(s *string) *WorkspaceCreate {
-	if s != nil {
-		wc.SetResourceKind(*s)
-	}
-	return wc
-}
-
-// SetOperationID sets the "operation_id" field.
-func (wc *WorkspaceCreate) SetOperationID(s string) *WorkspaceCreate {
-	wc.mutation.SetOperationID(s)
-	return wc
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableOperationID(s *string) *WorkspaceCreate {
-	if s != nil {
-		wc.SetOperationID(*s)
-	}
-	return wc
-}
-
-// SetProvider sets the "provider" field.
-func (wc *WorkspaceCreate) SetProvider(s string) *WorkspaceCreate {
-	wc.mutation.SetProvider(s)
-	return wc
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableProvider(s *string) *WorkspaceCreate {
-	if s != nil {
-		wc.SetProvider(*s)
-	}
-	return wc
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (wc *WorkspaceCreate) SetProviderResourceID(s string) *WorkspaceCreate {
-	wc.mutation.SetProviderResourceID(s)
-	return wc
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableProviderResourceID(s *string) *WorkspaceCreate {
-	if s != nil {
-		wc.SetProviderResourceID(*s)
 	}
 	return wc
 }
@@ -230,282 +132,240 @@ func (wc *WorkspaceCreate) SetNillableURL(s *string) *WorkspaceCreate {
 	return wc
 }
 
-// SetHoldID sets the "hold_id" field.
-func (wc *WorkspaceCreate) SetHoldID(s string) *WorkspaceCreate {
-	wc.mutation.SetHoldID(s)
+// SetState sets the "state" field.
+func (wc *WorkspaceCreate) SetState(s string) *WorkspaceCreate {
+	wc.mutation.SetState(s)
 	return wc
 }
 
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableHoldID(s *string) *WorkspaceCreate {
+// SetNillableState sets the "state" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableState(s *string) *WorkspaceCreate {
 	if s != nil {
-		wc.SetHoldID(*s)
+		wc.SetState(*s)
 	}
 	return wc
 }
 
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (wc *WorkspaceCreate) SetHoldReleaseID(s string) *WorkspaceCreate {
-	wc.mutation.SetHoldReleaseID(s)
+// SetStatus sets the "status" field.
+func (wc *WorkspaceCreate) SetStatus(s string) *WorkspaceCreate {
+	wc.mutation.SetStatus(s)
 	return wc
 }
 
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableHoldReleaseID(s *string) *WorkspaceCreate {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableStatus(s *string) *WorkspaceCreate {
 	if s != nil {
-		wc.SetHoldReleaseID(*s)
+		wc.SetStatus(*s)
 	}
 	return wc
 }
 
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (wc *WorkspaceCreate) SetLedgerEntryID(s string) *WorkspaceCreate {
-	wc.mutation.SetLedgerEntryID(s)
+// SetStorageID sets the "storage_id" field.
+func (wc *WorkspaceCreate) SetStorageID(s string) *WorkspaceCreate {
+	wc.mutation.SetStorageID(s)
 	return wc
 }
 
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableLedgerEntryID(s *string) *WorkspaceCreate {
+// SetNillableStorageID sets the "storage_id" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableStorageID(s *string) *WorkspaceCreate {
 	if s != nil {
-		wc.SetLedgerEntryID(*s)
+		wc.SetStorageID(*s)
 	}
 	return wc
 }
 
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (wc *WorkspaceCreate) SetWalletTransactionID(s string) *WorkspaceCreate {
-	wc.mutation.SetWalletTransactionID(s)
+// SetCurrentComputeAllocationID sets the "current_compute_allocation_id" field.
+func (wc *WorkspaceCreate) SetCurrentComputeAllocationID(s string) *WorkspaceCreate {
+	wc.mutation.SetCurrentComputeAllocationID(s)
 	return wc
 }
 
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableWalletTransactionID(s *string) *WorkspaceCreate {
+// SetNillableCurrentComputeAllocationID sets the "current_compute_allocation_id" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableCurrentComputeAllocationID(s *string) *WorkspaceCreate {
 	if s != nil {
-		wc.SetWalletTransactionID(*s)
+		wc.SetCurrentComputeAllocationID(*s)
 	}
 	return wc
 }
 
-// SetSettlementID sets the "settlement_id" field.
-func (wc *WorkspaceCreate) SetSettlementID(s string) *WorkspaceCreate {
-	wc.mutation.SetSettlementID(s)
+// SetCurrentAttachmentID sets the "current_attachment_id" field.
+func (wc *WorkspaceCreate) SetCurrentAttachmentID(s string) *WorkspaceCreate {
+	wc.mutation.SetCurrentAttachmentID(s)
 	return wc
 }
 
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableSettlementID(s *string) *WorkspaceCreate {
+// SetNillableCurrentAttachmentID sets the "current_attachment_id" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableCurrentAttachmentID(s *string) *WorkspaceCreate {
 	if s != nil {
-		wc.SetSettlementID(*s)
+		wc.SetCurrentAttachmentID(*s)
 	}
 	return wc
 }
 
-// SetPricingVersion sets the "pricing_version" field.
-func (wc *WorkspaceCreate) SetPricingVersion(s string) *WorkspaceCreate {
-	wc.mutation.SetPricingVersion(s)
+// SetRuntimeID sets the "runtime_id" field.
+func (wc *WorkspaceCreate) SetRuntimeID(s string) *WorkspaceCreate {
+	wc.mutation.SetRuntimeID(s)
 	return wc
 }
 
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillablePricingVersion(s *string) *WorkspaceCreate {
+// SetNillableRuntimeID sets the "runtime_id" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableRuntimeID(s *string) *WorkspaceCreate {
 	if s != nil {
-		wc.SetPricingVersion(*s)
+		wc.SetRuntimeID(*s)
 	}
 	return wc
 }
 
-// SetAmountCents sets the "amount_cents" field.
-func (wc *WorkspaceCreate) SetAmountCents(i int64) *WorkspaceCreate {
-	wc.mutation.SetAmountCents(i)
+// SetRuntimeServiceName sets the "runtime_service_name" field.
+func (wc *WorkspaceCreate) SetRuntimeServiceName(s string) *WorkspaceCreate {
+	wc.mutation.SetRuntimeServiceName(s)
 	return wc
 }
 
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableAmountCents(i *int64) *WorkspaceCreate {
-	if i != nil {
-		wc.SetAmountCents(*i)
-	}
-	return wc
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (wc *WorkspaceCreate) SetBalanceCents(i int64) *WorkspaceCreate {
-	wc.mutation.SetBalanceCents(i)
-	return wc
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableBalanceCents(i *int64) *WorkspaceCreate {
-	if i != nil {
-		wc.SetBalanceCents(*i)
-	}
-	return wc
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (wc *WorkspaceCreate) SetFrozenCents(i int64) *WorkspaceCreate {
-	wc.mutation.SetFrozenCents(i)
-	return wc
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableFrozenCents(i *int64) *WorkspaceCreate {
-	if i != nil {
-		wc.SetFrozenCents(*i)
-	}
-	return wc
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (wc *WorkspaceCreate) SetAvailableCents(i int64) *WorkspaceCreate {
-	wc.mutation.SetAvailableCents(i)
-	return wc
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableAvailableCents(i *int64) *WorkspaceCreate {
-	if i != nil {
-		wc.SetAvailableCents(*i)
-	}
-	return wc
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (wc *WorkspaceCreate) SetTotalSpentCents(i int64) *WorkspaceCreate {
-	wc.mutation.SetTotalSpentCents(i)
-	return wc
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableTotalSpentCents(i *int64) *WorkspaceCreate {
-	if i != nil {
-		wc.SetTotalSpentCents(*i)
-	}
-	return wc
-}
-
-// SetQuantity sets the "quantity" field.
-func (wc *WorkspaceCreate) SetQuantity(f float64) *WorkspaceCreate {
-	wc.mutation.SetQuantity(f)
-	return wc
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableQuantity(f *float64) *WorkspaceCreate {
-	if f != nil {
-		wc.SetQuantity(*f)
-	}
-	return wc
-}
-
-// SetUnit sets the "unit" field.
-func (wc *WorkspaceCreate) SetUnit(s string) *WorkspaceCreate {
-	wc.mutation.SetUnit(s)
-	return wc
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableUnit(s *string) *WorkspaceCreate {
+// SetNillableRuntimeServiceName sets the "runtime_service_name" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableRuntimeServiceName(s *string) *WorkspaceCreate {
 	if s != nil {
-		wc.SetUnit(*s)
+		wc.SetRuntimeServiceName(*s)
 	}
 	return wc
 }
 
-// SetReason sets the "reason" field.
-func (wc *WorkspaceCreate) SetReason(s string) *WorkspaceCreate {
-	wc.mutation.SetReason(s)
+// SetRuntimeServiceNameRoot sets the "runtime_service_name_root" field.
+func (wc *WorkspaceCreate) SetRuntimeServiceNameRoot(s string) *WorkspaceCreate {
+	wc.mutation.SetRuntimeServiceNameRoot(s)
 	return wc
 }
 
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableReason(s *string) *WorkspaceCreate {
+// SetNillableRuntimeServiceNameRoot sets the "runtime_service_name_root" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableRuntimeServiceNameRoot(s *string) *WorkspaceCreate {
 	if s != nil {
-		wc.SetReason(*s)
+		wc.SetRuntimeServiceNameRoot(*s)
 	}
 	return wc
 }
 
-// SetResult sets the "result" field.
-func (wc *WorkspaceCreate) SetResult(s string) *WorkspaceCreate {
-	wc.mutation.SetResult(s)
+// SetServiceName sets the "service_name" field.
+func (wc *WorkspaceCreate) SetServiceName(s string) *WorkspaceCreate {
+	wc.mutation.SetServiceName(s)
 	return wc
 }
 
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableResult(s *string) *WorkspaceCreate {
+// SetNillableServiceName sets the "service_name" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableServiceName(s *string) *WorkspaceCreate {
 	if s != nil {
-		wc.SetResult(*s)
+		wc.SetServiceName(*s)
 	}
 	return wc
 }
 
-// SetSource sets the "source" field.
-func (wc *WorkspaceCreate) SetSource(s string) *WorkspaceCreate {
-	wc.mutation.SetSource(s)
+// SetAccessTokenStatus sets the "access_token_status" field.
+func (wc *WorkspaceCreate) SetAccessTokenStatus(s string) *WorkspaceCreate {
+	wc.mutation.SetAccessTokenStatus(s)
 	return wc
 }
 
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableSource(s *string) *WorkspaceCreate {
+// SetNillableAccessTokenStatus sets the "access_token_status" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableAccessTokenStatus(s *string) *WorkspaceCreate {
 	if s != nil {
-		wc.SetSource(*s)
+		wc.SetAccessTokenStatus(*s)
 	}
 	return wc
 }
 
-// SetDirection sets the "direction" field.
-func (wc *WorkspaceCreate) SetDirection(s string) *WorkspaceCreate {
-	wc.mutation.SetDirection(s)
+// SetAccessAccount sets the "access_account" field.
+func (wc *WorkspaceCreate) SetAccessAccount(s string) *WorkspaceCreate {
+	wc.mutation.SetAccessAccount(s)
 	return wc
 }
 
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableDirection(s *string) *WorkspaceCreate {
+// SetNillableAccessAccount sets the "access_account" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableAccessAccount(s *string) *WorkspaceCreate {
 	if s != nil {
-		wc.SetDirection(*s)
+		wc.SetAccessAccount(*s)
 	}
 	return wc
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (wc *WorkspaceCreate) SetCreatedAt(t time.Time) *WorkspaceCreate {
-	wc.mutation.SetCreatedAt(t)
+// SetAccessUsername sets the "access_username" field.
+func (wc *WorkspaceCreate) SetAccessUsername(s string) *WorkspaceCreate {
+	wc.mutation.SetAccessUsername(s)
 	return wc
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableCreatedAt(t *time.Time) *WorkspaceCreate {
-	if t != nil {
-		wc.SetCreatedAt(*t)
+// SetNillableAccessUsername sets the "access_username" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableAccessUsername(s *string) *WorkspaceCreate {
+	if s != nil {
+		wc.SetAccessUsername(*s)
 	}
 	return wc
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (wc *WorkspaceCreate) SetUpdatedAt(t time.Time) *WorkspaceCreate {
-	wc.mutation.SetUpdatedAt(t)
+// SetAccessPassword sets the "access_password" field.
+func (wc *WorkspaceCreate) SetAccessPassword(s string) *WorkspaceCreate {
+	wc.mutation.SetAccessPassword(s)
 	return wc
 }
 
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableUpdatedAt(t *time.Time) *WorkspaceCreate {
-	if t != nil {
-		wc.SetUpdatedAt(*t)
+// SetNillableAccessPassword sets the "access_password" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableAccessPassword(s *string) *WorkspaceCreate {
+	if s != nil {
+		wc.SetAccessPassword(*s)
 	}
 	return wc
 }
 
-// SetArchivedAt sets the "archived_at" field.
-func (wc *WorkspaceCreate) SetArchivedAt(t time.Time) *WorkspaceCreate {
-	wc.mutation.SetArchivedAt(t)
+// SetCredentialStatus sets the "credential_status" field.
+func (wc *WorkspaceCreate) SetCredentialStatus(s string) *WorkspaceCreate {
+	wc.mutation.SetCredentialStatus(s)
 	return wc
 }
 
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableArchivedAt(t *time.Time) *WorkspaceCreate {
-	if t != nil {
-		wc.SetArchivedAt(*t)
+// SetNillableCredentialStatus sets the "credential_status" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableCredentialStatus(s *string) *WorkspaceCreate {
+	if s != nil {
+		wc.SetCredentialStatus(*s)
+	}
+	return wc
+}
+
+// SetCredentialVersion sets the "credential_version" field.
+func (wc *WorkspaceCreate) SetCredentialVersion(s string) *WorkspaceCreate {
+	wc.mutation.SetCredentialVersion(s)
+	return wc
+}
+
+// SetNillableCredentialVersion sets the "credential_version" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableCredentialVersion(s *string) *WorkspaceCreate {
+	if s != nil {
+		wc.SetCredentialVersion(*s)
+	}
+	return wc
+}
+
+// SetCredentialSecretRef sets the "credential_secret_ref" field.
+func (wc *WorkspaceCreate) SetCredentialSecretRef(s string) *WorkspaceCreate {
+	wc.mutation.SetCredentialSecretRef(s)
+	return wc
+}
+
+// SetNillableCredentialSecretRef sets the "credential_secret_ref" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableCredentialSecretRef(s *string) *WorkspaceCreate {
+	if s != nil {
+		wc.SetCredentialSecretRef(*s)
+	}
+	return wc
+}
+
+// SetAccessRequiresLogin sets the "access_requires_login" field.
+func (wc *WorkspaceCreate) SetAccessRequiresLogin(b bool) *WorkspaceCreate {
+	wc.mutation.SetAccessRequiresLogin(b)
+	return wc
+}
+
+// SetNillableAccessRequiresLogin sets the "access_requires_login" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableAccessRequiresLogin(b *bool) *WorkspaceCreate {
+	if b != nil {
+		wc.SetAccessRequiresLogin(*b)
 	}
 	return wc
 }
@@ -551,6 +411,14 @@ func (wc *WorkspaceCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (wc *WorkspaceCreate) defaults() {
+	if _, ok := wc.mutation.CreatedAt(); !ok {
+		v := workspace.DefaultCreatedAt()
+		wc.mutation.SetCreatedAt(v)
+	}
+	if _, ok := wc.mutation.UpdatedAt(); !ok {
+		v := workspace.DefaultUpdatedAt()
+		wc.mutation.SetUpdatedAt(v)
+	}
 	if _, ok := wc.mutation.AccountID(); !ok {
 		v := workspace.DefaultAccountID
 		wc.mutation.SetAccountID(v)
@@ -567,130 +435,92 @@ func (wc *WorkspaceCreate) defaults() {
 		v := workspace.DefaultUserID
 		wc.mutation.SetUserID(v)
 	}
-	if _, ok := wc.mutation.Email(); !ok {
-		v := workspace.DefaultEmail
-		wc.mutation.SetEmail(v)
-	}
-	if _, ok := wc.mutation.Role(); !ok {
-		v := workspace.DefaultRole
-		wc.mutation.SetRole(v)
-	}
-	if _, ok := wc.mutation.Status(); !ok {
-		v := workspace.DefaultStatus
-		wc.mutation.SetStatus(v)
-	}
 	if _, ok := wc.mutation.Name(); !ok {
 		v := workspace.DefaultName
 		wc.mutation.SetName(v)
-	}
-	if _, ok := wc.mutation.WorkspaceID(); !ok {
-		v := workspace.DefaultWorkspaceID
-		wc.mutation.SetWorkspaceID(v)
-	}
-	if _, ok := wc.mutation.ResourceID(); !ok {
-		v := workspace.DefaultResourceID
-		wc.mutation.SetResourceID(v)
-	}
-	if _, ok := wc.mutation.ResourceKind(); !ok {
-		v := workspace.DefaultResourceKind
-		wc.mutation.SetResourceKind(v)
-	}
-	if _, ok := wc.mutation.OperationID(); !ok {
-		v := workspace.DefaultOperationID
-		wc.mutation.SetOperationID(v)
-	}
-	if _, ok := wc.mutation.Provider(); !ok {
-		v := workspace.DefaultProvider
-		wc.mutation.SetProvider(v)
-	}
-	if _, ok := wc.mutation.ProviderResourceID(); !ok {
-		v := workspace.DefaultProviderResourceID
-		wc.mutation.SetProviderResourceID(v)
 	}
 	if _, ok := wc.mutation.URL(); !ok {
 		v := workspace.DefaultURL
 		wc.mutation.SetURL(v)
 	}
-	if _, ok := wc.mutation.HoldID(); !ok {
-		v := workspace.DefaultHoldID
-		wc.mutation.SetHoldID(v)
+	if _, ok := wc.mutation.State(); !ok {
+		v := workspace.DefaultState
+		wc.mutation.SetState(v)
 	}
-	if _, ok := wc.mutation.HoldReleaseID(); !ok {
-		v := workspace.DefaultHoldReleaseID
-		wc.mutation.SetHoldReleaseID(v)
+	if _, ok := wc.mutation.Status(); !ok {
+		v := workspace.DefaultStatus
+		wc.mutation.SetStatus(v)
 	}
-	if _, ok := wc.mutation.LedgerEntryID(); !ok {
-		v := workspace.DefaultLedgerEntryID
-		wc.mutation.SetLedgerEntryID(v)
+	if _, ok := wc.mutation.StorageID(); !ok {
+		v := workspace.DefaultStorageID
+		wc.mutation.SetStorageID(v)
 	}
-	if _, ok := wc.mutation.WalletTransactionID(); !ok {
-		v := workspace.DefaultWalletTransactionID
-		wc.mutation.SetWalletTransactionID(v)
+	if _, ok := wc.mutation.CurrentComputeAllocationID(); !ok {
+		v := workspace.DefaultCurrentComputeAllocationID
+		wc.mutation.SetCurrentComputeAllocationID(v)
 	}
-	if _, ok := wc.mutation.SettlementID(); !ok {
-		v := workspace.DefaultSettlementID
-		wc.mutation.SetSettlementID(v)
+	if _, ok := wc.mutation.CurrentAttachmentID(); !ok {
+		v := workspace.DefaultCurrentAttachmentID
+		wc.mutation.SetCurrentAttachmentID(v)
 	}
-	if _, ok := wc.mutation.PricingVersion(); !ok {
-		v := workspace.DefaultPricingVersion
-		wc.mutation.SetPricingVersion(v)
+	if _, ok := wc.mutation.RuntimeID(); !ok {
+		v := workspace.DefaultRuntimeID
+		wc.mutation.SetRuntimeID(v)
 	}
-	if _, ok := wc.mutation.AmountCents(); !ok {
-		v := workspace.DefaultAmountCents
-		wc.mutation.SetAmountCents(v)
+	if _, ok := wc.mutation.RuntimeServiceName(); !ok {
+		v := workspace.DefaultRuntimeServiceName
+		wc.mutation.SetRuntimeServiceName(v)
 	}
-	if _, ok := wc.mutation.BalanceCents(); !ok {
-		v := workspace.DefaultBalanceCents
-		wc.mutation.SetBalanceCents(v)
+	if _, ok := wc.mutation.RuntimeServiceNameRoot(); !ok {
+		v := workspace.DefaultRuntimeServiceNameRoot
+		wc.mutation.SetRuntimeServiceNameRoot(v)
 	}
-	if _, ok := wc.mutation.FrozenCents(); !ok {
-		v := workspace.DefaultFrozenCents
-		wc.mutation.SetFrozenCents(v)
+	if _, ok := wc.mutation.ServiceName(); !ok {
+		v := workspace.DefaultServiceName
+		wc.mutation.SetServiceName(v)
 	}
-	if _, ok := wc.mutation.AvailableCents(); !ok {
-		v := workspace.DefaultAvailableCents
-		wc.mutation.SetAvailableCents(v)
+	if _, ok := wc.mutation.AccessTokenStatus(); !ok {
+		v := workspace.DefaultAccessTokenStatus
+		wc.mutation.SetAccessTokenStatus(v)
 	}
-	if _, ok := wc.mutation.TotalSpentCents(); !ok {
-		v := workspace.DefaultTotalSpentCents
-		wc.mutation.SetTotalSpentCents(v)
+	if _, ok := wc.mutation.AccessAccount(); !ok {
+		v := workspace.DefaultAccessAccount
+		wc.mutation.SetAccessAccount(v)
 	}
-	if _, ok := wc.mutation.Quantity(); !ok {
-		v := workspace.DefaultQuantity
-		wc.mutation.SetQuantity(v)
+	if _, ok := wc.mutation.AccessUsername(); !ok {
+		v := workspace.DefaultAccessUsername
+		wc.mutation.SetAccessUsername(v)
 	}
-	if _, ok := wc.mutation.Unit(); !ok {
-		v := workspace.DefaultUnit
-		wc.mutation.SetUnit(v)
+	if _, ok := wc.mutation.AccessPassword(); !ok {
+		v := workspace.DefaultAccessPassword
+		wc.mutation.SetAccessPassword(v)
 	}
-	if _, ok := wc.mutation.Reason(); !ok {
-		v := workspace.DefaultReason
-		wc.mutation.SetReason(v)
+	if _, ok := wc.mutation.CredentialStatus(); !ok {
+		v := workspace.DefaultCredentialStatus
+		wc.mutation.SetCredentialStatus(v)
 	}
-	if _, ok := wc.mutation.Result(); !ok {
-		v := workspace.DefaultResult
-		wc.mutation.SetResult(v)
+	if _, ok := wc.mutation.CredentialVersion(); !ok {
+		v := workspace.DefaultCredentialVersion
+		wc.mutation.SetCredentialVersion(v)
 	}
-	if _, ok := wc.mutation.Source(); !ok {
-		v := workspace.DefaultSource
-		wc.mutation.SetSource(v)
+	if _, ok := wc.mutation.CredentialSecretRef(); !ok {
+		v := workspace.DefaultCredentialSecretRef
+		wc.mutation.SetCredentialSecretRef(v)
 	}
-	if _, ok := wc.mutation.Direction(); !ok {
-		v := workspace.DefaultDirection
-		wc.mutation.SetDirection(v)
-	}
-	if _, ok := wc.mutation.CreatedAt(); !ok {
-		v := workspace.DefaultCreatedAt()
-		wc.mutation.SetCreatedAt(v)
-	}
-	if _, ok := wc.mutation.UpdatedAt(); !ok {
-		v := workspace.DefaultUpdatedAt()
-		wc.mutation.SetUpdatedAt(v)
+	if _, ok := wc.mutation.AccessRequiresLogin(); !ok {
+		v := workspace.DefaultAccessRequiresLogin
+		wc.mutation.SetAccessRequiresLogin(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (wc *WorkspaceCreate) check() error {
+	if _, ok := wc.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Workspace.created_at"`)}
+	}
+	if _, ok := wc.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Workspace.updated_at"`)}
+	}
 	if _, ok := wc.mutation.AccountID(); !ok {
 		return &ValidationError{Name: "account_id", err: errors.New(`ent: missing required field "Workspace.account_id"`)}
 	}
@@ -703,95 +533,62 @@ func (wc *WorkspaceCreate) check() error {
 	if _, ok := wc.mutation.UserID(); !ok {
 		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "Workspace.user_id"`)}
 	}
-	if _, ok := wc.mutation.Email(); !ok {
-		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "Workspace.email"`)}
-	}
-	if _, ok := wc.mutation.Role(); !ok {
-		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "Workspace.role"`)}
-	}
-	if _, ok := wc.mutation.Status(); !ok {
-		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Workspace.status"`)}
-	}
 	if _, ok := wc.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Workspace.name"`)}
-	}
-	if _, ok := wc.mutation.WorkspaceID(); !ok {
-		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "Workspace.workspace_id"`)}
-	}
-	if _, ok := wc.mutation.ResourceID(); !ok {
-		return &ValidationError{Name: "resource_id", err: errors.New(`ent: missing required field "Workspace.resource_id"`)}
-	}
-	if _, ok := wc.mutation.ResourceKind(); !ok {
-		return &ValidationError{Name: "resource_kind", err: errors.New(`ent: missing required field "Workspace.resource_kind"`)}
-	}
-	if _, ok := wc.mutation.OperationID(); !ok {
-		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "Workspace.operation_id"`)}
-	}
-	if _, ok := wc.mutation.Provider(); !ok {
-		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "Workspace.provider"`)}
-	}
-	if _, ok := wc.mutation.ProviderResourceID(); !ok {
-		return &ValidationError{Name: "provider_resource_id", err: errors.New(`ent: missing required field "Workspace.provider_resource_id"`)}
 	}
 	if _, ok := wc.mutation.URL(); !ok {
 		return &ValidationError{Name: "url", err: errors.New(`ent: missing required field "Workspace.url"`)}
 	}
-	if _, ok := wc.mutation.HoldID(); !ok {
-		return &ValidationError{Name: "hold_id", err: errors.New(`ent: missing required field "Workspace.hold_id"`)}
+	if _, ok := wc.mutation.State(); !ok {
+		return &ValidationError{Name: "state", err: errors.New(`ent: missing required field "Workspace.state"`)}
 	}
-	if _, ok := wc.mutation.HoldReleaseID(); !ok {
-		return &ValidationError{Name: "hold_release_id", err: errors.New(`ent: missing required field "Workspace.hold_release_id"`)}
+	if _, ok := wc.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Workspace.status"`)}
 	}
-	if _, ok := wc.mutation.LedgerEntryID(); !ok {
-		return &ValidationError{Name: "ledger_entry_id", err: errors.New(`ent: missing required field "Workspace.ledger_entry_id"`)}
+	if _, ok := wc.mutation.StorageID(); !ok {
+		return &ValidationError{Name: "storage_id", err: errors.New(`ent: missing required field "Workspace.storage_id"`)}
 	}
-	if _, ok := wc.mutation.WalletTransactionID(); !ok {
-		return &ValidationError{Name: "wallet_transaction_id", err: errors.New(`ent: missing required field "Workspace.wallet_transaction_id"`)}
+	if _, ok := wc.mutation.CurrentComputeAllocationID(); !ok {
+		return &ValidationError{Name: "current_compute_allocation_id", err: errors.New(`ent: missing required field "Workspace.current_compute_allocation_id"`)}
 	}
-	if _, ok := wc.mutation.SettlementID(); !ok {
-		return &ValidationError{Name: "settlement_id", err: errors.New(`ent: missing required field "Workspace.settlement_id"`)}
+	if _, ok := wc.mutation.CurrentAttachmentID(); !ok {
+		return &ValidationError{Name: "current_attachment_id", err: errors.New(`ent: missing required field "Workspace.current_attachment_id"`)}
 	}
-	if _, ok := wc.mutation.PricingVersion(); !ok {
-		return &ValidationError{Name: "pricing_version", err: errors.New(`ent: missing required field "Workspace.pricing_version"`)}
+	if _, ok := wc.mutation.RuntimeID(); !ok {
+		return &ValidationError{Name: "runtime_id", err: errors.New(`ent: missing required field "Workspace.runtime_id"`)}
 	}
-	if _, ok := wc.mutation.AmountCents(); !ok {
-		return &ValidationError{Name: "amount_cents", err: errors.New(`ent: missing required field "Workspace.amount_cents"`)}
+	if _, ok := wc.mutation.RuntimeServiceName(); !ok {
+		return &ValidationError{Name: "runtime_service_name", err: errors.New(`ent: missing required field "Workspace.runtime_service_name"`)}
 	}
-	if _, ok := wc.mutation.BalanceCents(); !ok {
-		return &ValidationError{Name: "balance_cents", err: errors.New(`ent: missing required field "Workspace.balance_cents"`)}
+	if _, ok := wc.mutation.RuntimeServiceNameRoot(); !ok {
+		return &ValidationError{Name: "runtime_service_name_root", err: errors.New(`ent: missing required field "Workspace.runtime_service_name_root"`)}
 	}
-	if _, ok := wc.mutation.FrozenCents(); !ok {
-		return &ValidationError{Name: "frozen_cents", err: errors.New(`ent: missing required field "Workspace.frozen_cents"`)}
+	if _, ok := wc.mutation.ServiceName(); !ok {
+		return &ValidationError{Name: "service_name", err: errors.New(`ent: missing required field "Workspace.service_name"`)}
 	}
-	if _, ok := wc.mutation.AvailableCents(); !ok {
-		return &ValidationError{Name: "available_cents", err: errors.New(`ent: missing required field "Workspace.available_cents"`)}
+	if _, ok := wc.mutation.AccessTokenStatus(); !ok {
+		return &ValidationError{Name: "access_token_status", err: errors.New(`ent: missing required field "Workspace.access_token_status"`)}
 	}
-	if _, ok := wc.mutation.TotalSpentCents(); !ok {
-		return &ValidationError{Name: "total_spent_cents", err: errors.New(`ent: missing required field "Workspace.total_spent_cents"`)}
+	if _, ok := wc.mutation.AccessAccount(); !ok {
+		return &ValidationError{Name: "access_account", err: errors.New(`ent: missing required field "Workspace.access_account"`)}
 	}
-	if _, ok := wc.mutation.Quantity(); !ok {
-		return &ValidationError{Name: "quantity", err: errors.New(`ent: missing required field "Workspace.quantity"`)}
+	if _, ok := wc.mutation.AccessUsername(); !ok {
+		return &ValidationError{Name: "access_username", err: errors.New(`ent: missing required field "Workspace.access_username"`)}
 	}
-	if _, ok := wc.mutation.Unit(); !ok {
-		return &ValidationError{Name: "unit", err: errors.New(`ent: missing required field "Workspace.unit"`)}
+	if _, ok := wc.mutation.AccessPassword(); !ok {
+		return &ValidationError{Name: "access_password", err: errors.New(`ent: missing required field "Workspace.access_password"`)}
 	}
-	if _, ok := wc.mutation.Reason(); !ok {
-		return &ValidationError{Name: "reason", err: errors.New(`ent: missing required field "Workspace.reason"`)}
+	if _, ok := wc.mutation.CredentialStatus(); !ok {
+		return &ValidationError{Name: "credential_status", err: errors.New(`ent: missing required field "Workspace.credential_status"`)}
 	}
-	if _, ok := wc.mutation.Result(); !ok {
-		return &ValidationError{Name: "result", err: errors.New(`ent: missing required field "Workspace.result"`)}
+	if _, ok := wc.mutation.CredentialVersion(); !ok {
+		return &ValidationError{Name: "credential_version", err: errors.New(`ent: missing required field "Workspace.credential_version"`)}
 	}
-	if _, ok := wc.mutation.Source(); !ok {
-		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "Workspace.source"`)}
+	if _, ok := wc.mutation.CredentialSecretRef(); !ok {
+		return &ValidationError{Name: "credential_secret_ref", err: errors.New(`ent: missing required field "Workspace.credential_secret_ref"`)}
 	}
-	if _, ok := wc.mutation.Direction(); !ok {
-		return &ValidationError{Name: "direction", err: errors.New(`ent: missing required field "Workspace.direction"`)}
-	}
-	if _, ok := wc.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Workspace.created_at"`)}
-	}
-	if _, ok := wc.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Workspace.updated_at"`)}
+	if _, ok := wc.mutation.AccessRequiresLogin(); !ok {
+		return &ValidationError{Name: "access_requires_login", err: errors.New(`ent: missing required field "Workspace.access_requires_login"`)}
 	}
 	if v, ok := wc.mutation.ID(); ok {
 		if err := workspace.IDValidator(v); err != nil {
@@ -833,6 +630,14 @@ func (wc *WorkspaceCreate) createSpec() (*Workspace, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = id
 	}
+	if value, ok := wc.mutation.CreatedAt(); ok {
+		_spec.SetField(workspace.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := wc.mutation.UpdatedAt(); ok {
+		_spec.SetField(workspace.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
 	if value, ok := wc.mutation.AccountID(); ok {
 		_spec.SetField(workspace.FieldAccountID, field.TypeString, value)
 		_node.AccountID = value
@@ -849,129 +654,81 @@ func (wc *WorkspaceCreate) createSpec() (*Workspace, *sqlgraph.CreateSpec) {
 		_spec.SetField(workspace.FieldUserID, field.TypeString, value)
 		_node.UserID = value
 	}
-	if value, ok := wc.mutation.Email(); ok {
-		_spec.SetField(workspace.FieldEmail, field.TypeString, value)
-		_node.Email = value
-	}
-	if value, ok := wc.mutation.Role(); ok {
-		_spec.SetField(workspace.FieldRole, field.TypeString, value)
-		_node.Role = value
-	}
-	if value, ok := wc.mutation.Status(); ok {
-		_spec.SetField(workspace.FieldStatus, field.TypeString, value)
-		_node.Status = value
-	}
 	if value, ok := wc.mutation.Name(); ok {
 		_spec.SetField(workspace.FieldName, field.TypeString, value)
 		_node.Name = value
-	}
-	if value, ok := wc.mutation.WorkspaceID(); ok {
-		_spec.SetField(workspace.FieldWorkspaceID, field.TypeString, value)
-		_node.WorkspaceID = value
-	}
-	if value, ok := wc.mutation.ResourceID(); ok {
-		_spec.SetField(workspace.FieldResourceID, field.TypeString, value)
-		_node.ResourceID = value
-	}
-	if value, ok := wc.mutation.ResourceKind(); ok {
-		_spec.SetField(workspace.FieldResourceKind, field.TypeString, value)
-		_node.ResourceKind = value
-	}
-	if value, ok := wc.mutation.OperationID(); ok {
-		_spec.SetField(workspace.FieldOperationID, field.TypeString, value)
-		_node.OperationID = value
-	}
-	if value, ok := wc.mutation.Provider(); ok {
-		_spec.SetField(workspace.FieldProvider, field.TypeString, value)
-		_node.Provider = value
-	}
-	if value, ok := wc.mutation.ProviderResourceID(); ok {
-		_spec.SetField(workspace.FieldProviderResourceID, field.TypeString, value)
-		_node.ProviderResourceID = value
 	}
 	if value, ok := wc.mutation.URL(); ok {
 		_spec.SetField(workspace.FieldURL, field.TypeString, value)
 		_node.URL = value
 	}
-	if value, ok := wc.mutation.HoldID(); ok {
-		_spec.SetField(workspace.FieldHoldID, field.TypeString, value)
-		_node.HoldID = value
+	if value, ok := wc.mutation.State(); ok {
+		_spec.SetField(workspace.FieldState, field.TypeString, value)
+		_node.State = value
 	}
-	if value, ok := wc.mutation.HoldReleaseID(); ok {
-		_spec.SetField(workspace.FieldHoldReleaseID, field.TypeString, value)
-		_node.HoldReleaseID = value
+	if value, ok := wc.mutation.Status(); ok {
+		_spec.SetField(workspace.FieldStatus, field.TypeString, value)
+		_node.Status = value
 	}
-	if value, ok := wc.mutation.LedgerEntryID(); ok {
-		_spec.SetField(workspace.FieldLedgerEntryID, field.TypeString, value)
-		_node.LedgerEntryID = value
+	if value, ok := wc.mutation.StorageID(); ok {
+		_spec.SetField(workspace.FieldStorageID, field.TypeString, value)
+		_node.StorageID = value
 	}
-	if value, ok := wc.mutation.WalletTransactionID(); ok {
-		_spec.SetField(workspace.FieldWalletTransactionID, field.TypeString, value)
-		_node.WalletTransactionID = value
+	if value, ok := wc.mutation.CurrentComputeAllocationID(); ok {
+		_spec.SetField(workspace.FieldCurrentComputeAllocationID, field.TypeString, value)
+		_node.CurrentComputeAllocationID = value
 	}
-	if value, ok := wc.mutation.SettlementID(); ok {
-		_spec.SetField(workspace.FieldSettlementID, field.TypeString, value)
-		_node.SettlementID = value
+	if value, ok := wc.mutation.CurrentAttachmentID(); ok {
+		_spec.SetField(workspace.FieldCurrentAttachmentID, field.TypeString, value)
+		_node.CurrentAttachmentID = value
 	}
-	if value, ok := wc.mutation.PricingVersion(); ok {
-		_spec.SetField(workspace.FieldPricingVersion, field.TypeString, value)
-		_node.PricingVersion = value
+	if value, ok := wc.mutation.RuntimeID(); ok {
+		_spec.SetField(workspace.FieldRuntimeID, field.TypeString, value)
+		_node.RuntimeID = value
 	}
-	if value, ok := wc.mutation.AmountCents(); ok {
-		_spec.SetField(workspace.FieldAmountCents, field.TypeInt64, value)
-		_node.AmountCents = value
+	if value, ok := wc.mutation.RuntimeServiceName(); ok {
+		_spec.SetField(workspace.FieldRuntimeServiceName, field.TypeString, value)
+		_node.RuntimeServiceName = value
 	}
-	if value, ok := wc.mutation.BalanceCents(); ok {
-		_spec.SetField(workspace.FieldBalanceCents, field.TypeInt64, value)
-		_node.BalanceCents = value
+	if value, ok := wc.mutation.RuntimeServiceNameRoot(); ok {
+		_spec.SetField(workspace.FieldRuntimeServiceNameRoot, field.TypeString, value)
+		_node.RuntimeServiceNameRoot = value
 	}
-	if value, ok := wc.mutation.FrozenCents(); ok {
-		_spec.SetField(workspace.FieldFrozenCents, field.TypeInt64, value)
-		_node.FrozenCents = value
+	if value, ok := wc.mutation.ServiceName(); ok {
+		_spec.SetField(workspace.FieldServiceName, field.TypeString, value)
+		_node.ServiceName = value
 	}
-	if value, ok := wc.mutation.AvailableCents(); ok {
-		_spec.SetField(workspace.FieldAvailableCents, field.TypeInt64, value)
-		_node.AvailableCents = value
+	if value, ok := wc.mutation.AccessTokenStatus(); ok {
+		_spec.SetField(workspace.FieldAccessTokenStatus, field.TypeString, value)
+		_node.AccessTokenStatus = value
 	}
-	if value, ok := wc.mutation.TotalSpentCents(); ok {
-		_spec.SetField(workspace.FieldTotalSpentCents, field.TypeInt64, value)
-		_node.TotalSpentCents = value
+	if value, ok := wc.mutation.AccessAccount(); ok {
+		_spec.SetField(workspace.FieldAccessAccount, field.TypeString, value)
+		_node.AccessAccount = value
 	}
-	if value, ok := wc.mutation.Quantity(); ok {
-		_spec.SetField(workspace.FieldQuantity, field.TypeFloat64, value)
-		_node.Quantity = value
+	if value, ok := wc.mutation.AccessUsername(); ok {
+		_spec.SetField(workspace.FieldAccessUsername, field.TypeString, value)
+		_node.AccessUsername = value
 	}
-	if value, ok := wc.mutation.Unit(); ok {
-		_spec.SetField(workspace.FieldUnit, field.TypeString, value)
-		_node.Unit = value
+	if value, ok := wc.mutation.AccessPassword(); ok {
+		_spec.SetField(workspace.FieldAccessPassword, field.TypeString, value)
+		_node.AccessPassword = value
 	}
-	if value, ok := wc.mutation.Reason(); ok {
-		_spec.SetField(workspace.FieldReason, field.TypeString, value)
-		_node.Reason = value
+	if value, ok := wc.mutation.CredentialStatus(); ok {
+		_spec.SetField(workspace.FieldCredentialStatus, field.TypeString, value)
+		_node.CredentialStatus = value
 	}
-	if value, ok := wc.mutation.Result(); ok {
-		_spec.SetField(workspace.FieldResult, field.TypeString, value)
-		_node.Result = value
+	if value, ok := wc.mutation.CredentialVersion(); ok {
+		_spec.SetField(workspace.FieldCredentialVersion, field.TypeString, value)
+		_node.CredentialVersion = value
 	}
-	if value, ok := wc.mutation.Source(); ok {
-		_spec.SetField(workspace.FieldSource, field.TypeString, value)
-		_node.Source = value
+	if value, ok := wc.mutation.CredentialSecretRef(); ok {
+		_spec.SetField(workspace.FieldCredentialSecretRef, field.TypeString, value)
+		_node.CredentialSecretRef = value
 	}
-	if value, ok := wc.mutation.Direction(); ok {
-		_spec.SetField(workspace.FieldDirection, field.TypeString, value)
-		_node.Direction = value
-	}
-	if value, ok := wc.mutation.CreatedAt(); ok {
-		_spec.SetField(workspace.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
-	}
-	if value, ok := wc.mutation.UpdatedAt(); ok {
-		_spec.SetField(workspace.FieldUpdatedAt, field.TypeTime, value)
-		_node.UpdatedAt = value
-	}
-	if value, ok := wc.mutation.ArchivedAt(); ok {
-		_spec.SetField(workspace.FieldArchivedAt, field.TypeTime, value)
-		_node.ArchivedAt = &value
+	if value, ok := wc.mutation.AccessRequiresLogin(); ok {
+		_spec.SetField(workspace.FieldAccessRequiresLogin, field.TypeBool, value)
+		_node.AccessRequiresLogin = value
 	}
 	return _node, _spec
 }

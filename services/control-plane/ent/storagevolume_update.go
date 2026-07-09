@@ -28,6 +28,26 @@ func (svu *StorageVolumeUpdate) Where(ps ...predicate.StorageVolume) *StorageVol
 	return svu
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (svu *StorageVolumeUpdate) SetCreatedAt(t time.Time) *StorageVolumeUpdate {
+	svu.mutation.SetCreatedAt(t)
+	return svu
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableCreatedAt(t *time.Time) *StorageVolumeUpdate {
+	if t != nil {
+		svu.SetCreatedAt(*t)
+	}
+	return svu
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (svu *StorageVolumeUpdate) SetUpdatedAt(t time.Time) *StorageVolumeUpdate {
+	svu.mutation.SetUpdatedAt(t)
+	return svu
+}
+
 // SetAccountID sets the "account_id" field.
 func (svu *StorageVolumeUpdate) SetAccountID(s string) *StorageVolumeUpdate {
 	svu.mutation.SetAccountID(s)
@@ -38,20 +58,6 @@ func (svu *StorageVolumeUpdate) SetAccountID(s string) *StorageVolumeUpdate {
 func (svu *StorageVolumeUpdate) SetNillableAccountID(s *string) *StorageVolumeUpdate {
 	if s != nil {
 		svu.SetAccountID(*s)
-	}
-	return svu
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (svu *StorageVolumeUpdate) SetOwnerAccountID(s string) *StorageVolumeUpdate {
-	svu.mutation.SetOwnerAccountID(s)
-	return svu
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableOwnerAccountID(s *string) *StorageVolumeUpdate {
-	if s != nil {
-		svu.SetOwnerAccountID(*s)
 	}
 	return svu
 }
@@ -70,76 +76,6 @@ func (svu *StorageVolumeUpdate) SetNillableOwnerUserID(s *string) *StorageVolume
 	return svu
 }
 
-// SetUserID sets the "user_id" field.
-func (svu *StorageVolumeUpdate) SetUserID(s string) *StorageVolumeUpdate {
-	svu.mutation.SetUserID(s)
-	return svu
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableUserID(s *string) *StorageVolumeUpdate {
-	if s != nil {
-		svu.SetUserID(*s)
-	}
-	return svu
-}
-
-// SetEmail sets the "email" field.
-func (svu *StorageVolumeUpdate) SetEmail(s string) *StorageVolumeUpdate {
-	svu.mutation.SetEmail(s)
-	return svu
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableEmail(s *string) *StorageVolumeUpdate {
-	if s != nil {
-		svu.SetEmail(*s)
-	}
-	return svu
-}
-
-// SetRole sets the "role" field.
-func (svu *StorageVolumeUpdate) SetRole(s string) *StorageVolumeUpdate {
-	svu.mutation.SetRole(s)
-	return svu
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableRole(s *string) *StorageVolumeUpdate {
-	if s != nil {
-		svu.SetRole(*s)
-	}
-	return svu
-}
-
-// SetStatus sets the "status" field.
-func (svu *StorageVolumeUpdate) SetStatus(s string) *StorageVolumeUpdate {
-	svu.mutation.SetStatus(s)
-	return svu
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableStatus(s *string) *StorageVolumeUpdate {
-	if s != nil {
-		svu.SetStatus(*s)
-	}
-	return svu
-}
-
-// SetName sets the "name" field.
-func (svu *StorageVolumeUpdate) SetName(s string) *StorageVolumeUpdate {
-	svu.mutation.SetName(s)
-	return svu
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableName(s *string) *StorageVolumeUpdate {
-	if s != nil {
-		svu.SetName(*s)
-	}
-	return svu
-}
-
 // SetWorkspaceID sets the "workspace_id" field.
 func (svu *StorageVolumeUpdate) SetWorkspaceID(s string) *StorageVolumeUpdate {
 	svu.mutation.SetWorkspaceID(s)
@@ -154,44 +90,16 @@ func (svu *StorageVolumeUpdate) SetNillableWorkspaceID(s *string) *StorageVolume
 	return svu
 }
 
-// SetResourceID sets the "resource_id" field.
-func (svu *StorageVolumeUpdate) SetResourceID(s string) *StorageVolumeUpdate {
-	svu.mutation.SetResourceID(s)
+// SetName sets the "name" field.
+func (svu *StorageVolumeUpdate) SetName(s string) *StorageVolumeUpdate {
+	svu.mutation.SetName(s)
 	return svu
 }
 
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableResourceID(s *string) *StorageVolumeUpdate {
+// SetNillableName sets the "name" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableName(s *string) *StorageVolumeUpdate {
 	if s != nil {
-		svu.SetResourceID(*s)
-	}
-	return svu
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (svu *StorageVolumeUpdate) SetResourceKind(s string) *StorageVolumeUpdate {
-	svu.mutation.SetResourceKind(s)
-	return svu
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableResourceKind(s *string) *StorageVolumeUpdate {
-	if s != nil {
-		svu.SetResourceKind(*s)
-	}
-	return svu
-}
-
-// SetOperationID sets the "operation_id" field.
-func (svu *StorageVolumeUpdate) SetOperationID(s string) *StorageVolumeUpdate {
-	svu.mutation.SetOperationID(s)
-	return svu
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableOperationID(s *string) *StorageVolumeUpdate {
-	if s != nil {
-		svu.SetOperationID(*s)
+		svu.SetName(*s)
 	}
 	return svu
 }
@@ -224,16 +132,58 @@ func (svu *StorageVolumeUpdate) SetNillableProviderResourceID(s *string) *Storag
 	return svu
 }
 
-// SetURL sets the "url" field.
-func (svu *StorageVolumeUpdate) SetURL(s string) *StorageVolumeUpdate {
-	svu.mutation.SetURL(s)
+// SetProviderRequestID sets the "provider_request_id" field.
+func (svu *StorageVolumeUpdate) SetProviderRequestID(s string) *StorageVolumeUpdate {
+	svu.mutation.SetProviderRequestID(s)
 	return svu
 }
 
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableURL(s *string) *StorageVolumeUpdate {
+// SetNillableProviderRequestID sets the "provider_request_id" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableProviderRequestID(s *string) *StorageVolumeUpdate {
 	if s != nil {
-		svu.SetURL(*s)
+		svu.SetProviderRequestID(*s)
+	}
+	return svu
+}
+
+// SetOperationID sets the "operation_id" field.
+func (svu *StorageVolumeUpdate) SetOperationID(s string) *StorageVolumeUpdate {
+	svu.mutation.SetOperationID(s)
+	return svu
+}
+
+// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableOperationID(s *string) *StorageVolumeUpdate {
+	if s != nil {
+		svu.SetOperationID(*s)
+	}
+	return svu
+}
+
+// SetStatus sets the "status" field.
+func (svu *StorageVolumeUpdate) SetStatus(s string) *StorageVolumeUpdate {
+	svu.mutation.SetStatus(s)
+	return svu
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableStatus(s *string) *StorageVolumeUpdate {
+	if s != nil {
+		svu.SetStatus(*s)
+	}
+	return svu
+}
+
+// SetBillingStatus sets the "billing_status" field.
+func (svu *StorageVolumeUpdate) SetBillingStatus(s string) *StorageVolumeUpdate {
+	svu.mutation.SetBillingStatus(s)
+	return svu
+}
+
+// SetNillableBillingStatus sets the "billing_status" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableBillingStatus(s *string) *StorageVolumeUpdate {
+	if s != nil {
+		svu.SetBillingStatus(*s)
 	}
 	return svu
 }
@@ -266,6 +216,20 @@ func (svu *StorageVolumeUpdate) SetNillableHoldReleaseID(s *string) *StorageVolu
 	return svu
 }
 
+// SetSettlementID sets the "settlement_id" field.
+func (svu *StorageVolumeUpdate) SetSettlementID(s string) *StorageVolumeUpdate {
+	svu.mutation.SetSettlementID(s)
+	return svu
+}
+
+// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableSettlementID(s *string) *StorageVolumeUpdate {
+	if s != nil {
+		svu.SetSettlementID(*s)
+	}
+	return svu
+}
+
 // SetLedgerEntryID sets the "ledger_entry_id" field.
 func (svu *StorageVolumeUpdate) SetLedgerEntryID(s string) *StorageVolumeUpdate {
 	svu.mutation.SetLedgerEntryID(s)
@@ -294,20 +258,6 @@ func (svu *StorageVolumeUpdate) SetNillableWalletTransactionID(s *string) *Stora
 	return svu
 }
 
-// SetSettlementID sets the "settlement_id" field.
-func (svu *StorageVolumeUpdate) SetSettlementID(s string) *StorageVolumeUpdate {
-	svu.mutation.SetSettlementID(s)
-	return svu
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableSettlementID(s *string) *StorageVolumeUpdate {
-	if s != nil {
-		svu.SetSettlementID(*s)
-	}
-	return svu
-}
-
 // SetPricingVersion sets the "pricing_version" field.
 func (svu *StorageVolumeUpdate) SetPricingVersion(s string) *StorageVolumeUpdate {
 	svu.mutation.SetPricingVersion(s)
@@ -322,239 +272,199 @@ func (svu *StorageVolumeUpdate) SetNillablePricingVersion(s *string) *StorageVol
 	return svu
 }
 
-// SetAmountCents sets the "amount_cents" field.
-func (svu *StorageVolumeUpdate) SetAmountCents(i int64) *StorageVolumeUpdate {
-	svu.mutation.ResetAmountCents()
-	svu.mutation.SetAmountCents(i)
+// SetUsagePeriodEnd sets the "usage_period_end" field.
+func (svu *StorageVolumeUpdate) SetUsagePeriodEnd(s string) *StorageVolumeUpdate {
+	svu.mutation.SetUsagePeriodEnd(s)
 	return svu
 }
 
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableAmountCents(i *int64) *StorageVolumeUpdate {
-	if i != nil {
-		svu.SetAmountCents(*i)
+// SetNillableUsagePeriodEnd sets the "usage_period_end" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableUsagePeriodEnd(s *string) *StorageVolumeUpdate {
+	if s != nil {
+		svu.SetUsagePeriodEnd(*s)
 	}
 	return svu
 }
 
-// AddAmountCents adds i to the "amount_cents" field.
-func (svu *StorageVolumeUpdate) AddAmountCents(i int64) *StorageVolumeUpdate {
-	svu.mutation.AddAmountCents(i)
+// SetMountPath sets the "mount_path" field.
+func (svu *StorageVolumeUpdate) SetMountPath(s string) *StorageVolumeUpdate {
+	svu.mutation.SetMountPath(s)
 	return svu
 }
 
-// SetBalanceCents sets the "balance_cents" field.
-func (svu *StorageVolumeUpdate) SetBalanceCents(i int64) *StorageVolumeUpdate {
-	svu.mutation.ResetBalanceCents()
-	svu.mutation.SetBalanceCents(i)
-	return svu
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableBalanceCents(i *int64) *StorageVolumeUpdate {
-	if i != nil {
-		svu.SetBalanceCents(*i)
+// SetNillableMountPath sets the "mount_path" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableMountPath(s *string) *StorageVolumeUpdate {
+	if s != nil {
+		svu.SetMountPath(*s)
 	}
 	return svu
 }
 
-// AddBalanceCents adds i to the "balance_cents" field.
-func (svu *StorageVolumeUpdate) AddBalanceCents(i int64) *StorageVolumeUpdate {
-	svu.mutation.AddBalanceCents(i)
+// SetHoldAmountCents sets the "hold_amount_cents" field.
+func (svu *StorageVolumeUpdate) SetHoldAmountCents(i int64) *StorageVolumeUpdate {
+	svu.mutation.ResetHoldAmountCents()
+	svu.mutation.SetHoldAmountCents(i)
 	return svu
 }
 
-// SetFrozenCents sets the "frozen_cents" field.
-func (svu *StorageVolumeUpdate) SetFrozenCents(i int64) *StorageVolumeUpdate {
-	svu.mutation.ResetFrozenCents()
-	svu.mutation.SetFrozenCents(i)
-	return svu
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableFrozenCents(i *int64) *StorageVolumeUpdate {
+// SetNillableHoldAmountCents sets the "hold_amount_cents" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableHoldAmountCents(i *int64) *StorageVolumeUpdate {
 	if i != nil {
-		svu.SetFrozenCents(*i)
+		svu.SetHoldAmountCents(*i)
 	}
 	return svu
 }
 
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (svu *StorageVolumeUpdate) AddFrozenCents(i int64) *StorageVolumeUpdate {
-	svu.mutation.AddFrozenCents(i)
+// AddHoldAmountCents adds i to the "hold_amount_cents" field.
+func (svu *StorageVolumeUpdate) AddHoldAmountCents(i int64) *StorageVolumeUpdate {
+	svu.mutation.AddHoldAmountCents(i)
 	return svu
 }
 
-// SetAvailableCents sets the "available_cents" field.
-func (svu *StorageVolumeUpdate) SetAvailableCents(i int64) *StorageVolumeUpdate {
-	svu.mutation.ResetAvailableCents()
-	svu.mutation.SetAvailableCents(i)
+// SetHoldAmount sets the "hold_amount" field.
+func (svu *StorageVolumeUpdate) SetHoldAmount(f float64) *StorageVolumeUpdate {
+	svu.mutation.ResetHoldAmount()
+	svu.mutation.SetHoldAmount(f)
 	return svu
 }
 
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableAvailableCents(i *int64) *StorageVolumeUpdate {
-	if i != nil {
-		svu.SetAvailableCents(*i)
-	}
-	return svu
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (svu *StorageVolumeUpdate) AddAvailableCents(i int64) *StorageVolumeUpdate {
-	svu.mutation.AddAvailableCents(i)
-	return svu
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (svu *StorageVolumeUpdate) SetTotalSpentCents(i int64) *StorageVolumeUpdate {
-	svu.mutation.ResetTotalSpentCents()
-	svu.mutation.SetTotalSpentCents(i)
-	return svu
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableTotalSpentCents(i *int64) *StorageVolumeUpdate {
-	if i != nil {
-		svu.SetTotalSpentCents(*i)
-	}
-	return svu
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (svu *StorageVolumeUpdate) AddTotalSpentCents(i int64) *StorageVolumeUpdate {
-	svu.mutation.AddTotalSpentCents(i)
-	return svu
-}
-
-// SetQuantity sets the "quantity" field.
-func (svu *StorageVolumeUpdate) SetQuantity(f float64) *StorageVolumeUpdate {
-	svu.mutation.ResetQuantity()
-	svu.mutation.SetQuantity(f)
-	return svu
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableQuantity(f *float64) *StorageVolumeUpdate {
+// SetNillableHoldAmount sets the "hold_amount" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableHoldAmount(f *float64) *StorageVolumeUpdate {
 	if f != nil {
-		svu.SetQuantity(*f)
+		svu.SetHoldAmount(*f)
 	}
 	return svu
 }
 
-// AddQuantity adds f to the "quantity" field.
-func (svu *StorageVolumeUpdate) AddQuantity(f float64) *StorageVolumeUpdate {
-	svu.mutation.AddQuantity(f)
+// AddHoldAmount adds f to the "hold_amount" field.
+func (svu *StorageVolumeUpdate) AddHoldAmount(f float64) *StorageVolumeUpdate {
+	svu.mutation.AddHoldAmount(f)
 	return svu
 }
 
-// SetUnit sets the "unit" field.
-func (svu *StorageVolumeUpdate) SetUnit(s string) *StorageVolumeUpdate {
-	svu.mutation.SetUnit(s)
+// SetSizeGB sets the "size_gb" field.
+func (svu *StorageVolumeUpdate) SetSizeGB(f float64) *StorageVolumeUpdate {
+	svu.mutation.ResetSizeGB()
+	svu.mutation.SetSizeGB(f)
 	return svu
 }
 
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableUnit(s *string) *StorageVolumeUpdate {
+// SetNillableSizeGB sets the "size_gb" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableSizeGB(f *float64) *StorageVolumeUpdate {
+	if f != nil {
+		svu.SetSizeGB(*f)
+	}
+	return svu
+}
+
+// AddSizeGB adds f to the "size_gb" field.
+func (svu *StorageVolumeUpdate) AddSizeGB(f float64) *StorageVolumeUpdate {
+	svu.mutation.AddSizeGB(f)
+	return svu
+}
+
+// SetPriceSnapshotResourceType sets the "price_snapshot_resource_type" field.
+func (svu *StorageVolumeUpdate) SetPriceSnapshotResourceType(s string) *StorageVolumeUpdate {
+	svu.mutation.SetPriceSnapshotResourceType(s)
+	return svu
+}
+
+// SetNillablePriceSnapshotResourceType sets the "price_snapshot_resource_type" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillablePriceSnapshotResourceType(s *string) *StorageVolumeUpdate {
 	if s != nil {
-		svu.SetUnit(*s)
+		svu.SetPriceSnapshotResourceType(*s)
 	}
 	return svu
 }
 
-// SetReason sets the "reason" field.
-func (svu *StorageVolumeUpdate) SetReason(s string) *StorageVolumeUpdate {
-	svu.mutation.SetReason(s)
+// SetPriceSnapshotCurrency sets the "price_snapshot_currency" field.
+func (svu *StorageVolumeUpdate) SetPriceSnapshotCurrency(s string) *StorageVolumeUpdate {
+	svu.mutation.SetPriceSnapshotCurrency(s)
 	return svu
 }
 
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableReason(s *string) *StorageVolumeUpdate {
+// SetNillablePriceSnapshotCurrency sets the "price_snapshot_currency" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillablePriceSnapshotCurrency(s *string) *StorageVolumeUpdate {
 	if s != nil {
-		svu.SetReason(*s)
+		svu.SetPriceSnapshotCurrency(*s)
 	}
 	return svu
 }
 
-// SetResult sets the "result" field.
-func (svu *StorageVolumeUpdate) SetResult(s string) *StorageVolumeUpdate {
-	svu.mutation.SetResult(s)
+// SetPriceSnapshotSource sets the "price_snapshot_source" field.
+func (svu *StorageVolumeUpdate) SetPriceSnapshotSource(s string) *StorageVolumeUpdate {
+	svu.mutation.SetPriceSnapshotSource(s)
 	return svu
 }
 
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableResult(s *string) *StorageVolumeUpdate {
+// SetNillablePriceSnapshotSource sets the "price_snapshot_source" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillablePriceSnapshotSource(s *string) *StorageVolumeUpdate {
 	if s != nil {
-		svu.SetResult(*s)
+		svu.SetPriceSnapshotSource(*s)
 	}
 	return svu
 }
 
-// SetSource sets the "source" field.
-func (svu *StorageVolumeUpdate) SetSource(s string) *StorageVolumeUpdate {
-	svu.mutation.SetSource(s)
+// SetPriceSnapshotUnitPriceCents sets the "price_snapshot_unit_price_cents" field.
+func (svu *StorageVolumeUpdate) SetPriceSnapshotUnitPriceCents(i int64) *StorageVolumeUpdate {
+	svu.mutation.ResetPriceSnapshotUnitPriceCents()
+	svu.mutation.SetPriceSnapshotUnitPriceCents(i)
 	return svu
 }
 
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableSource(s *string) *StorageVolumeUpdate {
-	if s != nil {
-		svu.SetSource(*s)
+// SetNillablePriceSnapshotUnitPriceCents sets the "price_snapshot_unit_price_cents" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillablePriceSnapshotUnitPriceCents(i *int64) *StorageVolumeUpdate {
+	if i != nil {
+		svu.SetPriceSnapshotUnitPriceCents(*i)
 	}
 	return svu
 }
 
-// SetDirection sets the "direction" field.
-func (svu *StorageVolumeUpdate) SetDirection(s string) *StorageVolumeUpdate {
-	svu.mutation.SetDirection(s)
+// AddPriceSnapshotUnitPriceCents adds i to the "price_snapshot_unit_price_cents" field.
+func (svu *StorageVolumeUpdate) AddPriceSnapshotUnitPriceCents(i int64) *StorageVolumeUpdate {
+	svu.mutation.AddPriceSnapshotUnitPriceCents(i)
 	return svu
 }
 
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableDirection(s *string) *StorageVolumeUpdate {
-	if s != nil {
-		svu.SetDirection(*s)
+// SetPriceSnapshotStorageGBMonth sets the "price_snapshot_storage_gb_month" field.
+func (svu *StorageVolumeUpdate) SetPriceSnapshotStorageGBMonth(f float64) *StorageVolumeUpdate {
+	svu.mutation.ResetPriceSnapshotStorageGBMonth()
+	svu.mutation.SetPriceSnapshotStorageGBMonth(f)
+	return svu
+}
+
+// SetNillablePriceSnapshotStorageGBMonth sets the "price_snapshot_storage_gb_month" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillablePriceSnapshotStorageGBMonth(f *float64) *StorageVolumeUpdate {
+	if f != nil {
+		svu.SetPriceSnapshotStorageGBMonth(*f)
 	}
 	return svu
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (svu *StorageVolumeUpdate) SetCreatedAt(t time.Time) *StorageVolumeUpdate {
-	svu.mutation.SetCreatedAt(t)
+// AddPriceSnapshotStorageGBMonth adds f to the "price_snapshot_storage_gb_month" field.
+func (svu *StorageVolumeUpdate) AddPriceSnapshotStorageGBMonth(f float64) *StorageVolumeUpdate {
+	svu.mutation.AddPriceSnapshotStorageGBMonth(f)
 	return svu
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableCreatedAt(t *time.Time) *StorageVolumeUpdate {
-	if t != nil {
-		svu.SetCreatedAt(*t)
+// SetPriceSnapshotSizeGB sets the "price_snapshot_size_gb" field.
+func (svu *StorageVolumeUpdate) SetPriceSnapshotSizeGB(f float64) *StorageVolumeUpdate {
+	svu.mutation.ResetPriceSnapshotSizeGB()
+	svu.mutation.SetPriceSnapshotSizeGB(f)
+	return svu
+}
+
+// SetNillablePriceSnapshotSizeGB sets the "price_snapshot_size_gb" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillablePriceSnapshotSizeGB(f *float64) *StorageVolumeUpdate {
+	if f != nil {
+		svu.SetPriceSnapshotSizeGB(*f)
 	}
 	return svu
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (svu *StorageVolumeUpdate) SetUpdatedAt(t time.Time) *StorageVolumeUpdate {
-	svu.mutation.SetUpdatedAt(t)
-	return svu
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (svu *StorageVolumeUpdate) SetArchivedAt(t time.Time) *StorageVolumeUpdate {
-	svu.mutation.SetArchivedAt(t)
-	return svu
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (svu *StorageVolumeUpdate) SetNillableArchivedAt(t *time.Time) *StorageVolumeUpdate {
-	if t != nil {
-		svu.SetArchivedAt(*t)
-	}
-	return svu
-}
-
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (svu *StorageVolumeUpdate) ClearArchivedAt() *StorageVolumeUpdate {
-	svu.mutation.ClearArchivedAt()
+// AddPriceSnapshotSizeGB adds f to the "price_snapshot_size_gb" field.
+func (svu *StorageVolumeUpdate) AddPriceSnapshotSizeGB(f float64) *StorageVolumeUpdate {
+	svu.mutation.AddPriceSnapshotSizeGB(f)
 	return svu
 }
 
@@ -599,7 +509,20 @@ func (svu *StorageVolumeUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (svu *StorageVolumeUpdate) check() error {
+	if v, ok := svu.mutation.AccountID(); ok {
+		if err := storagevolume.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "StorageVolume.account_id": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (svu *StorageVolumeUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := svu.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(storagevolume.Table, storagevolume.Columns, sqlgraph.NewFieldSpec(storagevolume.FieldID, field.TypeString))
 	if ps := svu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -608,41 +531,23 @@ func (svu *StorageVolumeUpdate) sqlSave(ctx context.Context) (n int, err error) 
 			}
 		}
 	}
+	if value, ok := svu.mutation.CreatedAt(); ok {
+		_spec.SetField(storagevolume.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := svu.mutation.UpdatedAt(); ok {
+		_spec.SetField(storagevolume.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := svu.mutation.AccountID(); ok {
 		_spec.SetField(storagevolume.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := svu.mutation.OwnerAccountID(); ok {
-		_spec.SetField(storagevolume.FieldOwnerAccountID, field.TypeString, value)
 	}
 	if value, ok := svu.mutation.OwnerUserID(); ok {
 		_spec.SetField(storagevolume.FieldOwnerUserID, field.TypeString, value)
 	}
-	if value, ok := svu.mutation.UserID(); ok {
-		_spec.SetField(storagevolume.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := svu.mutation.Email(); ok {
-		_spec.SetField(storagevolume.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := svu.mutation.Role(); ok {
-		_spec.SetField(storagevolume.FieldRole, field.TypeString, value)
-	}
-	if value, ok := svu.mutation.Status(); ok {
-		_spec.SetField(storagevolume.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := svu.mutation.Name(); ok {
-		_spec.SetField(storagevolume.FieldName, field.TypeString, value)
-	}
 	if value, ok := svu.mutation.WorkspaceID(); ok {
 		_spec.SetField(storagevolume.FieldWorkspaceID, field.TypeString, value)
 	}
-	if value, ok := svu.mutation.ResourceID(); ok {
-		_spec.SetField(storagevolume.FieldResourceID, field.TypeString, value)
-	}
-	if value, ok := svu.mutation.ResourceKind(); ok {
-		_spec.SetField(storagevolume.FieldResourceKind, field.TypeString, value)
-	}
-	if value, ok := svu.mutation.OperationID(); ok {
-		_spec.SetField(storagevolume.FieldOperationID, field.TypeString, value)
+	if value, ok := svu.mutation.Name(); ok {
+		_spec.SetField(storagevolume.FieldName, field.TypeString, value)
 	}
 	if value, ok := svu.mutation.Provider(); ok {
 		_spec.SetField(storagevolume.FieldProvider, field.TypeString, value)
@@ -650,8 +555,17 @@ func (svu *StorageVolumeUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	if value, ok := svu.mutation.ProviderResourceID(); ok {
 		_spec.SetField(storagevolume.FieldProviderResourceID, field.TypeString, value)
 	}
-	if value, ok := svu.mutation.URL(); ok {
-		_spec.SetField(storagevolume.FieldURL, field.TypeString, value)
+	if value, ok := svu.mutation.ProviderRequestID(); ok {
+		_spec.SetField(storagevolume.FieldProviderRequestID, field.TypeString, value)
+	}
+	if value, ok := svu.mutation.OperationID(); ok {
+		_spec.SetField(storagevolume.FieldOperationID, field.TypeString, value)
+	}
+	if value, ok := svu.mutation.Status(); ok {
+		_spec.SetField(storagevolume.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := svu.mutation.BillingStatus(); ok {
+		_spec.SetField(storagevolume.FieldBillingStatus, field.TypeString, value)
 	}
 	if value, ok := svu.mutation.HoldID(); ok {
 		_spec.SetField(storagevolume.FieldHoldID, field.TypeString, value)
@@ -659,80 +573,68 @@ func (svu *StorageVolumeUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	if value, ok := svu.mutation.HoldReleaseID(); ok {
 		_spec.SetField(storagevolume.FieldHoldReleaseID, field.TypeString, value)
 	}
+	if value, ok := svu.mutation.SettlementID(); ok {
+		_spec.SetField(storagevolume.FieldSettlementID, field.TypeString, value)
+	}
 	if value, ok := svu.mutation.LedgerEntryID(); ok {
 		_spec.SetField(storagevolume.FieldLedgerEntryID, field.TypeString, value)
 	}
 	if value, ok := svu.mutation.WalletTransactionID(); ok {
 		_spec.SetField(storagevolume.FieldWalletTransactionID, field.TypeString, value)
 	}
-	if value, ok := svu.mutation.SettlementID(); ok {
-		_spec.SetField(storagevolume.FieldSettlementID, field.TypeString, value)
-	}
 	if value, ok := svu.mutation.PricingVersion(); ok {
 		_spec.SetField(storagevolume.FieldPricingVersion, field.TypeString, value)
 	}
-	if value, ok := svu.mutation.AmountCents(); ok {
-		_spec.SetField(storagevolume.FieldAmountCents, field.TypeInt64, value)
+	if value, ok := svu.mutation.UsagePeriodEnd(); ok {
+		_spec.SetField(storagevolume.FieldUsagePeriodEnd, field.TypeString, value)
 	}
-	if value, ok := svu.mutation.AddedAmountCents(); ok {
-		_spec.AddField(storagevolume.FieldAmountCents, field.TypeInt64, value)
+	if value, ok := svu.mutation.MountPath(); ok {
+		_spec.SetField(storagevolume.FieldMountPath, field.TypeString, value)
 	}
-	if value, ok := svu.mutation.BalanceCents(); ok {
-		_spec.SetField(storagevolume.FieldBalanceCents, field.TypeInt64, value)
+	if value, ok := svu.mutation.HoldAmountCents(); ok {
+		_spec.SetField(storagevolume.FieldHoldAmountCents, field.TypeInt64, value)
 	}
-	if value, ok := svu.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(storagevolume.FieldBalanceCents, field.TypeInt64, value)
+	if value, ok := svu.mutation.AddedHoldAmountCents(); ok {
+		_spec.AddField(storagevolume.FieldHoldAmountCents, field.TypeInt64, value)
 	}
-	if value, ok := svu.mutation.FrozenCents(); ok {
-		_spec.SetField(storagevolume.FieldFrozenCents, field.TypeInt64, value)
+	if value, ok := svu.mutation.HoldAmount(); ok {
+		_spec.SetField(storagevolume.FieldHoldAmount, field.TypeFloat64, value)
 	}
-	if value, ok := svu.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(storagevolume.FieldFrozenCents, field.TypeInt64, value)
+	if value, ok := svu.mutation.AddedHoldAmount(); ok {
+		_spec.AddField(storagevolume.FieldHoldAmount, field.TypeFloat64, value)
 	}
-	if value, ok := svu.mutation.AvailableCents(); ok {
-		_spec.SetField(storagevolume.FieldAvailableCents, field.TypeInt64, value)
+	if value, ok := svu.mutation.SizeGB(); ok {
+		_spec.SetField(storagevolume.FieldSizeGB, field.TypeFloat64, value)
 	}
-	if value, ok := svu.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(storagevolume.FieldAvailableCents, field.TypeInt64, value)
+	if value, ok := svu.mutation.AddedSizeGB(); ok {
+		_spec.AddField(storagevolume.FieldSizeGB, field.TypeFloat64, value)
 	}
-	if value, ok := svu.mutation.TotalSpentCents(); ok {
-		_spec.SetField(storagevolume.FieldTotalSpentCents, field.TypeInt64, value)
+	if value, ok := svu.mutation.PriceSnapshotResourceType(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotResourceType, field.TypeString, value)
 	}
-	if value, ok := svu.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(storagevolume.FieldTotalSpentCents, field.TypeInt64, value)
+	if value, ok := svu.mutation.PriceSnapshotCurrency(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotCurrency, field.TypeString, value)
 	}
-	if value, ok := svu.mutation.Quantity(); ok {
-		_spec.SetField(storagevolume.FieldQuantity, field.TypeFloat64, value)
+	if value, ok := svu.mutation.PriceSnapshotSource(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotSource, field.TypeString, value)
 	}
-	if value, ok := svu.mutation.AddedQuantity(); ok {
-		_spec.AddField(storagevolume.FieldQuantity, field.TypeFloat64, value)
+	if value, ok := svu.mutation.PriceSnapshotUnitPriceCents(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotUnitPriceCents, field.TypeInt64, value)
 	}
-	if value, ok := svu.mutation.Unit(); ok {
-		_spec.SetField(storagevolume.FieldUnit, field.TypeString, value)
+	if value, ok := svu.mutation.AddedPriceSnapshotUnitPriceCents(); ok {
+		_spec.AddField(storagevolume.FieldPriceSnapshotUnitPriceCents, field.TypeInt64, value)
 	}
-	if value, ok := svu.mutation.Reason(); ok {
-		_spec.SetField(storagevolume.FieldReason, field.TypeString, value)
+	if value, ok := svu.mutation.PriceSnapshotStorageGBMonth(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotStorageGBMonth, field.TypeFloat64, value)
 	}
-	if value, ok := svu.mutation.Result(); ok {
-		_spec.SetField(storagevolume.FieldResult, field.TypeString, value)
+	if value, ok := svu.mutation.AddedPriceSnapshotStorageGBMonth(); ok {
+		_spec.AddField(storagevolume.FieldPriceSnapshotStorageGBMonth, field.TypeFloat64, value)
 	}
-	if value, ok := svu.mutation.Source(); ok {
-		_spec.SetField(storagevolume.FieldSource, field.TypeString, value)
+	if value, ok := svu.mutation.PriceSnapshotSizeGB(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotSizeGB, field.TypeFloat64, value)
 	}
-	if value, ok := svu.mutation.Direction(); ok {
-		_spec.SetField(storagevolume.FieldDirection, field.TypeString, value)
-	}
-	if value, ok := svu.mutation.CreatedAt(); ok {
-		_spec.SetField(storagevolume.FieldCreatedAt, field.TypeTime, value)
-	}
-	if value, ok := svu.mutation.UpdatedAt(); ok {
-		_spec.SetField(storagevolume.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := svu.mutation.ArchivedAt(); ok {
-		_spec.SetField(storagevolume.FieldArchivedAt, field.TypeTime, value)
-	}
-	if svu.mutation.ArchivedAtCleared() {
-		_spec.ClearField(storagevolume.FieldArchivedAt, field.TypeTime)
+	if value, ok := svu.mutation.AddedPriceSnapshotSizeGB(); ok {
+		_spec.AddField(storagevolume.FieldPriceSnapshotSizeGB, field.TypeFloat64, value)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, svu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -754,6 +656,26 @@ type StorageVolumeUpdateOne struct {
 	mutation *StorageVolumeMutation
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (svuo *StorageVolumeUpdateOne) SetCreatedAt(t time.Time) *StorageVolumeUpdateOne {
+	svuo.mutation.SetCreatedAt(t)
+	return svuo
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableCreatedAt(t *time.Time) *StorageVolumeUpdateOne {
+	if t != nil {
+		svuo.SetCreatedAt(*t)
+	}
+	return svuo
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (svuo *StorageVolumeUpdateOne) SetUpdatedAt(t time.Time) *StorageVolumeUpdateOne {
+	svuo.mutation.SetUpdatedAt(t)
+	return svuo
+}
+
 // SetAccountID sets the "account_id" field.
 func (svuo *StorageVolumeUpdateOne) SetAccountID(s string) *StorageVolumeUpdateOne {
 	svuo.mutation.SetAccountID(s)
@@ -764,20 +686,6 @@ func (svuo *StorageVolumeUpdateOne) SetAccountID(s string) *StorageVolumeUpdateO
 func (svuo *StorageVolumeUpdateOne) SetNillableAccountID(s *string) *StorageVolumeUpdateOne {
 	if s != nil {
 		svuo.SetAccountID(*s)
-	}
-	return svuo
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (svuo *StorageVolumeUpdateOne) SetOwnerAccountID(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetOwnerAccountID(s)
-	return svuo
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableOwnerAccountID(s *string) *StorageVolumeUpdateOne {
-	if s != nil {
-		svuo.SetOwnerAccountID(*s)
 	}
 	return svuo
 }
@@ -796,76 +704,6 @@ func (svuo *StorageVolumeUpdateOne) SetNillableOwnerUserID(s *string) *StorageVo
 	return svuo
 }
 
-// SetUserID sets the "user_id" field.
-func (svuo *StorageVolumeUpdateOne) SetUserID(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetUserID(s)
-	return svuo
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableUserID(s *string) *StorageVolumeUpdateOne {
-	if s != nil {
-		svuo.SetUserID(*s)
-	}
-	return svuo
-}
-
-// SetEmail sets the "email" field.
-func (svuo *StorageVolumeUpdateOne) SetEmail(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetEmail(s)
-	return svuo
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableEmail(s *string) *StorageVolumeUpdateOne {
-	if s != nil {
-		svuo.SetEmail(*s)
-	}
-	return svuo
-}
-
-// SetRole sets the "role" field.
-func (svuo *StorageVolumeUpdateOne) SetRole(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetRole(s)
-	return svuo
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableRole(s *string) *StorageVolumeUpdateOne {
-	if s != nil {
-		svuo.SetRole(*s)
-	}
-	return svuo
-}
-
-// SetStatus sets the "status" field.
-func (svuo *StorageVolumeUpdateOne) SetStatus(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetStatus(s)
-	return svuo
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableStatus(s *string) *StorageVolumeUpdateOne {
-	if s != nil {
-		svuo.SetStatus(*s)
-	}
-	return svuo
-}
-
-// SetName sets the "name" field.
-func (svuo *StorageVolumeUpdateOne) SetName(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetName(s)
-	return svuo
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableName(s *string) *StorageVolumeUpdateOne {
-	if s != nil {
-		svuo.SetName(*s)
-	}
-	return svuo
-}
-
 // SetWorkspaceID sets the "workspace_id" field.
 func (svuo *StorageVolumeUpdateOne) SetWorkspaceID(s string) *StorageVolumeUpdateOne {
 	svuo.mutation.SetWorkspaceID(s)
@@ -880,44 +718,16 @@ func (svuo *StorageVolumeUpdateOne) SetNillableWorkspaceID(s *string) *StorageVo
 	return svuo
 }
 
-// SetResourceID sets the "resource_id" field.
-func (svuo *StorageVolumeUpdateOne) SetResourceID(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetResourceID(s)
+// SetName sets the "name" field.
+func (svuo *StorageVolumeUpdateOne) SetName(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetName(s)
 	return svuo
 }
 
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableResourceID(s *string) *StorageVolumeUpdateOne {
+// SetNillableName sets the "name" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableName(s *string) *StorageVolumeUpdateOne {
 	if s != nil {
-		svuo.SetResourceID(*s)
-	}
-	return svuo
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (svuo *StorageVolumeUpdateOne) SetResourceKind(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetResourceKind(s)
-	return svuo
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableResourceKind(s *string) *StorageVolumeUpdateOne {
-	if s != nil {
-		svuo.SetResourceKind(*s)
-	}
-	return svuo
-}
-
-// SetOperationID sets the "operation_id" field.
-func (svuo *StorageVolumeUpdateOne) SetOperationID(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetOperationID(s)
-	return svuo
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableOperationID(s *string) *StorageVolumeUpdateOne {
-	if s != nil {
-		svuo.SetOperationID(*s)
+		svuo.SetName(*s)
 	}
 	return svuo
 }
@@ -950,16 +760,58 @@ func (svuo *StorageVolumeUpdateOne) SetNillableProviderResourceID(s *string) *St
 	return svuo
 }
 
-// SetURL sets the "url" field.
-func (svuo *StorageVolumeUpdateOne) SetURL(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetURL(s)
+// SetProviderRequestID sets the "provider_request_id" field.
+func (svuo *StorageVolumeUpdateOne) SetProviderRequestID(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetProviderRequestID(s)
 	return svuo
 }
 
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableURL(s *string) *StorageVolumeUpdateOne {
+// SetNillableProviderRequestID sets the "provider_request_id" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableProviderRequestID(s *string) *StorageVolumeUpdateOne {
 	if s != nil {
-		svuo.SetURL(*s)
+		svuo.SetProviderRequestID(*s)
+	}
+	return svuo
+}
+
+// SetOperationID sets the "operation_id" field.
+func (svuo *StorageVolumeUpdateOne) SetOperationID(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetOperationID(s)
+	return svuo
+}
+
+// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableOperationID(s *string) *StorageVolumeUpdateOne {
+	if s != nil {
+		svuo.SetOperationID(*s)
+	}
+	return svuo
+}
+
+// SetStatus sets the "status" field.
+func (svuo *StorageVolumeUpdateOne) SetStatus(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetStatus(s)
+	return svuo
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableStatus(s *string) *StorageVolumeUpdateOne {
+	if s != nil {
+		svuo.SetStatus(*s)
+	}
+	return svuo
+}
+
+// SetBillingStatus sets the "billing_status" field.
+func (svuo *StorageVolumeUpdateOne) SetBillingStatus(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetBillingStatus(s)
+	return svuo
+}
+
+// SetNillableBillingStatus sets the "billing_status" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableBillingStatus(s *string) *StorageVolumeUpdateOne {
+	if s != nil {
+		svuo.SetBillingStatus(*s)
 	}
 	return svuo
 }
@@ -992,6 +844,20 @@ func (svuo *StorageVolumeUpdateOne) SetNillableHoldReleaseID(s *string) *Storage
 	return svuo
 }
 
+// SetSettlementID sets the "settlement_id" field.
+func (svuo *StorageVolumeUpdateOne) SetSettlementID(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetSettlementID(s)
+	return svuo
+}
+
+// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableSettlementID(s *string) *StorageVolumeUpdateOne {
+	if s != nil {
+		svuo.SetSettlementID(*s)
+	}
+	return svuo
+}
+
 // SetLedgerEntryID sets the "ledger_entry_id" field.
 func (svuo *StorageVolumeUpdateOne) SetLedgerEntryID(s string) *StorageVolumeUpdateOne {
 	svuo.mutation.SetLedgerEntryID(s)
@@ -1020,20 +886,6 @@ func (svuo *StorageVolumeUpdateOne) SetNillableWalletTransactionID(s *string) *S
 	return svuo
 }
 
-// SetSettlementID sets the "settlement_id" field.
-func (svuo *StorageVolumeUpdateOne) SetSettlementID(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetSettlementID(s)
-	return svuo
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableSettlementID(s *string) *StorageVolumeUpdateOne {
-	if s != nil {
-		svuo.SetSettlementID(*s)
-	}
-	return svuo
-}
-
 // SetPricingVersion sets the "pricing_version" field.
 func (svuo *StorageVolumeUpdateOne) SetPricingVersion(s string) *StorageVolumeUpdateOne {
 	svuo.mutation.SetPricingVersion(s)
@@ -1048,239 +900,199 @@ func (svuo *StorageVolumeUpdateOne) SetNillablePricingVersion(s *string) *Storag
 	return svuo
 }
 
-// SetAmountCents sets the "amount_cents" field.
-func (svuo *StorageVolumeUpdateOne) SetAmountCents(i int64) *StorageVolumeUpdateOne {
-	svuo.mutation.ResetAmountCents()
-	svuo.mutation.SetAmountCents(i)
+// SetUsagePeriodEnd sets the "usage_period_end" field.
+func (svuo *StorageVolumeUpdateOne) SetUsagePeriodEnd(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetUsagePeriodEnd(s)
 	return svuo
 }
 
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableAmountCents(i *int64) *StorageVolumeUpdateOne {
-	if i != nil {
-		svuo.SetAmountCents(*i)
+// SetNillableUsagePeriodEnd sets the "usage_period_end" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableUsagePeriodEnd(s *string) *StorageVolumeUpdateOne {
+	if s != nil {
+		svuo.SetUsagePeriodEnd(*s)
 	}
 	return svuo
 }
 
-// AddAmountCents adds i to the "amount_cents" field.
-func (svuo *StorageVolumeUpdateOne) AddAmountCents(i int64) *StorageVolumeUpdateOne {
-	svuo.mutation.AddAmountCents(i)
+// SetMountPath sets the "mount_path" field.
+func (svuo *StorageVolumeUpdateOne) SetMountPath(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetMountPath(s)
 	return svuo
 }
 
-// SetBalanceCents sets the "balance_cents" field.
-func (svuo *StorageVolumeUpdateOne) SetBalanceCents(i int64) *StorageVolumeUpdateOne {
-	svuo.mutation.ResetBalanceCents()
-	svuo.mutation.SetBalanceCents(i)
-	return svuo
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableBalanceCents(i *int64) *StorageVolumeUpdateOne {
-	if i != nil {
-		svuo.SetBalanceCents(*i)
+// SetNillableMountPath sets the "mount_path" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableMountPath(s *string) *StorageVolumeUpdateOne {
+	if s != nil {
+		svuo.SetMountPath(*s)
 	}
 	return svuo
 }
 
-// AddBalanceCents adds i to the "balance_cents" field.
-func (svuo *StorageVolumeUpdateOne) AddBalanceCents(i int64) *StorageVolumeUpdateOne {
-	svuo.mutation.AddBalanceCents(i)
+// SetHoldAmountCents sets the "hold_amount_cents" field.
+func (svuo *StorageVolumeUpdateOne) SetHoldAmountCents(i int64) *StorageVolumeUpdateOne {
+	svuo.mutation.ResetHoldAmountCents()
+	svuo.mutation.SetHoldAmountCents(i)
 	return svuo
 }
 
-// SetFrozenCents sets the "frozen_cents" field.
-func (svuo *StorageVolumeUpdateOne) SetFrozenCents(i int64) *StorageVolumeUpdateOne {
-	svuo.mutation.ResetFrozenCents()
-	svuo.mutation.SetFrozenCents(i)
-	return svuo
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableFrozenCents(i *int64) *StorageVolumeUpdateOne {
+// SetNillableHoldAmountCents sets the "hold_amount_cents" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableHoldAmountCents(i *int64) *StorageVolumeUpdateOne {
 	if i != nil {
-		svuo.SetFrozenCents(*i)
+		svuo.SetHoldAmountCents(*i)
 	}
 	return svuo
 }
 
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (svuo *StorageVolumeUpdateOne) AddFrozenCents(i int64) *StorageVolumeUpdateOne {
-	svuo.mutation.AddFrozenCents(i)
+// AddHoldAmountCents adds i to the "hold_amount_cents" field.
+func (svuo *StorageVolumeUpdateOne) AddHoldAmountCents(i int64) *StorageVolumeUpdateOne {
+	svuo.mutation.AddHoldAmountCents(i)
 	return svuo
 }
 
-// SetAvailableCents sets the "available_cents" field.
-func (svuo *StorageVolumeUpdateOne) SetAvailableCents(i int64) *StorageVolumeUpdateOne {
-	svuo.mutation.ResetAvailableCents()
-	svuo.mutation.SetAvailableCents(i)
+// SetHoldAmount sets the "hold_amount" field.
+func (svuo *StorageVolumeUpdateOne) SetHoldAmount(f float64) *StorageVolumeUpdateOne {
+	svuo.mutation.ResetHoldAmount()
+	svuo.mutation.SetHoldAmount(f)
 	return svuo
 }
 
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableAvailableCents(i *int64) *StorageVolumeUpdateOne {
-	if i != nil {
-		svuo.SetAvailableCents(*i)
-	}
-	return svuo
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (svuo *StorageVolumeUpdateOne) AddAvailableCents(i int64) *StorageVolumeUpdateOne {
-	svuo.mutation.AddAvailableCents(i)
-	return svuo
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (svuo *StorageVolumeUpdateOne) SetTotalSpentCents(i int64) *StorageVolumeUpdateOne {
-	svuo.mutation.ResetTotalSpentCents()
-	svuo.mutation.SetTotalSpentCents(i)
-	return svuo
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableTotalSpentCents(i *int64) *StorageVolumeUpdateOne {
-	if i != nil {
-		svuo.SetTotalSpentCents(*i)
-	}
-	return svuo
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (svuo *StorageVolumeUpdateOne) AddTotalSpentCents(i int64) *StorageVolumeUpdateOne {
-	svuo.mutation.AddTotalSpentCents(i)
-	return svuo
-}
-
-// SetQuantity sets the "quantity" field.
-func (svuo *StorageVolumeUpdateOne) SetQuantity(f float64) *StorageVolumeUpdateOne {
-	svuo.mutation.ResetQuantity()
-	svuo.mutation.SetQuantity(f)
-	return svuo
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableQuantity(f *float64) *StorageVolumeUpdateOne {
+// SetNillableHoldAmount sets the "hold_amount" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableHoldAmount(f *float64) *StorageVolumeUpdateOne {
 	if f != nil {
-		svuo.SetQuantity(*f)
+		svuo.SetHoldAmount(*f)
 	}
 	return svuo
 }
 
-// AddQuantity adds f to the "quantity" field.
-func (svuo *StorageVolumeUpdateOne) AddQuantity(f float64) *StorageVolumeUpdateOne {
-	svuo.mutation.AddQuantity(f)
+// AddHoldAmount adds f to the "hold_amount" field.
+func (svuo *StorageVolumeUpdateOne) AddHoldAmount(f float64) *StorageVolumeUpdateOne {
+	svuo.mutation.AddHoldAmount(f)
 	return svuo
 }
 
-// SetUnit sets the "unit" field.
-func (svuo *StorageVolumeUpdateOne) SetUnit(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetUnit(s)
+// SetSizeGB sets the "size_gb" field.
+func (svuo *StorageVolumeUpdateOne) SetSizeGB(f float64) *StorageVolumeUpdateOne {
+	svuo.mutation.ResetSizeGB()
+	svuo.mutation.SetSizeGB(f)
 	return svuo
 }
 
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableUnit(s *string) *StorageVolumeUpdateOne {
+// SetNillableSizeGB sets the "size_gb" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableSizeGB(f *float64) *StorageVolumeUpdateOne {
+	if f != nil {
+		svuo.SetSizeGB(*f)
+	}
+	return svuo
+}
+
+// AddSizeGB adds f to the "size_gb" field.
+func (svuo *StorageVolumeUpdateOne) AddSizeGB(f float64) *StorageVolumeUpdateOne {
+	svuo.mutation.AddSizeGB(f)
+	return svuo
+}
+
+// SetPriceSnapshotResourceType sets the "price_snapshot_resource_type" field.
+func (svuo *StorageVolumeUpdateOne) SetPriceSnapshotResourceType(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetPriceSnapshotResourceType(s)
+	return svuo
+}
+
+// SetNillablePriceSnapshotResourceType sets the "price_snapshot_resource_type" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillablePriceSnapshotResourceType(s *string) *StorageVolumeUpdateOne {
 	if s != nil {
-		svuo.SetUnit(*s)
+		svuo.SetPriceSnapshotResourceType(*s)
 	}
 	return svuo
 }
 
-// SetReason sets the "reason" field.
-func (svuo *StorageVolumeUpdateOne) SetReason(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetReason(s)
+// SetPriceSnapshotCurrency sets the "price_snapshot_currency" field.
+func (svuo *StorageVolumeUpdateOne) SetPriceSnapshotCurrency(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetPriceSnapshotCurrency(s)
 	return svuo
 }
 
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableReason(s *string) *StorageVolumeUpdateOne {
+// SetNillablePriceSnapshotCurrency sets the "price_snapshot_currency" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillablePriceSnapshotCurrency(s *string) *StorageVolumeUpdateOne {
 	if s != nil {
-		svuo.SetReason(*s)
+		svuo.SetPriceSnapshotCurrency(*s)
 	}
 	return svuo
 }
 
-// SetResult sets the "result" field.
-func (svuo *StorageVolumeUpdateOne) SetResult(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetResult(s)
+// SetPriceSnapshotSource sets the "price_snapshot_source" field.
+func (svuo *StorageVolumeUpdateOne) SetPriceSnapshotSource(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetPriceSnapshotSource(s)
 	return svuo
 }
 
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableResult(s *string) *StorageVolumeUpdateOne {
+// SetNillablePriceSnapshotSource sets the "price_snapshot_source" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillablePriceSnapshotSource(s *string) *StorageVolumeUpdateOne {
 	if s != nil {
-		svuo.SetResult(*s)
+		svuo.SetPriceSnapshotSource(*s)
 	}
 	return svuo
 }
 
-// SetSource sets the "source" field.
-func (svuo *StorageVolumeUpdateOne) SetSource(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetSource(s)
+// SetPriceSnapshotUnitPriceCents sets the "price_snapshot_unit_price_cents" field.
+func (svuo *StorageVolumeUpdateOne) SetPriceSnapshotUnitPriceCents(i int64) *StorageVolumeUpdateOne {
+	svuo.mutation.ResetPriceSnapshotUnitPriceCents()
+	svuo.mutation.SetPriceSnapshotUnitPriceCents(i)
 	return svuo
 }
 
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableSource(s *string) *StorageVolumeUpdateOne {
-	if s != nil {
-		svuo.SetSource(*s)
+// SetNillablePriceSnapshotUnitPriceCents sets the "price_snapshot_unit_price_cents" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillablePriceSnapshotUnitPriceCents(i *int64) *StorageVolumeUpdateOne {
+	if i != nil {
+		svuo.SetPriceSnapshotUnitPriceCents(*i)
 	}
 	return svuo
 }
 
-// SetDirection sets the "direction" field.
-func (svuo *StorageVolumeUpdateOne) SetDirection(s string) *StorageVolumeUpdateOne {
-	svuo.mutation.SetDirection(s)
+// AddPriceSnapshotUnitPriceCents adds i to the "price_snapshot_unit_price_cents" field.
+func (svuo *StorageVolumeUpdateOne) AddPriceSnapshotUnitPriceCents(i int64) *StorageVolumeUpdateOne {
+	svuo.mutation.AddPriceSnapshotUnitPriceCents(i)
 	return svuo
 }
 
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableDirection(s *string) *StorageVolumeUpdateOne {
-	if s != nil {
-		svuo.SetDirection(*s)
+// SetPriceSnapshotStorageGBMonth sets the "price_snapshot_storage_gb_month" field.
+func (svuo *StorageVolumeUpdateOne) SetPriceSnapshotStorageGBMonth(f float64) *StorageVolumeUpdateOne {
+	svuo.mutation.ResetPriceSnapshotStorageGBMonth()
+	svuo.mutation.SetPriceSnapshotStorageGBMonth(f)
+	return svuo
+}
+
+// SetNillablePriceSnapshotStorageGBMonth sets the "price_snapshot_storage_gb_month" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillablePriceSnapshotStorageGBMonth(f *float64) *StorageVolumeUpdateOne {
+	if f != nil {
+		svuo.SetPriceSnapshotStorageGBMonth(*f)
 	}
 	return svuo
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (svuo *StorageVolumeUpdateOne) SetCreatedAt(t time.Time) *StorageVolumeUpdateOne {
-	svuo.mutation.SetCreatedAt(t)
+// AddPriceSnapshotStorageGBMonth adds f to the "price_snapshot_storage_gb_month" field.
+func (svuo *StorageVolumeUpdateOne) AddPriceSnapshotStorageGBMonth(f float64) *StorageVolumeUpdateOne {
+	svuo.mutation.AddPriceSnapshotStorageGBMonth(f)
 	return svuo
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableCreatedAt(t *time.Time) *StorageVolumeUpdateOne {
-	if t != nil {
-		svuo.SetCreatedAt(*t)
+// SetPriceSnapshotSizeGB sets the "price_snapshot_size_gb" field.
+func (svuo *StorageVolumeUpdateOne) SetPriceSnapshotSizeGB(f float64) *StorageVolumeUpdateOne {
+	svuo.mutation.ResetPriceSnapshotSizeGB()
+	svuo.mutation.SetPriceSnapshotSizeGB(f)
+	return svuo
+}
+
+// SetNillablePriceSnapshotSizeGB sets the "price_snapshot_size_gb" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillablePriceSnapshotSizeGB(f *float64) *StorageVolumeUpdateOne {
+	if f != nil {
+		svuo.SetPriceSnapshotSizeGB(*f)
 	}
 	return svuo
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (svuo *StorageVolumeUpdateOne) SetUpdatedAt(t time.Time) *StorageVolumeUpdateOne {
-	svuo.mutation.SetUpdatedAt(t)
-	return svuo
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (svuo *StorageVolumeUpdateOne) SetArchivedAt(t time.Time) *StorageVolumeUpdateOne {
-	svuo.mutation.SetArchivedAt(t)
-	return svuo
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (svuo *StorageVolumeUpdateOne) SetNillableArchivedAt(t *time.Time) *StorageVolumeUpdateOne {
-	if t != nil {
-		svuo.SetArchivedAt(*t)
-	}
-	return svuo
-}
-
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (svuo *StorageVolumeUpdateOne) ClearArchivedAt() *StorageVolumeUpdateOne {
-	svuo.mutation.ClearArchivedAt()
+// AddPriceSnapshotSizeGB adds f to the "price_snapshot_size_gb" field.
+func (svuo *StorageVolumeUpdateOne) AddPriceSnapshotSizeGB(f float64) *StorageVolumeUpdateOne {
+	svuo.mutation.AddPriceSnapshotSizeGB(f)
 	return svuo
 }
 
@@ -1338,7 +1150,20 @@ func (svuo *StorageVolumeUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (svuo *StorageVolumeUpdateOne) check() error {
+	if v, ok := svuo.mutation.AccountID(); ok {
+		if err := storagevolume.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "StorageVolume.account_id": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (svuo *StorageVolumeUpdateOne) sqlSave(ctx context.Context) (_node *StorageVolume, err error) {
+	if err := svuo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(storagevolume.Table, storagevolume.Columns, sqlgraph.NewFieldSpec(storagevolume.FieldID, field.TypeString))
 	id, ok := svuo.mutation.ID()
 	if !ok {
@@ -1364,41 +1189,23 @@ func (svuo *StorageVolumeUpdateOne) sqlSave(ctx context.Context) (_node *Storage
 			}
 		}
 	}
+	if value, ok := svuo.mutation.CreatedAt(); ok {
+		_spec.SetField(storagevolume.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := svuo.mutation.UpdatedAt(); ok {
+		_spec.SetField(storagevolume.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := svuo.mutation.AccountID(); ok {
 		_spec.SetField(storagevolume.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := svuo.mutation.OwnerAccountID(); ok {
-		_spec.SetField(storagevolume.FieldOwnerAccountID, field.TypeString, value)
 	}
 	if value, ok := svuo.mutation.OwnerUserID(); ok {
 		_spec.SetField(storagevolume.FieldOwnerUserID, field.TypeString, value)
 	}
-	if value, ok := svuo.mutation.UserID(); ok {
-		_spec.SetField(storagevolume.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := svuo.mutation.Email(); ok {
-		_spec.SetField(storagevolume.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := svuo.mutation.Role(); ok {
-		_spec.SetField(storagevolume.FieldRole, field.TypeString, value)
-	}
-	if value, ok := svuo.mutation.Status(); ok {
-		_spec.SetField(storagevolume.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := svuo.mutation.Name(); ok {
-		_spec.SetField(storagevolume.FieldName, field.TypeString, value)
-	}
 	if value, ok := svuo.mutation.WorkspaceID(); ok {
 		_spec.SetField(storagevolume.FieldWorkspaceID, field.TypeString, value)
 	}
-	if value, ok := svuo.mutation.ResourceID(); ok {
-		_spec.SetField(storagevolume.FieldResourceID, field.TypeString, value)
-	}
-	if value, ok := svuo.mutation.ResourceKind(); ok {
-		_spec.SetField(storagevolume.FieldResourceKind, field.TypeString, value)
-	}
-	if value, ok := svuo.mutation.OperationID(); ok {
-		_spec.SetField(storagevolume.FieldOperationID, field.TypeString, value)
+	if value, ok := svuo.mutation.Name(); ok {
+		_spec.SetField(storagevolume.FieldName, field.TypeString, value)
 	}
 	if value, ok := svuo.mutation.Provider(); ok {
 		_spec.SetField(storagevolume.FieldProvider, field.TypeString, value)
@@ -1406,8 +1213,17 @@ func (svuo *StorageVolumeUpdateOne) sqlSave(ctx context.Context) (_node *Storage
 	if value, ok := svuo.mutation.ProviderResourceID(); ok {
 		_spec.SetField(storagevolume.FieldProviderResourceID, field.TypeString, value)
 	}
-	if value, ok := svuo.mutation.URL(); ok {
-		_spec.SetField(storagevolume.FieldURL, field.TypeString, value)
+	if value, ok := svuo.mutation.ProviderRequestID(); ok {
+		_spec.SetField(storagevolume.FieldProviderRequestID, field.TypeString, value)
+	}
+	if value, ok := svuo.mutation.OperationID(); ok {
+		_spec.SetField(storagevolume.FieldOperationID, field.TypeString, value)
+	}
+	if value, ok := svuo.mutation.Status(); ok {
+		_spec.SetField(storagevolume.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := svuo.mutation.BillingStatus(); ok {
+		_spec.SetField(storagevolume.FieldBillingStatus, field.TypeString, value)
 	}
 	if value, ok := svuo.mutation.HoldID(); ok {
 		_spec.SetField(storagevolume.FieldHoldID, field.TypeString, value)
@@ -1415,80 +1231,68 @@ func (svuo *StorageVolumeUpdateOne) sqlSave(ctx context.Context) (_node *Storage
 	if value, ok := svuo.mutation.HoldReleaseID(); ok {
 		_spec.SetField(storagevolume.FieldHoldReleaseID, field.TypeString, value)
 	}
+	if value, ok := svuo.mutation.SettlementID(); ok {
+		_spec.SetField(storagevolume.FieldSettlementID, field.TypeString, value)
+	}
 	if value, ok := svuo.mutation.LedgerEntryID(); ok {
 		_spec.SetField(storagevolume.FieldLedgerEntryID, field.TypeString, value)
 	}
 	if value, ok := svuo.mutation.WalletTransactionID(); ok {
 		_spec.SetField(storagevolume.FieldWalletTransactionID, field.TypeString, value)
 	}
-	if value, ok := svuo.mutation.SettlementID(); ok {
-		_spec.SetField(storagevolume.FieldSettlementID, field.TypeString, value)
-	}
 	if value, ok := svuo.mutation.PricingVersion(); ok {
 		_spec.SetField(storagevolume.FieldPricingVersion, field.TypeString, value)
 	}
-	if value, ok := svuo.mutation.AmountCents(); ok {
-		_spec.SetField(storagevolume.FieldAmountCents, field.TypeInt64, value)
+	if value, ok := svuo.mutation.UsagePeriodEnd(); ok {
+		_spec.SetField(storagevolume.FieldUsagePeriodEnd, field.TypeString, value)
 	}
-	if value, ok := svuo.mutation.AddedAmountCents(); ok {
-		_spec.AddField(storagevolume.FieldAmountCents, field.TypeInt64, value)
+	if value, ok := svuo.mutation.MountPath(); ok {
+		_spec.SetField(storagevolume.FieldMountPath, field.TypeString, value)
 	}
-	if value, ok := svuo.mutation.BalanceCents(); ok {
-		_spec.SetField(storagevolume.FieldBalanceCents, field.TypeInt64, value)
+	if value, ok := svuo.mutation.HoldAmountCents(); ok {
+		_spec.SetField(storagevolume.FieldHoldAmountCents, field.TypeInt64, value)
 	}
-	if value, ok := svuo.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(storagevolume.FieldBalanceCents, field.TypeInt64, value)
+	if value, ok := svuo.mutation.AddedHoldAmountCents(); ok {
+		_spec.AddField(storagevolume.FieldHoldAmountCents, field.TypeInt64, value)
 	}
-	if value, ok := svuo.mutation.FrozenCents(); ok {
-		_spec.SetField(storagevolume.FieldFrozenCents, field.TypeInt64, value)
+	if value, ok := svuo.mutation.HoldAmount(); ok {
+		_spec.SetField(storagevolume.FieldHoldAmount, field.TypeFloat64, value)
 	}
-	if value, ok := svuo.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(storagevolume.FieldFrozenCents, field.TypeInt64, value)
+	if value, ok := svuo.mutation.AddedHoldAmount(); ok {
+		_spec.AddField(storagevolume.FieldHoldAmount, field.TypeFloat64, value)
 	}
-	if value, ok := svuo.mutation.AvailableCents(); ok {
-		_spec.SetField(storagevolume.FieldAvailableCents, field.TypeInt64, value)
+	if value, ok := svuo.mutation.SizeGB(); ok {
+		_spec.SetField(storagevolume.FieldSizeGB, field.TypeFloat64, value)
 	}
-	if value, ok := svuo.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(storagevolume.FieldAvailableCents, field.TypeInt64, value)
+	if value, ok := svuo.mutation.AddedSizeGB(); ok {
+		_spec.AddField(storagevolume.FieldSizeGB, field.TypeFloat64, value)
 	}
-	if value, ok := svuo.mutation.TotalSpentCents(); ok {
-		_spec.SetField(storagevolume.FieldTotalSpentCents, field.TypeInt64, value)
+	if value, ok := svuo.mutation.PriceSnapshotResourceType(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotResourceType, field.TypeString, value)
 	}
-	if value, ok := svuo.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(storagevolume.FieldTotalSpentCents, field.TypeInt64, value)
+	if value, ok := svuo.mutation.PriceSnapshotCurrency(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotCurrency, field.TypeString, value)
 	}
-	if value, ok := svuo.mutation.Quantity(); ok {
-		_spec.SetField(storagevolume.FieldQuantity, field.TypeFloat64, value)
+	if value, ok := svuo.mutation.PriceSnapshotSource(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotSource, field.TypeString, value)
 	}
-	if value, ok := svuo.mutation.AddedQuantity(); ok {
-		_spec.AddField(storagevolume.FieldQuantity, field.TypeFloat64, value)
+	if value, ok := svuo.mutation.PriceSnapshotUnitPriceCents(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotUnitPriceCents, field.TypeInt64, value)
 	}
-	if value, ok := svuo.mutation.Unit(); ok {
-		_spec.SetField(storagevolume.FieldUnit, field.TypeString, value)
+	if value, ok := svuo.mutation.AddedPriceSnapshotUnitPriceCents(); ok {
+		_spec.AddField(storagevolume.FieldPriceSnapshotUnitPriceCents, field.TypeInt64, value)
 	}
-	if value, ok := svuo.mutation.Reason(); ok {
-		_spec.SetField(storagevolume.FieldReason, field.TypeString, value)
+	if value, ok := svuo.mutation.PriceSnapshotStorageGBMonth(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotStorageGBMonth, field.TypeFloat64, value)
 	}
-	if value, ok := svuo.mutation.Result(); ok {
-		_spec.SetField(storagevolume.FieldResult, field.TypeString, value)
+	if value, ok := svuo.mutation.AddedPriceSnapshotStorageGBMonth(); ok {
+		_spec.AddField(storagevolume.FieldPriceSnapshotStorageGBMonth, field.TypeFloat64, value)
 	}
-	if value, ok := svuo.mutation.Source(); ok {
-		_spec.SetField(storagevolume.FieldSource, field.TypeString, value)
+	if value, ok := svuo.mutation.PriceSnapshotSizeGB(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotSizeGB, field.TypeFloat64, value)
 	}
-	if value, ok := svuo.mutation.Direction(); ok {
-		_spec.SetField(storagevolume.FieldDirection, field.TypeString, value)
-	}
-	if value, ok := svuo.mutation.CreatedAt(); ok {
-		_spec.SetField(storagevolume.FieldCreatedAt, field.TypeTime, value)
-	}
-	if value, ok := svuo.mutation.UpdatedAt(); ok {
-		_spec.SetField(storagevolume.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := svuo.mutation.ArchivedAt(); ok {
-		_spec.SetField(storagevolume.FieldArchivedAt, field.TypeTime, value)
-	}
-	if svuo.mutation.ArchivedAtCleared() {
-		_spec.ClearField(storagevolume.FieldArchivedAt, field.TypeTime)
+	if value, ok := svuo.mutation.AddedPriceSnapshotSizeGB(); ok {
+		_spec.AddField(storagevolume.FieldPriceSnapshotSizeGB, field.TypeFloat64, value)
 	}
 	_node = &StorageVolume{config: svuo.config}
 	_spec.Assign = _node.assignValues

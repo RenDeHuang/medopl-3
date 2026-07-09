@@ -28,6 +28,26 @@ func (wu *WorkspaceUpdate) Where(ps ...predicate.Workspace) *WorkspaceUpdate {
 	return wu
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (wu *WorkspaceUpdate) SetCreatedAt(t time.Time) *WorkspaceUpdate {
+	wu.mutation.SetCreatedAt(t)
+	return wu
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableCreatedAt(t *time.Time) *WorkspaceUpdate {
+	if t != nil {
+		wu.SetCreatedAt(*t)
+	}
+	return wu
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (wu *WorkspaceUpdate) SetUpdatedAt(t time.Time) *WorkspaceUpdate {
+	wu.mutation.SetUpdatedAt(t)
+	return wu
+}
+
 // SetAccountID sets the "account_id" field.
 func (wu *WorkspaceUpdate) SetAccountID(s string) *WorkspaceUpdate {
 	wu.mutation.SetAccountID(s)
@@ -84,48 +104,6 @@ func (wu *WorkspaceUpdate) SetNillableUserID(s *string) *WorkspaceUpdate {
 	return wu
 }
 
-// SetEmail sets the "email" field.
-func (wu *WorkspaceUpdate) SetEmail(s string) *WorkspaceUpdate {
-	wu.mutation.SetEmail(s)
-	return wu
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableEmail(s *string) *WorkspaceUpdate {
-	if s != nil {
-		wu.SetEmail(*s)
-	}
-	return wu
-}
-
-// SetRole sets the "role" field.
-func (wu *WorkspaceUpdate) SetRole(s string) *WorkspaceUpdate {
-	wu.mutation.SetRole(s)
-	return wu
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableRole(s *string) *WorkspaceUpdate {
-	if s != nil {
-		wu.SetRole(*s)
-	}
-	return wu
-}
-
-// SetStatus sets the "status" field.
-func (wu *WorkspaceUpdate) SetStatus(s string) *WorkspaceUpdate {
-	wu.mutation.SetStatus(s)
-	return wu
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableStatus(s *string) *WorkspaceUpdate {
-	if s != nil {
-		wu.SetStatus(*s)
-	}
-	return wu
-}
-
 // SetName sets the "name" field.
 func (wu *WorkspaceUpdate) SetName(s string) *WorkspaceUpdate {
 	wu.mutation.SetName(s)
@@ -136,90 +114,6 @@ func (wu *WorkspaceUpdate) SetName(s string) *WorkspaceUpdate {
 func (wu *WorkspaceUpdate) SetNillableName(s *string) *WorkspaceUpdate {
 	if s != nil {
 		wu.SetName(*s)
-	}
-	return wu
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (wu *WorkspaceUpdate) SetWorkspaceID(s string) *WorkspaceUpdate {
-	wu.mutation.SetWorkspaceID(s)
-	return wu
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableWorkspaceID(s *string) *WorkspaceUpdate {
-	if s != nil {
-		wu.SetWorkspaceID(*s)
-	}
-	return wu
-}
-
-// SetResourceID sets the "resource_id" field.
-func (wu *WorkspaceUpdate) SetResourceID(s string) *WorkspaceUpdate {
-	wu.mutation.SetResourceID(s)
-	return wu
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableResourceID(s *string) *WorkspaceUpdate {
-	if s != nil {
-		wu.SetResourceID(*s)
-	}
-	return wu
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (wu *WorkspaceUpdate) SetResourceKind(s string) *WorkspaceUpdate {
-	wu.mutation.SetResourceKind(s)
-	return wu
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableResourceKind(s *string) *WorkspaceUpdate {
-	if s != nil {
-		wu.SetResourceKind(*s)
-	}
-	return wu
-}
-
-// SetOperationID sets the "operation_id" field.
-func (wu *WorkspaceUpdate) SetOperationID(s string) *WorkspaceUpdate {
-	wu.mutation.SetOperationID(s)
-	return wu
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableOperationID(s *string) *WorkspaceUpdate {
-	if s != nil {
-		wu.SetOperationID(*s)
-	}
-	return wu
-}
-
-// SetProvider sets the "provider" field.
-func (wu *WorkspaceUpdate) SetProvider(s string) *WorkspaceUpdate {
-	wu.mutation.SetProvider(s)
-	return wu
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableProvider(s *string) *WorkspaceUpdate {
-	if s != nil {
-		wu.SetProvider(*s)
-	}
-	return wu
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (wu *WorkspaceUpdate) SetProviderResourceID(s string) *WorkspaceUpdate {
-	wu.mutation.SetProviderResourceID(s)
-	return wu
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableProviderResourceID(s *string) *WorkspaceUpdate {
-	if s != nil {
-		wu.SetProviderResourceID(*s)
 	}
 	return wu
 }
@@ -238,323 +132,241 @@ func (wu *WorkspaceUpdate) SetNillableURL(s *string) *WorkspaceUpdate {
 	return wu
 }
 
-// SetHoldID sets the "hold_id" field.
-func (wu *WorkspaceUpdate) SetHoldID(s string) *WorkspaceUpdate {
-	wu.mutation.SetHoldID(s)
+// SetState sets the "state" field.
+func (wu *WorkspaceUpdate) SetState(s string) *WorkspaceUpdate {
+	wu.mutation.SetState(s)
 	return wu
 }
 
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableHoldID(s *string) *WorkspaceUpdate {
+// SetNillableState sets the "state" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableState(s *string) *WorkspaceUpdate {
 	if s != nil {
-		wu.SetHoldID(*s)
+		wu.SetState(*s)
 	}
 	return wu
 }
 
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (wu *WorkspaceUpdate) SetHoldReleaseID(s string) *WorkspaceUpdate {
-	wu.mutation.SetHoldReleaseID(s)
+// SetStatus sets the "status" field.
+func (wu *WorkspaceUpdate) SetStatus(s string) *WorkspaceUpdate {
+	wu.mutation.SetStatus(s)
 	return wu
 }
 
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableHoldReleaseID(s *string) *WorkspaceUpdate {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableStatus(s *string) *WorkspaceUpdate {
 	if s != nil {
-		wu.SetHoldReleaseID(*s)
+		wu.SetStatus(*s)
 	}
 	return wu
 }
 
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (wu *WorkspaceUpdate) SetLedgerEntryID(s string) *WorkspaceUpdate {
-	wu.mutation.SetLedgerEntryID(s)
+// SetStorageID sets the "storage_id" field.
+func (wu *WorkspaceUpdate) SetStorageID(s string) *WorkspaceUpdate {
+	wu.mutation.SetStorageID(s)
 	return wu
 }
 
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableLedgerEntryID(s *string) *WorkspaceUpdate {
+// SetNillableStorageID sets the "storage_id" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableStorageID(s *string) *WorkspaceUpdate {
 	if s != nil {
-		wu.SetLedgerEntryID(*s)
+		wu.SetStorageID(*s)
 	}
 	return wu
 }
 
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (wu *WorkspaceUpdate) SetWalletTransactionID(s string) *WorkspaceUpdate {
-	wu.mutation.SetWalletTransactionID(s)
+// SetCurrentComputeAllocationID sets the "current_compute_allocation_id" field.
+func (wu *WorkspaceUpdate) SetCurrentComputeAllocationID(s string) *WorkspaceUpdate {
+	wu.mutation.SetCurrentComputeAllocationID(s)
 	return wu
 }
 
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableWalletTransactionID(s *string) *WorkspaceUpdate {
+// SetNillableCurrentComputeAllocationID sets the "current_compute_allocation_id" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableCurrentComputeAllocationID(s *string) *WorkspaceUpdate {
 	if s != nil {
-		wu.SetWalletTransactionID(*s)
+		wu.SetCurrentComputeAllocationID(*s)
 	}
 	return wu
 }
 
-// SetSettlementID sets the "settlement_id" field.
-func (wu *WorkspaceUpdate) SetSettlementID(s string) *WorkspaceUpdate {
-	wu.mutation.SetSettlementID(s)
+// SetCurrentAttachmentID sets the "current_attachment_id" field.
+func (wu *WorkspaceUpdate) SetCurrentAttachmentID(s string) *WorkspaceUpdate {
+	wu.mutation.SetCurrentAttachmentID(s)
 	return wu
 }
 
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableSettlementID(s *string) *WorkspaceUpdate {
+// SetNillableCurrentAttachmentID sets the "current_attachment_id" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableCurrentAttachmentID(s *string) *WorkspaceUpdate {
 	if s != nil {
-		wu.SetSettlementID(*s)
+		wu.SetCurrentAttachmentID(*s)
 	}
 	return wu
 }
 
-// SetPricingVersion sets the "pricing_version" field.
-func (wu *WorkspaceUpdate) SetPricingVersion(s string) *WorkspaceUpdate {
-	wu.mutation.SetPricingVersion(s)
+// SetRuntimeID sets the "runtime_id" field.
+func (wu *WorkspaceUpdate) SetRuntimeID(s string) *WorkspaceUpdate {
+	wu.mutation.SetRuntimeID(s)
 	return wu
 }
 
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillablePricingVersion(s *string) *WorkspaceUpdate {
+// SetNillableRuntimeID sets the "runtime_id" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableRuntimeID(s *string) *WorkspaceUpdate {
 	if s != nil {
-		wu.SetPricingVersion(*s)
+		wu.SetRuntimeID(*s)
 	}
 	return wu
 }
 
-// SetAmountCents sets the "amount_cents" field.
-func (wu *WorkspaceUpdate) SetAmountCents(i int64) *WorkspaceUpdate {
-	wu.mutation.ResetAmountCents()
-	wu.mutation.SetAmountCents(i)
+// SetRuntimeServiceName sets the "runtime_service_name" field.
+func (wu *WorkspaceUpdate) SetRuntimeServiceName(s string) *WorkspaceUpdate {
+	wu.mutation.SetRuntimeServiceName(s)
 	return wu
 }
 
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableAmountCents(i *int64) *WorkspaceUpdate {
-	if i != nil {
-		wu.SetAmountCents(*i)
-	}
-	return wu
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (wu *WorkspaceUpdate) AddAmountCents(i int64) *WorkspaceUpdate {
-	wu.mutation.AddAmountCents(i)
-	return wu
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (wu *WorkspaceUpdate) SetBalanceCents(i int64) *WorkspaceUpdate {
-	wu.mutation.ResetBalanceCents()
-	wu.mutation.SetBalanceCents(i)
-	return wu
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableBalanceCents(i *int64) *WorkspaceUpdate {
-	if i != nil {
-		wu.SetBalanceCents(*i)
-	}
-	return wu
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (wu *WorkspaceUpdate) AddBalanceCents(i int64) *WorkspaceUpdate {
-	wu.mutation.AddBalanceCents(i)
-	return wu
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (wu *WorkspaceUpdate) SetFrozenCents(i int64) *WorkspaceUpdate {
-	wu.mutation.ResetFrozenCents()
-	wu.mutation.SetFrozenCents(i)
-	return wu
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableFrozenCents(i *int64) *WorkspaceUpdate {
-	if i != nil {
-		wu.SetFrozenCents(*i)
-	}
-	return wu
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (wu *WorkspaceUpdate) AddFrozenCents(i int64) *WorkspaceUpdate {
-	wu.mutation.AddFrozenCents(i)
-	return wu
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (wu *WorkspaceUpdate) SetAvailableCents(i int64) *WorkspaceUpdate {
-	wu.mutation.ResetAvailableCents()
-	wu.mutation.SetAvailableCents(i)
-	return wu
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableAvailableCents(i *int64) *WorkspaceUpdate {
-	if i != nil {
-		wu.SetAvailableCents(*i)
-	}
-	return wu
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (wu *WorkspaceUpdate) AddAvailableCents(i int64) *WorkspaceUpdate {
-	wu.mutation.AddAvailableCents(i)
-	return wu
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (wu *WorkspaceUpdate) SetTotalSpentCents(i int64) *WorkspaceUpdate {
-	wu.mutation.ResetTotalSpentCents()
-	wu.mutation.SetTotalSpentCents(i)
-	return wu
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableTotalSpentCents(i *int64) *WorkspaceUpdate {
-	if i != nil {
-		wu.SetTotalSpentCents(*i)
-	}
-	return wu
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (wu *WorkspaceUpdate) AddTotalSpentCents(i int64) *WorkspaceUpdate {
-	wu.mutation.AddTotalSpentCents(i)
-	return wu
-}
-
-// SetQuantity sets the "quantity" field.
-func (wu *WorkspaceUpdate) SetQuantity(f float64) *WorkspaceUpdate {
-	wu.mutation.ResetQuantity()
-	wu.mutation.SetQuantity(f)
-	return wu
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableQuantity(f *float64) *WorkspaceUpdate {
-	if f != nil {
-		wu.SetQuantity(*f)
-	}
-	return wu
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (wu *WorkspaceUpdate) AddQuantity(f float64) *WorkspaceUpdate {
-	wu.mutation.AddQuantity(f)
-	return wu
-}
-
-// SetUnit sets the "unit" field.
-func (wu *WorkspaceUpdate) SetUnit(s string) *WorkspaceUpdate {
-	wu.mutation.SetUnit(s)
-	return wu
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableUnit(s *string) *WorkspaceUpdate {
+// SetNillableRuntimeServiceName sets the "runtime_service_name" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableRuntimeServiceName(s *string) *WorkspaceUpdate {
 	if s != nil {
-		wu.SetUnit(*s)
+		wu.SetRuntimeServiceName(*s)
 	}
 	return wu
 }
 
-// SetReason sets the "reason" field.
-func (wu *WorkspaceUpdate) SetReason(s string) *WorkspaceUpdate {
-	wu.mutation.SetReason(s)
+// SetRuntimeServiceNameRoot sets the "runtime_service_name_root" field.
+func (wu *WorkspaceUpdate) SetRuntimeServiceNameRoot(s string) *WorkspaceUpdate {
+	wu.mutation.SetRuntimeServiceNameRoot(s)
 	return wu
 }
 
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableReason(s *string) *WorkspaceUpdate {
+// SetNillableRuntimeServiceNameRoot sets the "runtime_service_name_root" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableRuntimeServiceNameRoot(s *string) *WorkspaceUpdate {
 	if s != nil {
-		wu.SetReason(*s)
+		wu.SetRuntimeServiceNameRoot(*s)
 	}
 	return wu
 }
 
-// SetResult sets the "result" field.
-func (wu *WorkspaceUpdate) SetResult(s string) *WorkspaceUpdate {
-	wu.mutation.SetResult(s)
+// SetServiceName sets the "service_name" field.
+func (wu *WorkspaceUpdate) SetServiceName(s string) *WorkspaceUpdate {
+	wu.mutation.SetServiceName(s)
 	return wu
 }
 
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableResult(s *string) *WorkspaceUpdate {
+// SetNillableServiceName sets the "service_name" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableServiceName(s *string) *WorkspaceUpdate {
 	if s != nil {
-		wu.SetResult(*s)
+		wu.SetServiceName(*s)
 	}
 	return wu
 }
 
-// SetSource sets the "source" field.
-func (wu *WorkspaceUpdate) SetSource(s string) *WorkspaceUpdate {
-	wu.mutation.SetSource(s)
+// SetAccessTokenStatus sets the "access_token_status" field.
+func (wu *WorkspaceUpdate) SetAccessTokenStatus(s string) *WorkspaceUpdate {
+	wu.mutation.SetAccessTokenStatus(s)
 	return wu
 }
 
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableSource(s *string) *WorkspaceUpdate {
+// SetNillableAccessTokenStatus sets the "access_token_status" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableAccessTokenStatus(s *string) *WorkspaceUpdate {
 	if s != nil {
-		wu.SetSource(*s)
+		wu.SetAccessTokenStatus(*s)
 	}
 	return wu
 }
 
-// SetDirection sets the "direction" field.
-func (wu *WorkspaceUpdate) SetDirection(s string) *WorkspaceUpdate {
-	wu.mutation.SetDirection(s)
+// SetAccessAccount sets the "access_account" field.
+func (wu *WorkspaceUpdate) SetAccessAccount(s string) *WorkspaceUpdate {
+	wu.mutation.SetAccessAccount(s)
 	return wu
 }
 
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableDirection(s *string) *WorkspaceUpdate {
+// SetNillableAccessAccount sets the "access_account" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableAccessAccount(s *string) *WorkspaceUpdate {
 	if s != nil {
-		wu.SetDirection(*s)
+		wu.SetAccessAccount(*s)
 	}
 	return wu
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (wu *WorkspaceUpdate) SetCreatedAt(t time.Time) *WorkspaceUpdate {
-	wu.mutation.SetCreatedAt(t)
+// SetAccessUsername sets the "access_username" field.
+func (wu *WorkspaceUpdate) SetAccessUsername(s string) *WorkspaceUpdate {
+	wu.mutation.SetAccessUsername(s)
 	return wu
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableCreatedAt(t *time.Time) *WorkspaceUpdate {
-	if t != nil {
-		wu.SetCreatedAt(*t)
+// SetNillableAccessUsername sets the "access_username" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableAccessUsername(s *string) *WorkspaceUpdate {
+	if s != nil {
+		wu.SetAccessUsername(*s)
 	}
 	return wu
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (wu *WorkspaceUpdate) SetUpdatedAt(t time.Time) *WorkspaceUpdate {
-	wu.mutation.SetUpdatedAt(t)
+// SetAccessPassword sets the "access_password" field.
+func (wu *WorkspaceUpdate) SetAccessPassword(s string) *WorkspaceUpdate {
+	wu.mutation.SetAccessPassword(s)
 	return wu
 }
 
-// SetArchivedAt sets the "archived_at" field.
-func (wu *WorkspaceUpdate) SetArchivedAt(t time.Time) *WorkspaceUpdate {
-	wu.mutation.SetArchivedAt(t)
-	return wu
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableArchivedAt(t *time.Time) *WorkspaceUpdate {
-	if t != nil {
-		wu.SetArchivedAt(*t)
+// SetNillableAccessPassword sets the "access_password" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableAccessPassword(s *string) *WorkspaceUpdate {
+	if s != nil {
+		wu.SetAccessPassword(*s)
 	}
 	return wu
 }
 
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (wu *WorkspaceUpdate) ClearArchivedAt() *WorkspaceUpdate {
-	wu.mutation.ClearArchivedAt()
+// SetCredentialStatus sets the "credential_status" field.
+func (wu *WorkspaceUpdate) SetCredentialStatus(s string) *WorkspaceUpdate {
+	wu.mutation.SetCredentialStatus(s)
+	return wu
+}
+
+// SetNillableCredentialStatus sets the "credential_status" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableCredentialStatus(s *string) *WorkspaceUpdate {
+	if s != nil {
+		wu.SetCredentialStatus(*s)
+	}
+	return wu
+}
+
+// SetCredentialVersion sets the "credential_version" field.
+func (wu *WorkspaceUpdate) SetCredentialVersion(s string) *WorkspaceUpdate {
+	wu.mutation.SetCredentialVersion(s)
+	return wu
+}
+
+// SetNillableCredentialVersion sets the "credential_version" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableCredentialVersion(s *string) *WorkspaceUpdate {
+	if s != nil {
+		wu.SetCredentialVersion(*s)
+	}
+	return wu
+}
+
+// SetCredentialSecretRef sets the "credential_secret_ref" field.
+func (wu *WorkspaceUpdate) SetCredentialSecretRef(s string) *WorkspaceUpdate {
+	wu.mutation.SetCredentialSecretRef(s)
+	return wu
+}
+
+// SetNillableCredentialSecretRef sets the "credential_secret_ref" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableCredentialSecretRef(s *string) *WorkspaceUpdate {
+	if s != nil {
+		wu.SetCredentialSecretRef(*s)
+	}
+	return wu
+}
+
+// SetAccessRequiresLogin sets the "access_requires_login" field.
+func (wu *WorkspaceUpdate) SetAccessRequiresLogin(b bool) *WorkspaceUpdate {
+	wu.mutation.SetAccessRequiresLogin(b)
+	return wu
+}
+
+// SetNillableAccessRequiresLogin sets the "access_requires_login" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableAccessRequiresLogin(b *bool) *WorkspaceUpdate {
+	if b != nil {
+		wu.SetAccessRequiresLogin(*b)
+	}
 	return wu
 }
 
@@ -608,6 +420,12 @@ func (wu *WorkspaceUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if value, ok := wu.mutation.CreatedAt(); ok {
+		_spec.SetField(workspace.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := wu.mutation.UpdatedAt(); ok {
+		_spec.SetField(workspace.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := wu.mutation.AccountID(); ok {
 		_spec.SetField(workspace.FieldAccountID, field.TypeString, value)
 	}
@@ -620,119 +438,62 @@ func (wu *WorkspaceUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := wu.mutation.UserID(); ok {
 		_spec.SetField(workspace.FieldUserID, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.Email(); ok {
-		_spec.SetField(workspace.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := wu.mutation.Role(); ok {
-		_spec.SetField(workspace.FieldRole, field.TypeString, value)
-	}
-	if value, ok := wu.mutation.Status(); ok {
-		_spec.SetField(workspace.FieldStatus, field.TypeString, value)
-	}
 	if value, ok := wu.mutation.Name(); ok {
 		_spec.SetField(workspace.FieldName, field.TypeString, value)
-	}
-	if value, ok := wu.mutation.WorkspaceID(); ok {
-		_spec.SetField(workspace.FieldWorkspaceID, field.TypeString, value)
-	}
-	if value, ok := wu.mutation.ResourceID(); ok {
-		_spec.SetField(workspace.FieldResourceID, field.TypeString, value)
-	}
-	if value, ok := wu.mutation.ResourceKind(); ok {
-		_spec.SetField(workspace.FieldResourceKind, field.TypeString, value)
-	}
-	if value, ok := wu.mutation.OperationID(); ok {
-		_spec.SetField(workspace.FieldOperationID, field.TypeString, value)
-	}
-	if value, ok := wu.mutation.Provider(); ok {
-		_spec.SetField(workspace.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := wu.mutation.ProviderResourceID(); ok {
-		_spec.SetField(workspace.FieldProviderResourceID, field.TypeString, value)
 	}
 	if value, ok := wu.mutation.URL(); ok {
 		_spec.SetField(workspace.FieldURL, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.HoldID(); ok {
-		_spec.SetField(workspace.FieldHoldID, field.TypeString, value)
+	if value, ok := wu.mutation.State(); ok {
+		_spec.SetField(workspace.FieldState, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.HoldReleaseID(); ok {
-		_spec.SetField(workspace.FieldHoldReleaseID, field.TypeString, value)
+	if value, ok := wu.mutation.Status(); ok {
+		_spec.SetField(workspace.FieldStatus, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.LedgerEntryID(); ok {
-		_spec.SetField(workspace.FieldLedgerEntryID, field.TypeString, value)
+	if value, ok := wu.mutation.StorageID(); ok {
+		_spec.SetField(workspace.FieldStorageID, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.WalletTransactionID(); ok {
-		_spec.SetField(workspace.FieldWalletTransactionID, field.TypeString, value)
+	if value, ok := wu.mutation.CurrentComputeAllocationID(); ok {
+		_spec.SetField(workspace.FieldCurrentComputeAllocationID, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.SettlementID(); ok {
-		_spec.SetField(workspace.FieldSettlementID, field.TypeString, value)
+	if value, ok := wu.mutation.CurrentAttachmentID(); ok {
+		_spec.SetField(workspace.FieldCurrentAttachmentID, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.PricingVersion(); ok {
-		_spec.SetField(workspace.FieldPricingVersion, field.TypeString, value)
+	if value, ok := wu.mutation.RuntimeID(); ok {
+		_spec.SetField(workspace.FieldRuntimeID, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.AmountCents(); ok {
-		_spec.SetField(workspace.FieldAmountCents, field.TypeInt64, value)
+	if value, ok := wu.mutation.RuntimeServiceName(); ok {
+		_spec.SetField(workspace.FieldRuntimeServiceName, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.AddedAmountCents(); ok {
-		_spec.AddField(workspace.FieldAmountCents, field.TypeInt64, value)
+	if value, ok := wu.mutation.RuntimeServiceNameRoot(); ok {
+		_spec.SetField(workspace.FieldRuntimeServiceNameRoot, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.BalanceCents(); ok {
-		_spec.SetField(workspace.FieldBalanceCents, field.TypeInt64, value)
+	if value, ok := wu.mutation.ServiceName(); ok {
+		_spec.SetField(workspace.FieldServiceName, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(workspace.FieldBalanceCents, field.TypeInt64, value)
+	if value, ok := wu.mutation.AccessTokenStatus(); ok {
+		_spec.SetField(workspace.FieldAccessTokenStatus, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.FrozenCents(); ok {
-		_spec.SetField(workspace.FieldFrozenCents, field.TypeInt64, value)
+	if value, ok := wu.mutation.AccessAccount(); ok {
+		_spec.SetField(workspace.FieldAccessAccount, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(workspace.FieldFrozenCents, field.TypeInt64, value)
+	if value, ok := wu.mutation.AccessUsername(); ok {
+		_spec.SetField(workspace.FieldAccessUsername, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.AvailableCents(); ok {
-		_spec.SetField(workspace.FieldAvailableCents, field.TypeInt64, value)
+	if value, ok := wu.mutation.AccessPassword(); ok {
+		_spec.SetField(workspace.FieldAccessPassword, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(workspace.FieldAvailableCents, field.TypeInt64, value)
+	if value, ok := wu.mutation.CredentialStatus(); ok {
+		_spec.SetField(workspace.FieldCredentialStatus, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.TotalSpentCents(); ok {
-		_spec.SetField(workspace.FieldTotalSpentCents, field.TypeInt64, value)
+	if value, ok := wu.mutation.CredentialVersion(); ok {
+		_spec.SetField(workspace.FieldCredentialVersion, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(workspace.FieldTotalSpentCents, field.TypeInt64, value)
+	if value, ok := wu.mutation.CredentialSecretRef(); ok {
+		_spec.SetField(workspace.FieldCredentialSecretRef, field.TypeString, value)
 	}
-	if value, ok := wu.mutation.Quantity(); ok {
-		_spec.SetField(workspace.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := wu.mutation.AddedQuantity(); ok {
-		_spec.AddField(workspace.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := wu.mutation.Unit(); ok {
-		_spec.SetField(workspace.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := wu.mutation.Reason(); ok {
-		_spec.SetField(workspace.FieldReason, field.TypeString, value)
-	}
-	if value, ok := wu.mutation.Result(); ok {
-		_spec.SetField(workspace.FieldResult, field.TypeString, value)
-	}
-	if value, ok := wu.mutation.Source(); ok {
-		_spec.SetField(workspace.FieldSource, field.TypeString, value)
-	}
-	if value, ok := wu.mutation.Direction(); ok {
-		_spec.SetField(workspace.FieldDirection, field.TypeString, value)
-	}
-	if value, ok := wu.mutation.CreatedAt(); ok {
-		_spec.SetField(workspace.FieldCreatedAt, field.TypeTime, value)
-	}
-	if value, ok := wu.mutation.UpdatedAt(); ok {
-		_spec.SetField(workspace.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := wu.mutation.ArchivedAt(); ok {
-		_spec.SetField(workspace.FieldArchivedAt, field.TypeTime, value)
-	}
-	if wu.mutation.ArchivedAtCleared() {
-		_spec.ClearField(workspace.FieldArchivedAt, field.TypeTime)
+	if value, ok := wu.mutation.AccessRequiresLogin(); ok {
+		_spec.SetField(workspace.FieldAccessRequiresLogin, field.TypeBool, value)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, wu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -752,6 +513,26 @@ type WorkspaceUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *WorkspaceMutation
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (wuo *WorkspaceUpdateOne) SetCreatedAt(t time.Time) *WorkspaceUpdateOne {
+	wuo.mutation.SetCreatedAt(t)
+	return wuo
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableCreatedAt(t *time.Time) *WorkspaceUpdateOne {
+	if t != nil {
+		wuo.SetCreatedAt(*t)
+	}
+	return wuo
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (wuo *WorkspaceUpdateOne) SetUpdatedAt(t time.Time) *WorkspaceUpdateOne {
+	wuo.mutation.SetUpdatedAt(t)
+	return wuo
 }
 
 // SetAccountID sets the "account_id" field.
@@ -810,48 +591,6 @@ func (wuo *WorkspaceUpdateOne) SetNillableUserID(s *string) *WorkspaceUpdateOne 
 	return wuo
 }
 
-// SetEmail sets the "email" field.
-func (wuo *WorkspaceUpdateOne) SetEmail(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetEmail(s)
-	return wuo
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableEmail(s *string) *WorkspaceUpdateOne {
-	if s != nil {
-		wuo.SetEmail(*s)
-	}
-	return wuo
-}
-
-// SetRole sets the "role" field.
-func (wuo *WorkspaceUpdateOne) SetRole(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetRole(s)
-	return wuo
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableRole(s *string) *WorkspaceUpdateOne {
-	if s != nil {
-		wuo.SetRole(*s)
-	}
-	return wuo
-}
-
-// SetStatus sets the "status" field.
-func (wuo *WorkspaceUpdateOne) SetStatus(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetStatus(s)
-	return wuo
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableStatus(s *string) *WorkspaceUpdateOne {
-	if s != nil {
-		wuo.SetStatus(*s)
-	}
-	return wuo
-}
-
 // SetName sets the "name" field.
 func (wuo *WorkspaceUpdateOne) SetName(s string) *WorkspaceUpdateOne {
 	wuo.mutation.SetName(s)
@@ -862,90 +601,6 @@ func (wuo *WorkspaceUpdateOne) SetName(s string) *WorkspaceUpdateOne {
 func (wuo *WorkspaceUpdateOne) SetNillableName(s *string) *WorkspaceUpdateOne {
 	if s != nil {
 		wuo.SetName(*s)
-	}
-	return wuo
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (wuo *WorkspaceUpdateOne) SetWorkspaceID(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetWorkspaceID(s)
-	return wuo
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableWorkspaceID(s *string) *WorkspaceUpdateOne {
-	if s != nil {
-		wuo.SetWorkspaceID(*s)
-	}
-	return wuo
-}
-
-// SetResourceID sets the "resource_id" field.
-func (wuo *WorkspaceUpdateOne) SetResourceID(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetResourceID(s)
-	return wuo
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableResourceID(s *string) *WorkspaceUpdateOne {
-	if s != nil {
-		wuo.SetResourceID(*s)
-	}
-	return wuo
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (wuo *WorkspaceUpdateOne) SetResourceKind(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetResourceKind(s)
-	return wuo
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableResourceKind(s *string) *WorkspaceUpdateOne {
-	if s != nil {
-		wuo.SetResourceKind(*s)
-	}
-	return wuo
-}
-
-// SetOperationID sets the "operation_id" field.
-func (wuo *WorkspaceUpdateOne) SetOperationID(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetOperationID(s)
-	return wuo
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableOperationID(s *string) *WorkspaceUpdateOne {
-	if s != nil {
-		wuo.SetOperationID(*s)
-	}
-	return wuo
-}
-
-// SetProvider sets the "provider" field.
-func (wuo *WorkspaceUpdateOne) SetProvider(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetProvider(s)
-	return wuo
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableProvider(s *string) *WorkspaceUpdateOne {
-	if s != nil {
-		wuo.SetProvider(*s)
-	}
-	return wuo
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (wuo *WorkspaceUpdateOne) SetProviderResourceID(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetProviderResourceID(s)
-	return wuo
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableProviderResourceID(s *string) *WorkspaceUpdateOne {
-	if s != nil {
-		wuo.SetProviderResourceID(*s)
 	}
 	return wuo
 }
@@ -964,323 +619,241 @@ func (wuo *WorkspaceUpdateOne) SetNillableURL(s *string) *WorkspaceUpdateOne {
 	return wuo
 }
 
-// SetHoldID sets the "hold_id" field.
-func (wuo *WorkspaceUpdateOne) SetHoldID(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetHoldID(s)
+// SetState sets the "state" field.
+func (wuo *WorkspaceUpdateOne) SetState(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetState(s)
 	return wuo
 }
 
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableHoldID(s *string) *WorkspaceUpdateOne {
+// SetNillableState sets the "state" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableState(s *string) *WorkspaceUpdateOne {
 	if s != nil {
-		wuo.SetHoldID(*s)
+		wuo.SetState(*s)
 	}
 	return wuo
 }
 
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (wuo *WorkspaceUpdateOne) SetHoldReleaseID(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetHoldReleaseID(s)
+// SetStatus sets the "status" field.
+func (wuo *WorkspaceUpdateOne) SetStatus(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetStatus(s)
 	return wuo
 }
 
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableHoldReleaseID(s *string) *WorkspaceUpdateOne {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableStatus(s *string) *WorkspaceUpdateOne {
 	if s != nil {
-		wuo.SetHoldReleaseID(*s)
+		wuo.SetStatus(*s)
 	}
 	return wuo
 }
 
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (wuo *WorkspaceUpdateOne) SetLedgerEntryID(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetLedgerEntryID(s)
+// SetStorageID sets the "storage_id" field.
+func (wuo *WorkspaceUpdateOne) SetStorageID(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetStorageID(s)
 	return wuo
 }
 
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableLedgerEntryID(s *string) *WorkspaceUpdateOne {
+// SetNillableStorageID sets the "storage_id" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableStorageID(s *string) *WorkspaceUpdateOne {
 	if s != nil {
-		wuo.SetLedgerEntryID(*s)
+		wuo.SetStorageID(*s)
 	}
 	return wuo
 }
 
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (wuo *WorkspaceUpdateOne) SetWalletTransactionID(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetWalletTransactionID(s)
+// SetCurrentComputeAllocationID sets the "current_compute_allocation_id" field.
+func (wuo *WorkspaceUpdateOne) SetCurrentComputeAllocationID(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetCurrentComputeAllocationID(s)
 	return wuo
 }
 
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableWalletTransactionID(s *string) *WorkspaceUpdateOne {
+// SetNillableCurrentComputeAllocationID sets the "current_compute_allocation_id" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableCurrentComputeAllocationID(s *string) *WorkspaceUpdateOne {
 	if s != nil {
-		wuo.SetWalletTransactionID(*s)
+		wuo.SetCurrentComputeAllocationID(*s)
 	}
 	return wuo
 }
 
-// SetSettlementID sets the "settlement_id" field.
-func (wuo *WorkspaceUpdateOne) SetSettlementID(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetSettlementID(s)
+// SetCurrentAttachmentID sets the "current_attachment_id" field.
+func (wuo *WorkspaceUpdateOne) SetCurrentAttachmentID(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetCurrentAttachmentID(s)
 	return wuo
 }
 
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableSettlementID(s *string) *WorkspaceUpdateOne {
+// SetNillableCurrentAttachmentID sets the "current_attachment_id" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableCurrentAttachmentID(s *string) *WorkspaceUpdateOne {
 	if s != nil {
-		wuo.SetSettlementID(*s)
+		wuo.SetCurrentAttachmentID(*s)
 	}
 	return wuo
 }
 
-// SetPricingVersion sets the "pricing_version" field.
-func (wuo *WorkspaceUpdateOne) SetPricingVersion(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetPricingVersion(s)
+// SetRuntimeID sets the "runtime_id" field.
+func (wuo *WorkspaceUpdateOne) SetRuntimeID(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetRuntimeID(s)
 	return wuo
 }
 
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillablePricingVersion(s *string) *WorkspaceUpdateOne {
+// SetNillableRuntimeID sets the "runtime_id" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableRuntimeID(s *string) *WorkspaceUpdateOne {
 	if s != nil {
-		wuo.SetPricingVersion(*s)
+		wuo.SetRuntimeID(*s)
 	}
 	return wuo
 }
 
-// SetAmountCents sets the "amount_cents" field.
-func (wuo *WorkspaceUpdateOne) SetAmountCents(i int64) *WorkspaceUpdateOne {
-	wuo.mutation.ResetAmountCents()
-	wuo.mutation.SetAmountCents(i)
+// SetRuntimeServiceName sets the "runtime_service_name" field.
+func (wuo *WorkspaceUpdateOne) SetRuntimeServiceName(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetRuntimeServiceName(s)
 	return wuo
 }
 
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableAmountCents(i *int64) *WorkspaceUpdateOne {
-	if i != nil {
-		wuo.SetAmountCents(*i)
-	}
-	return wuo
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (wuo *WorkspaceUpdateOne) AddAmountCents(i int64) *WorkspaceUpdateOne {
-	wuo.mutation.AddAmountCents(i)
-	return wuo
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (wuo *WorkspaceUpdateOne) SetBalanceCents(i int64) *WorkspaceUpdateOne {
-	wuo.mutation.ResetBalanceCents()
-	wuo.mutation.SetBalanceCents(i)
-	return wuo
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableBalanceCents(i *int64) *WorkspaceUpdateOne {
-	if i != nil {
-		wuo.SetBalanceCents(*i)
-	}
-	return wuo
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (wuo *WorkspaceUpdateOne) AddBalanceCents(i int64) *WorkspaceUpdateOne {
-	wuo.mutation.AddBalanceCents(i)
-	return wuo
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (wuo *WorkspaceUpdateOne) SetFrozenCents(i int64) *WorkspaceUpdateOne {
-	wuo.mutation.ResetFrozenCents()
-	wuo.mutation.SetFrozenCents(i)
-	return wuo
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableFrozenCents(i *int64) *WorkspaceUpdateOne {
-	if i != nil {
-		wuo.SetFrozenCents(*i)
-	}
-	return wuo
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (wuo *WorkspaceUpdateOne) AddFrozenCents(i int64) *WorkspaceUpdateOne {
-	wuo.mutation.AddFrozenCents(i)
-	return wuo
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (wuo *WorkspaceUpdateOne) SetAvailableCents(i int64) *WorkspaceUpdateOne {
-	wuo.mutation.ResetAvailableCents()
-	wuo.mutation.SetAvailableCents(i)
-	return wuo
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableAvailableCents(i *int64) *WorkspaceUpdateOne {
-	if i != nil {
-		wuo.SetAvailableCents(*i)
-	}
-	return wuo
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (wuo *WorkspaceUpdateOne) AddAvailableCents(i int64) *WorkspaceUpdateOne {
-	wuo.mutation.AddAvailableCents(i)
-	return wuo
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (wuo *WorkspaceUpdateOne) SetTotalSpentCents(i int64) *WorkspaceUpdateOne {
-	wuo.mutation.ResetTotalSpentCents()
-	wuo.mutation.SetTotalSpentCents(i)
-	return wuo
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableTotalSpentCents(i *int64) *WorkspaceUpdateOne {
-	if i != nil {
-		wuo.SetTotalSpentCents(*i)
-	}
-	return wuo
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (wuo *WorkspaceUpdateOne) AddTotalSpentCents(i int64) *WorkspaceUpdateOne {
-	wuo.mutation.AddTotalSpentCents(i)
-	return wuo
-}
-
-// SetQuantity sets the "quantity" field.
-func (wuo *WorkspaceUpdateOne) SetQuantity(f float64) *WorkspaceUpdateOne {
-	wuo.mutation.ResetQuantity()
-	wuo.mutation.SetQuantity(f)
-	return wuo
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableQuantity(f *float64) *WorkspaceUpdateOne {
-	if f != nil {
-		wuo.SetQuantity(*f)
-	}
-	return wuo
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (wuo *WorkspaceUpdateOne) AddQuantity(f float64) *WorkspaceUpdateOne {
-	wuo.mutation.AddQuantity(f)
-	return wuo
-}
-
-// SetUnit sets the "unit" field.
-func (wuo *WorkspaceUpdateOne) SetUnit(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetUnit(s)
-	return wuo
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableUnit(s *string) *WorkspaceUpdateOne {
+// SetNillableRuntimeServiceName sets the "runtime_service_name" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableRuntimeServiceName(s *string) *WorkspaceUpdateOne {
 	if s != nil {
-		wuo.SetUnit(*s)
+		wuo.SetRuntimeServiceName(*s)
 	}
 	return wuo
 }
 
-// SetReason sets the "reason" field.
-func (wuo *WorkspaceUpdateOne) SetReason(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetReason(s)
+// SetRuntimeServiceNameRoot sets the "runtime_service_name_root" field.
+func (wuo *WorkspaceUpdateOne) SetRuntimeServiceNameRoot(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetRuntimeServiceNameRoot(s)
 	return wuo
 }
 
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableReason(s *string) *WorkspaceUpdateOne {
+// SetNillableRuntimeServiceNameRoot sets the "runtime_service_name_root" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableRuntimeServiceNameRoot(s *string) *WorkspaceUpdateOne {
 	if s != nil {
-		wuo.SetReason(*s)
+		wuo.SetRuntimeServiceNameRoot(*s)
 	}
 	return wuo
 }
 
-// SetResult sets the "result" field.
-func (wuo *WorkspaceUpdateOne) SetResult(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetResult(s)
+// SetServiceName sets the "service_name" field.
+func (wuo *WorkspaceUpdateOne) SetServiceName(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetServiceName(s)
 	return wuo
 }
 
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableResult(s *string) *WorkspaceUpdateOne {
+// SetNillableServiceName sets the "service_name" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableServiceName(s *string) *WorkspaceUpdateOne {
 	if s != nil {
-		wuo.SetResult(*s)
+		wuo.SetServiceName(*s)
 	}
 	return wuo
 }
 
-// SetSource sets the "source" field.
-func (wuo *WorkspaceUpdateOne) SetSource(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetSource(s)
+// SetAccessTokenStatus sets the "access_token_status" field.
+func (wuo *WorkspaceUpdateOne) SetAccessTokenStatus(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetAccessTokenStatus(s)
 	return wuo
 }
 
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableSource(s *string) *WorkspaceUpdateOne {
+// SetNillableAccessTokenStatus sets the "access_token_status" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableAccessTokenStatus(s *string) *WorkspaceUpdateOne {
 	if s != nil {
-		wuo.SetSource(*s)
+		wuo.SetAccessTokenStatus(*s)
 	}
 	return wuo
 }
 
-// SetDirection sets the "direction" field.
-func (wuo *WorkspaceUpdateOne) SetDirection(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetDirection(s)
+// SetAccessAccount sets the "access_account" field.
+func (wuo *WorkspaceUpdateOne) SetAccessAccount(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetAccessAccount(s)
 	return wuo
 }
 
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableDirection(s *string) *WorkspaceUpdateOne {
+// SetNillableAccessAccount sets the "access_account" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableAccessAccount(s *string) *WorkspaceUpdateOne {
 	if s != nil {
-		wuo.SetDirection(*s)
+		wuo.SetAccessAccount(*s)
 	}
 	return wuo
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (wuo *WorkspaceUpdateOne) SetCreatedAt(t time.Time) *WorkspaceUpdateOne {
-	wuo.mutation.SetCreatedAt(t)
+// SetAccessUsername sets the "access_username" field.
+func (wuo *WorkspaceUpdateOne) SetAccessUsername(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetAccessUsername(s)
 	return wuo
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableCreatedAt(t *time.Time) *WorkspaceUpdateOne {
-	if t != nil {
-		wuo.SetCreatedAt(*t)
+// SetNillableAccessUsername sets the "access_username" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableAccessUsername(s *string) *WorkspaceUpdateOne {
+	if s != nil {
+		wuo.SetAccessUsername(*s)
 	}
 	return wuo
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (wuo *WorkspaceUpdateOne) SetUpdatedAt(t time.Time) *WorkspaceUpdateOne {
-	wuo.mutation.SetUpdatedAt(t)
+// SetAccessPassword sets the "access_password" field.
+func (wuo *WorkspaceUpdateOne) SetAccessPassword(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetAccessPassword(s)
 	return wuo
 }
 
-// SetArchivedAt sets the "archived_at" field.
-func (wuo *WorkspaceUpdateOne) SetArchivedAt(t time.Time) *WorkspaceUpdateOne {
-	wuo.mutation.SetArchivedAt(t)
-	return wuo
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableArchivedAt(t *time.Time) *WorkspaceUpdateOne {
-	if t != nil {
-		wuo.SetArchivedAt(*t)
+// SetNillableAccessPassword sets the "access_password" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableAccessPassword(s *string) *WorkspaceUpdateOne {
+	if s != nil {
+		wuo.SetAccessPassword(*s)
 	}
 	return wuo
 }
 
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (wuo *WorkspaceUpdateOne) ClearArchivedAt() *WorkspaceUpdateOne {
-	wuo.mutation.ClearArchivedAt()
+// SetCredentialStatus sets the "credential_status" field.
+func (wuo *WorkspaceUpdateOne) SetCredentialStatus(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetCredentialStatus(s)
+	return wuo
+}
+
+// SetNillableCredentialStatus sets the "credential_status" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableCredentialStatus(s *string) *WorkspaceUpdateOne {
+	if s != nil {
+		wuo.SetCredentialStatus(*s)
+	}
+	return wuo
+}
+
+// SetCredentialVersion sets the "credential_version" field.
+func (wuo *WorkspaceUpdateOne) SetCredentialVersion(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetCredentialVersion(s)
+	return wuo
+}
+
+// SetNillableCredentialVersion sets the "credential_version" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableCredentialVersion(s *string) *WorkspaceUpdateOne {
+	if s != nil {
+		wuo.SetCredentialVersion(*s)
+	}
+	return wuo
+}
+
+// SetCredentialSecretRef sets the "credential_secret_ref" field.
+func (wuo *WorkspaceUpdateOne) SetCredentialSecretRef(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetCredentialSecretRef(s)
+	return wuo
+}
+
+// SetNillableCredentialSecretRef sets the "credential_secret_ref" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableCredentialSecretRef(s *string) *WorkspaceUpdateOne {
+	if s != nil {
+		wuo.SetCredentialSecretRef(*s)
+	}
+	return wuo
+}
+
+// SetAccessRequiresLogin sets the "access_requires_login" field.
+func (wuo *WorkspaceUpdateOne) SetAccessRequiresLogin(b bool) *WorkspaceUpdateOne {
+	wuo.mutation.SetAccessRequiresLogin(b)
+	return wuo
+}
+
+// SetNillableAccessRequiresLogin sets the "access_requires_login" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableAccessRequiresLogin(b *bool) *WorkspaceUpdateOne {
+	if b != nil {
+		wuo.SetAccessRequiresLogin(*b)
+	}
 	return wuo
 }
 
@@ -1364,6 +937,12 @@ func (wuo *WorkspaceUpdateOne) sqlSave(ctx context.Context) (_node *Workspace, e
 			}
 		}
 	}
+	if value, ok := wuo.mutation.CreatedAt(); ok {
+		_spec.SetField(workspace.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := wuo.mutation.UpdatedAt(); ok {
+		_spec.SetField(workspace.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := wuo.mutation.AccountID(); ok {
 		_spec.SetField(workspace.FieldAccountID, field.TypeString, value)
 	}
@@ -1376,119 +955,62 @@ func (wuo *WorkspaceUpdateOne) sqlSave(ctx context.Context) (_node *Workspace, e
 	if value, ok := wuo.mutation.UserID(); ok {
 		_spec.SetField(workspace.FieldUserID, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.Email(); ok {
-		_spec.SetField(workspace.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := wuo.mutation.Role(); ok {
-		_spec.SetField(workspace.FieldRole, field.TypeString, value)
-	}
-	if value, ok := wuo.mutation.Status(); ok {
-		_spec.SetField(workspace.FieldStatus, field.TypeString, value)
-	}
 	if value, ok := wuo.mutation.Name(); ok {
 		_spec.SetField(workspace.FieldName, field.TypeString, value)
-	}
-	if value, ok := wuo.mutation.WorkspaceID(); ok {
-		_spec.SetField(workspace.FieldWorkspaceID, field.TypeString, value)
-	}
-	if value, ok := wuo.mutation.ResourceID(); ok {
-		_spec.SetField(workspace.FieldResourceID, field.TypeString, value)
-	}
-	if value, ok := wuo.mutation.ResourceKind(); ok {
-		_spec.SetField(workspace.FieldResourceKind, field.TypeString, value)
-	}
-	if value, ok := wuo.mutation.OperationID(); ok {
-		_spec.SetField(workspace.FieldOperationID, field.TypeString, value)
-	}
-	if value, ok := wuo.mutation.Provider(); ok {
-		_spec.SetField(workspace.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := wuo.mutation.ProviderResourceID(); ok {
-		_spec.SetField(workspace.FieldProviderResourceID, field.TypeString, value)
 	}
 	if value, ok := wuo.mutation.URL(); ok {
 		_spec.SetField(workspace.FieldURL, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.HoldID(); ok {
-		_spec.SetField(workspace.FieldHoldID, field.TypeString, value)
+	if value, ok := wuo.mutation.State(); ok {
+		_spec.SetField(workspace.FieldState, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.HoldReleaseID(); ok {
-		_spec.SetField(workspace.FieldHoldReleaseID, field.TypeString, value)
+	if value, ok := wuo.mutation.Status(); ok {
+		_spec.SetField(workspace.FieldStatus, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.LedgerEntryID(); ok {
-		_spec.SetField(workspace.FieldLedgerEntryID, field.TypeString, value)
+	if value, ok := wuo.mutation.StorageID(); ok {
+		_spec.SetField(workspace.FieldStorageID, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.WalletTransactionID(); ok {
-		_spec.SetField(workspace.FieldWalletTransactionID, field.TypeString, value)
+	if value, ok := wuo.mutation.CurrentComputeAllocationID(); ok {
+		_spec.SetField(workspace.FieldCurrentComputeAllocationID, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.SettlementID(); ok {
-		_spec.SetField(workspace.FieldSettlementID, field.TypeString, value)
+	if value, ok := wuo.mutation.CurrentAttachmentID(); ok {
+		_spec.SetField(workspace.FieldCurrentAttachmentID, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.PricingVersion(); ok {
-		_spec.SetField(workspace.FieldPricingVersion, field.TypeString, value)
+	if value, ok := wuo.mutation.RuntimeID(); ok {
+		_spec.SetField(workspace.FieldRuntimeID, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.AmountCents(); ok {
-		_spec.SetField(workspace.FieldAmountCents, field.TypeInt64, value)
+	if value, ok := wuo.mutation.RuntimeServiceName(); ok {
+		_spec.SetField(workspace.FieldRuntimeServiceName, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.AddedAmountCents(); ok {
-		_spec.AddField(workspace.FieldAmountCents, field.TypeInt64, value)
+	if value, ok := wuo.mutation.RuntimeServiceNameRoot(); ok {
+		_spec.SetField(workspace.FieldRuntimeServiceNameRoot, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.BalanceCents(); ok {
-		_spec.SetField(workspace.FieldBalanceCents, field.TypeInt64, value)
+	if value, ok := wuo.mutation.ServiceName(); ok {
+		_spec.SetField(workspace.FieldServiceName, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(workspace.FieldBalanceCents, field.TypeInt64, value)
+	if value, ok := wuo.mutation.AccessTokenStatus(); ok {
+		_spec.SetField(workspace.FieldAccessTokenStatus, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.FrozenCents(); ok {
-		_spec.SetField(workspace.FieldFrozenCents, field.TypeInt64, value)
+	if value, ok := wuo.mutation.AccessAccount(); ok {
+		_spec.SetField(workspace.FieldAccessAccount, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(workspace.FieldFrozenCents, field.TypeInt64, value)
+	if value, ok := wuo.mutation.AccessUsername(); ok {
+		_spec.SetField(workspace.FieldAccessUsername, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.AvailableCents(); ok {
-		_spec.SetField(workspace.FieldAvailableCents, field.TypeInt64, value)
+	if value, ok := wuo.mutation.AccessPassword(); ok {
+		_spec.SetField(workspace.FieldAccessPassword, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(workspace.FieldAvailableCents, field.TypeInt64, value)
+	if value, ok := wuo.mutation.CredentialStatus(); ok {
+		_spec.SetField(workspace.FieldCredentialStatus, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.TotalSpentCents(); ok {
-		_spec.SetField(workspace.FieldTotalSpentCents, field.TypeInt64, value)
+	if value, ok := wuo.mutation.CredentialVersion(); ok {
+		_spec.SetField(workspace.FieldCredentialVersion, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(workspace.FieldTotalSpentCents, field.TypeInt64, value)
+	if value, ok := wuo.mutation.CredentialSecretRef(); ok {
+		_spec.SetField(workspace.FieldCredentialSecretRef, field.TypeString, value)
 	}
-	if value, ok := wuo.mutation.Quantity(); ok {
-		_spec.SetField(workspace.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := wuo.mutation.AddedQuantity(); ok {
-		_spec.AddField(workspace.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := wuo.mutation.Unit(); ok {
-		_spec.SetField(workspace.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := wuo.mutation.Reason(); ok {
-		_spec.SetField(workspace.FieldReason, field.TypeString, value)
-	}
-	if value, ok := wuo.mutation.Result(); ok {
-		_spec.SetField(workspace.FieldResult, field.TypeString, value)
-	}
-	if value, ok := wuo.mutation.Source(); ok {
-		_spec.SetField(workspace.FieldSource, field.TypeString, value)
-	}
-	if value, ok := wuo.mutation.Direction(); ok {
-		_spec.SetField(workspace.FieldDirection, field.TypeString, value)
-	}
-	if value, ok := wuo.mutation.CreatedAt(); ok {
-		_spec.SetField(workspace.FieldCreatedAt, field.TypeTime, value)
-	}
-	if value, ok := wuo.mutation.UpdatedAt(); ok {
-		_spec.SetField(workspace.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := wuo.mutation.ArchivedAt(); ok {
-		_spec.SetField(workspace.FieldArchivedAt, field.TypeTime, value)
-	}
-	if wuo.mutation.ArchivedAtCleared() {
-		_spec.ClearField(workspace.FieldArchivedAt, field.TypeTime)
+	if value, ok := wuo.mutation.AccessRequiresLogin(); ok {
+		_spec.SetField(workspace.FieldAccessRequiresLogin, field.TypeBool, value)
 	}
 	_node = &Workspace{config: wuo.config}
 	_spec.Assign = _node.assignValues

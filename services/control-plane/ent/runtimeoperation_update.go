@@ -28,6 +28,40 @@ func (rou *RuntimeOperationUpdate) Where(ps ...predicate.RuntimeOperation) *Runt
 	return rou
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (rou *RuntimeOperationUpdate) SetCreatedAt(t time.Time) *RuntimeOperationUpdate {
+	rou.mutation.SetCreatedAt(t)
+	return rou
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (rou *RuntimeOperationUpdate) SetNillableCreatedAt(t *time.Time) *RuntimeOperationUpdate {
+	if t != nil {
+		rou.SetCreatedAt(*t)
+	}
+	return rou
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (rou *RuntimeOperationUpdate) SetUpdatedAt(t time.Time) *RuntimeOperationUpdate {
+	rou.mutation.SetUpdatedAt(t)
+	return rou
+}
+
+// SetOperationID sets the "operation_id" field.
+func (rou *RuntimeOperationUpdate) SetOperationID(s string) *RuntimeOperationUpdate {
+	rou.mutation.SetOperationID(s)
+	return rou
+}
+
+// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
+func (rou *RuntimeOperationUpdate) SetNillableOperationID(s *string) *RuntimeOperationUpdate {
+	if s != nil {
+		rou.SetOperationID(*s)
+	}
+	return rou
+}
+
 // SetAccountID sets the "account_id" field.
 func (rou *RuntimeOperationUpdate) SetAccountID(s string) *RuntimeOperationUpdate {
 	rou.mutation.SetAccountID(s)
@@ -38,104 +72,6 @@ func (rou *RuntimeOperationUpdate) SetAccountID(s string) *RuntimeOperationUpdat
 func (rou *RuntimeOperationUpdate) SetNillableAccountID(s *string) *RuntimeOperationUpdate {
 	if s != nil {
 		rou.SetAccountID(*s)
-	}
-	return rou
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (rou *RuntimeOperationUpdate) SetOwnerAccountID(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetOwnerAccountID(s)
-	return rou
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableOwnerAccountID(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetOwnerAccountID(*s)
-	}
-	return rou
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (rou *RuntimeOperationUpdate) SetOwnerUserID(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetOwnerUserID(s)
-	return rou
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableOwnerUserID(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetOwnerUserID(*s)
-	}
-	return rou
-}
-
-// SetUserID sets the "user_id" field.
-func (rou *RuntimeOperationUpdate) SetUserID(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetUserID(s)
-	return rou
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableUserID(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetUserID(*s)
-	}
-	return rou
-}
-
-// SetEmail sets the "email" field.
-func (rou *RuntimeOperationUpdate) SetEmail(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetEmail(s)
-	return rou
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableEmail(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetEmail(*s)
-	}
-	return rou
-}
-
-// SetRole sets the "role" field.
-func (rou *RuntimeOperationUpdate) SetRole(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetRole(s)
-	return rou
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableRole(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetRole(*s)
-	}
-	return rou
-}
-
-// SetStatus sets the "status" field.
-func (rou *RuntimeOperationUpdate) SetStatus(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetStatus(s)
-	return rou
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableStatus(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetStatus(*s)
-	}
-	return rou
-}
-
-// SetName sets the "name" field.
-func (rou *RuntimeOperationUpdate) SetName(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetName(s)
-	return rou
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableName(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetName(*s)
 	}
 	return rou
 }
@@ -182,16 +118,16 @@ func (rou *RuntimeOperationUpdate) SetNillableResourceKind(s *string) *RuntimeOp
 	return rou
 }
 
-// SetOperationID sets the "operation_id" field.
-func (rou *RuntimeOperationUpdate) SetOperationID(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetOperationID(s)
+// SetAction sets the "action" field.
+func (rou *RuntimeOperationUpdate) SetAction(s string) *RuntimeOperationUpdate {
+	rou.mutation.SetAction(s)
 	return rou
 }
 
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableOperationID(s *string) *RuntimeOperationUpdate {
+// SetNillableAction sets the "action" field if the given value is not nil.
+func (rou *RuntimeOperationUpdate) SetNillableAction(s *string) *RuntimeOperationUpdate {
 	if s != nil {
-		rou.SetOperationID(*s)
+		rou.SetAction(*s)
 	}
 	return rou
 }
@@ -210,268 +146,30 @@ func (rou *RuntimeOperationUpdate) SetNillableProvider(s *string) *RuntimeOperat
 	return rou
 }
 
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (rou *RuntimeOperationUpdate) SetProviderResourceID(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetProviderResourceID(s)
+// SetProviderRequestID sets the "provider_request_id" field.
+func (rou *RuntimeOperationUpdate) SetProviderRequestID(s string) *RuntimeOperationUpdate {
+	rou.mutation.SetProviderRequestID(s)
 	return rou
 }
 
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableProviderResourceID(s *string) *RuntimeOperationUpdate {
+// SetNillableProviderRequestID sets the "provider_request_id" field if the given value is not nil.
+func (rou *RuntimeOperationUpdate) SetNillableProviderRequestID(s *string) *RuntimeOperationUpdate {
 	if s != nil {
-		rou.SetProviderResourceID(*s)
+		rou.SetProviderRequestID(*s)
 	}
 	return rou
 }
 
-// SetURL sets the "url" field.
-func (rou *RuntimeOperationUpdate) SetURL(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetURL(s)
+// SetStatus sets the "status" field.
+func (rou *RuntimeOperationUpdate) SetStatus(s string) *RuntimeOperationUpdate {
+	rou.mutation.SetStatus(s)
 	return rou
 }
 
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableURL(s *string) *RuntimeOperationUpdate {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (rou *RuntimeOperationUpdate) SetNillableStatus(s *string) *RuntimeOperationUpdate {
 	if s != nil {
-		rou.SetURL(*s)
-	}
-	return rou
-}
-
-// SetHoldID sets the "hold_id" field.
-func (rou *RuntimeOperationUpdate) SetHoldID(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetHoldID(s)
-	return rou
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableHoldID(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetHoldID(*s)
-	}
-	return rou
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (rou *RuntimeOperationUpdate) SetHoldReleaseID(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetHoldReleaseID(s)
-	return rou
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableHoldReleaseID(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetHoldReleaseID(*s)
-	}
-	return rou
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (rou *RuntimeOperationUpdate) SetLedgerEntryID(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetLedgerEntryID(s)
-	return rou
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableLedgerEntryID(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetLedgerEntryID(*s)
-	}
-	return rou
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (rou *RuntimeOperationUpdate) SetWalletTransactionID(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetWalletTransactionID(s)
-	return rou
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableWalletTransactionID(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetWalletTransactionID(*s)
-	}
-	return rou
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (rou *RuntimeOperationUpdate) SetSettlementID(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetSettlementID(s)
-	return rou
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableSettlementID(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetSettlementID(*s)
-	}
-	return rou
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (rou *RuntimeOperationUpdate) SetPricingVersion(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetPricingVersion(s)
-	return rou
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillablePricingVersion(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetPricingVersion(*s)
-	}
-	return rou
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (rou *RuntimeOperationUpdate) SetAmountCents(i int64) *RuntimeOperationUpdate {
-	rou.mutation.ResetAmountCents()
-	rou.mutation.SetAmountCents(i)
-	return rou
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableAmountCents(i *int64) *RuntimeOperationUpdate {
-	if i != nil {
-		rou.SetAmountCents(*i)
-	}
-	return rou
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (rou *RuntimeOperationUpdate) AddAmountCents(i int64) *RuntimeOperationUpdate {
-	rou.mutation.AddAmountCents(i)
-	return rou
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (rou *RuntimeOperationUpdate) SetBalanceCents(i int64) *RuntimeOperationUpdate {
-	rou.mutation.ResetBalanceCents()
-	rou.mutation.SetBalanceCents(i)
-	return rou
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableBalanceCents(i *int64) *RuntimeOperationUpdate {
-	if i != nil {
-		rou.SetBalanceCents(*i)
-	}
-	return rou
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (rou *RuntimeOperationUpdate) AddBalanceCents(i int64) *RuntimeOperationUpdate {
-	rou.mutation.AddBalanceCents(i)
-	return rou
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (rou *RuntimeOperationUpdate) SetFrozenCents(i int64) *RuntimeOperationUpdate {
-	rou.mutation.ResetFrozenCents()
-	rou.mutation.SetFrozenCents(i)
-	return rou
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableFrozenCents(i *int64) *RuntimeOperationUpdate {
-	if i != nil {
-		rou.SetFrozenCents(*i)
-	}
-	return rou
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (rou *RuntimeOperationUpdate) AddFrozenCents(i int64) *RuntimeOperationUpdate {
-	rou.mutation.AddFrozenCents(i)
-	return rou
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (rou *RuntimeOperationUpdate) SetAvailableCents(i int64) *RuntimeOperationUpdate {
-	rou.mutation.ResetAvailableCents()
-	rou.mutation.SetAvailableCents(i)
-	return rou
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableAvailableCents(i *int64) *RuntimeOperationUpdate {
-	if i != nil {
-		rou.SetAvailableCents(*i)
-	}
-	return rou
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (rou *RuntimeOperationUpdate) AddAvailableCents(i int64) *RuntimeOperationUpdate {
-	rou.mutation.AddAvailableCents(i)
-	return rou
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (rou *RuntimeOperationUpdate) SetTotalSpentCents(i int64) *RuntimeOperationUpdate {
-	rou.mutation.ResetTotalSpentCents()
-	rou.mutation.SetTotalSpentCents(i)
-	return rou
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableTotalSpentCents(i *int64) *RuntimeOperationUpdate {
-	if i != nil {
-		rou.SetTotalSpentCents(*i)
-	}
-	return rou
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (rou *RuntimeOperationUpdate) AddTotalSpentCents(i int64) *RuntimeOperationUpdate {
-	rou.mutation.AddTotalSpentCents(i)
-	return rou
-}
-
-// SetQuantity sets the "quantity" field.
-func (rou *RuntimeOperationUpdate) SetQuantity(f float64) *RuntimeOperationUpdate {
-	rou.mutation.ResetQuantity()
-	rou.mutation.SetQuantity(f)
-	return rou
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableQuantity(f *float64) *RuntimeOperationUpdate {
-	if f != nil {
-		rou.SetQuantity(*f)
-	}
-	return rou
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (rou *RuntimeOperationUpdate) AddQuantity(f float64) *RuntimeOperationUpdate {
-	rou.mutation.AddQuantity(f)
-	return rou
-}
-
-// SetUnit sets the "unit" field.
-func (rou *RuntimeOperationUpdate) SetUnit(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetUnit(s)
-	return rou
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableUnit(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetUnit(*s)
-	}
-	return rou
-}
-
-// SetReason sets the "reason" field.
-func (rou *RuntimeOperationUpdate) SetReason(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetReason(s)
-	return rou
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableReason(s *string) *RuntimeOperationUpdate {
-	if s != nil {
-		rou.SetReason(*s)
+		rou.SetStatus(*s)
 	}
 	return rou
 }
@@ -490,71 +188,115 @@ func (rou *RuntimeOperationUpdate) SetNillableResult(s *string) *RuntimeOperatio
 	return rou
 }
 
-// SetSource sets the "source" field.
-func (rou *RuntimeOperationUpdate) SetSource(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetSource(s)
+// SetComputeAllocationID sets the "compute_allocation_id" field.
+func (rou *RuntimeOperationUpdate) SetComputeAllocationID(s string) *RuntimeOperationUpdate {
+	rou.mutation.SetComputeAllocationID(s)
 	return rou
 }
 
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableSource(s *string) *RuntimeOperationUpdate {
+// SetNillableComputeAllocationID sets the "compute_allocation_id" field if the given value is not nil.
+func (rou *RuntimeOperationUpdate) SetNillableComputeAllocationID(s *string) *RuntimeOperationUpdate {
 	if s != nil {
-		rou.SetSource(*s)
+		rou.SetComputeAllocationID(*s)
 	}
 	return rou
 }
 
-// SetDirection sets the "direction" field.
-func (rou *RuntimeOperationUpdate) SetDirection(s string) *RuntimeOperationUpdate {
-	rou.mutation.SetDirection(s)
+// SetStorageID sets the "storage_id" field.
+func (rou *RuntimeOperationUpdate) SetStorageID(s string) *RuntimeOperationUpdate {
+	rou.mutation.SetStorageID(s)
 	return rou
 }
 
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableDirection(s *string) *RuntimeOperationUpdate {
+// SetNillableStorageID sets the "storage_id" field if the given value is not nil.
+func (rou *RuntimeOperationUpdate) SetNillableStorageID(s *string) *RuntimeOperationUpdate {
 	if s != nil {
-		rou.SetDirection(*s)
+		rou.SetStorageID(*s)
 	}
 	return rou
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (rou *RuntimeOperationUpdate) SetCreatedAt(t time.Time) *RuntimeOperationUpdate {
-	rou.mutation.SetCreatedAt(t)
+// SetAttachmentID sets the "attachment_id" field.
+func (rou *RuntimeOperationUpdate) SetAttachmentID(s string) *RuntimeOperationUpdate {
+	rou.mutation.SetAttachmentID(s)
 	return rou
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableCreatedAt(t *time.Time) *RuntimeOperationUpdate {
-	if t != nil {
-		rou.SetCreatedAt(*t)
+// SetNillableAttachmentID sets the "attachment_id" field if the given value is not nil.
+func (rou *RuntimeOperationUpdate) SetNillableAttachmentID(s *string) *RuntimeOperationUpdate {
+	if s != nil {
+		rou.SetAttachmentID(*s)
 	}
 	return rou
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (rou *RuntimeOperationUpdate) SetUpdatedAt(t time.Time) *RuntimeOperationUpdate {
-	rou.mutation.SetUpdatedAt(t)
+// SetRuntimeServiceName sets the "runtime_service_name" field.
+func (rou *RuntimeOperationUpdate) SetRuntimeServiceName(s string) *RuntimeOperationUpdate {
+	rou.mutation.SetRuntimeServiceName(s)
 	return rou
 }
 
-// SetArchivedAt sets the "archived_at" field.
-func (rou *RuntimeOperationUpdate) SetArchivedAt(t time.Time) *RuntimeOperationUpdate {
-	rou.mutation.SetArchivedAt(t)
-	return rou
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (rou *RuntimeOperationUpdate) SetNillableArchivedAt(t *time.Time) *RuntimeOperationUpdate {
-	if t != nil {
-		rou.SetArchivedAt(*t)
+// SetNillableRuntimeServiceName sets the "runtime_service_name" field if the given value is not nil.
+func (rou *RuntimeOperationUpdate) SetNillableRuntimeServiceName(s *string) *RuntimeOperationUpdate {
+	if s != nil {
+		rou.SetRuntimeServiceName(*s)
 	}
 	return rou
 }
 
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (rou *RuntimeOperationUpdate) ClearArchivedAt() *RuntimeOperationUpdate {
-	rou.mutation.ClearArchivedAt()
+// SetCvmInstanceID sets the "cvm_instance_id" field.
+func (rou *RuntimeOperationUpdate) SetCvmInstanceID(s string) *RuntimeOperationUpdate {
+	rou.mutation.SetCvmInstanceID(s)
+	return rou
+}
+
+// SetNillableCvmInstanceID sets the "cvm_instance_id" field if the given value is not nil.
+func (rou *RuntimeOperationUpdate) SetNillableCvmInstanceID(s *string) *RuntimeOperationUpdate {
+	if s != nil {
+		rou.SetCvmInstanceID(*s)
+	}
+	return rou
+}
+
+// SetInstanceID sets the "instance_id" field.
+func (rou *RuntimeOperationUpdate) SetInstanceID(s string) *RuntimeOperationUpdate {
+	rou.mutation.SetInstanceID(s)
+	return rou
+}
+
+// SetNillableInstanceID sets the "instance_id" field if the given value is not nil.
+func (rou *RuntimeOperationUpdate) SetNillableInstanceID(s *string) *RuntimeOperationUpdate {
+	if s != nil {
+		rou.SetInstanceID(*s)
+	}
+	return rou
+}
+
+// SetNodeName sets the "node_name" field.
+func (rou *RuntimeOperationUpdate) SetNodeName(s string) *RuntimeOperationUpdate {
+	rou.mutation.SetNodeName(s)
+	return rou
+}
+
+// SetNillableNodeName sets the "node_name" field if the given value is not nil.
+func (rou *RuntimeOperationUpdate) SetNillableNodeName(s *string) *RuntimeOperationUpdate {
+	if s != nil {
+		rou.SetNodeName(*s)
+	}
+	return rou
+}
+
+// SetMachineName sets the "machine_name" field.
+func (rou *RuntimeOperationUpdate) SetMachineName(s string) *RuntimeOperationUpdate {
+	rou.mutation.SetMachineName(s)
+	return rou
+}
+
+// SetNillableMachineName sets the "machine_name" field if the given value is not nil.
+func (rou *RuntimeOperationUpdate) SetNillableMachineName(s *string) *RuntimeOperationUpdate {
+	if s != nil {
+		rou.SetMachineName(*s)
+	}
 	return rou
 }
 
@@ -608,29 +350,17 @@ func (rou *RuntimeOperationUpdate) sqlSave(ctx context.Context) (n int, err erro
 			}
 		}
 	}
+	if value, ok := rou.mutation.CreatedAt(); ok {
+		_spec.SetField(runtimeoperation.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := rou.mutation.UpdatedAt(); ok {
+		_spec.SetField(runtimeoperation.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := rou.mutation.OperationID(); ok {
+		_spec.SetField(runtimeoperation.FieldOperationID, field.TypeString, value)
+	}
 	if value, ok := rou.mutation.AccountID(); ok {
 		_spec.SetField(runtimeoperation.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.OwnerAccountID(); ok {
-		_spec.SetField(runtimeoperation.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.OwnerUserID(); ok {
-		_spec.SetField(runtimeoperation.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.UserID(); ok {
-		_spec.SetField(runtimeoperation.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.Email(); ok {
-		_spec.SetField(runtimeoperation.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.Role(); ok {
-		_spec.SetField(runtimeoperation.FieldRole, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.Status(); ok {
-		_spec.SetField(runtimeoperation.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.Name(); ok {
-		_spec.SetField(runtimeoperation.FieldName, field.TypeString, value)
 	}
 	if value, ok := rou.mutation.WorkspaceID(); ok {
 		_spec.SetField(runtimeoperation.FieldWorkspaceID, field.TypeString, value)
@@ -641,98 +371,44 @@ func (rou *RuntimeOperationUpdate) sqlSave(ctx context.Context) (n int, err erro
 	if value, ok := rou.mutation.ResourceKind(); ok {
 		_spec.SetField(runtimeoperation.FieldResourceKind, field.TypeString, value)
 	}
-	if value, ok := rou.mutation.OperationID(); ok {
-		_spec.SetField(runtimeoperation.FieldOperationID, field.TypeString, value)
+	if value, ok := rou.mutation.Action(); ok {
+		_spec.SetField(runtimeoperation.FieldAction, field.TypeString, value)
 	}
 	if value, ok := rou.mutation.Provider(); ok {
 		_spec.SetField(runtimeoperation.FieldProvider, field.TypeString, value)
 	}
-	if value, ok := rou.mutation.ProviderResourceID(); ok {
-		_spec.SetField(runtimeoperation.FieldProviderResourceID, field.TypeString, value)
+	if value, ok := rou.mutation.ProviderRequestID(); ok {
+		_spec.SetField(runtimeoperation.FieldProviderRequestID, field.TypeString, value)
 	}
-	if value, ok := rou.mutation.URL(); ok {
-		_spec.SetField(runtimeoperation.FieldURL, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.HoldID(); ok {
-		_spec.SetField(runtimeoperation.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.HoldReleaseID(); ok {
-		_spec.SetField(runtimeoperation.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.LedgerEntryID(); ok {
-		_spec.SetField(runtimeoperation.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.WalletTransactionID(); ok {
-		_spec.SetField(runtimeoperation.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.SettlementID(); ok {
-		_spec.SetField(runtimeoperation.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.PricingVersion(); ok {
-		_spec.SetField(runtimeoperation.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.AmountCents(); ok {
-		_spec.SetField(runtimeoperation.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := rou.mutation.AddedAmountCents(); ok {
-		_spec.AddField(runtimeoperation.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := rou.mutation.BalanceCents(); ok {
-		_spec.SetField(runtimeoperation.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := rou.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(runtimeoperation.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := rou.mutation.FrozenCents(); ok {
-		_spec.SetField(runtimeoperation.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := rou.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(runtimeoperation.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := rou.mutation.AvailableCents(); ok {
-		_spec.SetField(runtimeoperation.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := rou.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(runtimeoperation.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := rou.mutation.TotalSpentCents(); ok {
-		_spec.SetField(runtimeoperation.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := rou.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(runtimeoperation.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := rou.mutation.Quantity(); ok {
-		_spec.SetField(runtimeoperation.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := rou.mutation.AddedQuantity(); ok {
-		_spec.AddField(runtimeoperation.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := rou.mutation.Unit(); ok {
-		_spec.SetField(runtimeoperation.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := rou.mutation.Reason(); ok {
-		_spec.SetField(runtimeoperation.FieldReason, field.TypeString, value)
+	if value, ok := rou.mutation.Status(); ok {
+		_spec.SetField(runtimeoperation.FieldStatus, field.TypeString, value)
 	}
 	if value, ok := rou.mutation.Result(); ok {
 		_spec.SetField(runtimeoperation.FieldResult, field.TypeString, value)
 	}
-	if value, ok := rou.mutation.Source(); ok {
-		_spec.SetField(runtimeoperation.FieldSource, field.TypeString, value)
+	if value, ok := rou.mutation.ComputeAllocationID(); ok {
+		_spec.SetField(runtimeoperation.FieldComputeAllocationID, field.TypeString, value)
 	}
-	if value, ok := rou.mutation.Direction(); ok {
-		_spec.SetField(runtimeoperation.FieldDirection, field.TypeString, value)
+	if value, ok := rou.mutation.StorageID(); ok {
+		_spec.SetField(runtimeoperation.FieldStorageID, field.TypeString, value)
 	}
-	if value, ok := rou.mutation.CreatedAt(); ok {
-		_spec.SetField(runtimeoperation.FieldCreatedAt, field.TypeTime, value)
+	if value, ok := rou.mutation.AttachmentID(); ok {
+		_spec.SetField(runtimeoperation.FieldAttachmentID, field.TypeString, value)
 	}
-	if value, ok := rou.mutation.UpdatedAt(); ok {
-		_spec.SetField(runtimeoperation.FieldUpdatedAt, field.TypeTime, value)
+	if value, ok := rou.mutation.RuntimeServiceName(); ok {
+		_spec.SetField(runtimeoperation.FieldRuntimeServiceName, field.TypeString, value)
 	}
-	if value, ok := rou.mutation.ArchivedAt(); ok {
-		_spec.SetField(runtimeoperation.FieldArchivedAt, field.TypeTime, value)
+	if value, ok := rou.mutation.CvmInstanceID(); ok {
+		_spec.SetField(runtimeoperation.FieldCvmInstanceID, field.TypeString, value)
 	}
-	if rou.mutation.ArchivedAtCleared() {
-		_spec.ClearField(runtimeoperation.FieldArchivedAt, field.TypeTime)
+	if value, ok := rou.mutation.InstanceID(); ok {
+		_spec.SetField(runtimeoperation.FieldInstanceID, field.TypeString, value)
+	}
+	if value, ok := rou.mutation.NodeName(); ok {
+		_spec.SetField(runtimeoperation.FieldNodeName, field.TypeString, value)
+	}
+	if value, ok := rou.mutation.MachineName(); ok {
+		_spec.SetField(runtimeoperation.FieldMachineName, field.TypeString, value)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, rou.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -754,6 +430,40 @@ type RuntimeOperationUpdateOne struct {
 	mutation *RuntimeOperationMutation
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (rouo *RuntimeOperationUpdateOne) SetCreatedAt(t time.Time) *RuntimeOperationUpdateOne {
+	rouo.mutation.SetCreatedAt(t)
+	return rouo
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (rouo *RuntimeOperationUpdateOne) SetNillableCreatedAt(t *time.Time) *RuntimeOperationUpdateOne {
+	if t != nil {
+		rouo.SetCreatedAt(*t)
+	}
+	return rouo
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (rouo *RuntimeOperationUpdateOne) SetUpdatedAt(t time.Time) *RuntimeOperationUpdateOne {
+	rouo.mutation.SetUpdatedAt(t)
+	return rouo
+}
+
+// SetOperationID sets the "operation_id" field.
+func (rouo *RuntimeOperationUpdateOne) SetOperationID(s string) *RuntimeOperationUpdateOne {
+	rouo.mutation.SetOperationID(s)
+	return rouo
+}
+
+// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
+func (rouo *RuntimeOperationUpdateOne) SetNillableOperationID(s *string) *RuntimeOperationUpdateOne {
+	if s != nil {
+		rouo.SetOperationID(*s)
+	}
+	return rouo
+}
+
 // SetAccountID sets the "account_id" field.
 func (rouo *RuntimeOperationUpdateOne) SetAccountID(s string) *RuntimeOperationUpdateOne {
 	rouo.mutation.SetAccountID(s)
@@ -764,104 +474,6 @@ func (rouo *RuntimeOperationUpdateOne) SetAccountID(s string) *RuntimeOperationU
 func (rouo *RuntimeOperationUpdateOne) SetNillableAccountID(s *string) *RuntimeOperationUpdateOne {
 	if s != nil {
 		rouo.SetAccountID(*s)
-	}
-	return rouo
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (rouo *RuntimeOperationUpdateOne) SetOwnerAccountID(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetOwnerAccountID(s)
-	return rouo
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableOwnerAccountID(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetOwnerAccountID(*s)
-	}
-	return rouo
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (rouo *RuntimeOperationUpdateOne) SetOwnerUserID(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetOwnerUserID(s)
-	return rouo
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableOwnerUserID(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetOwnerUserID(*s)
-	}
-	return rouo
-}
-
-// SetUserID sets the "user_id" field.
-func (rouo *RuntimeOperationUpdateOne) SetUserID(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetUserID(s)
-	return rouo
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableUserID(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetUserID(*s)
-	}
-	return rouo
-}
-
-// SetEmail sets the "email" field.
-func (rouo *RuntimeOperationUpdateOne) SetEmail(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetEmail(s)
-	return rouo
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableEmail(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetEmail(*s)
-	}
-	return rouo
-}
-
-// SetRole sets the "role" field.
-func (rouo *RuntimeOperationUpdateOne) SetRole(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetRole(s)
-	return rouo
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableRole(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetRole(*s)
-	}
-	return rouo
-}
-
-// SetStatus sets the "status" field.
-func (rouo *RuntimeOperationUpdateOne) SetStatus(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetStatus(s)
-	return rouo
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableStatus(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetStatus(*s)
-	}
-	return rouo
-}
-
-// SetName sets the "name" field.
-func (rouo *RuntimeOperationUpdateOne) SetName(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetName(s)
-	return rouo
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableName(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetName(*s)
 	}
 	return rouo
 }
@@ -908,16 +520,16 @@ func (rouo *RuntimeOperationUpdateOne) SetNillableResourceKind(s *string) *Runti
 	return rouo
 }
 
-// SetOperationID sets the "operation_id" field.
-func (rouo *RuntimeOperationUpdateOne) SetOperationID(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetOperationID(s)
+// SetAction sets the "action" field.
+func (rouo *RuntimeOperationUpdateOne) SetAction(s string) *RuntimeOperationUpdateOne {
+	rouo.mutation.SetAction(s)
 	return rouo
 }
 
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableOperationID(s *string) *RuntimeOperationUpdateOne {
+// SetNillableAction sets the "action" field if the given value is not nil.
+func (rouo *RuntimeOperationUpdateOne) SetNillableAction(s *string) *RuntimeOperationUpdateOne {
 	if s != nil {
-		rouo.SetOperationID(*s)
+		rouo.SetAction(*s)
 	}
 	return rouo
 }
@@ -936,268 +548,30 @@ func (rouo *RuntimeOperationUpdateOne) SetNillableProvider(s *string) *RuntimeOp
 	return rouo
 }
 
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (rouo *RuntimeOperationUpdateOne) SetProviderResourceID(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetProviderResourceID(s)
+// SetProviderRequestID sets the "provider_request_id" field.
+func (rouo *RuntimeOperationUpdateOne) SetProviderRequestID(s string) *RuntimeOperationUpdateOne {
+	rouo.mutation.SetProviderRequestID(s)
 	return rouo
 }
 
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableProviderResourceID(s *string) *RuntimeOperationUpdateOne {
+// SetNillableProviderRequestID sets the "provider_request_id" field if the given value is not nil.
+func (rouo *RuntimeOperationUpdateOne) SetNillableProviderRequestID(s *string) *RuntimeOperationUpdateOne {
 	if s != nil {
-		rouo.SetProviderResourceID(*s)
+		rouo.SetProviderRequestID(*s)
 	}
 	return rouo
 }
 
-// SetURL sets the "url" field.
-func (rouo *RuntimeOperationUpdateOne) SetURL(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetURL(s)
+// SetStatus sets the "status" field.
+func (rouo *RuntimeOperationUpdateOne) SetStatus(s string) *RuntimeOperationUpdateOne {
+	rouo.mutation.SetStatus(s)
 	return rouo
 }
 
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableURL(s *string) *RuntimeOperationUpdateOne {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (rouo *RuntimeOperationUpdateOne) SetNillableStatus(s *string) *RuntimeOperationUpdateOne {
 	if s != nil {
-		rouo.SetURL(*s)
-	}
-	return rouo
-}
-
-// SetHoldID sets the "hold_id" field.
-func (rouo *RuntimeOperationUpdateOne) SetHoldID(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetHoldID(s)
-	return rouo
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableHoldID(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetHoldID(*s)
-	}
-	return rouo
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (rouo *RuntimeOperationUpdateOne) SetHoldReleaseID(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetHoldReleaseID(s)
-	return rouo
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableHoldReleaseID(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetHoldReleaseID(*s)
-	}
-	return rouo
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (rouo *RuntimeOperationUpdateOne) SetLedgerEntryID(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetLedgerEntryID(s)
-	return rouo
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableLedgerEntryID(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetLedgerEntryID(*s)
-	}
-	return rouo
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (rouo *RuntimeOperationUpdateOne) SetWalletTransactionID(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetWalletTransactionID(s)
-	return rouo
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableWalletTransactionID(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetWalletTransactionID(*s)
-	}
-	return rouo
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (rouo *RuntimeOperationUpdateOne) SetSettlementID(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetSettlementID(s)
-	return rouo
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableSettlementID(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetSettlementID(*s)
-	}
-	return rouo
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (rouo *RuntimeOperationUpdateOne) SetPricingVersion(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetPricingVersion(s)
-	return rouo
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillablePricingVersion(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetPricingVersion(*s)
-	}
-	return rouo
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (rouo *RuntimeOperationUpdateOne) SetAmountCents(i int64) *RuntimeOperationUpdateOne {
-	rouo.mutation.ResetAmountCents()
-	rouo.mutation.SetAmountCents(i)
-	return rouo
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableAmountCents(i *int64) *RuntimeOperationUpdateOne {
-	if i != nil {
-		rouo.SetAmountCents(*i)
-	}
-	return rouo
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (rouo *RuntimeOperationUpdateOne) AddAmountCents(i int64) *RuntimeOperationUpdateOne {
-	rouo.mutation.AddAmountCents(i)
-	return rouo
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (rouo *RuntimeOperationUpdateOne) SetBalanceCents(i int64) *RuntimeOperationUpdateOne {
-	rouo.mutation.ResetBalanceCents()
-	rouo.mutation.SetBalanceCents(i)
-	return rouo
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableBalanceCents(i *int64) *RuntimeOperationUpdateOne {
-	if i != nil {
-		rouo.SetBalanceCents(*i)
-	}
-	return rouo
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (rouo *RuntimeOperationUpdateOne) AddBalanceCents(i int64) *RuntimeOperationUpdateOne {
-	rouo.mutation.AddBalanceCents(i)
-	return rouo
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (rouo *RuntimeOperationUpdateOne) SetFrozenCents(i int64) *RuntimeOperationUpdateOne {
-	rouo.mutation.ResetFrozenCents()
-	rouo.mutation.SetFrozenCents(i)
-	return rouo
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableFrozenCents(i *int64) *RuntimeOperationUpdateOne {
-	if i != nil {
-		rouo.SetFrozenCents(*i)
-	}
-	return rouo
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (rouo *RuntimeOperationUpdateOne) AddFrozenCents(i int64) *RuntimeOperationUpdateOne {
-	rouo.mutation.AddFrozenCents(i)
-	return rouo
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (rouo *RuntimeOperationUpdateOne) SetAvailableCents(i int64) *RuntimeOperationUpdateOne {
-	rouo.mutation.ResetAvailableCents()
-	rouo.mutation.SetAvailableCents(i)
-	return rouo
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableAvailableCents(i *int64) *RuntimeOperationUpdateOne {
-	if i != nil {
-		rouo.SetAvailableCents(*i)
-	}
-	return rouo
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (rouo *RuntimeOperationUpdateOne) AddAvailableCents(i int64) *RuntimeOperationUpdateOne {
-	rouo.mutation.AddAvailableCents(i)
-	return rouo
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (rouo *RuntimeOperationUpdateOne) SetTotalSpentCents(i int64) *RuntimeOperationUpdateOne {
-	rouo.mutation.ResetTotalSpentCents()
-	rouo.mutation.SetTotalSpentCents(i)
-	return rouo
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableTotalSpentCents(i *int64) *RuntimeOperationUpdateOne {
-	if i != nil {
-		rouo.SetTotalSpentCents(*i)
-	}
-	return rouo
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (rouo *RuntimeOperationUpdateOne) AddTotalSpentCents(i int64) *RuntimeOperationUpdateOne {
-	rouo.mutation.AddTotalSpentCents(i)
-	return rouo
-}
-
-// SetQuantity sets the "quantity" field.
-func (rouo *RuntimeOperationUpdateOne) SetQuantity(f float64) *RuntimeOperationUpdateOne {
-	rouo.mutation.ResetQuantity()
-	rouo.mutation.SetQuantity(f)
-	return rouo
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableQuantity(f *float64) *RuntimeOperationUpdateOne {
-	if f != nil {
-		rouo.SetQuantity(*f)
-	}
-	return rouo
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (rouo *RuntimeOperationUpdateOne) AddQuantity(f float64) *RuntimeOperationUpdateOne {
-	rouo.mutation.AddQuantity(f)
-	return rouo
-}
-
-// SetUnit sets the "unit" field.
-func (rouo *RuntimeOperationUpdateOne) SetUnit(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetUnit(s)
-	return rouo
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableUnit(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetUnit(*s)
-	}
-	return rouo
-}
-
-// SetReason sets the "reason" field.
-func (rouo *RuntimeOperationUpdateOne) SetReason(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetReason(s)
-	return rouo
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableReason(s *string) *RuntimeOperationUpdateOne {
-	if s != nil {
-		rouo.SetReason(*s)
+		rouo.SetStatus(*s)
 	}
 	return rouo
 }
@@ -1216,71 +590,115 @@ func (rouo *RuntimeOperationUpdateOne) SetNillableResult(s *string) *RuntimeOper
 	return rouo
 }
 
-// SetSource sets the "source" field.
-func (rouo *RuntimeOperationUpdateOne) SetSource(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetSource(s)
+// SetComputeAllocationID sets the "compute_allocation_id" field.
+func (rouo *RuntimeOperationUpdateOne) SetComputeAllocationID(s string) *RuntimeOperationUpdateOne {
+	rouo.mutation.SetComputeAllocationID(s)
 	return rouo
 }
 
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableSource(s *string) *RuntimeOperationUpdateOne {
+// SetNillableComputeAllocationID sets the "compute_allocation_id" field if the given value is not nil.
+func (rouo *RuntimeOperationUpdateOne) SetNillableComputeAllocationID(s *string) *RuntimeOperationUpdateOne {
 	if s != nil {
-		rouo.SetSource(*s)
+		rouo.SetComputeAllocationID(*s)
 	}
 	return rouo
 }
 
-// SetDirection sets the "direction" field.
-func (rouo *RuntimeOperationUpdateOne) SetDirection(s string) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetDirection(s)
+// SetStorageID sets the "storage_id" field.
+func (rouo *RuntimeOperationUpdateOne) SetStorageID(s string) *RuntimeOperationUpdateOne {
+	rouo.mutation.SetStorageID(s)
 	return rouo
 }
 
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableDirection(s *string) *RuntimeOperationUpdateOne {
+// SetNillableStorageID sets the "storage_id" field if the given value is not nil.
+func (rouo *RuntimeOperationUpdateOne) SetNillableStorageID(s *string) *RuntimeOperationUpdateOne {
 	if s != nil {
-		rouo.SetDirection(*s)
+		rouo.SetStorageID(*s)
 	}
 	return rouo
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (rouo *RuntimeOperationUpdateOne) SetCreatedAt(t time.Time) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetCreatedAt(t)
+// SetAttachmentID sets the "attachment_id" field.
+func (rouo *RuntimeOperationUpdateOne) SetAttachmentID(s string) *RuntimeOperationUpdateOne {
+	rouo.mutation.SetAttachmentID(s)
 	return rouo
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableCreatedAt(t *time.Time) *RuntimeOperationUpdateOne {
-	if t != nil {
-		rouo.SetCreatedAt(*t)
+// SetNillableAttachmentID sets the "attachment_id" field if the given value is not nil.
+func (rouo *RuntimeOperationUpdateOne) SetNillableAttachmentID(s *string) *RuntimeOperationUpdateOne {
+	if s != nil {
+		rouo.SetAttachmentID(*s)
 	}
 	return rouo
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (rouo *RuntimeOperationUpdateOne) SetUpdatedAt(t time.Time) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetUpdatedAt(t)
+// SetRuntimeServiceName sets the "runtime_service_name" field.
+func (rouo *RuntimeOperationUpdateOne) SetRuntimeServiceName(s string) *RuntimeOperationUpdateOne {
+	rouo.mutation.SetRuntimeServiceName(s)
 	return rouo
 }
 
-// SetArchivedAt sets the "archived_at" field.
-func (rouo *RuntimeOperationUpdateOne) SetArchivedAt(t time.Time) *RuntimeOperationUpdateOne {
-	rouo.mutation.SetArchivedAt(t)
-	return rouo
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (rouo *RuntimeOperationUpdateOne) SetNillableArchivedAt(t *time.Time) *RuntimeOperationUpdateOne {
-	if t != nil {
-		rouo.SetArchivedAt(*t)
+// SetNillableRuntimeServiceName sets the "runtime_service_name" field if the given value is not nil.
+func (rouo *RuntimeOperationUpdateOne) SetNillableRuntimeServiceName(s *string) *RuntimeOperationUpdateOne {
+	if s != nil {
+		rouo.SetRuntimeServiceName(*s)
 	}
 	return rouo
 }
 
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (rouo *RuntimeOperationUpdateOne) ClearArchivedAt() *RuntimeOperationUpdateOne {
-	rouo.mutation.ClearArchivedAt()
+// SetCvmInstanceID sets the "cvm_instance_id" field.
+func (rouo *RuntimeOperationUpdateOne) SetCvmInstanceID(s string) *RuntimeOperationUpdateOne {
+	rouo.mutation.SetCvmInstanceID(s)
+	return rouo
+}
+
+// SetNillableCvmInstanceID sets the "cvm_instance_id" field if the given value is not nil.
+func (rouo *RuntimeOperationUpdateOne) SetNillableCvmInstanceID(s *string) *RuntimeOperationUpdateOne {
+	if s != nil {
+		rouo.SetCvmInstanceID(*s)
+	}
+	return rouo
+}
+
+// SetInstanceID sets the "instance_id" field.
+func (rouo *RuntimeOperationUpdateOne) SetInstanceID(s string) *RuntimeOperationUpdateOne {
+	rouo.mutation.SetInstanceID(s)
+	return rouo
+}
+
+// SetNillableInstanceID sets the "instance_id" field if the given value is not nil.
+func (rouo *RuntimeOperationUpdateOne) SetNillableInstanceID(s *string) *RuntimeOperationUpdateOne {
+	if s != nil {
+		rouo.SetInstanceID(*s)
+	}
+	return rouo
+}
+
+// SetNodeName sets the "node_name" field.
+func (rouo *RuntimeOperationUpdateOne) SetNodeName(s string) *RuntimeOperationUpdateOne {
+	rouo.mutation.SetNodeName(s)
+	return rouo
+}
+
+// SetNillableNodeName sets the "node_name" field if the given value is not nil.
+func (rouo *RuntimeOperationUpdateOne) SetNillableNodeName(s *string) *RuntimeOperationUpdateOne {
+	if s != nil {
+		rouo.SetNodeName(*s)
+	}
+	return rouo
+}
+
+// SetMachineName sets the "machine_name" field.
+func (rouo *RuntimeOperationUpdateOne) SetMachineName(s string) *RuntimeOperationUpdateOne {
+	rouo.mutation.SetMachineName(s)
+	return rouo
+}
+
+// SetNillableMachineName sets the "machine_name" field if the given value is not nil.
+func (rouo *RuntimeOperationUpdateOne) SetNillableMachineName(s *string) *RuntimeOperationUpdateOne {
+	if s != nil {
+		rouo.SetMachineName(*s)
+	}
 	return rouo
 }
 
@@ -1364,29 +782,17 @@ func (rouo *RuntimeOperationUpdateOne) sqlSave(ctx context.Context) (_node *Runt
 			}
 		}
 	}
+	if value, ok := rouo.mutation.CreatedAt(); ok {
+		_spec.SetField(runtimeoperation.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := rouo.mutation.UpdatedAt(); ok {
+		_spec.SetField(runtimeoperation.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := rouo.mutation.OperationID(); ok {
+		_spec.SetField(runtimeoperation.FieldOperationID, field.TypeString, value)
+	}
 	if value, ok := rouo.mutation.AccountID(); ok {
 		_spec.SetField(runtimeoperation.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.OwnerAccountID(); ok {
-		_spec.SetField(runtimeoperation.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.OwnerUserID(); ok {
-		_spec.SetField(runtimeoperation.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.UserID(); ok {
-		_spec.SetField(runtimeoperation.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.Email(); ok {
-		_spec.SetField(runtimeoperation.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.Role(); ok {
-		_spec.SetField(runtimeoperation.FieldRole, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.Status(); ok {
-		_spec.SetField(runtimeoperation.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.Name(); ok {
-		_spec.SetField(runtimeoperation.FieldName, field.TypeString, value)
 	}
 	if value, ok := rouo.mutation.WorkspaceID(); ok {
 		_spec.SetField(runtimeoperation.FieldWorkspaceID, field.TypeString, value)
@@ -1397,98 +803,44 @@ func (rouo *RuntimeOperationUpdateOne) sqlSave(ctx context.Context) (_node *Runt
 	if value, ok := rouo.mutation.ResourceKind(); ok {
 		_spec.SetField(runtimeoperation.FieldResourceKind, field.TypeString, value)
 	}
-	if value, ok := rouo.mutation.OperationID(); ok {
-		_spec.SetField(runtimeoperation.FieldOperationID, field.TypeString, value)
+	if value, ok := rouo.mutation.Action(); ok {
+		_spec.SetField(runtimeoperation.FieldAction, field.TypeString, value)
 	}
 	if value, ok := rouo.mutation.Provider(); ok {
 		_spec.SetField(runtimeoperation.FieldProvider, field.TypeString, value)
 	}
-	if value, ok := rouo.mutation.ProviderResourceID(); ok {
-		_spec.SetField(runtimeoperation.FieldProviderResourceID, field.TypeString, value)
+	if value, ok := rouo.mutation.ProviderRequestID(); ok {
+		_spec.SetField(runtimeoperation.FieldProviderRequestID, field.TypeString, value)
 	}
-	if value, ok := rouo.mutation.URL(); ok {
-		_spec.SetField(runtimeoperation.FieldURL, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.HoldID(); ok {
-		_spec.SetField(runtimeoperation.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.HoldReleaseID(); ok {
-		_spec.SetField(runtimeoperation.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.LedgerEntryID(); ok {
-		_spec.SetField(runtimeoperation.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.WalletTransactionID(); ok {
-		_spec.SetField(runtimeoperation.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.SettlementID(); ok {
-		_spec.SetField(runtimeoperation.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.PricingVersion(); ok {
-		_spec.SetField(runtimeoperation.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.AmountCents(); ok {
-		_spec.SetField(runtimeoperation.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := rouo.mutation.AddedAmountCents(); ok {
-		_spec.AddField(runtimeoperation.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := rouo.mutation.BalanceCents(); ok {
-		_spec.SetField(runtimeoperation.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := rouo.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(runtimeoperation.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := rouo.mutation.FrozenCents(); ok {
-		_spec.SetField(runtimeoperation.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := rouo.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(runtimeoperation.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := rouo.mutation.AvailableCents(); ok {
-		_spec.SetField(runtimeoperation.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := rouo.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(runtimeoperation.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := rouo.mutation.TotalSpentCents(); ok {
-		_spec.SetField(runtimeoperation.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := rouo.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(runtimeoperation.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := rouo.mutation.Quantity(); ok {
-		_spec.SetField(runtimeoperation.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := rouo.mutation.AddedQuantity(); ok {
-		_spec.AddField(runtimeoperation.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := rouo.mutation.Unit(); ok {
-		_spec.SetField(runtimeoperation.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := rouo.mutation.Reason(); ok {
-		_spec.SetField(runtimeoperation.FieldReason, field.TypeString, value)
+	if value, ok := rouo.mutation.Status(); ok {
+		_spec.SetField(runtimeoperation.FieldStatus, field.TypeString, value)
 	}
 	if value, ok := rouo.mutation.Result(); ok {
 		_spec.SetField(runtimeoperation.FieldResult, field.TypeString, value)
 	}
-	if value, ok := rouo.mutation.Source(); ok {
-		_spec.SetField(runtimeoperation.FieldSource, field.TypeString, value)
+	if value, ok := rouo.mutation.ComputeAllocationID(); ok {
+		_spec.SetField(runtimeoperation.FieldComputeAllocationID, field.TypeString, value)
 	}
-	if value, ok := rouo.mutation.Direction(); ok {
-		_spec.SetField(runtimeoperation.FieldDirection, field.TypeString, value)
+	if value, ok := rouo.mutation.StorageID(); ok {
+		_spec.SetField(runtimeoperation.FieldStorageID, field.TypeString, value)
 	}
-	if value, ok := rouo.mutation.CreatedAt(); ok {
-		_spec.SetField(runtimeoperation.FieldCreatedAt, field.TypeTime, value)
+	if value, ok := rouo.mutation.AttachmentID(); ok {
+		_spec.SetField(runtimeoperation.FieldAttachmentID, field.TypeString, value)
 	}
-	if value, ok := rouo.mutation.UpdatedAt(); ok {
-		_spec.SetField(runtimeoperation.FieldUpdatedAt, field.TypeTime, value)
+	if value, ok := rouo.mutation.RuntimeServiceName(); ok {
+		_spec.SetField(runtimeoperation.FieldRuntimeServiceName, field.TypeString, value)
 	}
-	if value, ok := rouo.mutation.ArchivedAt(); ok {
-		_spec.SetField(runtimeoperation.FieldArchivedAt, field.TypeTime, value)
+	if value, ok := rouo.mutation.CvmInstanceID(); ok {
+		_spec.SetField(runtimeoperation.FieldCvmInstanceID, field.TypeString, value)
 	}
-	if rouo.mutation.ArchivedAtCleared() {
-		_spec.ClearField(runtimeoperation.FieldArchivedAt, field.TypeTime)
+	if value, ok := rouo.mutation.InstanceID(); ok {
+		_spec.SetField(runtimeoperation.FieldInstanceID, field.TypeString, value)
+	}
+	if value, ok := rouo.mutation.NodeName(); ok {
+		_spec.SetField(runtimeoperation.FieldNodeName, field.TypeString, value)
+	}
+	if value, ok := rouo.mutation.MachineName(); ok {
+		_spec.SetField(runtimeoperation.FieldMachineName, field.TypeString, value)
 	}
 	_node = &RuntimeOperation{config: rouo.config}
 	_spec.Assign = _node.assignValues

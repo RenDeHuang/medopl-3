@@ -20,31 +20,37 @@ type StorageVolumeCreate struct {
 	hooks    []Hook
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (svc *StorageVolumeCreate) SetCreatedAt(t time.Time) *StorageVolumeCreate {
+	svc.mutation.SetCreatedAt(t)
+	return svc
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableCreatedAt(t *time.Time) *StorageVolumeCreate {
+	if t != nil {
+		svc.SetCreatedAt(*t)
+	}
+	return svc
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (svc *StorageVolumeCreate) SetUpdatedAt(t time.Time) *StorageVolumeCreate {
+	svc.mutation.SetUpdatedAt(t)
+	return svc
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableUpdatedAt(t *time.Time) *StorageVolumeCreate {
+	if t != nil {
+		svc.SetUpdatedAt(*t)
+	}
+	return svc
+}
+
 // SetAccountID sets the "account_id" field.
 func (svc *StorageVolumeCreate) SetAccountID(s string) *StorageVolumeCreate {
 	svc.mutation.SetAccountID(s)
-	return svc
-}
-
-// SetNillableAccountID sets the "account_id" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableAccountID(s *string) *StorageVolumeCreate {
-	if s != nil {
-		svc.SetAccountID(*s)
-	}
-	return svc
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (svc *StorageVolumeCreate) SetOwnerAccountID(s string) *StorageVolumeCreate {
-	svc.mutation.SetOwnerAccountID(s)
-	return svc
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableOwnerAccountID(s *string) *StorageVolumeCreate {
-	if s != nil {
-		svc.SetOwnerAccountID(*s)
-	}
 	return svc
 }
 
@@ -58,76 +64,6 @@ func (svc *StorageVolumeCreate) SetOwnerUserID(s string) *StorageVolumeCreate {
 func (svc *StorageVolumeCreate) SetNillableOwnerUserID(s *string) *StorageVolumeCreate {
 	if s != nil {
 		svc.SetOwnerUserID(*s)
-	}
-	return svc
-}
-
-// SetUserID sets the "user_id" field.
-func (svc *StorageVolumeCreate) SetUserID(s string) *StorageVolumeCreate {
-	svc.mutation.SetUserID(s)
-	return svc
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableUserID(s *string) *StorageVolumeCreate {
-	if s != nil {
-		svc.SetUserID(*s)
-	}
-	return svc
-}
-
-// SetEmail sets the "email" field.
-func (svc *StorageVolumeCreate) SetEmail(s string) *StorageVolumeCreate {
-	svc.mutation.SetEmail(s)
-	return svc
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableEmail(s *string) *StorageVolumeCreate {
-	if s != nil {
-		svc.SetEmail(*s)
-	}
-	return svc
-}
-
-// SetRole sets the "role" field.
-func (svc *StorageVolumeCreate) SetRole(s string) *StorageVolumeCreate {
-	svc.mutation.SetRole(s)
-	return svc
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableRole(s *string) *StorageVolumeCreate {
-	if s != nil {
-		svc.SetRole(*s)
-	}
-	return svc
-}
-
-// SetStatus sets the "status" field.
-func (svc *StorageVolumeCreate) SetStatus(s string) *StorageVolumeCreate {
-	svc.mutation.SetStatus(s)
-	return svc
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableStatus(s *string) *StorageVolumeCreate {
-	if s != nil {
-		svc.SetStatus(*s)
-	}
-	return svc
-}
-
-// SetName sets the "name" field.
-func (svc *StorageVolumeCreate) SetName(s string) *StorageVolumeCreate {
-	svc.mutation.SetName(s)
-	return svc
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableName(s *string) *StorageVolumeCreate {
-	if s != nil {
-		svc.SetName(*s)
 	}
 	return svc
 }
@@ -146,44 +82,16 @@ func (svc *StorageVolumeCreate) SetNillableWorkspaceID(s *string) *StorageVolume
 	return svc
 }
 
-// SetResourceID sets the "resource_id" field.
-func (svc *StorageVolumeCreate) SetResourceID(s string) *StorageVolumeCreate {
-	svc.mutation.SetResourceID(s)
+// SetName sets the "name" field.
+func (svc *StorageVolumeCreate) SetName(s string) *StorageVolumeCreate {
+	svc.mutation.SetName(s)
 	return svc
 }
 
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableResourceID(s *string) *StorageVolumeCreate {
+// SetNillableName sets the "name" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableName(s *string) *StorageVolumeCreate {
 	if s != nil {
-		svc.SetResourceID(*s)
-	}
-	return svc
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (svc *StorageVolumeCreate) SetResourceKind(s string) *StorageVolumeCreate {
-	svc.mutation.SetResourceKind(s)
-	return svc
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableResourceKind(s *string) *StorageVolumeCreate {
-	if s != nil {
-		svc.SetResourceKind(*s)
-	}
-	return svc
-}
-
-// SetOperationID sets the "operation_id" field.
-func (svc *StorageVolumeCreate) SetOperationID(s string) *StorageVolumeCreate {
-	svc.mutation.SetOperationID(s)
-	return svc
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableOperationID(s *string) *StorageVolumeCreate {
-	if s != nil {
-		svc.SetOperationID(*s)
+		svc.SetName(*s)
 	}
 	return svc
 }
@@ -216,16 +124,58 @@ func (svc *StorageVolumeCreate) SetNillableProviderResourceID(s *string) *Storag
 	return svc
 }
 
-// SetURL sets the "url" field.
-func (svc *StorageVolumeCreate) SetURL(s string) *StorageVolumeCreate {
-	svc.mutation.SetURL(s)
+// SetProviderRequestID sets the "provider_request_id" field.
+func (svc *StorageVolumeCreate) SetProviderRequestID(s string) *StorageVolumeCreate {
+	svc.mutation.SetProviderRequestID(s)
 	return svc
 }
 
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableURL(s *string) *StorageVolumeCreate {
+// SetNillableProviderRequestID sets the "provider_request_id" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableProviderRequestID(s *string) *StorageVolumeCreate {
 	if s != nil {
-		svc.SetURL(*s)
+		svc.SetProviderRequestID(*s)
+	}
+	return svc
+}
+
+// SetOperationID sets the "operation_id" field.
+func (svc *StorageVolumeCreate) SetOperationID(s string) *StorageVolumeCreate {
+	svc.mutation.SetOperationID(s)
+	return svc
+}
+
+// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableOperationID(s *string) *StorageVolumeCreate {
+	if s != nil {
+		svc.SetOperationID(*s)
+	}
+	return svc
+}
+
+// SetStatus sets the "status" field.
+func (svc *StorageVolumeCreate) SetStatus(s string) *StorageVolumeCreate {
+	svc.mutation.SetStatus(s)
+	return svc
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableStatus(s *string) *StorageVolumeCreate {
+	if s != nil {
+		svc.SetStatus(*s)
+	}
+	return svc
+}
+
+// SetBillingStatus sets the "billing_status" field.
+func (svc *StorageVolumeCreate) SetBillingStatus(s string) *StorageVolumeCreate {
+	svc.mutation.SetBillingStatus(s)
+	return svc
+}
+
+// SetNillableBillingStatus sets the "billing_status" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableBillingStatus(s *string) *StorageVolumeCreate {
+	if s != nil {
+		svc.SetBillingStatus(*s)
 	}
 	return svc
 }
@@ -258,6 +208,20 @@ func (svc *StorageVolumeCreate) SetNillableHoldReleaseID(s *string) *StorageVolu
 	return svc
 }
 
+// SetSettlementID sets the "settlement_id" field.
+func (svc *StorageVolumeCreate) SetSettlementID(s string) *StorageVolumeCreate {
+	svc.mutation.SetSettlementID(s)
+	return svc
+}
+
+// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableSettlementID(s *string) *StorageVolumeCreate {
+	if s != nil {
+		svc.SetSettlementID(*s)
+	}
+	return svc
+}
+
 // SetLedgerEntryID sets the "ledger_entry_id" field.
 func (svc *StorageVolumeCreate) SetLedgerEntryID(s string) *StorageVolumeCreate {
 	svc.mutation.SetLedgerEntryID(s)
@@ -286,20 +250,6 @@ func (svc *StorageVolumeCreate) SetNillableWalletTransactionID(s *string) *Stora
 	return svc
 }
 
-// SetSettlementID sets the "settlement_id" field.
-func (svc *StorageVolumeCreate) SetSettlementID(s string) *StorageVolumeCreate {
-	svc.mutation.SetSettlementID(s)
-	return svc
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableSettlementID(s *string) *StorageVolumeCreate {
-	if s != nil {
-		svc.SetSettlementID(*s)
-	}
-	return svc
-}
-
 // SetPricingVersion sets the "pricing_version" field.
 func (svc *StorageVolumeCreate) SetPricingVersion(s string) *StorageVolumeCreate {
 	svc.mutation.SetPricingVersion(s)
@@ -314,198 +264,156 @@ func (svc *StorageVolumeCreate) SetNillablePricingVersion(s *string) *StorageVol
 	return svc
 }
 
-// SetAmountCents sets the "amount_cents" field.
-func (svc *StorageVolumeCreate) SetAmountCents(i int64) *StorageVolumeCreate {
-	svc.mutation.SetAmountCents(i)
+// SetUsagePeriodEnd sets the "usage_period_end" field.
+func (svc *StorageVolumeCreate) SetUsagePeriodEnd(s string) *StorageVolumeCreate {
+	svc.mutation.SetUsagePeriodEnd(s)
 	return svc
 }
 
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableAmountCents(i *int64) *StorageVolumeCreate {
-	if i != nil {
-		svc.SetAmountCents(*i)
+// SetNillableUsagePeriodEnd sets the "usage_period_end" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableUsagePeriodEnd(s *string) *StorageVolumeCreate {
+	if s != nil {
+		svc.SetUsagePeriodEnd(*s)
 	}
 	return svc
 }
 
-// SetBalanceCents sets the "balance_cents" field.
-func (svc *StorageVolumeCreate) SetBalanceCents(i int64) *StorageVolumeCreate {
-	svc.mutation.SetBalanceCents(i)
+// SetMountPath sets the "mount_path" field.
+func (svc *StorageVolumeCreate) SetMountPath(s string) *StorageVolumeCreate {
+	svc.mutation.SetMountPath(s)
 	return svc
 }
 
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableBalanceCents(i *int64) *StorageVolumeCreate {
-	if i != nil {
-		svc.SetBalanceCents(*i)
+// SetNillableMountPath sets the "mount_path" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableMountPath(s *string) *StorageVolumeCreate {
+	if s != nil {
+		svc.SetMountPath(*s)
 	}
 	return svc
 }
 
-// SetFrozenCents sets the "frozen_cents" field.
-func (svc *StorageVolumeCreate) SetFrozenCents(i int64) *StorageVolumeCreate {
-	svc.mutation.SetFrozenCents(i)
+// SetHoldAmountCents sets the "hold_amount_cents" field.
+func (svc *StorageVolumeCreate) SetHoldAmountCents(i int64) *StorageVolumeCreate {
+	svc.mutation.SetHoldAmountCents(i)
 	return svc
 }
 
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableFrozenCents(i *int64) *StorageVolumeCreate {
+// SetNillableHoldAmountCents sets the "hold_amount_cents" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableHoldAmountCents(i *int64) *StorageVolumeCreate {
 	if i != nil {
-		svc.SetFrozenCents(*i)
+		svc.SetHoldAmountCents(*i)
 	}
 	return svc
 }
 
-// SetAvailableCents sets the "available_cents" field.
-func (svc *StorageVolumeCreate) SetAvailableCents(i int64) *StorageVolumeCreate {
-	svc.mutation.SetAvailableCents(i)
+// SetHoldAmount sets the "hold_amount" field.
+func (svc *StorageVolumeCreate) SetHoldAmount(f float64) *StorageVolumeCreate {
+	svc.mutation.SetHoldAmount(f)
 	return svc
 }
 
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableAvailableCents(i *int64) *StorageVolumeCreate {
-	if i != nil {
-		svc.SetAvailableCents(*i)
-	}
-	return svc
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (svc *StorageVolumeCreate) SetTotalSpentCents(i int64) *StorageVolumeCreate {
-	svc.mutation.SetTotalSpentCents(i)
-	return svc
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableTotalSpentCents(i *int64) *StorageVolumeCreate {
-	if i != nil {
-		svc.SetTotalSpentCents(*i)
-	}
-	return svc
-}
-
-// SetQuantity sets the "quantity" field.
-func (svc *StorageVolumeCreate) SetQuantity(f float64) *StorageVolumeCreate {
-	svc.mutation.SetQuantity(f)
-	return svc
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableQuantity(f *float64) *StorageVolumeCreate {
+// SetNillableHoldAmount sets the "hold_amount" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableHoldAmount(f *float64) *StorageVolumeCreate {
 	if f != nil {
-		svc.SetQuantity(*f)
+		svc.SetHoldAmount(*f)
 	}
 	return svc
 }
 
-// SetUnit sets the "unit" field.
-func (svc *StorageVolumeCreate) SetUnit(s string) *StorageVolumeCreate {
-	svc.mutation.SetUnit(s)
+// SetSizeGB sets the "size_gb" field.
+func (svc *StorageVolumeCreate) SetSizeGB(f float64) *StorageVolumeCreate {
+	svc.mutation.SetSizeGB(f)
 	return svc
 }
 
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableUnit(s *string) *StorageVolumeCreate {
+// SetNillableSizeGB sets the "size_gb" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableSizeGB(f *float64) *StorageVolumeCreate {
+	if f != nil {
+		svc.SetSizeGB(*f)
+	}
+	return svc
+}
+
+// SetPriceSnapshotResourceType sets the "price_snapshot_resource_type" field.
+func (svc *StorageVolumeCreate) SetPriceSnapshotResourceType(s string) *StorageVolumeCreate {
+	svc.mutation.SetPriceSnapshotResourceType(s)
+	return svc
+}
+
+// SetNillablePriceSnapshotResourceType sets the "price_snapshot_resource_type" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillablePriceSnapshotResourceType(s *string) *StorageVolumeCreate {
 	if s != nil {
-		svc.SetUnit(*s)
+		svc.SetPriceSnapshotResourceType(*s)
 	}
 	return svc
 }
 
-// SetReason sets the "reason" field.
-func (svc *StorageVolumeCreate) SetReason(s string) *StorageVolumeCreate {
-	svc.mutation.SetReason(s)
+// SetPriceSnapshotCurrency sets the "price_snapshot_currency" field.
+func (svc *StorageVolumeCreate) SetPriceSnapshotCurrency(s string) *StorageVolumeCreate {
+	svc.mutation.SetPriceSnapshotCurrency(s)
 	return svc
 }
 
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableReason(s *string) *StorageVolumeCreate {
+// SetNillablePriceSnapshotCurrency sets the "price_snapshot_currency" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillablePriceSnapshotCurrency(s *string) *StorageVolumeCreate {
 	if s != nil {
-		svc.SetReason(*s)
+		svc.SetPriceSnapshotCurrency(*s)
 	}
 	return svc
 }
 
-// SetResult sets the "result" field.
-func (svc *StorageVolumeCreate) SetResult(s string) *StorageVolumeCreate {
-	svc.mutation.SetResult(s)
+// SetPriceSnapshotSource sets the "price_snapshot_source" field.
+func (svc *StorageVolumeCreate) SetPriceSnapshotSource(s string) *StorageVolumeCreate {
+	svc.mutation.SetPriceSnapshotSource(s)
 	return svc
 }
 
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableResult(s *string) *StorageVolumeCreate {
+// SetNillablePriceSnapshotSource sets the "price_snapshot_source" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillablePriceSnapshotSource(s *string) *StorageVolumeCreate {
 	if s != nil {
-		svc.SetResult(*s)
+		svc.SetPriceSnapshotSource(*s)
 	}
 	return svc
 }
 
-// SetSource sets the "source" field.
-func (svc *StorageVolumeCreate) SetSource(s string) *StorageVolumeCreate {
-	svc.mutation.SetSource(s)
+// SetPriceSnapshotUnitPriceCents sets the "price_snapshot_unit_price_cents" field.
+func (svc *StorageVolumeCreate) SetPriceSnapshotUnitPriceCents(i int64) *StorageVolumeCreate {
+	svc.mutation.SetPriceSnapshotUnitPriceCents(i)
 	return svc
 }
 
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableSource(s *string) *StorageVolumeCreate {
-	if s != nil {
-		svc.SetSource(*s)
+// SetNillablePriceSnapshotUnitPriceCents sets the "price_snapshot_unit_price_cents" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillablePriceSnapshotUnitPriceCents(i *int64) *StorageVolumeCreate {
+	if i != nil {
+		svc.SetPriceSnapshotUnitPriceCents(*i)
 	}
 	return svc
 }
 
-// SetDirection sets the "direction" field.
-func (svc *StorageVolumeCreate) SetDirection(s string) *StorageVolumeCreate {
-	svc.mutation.SetDirection(s)
+// SetPriceSnapshotStorageGBMonth sets the "price_snapshot_storage_gb_month" field.
+func (svc *StorageVolumeCreate) SetPriceSnapshotStorageGBMonth(f float64) *StorageVolumeCreate {
+	svc.mutation.SetPriceSnapshotStorageGBMonth(f)
 	return svc
 }
 
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableDirection(s *string) *StorageVolumeCreate {
-	if s != nil {
-		svc.SetDirection(*s)
+// SetNillablePriceSnapshotStorageGBMonth sets the "price_snapshot_storage_gb_month" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillablePriceSnapshotStorageGBMonth(f *float64) *StorageVolumeCreate {
+	if f != nil {
+		svc.SetPriceSnapshotStorageGBMonth(*f)
 	}
 	return svc
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (svc *StorageVolumeCreate) SetCreatedAt(t time.Time) *StorageVolumeCreate {
-	svc.mutation.SetCreatedAt(t)
+// SetPriceSnapshotSizeGB sets the "price_snapshot_size_gb" field.
+func (svc *StorageVolumeCreate) SetPriceSnapshotSizeGB(f float64) *StorageVolumeCreate {
+	svc.mutation.SetPriceSnapshotSizeGB(f)
 	return svc
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableCreatedAt(t *time.Time) *StorageVolumeCreate {
-	if t != nil {
-		svc.SetCreatedAt(*t)
-	}
-	return svc
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (svc *StorageVolumeCreate) SetUpdatedAt(t time.Time) *StorageVolumeCreate {
-	svc.mutation.SetUpdatedAt(t)
-	return svc
-}
-
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableUpdatedAt(t *time.Time) *StorageVolumeCreate {
-	if t != nil {
-		svc.SetUpdatedAt(*t)
-	}
-	return svc
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (svc *StorageVolumeCreate) SetArchivedAt(t time.Time) *StorageVolumeCreate {
-	svc.mutation.SetArchivedAt(t)
-	return svc
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (svc *StorageVolumeCreate) SetNillableArchivedAt(t *time.Time) *StorageVolumeCreate {
-	if t != nil {
-		svc.SetArchivedAt(*t)
+// SetNillablePriceSnapshotSizeGB sets the "price_snapshot_size_gb" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillablePriceSnapshotSizeGB(f *float64) *StorageVolumeCreate {
+	if f != nil {
+		svc.SetPriceSnapshotSizeGB(*f)
 	}
 	return svc
 }
@@ -551,53 +459,25 @@ func (svc *StorageVolumeCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (svc *StorageVolumeCreate) defaults() {
-	if _, ok := svc.mutation.AccountID(); !ok {
-		v := storagevolume.DefaultAccountID
-		svc.mutation.SetAccountID(v)
+	if _, ok := svc.mutation.CreatedAt(); !ok {
+		v := storagevolume.DefaultCreatedAt()
+		svc.mutation.SetCreatedAt(v)
 	}
-	if _, ok := svc.mutation.OwnerAccountID(); !ok {
-		v := storagevolume.DefaultOwnerAccountID
-		svc.mutation.SetOwnerAccountID(v)
+	if _, ok := svc.mutation.UpdatedAt(); !ok {
+		v := storagevolume.DefaultUpdatedAt()
+		svc.mutation.SetUpdatedAt(v)
 	}
 	if _, ok := svc.mutation.OwnerUserID(); !ok {
 		v := storagevolume.DefaultOwnerUserID
 		svc.mutation.SetOwnerUserID(v)
 	}
-	if _, ok := svc.mutation.UserID(); !ok {
-		v := storagevolume.DefaultUserID
-		svc.mutation.SetUserID(v)
-	}
-	if _, ok := svc.mutation.Email(); !ok {
-		v := storagevolume.DefaultEmail
-		svc.mutation.SetEmail(v)
-	}
-	if _, ok := svc.mutation.Role(); !ok {
-		v := storagevolume.DefaultRole
-		svc.mutation.SetRole(v)
-	}
-	if _, ok := svc.mutation.Status(); !ok {
-		v := storagevolume.DefaultStatus
-		svc.mutation.SetStatus(v)
-	}
-	if _, ok := svc.mutation.Name(); !ok {
-		v := storagevolume.DefaultName
-		svc.mutation.SetName(v)
-	}
 	if _, ok := svc.mutation.WorkspaceID(); !ok {
 		v := storagevolume.DefaultWorkspaceID
 		svc.mutation.SetWorkspaceID(v)
 	}
-	if _, ok := svc.mutation.ResourceID(); !ok {
-		v := storagevolume.DefaultResourceID
-		svc.mutation.SetResourceID(v)
-	}
-	if _, ok := svc.mutation.ResourceKind(); !ok {
-		v := storagevolume.DefaultResourceKind
-		svc.mutation.SetResourceKind(v)
-	}
-	if _, ok := svc.mutation.OperationID(); !ok {
-		v := storagevolume.DefaultOperationID
-		svc.mutation.SetOperationID(v)
+	if _, ok := svc.mutation.Name(); !ok {
+		v := storagevolume.DefaultName
+		svc.mutation.SetName(v)
 	}
 	if _, ok := svc.mutation.Provider(); !ok {
 		v := storagevolume.DefaultProvider
@@ -607,9 +487,21 @@ func (svc *StorageVolumeCreate) defaults() {
 		v := storagevolume.DefaultProviderResourceID
 		svc.mutation.SetProviderResourceID(v)
 	}
-	if _, ok := svc.mutation.URL(); !ok {
-		v := storagevolume.DefaultURL
-		svc.mutation.SetURL(v)
+	if _, ok := svc.mutation.ProviderRequestID(); !ok {
+		v := storagevolume.DefaultProviderRequestID
+		svc.mutation.SetProviderRequestID(v)
+	}
+	if _, ok := svc.mutation.OperationID(); !ok {
+		v := storagevolume.DefaultOperationID
+		svc.mutation.SetOperationID(v)
+	}
+	if _, ok := svc.mutation.Status(); !ok {
+		v := storagevolume.DefaultStatus
+		svc.mutation.SetStatus(v)
+	}
+	if _, ok := svc.mutation.BillingStatus(); !ok {
+		v := storagevolume.DefaultBillingStatus
+		svc.mutation.SetBillingStatus(v)
 	}
 	if _, ok := svc.mutation.HoldID(); !ok {
 		v := storagevolume.DefaultHoldID
@@ -619,6 +511,10 @@ func (svc *StorageVolumeCreate) defaults() {
 		v := storagevolume.DefaultHoldReleaseID
 		svc.mutation.SetHoldReleaseID(v)
 	}
+	if _, ok := svc.mutation.SettlementID(); !ok {
+		v := storagevolume.DefaultSettlementID
+		svc.mutation.SetSettlementID(v)
+	}
 	if _, ok := svc.mutation.LedgerEntryID(); !ok {
 		v := storagevolume.DefaultLedgerEntryID
 		svc.mutation.SetLedgerEntryID(v)
@@ -627,105 +523,80 @@ func (svc *StorageVolumeCreate) defaults() {
 		v := storagevolume.DefaultWalletTransactionID
 		svc.mutation.SetWalletTransactionID(v)
 	}
-	if _, ok := svc.mutation.SettlementID(); !ok {
-		v := storagevolume.DefaultSettlementID
-		svc.mutation.SetSettlementID(v)
-	}
 	if _, ok := svc.mutation.PricingVersion(); !ok {
 		v := storagevolume.DefaultPricingVersion
 		svc.mutation.SetPricingVersion(v)
 	}
-	if _, ok := svc.mutation.AmountCents(); !ok {
-		v := storagevolume.DefaultAmountCents
-		svc.mutation.SetAmountCents(v)
+	if _, ok := svc.mutation.UsagePeriodEnd(); !ok {
+		v := storagevolume.DefaultUsagePeriodEnd
+		svc.mutation.SetUsagePeriodEnd(v)
 	}
-	if _, ok := svc.mutation.BalanceCents(); !ok {
-		v := storagevolume.DefaultBalanceCents
-		svc.mutation.SetBalanceCents(v)
+	if _, ok := svc.mutation.MountPath(); !ok {
+		v := storagevolume.DefaultMountPath
+		svc.mutation.SetMountPath(v)
 	}
-	if _, ok := svc.mutation.FrozenCents(); !ok {
-		v := storagevolume.DefaultFrozenCents
-		svc.mutation.SetFrozenCents(v)
+	if _, ok := svc.mutation.HoldAmountCents(); !ok {
+		v := storagevolume.DefaultHoldAmountCents
+		svc.mutation.SetHoldAmountCents(v)
 	}
-	if _, ok := svc.mutation.AvailableCents(); !ok {
-		v := storagevolume.DefaultAvailableCents
-		svc.mutation.SetAvailableCents(v)
+	if _, ok := svc.mutation.HoldAmount(); !ok {
+		v := storagevolume.DefaultHoldAmount
+		svc.mutation.SetHoldAmount(v)
 	}
-	if _, ok := svc.mutation.TotalSpentCents(); !ok {
-		v := storagevolume.DefaultTotalSpentCents
-		svc.mutation.SetTotalSpentCents(v)
+	if _, ok := svc.mutation.SizeGB(); !ok {
+		v := storagevolume.DefaultSizeGB
+		svc.mutation.SetSizeGB(v)
 	}
-	if _, ok := svc.mutation.Quantity(); !ok {
-		v := storagevolume.DefaultQuantity
-		svc.mutation.SetQuantity(v)
+	if _, ok := svc.mutation.PriceSnapshotResourceType(); !ok {
+		v := storagevolume.DefaultPriceSnapshotResourceType
+		svc.mutation.SetPriceSnapshotResourceType(v)
 	}
-	if _, ok := svc.mutation.Unit(); !ok {
-		v := storagevolume.DefaultUnit
-		svc.mutation.SetUnit(v)
+	if _, ok := svc.mutation.PriceSnapshotCurrency(); !ok {
+		v := storagevolume.DefaultPriceSnapshotCurrency
+		svc.mutation.SetPriceSnapshotCurrency(v)
 	}
-	if _, ok := svc.mutation.Reason(); !ok {
-		v := storagevolume.DefaultReason
-		svc.mutation.SetReason(v)
+	if _, ok := svc.mutation.PriceSnapshotSource(); !ok {
+		v := storagevolume.DefaultPriceSnapshotSource
+		svc.mutation.SetPriceSnapshotSource(v)
 	}
-	if _, ok := svc.mutation.Result(); !ok {
-		v := storagevolume.DefaultResult
-		svc.mutation.SetResult(v)
+	if _, ok := svc.mutation.PriceSnapshotUnitPriceCents(); !ok {
+		v := storagevolume.DefaultPriceSnapshotUnitPriceCents
+		svc.mutation.SetPriceSnapshotUnitPriceCents(v)
 	}
-	if _, ok := svc.mutation.Source(); !ok {
-		v := storagevolume.DefaultSource
-		svc.mutation.SetSource(v)
+	if _, ok := svc.mutation.PriceSnapshotStorageGBMonth(); !ok {
+		v := storagevolume.DefaultPriceSnapshotStorageGBMonth
+		svc.mutation.SetPriceSnapshotStorageGBMonth(v)
 	}
-	if _, ok := svc.mutation.Direction(); !ok {
-		v := storagevolume.DefaultDirection
-		svc.mutation.SetDirection(v)
-	}
-	if _, ok := svc.mutation.CreatedAt(); !ok {
-		v := storagevolume.DefaultCreatedAt()
-		svc.mutation.SetCreatedAt(v)
-	}
-	if _, ok := svc.mutation.UpdatedAt(); !ok {
-		v := storagevolume.DefaultUpdatedAt()
-		svc.mutation.SetUpdatedAt(v)
+	if _, ok := svc.mutation.PriceSnapshotSizeGB(); !ok {
+		v := storagevolume.DefaultPriceSnapshotSizeGB
+		svc.mutation.SetPriceSnapshotSizeGB(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (svc *StorageVolumeCreate) check() error {
+	if _, ok := svc.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "StorageVolume.created_at"`)}
+	}
+	if _, ok := svc.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "StorageVolume.updated_at"`)}
+	}
 	if _, ok := svc.mutation.AccountID(); !ok {
 		return &ValidationError{Name: "account_id", err: errors.New(`ent: missing required field "StorageVolume.account_id"`)}
 	}
-	if _, ok := svc.mutation.OwnerAccountID(); !ok {
-		return &ValidationError{Name: "owner_account_id", err: errors.New(`ent: missing required field "StorageVolume.owner_account_id"`)}
+	if v, ok := svc.mutation.AccountID(); ok {
+		if err := storagevolume.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "StorageVolume.account_id": %w`, err)}
+		}
 	}
 	if _, ok := svc.mutation.OwnerUserID(); !ok {
 		return &ValidationError{Name: "owner_user_id", err: errors.New(`ent: missing required field "StorageVolume.owner_user_id"`)}
 	}
-	if _, ok := svc.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "StorageVolume.user_id"`)}
-	}
-	if _, ok := svc.mutation.Email(); !ok {
-		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "StorageVolume.email"`)}
-	}
-	if _, ok := svc.mutation.Role(); !ok {
-		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "StorageVolume.role"`)}
-	}
-	if _, ok := svc.mutation.Status(); !ok {
-		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "StorageVolume.status"`)}
-	}
-	if _, ok := svc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "StorageVolume.name"`)}
-	}
 	if _, ok := svc.mutation.WorkspaceID(); !ok {
 		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "StorageVolume.workspace_id"`)}
 	}
-	if _, ok := svc.mutation.ResourceID(); !ok {
-		return &ValidationError{Name: "resource_id", err: errors.New(`ent: missing required field "StorageVolume.resource_id"`)}
-	}
-	if _, ok := svc.mutation.ResourceKind(); !ok {
-		return &ValidationError{Name: "resource_kind", err: errors.New(`ent: missing required field "StorageVolume.resource_kind"`)}
-	}
-	if _, ok := svc.mutation.OperationID(); !ok {
-		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "StorageVolume.operation_id"`)}
+	if _, ok := svc.mutation.Name(); !ok {
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "StorageVolume.name"`)}
 	}
 	if _, ok := svc.mutation.Provider(); !ok {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "StorageVolume.provider"`)}
@@ -733,8 +604,17 @@ func (svc *StorageVolumeCreate) check() error {
 	if _, ok := svc.mutation.ProviderResourceID(); !ok {
 		return &ValidationError{Name: "provider_resource_id", err: errors.New(`ent: missing required field "StorageVolume.provider_resource_id"`)}
 	}
-	if _, ok := svc.mutation.URL(); !ok {
-		return &ValidationError{Name: "url", err: errors.New(`ent: missing required field "StorageVolume.url"`)}
+	if _, ok := svc.mutation.ProviderRequestID(); !ok {
+		return &ValidationError{Name: "provider_request_id", err: errors.New(`ent: missing required field "StorageVolume.provider_request_id"`)}
+	}
+	if _, ok := svc.mutation.OperationID(); !ok {
+		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "StorageVolume.operation_id"`)}
+	}
+	if _, ok := svc.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "StorageVolume.status"`)}
+	}
+	if _, ok := svc.mutation.BillingStatus(); !ok {
+		return &ValidationError{Name: "billing_status", err: errors.New(`ent: missing required field "StorageVolume.billing_status"`)}
 	}
 	if _, ok := svc.mutation.HoldID(); !ok {
 		return &ValidationError{Name: "hold_id", err: errors.New(`ent: missing required field "StorageVolume.hold_id"`)}
@@ -742,56 +622,50 @@ func (svc *StorageVolumeCreate) check() error {
 	if _, ok := svc.mutation.HoldReleaseID(); !ok {
 		return &ValidationError{Name: "hold_release_id", err: errors.New(`ent: missing required field "StorageVolume.hold_release_id"`)}
 	}
+	if _, ok := svc.mutation.SettlementID(); !ok {
+		return &ValidationError{Name: "settlement_id", err: errors.New(`ent: missing required field "StorageVolume.settlement_id"`)}
+	}
 	if _, ok := svc.mutation.LedgerEntryID(); !ok {
 		return &ValidationError{Name: "ledger_entry_id", err: errors.New(`ent: missing required field "StorageVolume.ledger_entry_id"`)}
 	}
 	if _, ok := svc.mutation.WalletTransactionID(); !ok {
 		return &ValidationError{Name: "wallet_transaction_id", err: errors.New(`ent: missing required field "StorageVolume.wallet_transaction_id"`)}
 	}
-	if _, ok := svc.mutation.SettlementID(); !ok {
-		return &ValidationError{Name: "settlement_id", err: errors.New(`ent: missing required field "StorageVolume.settlement_id"`)}
-	}
 	if _, ok := svc.mutation.PricingVersion(); !ok {
 		return &ValidationError{Name: "pricing_version", err: errors.New(`ent: missing required field "StorageVolume.pricing_version"`)}
 	}
-	if _, ok := svc.mutation.AmountCents(); !ok {
-		return &ValidationError{Name: "amount_cents", err: errors.New(`ent: missing required field "StorageVolume.amount_cents"`)}
+	if _, ok := svc.mutation.UsagePeriodEnd(); !ok {
+		return &ValidationError{Name: "usage_period_end", err: errors.New(`ent: missing required field "StorageVolume.usage_period_end"`)}
 	}
-	if _, ok := svc.mutation.BalanceCents(); !ok {
-		return &ValidationError{Name: "balance_cents", err: errors.New(`ent: missing required field "StorageVolume.balance_cents"`)}
+	if _, ok := svc.mutation.MountPath(); !ok {
+		return &ValidationError{Name: "mount_path", err: errors.New(`ent: missing required field "StorageVolume.mount_path"`)}
 	}
-	if _, ok := svc.mutation.FrozenCents(); !ok {
-		return &ValidationError{Name: "frozen_cents", err: errors.New(`ent: missing required field "StorageVolume.frozen_cents"`)}
+	if _, ok := svc.mutation.HoldAmountCents(); !ok {
+		return &ValidationError{Name: "hold_amount_cents", err: errors.New(`ent: missing required field "StorageVolume.hold_amount_cents"`)}
 	}
-	if _, ok := svc.mutation.AvailableCents(); !ok {
-		return &ValidationError{Name: "available_cents", err: errors.New(`ent: missing required field "StorageVolume.available_cents"`)}
+	if _, ok := svc.mutation.HoldAmount(); !ok {
+		return &ValidationError{Name: "hold_amount", err: errors.New(`ent: missing required field "StorageVolume.hold_amount"`)}
 	}
-	if _, ok := svc.mutation.TotalSpentCents(); !ok {
-		return &ValidationError{Name: "total_spent_cents", err: errors.New(`ent: missing required field "StorageVolume.total_spent_cents"`)}
+	if _, ok := svc.mutation.SizeGB(); !ok {
+		return &ValidationError{Name: "size_gb", err: errors.New(`ent: missing required field "StorageVolume.size_gb"`)}
 	}
-	if _, ok := svc.mutation.Quantity(); !ok {
-		return &ValidationError{Name: "quantity", err: errors.New(`ent: missing required field "StorageVolume.quantity"`)}
+	if _, ok := svc.mutation.PriceSnapshotResourceType(); !ok {
+		return &ValidationError{Name: "price_snapshot_resource_type", err: errors.New(`ent: missing required field "StorageVolume.price_snapshot_resource_type"`)}
 	}
-	if _, ok := svc.mutation.Unit(); !ok {
-		return &ValidationError{Name: "unit", err: errors.New(`ent: missing required field "StorageVolume.unit"`)}
+	if _, ok := svc.mutation.PriceSnapshotCurrency(); !ok {
+		return &ValidationError{Name: "price_snapshot_currency", err: errors.New(`ent: missing required field "StorageVolume.price_snapshot_currency"`)}
 	}
-	if _, ok := svc.mutation.Reason(); !ok {
-		return &ValidationError{Name: "reason", err: errors.New(`ent: missing required field "StorageVolume.reason"`)}
+	if _, ok := svc.mutation.PriceSnapshotSource(); !ok {
+		return &ValidationError{Name: "price_snapshot_source", err: errors.New(`ent: missing required field "StorageVolume.price_snapshot_source"`)}
 	}
-	if _, ok := svc.mutation.Result(); !ok {
-		return &ValidationError{Name: "result", err: errors.New(`ent: missing required field "StorageVolume.result"`)}
+	if _, ok := svc.mutation.PriceSnapshotUnitPriceCents(); !ok {
+		return &ValidationError{Name: "price_snapshot_unit_price_cents", err: errors.New(`ent: missing required field "StorageVolume.price_snapshot_unit_price_cents"`)}
 	}
-	if _, ok := svc.mutation.Source(); !ok {
-		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "StorageVolume.source"`)}
+	if _, ok := svc.mutation.PriceSnapshotStorageGBMonth(); !ok {
+		return &ValidationError{Name: "price_snapshot_storage_gb_month", err: errors.New(`ent: missing required field "StorageVolume.price_snapshot_storage_gb_month"`)}
 	}
-	if _, ok := svc.mutation.Direction(); !ok {
-		return &ValidationError{Name: "direction", err: errors.New(`ent: missing required field "StorageVolume.direction"`)}
-	}
-	if _, ok := svc.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "StorageVolume.created_at"`)}
-	}
-	if _, ok := svc.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "StorageVolume.updated_at"`)}
+	if _, ok := svc.mutation.PriceSnapshotSizeGB(); !ok {
+		return &ValidationError{Name: "price_snapshot_size_gb", err: errors.New(`ent: missing required field "StorageVolume.price_snapshot_size_gb"`)}
 	}
 	if v, ok := svc.mutation.ID(); ok {
 		if err := storagevolume.IDValidator(v); err != nil {
@@ -833,53 +707,29 @@ func (svc *StorageVolumeCreate) createSpec() (*StorageVolume, *sqlgraph.CreateSp
 		_node.ID = id
 		_spec.ID.Value = id
 	}
+	if value, ok := svc.mutation.CreatedAt(); ok {
+		_spec.SetField(storagevolume.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := svc.mutation.UpdatedAt(); ok {
+		_spec.SetField(storagevolume.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
 	if value, ok := svc.mutation.AccountID(); ok {
 		_spec.SetField(storagevolume.FieldAccountID, field.TypeString, value)
 		_node.AccountID = value
-	}
-	if value, ok := svc.mutation.OwnerAccountID(); ok {
-		_spec.SetField(storagevolume.FieldOwnerAccountID, field.TypeString, value)
-		_node.OwnerAccountID = value
 	}
 	if value, ok := svc.mutation.OwnerUserID(); ok {
 		_spec.SetField(storagevolume.FieldOwnerUserID, field.TypeString, value)
 		_node.OwnerUserID = value
 	}
-	if value, ok := svc.mutation.UserID(); ok {
-		_spec.SetField(storagevolume.FieldUserID, field.TypeString, value)
-		_node.UserID = value
-	}
-	if value, ok := svc.mutation.Email(); ok {
-		_spec.SetField(storagevolume.FieldEmail, field.TypeString, value)
-		_node.Email = value
-	}
-	if value, ok := svc.mutation.Role(); ok {
-		_spec.SetField(storagevolume.FieldRole, field.TypeString, value)
-		_node.Role = value
-	}
-	if value, ok := svc.mutation.Status(); ok {
-		_spec.SetField(storagevolume.FieldStatus, field.TypeString, value)
-		_node.Status = value
-	}
-	if value, ok := svc.mutation.Name(); ok {
-		_spec.SetField(storagevolume.FieldName, field.TypeString, value)
-		_node.Name = value
-	}
 	if value, ok := svc.mutation.WorkspaceID(); ok {
 		_spec.SetField(storagevolume.FieldWorkspaceID, field.TypeString, value)
 		_node.WorkspaceID = value
 	}
-	if value, ok := svc.mutation.ResourceID(); ok {
-		_spec.SetField(storagevolume.FieldResourceID, field.TypeString, value)
-		_node.ResourceID = value
-	}
-	if value, ok := svc.mutation.ResourceKind(); ok {
-		_spec.SetField(storagevolume.FieldResourceKind, field.TypeString, value)
-		_node.ResourceKind = value
-	}
-	if value, ok := svc.mutation.OperationID(); ok {
-		_spec.SetField(storagevolume.FieldOperationID, field.TypeString, value)
-		_node.OperationID = value
+	if value, ok := svc.mutation.Name(); ok {
+		_spec.SetField(storagevolume.FieldName, field.TypeString, value)
+		_node.Name = value
 	}
 	if value, ok := svc.mutation.Provider(); ok {
 		_spec.SetField(storagevolume.FieldProvider, field.TypeString, value)
@@ -889,9 +739,21 @@ func (svc *StorageVolumeCreate) createSpec() (*StorageVolume, *sqlgraph.CreateSp
 		_spec.SetField(storagevolume.FieldProviderResourceID, field.TypeString, value)
 		_node.ProviderResourceID = value
 	}
-	if value, ok := svc.mutation.URL(); ok {
-		_spec.SetField(storagevolume.FieldURL, field.TypeString, value)
-		_node.URL = value
+	if value, ok := svc.mutation.ProviderRequestID(); ok {
+		_spec.SetField(storagevolume.FieldProviderRequestID, field.TypeString, value)
+		_node.ProviderRequestID = value
+	}
+	if value, ok := svc.mutation.OperationID(); ok {
+		_spec.SetField(storagevolume.FieldOperationID, field.TypeString, value)
+		_node.OperationID = value
+	}
+	if value, ok := svc.mutation.Status(); ok {
+		_spec.SetField(storagevolume.FieldStatus, field.TypeString, value)
+		_node.Status = value
+	}
+	if value, ok := svc.mutation.BillingStatus(); ok {
+		_spec.SetField(storagevolume.FieldBillingStatus, field.TypeString, value)
+		_node.BillingStatus = value
 	}
 	if value, ok := svc.mutation.HoldID(); ok {
 		_spec.SetField(storagevolume.FieldHoldID, field.TypeString, value)
@@ -901,6 +763,10 @@ func (svc *StorageVolumeCreate) createSpec() (*StorageVolume, *sqlgraph.CreateSp
 		_spec.SetField(storagevolume.FieldHoldReleaseID, field.TypeString, value)
 		_node.HoldReleaseID = value
 	}
+	if value, ok := svc.mutation.SettlementID(); ok {
+		_spec.SetField(storagevolume.FieldSettlementID, field.TypeString, value)
+		_node.SettlementID = value
+	}
 	if value, ok := svc.mutation.LedgerEntryID(); ok {
 		_spec.SetField(storagevolume.FieldLedgerEntryID, field.TypeString, value)
 		_node.LedgerEntryID = value
@@ -909,69 +775,53 @@ func (svc *StorageVolumeCreate) createSpec() (*StorageVolume, *sqlgraph.CreateSp
 		_spec.SetField(storagevolume.FieldWalletTransactionID, field.TypeString, value)
 		_node.WalletTransactionID = value
 	}
-	if value, ok := svc.mutation.SettlementID(); ok {
-		_spec.SetField(storagevolume.FieldSettlementID, field.TypeString, value)
-		_node.SettlementID = value
-	}
 	if value, ok := svc.mutation.PricingVersion(); ok {
 		_spec.SetField(storagevolume.FieldPricingVersion, field.TypeString, value)
 		_node.PricingVersion = value
 	}
-	if value, ok := svc.mutation.AmountCents(); ok {
-		_spec.SetField(storagevolume.FieldAmountCents, field.TypeInt64, value)
-		_node.AmountCents = value
+	if value, ok := svc.mutation.UsagePeriodEnd(); ok {
+		_spec.SetField(storagevolume.FieldUsagePeriodEnd, field.TypeString, value)
+		_node.UsagePeriodEnd = value
 	}
-	if value, ok := svc.mutation.BalanceCents(); ok {
-		_spec.SetField(storagevolume.FieldBalanceCents, field.TypeInt64, value)
-		_node.BalanceCents = value
+	if value, ok := svc.mutation.MountPath(); ok {
+		_spec.SetField(storagevolume.FieldMountPath, field.TypeString, value)
+		_node.MountPath = value
 	}
-	if value, ok := svc.mutation.FrozenCents(); ok {
-		_spec.SetField(storagevolume.FieldFrozenCents, field.TypeInt64, value)
-		_node.FrozenCents = value
+	if value, ok := svc.mutation.HoldAmountCents(); ok {
+		_spec.SetField(storagevolume.FieldHoldAmountCents, field.TypeInt64, value)
+		_node.HoldAmountCents = value
 	}
-	if value, ok := svc.mutation.AvailableCents(); ok {
-		_spec.SetField(storagevolume.FieldAvailableCents, field.TypeInt64, value)
-		_node.AvailableCents = value
+	if value, ok := svc.mutation.HoldAmount(); ok {
+		_spec.SetField(storagevolume.FieldHoldAmount, field.TypeFloat64, value)
+		_node.HoldAmount = value
 	}
-	if value, ok := svc.mutation.TotalSpentCents(); ok {
-		_spec.SetField(storagevolume.FieldTotalSpentCents, field.TypeInt64, value)
-		_node.TotalSpentCents = value
+	if value, ok := svc.mutation.SizeGB(); ok {
+		_spec.SetField(storagevolume.FieldSizeGB, field.TypeFloat64, value)
+		_node.SizeGB = value
 	}
-	if value, ok := svc.mutation.Quantity(); ok {
-		_spec.SetField(storagevolume.FieldQuantity, field.TypeFloat64, value)
-		_node.Quantity = value
+	if value, ok := svc.mutation.PriceSnapshotResourceType(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotResourceType, field.TypeString, value)
+		_node.PriceSnapshotResourceType = value
 	}
-	if value, ok := svc.mutation.Unit(); ok {
-		_spec.SetField(storagevolume.FieldUnit, field.TypeString, value)
-		_node.Unit = value
+	if value, ok := svc.mutation.PriceSnapshotCurrency(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotCurrency, field.TypeString, value)
+		_node.PriceSnapshotCurrency = value
 	}
-	if value, ok := svc.mutation.Reason(); ok {
-		_spec.SetField(storagevolume.FieldReason, field.TypeString, value)
-		_node.Reason = value
+	if value, ok := svc.mutation.PriceSnapshotSource(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotSource, field.TypeString, value)
+		_node.PriceSnapshotSource = value
 	}
-	if value, ok := svc.mutation.Result(); ok {
-		_spec.SetField(storagevolume.FieldResult, field.TypeString, value)
-		_node.Result = value
+	if value, ok := svc.mutation.PriceSnapshotUnitPriceCents(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotUnitPriceCents, field.TypeInt64, value)
+		_node.PriceSnapshotUnitPriceCents = value
 	}
-	if value, ok := svc.mutation.Source(); ok {
-		_spec.SetField(storagevolume.FieldSource, field.TypeString, value)
-		_node.Source = value
+	if value, ok := svc.mutation.PriceSnapshotStorageGBMonth(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotStorageGBMonth, field.TypeFloat64, value)
+		_node.PriceSnapshotStorageGBMonth = value
 	}
-	if value, ok := svc.mutation.Direction(); ok {
-		_spec.SetField(storagevolume.FieldDirection, field.TypeString, value)
-		_node.Direction = value
-	}
-	if value, ok := svc.mutation.CreatedAt(); ok {
-		_spec.SetField(storagevolume.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
-	}
-	if value, ok := svc.mutation.UpdatedAt(); ok {
-		_spec.SetField(storagevolume.FieldUpdatedAt, field.TypeTime, value)
-		_node.UpdatedAt = value
-	}
-	if value, ok := svc.mutation.ArchivedAt(); ok {
-		_spec.SetField(storagevolume.FieldArchivedAt, field.TypeTime, value)
-		_node.ArchivedAt = &value
+	if value, ok := svc.mutation.PriceSnapshotSizeGB(); ok {
+		_spec.SetField(storagevolume.FieldPriceSnapshotSizeGB, field.TypeFloat64, value)
+		_node.PriceSnapshotSizeGB = value
 	}
 	return _node, _spec
 }

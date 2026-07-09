@@ -130,3 +130,22 @@ test("production data path does not keep hand-written SQL fact stores after Ent 
     }
   }
 });
+
+test("Control Plane schema and migrations do not inherit a generic wide fact table", async () => {
+  for (const file of await files("services/control-plane/ent/schema", /\.go$/)) {
+    const text = await source(file);
+    assert.equal(text.includes("commonFactFields()"), false, `${file} must use business-specific Ent fields`);
+  }
+
+  const sharedSchema = await source("services/control-plane/ent/schema/shared.go");
+  assert.match(sharedSchema, /return table\("control_plane_accounts"\)/, "Control Plane Ent schemas must target control_plane_* tables");
+
+  for (const migration of [
+    ...await files("services/control-plane/migrations", /\.sql$/),
+    ...await files("services/control-plane/internal/server/ent_migrations", /\.sql$/)
+  ]) {
+    const text = await source(migration);
+    assert.equal(text.includes("LIKE control_plane_accounts"), false, `${migration} must define tables explicitly`);
+    assert.match(text, /control_plane_organizations/, `${migration} must include the organization facts read by Control Plane`);
+  }
+});

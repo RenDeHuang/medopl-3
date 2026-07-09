@@ -261,12 +261,12 @@ func (roq *RuntimeOperationQuery) Clone() *RuntimeOperationQuery {
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.RuntimeOperation.Query().
-//		GroupBy(runtimeoperation.FieldAccountID).
+//		GroupBy(runtimeoperation.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (roq *RuntimeOperationQuery) GroupBy(field string, fields ...string) *RuntimeOperationGroupBy {
@@ -284,11 +284,11 @@ func (roq *RuntimeOperationQuery) GroupBy(field string, fields ...string) *Runti
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.RuntimeOperation.Query().
-//		Select(runtimeoperation.FieldAccountID).
+//		Select(runtimeoperation.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (roq *RuntimeOperationQuery) Select(fields ...string) *RuntimeOperationSelect {
 	roq.ctx.Fields = append(roq.ctx.Fields, fields...)

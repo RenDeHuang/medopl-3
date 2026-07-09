@@ -28,6 +28,26 @@ func (mu *MembershipUpdate) Where(ps ...predicate.Membership) *MembershipUpdate 
 	return mu
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (mu *MembershipUpdate) SetCreatedAt(t time.Time) *MembershipUpdate {
+	mu.mutation.SetCreatedAt(t)
+	return mu
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (mu *MembershipUpdate) SetNillableCreatedAt(t *time.Time) *MembershipUpdate {
+	if t != nil {
+		mu.SetCreatedAt(*t)
+	}
+	return mu
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (mu *MembershipUpdate) SetUpdatedAt(t time.Time) *MembershipUpdate {
+	mu.mutation.SetUpdatedAt(t)
+	return mu
+}
+
 // SetAccountID sets the "account_id" field.
 func (mu *MembershipUpdate) SetAccountID(s string) *MembershipUpdate {
 	mu.mutation.SetAccountID(s)
@@ -42,34 +62,6 @@ func (mu *MembershipUpdate) SetNillableAccountID(s *string) *MembershipUpdate {
 	return mu
 }
 
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (mu *MembershipUpdate) SetOwnerAccountID(s string) *MembershipUpdate {
-	mu.mutation.SetOwnerAccountID(s)
-	return mu
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableOwnerAccountID(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetOwnerAccountID(*s)
-	}
-	return mu
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (mu *MembershipUpdate) SetOwnerUserID(s string) *MembershipUpdate {
-	mu.mutation.SetOwnerUserID(s)
-	return mu
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableOwnerUserID(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetOwnerUserID(*s)
-	}
-	return mu
-}
-
 // SetUserID sets the "user_id" field.
 func (mu *MembershipUpdate) SetUserID(s string) *MembershipUpdate {
 	mu.mutation.SetUserID(s)
@@ -80,20 +72,6 @@ func (mu *MembershipUpdate) SetUserID(s string) *MembershipUpdate {
 func (mu *MembershipUpdate) SetNillableUserID(s *string) *MembershipUpdate {
 	if s != nil {
 		mu.SetUserID(*s)
-	}
-	return mu
-}
-
-// SetEmail sets the "email" field.
-func (mu *MembershipUpdate) SetEmail(s string) *MembershipUpdate {
-	mu.mutation.SetEmail(s)
-	return mu
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableEmail(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetEmail(*s)
 	}
 	return mu
 }
@@ -123,438 +101,6 @@ func (mu *MembershipUpdate) SetNillableStatus(s *string) *MembershipUpdate {
 	if s != nil {
 		mu.SetStatus(*s)
 	}
-	return mu
-}
-
-// SetName sets the "name" field.
-func (mu *MembershipUpdate) SetName(s string) *MembershipUpdate {
-	mu.mutation.SetName(s)
-	return mu
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableName(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetName(*s)
-	}
-	return mu
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (mu *MembershipUpdate) SetWorkspaceID(s string) *MembershipUpdate {
-	mu.mutation.SetWorkspaceID(s)
-	return mu
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableWorkspaceID(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetWorkspaceID(*s)
-	}
-	return mu
-}
-
-// SetResourceID sets the "resource_id" field.
-func (mu *MembershipUpdate) SetResourceID(s string) *MembershipUpdate {
-	mu.mutation.SetResourceID(s)
-	return mu
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableResourceID(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetResourceID(*s)
-	}
-	return mu
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (mu *MembershipUpdate) SetResourceKind(s string) *MembershipUpdate {
-	mu.mutation.SetResourceKind(s)
-	return mu
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableResourceKind(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetResourceKind(*s)
-	}
-	return mu
-}
-
-// SetOperationID sets the "operation_id" field.
-func (mu *MembershipUpdate) SetOperationID(s string) *MembershipUpdate {
-	mu.mutation.SetOperationID(s)
-	return mu
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableOperationID(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetOperationID(*s)
-	}
-	return mu
-}
-
-// SetProvider sets the "provider" field.
-func (mu *MembershipUpdate) SetProvider(s string) *MembershipUpdate {
-	mu.mutation.SetProvider(s)
-	return mu
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableProvider(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetProvider(*s)
-	}
-	return mu
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (mu *MembershipUpdate) SetProviderResourceID(s string) *MembershipUpdate {
-	mu.mutation.SetProviderResourceID(s)
-	return mu
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableProviderResourceID(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetProviderResourceID(*s)
-	}
-	return mu
-}
-
-// SetURL sets the "url" field.
-func (mu *MembershipUpdate) SetURL(s string) *MembershipUpdate {
-	mu.mutation.SetURL(s)
-	return mu
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableURL(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetURL(*s)
-	}
-	return mu
-}
-
-// SetHoldID sets the "hold_id" field.
-func (mu *MembershipUpdate) SetHoldID(s string) *MembershipUpdate {
-	mu.mutation.SetHoldID(s)
-	return mu
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableHoldID(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetHoldID(*s)
-	}
-	return mu
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (mu *MembershipUpdate) SetHoldReleaseID(s string) *MembershipUpdate {
-	mu.mutation.SetHoldReleaseID(s)
-	return mu
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableHoldReleaseID(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetHoldReleaseID(*s)
-	}
-	return mu
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (mu *MembershipUpdate) SetLedgerEntryID(s string) *MembershipUpdate {
-	mu.mutation.SetLedgerEntryID(s)
-	return mu
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableLedgerEntryID(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetLedgerEntryID(*s)
-	}
-	return mu
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (mu *MembershipUpdate) SetWalletTransactionID(s string) *MembershipUpdate {
-	mu.mutation.SetWalletTransactionID(s)
-	return mu
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableWalletTransactionID(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetWalletTransactionID(*s)
-	}
-	return mu
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (mu *MembershipUpdate) SetSettlementID(s string) *MembershipUpdate {
-	mu.mutation.SetSettlementID(s)
-	return mu
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableSettlementID(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetSettlementID(*s)
-	}
-	return mu
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (mu *MembershipUpdate) SetPricingVersion(s string) *MembershipUpdate {
-	mu.mutation.SetPricingVersion(s)
-	return mu
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillablePricingVersion(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetPricingVersion(*s)
-	}
-	return mu
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (mu *MembershipUpdate) SetAmountCents(i int64) *MembershipUpdate {
-	mu.mutation.ResetAmountCents()
-	mu.mutation.SetAmountCents(i)
-	return mu
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableAmountCents(i *int64) *MembershipUpdate {
-	if i != nil {
-		mu.SetAmountCents(*i)
-	}
-	return mu
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (mu *MembershipUpdate) AddAmountCents(i int64) *MembershipUpdate {
-	mu.mutation.AddAmountCents(i)
-	return mu
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (mu *MembershipUpdate) SetBalanceCents(i int64) *MembershipUpdate {
-	mu.mutation.ResetBalanceCents()
-	mu.mutation.SetBalanceCents(i)
-	return mu
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableBalanceCents(i *int64) *MembershipUpdate {
-	if i != nil {
-		mu.SetBalanceCents(*i)
-	}
-	return mu
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (mu *MembershipUpdate) AddBalanceCents(i int64) *MembershipUpdate {
-	mu.mutation.AddBalanceCents(i)
-	return mu
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (mu *MembershipUpdate) SetFrozenCents(i int64) *MembershipUpdate {
-	mu.mutation.ResetFrozenCents()
-	mu.mutation.SetFrozenCents(i)
-	return mu
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableFrozenCents(i *int64) *MembershipUpdate {
-	if i != nil {
-		mu.SetFrozenCents(*i)
-	}
-	return mu
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (mu *MembershipUpdate) AddFrozenCents(i int64) *MembershipUpdate {
-	mu.mutation.AddFrozenCents(i)
-	return mu
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (mu *MembershipUpdate) SetAvailableCents(i int64) *MembershipUpdate {
-	mu.mutation.ResetAvailableCents()
-	mu.mutation.SetAvailableCents(i)
-	return mu
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableAvailableCents(i *int64) *MembershipUpdate {
-	if i != nil {
-		mu.SetAvailableCents(*i)
-	}
-	return mu
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (mu *MembershipUpdate) AddAvailableCents(i int64) *MembershipUpdate {
-	mu.mutation.AddAvailableCents(i)
-	return mu
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (mu *MembershipUpdate) SetTotalSpentCents(i int64) *MembershipUpdate {
-	mu.mutation.ResetTotalSpentCents()
-	mu.mutation.SetTotalSpentCents(i)
-	return mu
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableTotalSpentCents(i *int64) *MembershipUpdate {
-	if i != nil {
-		mu.SetTotalSpentCents(*i)
-	}
-	return mu
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (mu *MembershipUpdate) AddTotalSpentCents(i int64) *MembershipUpdate {
-	mu.mutation.AddTotalSpentCents(i)
-	return mu
-}
-
-// SetQuantity sets the "quantity" field.
-func (mu *MembershipUpdate) SetQuantity(f float64) *MembershipUpdate {
-	mu.mutation.ResetQuantity()
-	mu.mutation.SetQuantity(f)
-	return mu
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableQuantity(f *float64) *MembershipUpdate {
-	if f != nil {
-		mu.SetQuantity(*f)
-	}
-	return mu
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (mu *MembershipUpdate) AddQuantity(f float64) *MembershipUpdate {
-	mu.mutation.AddQuantity(f)
-	return mu
-}
-
-// SetUnit sets the "unit" field.
-func (mu *MembershipUpdate) SetUnit(s string) *MembershipUpdate {
-	mu.mutation.SetUnit(s)
-	return mu
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableUnit(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetUnit(*s)
-	}
-	return mu
-}
-
-// SetReason sets the "reason" field.
-func (mu *MembershipUpdate) SetReason(s string) *MembershipUpdate {
-	mu.mutation.SetReason(s)
-	return mu
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableReason(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetReason(*s)
-	}
-	return mu
-}
-
-// SetResult sets the "result" field.
-func (mu *MembershipUpdate) SetResult(s string) *MembershipUpdate {
-	mu.mutation.SetResult(s)
-	return mu
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableResult(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetResult(*s)
-	}
-	return mu
-}
-
-// SetSource sets the "source" field.
-func (mu *MembershipUpdate) SetSource(s string) *MembershipUpdate {
-	mu.mutation.SetSource(s)
-	return mu
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableSource(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetSource(*s)
-	}
-	return mu
-}
-
-// SetDirection sets the "direction" field.
-func (mu *MembershipUpdate) SetDirection(s string) *MembershipUpdate {
-	mu.mutation.SetDirection(s)
-	return mu
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableDirection(s *string) *MembershipUpdate {
-	if s != nil {
-		mu.SetDirection(*s)
-	}
-	return mu
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (mu *MembershipUpdate) SetCreatedAt(t time.Time) *MembershipUpdate {
-	mu.mutation.SetCreatedAt(t)
-	return mu
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableCreatedAt(t *time.Time) *MembershipUpdate {
-	if t != nil {
-		mu.SetCreatedAt(*t)
-	}
-	return mu
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (mu *MembershipUpdate) SetUpdatedAt(t time.Time) *MembershipUpdate {
-	mu.mutation.SetUpdatedAt(t)
-	return mu
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (mu *MembershipUpdate) SetArchivedAt(t time.Time) *MembershipUpdate {
-	mu.mutation.SetArchivedAt(t)
-	return mu
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (mu *MembershipUpdate) SetNillableArchivedAt(t *time.Time) *MembershipUpdate {
-	if t != nil {
-		mu.SetArchivedAt(*t)
-	}
-	return mu
-}
-
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (mu *MembershipUpdate) ClearArchivedAt() *MembershipUpdate {
-	mu.mutation.ClearArchivedAt()
 	return mu
 }
 
@@ -599,7 +145,25 @@ func (mu *MembershipUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (mu *MembershipUpdate) check() error {
+	if v, ok := mu.mutation.AccountID(); ok {
+		if err := membership.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "Membership.account_id": %w`, err)}
+		}
+	}
+	if v, ok := mu.mutation.UserID(); ok {
+		if err := membership.UserIDValidator(v); err != nil {
+			return &ValidationError{Name: "user_id", err: fmt.Errorf(`ent: validator failed for field "Membership.user_id": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (mu *MembershipUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := mu.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(membership.Table, membership.Columns, sqlgraph.NewFieldSpec(membership.FieldID, field.TypeString))
 	if ps := mu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -608,131 +172,23 @@ func (mu *MembershipUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value, ok := mu.mutation.AccountID(); ok {
-		_spec.SetField(membership.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.OwnerAccountID(); ok {
-		_spec.SetField(membership.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.OwnerUserID(); ok {
-		_spec.SetField(membership.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.UserID(); ok {
-		_spec.SetField(membership.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.Email(); ok {
-		_spec.SetField(membership.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.Role(); ok {
-		_spec.SetField(membership.FieldRole, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.Status(); ok {
-		_spec.SetField(membership.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.Name(); ok {
-		_spec.SetField(membership.FieldName, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.WorkspaceID(); ok {
-		_spec.SetField(membership.FieldWorkspaceID, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.ResourceID(); ok {
-		_spec.SetField(membership.FieldResourceID, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.ResourceKind(); ok {
-		_spec.SetField(membership.FieldResourceKind, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.OperationID(); ok {
-		_spec.SetField(membership.FieldOperationID, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.Provider(); ok {
-		_spec.SetField(membership.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.ProviderResourceID(); ok {
-		_spec.SetField(membership.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.URL(); ok {
-		_spec.SetField(membership.FieldURL, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.HoldID(); ok {
-		_spec.SetField(membership.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.HoldReleaseID(); ok {
-		_spec.SetField(membership.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.LedgerEntryID(); ok {
-		_spec.SetField(membership.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.WalletTransactionID(); ok {
-		_spec.SetField(membership.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.SettlementID(); ok {
-		_spec.SetField(membership.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.PricingVersion(); ok {
-		_spec.SetField(membership.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.AmountCents(); ok {
-		_spec.SetField(membership.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := mu.mutation.AddedAmountCents(); ok {
-		_spec.AddField(membership.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := mu.mutation.BalanceCents(); ok {
-		_spec.SetField(membership.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := mu.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(membership.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := mu.mutation.FrozenCents(); ok {
-		_spec.SetField(membership.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := mu.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(membership.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := mu.mutation.AvailableCents(); ok {
-		_spec.SetField(membership.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := mu.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(membership.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := mu.mutation.TotalSpentCents(); ok {
-		_spec.SetField(membership.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := mu.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(membership.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := mu.mutation.Quantity(); ok {
-		_spec.SetField(membership.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := mu.mutation.AddedQuantity(); ok {
-		_spec.AddField(membership.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := mu.mutation.Unit(); ok {
-		_spec.SetField(membership.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.Reason(); ok {
-		_spec.SetField(membership.FieldReason, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.Result(); ok {
-		_spec.SetField(membership.FieldResult, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.Source(); ok {
-		_spec.SetField(membership.FieldSource, field.TypeString, value)
-	}
-	if value, ok := mu.mutation.Direction(); ok {
-		_spec.SetField(membership.FieldDirection, field.TypeString, value)
-	}
 	if value, ok := mu.mutation.CreatedAt(); ok {
 		_spec.SetField(membership.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := mu.mutation.UpdatedAt(); ok {
 		_spec.SetField(membership.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := mu.mutation.ArchivedAt(); ok {
-		_spec.SetField(membership.FieldArchivedAt, field.TypeTime, value)
+	if value, ok := mu.mutation.AccountID(); ok {
+		_spec.SetField(membership.FieldAccountID, field.TypeString, value)
 	}
-	if mu.mutation.ArchivedAtCleared() {
-		_spec.ClearField(membership.FieldArchivedAt, field.TypeTime)
+	if value, ok := mu.mutation.UserID(); ok {
+		_spec.SetField(membership.FieldUserID, field.TypeString, value)
+	}
+	if value, ok := mu.mutation.Role(); ok {
+		_spec.SetField(membership.FieldRole, field.TypeString, value)
+	}
+	if value, ok := mu.mutation.Status(); ok {
+		_spec.SetField(membership.FieldStatus, field.TypeString, value)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, mu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -754,6 +210,26 @@ type MembershipUpdateOne struct {
 	mutation *MembershipMutation
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (muo *MembershipUpdateOne) SetCreatedAt(t time.Time) *MembershipUpdateOne {
+	muo.mutation.SetCreatedAt(t)
+	return muo
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (muo *MembershipUpdateOne) SetNillableCreatedAt(t *time.Time) *MembershipUpdateOne {
+	if t != nil {
+		muo.SetCreatedAt(*t)
+	}
+	return muo
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (muo *MembershipUpdateOne) SetUpdatedAt(t time.Time) *MembershipUpdateOne {
+	muo.mutation.SetUpdatedAt(t)
+	return muo
+}
+
 // SetAccountID sets the "account_id" field.
 func (muo *MembershipUpdateOne) SetAccountID(s string) *MembershipUpdateOne {
 	muo.mutation.SetAccountID(s)
@@ -768,34 +244,6 @@ func (muo *MembershipUpdateOne) SetNillableAccountID(s *string) *MembershipUpdat
 	return muo
 }
 
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (muo *MembershipUpdateOne) SetOwnerAccountID(s string) *MembershipUpdateOne {
-	muo.mutation.SetOwnerAccountID(s)
-	return muo
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableOwnerAccountID(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetOwnerAccountID(*s)
-	}
-	return muo
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (muo *MembershipUpdateOne) SetOwnerUserID(s string) *MembershipUpdateOne {
-	muo.mutation.SetOwnerUserID(s)
-	return muo
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableOwnerUserID(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetOwnerUserID(*s)
-	}
-	return muo
-}
-
 // SetUserID sets the "user_id" field.
 func (muo *MembershipUpdateOne) SetUserID(s string) *MembershipUpdateOne {
 	muo.mutation.SetUserID(s)
@@ -806,20 +254,6 @@ func (muo *MembershipUpdateOne) SetUserID(s string) *MembershipUpdateOne {
 func (muo *MembershipUpdateOne) SetNillableUserID(s *string) *MembershipUpdateOne {
 	if s != nil {
 		muo.SetUserID(*s)
-	}
-	return muo
-}
-
-// SetEmail sets the "email" field.
-func (muo *MembershipUpdateOne) SetEmail(s string) *MembershipUpdateOne {
-	muo.mutation.SetEmail(s)
-	return muo
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableEmail(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetEmail(*s)
 	}
 	return muo
 }
@@ -849,438 +283,6 @@ func (muo *MembershipUpdateOne) SetNillableStatus(s *string) *MembershipUpdateOn
 	if s != nil {
 		muo.SetStatus(*s)
 	}
-	return muo
-}
-
-// SetName sets the "name" field.
-func (muo *MembershipUpdateOne) SetName(s string) *MembershipUpdateOne {
-	muo.mutation.SetName(s)
-	return muo
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableName(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetName(*s)
-	}
-	return muo
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (muo *MembershipUpdateOne) SetWorkspaceID(s string) *MembershipUpdateOne {
-	muo.mutation.SetWorkspaceID(s)
-	return muo
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableWorkspaceID(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetWorkspaceID(*s)
-	}
-	return muo
-}
-
-// SetResourceID sets the "resource_id" field.
-func (muo *MembershipUpdateOne) SetResourceID(s string) *MembershipUpdateOne {
-	muo.mutation.SetResourceID(s)
-	return muo
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableResourceID(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetResourceID(*s)
-	}
-	return muo
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (muo *MembershipUpdateOne) SetResourceKind(s string) *MembershipUpdateOne {
-	muo.mutation.SetResourceKind(s)
-	return muo
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableResourceKind(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetResourceKind(*s)
-	}
-	return muo
-}
-
-// SetOperationID sets the "operation_id" field.
-func (muo *MembershipUpdateOne) SetOperationID(s string) *MembershipUpdateOne {
-	muo.mutation.SetOperationID(s)
-	return muo
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableOperationID(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetOperationID(*s)
-	}
-	return muo
-}
-
-// SetProvider sets the "provider" field.
-func (muo *MembershipUpdateOne) SetProvider(s string) *MembershipUpdateOne {
-	muo.mutation.SetProvider(s)
-	return muo
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableProvider(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetProvider(*s)
-	}
-	return muo
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (muo *MembershipUpdateOne) SetProviderResourceID(s string) *MembershipUpdateOne {
-	muo.mutation.SetProviderResourceID(s)
-	return muo
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableProviderResourceID(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetProviderResourceID(*s)
-	}
-	return muo
-}
-
-// SetURL sets the "url" field.
-func (muo *MembershipUpdateOne) SetURL(s string) *MembershipUpdateOne {
-	muo.mutation.SetURL(s)
-	return muo
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableURL(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetURL(*s)
-	}
-	return muo
-}
-
-// SetHoldID sets the "hold_id" field.
-func (muo *MembershipUpdateOne) SetHoldID(s string) *MembershipUpdateOne {
-	muo.mutation.SetHoldID(s)
-	return muo
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableHoldID(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetHoldID(*s)
-	}
-	return muo
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (muo *MembershipUpdateOne) SetHoldReleaseID(s string) *MembershipUpdateOne {
-	muo.mutation.SetHoldReleaseID(s)
-	return muo
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableHoldReleaseID(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetHoldReleaseID(*s)
-	}
-	return muo
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (muo *MembershipUpdateOne) SetLedgerEntryID(s string) *MembershipUpdateOne {
-	muo.mutation.SetLedgerEntryID(s)
-	return muo
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableLedgerEntryID(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetLedgerEntryID(*s)
-	}
-	return muo
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (muo *MembershipUpdateOne) SetWalletTransactionID(s string) *MembershipUpdateOne {
-	muo.mutation.SetWalletTransactionID(s)
-	return muo
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableWalletTransactionID(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetWalletTransactionID(*s)
-	}
-	return muo
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (muo *MembershipUpdateOne) SetSettlementID(s string) *MembershipUpdateOne {
-	muo.mutation.SetSettlementID(s)
-	return muo
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableSettlementID(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetSettlementID(*s)
-	}
-	return muo
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (muo *MembershipUpdateOne) SetPricingVersion(s string) *MembershipUpdateOne {
-	muo.mutation.SetPricingVersion(s)
-	return muo
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillablePricingVersion(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetPricingVersion(*s)
-	}
-	return muo
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (muo *MembershipUpdateOne) SetAmountCents(i int64) *MembershipUpdateOne {
-	muo.mutation.ResetAmountCents()
-	muo.mutation.SetAmountCents(i)
-	return muo
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableAmountCents(i *int64) *MembershipUpdateOne {
-	if i != nil {
-		muo.SetAmountCents(*i)
-	}
-	return muo
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (muo *MembershipUpdateOne) AddAmountCents(i int64) *MembershipUpdateOne {
-	muo.mutation.AddAmountCents(i)
-	return muo
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (muo *MembershipUpdateOne) SetBalanceCents(i int64) *MembershipUpdateOne {
-	muo.mutation.ResetBalanceCents()
-	muo.mutation.SetBalanceCents(i)
-	return muo
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableBalanceCents(i *int64) *MembershipUpdateOne {
-	if i != nil {
-		muo.SetBalanceCents(*i)
-	}
-	return muo
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (muo *MembershipUpdateOne) AddBalanceCents(i int64) *MembershipUpdateOne {
-	muo.mutation.AddBalanceCents(i)
-	return muo
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (muo *MembershipUpdateOne) SetFrozenCents(i int64) *MembershipUpdateOne {
-	muo.mutation.ResetFrozenCents()
-	muo.mutation.SetFrozenCents(i)
-	return muo
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableFrozenCents(i *int64) *MembershipUpdateOne {
-	if i != nil {
-		muo.SetFrozenCents(*i)
-	}
-	return muo
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (muo *MembershipUpdateOne) AddFrozenCents(i int64) *MembershipUpdateOne {
-	muo.mutation.AddFrozenCents(i)
-	return muo
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (muo *MembershipUpdateOne) SetAvailableCents(i int64) *MembershipUpdateOne {
-	muo.mutation.ResetAvailableCents()
-	muo.mutation.SetAvailableCents(i)
-	return muo
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableAvailableCents(i *int64) *MembershipUpdateOne {
-	if i != nil {
-		muo.SetAvailableCents(*i)
-	}
-	return muo
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (muo *MembershipUpdateOne) AddAvailableCents(i int64) *MembershipUpdateOne {
-	muo.mutation.AddAvailableCents(i)
-	return muo
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (muo *MembershipUpdateOne) SetTotalSpentCents(i int64) *MembershipUpdateOne {
-	muo.mutation.ResetTotalSpentCents()
-	muo.mutation.SetTotalSpentCents(i)
-	return muo
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableTotalSpentCents(i *int64) *MembershipUpdateOne {
-	if i != nil {
-		muo.SetTotalSpentCents(*i)
-	}
-	return muo
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (muo *MembershipUpdateOne) AddTotalSpentCents(i int64) *MembershipUpdateOne {
-	muo.mutation.AddTotalSpentCents(i)
-	return muo
-}
-
-// SetQuantity sets the "quantity" field.
-func (muo *MembershipUpdateOne) SetQuantity(f float64) *MembershipUpdateOne {
-	muo.mutation.ResetQuantity()
-	muo.mutation.SetQuantity(f)
-	return muo
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableQuantity(f *float64) *MembershipUpdateOne {
-	if f != nil {
-		muo.SetQuantity(*f)
-	}
-	return muo
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (muo *MembershipUpdateOne) AddQuantity(f float64) *MembershipUpdateOne {
-	muo.mutation.AddQuantity(f)
-	return muo
-}
-
-// SetUnit sets the "unit" field.
-func (muo *MembershipUpdateOne) SetUnit(s string) *MembershipUpdateOne {
-	muo.mutation.SetUnit(s)
-	return muo
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableUnit(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetUnit(*s)
-	}
-	return muo
-}
-
-// SetReason sets the "reason" field.
-func (muo *MembershipUpdateOne) SetReason(s string) *MembershipUpdateOne {
-	muo.mutation.SetReason(s)
-	return muo
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableReason(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetReason(*s)
-	}
-	return muo
-}
-
-// SetResult sets the "result" field.
-func (muo *MembershipUpdateOne) SetResult(s string) *MembershipUpdateOne {
-	muo.mutation.SetResult(s)
-	return muo
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableResult(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetResult(*s)
-	}
-	return muo
-}
-
-// SetSource sets the "source" field.
-func (muo *MembershipUpdateOne) SetSource(s string) *MembershipUpdateOne {
-	muo.mutation.SetSource(s)
-	return muo
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableSource(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetSource(*s)
-	}
-	return muo
-}
-
-// SetDirection sets the "direction" field.
-func (muo *MembershipUpdateOne) SetDirection(s string) *MembershipUpdateOne {
-	muo.mutation.SetDirection(s)
-	return muo
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableDirection(s *string) *MembershipUpdateOne {
-	if s != nil {
-		muo.SetDirection(*s)
-	}
-	return muo
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (muo *MembershipUpdateOne) SetCreatedAt(t time.Time) *MembershipUpdateOne {
-	muo.mutation.SetCreatedAt(t)
-	return muo
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableCreatedAt(t *time.Time) *MembershipUpdateOne {
-	if t != nil {
-		muo.SetCreatedAt(*t)
-	}
-	return muo
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (muo *MembershipUpdateOne) SetUpdatedAt(t time.Time) *MembershipUpdateOne {
-	muo.mutation.SetUpdatedAt(t)
-	return muo
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (muo *MembershipUpdateOne) SetArchivedAt(t time.Time) *MembershipUpdateOne {
-	muo.mutation.SetArchivedAt(t)
-	return muo
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (muo *MembershipUpdateOne) SetNillableArchivedAt(t *time.Time) *MembershipUpdateOne {
-	if t != nil {
-		muo.SetArchivedAt(*t)
-	}
-	return muo
-}
-
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (muo *MembershipUpdateOne) ClearArchivedAt() *MembershipUpdateOne {
-	muo.mutation.ClearArchivedAt()
 	return muo
 }
 
@@ -1338,7 +340,25 @@ func (muo *MembershipUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (muo *MembershipUpdateOne) check() error {
+	if v, ok := muo.mutation.AccountID(); ok {
+		if err := membership.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "Membership.account_id": %w`, err)}
+		}
+	}
+	if v, ok := muo.mutation.UserID(); ok {
+		if err := membership.UserIDValidator(v); err != nil {
+			return &ValidationError{Name: "user_id", err: fmt.Errorf(`ent: validator failed for field "Membership.user_id": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (muo *MembershipUpdateOne) sqlSave(ctx context.Context) (_node *Membership, err error) {
+	if err := muo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(membership.Table, membership.Columns, sqlgraph.NewFieldSpec(membership.FieldID, field.TypeString))
 	id, ok := muo.mutation.ID()
 	if !ok {
@@ -1364,131 +384,23 @@ func (muo *MembershipUpdateOne) sqlSave(ctx context.Context) (_node *Membership,
 			}
 		}
 	}
-	if value, ok := muo.mutation.AccountID(); ok {
-		_spec.SetField(membership.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.OwnerAccountID(); ok {
-		_spec.SetField(membership.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.OwnerUserID(); ok {
-		_spec.SetField(membership.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.UserID(); ok {
-		_spec.SetField(membership.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.Email(); ok {
-		_spec.SetField(membership.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.Role(); ok {
-		_spec.SetField(membership.FieldRole, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.Status(); ok {
-		_spec.SetField(membership.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.Name(); ok {
-		_spec.SetField(membership.FieldName, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.WorkspaceID(); ok {
-		_spec.SetField(membership.FieldWorkspaceID, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.ResourceID(); ok {
-		_spec.SetField(membership.FieldResourceID, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.ResourceKind(); ok {
-		_spec.SetField(membership.FieldResourceKind, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.OperationID(); ok {
-		_spec.SetField(membership.FieldOperationID, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.Provider(); ok {
-		_spec.SetField(membership.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.ProviderResourceID(); ok {
-		_spec.SetField(membership.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.URL(); ok {
-		_spec.SetField(membership.FieldURL, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.HoldID(); ok {
-		_spec.SetField(membership.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.HoldReleaseID(); ok {
-		_spec.SetField(membership.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.LedgerEntryID(); ok {
-		_spec.SetField(membership.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.WalletTransactionID(); ok {
-		_spec.SetField(membership.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.SettlementID(); ok {
-		_spec.SetField(membership.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.PricingVersion(); ok {
-		_spec.SetField(membership.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.AmountCents(); ok {
-		_spec.SetField(membership.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := muo.mutation.AddedAmountCents(); ok {
-		_spec.AddField(membership.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := muo.mutation.BalanceCents(); ok {
-		_spec.SetField(membership.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := muo.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(membership.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := muo.mutation.FrozenCents(); ok {
-		_spec.SetField(membership.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := muo.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(membership.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := muo.mutation.AvailableCents(); ok {
-		_spec.SetField(membership.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := muo.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(membership.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := muo.mutation.TotalSpentCents(); ok {
-		_spec.SetField(membership.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := muo.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(membership.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := muo.mutation.Quantity(); ok {
-		_spec.SetField(membership.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := muo.mutation.AddedQuantity(); ok {
-		_spec.AddField(membership.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := muo.mutation.Unit(); ok {
-		_spec.SetField(membership.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.Reason(); ok {
-		_spec.SetField(membership.FieldReason, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.Result(); ok {
-		_spec.SetField(membership.FieldResult, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.Source(); ok {
-		_spec.SetField(membership.FieldSource, field.TypeString, value)
-	}
-	if value, ok := muo.mutation.Direction(); ok {
-		_spec.SetField(membership.FieldDirection, field.TypeString, value)
-	}
 	if value, ok := muo.mutation.CreatedAt(); ok {
 		_spec.SetField(membership.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := muo.mutation.UpdatedAt(); ok {
 		_spec.SetField(membership.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := muo.mutation.ArchivedAt(); ok {
-		_spec.SetField(membership.FieldArchivedAt, field.TypeTime, value)
+	if value, ok := muo.mutation.AccountID(); ok {
+		_spec.SetField(membership.FieldAccountID, field.TypeString, value)
 	}
-	if muo.mutation.ArchivedAtCleared() {
-		_spec.ClearField(membership.FieldArchivedAt, field.TypeTime)
+	if value, ok := muo.mutation.UserID(); ok {
+		_spec.SetField(membership.FieldUserID, field.TypeString, value)
+	}
+	if value, ok := muo.mutation.Role(); ok {
+		_spec.SetField(membership.FieldRole, field.TypeString, value)
+	}
+	if value, ok := muo.mutation.Status(); ok {
+		_spec.SetField(membership.FieldStatus, field.TypeString, value)
 	}
 	_node = &Membership{config: muo.config}
 	_spec.Assign = _node.assignValues

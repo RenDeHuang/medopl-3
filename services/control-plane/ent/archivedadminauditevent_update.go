@@ -28,496 +28,6 @@ func (aaaeu *ArchivedAdminAuditEventUpdate) Where(ps ...predicate.ArchivedAdminA
 	return aaaeu
 }
 
-// SetAccountID sets the "account_id" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetAccountID(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetAccountID(s)
-	return aaaeu
-}
-
-// SetNillableAccountID sets the "account_id" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableAccountID(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetAccountID(*s)
-	}
-	return aaaeu
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetOwnerAccountID(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetOwnerAccountID(s)
-	return aaaeu
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableOwnerAccountID(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetOwnerAccountID(*s)
-	}
-	return aaaeu
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetOwnerUserID(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetOwnerUserID(s)
-	return aaaeu
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableOwnerUserID(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetOwnerUserID(*s)
-	}
-	return aaaeu
-}
-
-// SetUserID sets the "user_id" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetUserID(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetUserID(s)
-	return aaaeu
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableUserID(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetUserID(*s)
-	}
-	return aaaeu
-}
-
-// SetEmail sets the "email" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetEmail(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetEmail(s)
-	return aaaeu
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableEmail(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetEmail(*s)
-	}
-	return aaaeu
-}
-
-// SetRole sets the "role" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetRole(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetRole(s)
-	return aaaeu
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableRole(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetRole(*s)
-	}
-	return aaaeu
-}
-
-// SetStatus sets the "status" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetStatus(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetStatus(s)
-	return aaaeu
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableStatus(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetStatus(*s)
-	}
-	return aaaeu
-}
-
-// SetName sets the "name" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetName(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetName(s)
-	return aaaeu
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableName(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetName(*s)
-	}
-	return aaaeu
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetWorkspaceID(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetWorkspaceID(s)
-	return aaaeu
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableWorkspaceID(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetWorkspaceID(*s)
-	}
-	return aaaeu
-}
-
-// SetResourceID sets the "resource_id" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetResourceID(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetResourceID(s)
-	return aaaeu
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableResourceID(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetResourceID(*s)
-	}
-	return aaaeu
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetResourceKind(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetResourceKind(s)
-	return aaaeu
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableResourceKind(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetResourceKind(*s)
-	}
-	return aaaeu
-}
-
-// SetOperationID sets the "operation_id" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetOperationID(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetOperationID(s)
-	return aaaeu
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableOperationID(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetOperationID(*s)
-	}
-	return aaaeu
-}
-
-// SetProvider sets the "provider" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetProvider(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetProvider(s)
-	return aaaeu
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableProvider(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetProvider(*s)
-	}
-	return aaaeu
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetProviderResourceID(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetProviderResourceID(s)
-	return aaaeu
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableProviderResourceID(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetProviderResourceID(*s)
-	}
-	return aaaeu
-}
-
-// SetURL sets the "url" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetURL(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetURL(s)
-	return aaaeu
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableURL(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetURL(*s)
-	}
-	return aaaeu
-}
-
-// SetHoldID sets the "hold_id" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetHoldID(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetHoldID(s)
-	return aaaeu
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableHoldID(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetHoldID(*s)
-	}
-	return aaaeu
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetHoldReleaseID(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetHoldReleaseID(s)
-	return aaaeu
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableHoldReleaseID(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetHoldReleaseID(*s)
-	}
-	return aaaeu
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetLedgerEntryID(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetLedgerEntryID(s)
-	return aaaeu
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableLedgerEntryID(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetLedgerEntryID(*s)
-	}
-	return aaaeu
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetWalletTransactionID(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetWalletTransactionID(s)
-	return aaaeu
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableWalletTransactionID(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetWalletTransactionID(*s)
-	}
-	return aaaeu
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetSettlementID(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetSettlementID(s)
-	return aaaeu
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableSettlementID(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetSettlementID(*s)
-	}
-	return aaaeu
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetPricingVersion(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetPricingVersion(s)
-	return aaaeu
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillablePricingVersion(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetPricingVersion(*s)
-	}
-	return aaaeu
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetAmountCents(i int64) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.ResetAmountCents()
-	aaaeu.mutation.SetAmountCents(i)
-	return aaaeu
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableAmountCents(i *int64) *ArchivedAdminAuditEventUpdate {
-	if i != nil {
-		aaaeu.SetAmountCents(*i)
-	}
-	return aaaeu
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) AddAmountCents(i int64) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.AddAmountCents(i)
-	return aaaeu
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetBalanceCents(i int64) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.ResetBalanceCents()
-	aaaeu.mutation.SetBalanceCents(i)
-	return aaaeu
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableBalanceCents(i *int64) *ArchivedAdminAuditEventUpdate {
-	if i != nil {
-		aaaeu.SetBalanceCents(*i)
-	}
-	return aaaeu
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) AddBalanceCents(i int64) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.AddBalanceCents(i)
-	return aaaeu
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetFrozenCents(i int64) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.ResetFrozenCents()
-	aaaeu.mutation.SetFrozenCents(i)
-	return aaaeu
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableFrozenCents(i *int64) *ArchivedAdminAuditEventUpdate {
-	if i != nil {
-		aaaeu.SetFrozenCents(*i)
-	}
-	return aaaeu
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) AddFrozenCents(i int64) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.AddFrozenCents(i)
-	return aaaeu
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetAvailableCents(i int64) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.ResetAvailableCents()
-	aaaeu.mutation.SetAvailableCents(i)
-	return aaaeu
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableAvailableCents(i *int64) *ArchivedAdminAuditEventUpdate {
-	if i != nil {
-		aaaeu.SetAvailableCents(*i)
-	}
-	return aaaeu
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) AddAvailableCents(i int64) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.AddAvailableCents(i)
-	return aaaeu
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetTotalSpentCents(i int64) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.ResetTotalSpentCents()
-	aaaeu.mutation.SetTotalSpentCents(i)
-	return aaaeu
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableTotalSpentCents(i *int64) *ArchivedAdminAuditEventUpdate {
-	if i != nil {
-		aaaeu.SetTotalSpentCents(*i)
-	}
-	return aaaeu
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) AddTotalSpentCents(i int64) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.AddTotalSpentCents(i)
-	return aaaeu
-}
-
-// SetQuantity sets the "quantity" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetQuantity(f float64) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.ResetQuantity()
-	aaaeu.mutation.SetQuantity(f)
-	return aaaeu
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableQuantity(f *float64) *ArchivedAdminAuditEventUpdate {
-	if f != nil {
-		aaaeu.SetQuantity(*f)
-	}
-	return aaaeu
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) AddQuantity(f float64) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.AddQuantity(f)
-	return aaaeu
-}
-
-// SetUnit sets the "unit" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetUnit(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetUnit(s)
-	return aaaeu
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableUnit(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetUnit(*s)
-	}
-	return aaaeu
-}
-
-// SetReason sets the "reason" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetReason(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetReason(s)
-	return aaaeu
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableReason(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetReason(*s)
-	}
-	return aaaeu
-}
-
-// SetResult sets the "result" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetResult(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetResult(s)
-	return aaaeu
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableResult(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetResult(*s)
-	}
-	return aaaeu
-}
-
-// SetSource sets the "source" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetSource(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetSource(s)
-	return aaaeu
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableSource(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetSource(*s)
-	}
-	return aaaeu
-}
-
-// SetDirection sets the "direction" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetDirection(s string) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetDirection(s)
-	return aaaeu
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableDirection(s *string) *ArchivedAdminAuditEventUpdate {
-	if s != nil {
-		aaaeu.SetDirection(*s)
-	}
-	return aaaeu
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (aaaeu *ArchivedAdminAuditEventUpdate) SetCreatedAt(t time.Time) *ArchivedAdminAuditEventUpdate {
 	aaaeu.mutation.SetCreatedAt(t)
@@ -538,23 +48,143 @@ func (aaaeu *ArchivedAdminAuditEventUpdate) SetUpdatedAt(t time.Time) *ArchivedA
 	return aaaeu
 }
 
-// SetArchivedAt sets the "archived_at" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetArchivedAt(t time.Time) *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.SetArchivedAt(t)
+// SetActorUserID sets the "actor_user_id" field.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetActorUserID(s string) *ArchivedAdminAuditEventUpdate {
+	aaaeu.mutation.SetActorUserID(s)
 	return aaaeu
 }
 
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableArchivedAt(t *time.Time) *ArchivedAdminAuditEventUpdate {
-	if t != nil {
-		aaaeu.SetArchivedAt(*t)
+// SetNillableActorUserID sets the "actor_user_id" field if the given value is not nil.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableActorUserID(s *string) *ArchivedAdminAuditEventUpdate {
+	if s != nil {
+		aaaeu.SetActorUserID(*s)
 	}
 	return aaaeu
 }
 
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (aaaeu *ArchivedAdminAuditEventUpdate) ClearArchivedAt() *ArchivedAdminAuditEventUpdate {
-	aaaeu.mutation.ClearArchivedAt()
+// SetActorRole sets the "actor_role" field.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetActorRole(s string) *ArchivedAdminAuditEventUpdate {
+	aaaeu.mutation.SetActorRole(s)
+	return aaaeu
+}
+
+// SetNillableActorRole sets the "actor_role" field if the given value is not nil.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableActorRole(s *string) *ArchivedAdminAuditEventUpdate {
+	if s != nil {
+		aaaeu.SetActorRole(*s)
+	}
+	return aaaeu
+}
+
+// SetActorAccountID sets the "actor_account_id" field.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetActorAccountID(s string) *ArchivedAdminAuditEventUpdate {
+	aaaeu.mutation.SetActorAccountID(s)
+	return aaaeu
+}
+
+// SetNillableActorAccountID sets the "actor_account_id" field if the given value is not nil.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableActorAccountID(s *string) *ArchivedAdminAuditEventUpdate {
+	if s != nil {
+		aaaeu.SetActorAccountID(*s)
+	}
+	return aaaeu
+}
+
+// SetTargetAccountID sets the "target_account_id" field.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetTargetAccountID(s string) *ArchivedAdminAuditEventUpdate {
+	aaaeu.mutation.SetTargetAccountID(s)
+	return aaaeu
+}
+
+// SetNillableTargetAccountID sets the "target_account_id" field if the given value is not nil.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableTargetAccountID(s *string) *ArchivedAdminAuditEventUpdate {
+	if s != nil {
+		aaaeu.SetTargetAccountID(*s)
+	}
+	return aaaeu
+}
+
+// SetAction sets the "action" field.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetAction(s string) *ArchivedAdminAuditEventUpdate {
+	aaaeu.mutation.SetAction(s)
+	return aaaeu
+}
+
+// SetNillableAction sets the "action" field if the given value is not nil.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableAction(s *string) *ArchivedAdminAuditEventUpdate {
+	if s != nil {
+		aaaeu.SetAction(*s)
+	}
+	return aaaeu
+}
+
+// SetResourceKind sets the "resource_kind" field.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetResourceKind(s string) *ArchivedAdminAuditEventUpdate {
+	aaaeu.mutation.SetResourceKind(s)
+	return aaaeu
+}
+
+// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableResourceKind(s *string) *ArchivedAdminAuditEventUpdate {
+	if s != nil {
+		aaaeu.SetResourceKind(*s)
+	}
+	return aaaeu
+}
+
+// SetResourceID sets the "resource_id" field.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetResourceID(s string) *ArchivedAdminAuditEventUpdate {
+	aaaeu.mutation.SetResourceID(s)
+	return aaaeu
+}
+
+// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableResourceID(s *string) *ArchivedAdminAuditEventUpdate {
+	if s != nil {
+		aaaeu.SetResourceID(*s)
+	}
+	return aaaeu
+}
+
+// SetIPAddress sets the "ip_address" field.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetIPAddress(s string) *ArchivedAdminAuditEventUpdate {
+	aaaeu.mutation.SetIPAddress(s)
+	return aaaeu
+}
+
+// SetNillableIPAddress sets the "ip_address" field if the given value is not nil.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableIPAddress(s *string) *ArchivedAdminAuditEventUpdate {
+	if s != nil {
+		aaaeu.SetIPAddress(*s)
+	}
+	return aaaeu
+}
+
+// SetUserAgent sets the "user_agent" field.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetUserAgent(s string) *ArchivedAdminAuditEventUpdate {
+	aaaeu.mutation.SetUserAgent(s)
+	return aaaeu
+}
+
+// SetNillableUserAgent sets the "user_agent" field if the given value is not nil.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableUserAgent(s *string) *ArchivedAdminAuditEventUpdate {
+	if s != nil {
+		aaaeu.SetUserAgent(*s)
+	}
+	return aaaeu
+}
+
+// SetResult sets the "result" field.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetResult(s string) *ArchivedAdminAuditEventUpdate {
+	aaaeu.mutation.SetResult(s)
+	return aaaeu
+}
+
+// SetNillableResult sets the "result" field if the given value is not nil.
+func (aaaeu *ArchivedAdminAuditEventUpdate) SetNillableResult(s *string) *ArchivedAdminAuditEventUpdate {
+	if s != nil {
+		aaaeu.SetResult(*s)
+	}
 	return aaaeu
 }
 
@@ -608,131 +238,41 @@ func (aaaeu *ArchivedAdminAuditEventUpdate) sqlSave(ctx context.Context) (n int,
 			}
 		}
 	}
-	if value, ok := aaaeu.mutation.AccountID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.OwnerAccountID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.OwnerUserID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.UserID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.Email(); ok {
-		_spec.SetField(archivedadminauditevent.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.Role(); ok {
-		_spec.SetField(archivedadminauditevent.FieldRole, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.Status(); ok {
-		_spec.SetField(archivedadminauditevent.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.Name(); ok {
-		_spec.SetField(archivedadminauditevent.FieldName, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.WorkspaceID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldWorkspaceID, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.ResourceID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldResourceID, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.ResourceKind(); ok {
-		_spec.SetField(archivedadminauditevent.FieldResourceKind, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.OperationID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldOperationID, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.Provider(); ok {
-		_spec.SetField(archivedadminauditevent.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.ProviderResourceID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.URL(); ok {
-		_spec.SetField(archivedadminauditevent.FieldURL, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.HoldID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.HoldReleaseID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.LedgerEntryID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.WalletTransactionID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.SettlementID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.PricingVersion(); ok {
-		_spec.SetField(archivedadminauditevent.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.AmountCents(); ok {
-		_spec.SetField(archivedadminauditevent.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeu.mutation.AddedAmountCents(); ok {
-		_spec.AddField(archivedadminauditevent.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeu.mutation.BalanceCents(); ok {
-		_spec.SetField(archivedadminauditevent.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeu.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(archivedadminauditevent.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeu.mutation.FrozenCents(); ok {
-		_spec.SetField(archivedadminauditevent.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeu.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(archivedadminauditevent.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeu.mutation.AvailableCents(); ok {
-		_spec.SetField(archivedadminauditevent.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeu.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(archivedadminauditevent.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeu.mutation.TotalSpentCents(); ok {
-		_spec.SetField(archivedadminauditevent.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeu.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(archivedadminauditevent.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeu.mutation.Quantity(); ok {
-		_spec.SetField(archivedadminauditevent.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := aaaeu.mutation.AddedQuantity(); ok {
-		_spec.AddField(archivedadminauditevent.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := aaaeu.mutation.Unit(); ok {
-		_spec.SetField(archivedadminauditevent.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.Reason(); ok {
-		_spec.SetField(archivedadminauditevent.FieldReason, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.Result(); ok {
-		_spec.SetField(archivedadminauditevent.FieldResult, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.Source(); ok {
-		_spec.SetField(archivedadminauditevent.FieldSource, field.TypeString, value)
-	}
-	if value, ok := aaaeu.mutation.Direction(); ok {
-		_spec.SetField(archivedadminauditevent.FieldDirection, field.TypeString, value)
-	}
 	if value, ok := aaaeu.mutation.CreatedAt(); ok {
 		_spec.SetField(archivedadminauditevent.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := aaaeu.mutation.UpdatedAt(); ok {
 		_spec.SetField(archivedadminauditevent.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := aaaeu.mutation.ArchivedAt(); ok {
-		_spec.SetField(archivedadminauditevent.FieldArchivedAt, field.TypeTime, value)
+	if value, ok := aaaeu.mutation.ActorUserID(); ok {
+		_spec.SetField(archivedadminauditevent.FieldActorUserID, field.TypeString, value)
 	}
-	if aaaeu.mutation.ArchivedAtCleared() {
-		_spec.ClearField(archivedadminauditevent.FieldArchivedAt, field.TypeTime)
+	if value, ok := aaaeu.mutation.ActorRole(); ok {
+		_spec.SetField(archivedadminauditevent.FieldActorRole, field.TypeString, value)
+	}
+	if value, ok := aaaeu.mutation.ActorAccountID(); ok {
+		_spec.SetField(archivedadminauditevent.FieldActorAccountID, field.TypeString, value)
+	}
+	if value, ok := aaaeu.mutation.TargetAccountID(); ok {
+		_spec.SetField(archivedadminauditevent.FieldTargetAccountID, field.TypeString, value)
+	}
+	if value, ok := aaaeu.mutation.Action(); ok {
+		_spec.SetField(archivedadminauditevent.FieldAction, field.TypeString, value)
+	}
+	if value, ok := aaaeu.mutation.ResourceKind(); ok {
+		_spec.SetField(archivedadminauditevent.FieldResourceKind, field.TypeString, value)
+	}
+	if value, ok := aaaeu.mutation.ResourceID(); ok {
+		_spec.SetField(archivedadminauditevent.FieldResourceID, field.TypeString, value)
+	}
+	if value, ok := aaaeu.mutation.IPAddress(); ok {
+		_spec.SetField(archivedadminauditevent.FieldIPAddress, field.TypeString, value)
+	}
+	if value, ok := aaaeu.mutation.UserAgent(); ok {
+		_spec.SetField(archivedadminauditevent.FieldUserAgent, field.TypeString, value)
+	}
+	if value, ok := aaaeu.mutation.Result(); ok {
+		_spec.SetField(archivedadminauditevent.FieldResult, field.TypeString, value)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, aaaeu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -752,496 +292,6 @@ type ArchivedAdminAuditEventUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *ArchivedAdminAuditEventMutation
-}
-
-// SetAccountID sets the "account_id" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetAccountID(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetAccountID(s)
-	return aaaeuo
-}
-
-// SetNillableAccountID sets the "account_id" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableAccountID(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetAccountID(*s)
-	}
-	return aaaeuo
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetOwnerAccountID(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetOwnerAccountID(s)
-	return aaaeuo
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableOwnerAccountID(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetOwnerAccountID(*s)
-	}
-	return aaaeuo
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetOwnerUserID(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetOwnerUserID(s)
-	return aaaeuo
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableOwnerUserID(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetOwnerUserID(*s)
-	}
-	return aaaeuo
-}
-
-// SetUserID sets the "user_id" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetUserID(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetUserID(s)
-	return aaaeuo
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableUserID(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetUserID(*s)
-	}
-	return aaaeuo
-}
-
-// SetEmail sets the "email" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetEmail(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetEmail(s)
-	return aaaeuo
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableEmail(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetEmail(*s)
-	}
-	return aaaeuo
-}
-
-// SetRole sets the "role" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetRole(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetRole(s)
-	return aaaeuo
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableRole(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetRole(*s)
-	}
-	return aaaeuo
-}
-
-// SetStatus sets the "status" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetStatus(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetStatus(s)
-	return aaaeuo
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableStatus(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetStatus(*s)
-	}
-	return aaaeuo
-}
-
-// SetName sets the "name" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetName(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetName(s)
-	return aaaeuo
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableName(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetName(*s)
-	}
-	return aaaeuo
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetWorkspaceID(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetWorkspaceID(s)
-	return aaaeuo
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableWorkspaceID(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetWorkspaceID(*s)
-	}
-	return aaaeuo
-}
-
-// SetResourceID sets the "resource_id" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetResourceID(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetResourceID(s)
-	return aaaeuo
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableResourceID(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetResourceID(*s)
-	}
-	return aaaeuo
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetResourceKind(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetResourceKind(s)
-	return aaaeuo
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableResourceKind(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetResourceKind(*s)
-	}
-	return aaaeuo
-}
-
-// SetOperationID sets the "operation_id" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetOperationID(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetOperationID(s)
-	return aaaeuo
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableOperationID(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetOperationID(*s)
-	}
-	return aaaeuo
-}
-
-// SetProvider sets the "provider" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetProvider(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetProvider(s)
-	return aaaeuo
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableProvider(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetProvider(*s)
-	}
-	return aaaeuo
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetProviderResourceID(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetProviderResourceID(s)
-	return aaaeuo
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableProviderResourceID(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetProviderResourceID(*s)
-	}
-	return aaaeuo
-}
-
-// SetURL sets the "url" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetURL(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetURL(s)
-	return aaaeuo
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableURL(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetURL(*s)
-	}
-	return aaaeuo
-}
-
-// SetHoldID sets the "hold_id" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetHoldID(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetHoldID(s)
-	return aaaeuo
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableHoldID(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetHoldID(*s)
-	}
-	return aaaeuo
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetHoldReleaseID(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetHoldReleaseID(s)
-	return aaaeuo
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableHoldReleaseID(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetHoldReleaseID(*s)
-	}
-	return aaaeuo
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetLedgerEntryID(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetLedgerEntryID(s)
-	return aaaeuo
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableLedgerEntryID(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetLedgerEntryID(*s)
-	}
-	return aaaeuo
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetWalletTransactionID(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetWalletTransactionID(s)
-	return aaaeuo
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableWalletTransactionID(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetWalletTransactionID(*s)
-	}
-	return aaaeuo
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetSettlementID(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetSettlementID(s)
-	return aaaeuo
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableSettlementID(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetSettlementID(*s)
-	}
-	return aaaeuo
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetPricingVersion(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetPricingVersion(s)
-	return aaaeuo
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillablePricingVersion(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetPricingVersion(*s)
-	}
-	return aaaeuo
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetAmountCents(i int64) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.ResetAmountCents()
-	aaaeuo.mutation.SetAmountCents(i)
-	return aaaeuo
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableAmountCents(i *int64) *ArchivedAdminAuditEventUpdateOne {
-	if i != nil {
-		aaaeuo.SetAmountCents(*i)
-	}
-	return aaaeuo
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) AddAmountCents(i int64) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.AddAmountCents(i)
-	return aaaeuo
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetBalanceCents(i int64) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.ResetBalanceCents()
-	aaaeuo.mutation.SetBalanceCents(i)
-	return aaaeuo
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableBalanceCents(i *int64) *ArchivedAdminAuditEventUpdateOne {
-	if i != nil {
-		aaaeuo.SetBalanceCents(*i)
-	}
-	return aaaeuo
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) AddBalanceCents(i int64) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.AddBalanceCents(i)
-	return aaaeuo
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetFrozenCents(i int64) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.ResetFrozenCents()
-	aaaeuo.mutation.SetFrozenCents(i)
-	return aaaeuo
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableFrozenCents(i *int64) *ArchivedAdminAuditEventUpdateOne {
-	if i != nil {
-		aaaeuo.SetFrozenCents(*i)
-	}
-	return aaaeuo
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) AddFrozenCents(i int64) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.AddFrozenCents(i)
-	return aaaeuo
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetAvailableCents(i int64) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.ResetAvailableCents()
-	aaaeuo.mutation.SetAvailableCents(i)
-	return aaaeuo
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableAvailableCents(i *int64) *ArchivedAdminAuditEventUpdateOne {
-	if i != nil {
-		aaaeuo.SetAvailableCents(*i)
-	}
-	return aaaeuo
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) AddAvailableCents(i int64) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.AddAvailableCents(i)
-	return aaaeuo
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetTotalSpentCents(i int64) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.ResetTotalSpentCents()
-	aaaeuo.mutation.SetTotalSpentCents(i)
-	return aaaeuo
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableTotalSpentCents(i *int64) *ArchivedAdminAuditEventUpdateOne {
-	if i != nil {
-		aaaeuo.SetTotalSpentCents(*i)
-	}
-	return aaaeuo
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) AddTotalSpentCents(i int64) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.AddTotalSpentCents(i)
-	return aaaeuo
-}
-
-// SetQuantity sets the "quantity" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetQuantity(f float64) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.ResetQuantity()
-	aaaeuo.mutation.SetQuantity(f)
-	return aaaeuo
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableQuantity(f *float64) *ArchivedAdminAuditEventUpdateOne {
-	if f != nil {
-		aaaeuo.SetQuantity(*f)
-	}
-	return aaaeuo
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) AddQuantity(f float64) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.AddQuantity(f)
-	return aaaeuo
-}
-
-// SetUnit sets the "unit" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetUnit(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetUnit(s)
-	return aaaeuo
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableUnit(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetUnit(*s)
-	}
-	return aaaeuo
-}
-
-// SetReason sets the "reason" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetReason(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetReason(s)
-	return aaaeuo
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableReason(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetReason(*s)
-	}
-	return aaaeuo
-}
-
-// SetResult sets the "result" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetResult(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetResult(s)
-	return aaaeuo
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableResult(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetResult(*s)
-	}
-	return aaaeuo
-}
-
-// SetSource sets the "source" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetSource(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetSource(s)
-	return aaaeuo
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableSource(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetSource(*s)
-	}
-	return aaaeuo
-}
-
-// SetDirection sets the "direction" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetDirection(s string) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetDirection(s)
-	return aaaeuo
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableDirection(s *string) *ArchivedAdminAuditEventUpdateOne {
-	if s != nil {
-		aaaeuo.SetDirection(*s)
-	}
-	return aaaeuo
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -1264,23 +314,143 @@ func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetUpdatedAt(t time.Time) *Archi
 	return aaaeuo
 }
 
-// SetArchivedAt sets the "archived_at" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetArchivedAt(t time.Time) *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.SetArchivedAt(t)
+// SetActorUserID sets the "actor_user_id" field.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetActorUserID(s string) *ArchivedAdminAuditEventUpdateOne {
+	aaaeuo.mutation.SetActorUserID(s)
 	return aaaeuo
 }
 
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableArchivedAt(t *time.Time) *ArchivedAdminAuditEventUpdateOne {
-	if t != nil {
-		aaaeuo.SetArchivedAt(*t)
+// SetNillableActorUserID sets the "actor_user_id" field if the given value is not nil.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableActorUserID(s *string) *ArchivedAdminAuditEventUpdateOne {
+	if s != nil {
+		aaaeuo.SetActorUserID(*s)
 	}
 	return aaaeuo
 }
 
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (aaaeuo *ArchivedAdminAuditEventUpdateOne) ClearArchivedAt() *ArchivedAdminAuditEventUpdateOne {
-	aaaeuo.mutation.ClearArchivedAt()
+// SetActorRole sets the "actor_role" field.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetActorRole(s string) *ArchivedAdminAuditEventUpdateOne {
+	aaaeuo.mutation.SetActorRole(s)
+	return aaaeuo
+}
+
+// SetNillableActorRole sets the "actor_role" field if the given value is not nil.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableActorRole(s *string) *ArchivedAdminAuditEventUpdateOne {
+	if s != nil {
+		aaaeuo.SetActorRole(*s)
+	}
+	return aaaeuo
+}
+
+// SetActorAccountID sets the "actor_account_id" field.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetActorAccountID(s string) *ArchivedAdminAuditEventUpdateOne {
+	aaaeuo.mutation.SetActorAccountID(s)
+	return aaaeuo
+}
+
+// SetNillableActorAccountID sets the "actor_account_id" field if the given value is not nil.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableActorAccountID(s *string) *ArchivedAdminAuditEventUpdateOne {
+	if s != nil {
+		aaaeuo.SetActorAccountID(*s)
+	}
+	return aaaeuo
+}
+
+// SetTargetAccountID sets the "target_account_id" field.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetTargetAccountID(s string) *ArchivedAdminAuditEventUpdateOne {
+	aaaeuo.mutation.SetTargetAccountID(s)
+	return aaaeuo
+}
+
+// SetNillableTargetAccountID sets the "target_account_id" field if the given value is not nil.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableTargetAccountID(s *string) *ArchivedAdminAuditEventUpdateOne {
+	if s != nil {
+		aaaeuo.SetTargetAccountID(*s)
+	}
+	return aaaeuo
+}
+
+// SetAction sets the "action" field.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetAction(s string) *ArchivedAdminAuditEventUpdateOne {
+	aaaeuo.mutation.SetAction(s)
+	return aaaeuo
+}
+
+// SetNillableAction sets the "action" field if the given value is not nil.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableAction(s *string) *ArchivedAdminAuditEventUpdateOne {
+	if s != nil {
+		aaaeuo.SetAction(*s)
+	}
+	return aaaeuo
+}
+
+// SetResourceKind sets the "resource_kind" field.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetResourceKind(s string) *ArchivedAdminAuditEventUpdateOne {
+	aaaeuo.mutation.SetResourceKind(s)
+	return aaaeuo
+}
+
+// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableResourceKind(s *string) *ArchivedAdminAuditEventUpdateOne {
+	if s != nil {
+		aaaeuo.SetResourceKind(*s)
+	}
+	return aaaeuo
+}
+
+// SetResourceID sets the "resource_id" field.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetResourceID(s string) *ArchivedAdminAuditEventUpdateOne {
+	aaaeuo.mutation.SetResourceID(s)
+	return aaaeuo
+}
+
+// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableResourceID(s *string) *ArchivedAdminAuditEventUpdateOne {
+	if s != nil {
+		aaaeuo.SetResourceID(*s)
+	}
+	return aaaeuo
+}
+
+// SetIPAddress sets the "ip_address" field.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetIPAddress(s string) *ArchivedAdminAuditEventUpdateOne {
+	aaaeuo.mutation.SetIPAddress(s)
+	return aaaeuo
+}
+
+// SetNillableIPAddress sets the "ip_address" field if the given value is not nil.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableIPAddress(s *string) *ArchivedAdminAuditEventUpdateOne {
+	if s != nil {
+		aaaeuo.SetIPAddress(*s)
+	}
+	return aaaeuo
+}
+
+// SetUserAgent sets the "user_agent" field.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetUserAgent(s string) *ArchivedAdminAuditEventUpdateOne {
+	aaaeuo.mutation.SetUserAgent(s)
+	return aaaeuo
+}
+
+// SetNillableUserAgent sets the "user_agent" field if the given value is not nil.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableUserAgent(s *string) *ArchivedAdminAuditEventUpdateOne {
+	if s != nil {
+		aaaeuo.SetUserAgent(*s)
+	}
+	return aaaeuo
+}
+
+// SetResult sets the "result" field.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetResult(s string) *ArchivedAdminAuditEventUpdateOne {
+	aaaeuo.mutation.SetResult(s)
+	return aaaeuo
+}
+
+// SetNillableResult sets the "result" field if the given value is not nil.
+func (aaaeuo *ArchivedAdminAuditEventUpdateOne) SetNillableResult(s *string) *ArchivedAdminAuditEventUpdateOne {
+	if s != nil {
+		aaaeuo.SetResult(*s)
+	}
 	return aaaeuo
 }
 
@@ -1364,131 +534,41 @@ func (aaaeuo *ArchivedAdminAuditEventUpdateOne) sqlSave(ctx context.Context) (_n
 			}
 		}
 	}
-	if value, ok := aaaeuo.mutation.AccountID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.OwnerAccountID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.OwnerUserID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.UserID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.Email(); ok {
-		_spec.SetField(archivedadminauditevent.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.Role(); ok {
-		_spec.SetField(archivedadminauditevent.FieldRole, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.Status(); ok {
-		_spec.SetField(archivedadminauditevent.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.Name(); ok {
-		_spec.SetField(archivedadminauditevent.FieldName, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.WorkspaceID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldWorkspaceID, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.ResourceID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldResourceID, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.ResourceKind(); ok {
-		_spec.SetField(archivedadminauditevent.FieldResourceKind, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.OperationID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldOperationID, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.Provider(); ok {
-		_spec.SetField(archivedadminauditevent.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.ProviderResourceID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.URL(); ok {
-		_spec.SetField(archivedadminauditevent.FieldURL, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.HoldID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.HoldReleaseID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.LedgerEntryID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.WalletTransactionID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.SettlementID(); ok {
-		_spec.SetField(archivedadminauditevent.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.PricingVersion(); ok {
-		_spec.SetField(archivedadminauditevent.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.AmountCents(); ok {
-		_spec.SetField(archivedadminauditevent.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeuo.mutation.AddedAmountCents(); ok {
-		_spec.AddField(archivedadminauditevent.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeuo.mutation.BalanceCents(); ok {
-		_spec.SetField(archivedadminauditevent.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeuo.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(archivedadminauditevent.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeuo.mutation.FrozenCents(); ok {
-		_spec.SetField(archivedadminauditevent.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeuo.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(archivedadminauditevent.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeuo.mutation.AvailableCents(); ok {
-		_spec.SetField(archivedadminauditevent.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeuo.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(archivedadminauditevent.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeuo.mutation.TotalSpentCents(); ok {
-		_spec.SetField(archivedadminauditevent.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeuo.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(archivedadminauditevent.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := aaaeuo.mutation.Quantity(); ok {
-		_spec.SetField(archivedadminauditevent.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := aaaeuo.mutation.AddedQuantity(); ok {
-		_spec.AddField(archivedadminauditevent.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := aaaeuo.mutation.Unit(); ok {
-		_spec.SetField(archivedadminauditevent.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.Reason(); ok {
-		_spec.SetField(archivedadminauditevent.FieldReason, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.Result(); ok {
-		_spec.SetField(archivedadminauditevent.FieldResult, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.Source(); ok {
-		_spec.SetField(archivedadminauditevent.FieldSource, field.TypeString, value)
-	}
-	if value, ok := aaaeuo.mutation.Direction(); ok {
-		_spec.SetField(archivedadminauditevent.FieldDirection, field.TypeString, value)
-	}
 	if value, ok := aaaeuo.mutation.CreatedAt(); ok {
 		_spec.SetField(archivedadminauditevent.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := aaaeuo.mutation.UpdatedAt(); ok {
 		_spec.SetField(archivedadminauditevent.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := aaaeuo.mutation.ArchivedAt(); ok {
-		_spec.SetField(archivedadminauditevent.FieldArchivedAt, field.TypeTime, value)
+	if value, ok := aaaeuo.mutation.ActorUserID(); ok {
+		_spec.SetField(archivedadminauditevent.FieldActorUserID, field.TypeString, value)
 	}
-	if aaaeuo.mutation.ArchivedAtCleared() {
-		_spec.ClearField(archivedadminauditevent.FieldArchivedAt, field.TypeTime)
+	if value, ok := aaaeuo.mutation.ActorRole(); ok {
+		_spec.SetField(archivedadminauditevent.FieldActorRole, field.TypeString, value)
+	}
+	if value, ok := aaaeuo.mutation.ActorAccountID(); ok {
+		_spec.SetField(archivedadminauditevent.FieldActorAccountID, field.TypeString, value)
+	}
+	if value, ok := aaaeuo.mutation.TargetAccountID(); ok {
+		_spec.SetField(archivedadminauditevent.FieldTargetAccountID, field.TypeString, value)
+	}
+	if value, ok := aaaeuo.mutation.Action(); ok {
+		_spec.SetField(archivedadminauditevent.FieldAction, field.TypeString, value)
+	}
+	if value, ok := aaaeuo.mutation.ResourceKind(); ok {
+		_spec.SetField(archivedadminauditevent.FieldResourceKind, field.TypeString, value)
+	}
+	if value, ok := aaaeuo.mutation.ResourceID(); ok {
+		_spec.SetField(archivedadminauditevent.FieldResourceID, field.TypeString, value)
+	}
+	if value, ok := aaaeuo.mutation.IPAddress(); ok {
+		_spec.SetField(archivedadminauditevent.FieldIPAddress, field.TypeString, value)
+	}
+	if value, ok := aaaeuo.mutation.UserAgent(); ok {
+		_spec.SetField(archivedadminauditevent.FieldUserAgent, field.TypeString, value)
+	}
+	if value, ok := aaaeuo.mutation.Result(); ok {
+		_spec.SetField(archivedadminauditevent.FieldResult, field.TypeString, value)
 	}
 	_node = &ArchivedAdminAuditEvent{config: aaaeuo.config}
 	_spec.Assign = _node.assignValues

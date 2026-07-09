@@ -64,6 +64,16 @@ func IDContainsFold(id string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldContainsFold(FieldID, id))
 }
 
+// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
+func CreatedAt(v time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
+func UpdatedAt(v time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldUpdatedAt, v))
+}
+
 // AccountID applies equality check predicate on the "account_id" field. It's identical to AccountIDEQ.
 func AccountID(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldEQ(FieldAccountID, v))
@@ -84,54 +94,9 @@ func UserID(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldEQ(FieldUserID, v))
 }
 
-// Email applies equality check predicate on the "email" field. It's identical to EmailEQ.
-func Email(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldEmail, v))
-}
-
-// Role applies equality check predicate on the "role" field. It's identical to RoleEQ.
-func Role(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldRole, v))
-}
-
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldStatus, v))
-}
-
 // Name applies equality check predicate on the "name" field. It's identical to NameEQ.
 func Name(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldEQ(FieldName, v))
-}
-
-// WorkspaceID applies equality check predicate on the "workspace_id" field. It's identical to WorkspaceIDEQ.
-func WorkspaceID(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldWorkspaceID, v))
-}
-
-// ResourceID applies equality check predicate on the "resource_id" field. It's identical to ResourceIDEQ.
-func ResourceID(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldResourceID, v))
-}
-
-// ResourceKind applies equality check predicate on the "resource_kind" field. It's identical to ResourceKindEQ.
-func ResourceKind(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldResourceKind, v))
-}
-
-// OperationID applies equality check predicate on the "operation_id" field. It's identical to OperationIDEQ.
-func OperationID(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldOperationID, v))
-}
-
-// Provider applies equality check predicate on the "provider" field. It's identical to ProviderEQ.
-func Provider(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldProvider, v))
-}
-
-// ProviderResourceID applies equality check predicate on the "provider_resource_id" field. It's identical to ProviderResourceIDEQ.
-func ProviderResourceID(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldProviderResourceID, v))
 }
 
 // URL applies equality check predicate on the "url" field. It's identical to URLEQ.
@@ -139,104 +104,169 @@ func URL(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldEQ(FieldURL, v))
 }
 
-// HoldID applies equality check predicate on the "hold_id" field. It's identical to HoldIDEQ.
-func HoldID(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldHoldID, v))
+// State applies equality check predicate on the "state" field. It's identical to StateEQ.
+func State(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldState, v))
 }
 
-// HoldReleaseID applies equality check predicate on the "hold_release_id" field. It's identical to HoldReleaseIDEQ.
-func HoldReleaseID(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldHoldReleaseID, v))
+// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
+func Status(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldStatus, v))
 }
 
-// LedgerEntryID applies equality check predicate on the "ledger_entry_id" field. It's identical to LedgerEntryIDEQ.
-func LedgerEntryID(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldLedgerEntryID, v))
+// StorageID applies equality check predicate on the "storage_id" field. It's identical to StorageIDEQ.
+func StorageID(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldStorageID, v))
 }
 
-// WalletTransactionID applies equality check predicate on the "wallet_transaction_id" field. It's identical to WalletTransactionIDEQ.
-func WalletTransactionID(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldWalletTransactionID, v))
+// CurrentComputeAllocationID applies equality check predicate on the "current_compute_allocation_id" field. It's identical to CurrentComputeAllocationIDEQ.
+func CurrentComputeAllocationID(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldCurrentComputeAllocationID, v))
 }
 
-// SettlementID applies equality check predicate on the "settlement_id" field. It's identical to SettlementIDEQ.
-func SettlementID(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldSettlementID, v))
+// CurrentAttachmentID applies equality check predicate on the "current_attachment_id" field. It's identical to CurrentAttachmentIDEQ.
+func CurrentAttachmentID(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldCurrentAttachmentID, v))
 }
 
-// PricingVersion applies equality check predicate on the "pricing_version" field. It's identical to PricingVersionEQ.
-func PricingVersion(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldPricingVersion, v))
+// RuntimeID applies equality check predicate on the "runtime_id" field. It's identical to RuntimeIDEQ.
+func RuntimeID(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldRuntimeID, v))
 }
 
-// AmountCents applies equality check predicate on the "amount_cents" field. It's identical to AmountCentsEQ.
-func AmountCents(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldAmountCents, v))
+// RuntimeServiceName applies equality check predicate on the "runtime_service_name" field. It's identical to RuntimeServiceNameEQ.
+func RuntimeServiceName(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldRuntimeServiceName, v))
 }
 
-// BalanceCents applies equality check predicate on the "balance_cents" field. It's identical to BalanceCentsEQ.
-func BalanceCents(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldBalanceCents, v))
+// RuntimeServiceNameRoot applies equality check predicate on the "runtime_service_name_root" field. It's identical to RuntimeServiceNameRootEQ.
+func RuntimeServiceNameRoot(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldRuntimeServiceNameRoot, v))
 }
 
-// FrozenCents applies equality check predicate on the "frozen_cents" field. It's identical to FrozenCentsEQ.
-func FrozenCents(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldFrozenCents, v))
+// ServiceName applies equality check predicate on the "service_name" field. It's identical to ServiceNameEQ.
+func ServiceName(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldServiceName, v))
 }
 
-// AvailableCents applies equality check predicate on the "available_cents" field. It's identical to AvailableCentsEQ.
-func AvailableCents(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldAvailableCents, v))
+// AccessTokenStatus applies equality check predicate on the "access_token_status" field. It's identical to AccessTokenStatusEQ.
+func AccessTokenStatus(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldAccessTokenStatus, v))
 }
 
-// TotalSpentCents applies equality check predicate on the "total_spent_cents" field. It's identical to TotalSpentCentsEQ.
-func TotalSpentCents(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldTotalSpentCents, v))
+// AccessAccount applies equality check predicate on the "access_account" field. It's identical to AccessAccountEQ.
+func AccessAccount(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldAccessAccount, v))
 }
 
-// Quantity applies equality check predicate on the "quantity" field. It's identical to QuantityEQ.
-func Quantity(v float64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldQuantity, v))
+// AccessUsername applies equality check predicate on the "access_username" field. It's identical to AccessUsernameEQ.
+func AccessUsername(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldAccessUsername, v))
 }
 
-// Unit applies equality check predicate on the "unit" field. It's identical to UnitEQ.
-func Unit(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldUnit, v))
+// AccessPassword applies equality check predicate on the "access_password" field. It's identical to AccessPasswordEQ.
+func AccessPassword(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldAccessPassword, v))
 }
 
-// Reason applies equality check predicate on the "reason" field. It's identical to ReasonEQ.
-func Reason(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldReason, v))
+// CredentialStatus applies equality check predicate on the "credential_status" field. It's identical to CredentialStatusEQ.
+func CredentialStatus(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldCredentialStatus, v))
 }
 
-// Result applies equality check predicate on the "result" field. It's identical to ResultEQ.
-func Result(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldResult, v))
+// CredentialVersion applies equality check predicate on the "credential_version" field. It's identical to CredentialVersionEQ.
+func CredentialVersion(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldCredentialVersion, v))
 }
 
-// Source applies equality check predicate on the "source" field. It's identical to SourceEQ.
-func Source(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldSource, v))
+// CredentialSecretRef applies equality check predicate on the "credential_secret_ref" field. It's identical to CredentialSecretRefEQ.
+func CredentialSecretRef(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldCredentialSecretRef, v))
 }
 
-// Direction applies equality check predicate on the "direction" field. It's identical to DirectionEQ.
-func Direction(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldDirection, v))
+// AccessRequiresLogin applies equality check predicate on the "access_requires_login" field. It's identical to AccessRequiresLoginEQ.
+func AccessRequiresLogin(v bool) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldAccessRequiresLogin, v))
 }
 
-// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
-func CreatedAt(v time.Time) predicate.Workspace {
+// CreatedAtEQ applies the EQ predicate on the "created_at" field.
+func CreatedAtEQ(v time.Time) predicate.Workspace {
 	return predicate.Workspace(sql.FieldEQ(FieldCreatedAt, v))
 }
 
-// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
-func UpdatedAt(v time.Time) predicate.Workspace {
+// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
+func CreatedAtNEQ(v time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldCreatedAt, v))
+}
+
+// CreatedAtIn applies the In predicate on the "created_at" field.
+func CreatedAtIn(vs ...time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldCreatedAt, vs...))
+}
+
+// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
+func CreatedAtNotIn(vs ...time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldCreatedAt, vs...))
+}
+
+// CreatedAtGT applies the GT predicate on the "created_at" field.
+func CreatedAtGT(v time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldCreatedAt, v))
+}
+
+// CreatedAtGTE applies the GTE predicate on the "created_at" field.
+func CreatedAtGTE(v time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldCreatedAt, v))
+}
+
+// CreatedAtLT applies the LT predicate on the "created_at" field.
+func CreatedAtLT(v time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldCreatedAt, v))
+}
+
+// CreatedAtLTE applies the LTE predicate on the "created_at" field.
+func CreatedAtLTE(v time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
+func UpdatedAtEQ(v time.Time) predicate.Workspace {
 	return predicate.Workspace(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
-// ArchivedAt applies equality check predicate on the "archived_at" field. It's identical to ArchivedAtEQ.
-func ArchivedAt(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldArchivedAt, v))
+// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
+func UpdatedAtNEQ(v time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldUpdatedAt, v))
+}
+
+// UpdatedAtIn applies the In predicate on the "updated_at" field.
+func UpdatedAtIn(vs ...time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
+func UpdatedAtNotIn(vs ...time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtGT applies the GT predicate on the "updated_at" field.
+func UpdatedAtGT(v time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
+func UpdatedAtGTE(v time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLT applies the LT predicate on the "updated_at" field.
+func UpdatedAtLT(v time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
+func UpdatedAtLTE(v time.Time) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
 // AccountIDEQ applies the EQ predicate on the "account_id" field.
@@ -499,201 +529,6 @@ func UserIDContainsFold(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldContainsFold(FieldUserID, v))
 }
 
-// EmailEQ applies the EQ predicate on the "email" field.
-func EmailEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldEmail, v))
-}
-
-// EmailNEQ applies the NEQ predicate on the "email" field.
-func EmailNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldEmail, v))
-}
-
-// EmailIn applies the In predicate on the "email" field.
-func EmailIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldEmail, vs...))
-}
-
-// EmailNotIn applies the NotIn predicate on the "email" field.
-func EmailNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldEmail, vs...))
-}
-
-// EmailGT applies the GT predicate on the "email" field.
-func EmailGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldEmail, v))
-}
-
-// EmailGTE applies the GTE predicate on the "email" field.
-func EmailGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldEmail, v))
-}
-
-// EmailLT applies the LT predicate on the "email" field.
-func EmailLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldEmail, v))
-}
-
-// EmailLTE applies the LTE predicate on the "email" field.
-func EmailLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldEmail, v))
-}
-
-// EmailContains applies the Contains predicate on the "email" field.
-func EmailContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldEmail, v))
-}
-
-// EmailHasPrefix applies the HasPrefix predicate on the "email" field.
-func EmailHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldEmail, v))
-}
-
-// EmailHasSuffix applies the HasSuffix predicate on the "email" field.
-func EmailHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldEmail, v))
-}
-
-// EmailEqualFold applies the EqualFold predicate on the "email" field.
-func EmailEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldEmail, v))
-}
-
-// EmailContainsFold applies the ContainsFold predicate on the "email" field.
-func EmailContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldEmail, v))
-}
-
-// RoleEQ applies the EQ predicate on the "role" field.
-func RoleEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldRole, v))
-}
-
-// RoleNEQ applies the NEQ predicate on the "role" field.
-func RoleNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldRole, v))
-}
-
-// RoleIn applies the In predicate on the "role" field.
-func RoleIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldRole, vs...))
-}
-
-// RoleNotIn applies the NotIn predicate on the "role" field.
-func RoleNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldRole, vs...))
-}
-
-// RoleGT applies the GT predicate on the "role" field.
-func RoleGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldRole, v))
-}
-
-// RoleGTE applies the GTE predicate on the "role" field.
-func RoleGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldRole, v))
-}
-
-// RoleLT applies the LT predicate on the "role" field.
-func RoleLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldRole, v))
-}
-
-// RoleLTE applies the LTE predicate on the "role" field.
-func RoleLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldRole, v))
-}
-
-// RoleContains applies the Contains predicate on the "role" field.
-func RoleContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldRole, v))
-}
-
-// RoleHasPrefix applies the HasPrefix predicate on the "role" field.
-func RoleHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldRole, v))
-}
-
-// RoleHasSuffix applies the HasSuffix predicate on the "role" field.
-func RoleHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldRole, v))
-}
-
-// RoleEqualFold applies the EqualFold predicate on the "role" field.
-func RoleEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldRole, v))
-}
-
-// RoleContainsFold applies the ContainsFold predicate on the "role" field.
-func RoleContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldRole, v))
-}
-
-// StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldStatus, v))
-}
-
-// StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldStatus, v))
-}
-
-// StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldStatus, vs...))
-}
-
-// StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldStatus, vs...))
-}
-
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldStatus, v))
-}
-
 // NameEQ applies the EQ predicate on the "name" field.
 func NameEQ(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldEQ(FieldName, v))
@@ -757,396 +592,6 @@ func NameEqualFold(v string) predicate.Workspace {
 // NameContainsFold applies the ContainsFold predicate on the "name" field.
 func NameContainsFold(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldContainsFold(FieldName, v))
-}
-
-// WorkspaceIDEQ applies the EQ predicate on the "workspace_id" field.
-func WorkspaceIDEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDNEQ applies the NEQ predicate on the "workspace_id" field.
-func WorkspaceIDNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDIn applies the In predicate on the "workspace_id" field.
-func WorkspaceIDIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldWorkspaceID, vs...))
-}
-
-// WorkspaceIDNotIn applies the NotIn predicate on the "workspace_id" field.
-func WorkspaceIDNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldWorkspaceID, vs...))
-}
-
-// WorkspaceIDGT applies the GT predicate on the "workspace_id" field.
-func WorkspaceIDGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDGTE applies the GTE predicate on the "workspace_id" field.
-func WorkspaceIDGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDLT applies the LT predicate on the "workspace_id" field.
-func WorkspaceIDLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDLTE applies the LTE predicate on the "workspace_id" field.
-func WorkspaceIDLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDContains applies the Contains predicate on the "workspace_id" field.
-func WorkspaceIDContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDHasPrefix applies the HasPrefix predicate on the "workspace_id" field.
-func WorkspaceIDHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDHasSuffix applies the HasSuffix predicate on the "workspace_id" field.
-func WorkspaceIDHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDEqualFold applies the EqualFold predicate on the "workspace_id" field.
-func WorkspaceIDEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDContainsFold applies the ContainsFold predicate on the "workspace_id" field.
-func WorkspaceIDContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldWorkspaceID, v))
-}
-
-// ResourceIDEQ applies the EQ predicate on the "resource_id" field.
-func ResourceIDEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldResourceID, v))
-}
-
-// ResourceIDNEQ applies the NEQ predicate on the "resource_id" field.
-func ResourceIDNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldResourceID, v))
-}
-
-// ResourceIDIn applies the In predicate on the "resource_id" field.
-func ResourceIDIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldResourceID, vs...))
-}
-
-// ResourceIDNotIn applies the NotIn predicate on the "resource_id" field.
-func ResourceIDNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldResourceID, vs...))
-}
-
-// ResourceIDGT applies the GT predicate on the "resource_id" field.
-func ResourceIDGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldResourceID, v))
-}
-
-// ResourceIDGTE applies the GTE predicate on the "resource_id" field.
-func ResourceIDGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldResourceID, v))
-}
-
-// ResourceIDLT applies the LT predicate on the "resource_id" field.
-func ResourceIDLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldResourceID, v))
-}
-
-// ResourceIDLTE applies the LTE predicate on the "resource_id" field.
-func ResourceIDLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldResourceID, v))
-}
-
-// ResourceIDContains applies the Contains predicate on the "resource_id" field.
-func ResourceIDContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldResourceID, v))
-}
-
-// ResourceIDHasPrefix applies the HasPrefix predicate on the "resource_id" field.
-func ResourceIDHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldResourceID, v))
-}
-
-// ResourceIDHasSuffix applies the HasSuffix predicate on the "resource_id" field.
-func ResourceIDHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldResourceID, v))
-}
-
-// ResourceIDEqualFold applies the EqualFold predicate on the "resource_id" field.
-func ResourceIDEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldResourceID, v))
-}
-
-// ResourceIDContainsFold applies the ContainsFold predicate on the "resource_id" field.
-func ResourceIDContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldResourceID, v))
-}
-
-// ResourceKindEQ applies the EQ predicate on the "resource_kind" field.
-func ResourceKindEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldResourceKind, v))
-}
-
-// ResourceKindNEQ applies the NEQ predicate on the "resource_kind" field.
-func ResourceKindNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldResourceKind, v))
-}
-
-// ResourceKindIn applies the In predicate on the "resource_kind" field.
-func ResourceKindIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldResourceKind, vs...))
-}
-
-// ResourceKindNotIn applies the NotIn predicate on the "resource_kind" field.
-func ResourceKindNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldResourceKind, vs...))
-}
-
-// ResourceKindGT applies the GT predicate on the "resource_kind" field.
-func ResourceKindGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldResourceKind, v))
-}
-
-// ResourceKindGTE applies the GTE predicate on the "resource_kind" field.
-func ResourceKindGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldResourceKind, v))
-}
-
-// ResourceKindLT applies the LT predicate on the "resource_kind" field.
-func ResourceKindLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldResourceKind, v))
-}
-
-// ResourceKindLTE applies the LTE predicate on the "resource_kind" field.
-func ResourceKindLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldResourceKind, v))
-}
-
-// ResourceKindContains applies the Contains predicate on the "resource_kind" field.
-func ResourceKindContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldResourceKind, v))
-}
-
-// ResourceKindHasPrefix applies the HasPrefix predicate on the "resource_kind" field.
-func ResourceKindHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldResourceKind, v))
-}
-
-// ResourceKindHasSuffix applies the HasSuffix predicate on the "resource_kind" field.
-func ResourceKindHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldResourceKind, v))
-}
-
-// ResourceKindEqualFold applies the EqualFold predicate on the "resource_kind" field.
-func ResourceKindEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldResourceKind, v))
-}
-
-// ResourceKindContainsFold applies the ContainsFold predicate on the "resource_kind" field.
-func ResourceKindContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldResourceKind, v))
-}
-
-// OperationIDEQ applies the EQ predicate on the "operation_id" field.
-func OperationIDEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldOperationID, v))
-}
-
-// OperationIDNEQ applies the NEQ predicate on the "operation_id" field.
-func OperationIDNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldOperationID, v))
-}
-
-// OperationIDIn applies the In predicate on the "operation_id" field.
-func OperationIDIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldOperationID, vs...))
-}
-
-// OperationIDNotIn applies the NotIn predicate on the "operation_id" field.
-func OperationIDNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldOperationID, vs...))
-}
-
-// OperationIDGT applies the GT predicate on the "operation_id" field.
-func OperationIDGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldOperationID, v))
-}
-
-// OperationIDGTE applies the GTE predicate on the "operation_id" field.
-func OperationIDGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldOperationID, v))
-}
-
-// OperationIDLT applies the LT predicate on the "operation_id" field.
-func OperationIDLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldOperationID, v))
-}
-
-// OperationIDLTE applies the LTE predicate on the "operation_id" field.
-func OperationIDLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldOperationID, v))
-}
-
-// OperationIDContains applies the Contains predicate on the "operation_id" field.
-func OperationIDContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldOperationID, v))
-}
-
-// OperationIDHasPrefix applies the HasPrefix predicate on the "operation_id" field.
-func OperationIDHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldOperationID, v))
-}
-
-// OperationIDHasSuffix applies the HasSuffix predicate on the "operation_id" field.
-func OperationIDHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldOperationID, v))
-}
-
-// OperationIDEqualFold applies the EqualFold predicate on the "operation_id" field.
-func OperationIDEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldOperationID, v))
-}
-
-// OperationIDContainsFold applies the ContainsFold predicate on the "operation_id" field.
-func OperationIDContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldOperationID, v))
-}
-
-// ProviderEQ applies the EQ predicate on the "provider" field.
-func ProviderEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldProvider, v))
-}
-
-// ProviderNEQ applies the NEQ predicate on the "provider" field.
-func ProviderNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldProvider, v))
-}
-
-// ProviderIn applies the In predicate on the "provider" field.
-func ProviderIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldProvider, vs...))
-}
-
-// ProviderNotIn applies the NotIn predicate on the "provider" field.
-func ProviderNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldProvider, vs...))
-}
-
-// ProviderGT applies the GT predicate on the "provider" field.
-func ProviderGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldProvider, v))
-}
-
-// ProviderGTE applies the GTE predicate on the "provider" field.
-func ProviderGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldProvider, v))
-}
-
-// ProviderLT applies the LT predicate on the "provider" field.
-func ProviderLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldProvider, v))
-}
-
-// ProviderLTE applies the LTE predicate on the "provider" field.
-func ProviderLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldProvider, v))
-}
-
-// ProviderContains applies the Contains predicate on the "provider" field.
-func ProviderContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldProvider, v))
-}
-
-// ProviderHasPrefix applies the HasPrefix predicate on the "provider" field.
-func ProviderHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldProvider, v))
-}
-
-// ProviderHasSuffix applies the HasSuffix predicate on the "provider" field.
-func ProviderHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldProvider, v))
-}
-
-// ProviderEqualFold applies the EqualFold predicate on the "provider" field.
-func ProviderEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldProvider, v))
-}
-
-// ProviderContainsFold applies the ContainsFold predicate on the "provider" field.
-func ProviderContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldProvider, v))
-}
-
-// ProviderResourceIDEQ applies the EQ predicate on the "provider_resource_id" field.
-func ProviderResourceIDEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldProviderResourceID, v))
-}
-
-// ProviderResourceIDNEQ applies the NEQ predicate on the "provider_resource_id" field.
-func ProviderResourceIDNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldProviderResourceID, v))
-}
-
-// ProviderResourceIDIn applies the In predicate on the "provider_resource_id" field.
-func ProviderResourceIDIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldProviderResourceID, vs...))
-}
-
-// ProviderResourceIDNotIn applies the NotIn predicate on the "provider_resource_id" field.
-func ProviderResourceIDNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldProviderResourceID, vs...))
-}
-
-// ProviderResourceIDGT applies the GT predicate on the "provider_resource_id" field.
-func ProviderResourceIDGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldProviderResourceID, v))
-}
-
-// ProviderResourceIDGTE applies the GTE predicate on the "provider_resource_id" field.
-func ProviderResourceIDGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldProviderResourceID, v))
-}
-
-// ProviderResourceIDLT applies the LT predicate on the "provider_resource_id" field.
-func ProviderResourceIDLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldProviderResourceID, v))
-}
-
-// ProviderResourceIDLTE applies the LTE predicate on the "provider_resource_id" field.
-func ProviderResourceIDLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldProviderResourceID, v))
-}
-
-// ProviderResourceIDContains applies the Contains predicate on the "provider_resource_id" field.
-func ProviderResourceIDContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldProviderResourceID, v))
-}
-
-// ProviderResourceIDHasPrefix applies the HasPrefix predicate on the "provider_resource_id" field.
-func ProviderResourceIDHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldProviderResourceID, v))
-}
-
-// ProviderResourceIDHasSuffix applies the HasSuffix predicate on the "provider_resource_id" field.
-func ProviderResourceIDHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldProviderResourceID, v))
-}
-
-// ProviderResourceIDEqualFold applies the EqualFold predicate on the "provider_resource_id" field.
-func ProviderResourceIDEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldProviderResourceID, v))
-}
-
-// ProviderResourceIDContainsFold applies the ContainsFold predicate on the "provider_resource_id" field.
-func ProviderResourceIDContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldProviderResourceID, v))
 }
 
 // URLEQ applies the EQ predicate on the "url" field.
@@ -1214,1089 +659,1054 @@ func URLContainsFold(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldContainsFold(FieldURL, v))
 }
 
-// HoldIDEQ applies the EQ predicate on the "hold_id" field.
-func HoldIDEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldHoldID, v))
+// StateEQ applies the EQ predicate on the "state" field.
+func StateEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldState, v))
 }
 
-// HoldIDNEQ applies the NEQ predicate on the "hold_id" field.
-func HoldIDNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldHoldID, v))
+// StateNEQ applies the NEQ predicate on the "state" field.
+func StateNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldState, v))
 }
 
-// HoldIDIn applies the In predicate on the "hold_id" field.
-func HoldIDIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldHoldID, vs...))
+// StateIn applies the In predicate on the "state" field.
+func StateIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldState, vs...))
 }
 
-// HoldIDNotIn applies the NotIn predicate on the "hold_id" field.
-func HoldIDNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldHoldID, vs...))
+// StateNotIn applies the NotIn predicate on the "state" field.
+func StateNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldState, vs...))
 }
 
-// HoldIDGT applies the GT predicate on the "hold_id" field.
-func HoldIDGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldHoldID, v))
+// StateGT applies the GT predicate on the "state" field.
+func StateGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldState, v))
 }
 
-// HoldIDGTE applies the GTE predicate on the "hold_id" field.
-func HoldIDGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldHoldID, v))
+// StateGTE applies the GTE predicate on the "state" field.
+func StateGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldState, v))
 }
 
-// HoldIDLT applies the LT predicate on the "hold_id" field.
-func HoldIDLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldHoldID, v))
+// StateLT applies the LT predicate on the "state" field.
+func StateLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldState, v))
 }
 
-// HoldIDLTE applies the LTE predicate on the "hold_id" field.
-func HoldIDLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldHoldID, v))
+// StateLTE applies the LTE predicate on the "state" field.
+func StateLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldState, v))
 }
 
-// HoldIDContains applies the Contains predicate on the "hold_id" field.
-func HoldIDContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldHoldID, v))
+// StateContains applies the Contains predicate on the "state" field.
+func StateContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldState, v))
 }
 
-// HoldIDHasPrefix applies the HasPrefix predicate on the "hold_id" field.
-func HoldIDHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldHoldID, v))
+// StateHasPrefix applies the HasPrefix predicate on the "state" field.
+func StateHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldState, v))
 }
 
-// HoldIDHasSuffix applies the HasSuffix predicate on the "hold_id" field.
-func HoldIDHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldHoldID, v))
+// StateHasSuffix applies the HasSuffix predicate on the "state" field.
+func StateHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldState, v))
 }
 
-// HoldIDEqualFold applies the EqualFold predicate on the "hold_id" field.
-func HoldIDEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldHoldID, v))
+// StateEqualFold applies the EqualFold predicate on the "state" field.
+func StateEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldState, v))
 }
 
-// HoldIDContainsFold applies the ContainsFold predicate on the "hold_id" field.
-func HoldIDContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldHoldID, v))
+// StateContainsFold applies the ContainsFold predicate on the "state" field.
+func StateContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldState, v))
 }
 
-// HoldReleaseIDEQ applies the EQ predicate on the "hold_release_id" field.
-func HoldReleaseIDEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldHoldReleaseID, v))
+// StatusEQ applies the EQ predicate on the "status" field.
+func StatusEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldStatus, v))
 }
 
-// HoldReleaseIDNEQ applies the NEQ predicate on the "hold_release_id" field.
-func HoldReleaseIDNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldHoldReleaseID, v))
+// StatusNEQ applies the NEQ predicate on the "status" field.
+func StatusNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldStatus, v))
 }
 
-// HoldReleaseIDIn applies the In predicate on the "hold_release_id" field.
-func HoldReleaseIDIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldHoldReleaseID, vs...))
+// StatusIn applies the In predicate on the "status" field.
+func StatusIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldStatus, vs...))
 }
 
-// HoldReleaseIDNotIn applies the NotIn predicate on the "hold_release_id" field.
-func HoldReleaseIDNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldHoldReleaseID, vs...))
+// StatusNotIn applies the NotIn predicate on the "status" field.
+func StatusNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldStatus, vs...))
 }
 
-// HoldReleaseIDGT applies the GT predicate on the "hold_release_id" field.
-func HoldReleaseIDGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldHoldReleaseID, v))
+// StatusGT applies the GT predicate on the "status" field.
+func StatusGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldStatus, v))
 }
 
-// HoldReleaseIDGTE applies the GTE predicate on the "hold_release_id" field.
-func HoldReleaseIDGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldHoldReleaseID, v))
+// StatusGTE applies the GTE predicate on the "status" field.
+func StatusGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldStatus, v))
 }
 
-// HoldReleaseIDLT applies the LT predicate on the "hold_release_id" field.
-func HoldReleaseIDLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldHoldReleaseID, v))
+// StatusLT applies the LT predicate on the "status" field.
+func StatusLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldStatus, v))
 }
 
-// HoldReleaseIDLTE applies the LTE predicate on the "hold_release_id" field.
-func HoldReleaseIDLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldHoldReleaseID, v))
+// StatusLTE applies the LTE predicate on the "status" field.
+func StatusLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldStatus, v))
 }
 
-// HoldReleaseIDContains applies the Contains predicate on the "hold_release_id" field.
-func HoldReleaseIDContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldHoldReleaseID, v))
+// StatusContains applies the Contains predicate on the "status" field.
+func StatusContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldStatus, v))
 }
 
-// HoldReleaseIDHasPrefix applies the HasPrefix predicate on the "hold_release_id" field.
-func HoldReleaseIDHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldHoldReleaseID, v))
+// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
+func StatusHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldStatus, v))
 }
 
-// HoldReleaseIDHasSuffix applies the HasSuffix predicate on the "hold_release_id" field.
-func HoldReleaseIDHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldHoldReleaseID, v))
+// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
+func StatusHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldStatus, v))
 }
 
-// HoldReleaseIDEqualFold applies the EqualFold predicate on the "hold_release_id" field.
-func HoldReleaseIDEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldHoldReleaseID, v))
+// StatusEqualFold applies the EqualFold predicate on the "status" field.
+func StatusEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldStatus, v))
 }
 
-// HoldReleaseIDContainsFold applies the ContainsFold predicate on the "hold_release_id" field.
-func HoldReleaseIDContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldHoldReleaseID, v))
+// StatusContainsFold applies the ContainsFold predicate on the "status" field.
+func StatusContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldStatus, v))
 }
 
-// LedgerEntryIDEQ applies the EQ predicate on the "ledger_entry_id" field.
-func LedgerEntryIDEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldLedgerEntryID, v))
+// StorageIDEQ applies the EQ predicate on the "storage_id" field.
+func StorageIDEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldStorageID, v))
 }
 
-// LedgerEntryIDNEQ applies the NEQ predicate on the "ledger_entry_id" field.
-func LedgerEntryIDNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldLedgerEntryID, v))
+// StorageIDNEQ applies the NEQ predicate on the "storage_id" field.
+func StorageIDNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldStorageID, v))
 }
 
-// LedgerEntryIDIn applies the In predicate on the "ledger_entry_id" field.
-func LedgerEntryIDIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldLedgerEntryID, vs...))
+// StorageIDIn applies the In predicate on the "storage_id" field.
+func StorageIDIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldStorageID, vs...))
 }
 
-// LedgerEntryIDNotIn applies the NotIn predicate on the "ledger_entry_id" field.
-func LedgerEntryIDNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldLedgerEntryID, vs...))
+// StorageIDNotIn applies the NotIn predicate on the "storage_id" field.
+func StorageIDNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldStorageID, vs...))
 }
 
-// LedgerEntryIDGT applies the GT predicate on the "ledger_entry_id" field.
-func LedgerEntryIDGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldLedgerEntryID, v))
+// StorageIDGT applies the GT predicate on the "storage_id" field.
+func StorageIDGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldStorageID, v))
 }
 
-// LedgerEntryIDGTE applies the GTE predicate on the "ledger_entry_id" field.
-func LedgerEntryIDGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldLedgerEntryID, v))
+// StorageIDGTE applies the GTE predicate on the "storage_id" field.
+func StorageIDGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldStorageID, v))
 }
 
-// LedgerEntryIDLT applies the LT predicate on the "ledger_entry_id" field.
-func LedgerEntryIDLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldLedgerEntryID, v))
+// StorageIDLT applies the LT predicate on the "storage_id" field.
+func StorageIDLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldStorageID, v))
 }
 
-// LedgerEntryIDLTE applies the LTE predicate on the "ledger_entry_id" field.
-func LedgerEntryIDLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldLedgerEntryID, v))
+// StorageIDLTE applies the LTE predicate on the "storage_id" field.
+func StorageIDLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldStorageID, v))
 }
 
-// LedgerEntryIDContains applies the Contains predicate on the "ledger_entry_id" field.
-func LedgerEntryIDContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldLedgerEntryID, v))
+// StorageIDContains applies the Contains predicate on the "storage_id" field.
+func StorageIDContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldStorageID, v))
 }
 
-// LedgerEntryIDHasPrefix applies the HasPrefix predicate on the "ledger_entry_id" field.
-func LedgerEntryIDHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldLedgerEntryID, v))
+// StorageIDHasPrefix applies the HasPrefix predicate on the "storage_id" field.
+func StorageIDHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldStorageID, v))
 }
 
-// LedgerEntryIDHasSuffix applies the HasSuffix predicate on the "ledger_entry_id" field.
-func LedgerEntryIDHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldLedgerEntryID, v))
+// StorageIDHasSuffix applies the HasSuffix predicate on the "storage_id" field.
+func StorageIDHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldStorageID, v))
 }
 
-// LedgerEntryIDEqualFold applies the EqualFold predicate on the "ledger_entry_id" field.
-func LedgerEntryIDEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldLedgerEntryID, v))
+// StorageIDEqualFold applies the EqualFold predicate on the "storage_id" field.
+func StorageIDEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldStorageID, v))
 }
 
-// LedgerEntryIDContainsFold applies the ContainsFold predicate on the "ledger_entry_id" field.
-func LedgerEntryIDContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldLedgerEntryID, v))
+// StorageIDContainsFold applies the ContainsFold predicate on the "storage_id" field.
+func StorageIDContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldStorageID, v))
 }
 
-// WalletTransactionIDEQ applies the EQ predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldWalletTransactionID, v))
+// CurrentComputeAllocationIDEQ applies the EQ predicate on the "current_compute_allocation_id" field.
+func CurrentComputeAllocationIDEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldCurrentComputeAllocationID, v))
 }
 
-// WalletTransactionIDNEQ applies the NEQ predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldWalletTransactionID, v))
+// CurrentComputeAllocationIDNEQ applies the NEQ predicate on the "current_compute_allocation_id" field.
+func CurrentComputeAllocationIDNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldCurrentComputeAllocationID, v))
 }
 
-// WalletTransactionIDIn applies the In predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldWalletTransactionID, vs...))
+// CurrentComputeAllocationIDIn applies the In predicate on the "current_compute_allocation_id" field.
+func CurrentComputeAllocationIDIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldCurrentComputeAllocationID, vs...))
 }
 
-// WalletTransactionIDNotIn applies the NotIn predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldWalletTransactionID, vs...))
+// CurrentComputeAllocationIDNotIn applies the NotIn predicate on the "current_compute_allocation_id" field.
+func CurrentComputeAllocationIDNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldCurrentComputeAllocationID, vs...))
 }
 
-// WalletTransactionIDGT applies the GT predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldWalletTransactionID, v))
+// CurrentComputeAllocationIDGT applies the GT predicate on the "current_compute_allocation_id" field.
+func CurrentComputeAllocationIDGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldCurrentComputeAllocationID, v))
 }
 
-// WalletTransactionIDGTE applies the GTE predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldWalletTransactionID, v))
+// CurrentComputeAllocationIDGTE applies the GTE predicate on the "current_compute_allocation_id" field.
+func CurrentComputeAllocationIDGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldCurrentComputeAllocationID, v))
 }
 
-// WalletTransactionIDLT applies the LT predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldWalletTransactionID, v))
+// CurrentComputeAllocationIDLT applies the LT predicate on the "current_compute_allocation_id" field.
+func CurrentComputeAllocationIDLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldCurrentComputeAllocationID, v))
 }
 
-// WalletTransactionIDLTE applies the LTE predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldWalletTransactionID, v))
+// CurrentComputeAllocationIDLTE applies the LTE predicate on the "current_compute_allocation_id" field.
+func CurrentComputeAllocationIDLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldCurrentComputeAllocationID, v))
 }
 
-// WalletTransactionIDContains applies the Contains predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldWalletTransactionID, v))
+// CurrentComputeAllocationIDContains applies the Contains predicate on the "current_compute_allocation_id" field.
+func CurrentComputeAllocationIDContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldCurrentComputeAllocationID, v))
 }
 
-// WalletTransactionIDHasPrefix applies the HasPrefix predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldWalletTransactionID, v))
+// CurrentComputeAllocationIDHasPrefix applies the HasPrefix predicate on the "current_compute_allocation_id" field.
+func CurrentComputeAllocationIDHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldCurrentComputeAllocationID, v))
 }
 
-// WalletTransactionIDHasSuffix applies the HasSuffix predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldWalletTransactionID, v))
+// CurrentComputeAllocationIDHasSuffix applies the HasSuffix predicate on the "current_compute_allocation_id" field.
+func CurrentComputeAllocationIDHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldCurrentComputeAllocationID, v))
 }
 
-// WalletTransactionIDEqualFold applies the EqualFold predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldWalletTransactionID, v))
+// CurrentComputeAllocationIDEqualFold applies the EqualFold predicate on the "current_compute_allocation_id" field.
+func CurrentComputeAllocationIDEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldCurrentComputeAllocationID, v))
 }
 
-// WalletTransactionIDContainsFold applies the ContainsFold predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldWalletTransactionID, v))
+// CurrentComputeAllocationIDContainsFold applies the ContainsFold predicate on the "current_compute_allocation_id" field.
+func CurrentComputeAllocationIDContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldCurrentComputeAllocationID, v))
 }
 
-// SettlementIDEQ applies the EQ predicate on the "settlement_id" field.
-func SettlementIDEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldSettlementID, v))
+// CurrentAttachmentIDEQ applies the EQ predicate on the "current_attachment_id" field.
+func CurrentAttachmentIDEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldCurrentAttachmentID, v))
 }
 
-// SettlementIDNEQ applies the NEQ predicate on the "settlement_id" field.
-func SettlementIDNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldSettlementID, v))
+// CurrentAttachmentIDNEQ applies the NEQ predicate on the "current_attachment_id" field.
+func CurrentAttachmentIDNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldCurrentAttachmentID, v))
 }
 
-// SettlementIDIn applies the In predicate on the "settlement_id" field.
-func SettlementIDIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldSettlementID, vs...))
+// CurrentAttachmentIDIn applies the In predicate on the "current_attachment_id" field.
+func CurrentAttachmentIDIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldCurrentAttachmentID, vs...))
 }
 
-// SettlementIDNotIn applies the NotIn predicate on the "settlement_id" field.
-func SettlementIDNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldSettlementID, vs...))
+// CurrentAttachmentIDNotIn applies the NotIn predicate on the "current_attachment_id" field.
+func CurrentAttachmentIDNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldCurrentAttachmentID, vs...))
 }
 
-// SettlementIDGT applies the GT predicate on the "settlement_id" field.
-func SettlementIDGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldSettlementID, v))
+// CurrentAttachmentIDGT applies the GT predicate on the "current_attachment_id" field.
+func CurrentAttachmentIDGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldCurrentAttachmentID, v))
 }
 
-// SettlementIDGTE applies the GTE predicate on the "settlement_id" field.
-func SettlementIDGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldSettlementID, v))
+// CurrentAttachmentIDGTE applies the GTE predicate on the "current_attachment_id" field.
+func CurrentAttachmentIDGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldCurrentAttachmentID, v))
 }
 
-// SettlementIDLT applies the LT predicate on the "settlement_id" field.
-func SettlementIDLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldSettlementID, v))
+// CurrentAttachmentIDLT applies the LT predicate on the "current_attachment_id" field.
+func CurrentAttachmentIDLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldCurrentAttachmentID, v))
 }
 
-// SettlementIDLTE applies the LTE predicate on the "settlement_id" field.
-func SettlementIDLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldSettlementID, v))
+// CurrentAttachmentIDLTE applies the LTE predicate on the "current_attachment_id" field.
+func CurrentAttachmentIDLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldCurrentAttachmentID, v))
 }
 
-// SettlementIDContains applies the Contains predicate on the "settlement_id" field.
-func SettlementIDContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldSettlementID, v))
+// CurrentAttachmentIDContains applies the Contains predicate on the "current_attachment_id" field.
+func CurrentAttachmentIDContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldCurrentAttachmentID, v))
 }
 
-// SettlementIDHasPrefix applies the HasPrefix predicate on the "settlement_id" field.
-func SettlementIDHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldSettlementID, v))
+// CurrentAttachmentIDHasPrefix applies the HasPrefix predicate on the "current_attachment_id" field.
+func CurrentAttachmentIDHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldCurrentAttachmentID, v))
 }
 
-// SettlementIDHasSuffix applies the HasSuffix predicate on the "settlement_id" field.
-func SettlementIDHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldSettlementID, v))
+// CurrentAttachmentIDHasSuffix applies the HasSuffix predicate on the "current_attachment_id" field.
+func CurrentAttachmentIDHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldCurrentAttachmentID, v))
 }
 
-// SettlementIDEqualFold applies the EqualFold predicate on the "settlement_id" field.
-func SettlementIDEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldSettlementID, v))
+// CurrentAttachmentIDEqualFold applies the EqualFold predicate on the "current_attachment_id" field.
+func CurrentAttachmentIDEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldCurrentAttachmentID, v))
 }
 
-// SettlementIDContainsFold applies the ContainsFold predicate on the "settlement_id" field.
-func SettlementIDContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldSettlementID, v))
+// CurrentAttachmentIDContainsFold applies the ContainsFold predicate on the "current_attachment_id" field.
+func CurrentAttachmentIDContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldCurrentAttachmentID, v))
 }
 
-// PricingVersionEQ applies the EQ predicate on the "pricing_version" field.
-func PricingVersionEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldPricingVersion, v))
+// RuntimeIDEQ applies the EQ predicate on the "runtime_id" field.
+func RuntimeIDEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldRuntimeID, v))
 }
 
-// PricingVersionNEQ applies the NEQ predicate on the "pricing_version" field.
-func PricingVersionNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldPricingVersion, v))
+// RuntimeIDNEQ applies the NEQ predicate on the "runtime_id" field.
+func RuntimeIDNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldRuntimeID, v))
 }
 
-// PricingVersionIn applies the In predicate on the "pricing_version" field.
-func PricingVersionIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldPricingVersion, vs...))
+// RuntimeIDIn applies the In predicate on the "runtime_id" field.
+func RuntimeIDIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldRuntimeID, vs...))
 }
 
-// PricingVersionNotIn applies the NotIn predicate on the "pricing_version" field.
-func PricingVersionNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldPricingVersion, vs...))
+// RuntimeIDNotIn applies the NotIn predicate on the "runtime_id" field.
+func RuntimeIDNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldRuntimeID, vs...))
 }
 
-// PricingVersionGT applies the GT predicate on the "pricing_version" field.
-func PricingVersionGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldPricingVersion, v))
+// RuntimeIDGT applies the GT predicate on the "runtime_id" field.
+func RuntimeIDGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldRuntimeID, v))
 }
 
-// PricingVersionGTE applies the GTE predicate on the "pricing_version" field.
-func PricingVersionGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldPricingVersion, v))
+// RuntimeIDGTE applies the GTE predicate on the "runtime_id" field.
+func RuntimeIDGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldRuntimeID, v))
 }
 
-// PricingVersionLT applies the LT predicate on the "pricing_version" field.
-func PricingVersionLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldPricingVersion, v))
+// RuntimeIDLT applies the LT predicate on the "runtime_id" field.
+func RuntimeIDLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldRuntimeID, v))
 }
 
-// PricingVersionLTE applies the LTE predicate on the "pricing_version" field.
-func PricingVersionLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldPricingVersion, v))
+// RuntimeIDLTE applies the LTE predicate on the "runtime_id" field.
+func RuntimeIDLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldRuntimeID, v))
 }
 
-// PricingVersionContains applies the Contains predicate on the "pricing_version" field.
-func PricingVersionContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldPricingVersion, v))
+// RuntimeIDContains applies the Contains predicate on the "runtime_id" field.
+func RuntimeIDContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldRuntimeID, v))
 }
 
-// PricingVersionHasPrefix applies the HasPrefix predicate on the "pricing_version" field.
-func PricingVersionHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldPricingVersion, v))
+// RuntimeIDHasPrefix applies the HasPrefix predicate on the "runtime_id" field.
+func RuntimeIDHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldRuntimeID, v))
 }
 
-// PricingVersionHasSuffix applies the HasSuffix predicate on the "pricing_version" field.
-func PricingVersionHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldPricingVersion, v))
+// RuntimeIDHasSuffix applies the HasSuffix predicate on the "runtime_id" field.
+func RuntimeIDHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldRuntimeID, v))
 }
 
-// PricingVersionEqualFold applies the EqualFold predicate on the "pricing_version" field.
-func PricingVersionEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldPricingVersion, v))
+// RuntimeIDEqualFold applies the EqualFold predicate on the "runtime_id" field.
+func RuntimeIDEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldRuntimeID, v))
 }
 
-// PricingVersionContainsFold applies the ContainsFold predicate on the "pricing_version" field.
-func PricingVersionContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldPricingVersion, v))
+// RuntimeIDContainsFold applies the ContainsFold predicate on the "runtime_id" field.
+func RuntimeIDContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldRuntimeID, v))
 }
 
-// AmountCentsEQ applies the EQ predicate on the "amount_cents" field.
-func AmountCentsEQ(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldAmountCents, v))
+// RuntimeServiceNameEQ applies the EQ predicate on the "runtime_service_name" field.
+func RuntimeServiceNameEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldRuntimeServiceName, v))
 }
 
-// AmountCentsNEQ applies the NEQ predicate on the "amount_cents" field.
-func AmountCentsNEQ(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldAmountCents, v))
+// RuntimeServiceNameNEQ applies the NEQ predicate on the "runtime_service_name" field.
+func RuntimeServiceNameNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldRuntimeServiceName, v))
 }
 
-// AmountCentsIn applies the In predicate on the "amount_cents" field.
-func AmountCentsIn(vs ...int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldAmountCents, vs...))
+// RuntimeServiceNameIn applies the In predicate on the "runtime_service_name" field.
+func RuntimeServiceNameIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldRuntimeServiceName, vs...))
 }
 
-// AmountCentsNotIn applies the NotIn predicate on the "amount_cents" field.
-func AmountCentsNotIn(vs ...int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldAmountCents, vs...))
+// RuntimeServiceNameNotIn applies the NotIn predicate on the "runtime_service_name" field.
+func RuntimeServiceNameNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldRuntimeServiceName, vs...))
 }
 
-// AmountCentsGT applies the GT predicate on the "amount_cents" field.
-func AmountCentsGT(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldAmountCents, v))
+// RuntimeServiceNameGT applies the GT predicate on the "runtime_service_name" field.
+func RuntimeServiceNameGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldRuntimeServiceName, v))
 }
 
-// AmountCentsGTE applies the GTE predicate on the "amount_cents" field.
-func AmountCentsGTE(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldAmountCents, v))
+// RuntimeServiceNameGTE applies the GTE predicate on the "runtime_service_name" field.
+func RuntimeServiceNameGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldRuntimeServiceName, v))
 }
 
-// AmountCentsLT applies the LT predicate on the "amount_cents" field.
-func AmountCentsLT(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldAmountCents, v))
+// RuntimeServiceNameLT applies the LT predicate on the "runtime_service_name" field.
+func RuntimeServiceNameLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldRuntimeServiceName, v))
 }
 
-// AmountCentsLTE applies the LTE predicate on the "amount_cents" field.
-func AmountCentsLTE(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldAmountCents, v))
+// RuntimeServiceNameLTE applies the LTE predicate on the "runtime_service_name" field.
+func RuntimeServiceNameLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldRuntimeServiceName, v))
 }
 
-// BalanceCentsEQ applies the EQ predicate on the "balance_cents" field.
-func BalanceCentsEQ(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldBalanceCents, v))
+// RuntimeServiceNameContains applies the Contains predicate on the "runtime_service_name" field.
+func RuntimeServiceNameContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldRuntimeServiceName, v))
 }
 
-// BalanceCentsNEQ applies the NEQ predicate on the "balance_cents" field.
-func BalanceCentsNEQ(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldBalanceCents, v))
+// RuntimeServiceNameHasPrefix applies the HasPrefix predicate on the "runtime_service_name" field.
+func RuntimeServiceNameHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldRuntimeServiceName, v))
 }
 
-// BalanceCentsIn applies the In predicate on the "balance_cents" field.
-func BalanceCentsIn(vs ...int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldBalanceCents, vs...))
+// RuntimeServiceNameHasSuffix applies the HasSuffix predicate on the "runtime_service_name" field.
+func RuntimeServiceNameHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldRuntimeServiceName, v))
 }
 
-// BalanceCentsNotIn applies the NotIn predicate on the "balance_cents" field.
-func BalanceCentsNotIn(vs ...int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldBalanceCents, vs...))
+// RuntimeServiceNameEqualFold applies the EqualFold predicate on the "runtime_service_name" field.
+func RuntimeServiceNameEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldRuntimeServiceName, v))
 }
 
-// BalanceCentsGT applies the GT predicate on the "balance_cents" field.
-func BalanceCentsGT(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldBalanceCents, v))
+// RuntimeServiceNameContainsFold applies the ContainsFold predicate on the "runtime_service_name" field.
+func RuntimeServiceNameContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldRuntimeServiceName, v))
 }
 
-// BalanceCentsGTE applies the GTE predicate on the "balance_cents" field.
-func BalanceCentsGTE(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldBalanceCents, v))
+// RuntimeServiceNameRootEQ applies the EQ predicate on the "runtime_service_name_root" field.
+func RuntimeServiceNameRootEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldRuntimeServiceNameRoot, v))
 }
 
-// BalanceCentsLT applies the LT predicate on the "balance_cents" field.
-func BalanceCentsLT(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldBalanceCents, v))
+// RuntimeServiceNameRootNEQ applies the NEQ predicate on the "runtime_service_name_root" field.
+func RuntimeServiceNameRootNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldRuntimeServiceNameRoot, v))
 }
 
-// BalanceCentsLTE applies the LTE predicate on the "balance_cents" field.
-func BalanceCentsLTE(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldBalanceCents, v))
+// RuntimeServiceNameRootIn applies the In predicate on the "runtime_service_name_root" field.
+func RuntimeServiceNameRootIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldRuntimeServiceNameRoot, vs...))
 }
 
-// FrozenCentsEQ applies the EQ predicate on the "frozen_cents" field.
-func FrozenCentsEQ(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldFrozenCents, v))
+// RuntimeServiceNameRootNotIn applies the NotIn predicate on the "runtime_service_name_root" field.
+func RuntimeServiceNameRootNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldRuntimeServiceNameRoot, vs...))
 }
 
-// FrozenCentsNEQ applies the NEQ predicate on the "frozen_cents" field.
-func FrozenCentsNEQ(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldFrozenCents, v))
+// RuntimeServiceNameRootGT applies the GT predicate on the "runtime_service_name_root" field.
+func RuntimeServiceNameRootGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldRuntimeServiceNameRoot, v))
 }
 
-// FrozenCentsIn applies the In predicate on the "frozen_cents" field.
-func FrozenCentsIn(vs ...int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldFrozenCents, vs...))
+// RuntimeServiceNameRootGTE applies the GTE predicate on the "runtime_service_name_root" field.
+func RuntimeServiceNameRootGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldRuntimeServiceNameRoot, v))
 }
 
-// FrozenCentsNotIn applies the NotIn predicate on the "frozen_cents" field.
-func FrozenCentsNotIn(vs ...int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldFrozenCents, vs...))
+// RuntimeServiceNameRootLT applies the LT predicate on the "runtime_service_name_root" field.
+func RuntimeServiceNameRootLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldRuntimeServiceNameRoot, v))
 }
 
-// FrozenCentsGT applies the GT predicate on the "frozen_cents" field.
-func FrozenCentsGT(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldFrozenCents, v))
+// RuntimeServiceNameRootLTE applies the LTE predicate on the "runtime_service_name_root" field.
+func RuntimeServiceNameRootLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldRuntimeServiceNameRoot, v))
 }
 
-// FrozenCentsGTE applies the GTE predicate on the "frozen_cents" field.
-func FrozenCentsGTE(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldFrozenCents, v))
+// RuntimeServiceNameRootContains applies the Contains predicate on the "runtime_service_name_root" field.
+func RuntimeServiceNameRootContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldRuntimeServiceNameRoot, v))
 }
 
-// FrozenCentsLT applies the LT predicate on the "frozen_cents" field.
-func FrozenCentsLT(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldFrozenCents, v))
+// RuntimeServiceNameRootHasPrefix applies the HasPrefix predicate on the "runtime_service_name_root" field.
+func RuntimeServiceNameRootHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldRuntimeServiceNameRoot, v))
 }
 
-// FrozenCentsLTE applies the LTE predicate on the "frozen_cents" field.
-func FrozenCentsLTE(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldFrozenCents, v))
+// RuntimeServiceNameRootHasSuffix applies the HasSuffix predicate on the "runtime_service_name_root" field.
+func RuntimeServiceNameRootHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldRuntimeServiceNameRoot, v))
 }
 
-// AvailableCentsEQ applies the EQ predicate on the "available_cents" field.
-func AvailableCentsEQ(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldAvailableCents, v))
+// RuntimeServiceNameRootEqualFold applies the EqualFold predicate on the "runtime_service_name_root" field.
+func RuntimeServiceNameRootEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldRuntimeServiceNameRoot, v))
 }
 
-// AvailableCentsNEQ applies the NEQ predicate on the "available_cents" field.
-func AvailableCentsNEQ(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldAvailableCents, v))
+// RuntimeServiceNameRootContainsFold applies the ContainsFold predicate on the "runtime_service_name_root" field.
+func RuntimeServiceNameRootContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldRuntimeServiceNameRoot, v))
 }
 
-// AvailableCentsIn applies the In predicate on the "available_cents" field.
-func AvailableCentsIn(vs ...int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldAvailableCents, vs...))
+// ServiceNameEQ applies the EQ predicate on the "service_name" field.
+func ServiceNameEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldServiceName, v))
 }
 
-// AvailableCentsNotIn applies the NotIn predicate on the "available_cents" field.
-func AvailableCentsNotIn(vs ...int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldAvailableCents, vs...))
+// ServiceNameNEQ applies the NEQ predicate on the "service_name" field.
+func ServiceNameNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldServiceName, v))
 }
 
-// AvailableCentsGT applies the GT predicate on the "available_cents" field.
-func AvailableCentsGT(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldAvailableCents, v))
+// ServiceNameIn applies the In predicate on the "service_name" field.
+func ServiceNameIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldServiceName, vs...))
 }
 
-// AvailableCentsGTE applies the GTE predicate on the "available_cents" field.
-func AvailableCentsGTE(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldAvailableCents, v))
+// ServiceNameNotIn applies the NotIn predicate on the "service_name" field.
+func ServiceNameNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldServiceName, vs...))
 }
 
-// AvailableCentsLT applies the LT predicate on the "available_cents" field.
-func AvailableCentsLT(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldAvailableCents, v))
+// ServiceNameGT applies the GT predicate on the "service_name" field.
+func ServiceNameGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldServiceName, v))
 }
 
-// AvailableCentsLTE applies the LTE predicate on the "available_cents" field.
-func AvailableCentsLTE(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldAvailableCents, v))
+// ServiceNameGTE applies the GTE predicate on the "service_name" field.
+func ServiceNameGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldServiceName, v))
 }
 
-// TotalSpentCentsEQ applies the EQ predicate on the "total_spent_cents" field.
-func TotalSpentCentsEQ(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldTotalSpentCents, v))
+// ServiceNameLT applies the LT predicate on the "service_name" field.
+func ServiceNameLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldServiceName, v))
 }
 
-// TotalSpentCentsNEQ applies the NEQ predicate on the "total_spent_cents" field.
-func TotalSpentCentsNEQ(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldTotalSpentCents, v))
+// ServiceNameLTE applies the LTE predicate on the "service_name" field.
+func ServiceNameLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldServiceName, v))
 }
 
-// TotalSpentCentsIn applies the In predicate on the "total_spent_cents" field.
-func TotalSpentCentsIn(vs ...int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldTotalSpentCents, vs...))
+// ServiceNameContains applies the Contains predicate on the "service_name" field.
+func ServiceNameContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldServiceName, v))
 }
 
-// TotalSpentCentsNotIn applies the NotIn predicate on the "total_spent_cents" field.
-func TotalSpentCentsNotIn(vs ...int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldTotalSpentCents, vs...))
+// ServiceNameHasPrefix applies the HasPrefix predicate on the "service_name" field.
+func ServiceNameHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldServiceName, v))
 }
 
-// TotalSpentCentsGT applies the GT predicate on the "total_spent_cents" field.
-func TotalSpentCentsGT(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldTotalSpentCents, v))
+// ServiceNameHasSuffix applies the HasSuffix predicate on the "service_name" field.
+func ServiceNameHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldServiceName, v))
 }
 
-// TotalSpentCentsGTE applies the GTE predicate on the "total_spent_cents" field.
-func TotalSpentCentsGTE(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldTotalSpentCents, v))
+// ServiceNameEqualFold applies the EqualFold predicate on the "service_name" field.
+func ServiceNameEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldServiceName, v))
 }
 
-// TotalSpentCentsLT applies the LT predicate on the "total_spent_cents" field.
-func TotalSpentCentsLT(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldTotalSpentCents, v))
+// ServiceNameContainsFold applies the ContainsFold predicate on the "service_name" field.
+func ServiceNameContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldServiceName, v))
 }
 
-// TotalSpentCentsLTE applies the LTE predicate on the "total_spent_cents" field.
-func TotalSpentCentsLTE(v int64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldTotalSpentCents, v))
+// AccessTokenStatusEQ applies the EQ predicate on the "access_token_status" field.
+func AccessTokenStatusEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldAccessTokenStatus, v))
 }
 
-// QuantityEQ applies the EQ predicate on the "quantity" field.
-func QuantityEQ(v float64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldQuantity, v))
+// AccessTokenStatusNEQ applies the NEQ predicate on the "access_token_status" field.
+func AccessTokenStatusNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldAccessTokenStatus, v))
 }
 
-// QuantityNEQ applies the NEQ predicate on the "quantity" field.
-func QuantityNEQ(v float64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldQuantity, v))
+// AccessTokenStatusIn applies the In predicate on the "access_token_status" field.
+func AccessTokenStatusIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldAccessTokenStatus, vs...))
 }
 
-// QuantityIn applies the In predicate on the "quantity" field.
-func QuantityIn(vs ...float64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldQuantity, vs...))
+// AccessTokenStatusNotIn applies the NotIn predicate on the "access_token_status" field.
+func AccessTokenStatusNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldAccessTokenStatus, vs...))
 }
 
-// QuantityNotIn applies the NotIn predicate on the "quantity" field.
-func QuantityNotIn(vs ...float64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldQuantity, vs...))
+// AccessTokenStatusGT applies the GT predicate on the "access_token_status" field.
+func AccessTokenStatusGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldAccessTokenStatus, v))
 }
 
-// QuantityGT applies the GT predicate on the "quantity" field.
-func QuantityGT(v float64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldQuantity, v))
+// AccessTokenStatusGTE applies the GTE predicate on the "access_token_status" field.
+func AccessTokenStatusGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldAccessTokenStatus, v))
 }
 
-// QuantityGTE applies the GTE predicate on the "quantity" field.
-func QuantityGTE(v float64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldQuantity, v))
+// AccessTokenStatusLT applies the LT predicate on the "access_token_status" field.
+func AccessTokenStatusLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldAccessTokenStatus, v))
 }
 
-// QuantityLT applies the LT predicate on the "quantity" field.
-func QuantityLT(v float64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldQuantity, v))
+// AccessTokenStatusLTE applies the LTE predicate on the "access_token_status" field.
+func AccessTokenStatusLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldAccessTokenStatus, v))
 }
 
-// QuantityLTE applies the LTE predicate on the "quantity" field.
-func QuantityLTE(v float64) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldQuantity, v))
+// AccessTokenStatusContains applies the Contains predicate on the "access_token_status" field.
+func AccessTokenStatusContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldAccessTokenStatus, v))
 }
 
-// UnitEQ applies the EQ predicate on the "unit" field.
-func UnitEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldUnit, v))
+// AccessTokenStatusHasPrefix applies the HasPrefix predicate on the "access_token_status" field.
+func AccessTokenStatusHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldAccessTokenStatus, v))
 }
 
-// UnitNEQ applies the NEQ predicate on the "unit" field.
-func UnitNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldUnit, v))
+// AccessTokenStatusHasSuffix applies the HasSuffix predicate on the "access_token_status" field.
+func AccessTokenStatusHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldAccessTokenStatus, v))
 }
 
-// UnitIn applies the In predicate on the "unit" field.
-func UnitIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldUnit, vs...))
+// AccessTokenStatusEqualFold applies the EqualFold predicate on the "access_token_status" field.
+func AccessTokenStatusEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldAccessTokenStatus, v))
 }
 
-// UnitNotIn applies the NotIn predicate on the "unit" field.
-func UnitNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldUnit, vs...))
+// AccessTokenStatusContainsFold applies the ContainsFold predicate on the "access_token_status" field.
+func AccessTokenStatusContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldAccessTokenStatus, v))
 }
 
-// UnitGT applies the GT predicate on the "unit" field.
-func UnitGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldUnit, v))
+// AccessAccountEQ applies the EQ predicate on the "access_account" field.
+func AccessAccountEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldAccessAccount, v))
 }
 
-// UnitGTE applies the GTE predicate on the "unit" field.
-func UnitGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldUnit, v))
+// AccessAccountNEQ applies the NEQ predicate on the "access_account" field.
+func AccessAccountNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldAccessAccount, v))
 }
 
-// UnitLT applies the LT predicate on the "unit" field.
-func UnitLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldUnit, v))
+// AccessAccountIn applies the In predicate on the "access_account" field.
+func AccessAccountIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldAccessAccount, vs...))
 }
 
-// UnitLTE applies the LTE predicate on the "unit" field.
-func UnitLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldUnit, v))
+// AccessAccountNotIn applies the NotIn predicate on the "access_account" field.
+func AccessAccountNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldAccessAccount, vs...))
 }
 
-// UnitContains applies the Contains predicate on the "unit" field.
-func UnitContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldUnit, v))
+// AccessAccountGT applies the GT predicate on the "access_account" field.
+func AccessAccountGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldAccessAccount, v))
 }
 
-// UnitHasPrefix applies the HasPrefix predicate on the "unit" field.
-func UnitHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldUnit, v))
+// AccessAccountGTE applies the GTE predicate on the "access_account" field.
+func AccessAccountGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldAccessAccount, v))
 }
 
-// UnitHasSuffix applies the HasSuffix predicate on the "unit" field.
-func UnitHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldUnit, v))
+// AccessAccountLT applies the LT predicate on the "access_account" field.
+func AccessAccountLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldAccessAccount, v))
 }
 
-// UnitEqualFold applies the EqualFold predicate on the "unit" field.
-func UnitEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldUnit, v))
+// AccessAccountLTE applies the LTE predicate on the "access_account" field.
+func AccessAccountLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldAccessAccount, v))
 }
 
-// UnitContainsFold applies the ContainsFold predicate on the "unit" field.
-func UnitContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldUnit, v))
+// AccessAccountContains applies the Contains predicate on the "access_account" field.
+func AccessAccountContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldAccessAccount, v))
 }
 
-// ReasonEQ applies the EQ predicate on the "reason" field.
-func ReasonEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldReason, v))
+// AccessAccountHasPrefix applies the HasPrefix predicate on the "access_account" field.
+func AccessAccountHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldAccessAccount, v))
 }
 
-// ReasonNEQ applies the NEQ predicate on the "reason" field.
-func ReasonNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldReason, v))
+// AccessAccountHasSuffix applies the HasSuffix predicate on the "access_account" field.
+func AccessAccountHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldAccessAccount, v))
 }
 
-// ReasonIn applies the In predicate on the "reason" field.
-func ReasonIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldReason, vs...))
+// AccessAccountEqualFold applies the EqualFold predicate on the "access_account" field.
+func AccessAccountEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldAccessAccount, v))
 }
 
-// ReasonNotIn applies the NotIn predicate on the "reason" field.
-func ReasonNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldReason, vs...))
+// AccessAccountContainsFold applies the ContainsFold predicate on the "access_account" field.
+func AccessAccountContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldAccessAccount, v))
 }
 
-// ReasonGT applies the GT predicate on the "reason" field.
-func ReasonGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldReason, v))
+// AccessUsernameEQ applies the EQ predicate on the "access_username" field.
+func AccessUsernameEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldAccessUsername, v))
 }
 
-// ReasonGTE applies the GTE predicate on the "reason" field.
-func ReasonGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldReason, v))
+// AccessUsernameNEQ applies the NEQ predicate on the "access_username" field.
+func AccessUsernameNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldAccessUsername, v))
 }
 
-// ReasonLT applies the LT predicate on the "reason" field.
-func ReasonLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldReason, v))
+// AccessUsernameIn applies the In predicate on the "access_username" field.
+func AccessUsernameIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldAccessUsername, vs...))
 }
 
-// ReasonLTE applies the LTE predicate on the "reason" field.
-func ReasonLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldReason, v))
+// AccessUsernameNotIn applies the NotIn predicate on the "access_username" field.
+func AccessUsernameNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldAccessUsername, vs...))
 }
 
-// ReasonContains applies the Contains predicate on the "reason" field.
-func ReasonContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldReason, v))
+// AccessUsernameGT applies the GT predicate on the "access_username" field.
+func AccessUsernameGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldAccessUsername, v))
 }
 
-// ReasonHasPrefix applies the HasPrefix predicate on the "reason" field.
-func ReasonHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldReason, v))
+// AccessUsernameGTE applies the GTE predicate on the "access_username" field.
+func AccessUsernameGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldAccessUsername, v))
 }
 
-// ReasonHasSuffix applies the HasSuffix predicate on the "reason" field.
-func ReasonHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldReason, v))
+// AccessUsernameLT applies the LT predicate on the "access_username" field.
+func AccessUsernameLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldAccessUsername, v))
 }
 
-// ReasonEqualFold applies the EqualFold predicate on the "reason" field.
-func ReasonEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldReason, v))
+// AccessUsernameLTE applies the LTE predicate on the "access_username" field.
+func AccessUsernameLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldAccessUsername, v))
 }
 
-// ReasonContainsFold applies the ContainsFold predicate on the "reason" field.
-func ReasonContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldReason, v))
+// AccessUsernameContains applies the Contains predicate on the "access_username" field.
+func AccessUsernameContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldAccessUsername, v))
 }
 
-// ResultEQ applies the EQ predicate on the "result" field.
-func ResultEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldResult, v))
+// AccessUsernameHasPrefix applies the HasPrefix predicate on the "access_username" field.
+func AccessUsernameHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldAccessUsername, v))
 }
 
-// ResultNEQ applies the NEQ predicate on the "result" field.
-func ResultNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldResult, v))
+// AccessUsernameHasSuffix applies the HasSuffix predicate on the "access_username" field.
+func AccessUsernameHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldAccessUsername, v))
 }
 
-// ResultIn applies the In predicate on the "result" field.
-func ResultIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldResult, vs...))
+// AccessUsernameEqualFold applies the EqualFold predicate on the "access_username" field.
+func AccessUsernameEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldAccessUsername, v))
 }
 
-// ResultNotIn applies the NotIn predicate on the "result" field.
-func ResultNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldResult, vs...))
+// AccessUsernameContainsFold applies the ContainsFold predicate on the "access_username" field.
+func AccessUsernameContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldAccessUsername, v))
 }
 
-// ResultGT applies the GT predicate on the "result" field.
-func ResultGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldResult, v))
+// AccessPasswordEQ applies the EQ predicate on the "access_password" field.
+func AccessPasswordEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldAccessPassword, v))
 }
 
-// ResultGTE applies the GTE predicate on the "result" field.
-func ResultGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldResult, v))
+// AccessPasswordNEQ applies the NEQ predicate on the "access_password" field.
+func AccessPasswordNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldAccessPassword, v))
 }
 
-// ResultLT applies the LT predicate on the "result" field.
-func ResultLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldResult, v))
+// AccessPasswordIn applies the In predicate on the "access_password" field.
+func AccessPasswordIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldAccessPassword, vs...))
 }
 
-// ResultLTE applies the LTE predicate on the "result" field.
-func ResultLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldResult, v))
+// AccessPasswordNotIn applies the NotIn predicate on the "access_password" field.
+func AccessPasswordNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldAccessPassword, vs...))
 }
 
-// ResultContains applies the Contains predicate on the "result" field.
-func ResultContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldResult, v))
+// AccessPasswordGT applies the GT predicate on the "access_password" field.
+func AccessPasswordGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldAccessPassword, v))
 }
 
-// ResultHasPrefix applies the HasPrefix predicate on the "result" field.
-func ResultHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldResult, v))
+// AccessPasswordGTE applies the GTE predicate on the "access_password" field.
+func AccessPasswordGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldAccessPassword, v))
 }
 
-// ResultHasSuffix applies the HasSuffix predicate on the "result" field.
-func ResultHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldResult, v))
+// AccessPasswordLT applies the LT predicate on the "access_password" field.
+func AccessPasswordLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldAccessPassword, v))
 }
 
-// ResultEqualFold applies the EqualFold predicate on the "result" field.
-func ResultEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldResult, v))
+// AccessPasswordLTE applies the LTE predicate on the "access_password" field.
+func AccessPasswordLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldAccessPassword, v))
 }
 
-// ResultContainsFold applies the ContainsFold predicate on the "result" field.
-func ResultContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldResult, v))
+// AccessPasswordContains applies the Contains predicate on the "access_password" field.
+func AccessPasswordContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldAccessPassword, v))
 }
 
-// SourceEQ applies the EQ predicate on the "source" field.
-func SourceEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldSource, v))
+// AccessPasswordHasPrefix applies the HasPrefix predicate on the "access_password" field.
+func AccessPasswordHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldAccessPassword, v))
 }
 
-// SourceNEQ applies the NEQ predicate on the "source" field.
-func SourceNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldSource, v))
+// AccessPasswordHasSuffix applies the HasSuffix predicate on the "access_password" field.
+func AccessPasswordHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldAccessPassword, v))
 }
 
-// SourceIn applies the In predicate on the "source" field.
-func SourceIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldSource, vs...))
+// AccessPasswordEqualFold applies the EqualFold predicate on the "access_password" field.
+func AccessPasswordEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldAccessPassword, v))
 }
 
-// SourceNotIn applies the NotIn predicate on the "source" field.
-func SourceNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldSource, vs...))
+// AccessPasswordContainsFold applies the ContainsFold predicate on the "access_password" field.
+func AccessPasswordContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldAccessPassword, v))
 }
 
-// SourceGT applies the GT predicate on the "source" field.
-func SourceGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldSource, v))
+// CredentialStatusEQ applies the EQ predicate on the "credential_status" field.
+func CredentialStatusEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldCredentialStatus, v))
 }
 
-// SourceGTE applies the GTE predicate on the "source" field.
-func SourceGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldSource, v))
+// CredentialStatusNEQ applies the NEQ predicate on the "credential_status" field.
+func CredentialStatusNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldCredentialStatus, v))
 }
 
-// SourceLT applies the LT predicate on the "source" field.
-func SourceLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldSource, v))
+// CredentialStatusIn applies the In predicate on the "credential_status" field.
+func CredentialStatusIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldCredentialStatus, vs...))
 }
 
-// SourceLTE applies the LTE predicate on the "source" field.
-func SourceLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldSource, v))
+// CredentialStatusNotIn applies the NotIn predicate on the "credential_status" field.
+func CredentialStatusNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldCredentialStatus, vs...))
 }
 
-// SourceContains applies the Contains predicate on the "source" field.
-func SourceContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldSource, v))
+// CredentialStatusGT applies the GT predicate on the "credential_status" field.
+func CredentialStatusGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldCredentialStatus, v))
 }
 
-// SourceHasPrefix applies the HasPrefix predicate on the "source" field.
-func SourceHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldSource, v))
+// CredentialStatusGTE applies the GTE predicate on the "credential_status" field.
+func CredentialStatusGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldCredentialStatus, v))
 }
 
-// SourceHasSuffix applies the HasSuffix predicate on the "source" field.
-func SourceHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldSource, v))
+// CredentialStatusLT applies the LT predicate on the "credential_status" field.
+func CredentialStatusLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldCredentialStatus, v))
 }
 
-// SourceEqualFold applies the EqualFold predicate on the "source" field.
-func SourceEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldSource, v))
+// CredentialStatusLTE applies the LTE predicate on the "credential_status" field.
+func CredentialStatusLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldCredentialStatus, v))
 }
 
-// SourceContainsFold applies the ContainsFold predicate on the "source" field.
-func SourceContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldSource, v))
+// CredentialStatusContains applies the Contains predicate on the "credential_status" field.
+func CredentialStatusContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldCredentialStatus, v))
 }
 
-// DirectionEQ applies the EQ predicate on the "direction" field.
-func DirectionEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldDirection, v))
+// CredentialStatusHasPrefix applies the HasPrefix predicate on the "credential_status" field.
+func CredentialStatusHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldCredentialStatus, v))
 }
 
-// DirectionNEQ applies the NEQ predicate on the "direction" field.
-func DirectionNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldDirection, v))
+// CredentialStatusHasSuffix applies the HasSuffix predicate on the "credential_status" field.
+func CredentialStatusHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldCredentialStatus, v))
 }
 
-// DirectionIn applies the In predicate on the "direction" field.
-func DirectionIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldDirection, vs...))
+// CredentialStatusEqualFold applies the EqualFold predicate on the "credential_status" field.
+func CredentialStatusEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldCredentialStatus, v))
 }
 
-// DirectionNotIn applies the NotIn predicate on the "direction" field.
-func DirectionNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldDirection, vs...))
+// CredentialStatusContainsFold applies the ContainsFold predicate on the "credential_status" field.
+func CredentialStatusContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldCredentialStatus, v))
 }
 
-// DirectionGT applies the GT predicate on the "direction" field.
-func DirectionGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldDirection, v))
+// CredentialVersionEQ applies the EQ predicate on the "credential_version" field.
+func CredentialVersionEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldCredentialVersion, v))
 }
 
-// DirectionGTE applies the GTE predicate on the "direction" field.
-func DirectionGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldDirection, v))
+// CredentialVersionNEQ applies the NEQ predicate on the "credential_version" field.
+func CredentialVersionNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldCredentialVersion, v))
 }
 
-// DirectionLT applies the LT predicate on the "direction" field.
-func DirectionLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldDirection, v))
+// CredentialVersionIn applies the In predicate on the "credential_version" field.
+func CredentialVersionIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldCredentialVersion, vs...))
 }
 
-// DirectionLTE applies the LTE predicate on the "direction" field.
-func DirectionLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldDirection, v))
+// CredentialVersionNotIn applies the NotIn predicate on the "credential_version" field.
+func CredentialVersionNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldCredentialVersion, vs...))
 }
 
-// DirectionContains applies the Contains predicate on the "direction" field.
-func DirectionContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldDirection, v))
+// CredentialVersionGT applies the GT predicate on the "credential_version" field.
+func CredentialVersionGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldCredentialVersion, v))
 }
 
-// DirectionHasPrefix applies the HasPrefix predicate on the "direction" field.
-func DirectionHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldDirection, v))
+// CredentialVersionGTE applies the GTE predicate on the "credential_version" field.
+func CredentialVersionGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldCredentialVersion, v))
 }
 
-// DirectionHasSuffix applies the HasSuffix predicate on the "direction" field.
-func DirectionHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldDirection, v))
+// CredentialVersionLT applies the LT predicate on the "credential_version" field.
+func CredentialVersionLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldCredentialVersion, v))
 }
 
-// DirectionEqualFold applies the EqualFold predicate on the "direction" field.
-func DirectionEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldDirection, v))
+// CredentialVersionLTE applies the LTE predicate on the "credential_version" field.
+func CredentialVersionLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldCredentialVersion, v))
 }
 
-// DirectionContainsFold applies the ContainsFold predicate on the "direction" field.
-func DirectionContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldDirection, v))
+// CredentialVersionContains applies the Contains predicate on the "credential_version" field.
+func CredentialVersionContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldCredentialVersion, v))
 }
 
-// CreatedAtEQ applies the EQ predicate on the "created_at" field.
-func CreatedAtEQ(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldCreatedAt, v))
+// CredentialVersionHasPrefix applies the HasPrefix predicate on the "credential_version" field.
+func CredentialVersionHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldCredentialVersion, v))
 }
 
-// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
-func CreatedAtNEQ(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldCreatedAt, v))
+// CredentialVersionHasSuffix applies the HasSuffix predicate on the "credential_version" field.
+func CredentialVersionHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldCredentialVersion, v))
 }
 
-// CreatedAtIn applies the In predicate on the "created_at" field.
-func CreatedAtIn(vs ...time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldCreatedAt, vs...))
+// CredentialVersionEqualFold applies the EqualFold predicate on the "credential_version" field.
+func CredentialVersionEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldCredentialVersion, v))
 }
 
-// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
-func CreatedAtNotIn(vs ...time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldCreatedAt, vs...))
+// CredentialVersionContainsFold applies the ContainsFold predicate on the "credential_version" field.
+func CredentialVersionContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldCredentialVersion, v))
 }
 
-// CreatedAtGT applies the GT predicate on the "created_at" field.
-func CreatedAtGT(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldCreatedAt, v))
+// CredentialSecretRefEQ applies the EQ predicate on the "credential_secret_ref" field.
+func CredentialSecretRefEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldCredentialSecretRef, v))
 }
 
-// CreatedAtGTE applies the GTE predicate on the "created_at" field.
-func CreatedAtGTE(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldCreatedAt, v))
+// CredentialSecretRefNEQ applies the NEQ predicate on the "credential_secret_ref" field.
+func CredentialSecretRefNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldCredentialSecretRef, v))
 }
 
-// CreatedAtLT applies the LT predicate on the "created_at" field.
-func CreatedAtLT(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldCreatedAt, v))
+// CredentialSecretRefIn applies the In predicate on the "credential_secret_ref" field.
+func CredentialSecretRefIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldCredentialSecretRef, vs...))
 }
 
-// CreatedAtLTE applies the LTE predicate on the "created_at" field.
-func CreatedAtLTE(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldCreatedAt, v))
+// CredentialSecretRefNotIn applies the NotIn predicate on the "credential_secret_ref" field.
+func CredentialSecretRefNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldCredentialSecretRef, vs...))
 }
 
-// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
-func UpdatedAtEQ(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldUpdatedAt, v))
+// CredentialSecretRefGT applies the GT predicate on the "credential_secret_ref" field.
+func CredentialSecretRefGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldCredentialSecretRef, v))
 }
 
-// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
-func UpdatedAtNEQ(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldUpdatedAt, v))
+// CredentialSecretRefGTE applies the GTE predicate on the "credential_secret_ref" field.
+func CredentialSecretRefGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldCredentialSecretRef, v))
 }
 
-// UpdatedAtIn applies the In predicate on the "updated_at" field.
-func UpdatedAtIn(vs ...time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldUpdatedAt, vs...))
+// CredentialSecretRefLT applies the LT predicate on the "credential_secret_ref" field.
+func CredentialSecretRefLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldCredentialSecretRef, v))
 }
 
-// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
-func UpdatedAtNotIn(vs ...time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldUpdatedAt, vs...))
+// CredentialSecretRefLTE applies the LTE predicate on the "credential_secret_ref" field.
+func CredentialSecretRefLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldCredentialSecretRef, v))
 }
 
-// UpdatedAtGT applies the GT predicate on the "updated_at" field.
-func UpdatedAtGT(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldUpdatedAt, v))
+// CredentialSecretRefContains applies the Contains predicate on the "credential_secret_ref" field.
+func CredentialSecretRefContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldCredentialSecretRef, v))
 }
 
-// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
-func UpdatedAtGTE(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldUpdatedAt, v))
+// CredentialSecretRefHasPrefix applies the HasPrefix predicate on the "credential_secret_ref" field.
+func CredentialSecretRefHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldCredentialSecretRef, v))
 }
 
-// UpdatedAtLT applies the LT predicate on the "updated_at" field.
-func UpdatedAtLT(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldUpdatedAt, v))
+// CredentialSecretRefHasSuffix applies the HasSuffix predicate on the "credential_secret_ref" field.
+func CredentialSecretRefHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldCredentialSecretRef, v))
 }
 
-// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
-func UpdatedAtLTE(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldUpdatedAt, v))
+// CredentialSecretRefEqualFold applies the EqualFold predicate on the "credential_secret_ref" field.
+func CredentialSecretRefEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldCredentialSecretRef, v))
 }
 
-// ArchivedAtEQ applies the EQ predicate on the "archived_at" field.
-func ArchivedAtEQ(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldArchivedAt, v))
+// CredentialSecretRefContainsFold applies the ContainsFold predicate on the "credential_secret_ref" field.
+func CredentialSecretRefContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldCredentialSecretRef, v))
 }
 
-// ArchivedAtNEQ applies the NEQ predicate on the "archived_at" field.
-func ArchivedAtNEQ(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldArchivedAt, v))
+// AccessRequiresLoginEQ applies the EQ predicate on the "access_requires_login" field.
+func AccessRequiresLoginEQ(v bool) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldAccessRequiresLogin, v))
 }
 
-// ArchivedAtIn applies the In predicate on the "archived_at" field.
-func ArchivedAtIn(vs ...time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldArchivedAt, vs...))
-}
-
-// ArchivedAtNotIn applies the NotIn predicate on the "archived_at" field.
-func ArchivedAtNotIn(vs ...time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldArchivedAt, vs...))
-}
-
-// ArchivedAtGT applies the GT predicate on the "archived_at" field.
-func ArchivedAtGT(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldArchivedAt, v))
-}
-
-// ArchivedAtGTE applies the GTE predicate on the "archived_at" field.
-func ArchivedAtGTE(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldArchivedAt, v))
-}
-
-// ArchivedAtLT applies the LT predicate on the "archived_at" field.
-func ArchivedAtLT(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldArchivedAt, v))
-}
-
-// ArchivedAtLTE applies the LTE predicate on the "archived_at" field.
-func ArchivedAtLTE(v time.Time) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldArchivedAt, v))
-}
-
-// ArchivedAtIsNil applies the IsNil predicate on the "archived_at" field.
-func ArchivedAtIsNil() predicate.Workspace {
-	return predicate.Workspace(sql.FieldIsNull(FieldArchivedAt))
-}
-
-// ArchivedAtNotNil applies the NotNil predicate on the "archived_at" field.
-func ArchivedAtNotNil() predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotNull(FieldArchivedAt))
+// AccessRequiresLoginNEQ applies the NEQ predicate on the "access_requires_login" field.
+func AccessRequiresLoginNEQ(v bool) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldAccessRequiresLogin, v))
 }
 
 // And groups predicates with the AND operator between them.

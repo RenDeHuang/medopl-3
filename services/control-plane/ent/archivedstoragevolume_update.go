@@ -28,6 +28,26 @@ func (asvu *ArchivedStorageVolumeUpdate) Where(ps ...predicate.ArchivedStorageVo
 	return asvu
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (asvu *ArchivedStorageVolumeUpdate) SetCreatedAt(t time.Time) *ArchivedStorageVolumeUpdate {
+	asvu.mutation.SetCreatedAt(t)
+	return asvu
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (asvu *ArchivedStorageVolumeUpdate) SetNillableCreatedAt(t *time.Time) *ArchivedStorageVolumeUpdate {
+	if t != nil {
+		asvu.SetCreatedAt(*t)
+	}
+	return asvu
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (asvu *ArchivedStorageVolumeUpdate) SetUpdatedAt(t time.Time) *ArchivedStorageVolumeUpdate {
+	asvu.mutation.SetUpdatedAt(t)
+	return asvu
+}
+
 // SetAccountID sets the "account_id" field.
 func (asvu *ArchivedStorageVolumeUpdate) SetAccountID(s string) *ArchivedStorageVolumeUpdate {
 	asvu.mutation.SetAccountID(s)
@@ -38,104 +58,6 @@ func (asvu *ArchivedStorageVolumeUpdate) SetAccountID(s string) *ArchivedStorage
 func (asvu *ArchivedStorageVolumeUpdate) SetNillableAccountID(s *string) *ArchivedStorageVolumeUpdate {
 	if s != nil {
 		asvu.SetAccountID(*s)
-	}
-	return asvu
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetOwnerAccountID(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetOwnerAccountID(s)
-	return asvu
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableOwnerAccountID(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetOwnerAccountID(*s)
-	}
-	return asvu
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetOwnerUserID(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetOwnerUserID(s)
-	return asvu
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableOwnerUserID(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetOwnerUserID(*s)
-	}
-	return asvu
-}
-
-// SetUserID sets the "user_id" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetUserID(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetUserID(s)
-	return asvu
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableUserID(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetUserID(*s)
-	}
-	return asvu
-}
-
-// SetEmail sets the "email" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetEmail(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetEmail(s)
-	return asvu
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableEmail(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetEmail(*s)
-	}
-	return asvu
-}
-
-// SetRole sets the "role" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetRole(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetRole(s)
-	return asvu
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableRole(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetRole(*s)
-	}
-	return asvu
-}
-
-// SetStatus sets the "status" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetStatus(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetStatus(s)
-	return asvu
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableStatus(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetStatus(*s)
-	}
-	return asvu
-}
-
-// SetName sets the "name" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetName(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetName(s)
-	return asvu
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableName(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetName(*s)
 	}
 	return asvu
 }
@@ -182,282 +104,30 @@ func (asvu *ArchivedStorageVolumeUpdate) SetNillableResourceKind(s *string) *Arc
 	return asvu
 }
 
-// SetOperationID sets the "operation_id" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetOperationID(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetOperationID(s)
+// SetName sets the "name" field.
+func (asvu *ArchivedStorageVolumeUpdate) SetName(s string) *ArchivedStorageVolumeUpdate {
+	asvu.mutation.SetName(s)
 	return asvu
 }
 
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableOperationID(s *string) *ArchivedStorageVolumeUpdate {
+// SetNillableName sets the "name" field if the given value is not nil.
+func (asvu *ArchivedStorageVolumeUpdate) SetNillableName(s *string) *ArchivedStorageVolumeUpdate {
 	if s != nil {
-		asvu.SetOperationID(*s)
+		asvu.SetName(*s)
 	}
 	return asvu
 }
 
-// SetProvider sets the "provider" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetProvider(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetProvider(s)
+// SetStatus sets the "status" field.
+func (asvu *ArchivedStorageVolumeUpdate) SetStatus(s string) *ArchivedStorageVolumeUpdate {
+	asvu.mutation.SetStatus(s)
 	return asvu
 }
 
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableProvider(s *string) *ArchivedStorageVolumeUpdate {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (asvu *ArchivedStorageVolumeUpdate) SetNillableStatus(s *string) *ArchivedStorageVolumeUpdate {
 	if s != nil {
-		asvu.SetProvider(*s)
-	}
-	return asvu
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetProviderResourceID(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetProviderResourceID(s)
-	return asvu
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableProviderResourceID(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetProviderResourceID(*s)
-	}
-	return asvu
-}
-
-// SetURL sets the "url" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetURL(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetURL(s)
-	return asvu
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableURL(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetURL(*s)
-	}
-	return asvu
-}
-
-// SetHoldID sets the "hold_id" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetHoldID(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetHoldID(s)
-	return asvu
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableHoldID(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetHoldID(*s)
-	}
-	return asvu
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetHoldReleaseID(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetHoldReleaseID(s)
-	return asvu
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableHoldReleaseID(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetHoldReleaseID(*s)
-	}
-	return asvu
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetLedgerEntryID(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetLedgerEntryID(s)
-	return asvu
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableLedgerEntryID(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetLedgerEntryID(*s)
-	}
-	return asvu
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetWalletTransactionID(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetWalletTransactionID(s)
-	return asvu
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableWalletTransactionID(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetWalletTransactionID(*s)
-	}
-	return asvu
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetSettlementID(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetSettlementID(s)
-	return asvu
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableSettlementID(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetSettlementID(*s)
-	}
-	return asvu
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetPricingVersion(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetPricingVersion(s)
-	return asvu
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillablePricingVersion(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetPricingVersion(*s)
-	}
-	return asvu
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetAmountCents(i int64) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.ResetAmountCents()
-	asvu.mutation.SetAmountCents(i)
-	return asvu
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableAmountCents(i *int64) *ArchivedStorageVolumeUpdate {
-	if i != nil {
-		asvu.SetAmountCents(*i)
-	}
-	return asvu
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (asvu *ArchivedStorageVolumeUpdate) AddAmountCents(i int64) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.AddAmountCents(i)
-	return asvu
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetBalanceCents(i int64) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.ResetBalanceCents()
-	asvu.mutation.SetBalanceCents(i)
-	return asvu
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableBalanceCents(i *int64) *ArchivedStorageVolumeUpdate {
-	if i != nil {
-		asvu.SetBalanceCents(*i)
-	}
-	return asvu
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (asvu *ArchivedStorageVolumeUpdate) AddBalanceCents(i int64) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.AddBalanceCents(i)
-	return asvu
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetFrozenCents(i int64) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.ResetFrozenCents()
-	asvu.mutation.SetFrozenCents(i)
-	return asvu
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableFrozenCents(i *int64) *ArchivedStorageVolumeUpdate {
-	if i != nil {
-		asvu.SetFrozenCents(*i)
-	}
-	return asvu
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (asvu *ArchivedStorageVolumeUpdate) AddFrozenCents(i int64) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.AddFrozenCents(i)
-	return asvu
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetAvailableCents(i int64) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.ResetAvailableCents()
-	asvu.mutation.SetAvailableCents(i)
-	return asvu
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableAvailableCents(i *int64) *ArchivedStorageVolumeUpdate {
-	if i != nil {
-		asvu.SetAvailableCents(*i)
-	}
-	return asvu
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (asvu *ArchivedStorageVolumeUpdate) AddAvailableCents(i int64) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.AddAvailableCents(i)
-	return asvu
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetTotalSpentCents(i int64) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.ResetTotalSpentCents()
-	asvu.mutation.SetTotalSpentCents(i)
-	return asvu
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableTotalSpentCents(i *int64) *ArchivedStorageVolumeUpdate {
-	if i != nil {
-		asvu.SetTotalSpentCents(*i)
-	}
-	return asvu
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (asvu *ArchivedStorageVolumeUpdate) AddTotalSpentCents(i int64) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.AddTotalSpentCents(i)
-	return asvu
-}
-
-// SetQuantity sets the "quantity" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetQuantity(f float64) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.ResetQuantity()
-	asvu.mutation.SetQuantity(f)
-	return asvu
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableQuantity(f *float64) *ArchivedStorageVolumeUpdate {
-	if f != nil {
-		asvu.SetQuantity(*f)
-	}
-	return asvu
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (asvu *ArchivedStorageVolumeUpdate) AddQuantity(f float64) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.AddQuantity(f)
-	return asvu
-}
-
-// SetUnit sets the "unit" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetUnit(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetUnit(s)
-	return asvu
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableUnit(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetUnit(*s)
+		asvu.SetStatus(*s)
 	}
 	return asvu
 }
@@ -473,68 +143,6 @@ func (asvu *ArchivedStorageVolumeUpdate) SetNillableReason(s *string) *ArchivedS
 	if s != nil {
 		asvu.SetReason(*s)
 	}
-	return asvu
-}
-
-// SetResult sets the "result" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetResult(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetResult(s)
-	return asvu
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableResult(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetResult(*s)
-	}
-	return asvu
-}
-
-// SetSource sets the "source" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetSource(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetSource(s)
-	return asvu
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableSource(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetSource(*s)
-	}
-	return asvu
-}
-
-// SetDirection sets the "direction" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetDirection(s string) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetDirection(s)
-	return asvu
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableDirection(s *string) *ArchivedStorageVolumeUpdate {
-	if s != nil {
-		asvu.SetDirection(*s)
-	}
-	return asvu
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetCreatedAt(t time.Time) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetCreatedAt(t)
-	return asvu
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (asvu *ArchivedStorageVolumeUpdate) SetNillableCreatedAt(t *time.Time) *ArchivedStorageVolumeUpdate {
-	if t != nil {
-		asvu.SetCreatedAt(*t)
-	}
-	return asvu
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (asvu *ArchivedStorageVolumeUpdate) SetUpdatedAt(t time.Time) *ArchivedStorageVolumeUpdate {
-	asvu.mutation.SetUpdatedAt(t)
 	return asvu
 }
 
@@ -608,29 +216,14 @@ func (asvu *ArchivedStorageVolumeUpdate) sqlSave(ctx context.Context) (n int, er
 			}
 		}
 	}
+	if value, ok := asvu.mutation.CreatedAt(); ok {
+		_spec.SetField(archivedstoragevolume.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := asvu.mutation.UpdatedAt(); ok {
+		_spec.SetField(archivedstoragevolume.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := asvu.mutation.AccountID(); ok {
 		_spec.SetField(archivedstoragevolume.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.OwnerAccountID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.OwnerUserID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.UserID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.Email(); ok {
-		_spec.SetField(archivedstoragevolume.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.Role(); ok {
-		_spec.SetField(archivedstoragevolume.FieldRole, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.Status(); ok {
-		_spec.SetField(archivedstoragevolume.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.Name(); ok {
-		_spec.SetField(archivedstoragevolume.FieldName, field.TypeString, value)
 	}
 	if value, ok := asvu.mutation.WorkspaceID(); ok {
 		_spec.SetField(archivedstoragevolume.FieldWorkspaceID, field.TypeString, value)
@@ -641,92 +234,14 @@ func (asvu *ArchivedStorageVolumeUpdate) sqlSave(ctx context.Context) (n int, er
 	if value, ok := asvu.mutation.ResourceKind(); ok {
 		_spec.SetField(archivedstoragevolume.FieldResourceKind, field.TypeString, value)
 	}
-	if value, ok := asvu.mutation.OperationID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldOperationID, field.TypeString, value)
+	if value, ok := asvu.mutation.Name(); ok {
+		_spec.SetField(archivedstoragevolume.FieldName, field.TypeString, value)
 	}
-	if value, ok := asvu.mutation.Provider(); ok {
-		_spec.SetField(archivedstoragevolume.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.ProviderResourceID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.URL(); ok {
-		_spec.SetField(archivedstoragevolume.FieldURL, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.HoldID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.HoldReleaseID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.LedgerEntryID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.WalletTransactionID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.SettlementID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.PricingVersion(); ok {
-		_spec.SetField(archivedstoragevolume.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.AmountCents(); ok {
-		_spec.SetField(archivedstoragevolume.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := asvu.mutation.AddedAmountCents(); ok {
-		_spec.AddField(archivedstoragevolume.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := asvu.mutation.BalanceCents(); ok {
-		_spec.SetField(archivedstoragevolume.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := asvu.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(archivedstoragevolume.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := asvu.mutation.FrozenCents(); ok {
-		_spec.SetField(archivedstoragevolume.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := asvu.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(archivedstoragevolume.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := asvu.mutation.AvailableCents(); ok {
-		_spec.SetField(archivedstoragevolume.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := asvu.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(archivedstoragevolume.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := asvu.mutation.TotalSpentCents(); ok {
-		_spec.SetField(archivedstoragevolume.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := asvu.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(archivedstoragevolume.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := asvu.mutation.Quantity(); ok {
-		_spec.SetField(archivedstoragevolume.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := asvu.mutation.AddedQuantity(); ok {
-		_spec.AddField(archivedstoragevolume.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := asvu.mutation.Unit(); ok {
-		_spec.SetField(archivedstoragevolume.FieldUnit, field.TypeString, value)
+	if value, ok := asvu.mutation.Status(); ok {
+		_spec.SetField(archivedstoragevolume.FieldStatus, field.TypeString, value)
 	}
 	if value, ok := asvu.mutation.Reason(); ok {
 		_spec.SetField(archivedstoragevolume.FieldReason, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.Result(); ok {
-		_spec.SetField(archivedstoragevolume.FieldResult, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.Source(); ok {
-		_spec.SetField(archivedstoragevolume.FieldSource, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.Direction(); ok {
-		_spec.SetField(archivedstoragevolume.FieldDirection, field.TypeString, value)
-	}
-	if value, ok := asvu.mutation.CreatedAt(); ok {
-		_spec.SetField(archivedstoragevolume.FieldCreatedAt, field.TypeTime, value)
-	}
-	if value, ok := asvu.mutation.UpdatedAt(); ok {
-		_spec.SetField(archivedstoragevolume.FieldUpdatedAt, field.TypeTime, value)
 	}
 	if value, ok := asvu.mutation.ArchivedAt(); ok {
 		_spec.SetField(archivedstoragevolume.FieldArchivedAt, field.TypeTime, value)
@@ -754,6 +269,26 @@ type ArchivedStorageVolumeUpdateOne struct {
 	mutation *ArchivedStorageVolumeMutation
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (asvuo *ArchivedStorageVolumeUpdateOne) SetCreatedAt(t time.Time) *ArchivedStorageVolumeUpdateOne {
+	asvuo.mutation.SetCreatedAt(t)
+	return asvuo
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableCreatedAt(t *time.Time) *ArchivedStorageVolumeUpdateOne {
+	if t != nil {
+		asvuo.SetCreatedAt(*t)
+	}
+	return asvuo
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (asvuo *ArchivedStorageVolumeUpdateOne) SetUpdatedAt(t time.Time) *ArchivedStorageVolumeUpdateOne {
+	asvuo.mutation.SetUpdatedAt(t)
+	return asvuo
+}
+
 // SetAccountID sets the "account_id" field.
 func (asvuo *ArchivedStorageVolumeUpdateOne) SetAccountID(s string) *ArchivedStorageVolumeUpdateOne {
 	asvuo.mutation.SetAccountID(s)
@@ -764,104 +299,6 @@ func (asvuo *ArchivedStorageVolumeUpdateOne) SetAccountID(s string) *ArchivedSto
 func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableAccountID(s *string) *ArchivedStorageVolumeUpdateOne {
 	if s != nil {
 		asvuo.SetAccountID(*s)
-	}
-	return asvuo
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetOwnerAccountID(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetOwnerAccountID(s)
-	return asvuo
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableOwnerAccountID(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetOwnerAccountID(*s)
-	}
-	return asvuo
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetOwnerUserID(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetOwnerUserID(s)
-	return asvuo
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableOwnerUserID(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetOwnerUserID(*s)
-	}
-	return asvuo
-}
-
-// SetUserID sets the "user_id" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetUserID(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetUserID(s)
-	return asvuo
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableUserID(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetUserID(*s)
-	}
-	return asvuo
-}
-
-// SetEmail sets the "email" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetEmail(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetEmail(s)
-	return asvuo
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableEmail(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetEmail(*s)
-	}
-	return asvuo
-}
-
-// SetRole sets the "role" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetRole(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetRole(s)
-	return asvuo
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableRole(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetRole(*s)
-	}
-	return asvuo
-}
-
-// SetStatus sets the "status" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetStatus(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetStatus(s)
-	return asvuo
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableStatus(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetStatus(*s)
-	}
-	return asvuo
-}
-
-// SetName sets the "name" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetName(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetName(s)
-	return asvuo
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableName(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetName(*s)
 	}
 	return asvuo
 }
@@ -908,282 +345,30 @@ func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableResourceKind(s *string) 
 	return asvuo
 }
 
-// SetOperationID sets the "operation_id" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetOperationID(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetOperationID(s)
+// SetName sets the "name" field.
+func (asvuo *ArchivedStorageVolumeUpdateOne) SetName(s string) *ArchivedStorageVolumeUpdateOne {
+	asvuo.mutation.SetName(s)
 	return asvuo
 }
 
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableOperationID(s *string) *ArchivedStorageVolumeUpdateOne {
+// SetNillableName sets the "name" field if the given value is not nil.
+func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableName(s *string) *ArchivedStorageVolumeUpdateOne {
 	if s != nil {
-		asvuo.SetOperationID(*s)
+		asvuo.SetName(*s)
 	}
 	return asvuo
 }
 
-// SetProvider sets the "provider" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetProvider(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetProvider(s)
+// SetStatus sets the "status" field.
+func (asvuo *ArchivedStorageVolumeUpdateOne) SetStatus(s string) *ArchivedStorageVolumeUpdateOne {
+	asvuo.mutation.SetStatus(s)
 	return asvuo
 }
 
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableProvider(s *string) *ArchivedStorageVolumeUpdateOne {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableStatus(s *string) *ArchivedStorageVolumeUpdateOne {
 	if s != nil {
-		asvuo.SetProvider(*s)
-	}
-	return asvuo
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetProviderResourceID(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetProviderResourceID(s)
-	return asvuo
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableProviderResourceID(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetProviderResourceID(*s)
-	}
-	return asvuo
-}
-
-// SetURL sets the "url" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetURL(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetURL(s)
-	return asvuo
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableURL(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetURL(*s)
-	}
-	return asvuo
-}
-
-// SetHoldID sets the "hold_id" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetHoldID(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetHoldID(s)
-	return asvuo
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableHoldID(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetHoldID(*s)
-	}
-	return asvuo
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetHoldReleaseID(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetHoldReleaseID(s)
-	return asvuo
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableHoldReleaseID(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetHoldReleaseID(*s)
-	}
-	return asvuo
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetLedgerEntryID(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetLedgerEntryID(s)
-	return asvuo
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableLedgerEntryID(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetLedgerEntryID(*s)
-	}
-	return asvuo
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetWalletTransactionID(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetWalletTransactionID(s)
-	return asvuo
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableWalletTransactionID(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetWalletTransactionID(*s)
-	}
-	return asvuo
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetSettlementID(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetSettlementID(s)
-	return asvuo
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableSettlementID(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetSettlementID(*s)
-	}
-	return asvuo
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetPricingVersion(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetPricingVersion(s)
-	return asvuo
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillablePricingVersion(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetPricingVersion(*s)
-	}
-	return asvuo
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetAmountCents(i int64) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.ResetAmountCents()
-	asvuo.mutation.SetAmountCents(i)
-	return asvuo
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableAmountCents(i *int64) *ArchivedStorageVolumeUpdateOne {
-	if i != nil {
-		asvuo.SetAmountCents(*i)
-	}
-	return asvuo
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) AddAmountCents(i int64) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.AddAmountCents(i)
-	return asvuo
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetBalanceCents(i int64) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.ResetBalanceCents()
-	asvuo.mutation.SetBalanceCents(i)
-	return asvuo
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableBalanceCents(i *int64) *ArchivedStorageVolumeUpdateOne {
-	if i != nil {
-		asvuo.SetBalanceCents(*i)
-	}
-	return asvuo
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) AddBalanceCents(i int64) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.AddBalanceCents(i)
-	return asvuo
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetFrozenCents(i int64) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.ResetFrozenCents()
-	asvuo.mutation.SetFrozenCents(i)
-	return asvuo
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableFrozenCents(i *int64) *ArchivedStorageVolumeUpdateOne {
-	if i != nil {
-		asvuo.SetFrozenCents(*i)
-	}
-	return asvuo
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) AddFrozenCents(i int64) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.AddFrozenCents(i)
-	return asvuo
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetAvailableCents(i int64) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.ResetAvailableCents()
-	asvuo.mutation.SetAvailableCents(i)
-	return asvuo
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableAvailableCents(i *int64) *ArchivedStorageVolumeUpdateOne {
-	if i != nil {
-		asvuo.SetAvailableCents(*i)
-	}
-	return asvuo
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) AddAvailableCents(i int64) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.AddAvailableCents(i)
-	return asvuo
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetTotalSpentCents(i int64) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.ResetTotalSpentCents()
-	asvuo.mutation.SetTotalSpentCents(i)
-	return asvuo
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableTotalSpentCents(i *int64) *ArchivedStorageVolumeUpdateOne {
-	if i != nil {
-		asvuo.SetTotalSpentCents(*i)
-	}
-	return asvuo
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) AddTotalSpentCents(i int64) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.AddTotalSpentCents(i)
-	return asvuo
-}
-
-// SetQuantity sets the "quantity" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetQuantity(f float64) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.ResetQuantity()
-	asvuo.mutation.SetQuantity(f)
-	return asvuo
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableQuantity(f *float64) *ArchivedStorageVolumeUpdateOne {
-	if f != nil {
-		asvuo.SetQuantity(*f)
-	}
-	return asvuo
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) AddQuantity(f float64) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.AddQuantity(f)
-	return asvuo
-}
-
-// SetUnit sets the "unit" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetUnit(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetUnit(s)
-	return asvuo
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableUnit(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetUnit(*s)
+		asvuo.SetStatus(*s)
 	}
 	return asvuo
 }
@@ -1199,68 +384,6 @@ func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableReason(s *string) *Archi
 	if s != nil {
 		asvuo.SetReason(*s)
 	}
-	return asvuo
-}
-
-// SetResult sets the "result" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetResult(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetResult(s)
-	return asvuo
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableResult(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetResult(*s)
-	}
-	return asvuo
-}
-
-// SetSource sets the "source" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetSource(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetSource(s)
-	return asvuo
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableSource(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetSource(*s)
-	}
-	return asvuo
-}
-
-// SetDirection sets the "direction" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetDirection(s string) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetDirection(s)
-	return asvuo
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableDirection(s *string) *ArchivedStorageVolumeUpdateOne {
-	if s != nil {
-		asvuo.SetDirection(*s)
-	}
-	return asvuo
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetCreatedAt(t time.Time) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetCreatedAt(t)
-	return asvuo
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetNillableCreatedAt(t *time.Time) *ArchivedStorageVolumeUpdateOne {
-	if t != nil {
-		asvuo.SetCreatedAt(*t)
-	}
-	return asvuo
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (asvuo *ArchivedStorageVolumeUpdateOne) SetUpdatedAt(t time.Time) *ArchivedStorageVolumeUpdateOne {
-	asvuo.mutation.SetUpdatedAt(t)
 	return asvuo
 }
 
@@ -1364,29 +487,14 @@ func (asvuo *ArchivedStorageVolumeUpdateOne) sqlSave(ctx context.Context) (_node
 			}
 		}
 	}
+	if value, ok := asvuo.mutation.CreatedAt(); ok {
+		_spec.SetField(archivedstoragevolume.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := asvuo.mutation.UpdatedAt(); ok {
+		_spec.SetField(archivedstoragevolume.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := asvuo.mutation.AccountID(); ok {
 		_spec.SetField(archivedstoragevolume.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.OwnerAccountID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.OwnerUserID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.UserID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.Email(); ok {
-		_spec.SetField(archivedstoragevolume.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.Role(); ok {
-		_spec.SetField(archivedstoragevolume.FieldRole, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.Status(); ok {
-		_spec.SetField(archivedstoragevolume.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.Name(); ok {
-		_spec.SetField(archivedstoragevolume.FieldName, field.TypeString, value)
 	}
 	if value, ok := asvuo.mutation.WorkspaceID(); ok {
 		_spec.SetField(archivedstoragevolume.FieldWorkspaceID, field.TypeString, value)
@@ -1397,92 +505,14 @@ func (asvuo *ArchivedStorageVolumeUpdateOne) sqlSave(ctx context.Context) (_node
 	if value, ok := asvuo.mutation.ResourceKind(); ok {
 		_spec.SetField(archivedstoragevolume.FieldResourceKind, field.TypeString, value)
 	}
-	if value, ok := asvuo.mutation.OperationID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldOperationID, field.TypeString, value)
+	if value, ok := asvuo.mutation.Name(); ok {
+		_spec.SetField(archivedstoragevolume.FieldName, field.TypeString, value)
 	}
-	if value, ok := asvuo.mutation.Provider(); ok {
-		_spec.SetField(archivedstoragevolume.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.ProviderResourceID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.URL(); ok {
-		_spec.SetField(archivedstoragevolume.FieldURL, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.HoldID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.HoldReleaseID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.LedgerEntryID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.WalletTransactionID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.SettlementID(); ok {
-		_spec.SetField(archivedstoragevolume.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.PricingVersion(); ok {
-		_spec.SetField(archivedstoragevolume.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.AmountCents(); ok {
-		_spec.SetField(archivedstoragevolume.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := asvuo.mutation.AddedAmountCents(); ok {
-		_spec.AddField(archivedstoragevolume.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := asvuo.mutation.BalanceCents(); ok {
-		_spec.SetField(archivedstoragevolume.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := asvuo.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(archivedstoragevolume.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := asvuo.mutation.FrozenCents(); ok {
-		_spec.SetField(archivedstoragevolume.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := asvuo.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(archivedstoragevolume.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := asvuo.mutation.AvailableCents(); ok {
-		_spec.SetField(archivedstoragevolume.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := asvuo.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(archivedstoragevolume.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := asvuo.mutation.TotalSpentCents(); ok {
-		_spec.SetField(archivedstoragevolume.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := asvuo.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(archivedstoragevolume.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := asvuo.mutation.Quantity(); ok {
-		_spec.SetField(archivedstoragevolume.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := asvuo.mutation.AddedQuantity(); ok {
-		_spec.AddField(archivedstoragevolume.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := asvuo.mutation.Unit(); ok {
-		_spec.SetField(archivedstoragevolume.FieldUnit, field.TypeString, value)
+	if value, ok := asvuo.mutation.Status(); ok {
+		_spec.SetField(archivedstoragevolume.FieldStatus, field.TypeString, value)
 	}
 	if value, ok := asvuo.mutation.Reason(); ok {
 		_spec.SetField(archivedstoragevolume.FieldReason, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.Result(); ok {
-		_spec.SetField(archivedstoragevolume.FieldResult, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.Source(); ok {
-		_spec.SetField(archivedstoragevolume.FieldSource, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.Direction(); ok {
-		_spec.SetField(archivedstoragevolume.FieldDirection, field.TypeString, value)
-	}
-	if value, ok := asvuo.mutation.CreatedAt(); ok {
-		_spec.SetField(archivedstoragevolume.FieldCreatedAt, field.TypeTime, value)
-	}
-	if value, ok := asvuo.mutation.UpdatedAt(); ok {
-		_spec.SetField(archivedstoragevolume.FieldUpdatedAt, field.TypeTime, value)
 	}
 	if value, ok := asvuo.mutation.ArchivedAt(); ok {
 		_spec.SetField(archivedstoragevolume.FieldArchivedAt, field.TypeTime, value)

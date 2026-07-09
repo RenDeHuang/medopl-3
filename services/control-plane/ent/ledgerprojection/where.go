@@ -64,49 +64,24 @@ func IDContainsFold(id string) predicate.LedgerProjection {
 	return predicate.LedgerProjection(sql.FieldContainsFold(FieldID, id))
 }
 
+// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
+func CreatedAt(v time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
+func UpdatedAt(v time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldUpdatedAt, v))
+}
+
 // AccountID applies equality check predicate on the "account_id" field. It's identical to AccountIDEQ.
 func AccountID(v string) predicate.LedgerProjection {
 	return predicate.LedgerProjection(sql.FieldEQ(FieldAccountID, v))
 }
 
-// OwnerAccountID applies equality check predicate on the "owner_account_id" field. It's identical to OwnerAccountIDEQ.
-func OwnerAccountID(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldOwnerAccountID, v))
-}
-
-// OwnerUserID applies equality check predicate on the "owner_user_id" field. It's identical to OwnerUserIDEQ.
-func OwnerUserID(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldOwnerUserID, v))
-}
-
-// UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
-func UserID(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldUserID, v))
-}
-
-// Email applies equality check predicate on the "email" field. It's identical to EmailEQ.
-func Email(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldEmail, v))
-}
-
-// Role applies equality check predicate on the "role" field. It's identical to RoleEQ.
-func Role(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldRole, v))
-}
-
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldStatus, v))
-}
-
-// Name applies equality check predicate on the "name" field. It's identical to NameEQ.
-func Name(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldName, v))
-}
-
-// WorkspaceID applies equality check predicate on the "workspace_id" field. It's identical to WorkspaceIDEQ.
-func WorkspaceID(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldWorkspaceID, v))
+// Type applies equality check predicate on the "type" field. It's identical to TypeEQ.
+func Type(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldType, v))
 }
 
 // ResourceID applies equality check predicate on the "resource_id" field. It's identical to ResourceIDEQ.
@@ -119,44 +94,19 @@ func ResourceKind(v string) predicate.LedgerProjection {
 	return predicate.LedgerProjection(sql.FieldEQ(FieldResourceKind, v))
 }
 
-// OperationID applies equality check predicate on the "operation_id" field. It's identical to OperationIDEQ.
-func OperationID(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldOperationID, v))
+// WorkspaceID applies equality check predicate on the "workspace_id" field. It's identical to WorkspaceIDEQ.
+func WorkspaceID(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldWorkspaceID, v))
 }
 
-// Provider applies equality check predicate on the "provider" field. It's identical to ProviderEQ.
-func Provider(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldProvider, v))
+// ComputeAllocationID applies equality check predicate on the "compute_allocation_id" field. It's identical to ComputeAllocationIDEQ.
+func ComputeAllocationID(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldComputeAllocationID, v))
 }
 
-// ProviderResourceID applies equality check predicate on the "provider_resource_id" field. It's identical to ProviderResourceIDEQ.
-func ProviderResourceID(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldProviderResourceID, v))
-}
-
-// URL applies equality check predicate on the "url" field. It's identical to URLEQ.
-func URL(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldURL, v))
-}
-
-// HoldID applies equality check predicate on the "hold_id" field. It's identical to HoldIDEQ.
-func HoldID(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldHoldID, v))
-}
-
-// HoldReleaseID applies equality check predicate on the "hold_release_id" field. It's identical to HoldReleaseIDEQ.
-func HoldReleaseID(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldHoldReleaseID, v))
-}
-
-// LedgerEntryID applies equality check predicate on the "ledger_entry_id" field. It's identical to LedgerEntryIDEQ.
-func LedgerEntryID(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldLedgerEntryID, v))
-}
-
-// WalletTransactionID applies equality check predicate on the "wallet_transaction_id" field. It's identical to WalletTransactionIDEQ.
-func WalletTransactionID(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldWalletTransactionID, v))
+// StorageID applies equality check predicate on the "storage_id" field. It's identical to StorageIDEQ.
+func StorageID(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldStorageID, v))
 }
 
 // SettlementID applies equality check predicate on the "settlement_id" field. It's identical to SettlementIDEQ.
@@ -169,34 +119,14 @@ func PricingVersion(v string) predicate.LedgerProjection {
 	return predicate.LedgerProjection(sql.FieldEQ(FieldPricingVersion, v))
 }
 
-// AmountCents applies equality check predicate on the "amount_cents" field. It's identical to AmountCentsEQ.
-func AmountCents(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldAmountCents, v))
+// UsagePeriodStart applies equality check predicate on the "usage_period_start" field. It's identical to UsagePeriodStartEQ.
+func UsagePeriodStart(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldUsagePeriodStart, v))
 }
 
-// BalanceCents applies equality check predicate on the "balance_cents" field. It's identical to BalanceCentsEQ.
-func BalanceCents(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldBalanceCents, v))
-}
-
-// FrozenCents applies equality check predicate on the "frozen_cents" field. It's identical to FrozenCentsEQ.
-func FrozenCents(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldFrozenCents, v))
-}
-
-// AvailableCents applies equality check predicate on the "available_cents" field. It's identical to AvailableCentsEQ.
-func AvailableCents(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldAvailableCents, v))
-}
-
-// TotalSpentCents applies equality check predicate on the "total_spent_cents" field. It's identical to TotalSpentCentsEQ.
-func TotalSpentCents(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldTotalSpentCents, v))
-}
-
-// Quantity applies equality check predicate on the "quantity" field. It's identical to QuantityEQ.
-func Quantity(v float64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldQuantity, v))
+// UsagePeriodEnd applies equality check predicate on the "usage_period_end" field. It's identical to UsagePeriodEndEQ.
+func UsagePeriodEnd(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldUsagePeriodEnd, v))
 }
 
 // Unit applies equality check predicate on the "unit" field. It's identical to UnitEQ.
@@ -204,19 +134,24 @@ func Unit(v string) predicate.LedgerProjection {
 	return predicate.LedgerProjection(sql.FieldEQ(FieldUnit, v))
 }
 
-// Reason applies equality check predicate on the "reason" field. It's identical to ReasonEQ.
-func Reason(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldReason, v))
+// ProviderCostEvidenceRef applies equality check predicate on the "provider_cost_evidence_ref" field. It's identical to ProviderCostEvidenceRefEQ.
+func ProviderCostEvidenceRef(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldProviderCostEvidenceRef, v))
 }
 
-// Result applies equality check predicate on the "result" field. It's identical to ResultEQ.
-func Result(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldResult, v))
+// Currency applies equality check predicate on the "currency" field. It's identical to CurrencyEQ.
+func Currency(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldCurrency, v))
 }
 
-// Source applies equality check predicate on the "source" field. It's identical to SourceEQ.
-func Source(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldSource, v))
+// AmountCents applies equality check predicate on the "amount_cents" field. It's identical to AmountCentsEQ.
+func AmountCents(v int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldAmountCents, v))
+}
+
+// Quantity applies equality check predicate on the "quantity" field. It's identical to QuantityEQ.
+func Quantity(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldQuantity, v))
 }
 
 // Direction applies equality check predicate on the "direction" field. It's identical to DirectionEQ.
@@ -224,19 +159,129 @@ func Direction(v string) predicate.LedgerProjection {
 	return predicate.LedgerProjection(sql.FieldEQ(FieldDirection, v))
 }
 
-// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
-func CreatedAt(v time.Time) predicate.LedgerProjection {
+// PriceSnapshotPackageID applies equality check predicate on the "price_snapshot_package_id" field. It's identical to PriceSnapshotPackageIDEQ.
+func PriceSnapshotPackageID(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotPackageID, v))
+}
+
+// PriceSnapshotResourceType applies equality check predicate on the "price_snapshot_resource_type" field. It's identical to PriceSnapshotResourceTypeEQ.
+func PriceSnapshotResourceType(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotResourceType, v))
+}
+
+// PriceSnapshotCurrency applies equality check predicate on the "price_snapshot_currency" field. It's identical to PriceSnapshotCurrencyEQ.
+func PriceSnapshotCurrency(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotSource applies equality check predicate on the "price_snapshot_source" field. It's identical to PriceSnapshotSourceEQ.
+func PriceSnapshotSource(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSku applies equality check predicate on the "price_snapshot_sku" field. It's identical to PriceSnapshotSkuEQ.
+func PriceSnapshotSku(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotUnitPriceCents applies equality check predicate on the "price_snapshot_unit_price_cents" field. It's identical to PriceSnapshotUnitPriceCentsEQ.
+func PriceSnapshotUnitPriceCents(v int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotUnitPriceCents, v))
+}
+
+// PriceSnapshotComputeHourly applies equality check predicate on the "price_snapshot_compute_hourly" field. It's identical to PriceSnapshotComputeHourlyEQ.
+func PriceSnapshotComputeHourly(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotComputeHourly, v))
+}
+
+// PriceSnapshotStorageGBMonth applies equality check predicate on the "price_snapshot_storage_gb_month" field. It's identical to PriceSnapshotStorageGBMonthEQ.
+func PriceSnapshotStorageGBMonth(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotStorageGBMonth, v))
+}
+
+// PriceSnapshotSizeGB applies equality check predicate on the "price_snapshot_size_gb" field. It's identical to PriceSnapshotSizeGBEQ.
+func PriceSnapshotSizeGB(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotSizeGB, v))
+}
+
+// CreatedAtEQ applies the EQ predicate on the "created_at" field.
+func CreatedAtEQ(v time.Time) predicate.LedgerProjection {
 	return predicate.LedgerProjection(sql.FieldEQ(FieldCreatedAt, v))
 }
 
-// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
-func UpdatedAt(v time.Time) predicate.LedgerProjection {
+// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
+func CreatedAtNEQ(v time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldCreatedAt, v))
+}
+
+// CreatedAtIn applies the In predicate on the "created_at" field.
+func CreatedAtIn(vs ...time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldCreatedAt, vs...))
+}
+
+// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
+func CreatedAtNotIn(vs ...time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldCreatedAt, vs...))
+}
+
+// CreatedAtGT applies the GT predicate on the "created_at" field.
+func CreatedAtGT(v time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldCreatedAt, v))
+}
+
+// CreatedAtGTE applies the GTE predicate on the "created_at" field.
+func CreatedAtGTE(v time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldCreatedAt, v))
+}
+
+// CreatedAtLT applies the LT predicate on the "created_at" field.
+func CreatedAtLT(v time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldCreatedAt, v))
+}
+
+// CreatedAtLTE applies the LTE predicate on the "created_at" field.
+func CreatedAtLTE(v time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
+func UpdatedAtEQ(v time.Time) predicate.LedgerProjection {
 	return predicate.LedgerProjection(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
-// ArchivedAt applies equality check predicate on the "archived_at" field. It's identical to ArchivedAtEQ.
-func ArchivedAt(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldArchivedAt, v))
+// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
+func UpdatedAtNEQ(v time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldUpdatedAt, v))
+}
+
+// UpdatedAtIn applies the In predicate on the "updated_at" field.
+func UpdatedAtIn(vs ...time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
+func UpdatedAtNotIn(vs ...time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtGT applies the GT predicate on the "updated_at" field.
+func UpdatedAtGT(v time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
+func UpdatedAtGTE(v time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLT applies the LT predicate on the "updated_at" field.
+func UpdatedAtLT(v time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
+func UpdatedAtLTE(v time.Time) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
 // AccountIDEQ applies the EQ predicate on the "account_id" field.
@@ -304,524 +349,69 @@ func AccountIDContainsFold(v string) predicate.LedgerProjection {
 	return predicate.LedgerProjection(sql.FieldContainsFold(FieldAccountID, v))
 }
 
-// OwnerAccountIDEQ applies the EQ predicate on the "owner_account_id" field.
-func OwnerAccountIDEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldOwnerAccountID, v))
+// TypeEQ applies the EQ predicate on the "type" field.
+func TypeEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldType, v))
 }
 
-// OwnerAccountIDNEQ applies the NEQ predicate on the "owner_account_id" field.
-func OwnerAccountIDNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldOwnerAccountID, v))
+// TypeNEQ applies the NEQ predicate on the "type" field.
+func TypeNEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldType, v))
 }
 
-// OwnerAccountIDIn applies the In predicate on the "owner_account_id" field.
-func OwnerAccountIDIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldOwnerAccountID, vs...))
+// TypeIn applies the In predicate on the "type" field.
+func TypeIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldType, vs...))
 }
 
-// OwnerAccountIDNotIn applies the NotIn predicate on the "owner_account_id" field.
-func OwnerAccountIDNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldOwnerAccountID, vs...))
+// TypeNotIn applies the NotIn predicate on the "type" field.
+func TypeNotIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldType, vs...))
 }
 
-// OwnerAccountIDGT applies the GT predicate on the "owner_account_id" field.
-func OwnerAccountIDGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldOwnerAccountID, v))
+// TypeGT applies the GT predicate on the "type" field.
+func TypeGT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldType, v))
 }
 
-// OwnerAccountIDGTE applies the GTE predicate on the "owner_account_id" field.
-func OwnerAccountIDGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldOwnerAccountID, v))
+// TypeGTE applies the GTE predicate on the "type" field.
+func TypeGTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldType, v))
 }
 
-// OwnerAccountIDLT applies the LT predicate on the "owner_account_id" field.
-func OwnerAccountIDLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldOwnerAccountID, v))
+// TypeLT applies the LT predicate on the "type" field.
+func TypeLT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldType, v))
 }
 
-// OwnerAccountIDLTE applies the LTE predicate on the "owner_account_id" field.
-func OwnerAccountIDLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldOwnerAccountID, v))
+// TypeLTE applies the LTE predicate on the "type" field.
+func TypeLTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldType, v))
 }
 
-// OwnerAccountIDContains applies the Contains predicate on the "owner_account_id" field.
-func OwnerAccountIDContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldOwnerAccountID, v))
+// TypeContains applies the Contains predicate on the "type" field.
+func TypeContains(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContains(FieldType, v))
 }
 
-// OwnerAccountIDHasPrefix applies the HasPrefix predicate on the "owner_account_id" field.
-func OwnerAccountIDHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldOwnerAccountID, v))
+// TypeHasPrefix applies the HasPrefix predicate on the "type" field.
+func TypeHasPrefix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldType, v))
 }
 
-// OwnerAccountIDHasSuffix applies the HasSuffix predicate on the "owner_account_id" field.
-func OwnerAccountIDHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldOwnerAccountID, v))
+// TypeHasSuffix applies the HasSuffix predicate on the "type" field.
+func TypeHasSuffix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldType, v))
 }
 
-// OwnerAccountIDEqualFold applies the EqualFold predicate on the "owner_account_id" field.
-func OwnerAccountIDEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldOwnerAccountID, v))
+// TypeEqualFold applies the EqualFold predicate on the "type" field.
+func TypeEqualFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEqualFold(FieldType, v))
 }
 
-// OwnerAccountIDContainsFold applies the ContainsFold predicate on the "owner_account_id" field.
-func OwnerAccountIDContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldOwnerAccountID, v))
-}
-
-// OwnerUserIDEQ applies the EQ predicate on the "owner_user_id" field.
-func OwnerUserIDEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDNEQ applies the NEQ predicate on the "owner_user_id" field.
-func OwnerUserIDNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDIn applies the In predicate on the "owner_user_id" field.
-func OwnerUserIDIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldOwnerUserID, vs...))
-}
-
-// OwnerUserIDNotIn applies the NotIn predicate on the "owner_user_id" field.
-func OwnerUserIDNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldOwnerUserID, vs...))
-}
-
-// OwnerUserIDGT applies the GT predicate on the "owner_user_id" field.
-func OwnerUserIDGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDGTE applies the GTE predicate on the "owner_user_id" field.
-func OwnerUserIDGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDLT applies the LT predicate on the "owner_user_id" field.
-func OwnerUserIDLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDLTE applies the LTE predicate on the "owner_user_id" field.
-func OwnerUserIDLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDContains applies the Contains predicate on the "owner_user_id" field.
-func OwnerUserIDContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDHasPrefix applies the HasPrefix predicate on the "owner_user_id" field.
-func OwnerUserIDHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDHasSuffix applies the HasSuffix predicate on the "owner_user_id" field.
-func OwnerUserIDHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDEqualFold applies the EqualFold predicate on the "owner_user_id" field.
-func OwnerUserIDEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDContainsFold applies the ContainsFold predicate on the "owner_user_id" field.
-func OwnerUserIDContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldOwnerUserID, v))
-}
-
-// UserIDEQ applies the EQ predicate on the "user_id" field.
-func UserIDEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldUserID, v))
-}
-
-// UserIDNEQ applies the NEQ predicate on the "user_id" field.
-func UserIDNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldUserID, v))
-}
-
-// UserIDIn applies the In predicate on the "user_id" field.
-func UserIDIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldUserID, vs...))
-}
-
-// UserIDNotIn applies the NotIn predicate on the "user_id" field.
-func UserIDNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldUserID, vs...))
-}
-
-// UserIDGT applies the GT predicate on the "user_id" field.
-func UserIDGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldUserID, v))
-}
-
-// UserIDGTE applies the GTE predicate on the "user_id" field.
-func UserIDGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldUserID, v))
-}
-
-// UserIDLT applies the LT predicate on the "user_id" field.
-func UserIDLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldUserID, v))
-}
-
-// UserIDLTE applies the LTE predicate on the "user_id" field.
-func UserIDLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldUserID, v))
-}
-
-// UserIDContains applies the Contains predicate on the "user_id" field.
-func UserIDContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldUserID, v))
-}
-
-// UserIDHasPrefix applies the HasPrefix predicate on the "user_id" field.
-func UserIDHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldUserID, v))
-}
-
-// UserIDHasSuffix applies the HasSuffix predicate on the "user_id" field.
-func UserIDHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldUserID, v))
-}
-
-// UserIDEqualFold applies the EqualFold predicate on the "user_id" field.
-func UserIDEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldUserID, v))
-}
-
-// UserIDContainsFold applies the ContainsFold predicate on the "user_id" field.
-func UserIDContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldUserID, v))
-}
-
-// EmailEQ applies the EQ predicate on the "email" field.
-func EmailEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldEmail, v))
-}
-
-// EmailNEQ applies the NEQ predicate on the "email" field.
-func EmailNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldEmail, v))
-}
-
-// EmailIn applies the In predicate on the "email" field.
-func EmailIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldEmail, vs...))
-}
-
-// EmailNotIn applies the NotIn predicate on the "email" field.
-func EmailNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldEmail, vs...))
-}
-
-// EmailGT applies the GT predicate on the "email" field.
-func EmailGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldEmail, v))
-}
-
-// EmailGTE applies the GTE predicate on the "email" field.
-func EmailGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldEmail, v))
-}
-
-// EmailLT applies the LT predicate on the "email" field.
-func EmailLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldEmail, v))
-}
-
-// EmailLTE applies the LTE predicate on the "email" field.
-func EmailLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldEmail, v))
-}
-
-// EmailContains applies the Contains predicate on the "email" field.
-func EmailContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldEmail, v))
-}
-
-// EmailHasPrefix applies the HasPrefix predicate on the "email" field.
-func EmailHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldEmail, v))
-}
-
-// EmailHasSuffix applies the HasSuffix predicate on the "email" field.
-func EmailHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldEmail, v))
-}
-
-// EmailEqualFold applies the EqualFold predicate on the "email" field.
-func EmailEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldEmail, v))
-}
-
-// EmailContainsFold applies the ContainsFold predicate on the "email" field.
-func EmailContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldEmail, v))
-}
-
-// RoleEQ applies the EQ predicate on the "role" field.
-func RoleEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldRole, v))
-}
-
-// RoleNEQ applies the NEQ predicate on the "role" field.
-func RoleNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldRole, v))
-}
-
-// RoleIn applies the In predicate on the "role" field.
-func RoleIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldRole, vs...))
-}
-
-// RoleNotIn applies the NotIn predicate on the "role" field.
-func RoleNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldRole, vs...))
-}
-
-// RoleGT applies the GT predicate on the "role" field.
-func RoleGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldRole, v))
-}
-
-// RoleGTE applies the GTE predicate on the "role" field.
-func RoleGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldRole, v))
-}
-
-// RoleLT applies the LT predicate on the "role" field.
-func RoleLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldRole, v))
-}
-
-// RoleLTE applies the LTE predicate on the "role" field.
-func RoleLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldRole, v))
-}
-
-// RoleContains applies the Contains predicate on the "role" field.
-func RoleContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldRole, v))
-}
-
-// RoleHasPrefix applies the HasPrefix predicate on the "role" field.
-func RoleHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldRole, v))
-}
-
-// RoleHasSuffix applies the HasSuffix predicate on the "role" field.
-func RoleHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldRole, v))
-}
-
-// RoleEqualFold applies the EqualFold predicate on the "role" field.
-func RoleEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldRole, v))
-}
-
-// RoleContainsFold applies the ContainsFold predicate on the "role" field.
-func RoleContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldRole, v))
-}
-
-// StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldStatus, v))
-}
-
-// StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldStatus, v))
-}
-
-// StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldStatus, vs...))
-}
-
-// StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldStatus, vs...))
-}
-
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldStatus, v))
-}
-
-// NameEQ applies the EQ predicate on the "name" field.
-func NameEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldName, v))
-}
-
-// NameNEQ applies the NEQ predicate on the "name" field.
-func NameNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldName, v))
-}
-
-// NameIn applies the In predicate on the "name" field.
-func NameIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldName, vs...))
-}
-
-// NameNotIn applies the NotIn predicate on the "name" field.
-func NameNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldName, vs...))
-}
-
-// NameGT applies the GT predicate on the "name" field.
-func NameGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldName, v))
-}
-
-// NameGTE applies the GTE predicate on the "name" field.
-func NameGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldName, v))
-}
-
-// NameLT applies the LT predicate on the "name" field.
-func NameLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldName, v))
-}
-
-// NameLTE applies the LTE predicate on the "name" field.
-func NameLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldName, v))
-}
-
-// NameContains applies the Contains predicate on the "name" field.
-func NameContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldName, v))
-}
-
-// NameHasPrefix applies the HasPrefix predicate on the "name" field.
-func NameHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldName, v))
-}
-
-// NameHasSuffix applies the HasSuffix predicate on the "name" field.
-func NameHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldName, v))
-}
-
-// NameEqualFold applies the EqualFold predicate on the "name" field.
-func NameEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldName, v))
-}
-
-// NameContainsFold applies the ContainsFold predicate on the "name" field.
-func NameContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldName, v))
-}
-
-// WorkspaceIDEQ applies the EQ predicate on the "workspace_id" field.
-func WorkspaceIDEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDNEQ applies the NEQ predicate on the "workspace_id" field.
-func WorkspaceIDNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDIn applies the In predicate on the "workspace_id" field.
-func WorkspaceIDIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldWorkspaceID, vs...))
-}
-
-// WorkspaceIDNotIn applies the NotIn predicate on the "workspace_id" field.
-func WorkspaceIDNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldWorkspaceID, vs...))
-}
-
-// WorkspaceIDGT applies the GT predicate on the "workspace_id" field.
-func WorkspaceIDGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDGTE applies the GTE predicate on the "workspace_id" field.
-func WorkspaceIDGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDLT applies the LT predicate on the "workspace_id" field.
-func WorkspaceIDLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDLTE applies the LTE predicate on the "workspace_id" field.
-func WorkspaceIDLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDContains applies the Contains predicate on the "workspace_id" field.
-func WorkspaceIDContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDHasPrefix applies the HasPrefix predicate on the "workspace_id" field.
-func WorkspaceIDHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDHasSuffix applies the HasSuffix predicate on the "workspace_id" field.
-func WorkspaceIDHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDEqualFold applies the EqualFold predicate on the "workspace_id" field.
-func WorkspaceIDEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldWorkspaceID, v))
-}
-
-// WorkspaceIDContainsFold applies the ContainsFold predicate on the "workspace_id" field.
-func WorkspaceIDContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldWorkspaceID, v))
+// TypeContainsFold applies the ContainsFold predicate on the "type" field.
+func TypeContainsFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContainsFold(FieldType, v))
 }
 
 // ResourceIDEQ applies the EQ predicate on the "resource_id" field.
@@ -954,524 +544,199 @@ func ResourceKindContainsFold(v string) predicate.LedgerProjection {
 	return predicate.LedgerProjection(sql.FieldContainsFold(FieldResourceKind, v))
 }
 
-// OperationIDEQ applies the EQ predicate on the "operation_id" field.
-func OperationIDEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldOperationID, v))
+// WorkspaceIDEQ applies the EQ predicate on the "workspace_id" field.
+func WorkspaceIDEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldWorkspaceID, v))
 }
 
-// OperationIDNEQ applies the NEQ predicate on the "operation_id" field.
-func OperationIDNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldOperationID, v))
+// WorkspaceIDNEQ applies the NEQ predicate on the "workspace_id" field.
+func WorkspaceIDNEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldWorkspaceID, v))
 }
 
-// OperationIDIn applies the In predicate on the "operation_id" field.
-func OperationIDIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldOperationID, vs...))
+// WorkspaceIDIn applies the In predicate on the "workspace_id" field.
+func WorkspaceIDIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldWorkspaceID, vs...))
 }
 
-// OperationIDNotIn applies the NotIn predicate on the "operation_id" field.
-func OperationIDNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldOperationID, vs...))
+// WorkspaceIDNotIn applies the NotIn predicate on the "workspace_id" field.
+func WorkspaceIDNotIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldWorkspaceID, vs...))
 }
 
-// OperationIDGT applies the GT predicate on the "operation_id" field.
-func OperationIDGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldOperationID, v))
+// WorkspaceIDGT applies the GT predicate on the "workspace_id" field.
+func WorkspaceIDGT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldWorkspaceID, v))
 }
 
-// OperationIDGTE applies the GTE predicate on the "operation_id" field.
-func OperationIDGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldOperationID, v))
+// WorkspaceIDGTE applies the GTE predicate on the "workspace_id" field.
+func WorkspaceIDGTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldWorkspaceID, v))
 }
 
-// OperationIDLT applies the LT predicate on the "operation_id" field.
-func OperationIDLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldOperationID, v))
+// WorkspaceIDLT applies the LT predicate on the "workspace_id" field.
+func WorkspaceIDLT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldWorkspaceID, v))
 }
 
-// OperationIDLTE applies the LTE predicate on the "operation_id" field.
-func OperationIDLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldOperationID, v))
+// WorkspaceIDLTE applies the LTE predicate on the "workspace_id" field.
+func WorkspaceIDLTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldWorkspaceID, v))
 }
 
-// OperationIDContains applies the Contains predicate on the "operation_id" field.
-func OperationIDContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldOperationID, v))
+// WorkspaceIDContains applies the Contains predicate on the "workspace_id" field.
+func WorkspaceIDContains(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContains(FieldWorkspaceID, v))
 }
 
-// OperationIDHasPrefix applies the HasPrefix predicate on the "operation_id" field.
-func OperationIDHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldOperationID, v))
+// WorkspaceIDHasPrefix applies the HasPrefix predicate on the "workspace_id" field.
+func WorkspaceIDHasPrefix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldWorkspaceID, v))
 }
 
-// OperationIDHasSuffix applies the HasSuffix predicate on the "operation_id" field.
-func OperationIDHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldOperationID, v))
+// WorkspaceIDHasSuffix applies the HasSuffix predicate on the "workspace_id" field.
+func WorkspaceIDHasSuffix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldWorkspaceID, v))
 }
 
-// OperationIDEqualFold applies the EqualFold predicate on the "operation_id" field.
-func OperationIDEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldOperationID, v))
+// WorkspaceIDEqualFold applies the EqualFold predicate on the "workspace_id" field.
+func WorkspaceIDEqualFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEqualFold(FieldWorkspaceID, v))
 }
 
-// OperationIDContainsFold applies the ContainsFold predicate on the "operation_id" field.
-func OperationIDContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldOperationID, v))
+// WorkspaceIDContainsFold applies the ContainsFold predicate on the "workspace_id" field.
+func WorkspaceIDContainsFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContainsFold(FieldWorkspaceID, v))
 }
 
-// ProviderEQ applies the EQ predicate on the "provider" field.
-func ProviderEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldProvider, v))
+// ComputeAllocationIDEQ applies the EQ predicate on the "compute_allocation_id" field.
+func ComputeAllocationIDEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldComputeAllocationID, v))
 }
 
-// ProviderNEQ applies the NEQ predicate on the "provider" field.
-func ProviderNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldProvider, v))
+// ComputeAllocationIDNEQ applies the NEQ predicate on the "compute_allocation_id" field.
+func ComputeAllocationIDNEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldComputeAllocationID, v))
 }
 
-// ProviderIn applies the In predicate on the "provider" field.
-func ProviderIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldProvider, vs...))
+// ComputeAllocationIDIn applies the In predicate on the "compute_allocation_id" field.
+func ComputeAllocationIDIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldComputeAllocationID, vs...))
 }
 
-// ProviderNotIn applies the NotIn predicate on the "provider" field.
-func ProviderNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldProvider, vs...))
+// ComputeAllocationIDNotIn applies the NotIn predicate on the "compute_allocation_id" field.
+func ComputeAllocationIDNotIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldComputeAllocationID, vs...))
 }
 
-// ProviderGT applies the GT predicate on the "provider" field.
-func ProviderGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldProvider, v))
+// ComputeAllocationIDGT applies the GT predicate on the "compute_allocation_id" field.
+func ComputeAllocationIDGT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldComputeAllocationID, v))
 }
 
-// ProviderGTE applies the GTE predicate on the "provider" field.
-func ProviderGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldProvider, v))
+// ComputeAllocationIDGTE applies the GTE predicate on the "compute_allocation_id" field.
+func ComputeAllocationIDGTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldComputeAllocationID, v))
 }
 
-// ProviderLT applies the LT predicate on the "provider" field.
-func ProviderLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldProvider, v))
+// ComputeAllocationIDLT applies the LT predicate on the "compute_allocation_id" field.
+func ComputeAllocationIDLT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldComputeAllocationID, v))
 }
 
-// ProviderLTE applies the LTE predicate on the "provider" field.
-func ProviderLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldProvider, v))
+// ComputeAllocationIDLTE applies the LTE predicate on the "compute_allocation_id" field.
+func ComputeAllocationIDLTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldComputeAllocationID, v))
 }
 
-// ProviderContains applies the Contains predicate on the "provider" field.
-func ProviderContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldProvider, v))
+// ComputeAllocationIDContains applies the Contains predicate on the "compute_allocation_id" field.
+func ComputeAllocationIDContains(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContains(FieldComputeAllocationID, v))
 }
 
-// ProviderHasPrefix applies the HasPrefix predicate on the "provider" field.
-func ProviderHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldProvider, v))
+// ComputeAllocationIDHasPrefix applies the HasPrefix predicate on the "compute_allocation_id" field.
+func ComputeAllocationIDHasPrefix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldComputeAllocationID, v))
 }
 
-// ProviderHasSuffix applies the HasSuffix predicate on the "provider" field.
-func ProviderHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldProvider, v))
+// ComputeAllocationIDHasSuffix applies the HasSuffix predicate on the "compute_allocation_id" field.
+func ComputeAllocationIDHasSuffix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldComputeAllocationID, v))
 }
 
-// ProviderEqualFold applies the EqualFold predicate on the "provider" field.
-func ProviderEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldProvider, v))
+// ComputeAllocationIDEqualFold applies the EqualFold predicate on the "compute_allocation_id" field.
+func ComputeAllocationIDEqualFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEqualFold(FieldComputeAllocationID, v))
 }
 
-// ProviderContainsFold applies the ContainsFold predicate on the "provider" field.
-func ProviderContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldProvider, v))
+// ComputeAllocationIDContainsFold applies the ContainsFold predicate on the "compute_allocation_id" field.
+func ComputeAllocationIDContainsFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContainsFold(FieldComputeAllocationID, v))
 }
 
-// ProviderResourceIDEQ applies the EQ predicate on the "provider_resource_id" field.
-func ProviderResourceIDEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldProviderResourceID, v))
+// StorageIDEQ applies the EQ predicate on the "storage_id" field.
+func StorageIDEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldStorageID, v))
 }
 
-// ProviderResourceIDNEQ applies the NEQ predicate on the "provider_resource_id" field.
-func ProviderResourceIDNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldProviderResourceID, v))
+// StorageIDNEQ applies the NEQ predicate on the "storage_id" field.
+func StorageIDNEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldStorageID, v))
 }
 
-// ProviderResourceIDIn applies the In predicate on the "provider_resource_id" field.
-func ProviderResourceIDIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldProviderResourceID, vs...))
+// StorageIDIn applies the In predicate on the "storage_id" field.
+func StorageIDIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldStorageID, vs...))
 }
 
-// ProviderResourceIDNotIn applies the NotIn predicate on the "provider_resource_id" field.
-func ProviderResourceIDNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldProviderResourceID, vs...))
+// StorageIDNotIn applies the NotIn predicate on the "storage_id" field.
+func StorageIDNotIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldStorageID, vs...))
 }
 
-// ProviderResourceIDGT applies the GT predicate on the "provider_resource_id" field.
-func ProviderResourceIDGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldProviderResourceID, v))
+// StorageIDGT applies the GT predicate on the "storage_id" field.
+func StorageIDGT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldStorageID, v))
 }
 
-// ProviderResourceIDGTE applies the GTE predicate on the "provider_resource_id" field.
-func ProviderResourceIDGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldProviderResourceID, v))
+// StorageIDGTE applies the GTE predicate on the "storage_id" field.
+func StorageIDGTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldStorageID, v))
 }
 
-// ProviderResourceIDLT applies the LT predicate on the "provider_resource_id" field.
-func ProviderResourceIDLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldProviderResourceID, v))
+// StorageIDLT applies the LT predicate on the "storage_id" field.
+func StorageIDLT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldStorageID, v))
 }
 
-// ProviderResourceIDLTE applies the LTE predicate on the "provider_resource_id" field.
-func ProviderResourceIDLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldProviderResourceID, v))
+// StorageIDLTE applies the LTE predicate on the "storage_id" field.
+func StorageIDLTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldStorageID, v))
 }
 
-// ProviderResourceIDContains applies the Contains predicate on the "provider_resource_id" field.
-func ProviderResourceIDContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldProviderResourceID, v))
+// StorageIDContains applies the Contains predicate on the "storage_id" field.
+func StorageIDContains(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContains(FieldStorageID, v))
 }
 
-// ProviderResourceIDHasPrefix applies the HasPrefix predicate on the "provider_resource_id" field.
-func ProviderResourceIDHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldProviderResourceID, v))
+// StorageIDHasPrefix applies the HasPrefix predicate on the "storage_id" field.
+func StorageIDHasPrefix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldStorageID, v))
 }
 
-// ProviderResourceIDHasSuffix applies the HasSuffix predicate on the "provider_resource_id" field.
-func ProviderResourceIDHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldProviderResourceID, v))
+// StorageIDHasSuffix applies the HasSuffix predicate on the "storage_id" field.
+func StorageIDHasSuffix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldStorageID, v))
 }
 
-// ProviderResourceIDEqualFold applies the EqualFold predicate on the "provider_resource_id" field.
-func ProviderResourceIDEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldProviderResourceID, v))
+// StorageIDEqualFold applies the EqualFold predicate on the "storage_id" field.
+func StorageIDEqualFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEqualFold(FieldStorageID, v))
 }
 
-// ProviderResourceIDContainsFold applies the ContainsFold predicate on the "provider_resource_id" field.
-func ProviderResourceIDContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldProviderResourceID, v))
-}
-
-// URLEQ applies the EQ predicate on the "url" field.
-func URLEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldURL, v))
-}
-
-// URLNEQ applies the NEQ predicate on the "url" field.
-func URLNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldURL, v))
-}
-
-// URLIn applies the In predicate on the "url" field.
-func URLIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldURL, vs...))
-}
-
-// URLNotIn applies the NotIn predicate on the "url" field.
-func URLNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldURL, vs...))
-}
-
-// URLGT applies the GT predicate on the "url" field.
-func URLGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldURL, v))
-}
-
-// URLGTE applies the GTE predicate on the "url" field.
-func URLGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldURL, v))
-}
-
-// URLLT applies the LT predicate on the "url" field.
-func URLLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldURL, v))
-}
-
-// URLLTE applies the LTE predicate on the "url" field.
-func URLLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldURL, v))
-}
-
-// URLContains applies the Contains predicate on the "url" field.
-func URLContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldURL, v))
-}
-
-// URLHasPrefix applies the HasPrefix predicate on the "url" field.
-func URLHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldURL, v))
-}
-
-// URLHasSuffix applies the HasSuffix predicate on the "url" field.
-func URLHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldURL, v))
-}
-
-// URLEqualFold applies the EqualFold predicate on the "url" field.
-func URLEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldURL, v))
-}
-
-// URLContainsFold applies the ContainsFold predicate on the "url" field.
-func URLContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldURL, v))
-}
-
-// HoldIDEQ applies the EQ predicate on the "hold_id" field.
-func HoldIDEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldHoldID, v))
-}
-
-// HoldIDNEQ applies the NEQ predicate on the "hold_id" field.
-func HoldIDNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldHoldID, v))
-}
-
-// HoldIDIn applies the In predicate on the "hold_id" field.
-func HoldIDIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldHoldID, vs...))
-}
-
-// HoldIDNotIn applies the NotIn predicate on the "hold_id" field.
-func HoldIDNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldHoldID, vs...))
-}
-
-// HoldIDGT applies the GT predicate on the "hold_id" field.
-func HoldIDGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldHoldID, v))
-}
-
-// HoldIDGTE applies the GTE predicate on the "hold_id" field.
-func HoldIDGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldHoldID, v))
-}
-
-// HoldIDLT applies the LT predicate on the "hold_id" field.
-func HoldIDLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldHoldID, v))
-}
-
-// HoldIDLTE applies the LTE predicate on the "hold_id" field.
-func HoldIDLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldHoldID, v))
-}
-
-// HoldIDContains applies the Contains predicate on the "hold_id" field.
-func HoldIDContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldHoldID, v))
-}
-
-// HoldIDHasPrefix applies the HasPrefix predicate on the "hold_id" field.
-func HoldIDHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldHoldID, v))
-}
-
-// HoldIDHasSuffix applies the HasSuffix predicate on the "hold_id" field.
-func HoldIDHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldHoldID, v))
-}
-
-// HoldIDEqualFold applies the EqualFold predicate on the "hold_id" field.
-func HoldIDEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldHoldID, v))
-}
-
-// HoldIDContainsFold applies the ContainsFold predicate on the "hold_id" field.
-func HoldIDContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldHoldID, v))
-}
-
-// HoldReleaseIDEQ applies the EQ predicate on the "hold_release_id" field.
-func HoldReleaseIDEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDNEQ applies the NEQ predicate on the "hold_release_id" field.
-func HoldReleaseIDNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDIn applies the In predicate on the "hold_release_id" field.
-func HoldReleaseIDIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldHoldReleaseID, vs...))
-}
-
-// HoldReleaseIDNotIn applies the NotIn predicate on the "hold_release_id" field.
-func HoldReleaseIDNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldHoldReleaseID, vs...))
-}
-
-// HoldReleaseIDGT applies the GT predicate on the "hold_release_id" field.
-func HoldReleaseIDGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDGTE applies the GTE predicate on the "hold_release_id" field.
-func HoldReleaseIDGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDLT applies the LT predicate on the "hold_release_id" field.
-func HoldReleaseIDLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDLTE applies the LTE predicate on the "hold_release_id" field.
-func HoldReleaseIDLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDContains applies the Contains predicate on the "hold_release_id" field.
-func HoldReleaseIDContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDHasPrefix applies the HasPrefix predicate on the "hold_release_id" field.
-func HoldReleaseIDHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDHasSuffix applies the HasSuffix predicate on the "hold_release_id" field.
-func HoldReleaseIDHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDEqualFold applies the EqualFold predicate on the "hold_release_id" field.
-func HoldReleaseIDEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDContainsFold applies the ContainsFold predicate on the "hold_release_id" field.
-func HoldReleaseIDContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldHoldReleaseID, v))
-}
-
-// LedgerEntryIDEQ applies the EQ predicate on the "ledger_entry_id" field.
-func LedgerEntryIDEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDNEQ applies the NEQ predicate on the "ledger_entry_id" field.
-func LedgerEntryIDNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDIn applies the In predicate on the "ledger_entry_id" field.
-func LedgerEntryIDIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldLedgerEntryID, vs...))
-}
-
-// LedgerEntryIDNotIn applies the NotIn predicate on the "ledger_entry_id" field.
-func LedgerEntryIDNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldLedgerEntryID, vs...))
-}
-
-// LedgerEntryIDGT applies the GT predicate on the "ledger_entry_id" field.
-func LedgerEntryIDGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDGTE applies the GTE predicate on the "ledger_entry_id" field.
-func LedgerEntryIDGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDLT applies the LT predicate on the "ledger_entry_id" field.
-func LedgerEntryIDLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDLTE applies the LTE predicate on the "ledger_entry_id" field.
-func LedgerEntryIDLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDContains applies the Contains predicate on the "ledger_entry_id" field.
-func LedgerEntryIDContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDHasPrefix applies the HasPrefix predicate on the "ledger_entry_id" field.
-func LedgerEntryIDHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDHasSuffix applies the HasSuffix predicate on the "ledger_entry_id" field.
-func LedgerEntryIDHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDEqualFold applies the EqualFold predicate on the "ledger_entry_id" field.
-func LedgerEntryIDEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDContainsFold applies the ContainsFold predicate on the "ledger_entry_id" field.
-func LedgerEntryIDContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldLedgerEntryID, v))
-}
-
-// WalletTransactionIDEQ applies the EQ predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDNEQ applies the NEQ predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDIn applies the In predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldWalletTransactionID, vs...))
-}
-
-// WalletTransactionIDNotIn applies the NotIn predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldWalletTransactionID, vs...))
-}
-
-// WalletTransactionIDGT applies the GT predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDGTE applies the GTE predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDLT applies the LT predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDLTE applies the LTE predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDContains applies the Contains predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDHasPrefix applies the HasPrefix predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDHasSuffix applies the HasSuffix predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDEqualFold applies the EqualFold predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDContainsFold applies the ContainsFold predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldWalletTransactionID, v))
+// StorageIDContainsFold applies the ContainsFold predicate on the "storage_id" field.
+func StorageIDContainsFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContainsFold(FieldStorageID, v))
 }
 
 // SettlementIDEQ applies the EQ predicate on the "settlement_id" field.
@@ -1604,244 +869,134 @@ func PricingVersionContainsFold(v string) predicate.LedgerProjection {
 	return predicate.LedgerProjection(sql.FieldContainsFold(FieldPricingVersion, v))
 }
 
-// AmountCentsEQ applies the EQ predicate on the "amount_cents" field.
-func AmountCentsEQ(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldAmountCents, v))
+// UsagePeriodStartEQ applies the EQ predicate on the "usage_period_start" field.
+func UsagePeriodStartEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldUsagePeriodStart, v))
 }
 
-// AmountCentsNEQ applies the NEQ predicate on the "amount_cents" field.
-func AmountCentsNEQ(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldAmountCents, v))
+// UsagePeriodStartNEQ applies the NEQ predicate on the "usage_period_start" field.
+func UsagePeriodStartNEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldUsagePeriodStart, v))
 }
 
-// AmountCentsIn applies the In predicate on the "amount_cents" field.
-func AmountCentsIn(vs ...int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldAmountCents, vs...))
+// UsagePeriodStartIn applies the In predicate on the "usage_period_start" field.
+func UsagePeriodStartIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldUsagePeriodStart, vs...))
 }
 
-// AmountCentsNotIn applies the NotIn predicate on the "amount_cents" field.
-func AmountCentsNotIn(vs ...int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldAmountCents, vs...))
+// UsagePeriodStartNotIn applies the NotIn predicate on the "usage_period_start" field.
+func UsagePeriodStartNotIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldUsagePeriodStart, vs...))
 }
 
-// AmountCentsGT applies the GT predicate on the "amount_cents" field.
-func AmountCentsGT(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldAmountCents, v))
+// UsagePeriodStartGT applies the GT predicate on the "usage_period_start" field.
+func UsagePeriodStartGT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldUsagePeriodStart, v))
 }
 
-// AmountCentsGTE applies the GTE predicate on the "amount_cents" field.
-func AmountCentsGTE(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldAmountCents, v))
+// UsagePeriodStartGTE applies the GTE predicate on the "usage_period_start" field.
+func UsagePeriodStartGTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldUsagePeriodStart, v))
 }
 
-// AmountCentsLT applies the LT predicate on the "amount_cents" field.
-func AmountCentsLT(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldAmountCents, v))
+// UsagePeriodStartLT applies the LT predicate on the "usage_period_start" field.
+func UsagePeriodStartLT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldUsagePeriodStart, v))
 }
 
-// AmountCentsLTE applies the LTE predicate on the "amount_cents" field.
-func AmountCentsLTE(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldAmountCents, v))
+// UsagePeriodStartLTE applies the LTE predicate on the "usage_period_start" field.
+func UsagePeriodStartLTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldUsagePeriodStart, v))
 }
 
-// BalanceCentsEQ applies the EQ predicate on the "balance_cents" field.
-func BalanceCentsEQ(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldBalanceCents, v))
+// UsagePeriodStartContains applies the Contains predicate on the "usage_period_start" field.
+func UsagePeriodStartContains(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContains(FieldUsagePeriodStart, v))
 }
 
-// BalanceCentsNEQ applies the NEQ predicate on the "balance_cents" field.
-func BalanceCentsNEQ(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldBalanceCents, v))
+// UsagePeriodStartHasPrefix applies the HasPrefix predicate on the "usage_period_start" field.
+func UsagePeriodStartHasPrefix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldUsagePeriodStart, v))
 }
 
-// BalanceCentsIn applies the In predicate on the "balance_cents" field.
-func BalanceCentsIn(vs ...int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldBalanceCents, vs...))
+// UsagePeriodStartHasSuffix applies the HasSuffix predicate on the "usage_period_start" field.
+func UsagePeriodStartHasSuffix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldUsagePeriodStart, v))
 }
 
-// BalanceCentsNotIn applies the NotIn predicate on the "balance_cents" field.
-func BalanceCentsNotIn(vs ...int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldBalanceCents, vs...))
+// UsagePeriodStartEqualFold applies the EqualFold predicate on the "usage_period_start" field.
+func UsagePeriodStartEqualFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEqualFold(FieldUsagePeriodStart, v))
 }
 
-// BalanceCentsGT applies the GT predicate on the "balance_cents" field.
-func BalanceCentsGT(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldBalanceCents, v))
+// UsagePeriodStartContainsFold applies the ContainsFold predicate on the "usage_period_start" field.
+func UsagePeriodStartContainsFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContainsFold(FieldUsagePeriodStart, v))
 }
 
-// BalanceCentsGTE applies the GTE predicate on the "balance_cents" field.
-func BalanceCentsGTE(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldBalanceCents, v))
+// UsagePeriodEndEQ applies the EQ predicate on the "usage_period_end" field.
+func UsagePeriodEndEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCentsLT applies the LT predicate on the "balance_cents" field.
-func BalanceCentsLT(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldBalanceCents, v))
+// UsagePeriodEndNEQ applies the NEQ predicate on the "usage_period_end" field.
+func UsagePeriodEndNEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCentsLTE applies the LTE predicate on the "balance_cents" field.
-func BalanceCentsLTE(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldBalanceCents, v))
+// UsagePeriodEndIn applies the In predicate on the "usage_period_end" field.
+func UsagePeriodEndIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldUsagePeriodEnd, vs...))
 }
 
-// FrozenCentsEQ applies the EQ predicate on the "frozen_cents" field.
-func FrozenCentsEQ(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldFrozenCents, v))
+// UsagePeriodEndNotIn applies the NotIn predicate on the "usage_period_end" field.
+func UsagePeriodEndNotIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldUsagePeriodEnd, vs...))
 }
 
-// FrozenCentsNEQ applies the NEQ predicate on the "frozen_cents" field.
-func FrozenCentsNEQ(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldFrozenCents, v))
+// UsagePeriodEndGT applies the GT predicate on the "usage_period_end" field.
+func UsagePeriodEndGT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldUsagePeriodEnd, v))
 }
 
-// FrozenCentsIn applies the In predicate on the "frozen_cents" field.
-func FrozenCentsIn(vs ...int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldFrozenCents, vs...))
+// UsagePeriodEndGTE applies the GTE predicate on the "usage_period_end" field.
+func UsagePeriodEndGTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldUsagePeriodEnd, v))
 }
 
-// FrozenCentsNotIn applies the NotIn predicate on the "frozen_cents" field.
-func FrozenCentsNotIn(vs ...int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldFrozenCents, vs...))
+// UsagePeriodEndLT applies the LT predicate on the "usage_period_end" field.
+func UsagePeriodEndLT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldUsagePeriodEnd, v))
 }
 
-// FrozenCentsGT applies the GT predicate on the "frozen_cents" field.
-func FrozenCentsGT(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldFrozenCents, v))
+// UsagePeriodEndLTE applies the LTE predicate on the "usage_period_end" field.
+func UsagePeriodEndLTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldUsagePeriodEnd, v))
 }
 
-// FrozenCentsGTE applies the GTE predicate on the "frozen_cents" field.
-func FrozenCentsGTE(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldFrozenCents, v))
+// UsagePeriodEndContains applies the Contains predicate on the "usage_period_end" field.
+func UsagePeriodEndContains(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContains(FieldUsagePeriodEnd, v))
 }
 
-// FrozenCentsLT applies the LT predicate on the "frozen_cents" field.
-func FrozenCentsLT(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldFrozenCents, v))
+// UsagePeriodEndHasPrefix applies the HasPrefix predicate on the "usage_period_end" field.
+func UsagePeriodEndHasPrefix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldUsagePeriodEnd, v))
 }
 
-// FrozenCentsLTE applies the LTE predicate on the "frozen_cents" field.
-func FrozenCentsLTE(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldFrozenCents, v))
+// UsagePeriodEndHasSuffix applies the HasSuffix predicate on the "usage_period_end" field.
+func UsagePeriodEndHasSuffix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldUsagePeriodEnd, v))
 }
 
-// AvailableCentsEQ applies the EQ predicate on the "available_cents" field.
-func AvailableCentsEQ(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldAvailableCents, v))
+// UsagePeriodEndEqualFold applies the EqualFold predicate on the "usage_period_end" field.
+func UsagePeriodEndEqualFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEqualFold(FieldUsagePeriodEnd, v))
 }
 
-// AvailableCentsNEQ applies the NEQ predicate on the "available_cents" field.
-func AvailableCentsNEQ(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldAvailableCents, v))
-}
-
-// AvailableCentsIn applies the In predicate on the "available_cents" field.
-func AvailableCentsIn(vs ...int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldAvailableCents, vs...))
-}
-
-// AvailableCentsNotIn applies the NotIn predicate on the "available_cents" field.
-func AvailableCentsNotIn(vs ...int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldAvailableCents, vs...))
-}
-
-// AvailableCentsGT applies the GT predicate on the "available_cents" field.
-func AvailableCentsGT(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldAvailableCents, v))
-}
-
-// AvailableCentsGTE applies the GTE predicate on the "available_cents" field.
-func AvailableCentsGTE(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldAvailableCents, v))
-}
-
-// AvailableCentsLT applies the LT predicate on the "available_cents" field.
-func AvailableCentsLT(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldAvailableCents, v))
-}
-
-// AvailableCentsLTE applies the LTE predicate on the "available_cents" field.
-func AvailableCentsLTE(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldAvailableCents, v))
-}
-
-// TotalSpentCentsEQ applies the EQ predicate on the "total_spent_cents" field.
-func TotalSpentCentsEQ(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldTotalSpentCents, v))
-}
-
-// TotalSpentCentsNEQ applies the NEQ predicate on the "total_spent_cents" field.
-func TotalSpentCentsNEQ(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldTotalSpentCents, v))
-}
-
-// TotalSpentCentsIn applies the In predicate on the "total_spent_cents" field.
-func TotalSpentCentsIn(vs ...int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldTotalSpentCents, vs...))
-}
-
-// TotalSpentCentsNotIn applies the NotIn predicate on the "total_spent_cents" field.
-func TotalSpentCentsNotIn(vs ...int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldTotalSpentCents, vs...))
-}
-
-// TotalSpentCentsGT applies the GT predicate on the "total_spent_cents" field.
-func TotalSpentCentsGT(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldTotalSpentCents, v))
-}
-
-// TotalSpentCentsGTE applies the GTE predicate on the "total_spent_cents" field.
-func TotalSpentCentsGTE(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldTotalSpentCents, v))
-}
-
-// TotalSpentCentsLT applies the LT predicate on the "total_spent_cents" field.
-func TotalSpentCentsLT(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldTotalSpentCents, v))
-}
-
-// TotalSpentCentsLTE applies the LTE predicate on the "total_spent_cents" field.
-func TotalSpentCentsLTE(v int64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldTotalSpentCents, v))
-}
-
-// QuantityEQ applies the EQ predicate on the "quantity" field.
-func QuantityEQ(v float64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldQuantity, v))
-}
-
-// QuantityNEQ applies the NEQ predicate on the "quantity" field.
-func QuantityNEQ(v float64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldQuantity, v))
-}
-
-// QuantityIn applies the In predicate on the "quantity" field.
-func QuantityIn(vs ...float64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldQuantity, vs...))
-}
-
-// QuantityNotIn applies the NotIn predicate on the "quantity" field.
-func QuantityNotIn(vs ...float64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldQuantity, vs...))
-}
-
-// QuantityGT applies the GT predicate on the "quantity" field.
-func QuantityGT(v float64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldQuantity, v))
-}
-
-// QuantityGTE applies the GTE predicate on the "quantity" field.
-func QuantityGTE(v float64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldQuantity, v))
-}
-
-// QuantityLT applies the LT predicate on the "quantity" field.
-func QuantityLT(v float64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldQuantity, v))
-}
-
-// QuantityLTE applies the LTE predicate on the "quantity" field.
-func QuantityLTE(v float64) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldQuantity, v))
+// UsagePeriodEndContainsFold applies the ContainsFold predicate on the "usage_period_end" field.
+func UsagePeriodEndContainsFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContainsFold(FieldUsagePeriodEnd, v))
 }
 
 // UnitEQ applies the EQ predicate on the "unit" field.
@@ -1909,199 +1064,214 @@ func UnitContainsFold(v string) predicate.LedgerProjection {
 	return predicate.LedgerProjection(sql.FieldContainsFold(FieldUnit, v))
 }
 
-// ReasonEQ applies the EQ predicate on the "reason" field.
-func ReasonEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldReason, v))
+// ProviderCostEvidenceRefEQ applies the EQ predicate on the "provider_cost_evidence_ref" field.
+func ProviderCostEvidenceRefEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldProviderCostEvidenceRef, v))
 }
 
-// ReasonNEQ applies the NEQ predicate on the "reason" field.
-func ReasonNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldReason, v))
+// ProviderCostEvidenceRefNEQ applies the NEQ predicate on the "provider_cost_evidence_ref" field.
+func ProviderCostEvidenceRefNEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldProviderCostEvidenceRef, v))
 }
 
-// ReasonIn applies the In predicate on the "reason" field.
-func ReasonIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldReason, vs...))
+// ProviderCostEvidenceRefIn applies the In predicate on the "provider_cost_evidence_ref" field.
+func ProviderCostEvidenceRefIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldProviderCostEvidenceRef, vs...))
 }
 
-// ReasonNotIn applies the NotIn predicate on the "reason" field.
-func ReasonNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldReason, vs...))
+// ProviderCostEvidenceRefNotIn applies the NotIn predicate on the "provider_cost_evidence_ref" field.
+func ProviderCostEvidenceRefNotIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldProviderCostEvidenceRef, vs...))
 }
 
-// ReasonGT applies the GT predicate on the "reason" field.
-func ReasonGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldReason, v))
+// ProviderCostEvidenceRefGT applies the GT predicate on the "provider_cost_evidence_ref" field.
+func ProviderCostEvidenceRefGT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldProviderCostEvidenceRef, v))
 }
 
-// ReasonGTE applies the GTE predicate on the "reason" field.
-func ReasonGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldReason, v))
+// ProviderCostEvidenceRefGTE applies the GTE predicate on the "provider_cost_evidence_ref" field.
+func ProviderCostEvidenceRefGTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldProviderCostEvidenceRef, v))
 }
 
-// ReasonLT applies the LT predicate on the "reason" field.
-func ReasonLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldReason, v))
+// ProviderCostEvidenceRefLT applies the LT predicate on the "provider_cost_evidence_ref" field.
+func ProviderCostEvidenceRefLT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldProviderCostEvidenceRef, v))
 }
 
-// ReasonLTE applies the LTE predicate on the "reason" field.
-func ReasonLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldReason, v))
+// ProviderCostEvidenceRefLTE applies the LTE predicate on the "provider_cost_evidence_ref" field.
+func ProviderCostEvidenceRefLTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldProviderCostEvidenceRef, v))
 }
 
-// ReasonContains applies the Contains predicate on the "reason" field.
-func ReasonContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldReason, v))
+// ProviderCostEvidenceRefContains applies the Contains predicate on the "provider_cost_evidence_ref" field.
+func ProviderCostEvidenceRefContains(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContains(FieldProviderCostEvidenceRef, v))
 }
 
-// ReasonHasPrefix applies the HasPrefix predicate on the "reason" field.
-func ReasonHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldReason, v))
+// ProviderCostEvidenceRefHasPrefix applies the HasPrefix predicate on the "provider_cost_evidence_ref" field.
+func ProviderCostEvidenceRefHasPrefix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldProviderCostEvidenceRef, v))
 }
 
-// ReasonHasSuffix applies the HasSuffix predicate on the "reason" field.
-func ReasonHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldReason, v))
+// ProviderCostEvidenceRefHasSuffix applies the HasSuffix predicate on the "provider_cost_evidence_ref" field.
+func ProviderCostEvidenceRefHasSuffix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldProviderCostEvidenceRef, v))
 }
 
-// ReasonEqualFold applies the EqualFold predicate on the "reason" field.
-func ReasonEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldReason, v))
+// ProviderCostEvidenceRefEqualFold applies the EqualFold predicate on the "provider_cost_evidence_ref" field.
+func ProviderCostEvidenceRefEqualFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEqualFold(FieldProviderCostEvidenceRef, v))
 }
 
-// ReasonContainsFold applies the ContainsFold predicate on the "reason" field.
-func ReasonContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldReason, v))
+// ProviderCostEvidenceRefContainsFold applies the ContainsFold predicate on the "provider_cost_evidence_ref" field.
+func ProviderCostEvidenceRefContainsFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContainsFold(FieldProviderCostEvidenceRef, v))
 }
 
-// ResultEQ applies the EQ predicate on the "result" field.
-func ResultEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldResult, v))
+// CurrencyEQ applies the EQ predicate on the "currency" field.
+func CurrencyEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldCurrency, v))
 }
 
-// ResultNEQ applies the NEQ predicate on the "result" field.
-func ResultNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldResult, v))
+// CurrencyNEQ applies the NEQ predicate on the "currency" field.
+func CurrencyNEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldCurrency, v))
 }
 
-// ResultIn applies the In predicate on the "result" field.
-func ResultIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldResult, vs...))
+// CurrencyIn applies the In predicate on the "currency" field.
+func CurrencyIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldCurrency, vs...))
 }
 
-// ResultNotIn applies the NotIn predicate on the "result" field.
-func ResultNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldResult, vs...))
+// CurrencyNotIn applies the NotIn predicate on the "currency" field.
+func CurrencyNotIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldCurrency, vs...))
 }
 
-// ResultGT applies the GT predicate on the "result" field.
-func ResultGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldResult, v))
+// CurrencyGT applies the GT predicate on the "currency" field.
+func CurrencyGT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldCurrency, v))
 }
 
-// ResultGTE applies the GTE predicate on the "result" field.
-func ResultGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldResult, v))
+// CurrencyGTE applies the GTE predicate on the "currency" field.
+func CurrencyGTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldCurrency, v))
 }
 
-// ResultLT applies the LT predicate on the "result" field.
-func ResultLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldResult, v))
+// CurrencyLT applies the LT predicate on the "currency" field.
+func CurrencyLT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldCurrency, v))
 }
 
-// ResultLTE applies the LTE predicate on the "result" field.
-func ResultLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldResult, v))
+// CurrencyLTE applies the LTE predicate on the "currency" field.
+func CurrencyLTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldCurrency, v))
 }
 
-// ResultContains applies the Contains predicate on the "result" field.
-func ResultContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldResult, v))
+// CurrencyContains applies the Contains predicate on the "currency" field.
+func CurrencyContains(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContains(FieldCurrency, v))
 }
 
-// ResultHasPrefix applies the HasPrefix predicate on the "result" field.
-func ResultHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldResult, v))
+// CurrencyHasPrefix applies the HasPrefix predicate on the "currency" field.
+func CurrencyHasPrefix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldCurrency, v))
 }
 
-// ResultHasSuffix applies the HasSuffix predicate on the "result" field.
-func ResultHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldResult, v))
+// CurrencyHasSuffix applies the HasSuffix predicate on the "currency" field.
+func CurrencyHasSuffix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldCurrency, v))
 }
 
-// ResultEqualFold applies the EqualFold predicate on the "result" field.
-func ResultEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldResult, v))
+// CurrencyEqualFold applies the EqualFold predicate on the "currency" field.
+func CurrencyEqualFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEqualFold(FieldCurrency, v))
 }
 
-// ResultContainsFold applies the ContainsFold predicate on the "result" field.
-func ResultContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldResult, v))
+// CurrencyContainsFold applies the ContainsFold predicate on the "currency" field.
+func CurrencyContainsFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContainsFold(FieldCurrency, v))
 }
 
-// SourceEQ applies the EQ predicate on the "source" field.
-func SourceEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldSource, v))
+// AmountCentsEQ applies the EQ predicate on the "amount_cents" field.
+func AmountCentsEQ(v int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldAmountCents, v))
 }
 
-// SourceNEQ applies the NEQ predicate on the "source" field.
-func SourceNEQ(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldSource, v))
+// AmountCentsNEQ applies the NEQ predicate on the "amount_cents" field.
+func AmountCentsNEQ(v int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldAmountCents, v))
 }
 
-// SourceIn applies the In predicate on the "source" field.
-func SourceIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldSource, vs...))
+// AmountCentsIn applies the In predicate on the "amount_cents" field.
+func AmountCentsIn(vs ...int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldAmountCents, vs...))
 }
 
-// SourceNotIn applies the NotIn predicate on the "source" field.
-func SourceNotIn(vs ...string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldSource, vs...))
+// AmountCentsNotIn applies the NotIn predicate on the "amount_cents" field.
+func AmountCentsNotIn(vs ...int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldAmountCents, vs...))
 }
 
-// SourceGT applies the GT predicate on the "source" field.
-func SourceGT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldSource, v))
+// AmountCentsGT applies the GT predicate on the "amount_cents" field.
+func AmountCentsGT(v int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldAmountCents, v))
 }
 
-// SourceGTE applies the GTE predicate on the "source" field.
-func SourceGTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldSource, v))
+// AmountCentsGTE applies the GTE predicate on the "amount_cents" field.
+func AmountCentsGTE(v int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldAmountCents, v))
 }
 
-// SourceLT applies the LT predicate on the "source" field.
-func SourceLT(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldSource, v))
+// AmountCentsLT applies the LT predicate on the "amount_cents" field.
+func AmountCentsLT(v int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldAmountCents, v))
 }
 
-// SourceLTE applies the LTE predicate on the "source" field.
-func SourceLTE(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldSource, v))
+// AmountCentsLTE applies the LTE predicate on the "amount_cents" field.
+func AmountCentsLTE(v int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldAmountCents, v))
 }
 
-// SourceContains applies the Contains predicate on the "source" field.
-func SourceContains(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContains(FieldSource, v))
+// QuantityEQ applies the EQ predicate on the "quantity" field.
+func QuantityEQ(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldQuantity, v))
 }
 
-// SourceHasPrefix applies the HasPrefix predicate on the "source" field.
-func SourceHasPrefix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldSource, v))
+// QuantityNEQ applies the NEQ predicate on the "quantity" field.
+func QuantityNEQ(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldQuantity, v))
 }
 
-// SourceHasSuffix applies the HasSuffix predicate on the "source" field.
-func SourceHasSuffix(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldSource, v))
+// QuantityIn applies the In predicate on the "quantity" field.
+func QuantityIn(vs ...float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldQuantity, vs...))
 }
 
-// SourceEqualFold applies the EqualFold predicate on the "source" field.
-func SourceEqualFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEqualFold(FieldSource, v))
+// QuantityNotIn applies the NotIn predicate on the "quantity" field.
+func QuantityNotIn(vs ...float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldQuantity, vs...))
 }
 
-// SourceContainsFold applies the ContainsFold predicate on the "source" field.
-func SourceContainsFold(v string) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldContainsFold(FieldSource, v))
+// QuantityGT applies the GT predicate on the "quantity" field.
+func QuantityGT(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldQuantity, v))
+}
+
+// QuantityGTE applies the GTE predicate on the "quantity" field.
+func QuantityGTE(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldQuantity, v))
+}
+
+// QuantityLT applies the LT predicate on the "quantity" field.
+func QuantityLT(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldQuantity, v))
+}
+
+// QuantityLTE applies the LTE predicate on the "quantity" field.
+func QuantityLTE(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldQuantity, v))
 }
 
 // DirectionEQ applies the EQ predicate on the "direction" field.
@@ -2169,134 +1339,489 @@ func DirectionContainsFold(v string) predicate.LedgerProjection {
 	return predicate.LedgerProjection(sql.FieldContainsFold(FieldDirection, v))
 }
 
-// CreatedAtEQ applies the EQ predicate on the "created_at" field.
-func CreatedAtEQ(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldCreatedAt, v))
+// PriceSnapshotPackageIDEQ applies the EQ predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotPackageID, v))
 }
 
-// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
-func CreatedAtNEQ(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldCreatedAt, v))
+// PriceSnapshotPackageIDNEQ applies the NEQ predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDNEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldPriceSnapshotPackageID, v))
 }
 
-// CreatedAtIn applies the In predicate on the "created_at" field.
-func CreatedAtIn(vs ...time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldCreatedAt, vs...))
+// PriceSnapshotPackageIDIn applies the In predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldPriceSnapshotPackageID, vs...))
 }
 
-// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
-func CreatedAtNotIn(vs ...time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldCreatedAt, vs...))
+// PriceSnapshotPackageIDNotIn applies the NotIn predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDNotIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldPriceSnapshotPackageID, vs...))
 }
 
-// CreatedAtGT applies the GT predicate on the "created_at" field.
-func CreatedAtGT(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldCreatedAt, v))
+// PriceSnapshotPackageIDGT applies the GT predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDGT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldPriceSnapshotPackageID, v))
 }
 
-// CreatedAtGTE applies the GTE predicate on the "created_at" field.
-func CreatedAtGTE(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldCreatedAt, v))
+// PriceSnapshotPackageIDGTE applies the GTE predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDGTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldPriceSnapshotPackageID, v))
 }
 
-// CreatedAtLT applies the LT predicate on the "created_at" field.
-func CreatedAtLT(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldCreatedAt, v))
+// PriceSnapshotPackageIDLT applies the LT predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDLT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldPriceSnapshotPackageID, v))
 }
 
-// CreatedAtLTE applies the LTE predicate on the "created_at" field.
-func CreatedAtLTE(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldCreatedAt, v))
+// PriceSnapshotPackageIDLTE applies the LTE predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDLTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldPriceSnapshotPackageID, v))
 }
 
-// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
-func UpdatedAtEQ(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldUpdatedAt, v))
+// PriceSnapshotPackageIDContains applies the Contains predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDContains(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContains(FieldPriceSnapshotPackageID, v))
 }
 
-// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
-func UpdatedAtNEQ(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldUpdatedAt, v))
+// PriceSnapshotPackageIDHasPrefix applies the HasPrefix predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDHasPrefix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldPriceSnapshotPackageID, v))
 }
 
-// UpdatedAtIn applies the In predicate on the "updated_at" field.
-func UpdatedAtIn(vs ...time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldUpdatedAt, vs...))
+// PriceSnapshotPackageIDHasSuffix applies the HasSuffix predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDHasSuffix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldPriceSnapshotPackageID, v))
 }
 
-// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
-func UpdatedAtNotIn(vs ...time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldUpdatedAt, vs...))
+// PriceSnapshotPackageIDEqualFold applies the EqualFold predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDEqualFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEqualFold(FieldPriceSnapshotPackageID, v))
 }
 
-// UpdatedAtGT applies the GT predicate on the "updated_at" field.
-func UpdatedAtGT(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldUpdatedAt, v))
+// PriceSnapshotPackageIDContainsFold applies the ContainsFold predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDContainsFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContainsFold(FieldPriceSnapshotPackageID, v))
 }
 
-// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
-func UpdatedAtGTE(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldUpdatedAt, v))
+// PriceSnapshotResourceTypeEQ applies the EQ predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotResourceType, v))
 }
 
-// UpdatedAtLT applies the LT predicate on the "updated_at" field.
-func UpdatedAtLT(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldUpdatedAt, v))
+// PriceSnapshotResourceTypeNEQ applies the NEQ predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeNEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldPriceSnapshotResourceType, v))
 }
 
-// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
-func UpdatedAtLTE(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldUpdatedAt, v))
+// PriceSnapshotResourceTypeIn applies the In predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldPriceSnapshotResourceType, vs...))
 }
 
-// ArchivedAtEQ applies the EQ predicate on the "archived_at" field.
-func ArchivedAtEQ(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldEQ(FieldArchivedAt, v))
+// PriceSnapshotResourceTypeNotIn applies the NotIn predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeNotIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldPriceSnapshotResourceType, vs...))
 }
 
-// ArchivedAtNEQ applies the NEQ predicate on the "archived_at" field.
-func ArchivedAtNEQ(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNEQ(FieldArchivedAt, v))
+// PriceSnapshotResourceTypeGT applies the GT predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeGT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldPriceSnapshotResourceType, v))
 }
 
-// ArchivedAtIn applies the In predicate on the "archived_at" field.
-func ArchivedAtIn(vs ...time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIn(FieldArchivedAt, vs...))
+// PriceSnapshotResourceTypeGTE applies the GTE predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeGTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldPriceSnapshotResourceType, v))
 }
 
-// ArchivedAtNotIn applies the NotIn predicate on the "archived_at" field.
-func ArchivedAtNotIn(vs ...time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotIn(FieldArchivedAt, vs...))
+// PriceSnapshotResourceTypeLT applies the LT predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeLT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldPriceSnapshotResourceType, v))
 }
 
-// ArchivedAtGT applies the GT predicate on the "archived_at" field.
-func ArchivedAtGT(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGT(FieldArchivedAt, v))
+// PriceSnapshotResourceTypeLTE applies the LTE predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeLTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldPriceSnapshotResourceType, v))
 }
 
-// ArchivedAtGTE applies the GTE predicate on the "archived_at" field.
-func ArchivedAtGTE(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldGTE(FieldArchivedAt, v))
+// PriceSnapshotResourceTypeContains applies the Contains predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeContains(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContains(FieldPriceSnapshotResourceType, v))
 }
 
-// ArchivedAtLT applies the LT predicate on the "archived_at" field.
-func ArchivedAtLT(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLT(FieldArchivedAt, v))
+// PriceSnapshotResourceTypeHasPrefix applies the HasPrefix predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeHasPrefix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldPriceSnapshotResourceType, v))
 }
 
-// ArchivedAtLTE applies the LTE predicate on the "archived_at" field.
-func ArchivedAtLTE(v time.Time) predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldLTE(FieldArchivedAt, v))
+// PriceSnapshotResourceTypeHasSuffix applies the HasSuffix predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeHasSuffix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldPriceSnapshotResourceType, v))
 }
 
-// ArchivedAtIsNil applies the IsNil predicate on the "archived_at" field.
-func ArchivedAtIsNil() predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldIsNull(FieldArchivedAt))
+// PriceSnapshotResourceTypeEqualFold applies the EqualFold predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeEqualFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEqualFold(FieldPriceSnapshotResourceType, v))
 }
 
-// ArchivedAtNotNil applies the NotNil predicate on the "archived_at" field.
-func ArchivedAtNotNil() predicate.LedgerProjection {
-	return predicate.LedgerProjection(sql.FieldNotNull(FieldArchivedAt))
+// PriceSnapshotResourceTypeContainsFold applies the ContainsFold predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeContainsFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContainsFold(FieldPriceSnapshotResourceType, v))
+}
+
+// PriceSnapshotCurrencyEQ applies the EQ predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyNEQ applies the NEQ predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyNEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyIn applies the In predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldPriceSnapshotCurrency, vs...))
+}
+
+// PriceSnapshotCurrencyNotIn applies the NotIn predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyNotIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldPriceSnapshotCurrency, vs...))
+}
+
+// PriceSnapshotCurrencyGT applies the GT predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyGT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyGTE applies the GTE predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyGTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyLT applies the LT predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyLT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyLTE applies the LTE predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyLTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyContains applies the Contains predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyContains(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContains(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyHasPrefix applies the HasPrefix predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyHasPrefix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyHasSuffix applies the HasSuffix predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyHasSuffix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyEqualFold applies the EqualFold predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyEqualFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEqualFold(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyContainsFold applies the ContainsFold predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyContainsFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContainsFold(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotSourceEQ applies the EQ predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceNEQ applies the NEQ predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceNEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceIn applies the In predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldPriceSnapshotSource, vs...))
+}
+
+// PriceSnapshotSourceNotIn applies the NotIn predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceNotIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldPriceSnapshotSource, vs...))
+}
+
+// PriceSnapshotSourceGT applies the GT predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceGT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceGTE applies the GTE predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceGTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceLT applies the LT predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceLT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceLTE applies the LTE predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceLTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceContains applies the Contains predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceContains(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContains(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceHasPrefix applies the HasPrefix predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceHasPrefix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceHasSuffix applies the HasSuffix predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceHasSuffix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceEqualFold applies the EqualFold predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceEqualFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEqualFold(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceContainsFold applies the ContainsFold predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceContainsFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContainsFold(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSkuEQ applies the EQ predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuNEQ applies the NEQ predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuNEQ(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuIn applies the In predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldPriceSnapshotSku, vs...))
+}
+
+// PriceSnapshotSkuNotIn applies the NotIn predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuNotIn(vs ...string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldPriceSnapshotSku, vs...))
+}
+
+// PriceSnapshotSkuGT applies the GT predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuGT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuGTE applies the GTE predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuGTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuLT applies the LT predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuLT(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuLTE applies the LTE predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuLTE(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuContains applies the Contains predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuContains(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContains(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuHasPrefix applies the HasPrefix predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuHasPrefix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasPrefix(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuHasSuffix applies the HasSuffix predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuHasSuffix(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldHasSuffix(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuEqualFold applies the EqualFold predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuEqualFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEqualFold(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuContainsFold applies the ContainsFold predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuContainsFold(v string) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldContainsFold(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotUnitPriceCentsEQ applies the EQ predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsEQ(v int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotUnitPriceCents, v))
+}
+
+// PriceSnapshotUnitPriceCentsNEQ applies the NEQ predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsNEQ(v int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldPriceSnapshotUnitPriceCents, v))
+}
+
+// PriceSnapshotUnitPriceCentsIn applies the In predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsIn(vs ...int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldPriceSnapshotUnitPriceCents, vs...))
+}
+
+// PriceSnapshotUnitPriceCentsNotIn applies the NotIn predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsNotIn(vs ...int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldPriceSnapshotUnitPriceCents, vs...))
+}
+
+// PriceSnapshotUnitPriceCentsGT applies the GT predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsGT(v int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldPriceSnapshotUnitPriceCents, v))
+}
+
+// PriceSnapshotUnitPriceCentsGTE applies the GTE predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsGTE(v int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldPriceSnapshotUnitPriceCents, v))
+}
+
+// PriceSnapshotUnitPriceCentsLT applies the LT predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsLT(v int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldPriceSnapshotUnitPriceCents, v))
+}
+
+// PriceSnapshotUnitPriceCentsLTE applies the LTE predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsLTE(v int64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldPriceSnapshotUnitPriceCents, v))
+}
+
+// PriceSnapshotComputeHourlyEQ applies the EQ predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyEQ(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotComputeHourly, v))
+}
+
+// PriceSnapshotComputeHourlyNEQ applies the NEQ predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyNEQ(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldPriceSnapshotComputeHourly, v))
+}
+
+// PriceSnapshotComputeHourlyIn applies the In predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyIn(vs ...float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldPriceSnapshotComputeHourly, vs...))
+}
+
+// PriceSnapshotComputeHourlyNotIn applies the NotIn predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyNotIn(vs ...float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldPriceSnapshotComputeHourly, vs...))
+}
+
+// PriceSnapshotComputeHourlyGT applies the GT predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyGT(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldPriceSnapshotComputeHourly, v))
+}
+
+// PriceSnapshotComputeHourlyGTE applies the GTE predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyGTE(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldPriceSnapshotComputeHourly, v))
+}
+
+// PriceSnapshotComputeHourlyLT applies the LT predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyLT(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldPriceSnapshotComputeHourly, v))
+}
+
+// PriceSnapshotComputeHourlyLTE applies the LTE predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyLTE(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldPriceSnapshotComputeHourly, v))
+}
+
+// PriceSnapshotStorageGBMonthEQ applies the EQ predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthEQ(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotStorageGBMonth, v))
+}
+
+// PriceSnapshotStorageGBMonthNEQ applies the NEQ predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthNEQ(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldPriceSnapshotStorageGBMonth, v))
+}
+
+// PriceSnapshotStorageGBMonthIn applies the In predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthIn(vs ...float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldPriceSnapshotStorageGBMonth, vs...))
+}
+
+// PriceSnapshotStorageGBMonthNotIn applies the NotIn predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthNotIn(vs ...float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldPriceSnapshotStorageGBMonth, vs...))
+}
+
+// PriceSnapshotStorageGBMonthGT applies the GT predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthGT(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldPriceSnapshotStorageGBMonth, v))
+}
+
+// PriceSnapshotStorageGBMonthGTE applies the GTE predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthGTE(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldPriceSnapshotStorageGBMonth, v))
+}
+
+// PriceSnapshotStorageGBMonthLT applies the LT predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthLT(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldPriceSnapshotStorageGBMonth, v))
+}
+
+// PriceSnapshotStorageGBMonthLTE applies the LTE predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthLTE(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldPriceSnapshotStorageGBMonth, v))
+}
+
+// PriceSnapshotSizeGBEQ applies the EQ predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBEQ(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldEQ(FieldPriceSnapshotSizeGB, v))
+}
+
+// PriceSnapshotSizeGBNEQ applies the NEQ predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBNEQ(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNEQ(FieldPriceSnapshotSizeGB, v))
+}
+
+// PriceSnapshotSizeGBIn applies the In predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBIn(vs ...float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldIn(FieldPriceSnapshotSizeGB, vs...))
+}
+
+// PriceSnapshotSizeGBNotIn applies the NotIn predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBNotIn(vs ...float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldNotIn(FieldPriceSnapshotSizeGB, vs...))
+}
+
+// PriceSnapshotSizeGBGT applies the GT predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBGT(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGT(FieldPriceSnapshotSizeGB, v))
+}
+
+// PriceSnapshotSizeGBGTE applies the GTE predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBGTE(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldGTE(FieldPriceSnapshotSizeGB, v))
+}
+
+// PriceSnapshotSizeGBLT applies the LT predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBLT(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLT(FieldPriceSnapshotSizeGB, v))
+}
+
+// PriceSnapshotSizeGBLTE applies the LTE predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBLTE(v float64) predicate.LedgerProjection {
+	return predicate.LedgerProjection(sql.FieldLTE(FieldPriceSnapshotSizeGB, v))
 }
 
 // And groups predicates with the AND operator between them.

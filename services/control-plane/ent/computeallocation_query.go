@@ -261,12 +261,12 @@ func (caq *ComputeAllocationQuery) Clone() *ComputeAllocationQuery {
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.ComputeAllocation.Query().
-//		GroupBy(computeallocation.FieldAccountID).
+//		GroupBy(computeallocation.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (caq *ComputeAllocationQuery) GroupBy(field string, fields ...string) *ComputeAllocationGroupBy {
@@ -284,11 +284,11 @@ func (caq *ComputeAllocationQuery) GroupBy(field string, fields ...string) *Comp
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.ComputeAllocation.Query().
-//		Select(computeallocation.FieldAccountID).
+//		Select(computeallocation.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (caq *ComputeAllocationQuery) Select(fields ...string) *ComputeAllocationSelect {
 	caq.ctx.Fields = append(caq.ctx.Fields, fields...)

@@ -261,12 +261,12 @@ func (aaq *AuthAttemptQuery) Clone() *AuthAttemptQuery {
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.AuthAttempt.Query().
-//		GroupBy(authattempt.FieldAccountID).
+//		GroupBy(authattempt.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (aaq *AuthAttemptQuery) GroupBy(field string, fields ...string) *AuthAttemptGroupBy {
@@ -284,11 +284,11 @@ func (aaq *AuthAttemptQuery) GroupBy(field string, fields ...string) *AuthAttemp
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.AuthAttempt.Query().
-//		Select(authattempt.FieldAccountID).
+//		Select(authattempt.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (aaq *AuthAttemptQuery) Select(fields ...string) *AuthAttemptSelect {
 	aaq.ctx.Fields = append(aaq.ctx.Fields, fields...)

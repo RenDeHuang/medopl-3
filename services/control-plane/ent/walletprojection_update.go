@@ -28,6 +28,26 @@ func (wpu *WalletProjectionUpdate) Where(ps ...predicate.WalletProjection) *Wall
 	return wpu
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (wpu *WalletProjectionUpdate) SetCreatedAt(t time.Time) *WalletProjectionUpdate {
+	wpu.mutation.SetCreatedAt(t)
+	return wpu
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (wpu *WalletProjectionUpdate) SetNillableCreatedAt(t *time.Time) *WalletProjectionUpdate {
+	if t != nil {
+		wpu.SetCreatedAt(*t)
+	}
+	return wpu
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (wpu *WalletProjectionUpdate) SetUpdatedAt(t time.Time) *WalletProjectionUpdate {
+	wpu.mutation.SetUpdatedAt(t)
+	return wpu
+}
+
 // SetAccountID sets the "account_id" field.
 func (wpu *WalletProjectionUpdate) SetAccountID(s string) *WalletProjectionUpdate {
 	wpu.mutation.SetAccountID(s)
@@ -42,304 +62,17 @@ func (wpu *WalletProjectionUpdate) SetNillableAccountID(s *string) *WalletProjec
 	return wpu
 }
 
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (wpu *WalletProjectionUpdate) SetOwnerAccountID(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetOwnerAccountID(s)
+// SetCurrency sets the "currency" field.
+func (wpu *WalletProjectionUpdate) SetCurrency(s string) *WalletProjectionUpdate {
+	wpu.mutation.SetCurrency(s)
 	return wpu
 }
 
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableOwnerAccountID(s *string) *WalletProjectionUpdate {
+// SetNillableCurrency sets the "currency" field if the given value is not nil.
+func (wpu *WalletProjectionUpdate) SetNillableCurrency(s *string) *WalletProjectionUpdate {
 	if s != nil {
-		wpu.SetOwnerAccountID(*s)
+		wpu.SetCurrency(*s)
 	}
-	return wpu
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (wpu *WalletProjectionUpdate) SetOwnerUserID(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetOwnerUserID(s)
-	return wpu
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableOwnerUserID(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetOwnerUserID(*s)
-	}
-	return wpu
-}
-
-// SetUserID sets the "user_id" field.
-func (wpu *WalletProjectionUpdate) SetUserID(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetUserID(s)
-	return wpu
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableUserID(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetUserID(*s)
-	}
-	return wpu
-}
-
-// SetEmail sets the "email" field.
-func (wpu *WalletProjectionUpdate) SetEmail(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetEmail(s)
-	return wpu
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableEmail(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetEmail(*s)
-	}
-	return wpu
-}
-
-// SetRole sets the "role" field.
-func (wpu *WalletProjectionUpdate) SetRole(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetRole(s)
-	return wpu
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableRole(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetRole(*s)
-	}
-	return wpu
-}
-
-// SetStatus sets the "status" field.
-func (wpu *WalletProjectionUpdate) SetStatus(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetStatus(s)
-	return wpu
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableStatus(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetStatus(*s)
-	}
-	return wpu
-}
-
-// SetName sets the "name" field.
-func (wpu *WalletProjectionUpdate) SetName(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetName(s)
-	return wpu
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableName(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetName(*s)
-	}
-	return wpu
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (wpu *WalletProjectionUpdate) SetWorkspaceID(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetWorkspaceID(s)
-	return wpu
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableWorkspaceID(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetWorkspaceID(*s)
-	}
-	return wpu
-}
-
-// SetResourceID sets the "resource_id" field.
-func (wpu *WalletProjectionUpdate) SetResourceID(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetResourceID(s)
-	return wpu
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableResourceID(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetResourceID(*s)
-	}
-	return wpu
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (wpu *WalletProjectionUpdate) SetResourceKind(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetResourceKind(s)
-	return wpu
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableResourceKind(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetResourceKind(*s)
-	}
-	return wpu
-}
-
-// SetOperationID sets the "operation_id" field.
-func (wpu *WalletProjectionUpdate) SetOperationID(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetOperationID(s)
-	return wpu
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableOperationID(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetOperationID(*s)
-	}
-	return wpu
-}
-
-// SetProvider sets the "provider" field.
-func (wpu *WalletProjectionUpdate) SetProvider(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetProvider(s)
-	return wpu
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableProvider(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetProvider(*s)
-	}
-	return wpu
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (wpu *WalletProjectionUpdate) SetProviderResourceID(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetProviderResourceID(s)
-	return wpu
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableProviderResourceID(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetProviderResourceID(*s)
-	}
-	return wpu
-}
-
-// SetURL sets the "url" field.
-func (wpu *WalletProjectionUpdate) SetURL(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetURL(s)
-	return wpu
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableURL(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetURL(*s)
-	}
-	return wpu
-}
-
-// SetHoldID sets the "hold_id" field.
-func (wpu *WalletProjectionUpdate) SetHoldID(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetHoldID(s)
-	return wpu
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableHoldID(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetHoldID(*s)
-	}
-	return wpu
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (wpu *WalletProjectionUpdate) SetHoldReleaseID(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetHoldReleaseID(s)
-	return wpu
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableHoldReleaseID(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetHoldReleaseID(*s)
-	}
-	return wpu
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (wpu *WalletProjectionUpdate) SetLedgerEntryID(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetLedgerEntryID(s)
-	return wpu
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableLedgerEntryID(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetLedgerEntryID(*s)
-	}
-	return wpu
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (wpu *WalletProjectionUpdate) SetWalletTransactionID(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetWalletTransactionID(s)
-	return wpu
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableWalletTransactionID(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetWalletTransactionID(*s)
-	}
-	return wpu
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (wpu *WalletProjectionUpdate) SetSettlementID(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetSettlementID(s)
-	return wpu
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableSettlementID(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetSettlementID(*s)
-	}
-	return wpu
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (wpu *WalletProjectionUpdate) SetPricingVersion(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetPricingVersion(s)
-	return wpu
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillablePricingVersion(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetPricingVersion(*s)
-	}
-	return wpu
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (wpu *WalletProjectionUpdate) SetAmountCents(i int64) *WalletProjectionUpdate {
-	wpu.mutation.ResetAmountCents()
-	wpu.mutation.SetAmountCents(i)
-	return wpu
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableAmountCents(i *int64) *WalletProjectionUpdate {
-	if i != nil {
-		wpu.SetAmountCents(*i)
-	}
-	return wpu
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (wpu *WalletProjectionUpdate) AddAmountCents(i int64) *WalletProjectionUpdate {
-	wpu.mutation.AddAmountCents(i)
 	return wpu
 }
 
@@ -427,134 +160,108 @@ func (wpu *WalletProjectionUpdate) AddTotalSpentCents(i int64) *WalletProjection
 	return wpu
 }
 
-// SetQuantity sets the "quantity" field.
-func (wpu *WalletProjectionUpdate) SetQuantity(f float64) *WalletProjectionUpdate {
-	wpu.mutation.ResetQuantity()
-	wpu.mutation.SetQuantity(f)
+// SetBalance sets the "balance" field.
+func (wpu *WalletProjectionUpdate) SetBalance(f float64) *WalletProjectionUpdate {
+	wpu.mutation.ResetBalance()
+	wpu.mutation.SetBalance(f)
 	return wpu
 }
 
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableQuantity(f *float64) *WalletProjectionUpdate {
+// SetNillableBalance sets the "balance" field if the given value is not nil.
+func (wpu *WalletProjectionUpdate) SetNillableBalance(f *float64) *WalletProjectionUpdate {
 	if f != nil {
-		wpu.SetQuantity(*f)
+		wpu.SetBalance(*f)
 	}
 	return wpu
 }
 
-// AddQuantity adds f to the "quantity" field.
-func (wpu *WalletProjectionUpdate) AddQuantity(f float64) *WalletProjectionUpdate {
-	wpu.mutation.AddQuantity(f)
+// AddBalance adds f to the "balance" field.
+func (wpu *WalletProjectionUpdate) AddBalance(f float64) *WalletProjectionUpdate {
+	wpu.mutation.AddBalance(f)
 	return wpu
 }
 
-// SetUnit sets the "unit" field.
-func (wpu *WalletProjectionUpdate) SetUnit(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetUnit(s)
+// SetFrozen sets the "frozen" field.
+func (wpu *WalletProjectionUpdate) SetFrozen(f float64) *WalletProjectionUpdate {
+	wpu.mutation.ResetFrozen()
+	wpu.mutation.SetFrozen(f)
 	return wpu
 }
 
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableUnit(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetUnit(*s)
+// SetNillableFrozen sets the "frozen" field if the given value is not nil.
+func (wpu *WalletProjectionUpdate) SetNillableFrozen(f *float64) *WalletProjectionUpdate {
+	if f != nil {
+		wpu.SetFrozen(*f)
 	}
 	return wpu
 }
 
-// SetReason sets the "reason" field.
-func (wpu *WalletProjectionUpdate) SetReason(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetReason(s)
+// AddFrozen adds f to the "frozen" field.
+func (wpu *WalletProjectionUpdate) AddFrozen(f float64) *WalletProjectionUpdate {
+	wpu.mutation.AddFrozen(f)
 	return wpu
 }
 
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableReason(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetReason(*s)
+// SetAvailable sets the "available" field.
+func (wpu *WalletProjectionUpdate) SetAvailable(f float64) *WalletProjectionUpdate {
+	wpu.mutation.ResetAvailable()
+	wpu.mutation.SetAvailable(f)
+	return wpu
+}
+
+// SetNillableAvailable sets the "available" field if the given value is not nil.
+func (wpu *WalletProjectionUpdate) SetNillableAvailable(f *float64) *WalletProjectionUpdate {
+	if f != nil {
+		wpu.SetAvailable(*f)
 	}
 	return wpu
 }
 
-// SetResult sets the "result" field.
-func (wpu *WalletProjectionUpdate) SetResult(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetResult(s)
+// AddAvailable adds f to the "available" field.
+func (wpu *WalletProjectionUpdate) AddAvailable(f float64) *WalletProjectionUpdate {
+	wpu.mutation.AddAvailable(f)
 	return wpu
 }
 
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableResult(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetResult(*s)
+// SetTotalSpent sets the "total_spent" field.
+func (wpu *WalletProjectionUpdate) SetTotalSpent(f float64) *WalletProjectionUpdate {
+	wpu.mutation.ResetTotalSpent()
+	wpu.mutation.SetTotalSpent(f)
+	return wpu
+}
+
+// SetNillableTotalSpent sets the "total_spent" field if the given value is not nil.
+func (wpu *WalletProjectionUpdate) SetNillableTotalSpent(f *float64) *WalletProjectionUpdate {
+	if f != nil {
+		wpu.SetTotalSpent(*f)
 	}
 	return wpu
 }
 
-// SetSource sets the "source" field.
-func (wpu *WalletProjectionUpdate) SetSource(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetSource(s)
+// AddTotalSpent adds f to the "total_spent" field.
+func (wpu *WalletProjectionUpdate) AddTotalSpent(f float64) *WalletProjectionUpdate {
+	wpu.mutation.AddTotalSpent(f)
 	return wpu
 }
 
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableSource(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetSource(*s)
+// SetTotalRecharged sets the "total_recharged" field.
+func (wpu *WalletProjectionUpdate) SetTotalRecharged(f float64) *WalletProjectionUpdate {
+	wpu.mutation.ResetTotalRecharged()
+	wpu.mutation.SetTotalRecharged(f)
+	return wpu
+}
+
+// SetNillableTotalRecharged sets the "total_recharged" field if the given value is not nil.
+func (wpu *WalletProjectionUpdate) SetNillableTotalRecharged(f *float64) *WalletProjectionUpdate {
+	if f != nil {
+		wpu.SetTotalRecharged(*f)
 	}
 	return wpu
 }
 
-// SetDirection sets the "direction" field.
-func (wpu *WalletProjectionUpdate) SetDirection(s string) *WalletProjectionUpdate {
-	wpu.mutation.SetDirection(s)
-	return wpu
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableDirection(s *string) *WalletProjectionUpdate {
-	if s != nil {
-		wpu.SetDirection(*s)
-	}
-	return wpu
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (wpu *WalletProjectionUpdate) SetCreatedAt(t time.Time) *WalletProjectionUpdate {
-	wpu.mutation.SetCreatedAt(t)
-	return wpu
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableCreatedAt(t *time.Time) *WalletProjectionUpdate {
-	if t != nil {
-		wpu.SetCreatedAt(*t)
-	}
-	return wpu
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (wpu *WalletProjectionUpdate) SetUpdatedAt(t time.Time) *WalletProjectionUpdate {
-	wpu.mutation.SetUpdatedAt(t)
-	return wpu
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (wpu *WalletProjectionUpdate) SetArchivedAt(t time.Time) *WalletProjectionUpdate {
-	wpu.mutation.SetArchivedAt(t)
-	return wpu
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (wpu *WalletProjectionUpdate) SetNillableArchivedAt(t *time.Time) *WalletProjectionUpdate {
-	if t != nil {
-		wpu.SetArchivedAt(*t)
-	}
-	return wpu
-}
-
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (wpu *WalletProjectionUpdate) ClearArchivedAt() *WalletProjectionUpdate {
-	wpu.mutation.ClearArchivedAt()
+// AddTotalRecharged adds f to the "total_recharged" field.
+func (wpu *WalletProjectionUpdate) AddTotalRecharged(f float64) *WalletProjectionUpdate {
+	wpu.mutation.AddTotalRecharged(f)
 	return wpu
 }
 
@@ -599,7 +306,20 @@ func (wpu *WalletProjectionUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (wpu *WalletProjectionUpdate) check() error {
+	if v, ok := wpu.mutation.AccountID(); ok {
+		if err := walletprojection.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "WalletProjection.account_id": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (wpu *WalletProjectionUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := wpu.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(walletprojection.Table, walletprojection.Columns, sqlgraph.NewFieldSpec(walletprojection.FieldID, field.TypeString))
 	if ps := wpu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -608,74 +328,17 @@ func (wpu *WalletProjectionUpdate) sqlSave(ctx context.Context) (n int, err erro
 			}
 		}
 	}
+	if value, ok := wpu.mutation.CreatedAt(); ok {
+		_spec.SetField(walletprojection.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := wpu.mutation.UpdatedAt(); ok {
+		_spec.SetField(walletprojection.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := wpu.mutation.AccountID(); ok {
 		_spec.SetField(walletprojection.FieldAccountID, field.TypeString, value)
 	}
-	if value, ok := wpu.mutation.OwnerAccountID(); ok {
-		_spec.SetField(walletprojection.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.OwnerUserID(); ok {
-		_spec.SetField(walletprojection.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.UserID(); ok {
-		_spec.SetField(walletprojection.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.Email(); ok {
-		_spec.SetField(walletprojection.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.Role(); ok {
-		_spec.SetField(walletprojection.FieldRole, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.Status(); ok {
-		_spec.SetField(walletprojection.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.Name(); ok {
-		_spec.SetField(walletprojection.FieldName, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.WorkspaceID(); ok {
-		_spec.SetField(walletprojection.FieldWorkspaceID, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.ResourceID(); ok {
-		_spec.SetField(walletprojection.FieldResourceID, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.ResourceKind(); ok {
-		_spec.SetField(walletprojection.FieldResourceKind, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.OperationID(); ok {
-		_spec.SetField(walletprojection.FieldOperationID, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.Provider(); ok {
-		_spec.SetField(walletprojection.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.ProviderResourceID(); ok {
-		_spec.SetField(walletprojection.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.URL(); ok {
-		_spec.SetField(walletprojection.FieldURL, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.HoldID(); ok {
-		_spec.SetField(walletprojection.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.HoldReleaseID(); ok {
-		_spec.SetField(walletprojection.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.LedgerEntryID(); ok {
-		_spec.SetField(walletprojection.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.WalletTransactionID(); ok {
-		_spec.SetField(walletprojection.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.SettlementID(); ok {
-		_spec.SetField(walletprojection.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.PricingVersion(); ok {
-		_spec.SetField(walletprojection.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := wpu.mutation.AmountCents(); ok {
-		_spec.SetField(walletprojection.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := wpu.mutation.AddedAmountCents(); ok {
-		_spec.AddField(walletprojection.FieldAmountCents, field.TypeInt64, value)
+	if value, ok := wpu.mutation.Currency(); ok {
+		_spec.SetField(walletprojection.FieldCurrency, field.TypeString, value)
 	}
 	if value, ok := wpu.mutation.BalanceCents(); ok {
 		_spec.SetField(walletprojection.FieldBalanceCents, field.TypeInt64, value)
@@ -701,38 +364,35 @@ func (wpu *WalletProjectionUpdate) sqlSave(ctx context.Context) (n int, err erro
 	if value, ok := wpu.mutation.AddedTotalSpentCents(); ok {
 		_spec.AddField(walletprojection.FieldTotalSpentCents, field.TypeInt64, value)
 	}
-	if value, ok := wpu.mutation.Quantity(); ok {
-		_spec.SetField(walletprojection.FieldQuantity, field.TypeFloat64, value)
+	if value, ok := wpu.mutation.Balance(); ok {
+		_spec.SetField(walletprojection.FieldBalance, field.TypeFloat64, value)
 	}
-	if value, ok := wpu.mutation.AddedQuantity(); ok {
-		_spec.AddField(walletprojection.FieldQuantity, field.TypeFloat64, value)
+	if value, ok := wpu.mutation.AddedBalance(); ok {
+		_spec.AddField(walletprojection.FieldBalance, field.TypeFloat64, value)
 	}
-	if value, ok := wpu.mutation.Unit(); ok {
-		_spec.SetField(walletprojection.FieldUnit, field.TypeString, value)
+	if value, ok := wpu.mutation.Frozen(); ok {
+		_spec.SetField(walletprojection.FieldFrozen, field.TypeFloat64, value)
 	}
-	if value, ok := wpu.mutation.Reason(); ok {
-		_spec.SetField(walletprojection.FieldReason, field.TypeString, value)
+	if value, ok := wpu.mutation.AddedFrozen(); ok {
+		_spec.AddField(walletprojection.FieldFrozen, field.TypeFloat64, value)
 	}
-	if value, ok := wpu.mutation.Result(); ok {
-		_spec.SetField(walletprojection.FieldResult, field.TypeString, value)
+	if value, ok := wpu.mutation.Available(); ok {
+		_spec.SetField(walletprojection.FieldAvailable, field.TypeFloat64, value)
 	}
-	if value, ok := wpu.mutation.Source(); ok {
-		_spec.SetField(walletprojection.FieldSource, field.TypeString, value)
+	if value, ok := wpu.mutation.AddedAvailable(); ok {
+		_spec.AddField(walletprojection.FieldAvailable, field.TypeFloat64, value)
 	}
-	if value, ok := wpu.mutation.Direction(); ok {
-		_spec.SetField(walletprojection.FieldDirection, field.TypeString, value)
+	if value, ok := wpu.mutation.TotalSpent(); ok {
+		_spec.SetField(walletprojection.FieldTotalSpent, field.TypeFloat64, value)
 	}
-	if value, ok := wpu.mutation.CreatedAt(); ok {
-		_spec.SetField(walletprojection.FieldCreatedAt, field.TypeTime, value)
+	if value, ok := wpu.mutation.AddedTotalSpent(); ok {
+		_spec.AddField(walletprojection.FieldTotalSpent, field.TypeFloat64, value)
 	}
-	if value, ok := wpu.mutation.UpdatedAt(); ok {
-		_spec.SetField(walletprojection.FieldUpdatedAt, field.TypeTime, value)
+	if value, ok := wpu.mutation.TotalRecharged(); ok {
+		_spec.SetField(walletprojection.FieldTotalRecharged, field.TypeFloat64, value)
 	}
-	if value, ok := wpu.mutation.ArchivedAt(); ok {
-		_spec.SetField(walletprojection.FieldArchivedAt, field.TypeTime, value)
-	}
-	if wpu.mutation.ArchivedAtCleared() {
-		_spec.ClearField(walletprojection.FieldArchivedAt, field.TypeTime)
+	if value, ok := wpu.mutation.AddedTotalRecharged(); ok {
+		_spec.AddField(walletprojection.FieldTotalRecharged, field.TypeFloat64, value)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, wpu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -754,6 +414,26 @@ type WalletProjectionUpdateOne struct {
 	mutation *WalletProjectionMutation
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (wpuo *WalletProjectionUpdateOne) SetCreatedAt(t time.Time) *WalletProjectionUpdateOne {
+	wpuo.mutation.SetCreatedAt(t)
+	return wpuo
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (wpuo *WalletProjectionUpdateOne) SetNillableCreatedAt(t *time.Time) *WalletProjectionUpdateOne {
+	if t != nil {
+		wpuo.SetCreatedAt(*t)
+	}
+	return wpuo
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (wpuo *WalletProjectionUpdateOne) SetUpdatedAt(t time.Time) *WalletProjectionUpdateOne {
+	wpuo.mutation.SetUpdatedAt(t)
+	return wpuo
+}
+
 // SetAccountID sets the "account_id" field.
 func (wpuo *WalletProjectionUpdateOne) SetAccountID(s string) *WalletProjectionUpdateOne {
 	wpuo.mutation.SetAccountID(s)
@@ -768,304 +448,17 @@ func (wpuo *WalletProjectionUpdateOne) SetNillableAccountID(s *string) *WalletPr
 	return wpuo
 }
 
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (wpuo *WalletProjectionUpdateOne) SetOwnerAccountID(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetOwnerAccountID(s)
+// SetCurrency sets the "currency" field.
+func (wpuo *WalletProjectionUpdateOne) SetCurrency(s string) *WalletProjectionUpdateOne {
+	wpuo.mutation.SetCurrency(s)
 	return wpuo
 }
 
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableOwnerAccountID(s *string) *WalletProjectionUpdateOne {
+// SetNillableCurrency sets the "currency" field if the given value is not nil.
+func (wpuo *WalletProjectionUpdateOne) SetNillableCurrency(s *string) *WalletProjectionUpdateOne {
 	if s != nil {
-		wpuo.SetOwnerAccountID(*s)
+		wpuo.SetCurrency(*s)
 	}
-	return wpuo
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (wpuo *WalletProjectionUpdateOne) SetOwnerUserID(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetOwnerUserID(s)
-	return wpuo
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableOwnerUserID(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetOwnerUserID(*s)
-	}
-	return wpuo
-}
-
-// SetUserID sets the "user_id" field.
-func (wpuo *WalletProjectionUpdateOne) SetUserID(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetUserID(s)
-	return wpuo
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableUserID(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetUserID(*s)
-	}
-	return wpuo
-}
-
-// SetEmail sets the "email" field.
-func (wpuo *WalletProjectionUpdateOne) SetEmail(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetEmail(s)
-	return wpuo
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableEmail(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetEmail(*s)
-	}
-	return wpuo
-}
-
-// SetRole sets the "role" field.
-func (wpuo *WalletProjectionUpdateOne) SetRole(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetRole(s)
-	return wpuo
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableRole(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetRole(*s)
-	}
-	return wpuo
-}
-
-// SetStatus sets the "status" field.
-func (wpuo *WalletProjectionUpdateOne) SetStatus(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetStatus(s)
-	return wpuo
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableStatus(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetStatus(*s)
-	}
-	return wpuo
-}
-
-// SetName sets the "name" field.
-func (wpuo *WalletProjectionUpdateOne) SetName(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetName(s)
-	return wpuo
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableName(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetName(*s)
-	}
-	return wpuo
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (wpuo *WalletProjectionUpdateOne) SetWorkspaceID(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetWorkspaceID(s)
-	return wpuo
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableWorkspaceID(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetWorkspaceID(*s)
-	}
-	return wpuo
-}
-
-// SetResourceID sets the "resource_id" field.
-func (wpuo *WalletProjectionUpdateOne) SetResourceID(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetResourceID(s)
-	return wpuo
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableResourceID(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetResourceID(*s)
-	}
-	return wpuo
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (wpuo *WalletProjectionUpdateOne) SetResourceKind(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetResourceKind(s)
-	return wpuo
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableResourceKind(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetResourceKind(*s)
-	}
-	return wpuo
-}
-
-// SetOperationID sets the "operation_id" field.
-func (wpuo *WalletProjectionUpdateOne) SetOperationID(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetOperationID(s)
-	return wpuo
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableOperationID(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetOperationID(*s)
-	}
-	return wpuo
-}
-
-// SetProvider sets the "provider" field.
-func (wpuo *WalletProjectionUpdateOne) SetProvider(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetProvider(s)
-	return wpuo
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableProvider(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetProvider(*s)
-	}
-	return wpuo
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (wpuo *WalletProjectionUpdateOne) SetProviderResourceID(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetProviderResourceID(s)
-	return wpuo
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableProviderResourceID(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetProviderResourceID(*s)
-	}
-	return wpuo
-}
-
-// SetURL sets the "url" field.
-func (wpuo *WalletProjectionUpdateOne) SetURL(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetURL(s)
-	return wpuo
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableURL(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetURL(*s)
-	}
-	return wpuo
-}
-
-// SetHoldID sets the "hold_id" field.
-func (wpuo *WalletProjectionUpdateOne) SetHoldID(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetHoldID(s)
-	return wpuo
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableHoldID(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetHoldID(*s)
-	}
-	return wpuo
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (wpuo *WalletProjectionUpdateOne) SetHoldReleaseID(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetHoldReleaseID(s)
-	return wpuo
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableHoldReleaseID(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetHoldReleaseID(*s)
-	}
-	return wpuo
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (wpuo *WalletProjectionUpdateOne) SetLedgerEntryID(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetLedgerEntryID(s)
-	return wpuo
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableLedgerEntryID(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetLedgerEntryID(*s)
-	}
-	return wpuo
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (wpuo *WalletProjectionUpdateOne) SetWalletTransactionID(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetWalletTransactionID(s)
-	return wpuo
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableWalletTransactionID(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetWalletTransactionID(*s)
-	}
-	return wpuo
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (wpuo *WalletProjectionUpdateOne) SetSettlementID(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetSettlementID(s)
-	return wpuo
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableSettlementID(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetSettlementID(*s)
-	}
-	return wpuo
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (wpuo *WalletProjectionUpdateOne) SetPricingVersion(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetPricingVersion(s)
-	return wpuo
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillablePricingVersion(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetPricingVersion(*s)
-	}
-	return wpuo
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (wpuo *WalletProjectionUpdateOne) SetAmountCents(i int64) *WalletProjectionUpdateOne {
-	wpuo.mutation.ResetAmountCents()
-	wpuo.mutation.SetAmountCents(i)
-	return wpuo
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableAmountCents(i *int64) *WalletProjectionUpdateOne {
-	if i != nil {
-		wpuo.SetAmountCents(*i)
-	}
-	return wpuo
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (wpuo *WalletProjectionUpdateOne) AddAmountCents(i int64) *WalletProjectionUpdateOne {
-	wpuo.mutation.AddAmountCents(i)
 	return wpuo
 }
 
@@ -1153,134 +546,108 @@ func (wpuo *WalletProjectionUpdateOne) AddTotalSpentCents(i int64) *WalletProjec
 	return wpuo
 }
 
-// SetQuantity sets the "quantity" field.
-func (wpuo *WalletProjectionUpdateOne) SetQuantity(f float64) *WalletProjectionUpdateOne {
-	wpuo.mutation.ResetQuantity()
-	wpuo.mutation.SetQuantity(f)
+// SetBalance sets the "balance" field.
+func (wpuo *WalletProjectionUpdateOne) SetBalance(f float64) *WalletProjectionUpdateOne {
+	wpuo.mutation.ResetBalance()
+	wpuo.mutation.SetBalance(f)
 	return wpuo
 }
 
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableQuantity(f *float64) *WalletProjectionUpdateOne {
+// SetNillableBalance sets the "balance" field if the given value is not nil.
+func (wpuo *WalletProjectionUpdateOne) SetNillableBalance(f *float64) *WalletProjectionUpdateOne {
 	if f != nil {
-		wpuo.SetQuantity(*f)
+		wpuo.SetBalance(*f)
 	}
 	return wpuo
 }
 
-// AddQuantity adds f to the "quantity" field.
-func (wpuo *WalletProjectionUpdateOne) AddQuantity(f float64) *WalletProjectionUpdateOne {
-	wpuo.mutation.AddQuantity(f)
+// AddBalance adds f to the "balance" field.
+func (wpuo *WalletProjectionUpdateOne) AddBalance(f float64) *WalletProjectionUpdateOne {
+	wpuo.mutation.AddBalance(f)
 	return wpuo
 }
 
-// SetUnit sets the "unit" field.
-func (wpuo *WalletProjectionUpdateOne) SetUnit(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetUnit(s)
+// SetFrozen sets the "frozen" field.
+func (wpuo *WalletProjectionUpdateOne) SetFrozen(f float64) *WalletProjectionUpdateOne {
+	wpuo.mutation.ResetFrozen()
+	wpuo.mutation.SetFrozen(f)
 	return wpuo
 }
 
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableUnit(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetUnit(*s)
+// SetNillableFrozen sets the "frozen" field if the given value is not nil.
+func (wpuo *WalletProjectionUpdateOne) SetNillableFrozen(f *float64) *WalletProjectionUpdateOne {
+	if f != nil {
+		wpuo.SetFrozen(*f)
 	}
 	return wpuo
 }
 
-// SetReason sets the "reason" field.
-func (wpuo *WalletProjectionUpdateOne) SetReason(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetReason(s)
+// AddFrozen adds f to the "frozen" field.
+func (wpuo *WalletProjectionUpdateOne) AddFrozen(f float64) *WalletProjectionUpdateOne {
+	wpuo.mutation.AddFrozen(f)
 	return wpuo
 }
 
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableReason(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetReason(*s)
+// SetAvailable sets the "available" field.
+func (wpuo *WalletProjectionUpdateOne) SetAvailable(f float64) *WalletProjectionUpdateOne {
+	wpuo.mutation.ResetAvailable()
+	wpuo.mutation.SetAvailable(f)
+	return wpuo
+}
+
+// SetNillableAvailable sets the "available" field if the given value is not nil.
+func (wpuo *WalletProjectionUpdateOne) SetNillableAvailable(f *float64) *WalletProjectionUpdateOne {
+	if f != nil {
+		wpuo.SetAvailable(*f)
 	}
 	return wpuo
 }
 
-// SetResult sets the "result" field.
-func (wpuo *WalletProjectionUpdateOne) SetResult(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetResult(s)
+// AddAvailable adds f to the "available" field.
+func (wpuo *WalletProjectionUpdateOne) AddAvailable(f float64) *WalletProjectionUpdateOne {
+	wpuo.mutation.AddAvailable(f)
 	return wpuo
 }
 
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableResult(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetResult(*s)
+// SetTotalSpent sets the "total_spent" field.
+func (wpuo *WalletProjectionUpdateOne) SetTotalSpent(f float64) *WalletProjectionUpdateOne {
+	wpuo.mutation.ResetTotalSpent()
+	wpuo.mutation.SetTotalSpent(f)
+	return wpuo
+}
+
+// SetNillableTotalSpent sets the "total_spent" field if the given value is not nil.
+func (wpuo *WalletProjectionUpdateOne) SetNillableTotalSpent(f *float64) *WalletProjectionUpdateOne {
+	if f != nil {
+		wpuo.SetTotalSpent(*f)
 	}
 	return wpuo
 }
 
-// SetSource sets the "source" field.
-func (wpuo *WalletProjectionUpdateOne) SetSource(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetSource(s)
+// AddTotalSpent adds f to the "total_spent" field.
+func (wpuo *WalletProjectionUpdateOne) AddTotalSpent(f float64) *WalletProjectionUpdateOne {
+	wpuo.mutation.AddTotalSpent(f)
 	return wpuo
 }
 
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableSource(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetSource(*s)
+// SetTotalRecharged sets the "total_recharged" field.
+func (wpuo *WalletProjectionUpdateOne) SetTotalRecharged(f float64) *WalletProjectionUpdateOne {
+	wpuo.mutation.ResetTotalRecharged()
+	wpuo.mutation.SetTotalRecharged(f)
+	return wpuo
+}
+
+// SetNillableTotalRecharged sets the "total_recharged" field if the given value is not nil.
+func (wpuo *WalletProjectionUpdateOne) SetNillableTotalRecharged(f *float64) *WalletProjectionUpdateOne {
+	if f != nil {
+		wpuo.SetTotalRecharged(*f)
 	}
 	return wpuo
 }
 
-// SetDirection sets the "direction" field.
-func (wpuo *WalletProjectionUpdateOne) SetDirection(s string) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetDirection(s)
-	return wpuo
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableDirection(s *string) *WalletProjectionUpdateOne {
-	if s != nil {
-		wpuo.SetDirection(*s)
-	}
-	return wpuo
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (wpuo *WalletProjectionUpdateOne) SetCreatedAt(t time.Time) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetCreatedAt(t)
-	return wpuo
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableCreatedAt(t *time.Time) *WalletProjectionUpdateOne {
-	if t != nil {
-		wpuo.SetCreatedAt(*t)
-	}
-	return wpuo
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (wpuo *WalletProjectionUpdateOne) SetUpdatedAt(t time.Time) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetUpdatedAt(t)
-	return wpuo
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (wpuo *WalletProjectionUpdateOne) SetArchivedAt(t time.Time) *WalletProjectionUpdateOne {
-	wpuo.mutation.SetArchivedAt(t)
-	return wpuo
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (wpuo *WalletProjectionUpdateOne) SetNillableArchivedAt(t *time.Time) *WalletProjectionUpdateOne {
-	if t != nil {
-		wpuo.SetArchivedAt(*t)
-	}
-	return wpuo
-}
-
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (wpuo *WalletProjectionUpdateOne) ClearArchivedAt() *WalletProjectionUpdateOne {
-	wpuo.mutation.ClearArchivedAt()
+// AddTotalRecharged adds f to the "total_recharged" field.
+func (wpuo *WalletProjectionUpdateOne) AddTotalRecharged(f float64) *WalletProjectionUpdateOne {
+	wpuo.mutation.AddTotalRecharged(f)
 	return wpuo
 }
 
@@ -1338,7 +705,20 @@ func (wpuo *WalletProjectionUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (wpuo *WalletProjectionUpdateOne) check() error {
+	if v, ok := wpuo.mutation.AccountID(); ok {
+		if err := walletprojection.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "WalletProjection.account_id": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (wpuo *WalletProjectionUpdateOne) sqlSave(ctx context.Context) (_node *WalletProjection, err error) {
+	if err := wpuo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(walletprojection.Table, walletprojection.Columns, sqlgraph.NewFieldSpec(walletprojection.FieldID, field.TypeString))
 	id, ok := wpuo.mutation.ID()
 	if !ok {
@@ -1364,74 +744,17 @@ func (wpuo *WalletProjectionUpdateOne) sqlSave(ctx context.Context) (_node *Wall
 			}
 		}
 	}
+	if value, ok := wpuo.mutation.CreatedAt(); ok {
+		_spec.SetField(walletprojection.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := wpuo.mutation.UpdatedAt(); ok {
+		_spec.SetField(walletprojection.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := wpuo.mutation.AccountID(); ok {
 		_spec.SetField(walletprojection.FieldAccountID, field.TypeString, value)
 	}
-	if value, ok := wpuo.mutation.OwnerAccountID(); ok {
-		_spec.SetField(walletprojection.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.OwnerUserID(); ok {
-		_spec.SetField(walletprojection.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.UserID(); ok {
-		_spec.SetField(walletprojection.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.Email(); ok {
-		_spec.SetField(walletprojection.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.Role(); ok {
-		_spec.SetField(walletprojection.FieldRole, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.Status(); ok {
-		_spec.SetField(walletprojection.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.Name(); ok {
-		_spec.SetField(walletprojection.FieldName, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.WorkspaceID(); ok {
-		_spec.SetField(walletprojection.FieldWorkspaceID, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.ResourceID(); ok {
-		_spec.SetField(walletprojection.FieldResourceID, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.ResourceKind(); ok {
-		_spec.SetField(walletprojection.FieldResourceKind, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.OperationID(); ok {
-		_spec.SetField(walletprojection.FieldOperationID, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.Provider(); ok {
-		_spec.SetField(walletprojection.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.ProviderResourceID(); ok {
-		_spec.SetField(walletprojection.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.URL(); ok {
-		_spec.SetField(walletprojection.FieldURL, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.HoldID(); ok {
-		_spec.SetField(walletprojection.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.HoldReleaseID(); ok {
-		_spec.SetField(walletprojection.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.LedgerEntryID(); ok {
-		_spec.SetField(walletprojection.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.WalletTransactionID(); ok {
-		_spec.SetField(walletprojection.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.SettlementID(); ok {
-		_spec.SetField(walletprojection.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.PricingVersion(); ok {
-		_spec.SetField(walletprojection.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := wpuo.mutation.AmountCents(); ok {
-		_spec.SetField(walletprojection.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := wpuo.mutation.AddedAmountCents(); ok {
-		_spec.AddField(walletprojection.FieldAmountCents, field.TypeInt64, value)
+	if value, ok := wpuo.mutation.Currency(); ok {
+		_spec.SetField(walletprojection.FieldCurrency, field.TypeString, value)
 	}
 	if value, ok := wpuo.mutation.BalanceCents(); ok {
 		_spec.SetField(walletprojection.FieldBalanceCents, field.TypeInt64, value)
@@ -1457,38 +780,35 @@ func (wpuo *WalletProjectionUpdateOne) sqlSave(ctx context.Context) (_node *Wall
 	if value, ok := wpuo.mutation.AddedTotalSpentCents(); ok {
 		_spec.AddField(walletprojection.FieldTotalSpentCents, field.TypeInt64, value)
 	}
-	if value, ok := wpuo.mutation.Quantity(); ok {
-		_spec.SetField(walletprojection.FieldQuantity, field.TypeFloat64, value)
+	if value, ok := wpuo.mutation.Balance(); ok {
+		_spec.SetField(walletprojection.FieldBalance, field.TypeFloat64, value)
 	}
-	if value, ok := wpuo.mutation.AddedQuantity(); ok {
-		_spec.AddField(walletprojection.FieldQuantity, field.TypeFloat64, value)
+	if value, ok := wpuo.mutation.AddedBalance(); ok {
+		_spec.AddField(walletprojection.FieldBalance, field.TypeFloat64, value)
 	}
-	if value, ok := wpuo.mutation.Unit(); ok {
-		_spec.SetField(walletprojection.FieldUnit, field.TypeString, value)
+	if value, ok := wpuo.mutation.Frozen(); ok {
+		_spec.SetField(walletprojection.FieldFrozen, field.TypeFloat64, value)
 	}
-	if value, ok := wpuo.mutation.Reason(); ok {
-		_spec.SetField(walletprojection.FieldReason, field.TypeString, value)
+	if value, ok := wpuo.mutation.AddedFrozen(); ok {
+		_spec.AddField(walletprojection.FieldFrozen, field.TypeFloat64, value)
 	}
-	if value, ok := wpuo.mutation.Result(); ok {
-		_spec.SetField(walletprojection.FieldResult, field.TypeString, value)
+	if value, ok := wpuo.mutation.Available(); ok {
+		_spec.SetField(walletprojection.FieldAvailable, field.TypeFloat64, value)
 	}
-	if value, ok := wpuo.mutation.Source(); ok {
-		_spec.SetField(walletprojection.FieldSource, field.TypeString, value)
+	if value, ok := wpuo.mutation.AddedAvailable(); ok {
+		_spec.AddField(walletprojection.FieldAvailable, field.TypeFloat64, value)
 	}
-	if value, ok := wpuo.mutation.Direction(); ok {
-		_spec.SetField(walletprojection.FieldDirection, field.TypeString, value)
+	if value, ok := wpuo.mutation.TotalSpent(); ok {
+		_spec.SetField(walletprojection.FieldTotalSpent, field.TypeFloat64, value)
 	}
-	if value, ok := wpuo.mutation.CreatedAt(); ok {
-		_spec.SetField(walletprojection.FieldCreatedAt, field.TypeTime, value)
+	if value, ok := wpuo.mutation.AddedTotalSpent(); ok {
+		_spec.AddField(walletprojection.FieldTotalSpent, field.TypeFloat64, value)
 	}
-	if value, ok := wpuo.mutation.UpdatedAt(); ok {
-		_spec.SetField(walletprojection.FieldUpdatedAt, field.TypeTime, value)
+	if value, ok := wpuo.mutation.TotalRecharged(); ok {
+		_spec.SetField(walletprojection.FieldTotalRecharged, field.TypeFloat64, value)
 	}
-	if value, ok := wpuo.mutation.ArchivedAt(); ok {
-		_spec.SetField(walletprojection.FieldArchivedAt, field.TypeTime, value)
-	}
-	if wpuo.mutation.ArchivedAtCleared() {
-		_spec.ClearField(walletprojection.FieldArchivedAt, field.TypeTime)
+	if value, ok := wpuo.mutation.AddedTotalRecharged(); ok {
+		_spec.AddField(walletprojection.FieldTotalRecharged, field.TypeFloat64, value)
 	}
 	_node = &WalletProjection{config: wpuo.config}
 	_spec.Assign = _node.assignValues

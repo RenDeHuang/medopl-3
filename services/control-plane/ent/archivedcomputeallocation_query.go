@@ -261,12 +261,12 @@ func (acaq *ArchivedComputeAllocationQuery) Clone() *ArchivedComputeAllocationQu
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.ArchivedComputeAllocation.Query().
-//		GroupBy(archivedcomputeallocation.FieldAccountID).
+//		GroupBy(archivedcomputeallocation.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (acaq *ArchivedComputeAllocationQuery) GroupBy(field string, fields ...string) *ArchivedComputeAllocationGroupBy {
@@ -284,11 +284,11 @@ func (acaq *ArchivedComputeAllocationQuery) GroupBy(field string, fields ...stri
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.ArchivedComputeAllocation.Query().
-//		Select(archivedcomputeallocation.FieldAccountID).
+//		Select(archivedcomputeallocation.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (acaq *ArchivedComputeAllocationQuery) Select(fields ...string) *ArchivedComputeAllocationSelect {
 	acaq.ctx.Fields = append(acaq.ctx.Fields, fields...)

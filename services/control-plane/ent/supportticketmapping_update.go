@@ -28,6 +28,26 @@ func (stmu *SupportTicketMappingUpdate) Where(ps ...predicate.SupportTicketMappi
 	return stmu
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (stmu *SupportTicketMappingUpdate) SetCreatedAt(t time.Time) *SupportTicketMappingUpdate {
+	stmu.mutation.SetCreatedAt(t)
+	return stmu
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (stmu *SupportTicketMappingUpdate) SetNillableCreatedAt(t *time.Time) *SupportTicketMappingUpdate {
+	if t != nil {
+		stmu.SetCreatedAt(*t)
+	}
+	return stmu
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (stmu *SupportTicketMappingUpdate) SetUpdatedAt(t time.Time) *SupportTicketMappingUpdate {
+	stmu.mutation.SetUpdatedAt(t)
+	return stmu
+}
+
 // SetAccountID sets the "account_id" field.
 func (stmu *SupportTicketMappingUpdate) SetAccountID(s string) *SupportTicketMappingUpdate {
 	stmu.mutation.SetAccountID(s)
@@ -42,34 +62,6 @@ func (stmu *SupportTicketMappingUpdate) SetNillableAccountID(s *string) *Support
 	return stmu
 }
 
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (stmu *SupportTicketMappingUpdate) SetOwnerAccountID(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetOwnerAccountID(s)
-	return stmu
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableOwnerAccountID(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetOwnerAccountID(*s)
-	}
-	return stmu
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (stmu *SupportTicketMappingUpdate) SetOwnerUserID(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetOwnerUserID(s)
-	return stmu
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableOwnerUserID(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetOwnerUserID(*s)
-	}
-	return stmu
-}
-
 // SetUserID sets the "user_id" field.
 func (stmu *SupportTicketMappingUpdate) SetUserID(s string) *SupportTicketMappingUpdate {
 	stmu.mutation.SetUserID(s)
@@ -80,62 +72,6 @@ func (stmu *SupportTicketMappingUpdate) SetUserID(s string) *SupportTicketMappin
 func (stmu *SupportTicketMappingUpdate) SetNillableUserID(s *string) *SupportTicketMappingUpdate {
 	if s != nil {
 		stmu.SetUserID(*s)
-	}
-	return stmu
-}
-
-// SetEmail sets the "email" field.
-func (stmu *SupportTicketMappingUpdate) SetEmail(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetEmail(s)
-	return stmu
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableEmail(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetEmail(*s)
-	}
-	return stmu
-}
-
-// SetRole sets the "role" field.
-func (stmu *SupportTicketMappingUpdate) SetRole(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetRole(s)
-	return stmu
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableRole(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetRole(*s)
-	}
-	return stmu
-}
-
-// SetStatus sets the "status" field.
-func (stmu *SupportTicketMappingUpdate) SetStatus(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetStatus(s)
-	return stmu
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableStatus(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetStatus(*s)
-	}
-	return stmu
-}
-
-// SetName sets the "name" field.
-func (stmu *SupportTicketMappingUpdate) SetName(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetName(s)
-	return stmu
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableName(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetName(*s)
 	}
 	return stmu
 }
@@ -182,310 +118,16 @@ func (stmu *SupportTicketMappingUpdate) SetNillableResourceKind(s *string) *Supp
 	return stmu
 }
 
-// SetOperationID sets the "operation_id" field.
-func (stmu *SupportTicketMappingUpdate) SetOperationID(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetOperationID(s)
+// SetStatus sets the "status" field.
+func (stmu *SupportTicketMappingUpdate) SetStatus(s string) *SupportTicketMappingUpdate {
+	stmu.mutation.SetStatus(s)
 	return stmu
 }
 
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableOperationID(s *string) *SupportTicketMappingUpdate {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (stmu *SupportTicketMappingUpdate) SetNillableStatus(s *string) *SupportTicketMappingUpdate {
 	if s != nil {
-		stmu.SetOperationID(*s)
-	}
-	return stmu
-}
-
-// SetProvider sets the "provider" field.
-func (stmu *SupportTicketMappingUpdate) SetProvider(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetProvider(s)
-	return stmu
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableProvider(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetProvider(*s)
-	}
-	return stmu
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (stmu *SupportTicketMappingUpdate) SetProviderResourceID(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetProviderResourceID(s)
-	return stmu
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableProviderResourceID(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetProviderResourceID(*s)
-	}
-	return stmu
-}
-
-// SetURL sets the "url" field.
-func (stmu *SupportTicketMappingUpdate) SetURL(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetURL(s)
-	return stmu
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableURL(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetURL(*s)
-	}
-	return stmu
-}
-
-// SetHoldID sets the "hold_id" field.
-func (stmu *SupportTicketMappingUpdate) SetHoldID(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetHoldID(s)
-	return stmu
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableHoldID(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetHoldID(*s)
-	}
-	return stmu
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (stmu *SupportTicketMappingUpdate) SetHoldReleaseID(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetHoldReleaseID(s)
-	return stmu
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableHoldReleaseID(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetHoldReleaseID(*s)
-	}
-	return stmu
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (stmu *SupportTicketMappingUpdate) SetLedgerEntryID(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetLedgerEntryID(s)
-	return stmu
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableLedgerEntryID(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetLedgerEntryID(*s)
-	}
-	return stmu
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (stmu *SupportTicketMappingUpdate) SetWalletTransactionID(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetWalletTransactionID(s)
-	return stmu
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableWalletTransactionID(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetWalletTransactionID(*s)
-	}
-	return stmu
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (stmu *SupportTicketMappingUpdate) SetSettlementID(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetSettlementID(s)
-	return stmu
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableSettlementID(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetSettlementID(*s)
-	}
-	return stmu
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (stmu *SupportTicketMappingUpdate) SetPricingVersion(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetPricingVersion(s)
-	return stmu
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillablePricingVersion(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetPricingVersion(*s)
-	}
-	return stmu
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (stmu *SupportTicketMappingUpdate) SetAmountCents(i int64) *SupportTicketMappingUpdate {
-	stmu.mutation.ResetAmountCents()
-	stmu.mutation.SetAmountCents(i)
-	return stmu
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableAmountCents(i *int64) *SupportTicketMappingUpdate {
-	if i != nil {
-		stmu.SetAmountCents(*i)
-	}
-	return stmu
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (stmu *SupportTicketMappingUpdate) AddAmountCents(i int64) *SupportTicketMappingUpdate {
-	stmu.mutation.AddAmountCents(i)
-	return stmu
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (stmu *SupportTicketMappingUpdate) SetBalanceCents(i int64) *SupportTicketMappingUpdate {
-	stmu.mutation.ResetBalanceCents()
-	stmu.mutation.SetBalanceCents(i)
-	return stmu
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableBalanceCents(i *int64) *SupportTicketMappingUpdate {
-	if i != nil {
-		stmu.SetBalanceCents(*i)
-	}
-	return stmu
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (stmu *SupportTicketMappingUpdate) AddBalanceCents(i int64) *SupportTicketMappingUpdate {
-	stmu.mutation.AddBalanceCents(i)
-	return stmu
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (stmu *SupportTicketMappingUpdate) SetFrozenCents(i int64) *SupportTicketMappingUpdate {
-	stmu.mutation.ResetFrozenCents()
-	stmu.mutation.SetFrozenCents(i)
-	return stmu
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableFrozenCents(i *int64) *SupportTicketMappingUpdate {
-	if i != nil {
-		stmu.SetFrozenCents(*i)
-	}
-	return stmu
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (stmu *SupportTicketMappingUpdate) AddFrozenCents(i int64) *SupportTicketMappingUpdate {
-	stmu.mutation.AddFrozenCents(i)
-	return stmu
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (stmu *SupportTicketMappingUpdate) SetAvailableCents(i int64) *SupportTicketMappingUpdate {
-	stmu.mutation.ResetAvailableCents()
-	stmu.mutation.SetAvailableCents(i)
-	return stmu
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableAvailableCents(i *int64) *SupportTicketMappingUpdate {
-	if i != nil {
-		stmu.SetAvailableCents(*i)
-	}
-	return stmu
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (stmu *SupportTicketMappingUpdate) AddAvailableCents(i int64) *SupportTicketMappingUpdate {
-	stmu.mutation.AddAvailableCents(i)
-	return stmu
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (stmu *SupportTicketMappingUpdate) SetTotalSpentCents(i int64) *SupportTicketMappingUpdate {
-	stmu.mutation.ResetTotalSpentCents()
-	stmu.mutation.SetTotalSpentCents(i)
-	return stmu
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableTotalSpentCents(i *int64) *SupportTicketMappingUpdate {
-	if i != nil {
-		stmu.SetTotalSpentCents(*i)
-	}
-	return stmu
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (stmu *SupportTicketMappingUpdate) AddTotalSpentCents(i int64) *SupportTicketMappingUpdate {
-	stmu.mutation.AddTotalSpentCents(i)
-	return stmu
-}
-
-// SetQuantity sets the "quantity" field.
-func (stmu *SupportTicketMappingUpdate) SetQuantity(f float64) *SupportTicketMappingUpdate {
-	stmu.mutation.ResetQuantity()
-	stmu.mutation.SetQuantity(f)
-	return stmu
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableQuantity(f *float64) *SupportTicketMappingUpdate {
-	if f != nil {
-		stmu.SetQuantity(*f)
-	}
-	return stmu
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (stmu *SupportTicketMappingUpdate) AddQuantity(f float64) *SupportTicketMappingUpdate {
-	stmu.mutation.AddQuantity(f)
-	return stmu
-}
-
-// SetUnit sets the "unit" field.
-func (stmu *SupportTicketMappingUpdate) SetUnit(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetUnit(s)
-	return stmu
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableUnit(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetUnit(*s)
-	}
-	return stmu
-}
-
-// SetReason sets the "reason" field.
-func (stmu *SupportTicketMappingUpdate) SetReason(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetReason(s)
-	return stmu
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableReason(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetReason(*s)
-	}
-	return stmu
-}
-
-// SetResult sets the "result" field.
-func (stmu *SupportTicketMappingUpdate) SetResult(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetResult(s)
-	return stmu
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableResult(s *string) *SupportTicketMappingUpdate {
-	if s != nil {
-		stmu.SetResult(*s)
+		stmu.SetStatus(*s)
 	}
 	return stmu
 }
@@ -504,57 +146,31 @@ func (stmu *SupportTicketMappingUpdate) SetNillableSource(s *string) *SupportTic
 	return stmu
 }
 
-// SetDirection sets the "direction" field.
-func (stmu *SupportTicketMappingUpdate) SetDirection(s string) *SupportTicketMappingUpdate {
-	stmu.mutation.SetDirection(s)
+// SetURL sets the "url" field.
+func (stmu *SupportTicketMappingUpdate) SetURL(s string) *SupportTicketMappingUpdate {
+	stmu.mutation.SetURL(s)
 	return stmu
 }
 
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableDirection(s *string) *SupportTicketMappingUpdate {
+// SetNillableURL sets the "url" field if the given value is not nil.
+func (stmu *SupportTicketMappingUpdate) SetNillableURL(s *string) *SupportTicketMappingUpdate {
 	if s != nil {
-		stmu.SetDirection(*s)
+		stmu.SetURL(*s)
 	}
 	return stmu
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (stmu *SupportTicketMappingUpdate) SetCreatedAt(t time.Time) *SupportTicketMappingUpdate {
-	stmu.mutation.SetCreatedAt(t)
+// SetReason sets the "reason" field.
+func (stmu *SupportTicketMappingUpdate) SetReason(s string) *SupportTicketMappingUpdate {
+	stmu.mutation.SetReason(s)
 	return stmu
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableCreatedAt(t *time.Time) *SupportTicketMappingUpdate {
-	if t != nil {
-		stmu.SetCreatedAt(*t)
+// SetNillableReason sets the "reason" field if the given value is not nil.
+func (stmu *SupportTicketMappingUpdate) SetNillableReason(s *string) *SupportTicketMappingUpdate {
+	if s != nil {
+		stmu.SetReason(*s)
 	}
-	return stmu
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (stmu *SupportTicketMappingUpdate) SetUpdatedAt(t time.Time) *SupportTicketMappingUpdate {
-	stmu.mutation.SetUpdatedAt(t)
-	return stmu
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (stmu *SupportTicketMappingUpdate) SetArchivedAt(t time.Time) *SupportTicketMappingUpdate {
-	stmu.mutation.SetArchivedAt(t)
-	return stmu
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (stmu *SupportTicketMappingUpdate) SetNillableArchivedAt(t *time.Time) *SupportTicketMappingUpdate {
-	if t != nil {
-		stmu.SetArchivedAt(*t)
-	}
-	return stmu
-}
-
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (stmu *SupportTicketMappingUpdate) ClearArchivedAt() *SupportTicketMappingUpdate {
-	stmu.mutation.ClearArchivedAt()
 	return stmu
 }
 
@@ -608,29 +224,17 @@ func (stmu *SupportTicketMappingUpdate) sqlSave(ctx context.Context) (n int, err
 			}
 		}
 	}
+	if value, ok := stmu.mutation.CreatedAt(); ok {
+		_spec.SetField(supportticketmapping.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := stmu.mutation.UpdatedAt(); ok {
+		_spec.SetField(supportticketmapping.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := stmu.mutation.AccountID(); ok {
 		_spec.SetField(supportticketmapping.FieldAccountID, field.TypeString, value)
 	}
-	if value, ok := stmu.mutation.OwnerAccountID(); ok {
-		_spec.SetField(supportticketmapping.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.OwnerUserID(); ok {
-		_spec.SetField(supportticketmapping.FieldOwnerUserID, field.TypeString, value)
-	}
 	if value, ok := stmu.mutation.UserID(); ok {
 		_spec.SetField(supportticketmapping.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.Email(); ok {
-		_spec.SetField(supportticketmapping.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.Role(); ok {
-		_spec.SetField(supportticketmapping.FieldRole, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.Status(); ok {
-		_spec.SetField(supportticketmapping.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.Name(); ok {
-		_spec.SetField(supportticketmapping.FieldName, field.TypeString, value)
 	}
 	if value, ok := stmu.mutation.WorkspaceID(); ok {
 		_spec.SetField(supportticketmapping.FieldWorkspaceID, field.TypeString, value)
@@ -641,98 +245,17 @@ func (stmu *SupportTicketMappingUpdate) sqlSave(ctx context.Context) (n int, err
 	if value, ok := stmu.mutation.ResourceKind(); ok {
 		_spec.SetField(supportticketmapping.FieldResourceKind, field.TypeString, value)
 	}
-	if value, ok := stmu.mutation.OperationID(); ok {
-		_spec.SetField(supportticketmapping.FieldOperationID, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.Provider(); ok {
-		_spec.SetField(supportticketmapping.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.ProviderResourceID(); ok {
-		_spec.SetField(supportticketmapping.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.URL(); ok {
-		_spec.SetField(supportticketmapping.FieldURL, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.HoldID(); ok {
-		_spec.SetField(supportticketmapping.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.HoldReleaseID(); ok {
-		_spec.SetField(supportticketmapping.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.LedgerEntryID(); ok {
-		_spec.SetField(supportticketmapping.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.WalletTransactionID(); ok {
-		_spec.SetField(supportticketmapping.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.SettlementID(); ok {
-		_spec.SetField(supportticketmapping.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.PricingVersion(); ok {
-		_spec.SetField(supportticketmapping.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.AmountCents(); ok {
-		_spec.SetField(supportticketmapping.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := stmu.mutation.AddedAmountCents(); ok {
-		_spec.AddField(supportticketmapping.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := stmu.mutation.BalanceCents(); ok {
-		_spec.SetField(supportticketmapping.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := stmu.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(supportticketmapping.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := stmu.mutation.FrozenCents(); ok {
-		_spec.SetField(supportticketmapping.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := stmu.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(supportticketmapping.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := stmu.mutation.AvailableCents(); ok {
-		_spec.SetField(supportticketmapping.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := stmu.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(supportticketmapping.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := stmu.mutation.TotalSpentCents(); ok {
-		_spec.SetField(supportticketmapping.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := stmu.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(supportticketmapping.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := stmu.mutation.Quantity(); ok {
-		_spec.SetField(supportticketmapping.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := stmu.mutation.AddedQuantity(); ok {
-		_spec.AddField(supportticketmapping.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := stmu.mutation.Unit(); ok {
-		_spec.SetField(supportticketmapping.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.Reason(); ok {
-		_spec.SetField(supportticketmapping.FieldReason, field.TypeString, value)
-	}
-	if value, ok := stmu.mutation.Result(); ok {
-		_spec.SetField(supportticketmapping.FieldResult, field.TypeString, value)
+	if value, ok := stmu.mutation.Status(); ok {
+		_spec.SetField(supportticketmapping.FieldStatus, field.TypeString, value)
 	}
 	if value, ok := stmu.mutation.Source(); ok {
 		_spec.SetField(supportticketmapping.FieldSource, field.TypeString, value)
 	}
-	if value, ok := stmu.mutation.Direction(); ok {
-		_spec.SetField(supportticketmapping.FieldDirection, field.TypeString, value)
+	if value, ok := stmu.mutation.URL(); ok {
+		_spec.SetField(supportticketmapping.FieldURL, field.TypeString, value)
 	}
-	if value, ok := stmu.mutation.CreatedAt(); ok {
-		_spec.SetField(supportticketmapping.FieldCreatedAt, field.TypeTime, value)
-	}
-	if value, ok := stmu.mutation.UpdatedAt(); ok {
-		_spec.SetField(supportticketmapping.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := stmu.mutation.ArchivedAt(); ok {
-		_spec.SetField(supportticketmapping.FieldArchivedAt, field.TypeTime, value)
-	}
-	if stmu.mutation.ArchivedAtCleared() {
-		_spec.ClearField(supportticketmapping.FieldArchivedAt, field.TypeTime)
+	if value, ok := stmu.mutation.Reason(); ok {
+		_spec.SetField(supportticketmapping.FieldReason, field.TypeString, value)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, stmu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -754,6 +277,26 @@ type SupportTicketMappingUpdateOne struct {
 	mutation *SupportTicketMappingMutation
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (stmuo *SupportTicketMappingUpdateOne) SetCreatedAt(t time.Time) *SupportTicketMappingUpdateOne {
+	stmuo.mutation.SetCreatedAt(t)
+	return stmuo
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (stmuo *SupportTicketMappingUpdateOne) SetNillableCreatedAt(t *time.Time) *SupportTicketMappingUpdateOne {
+	if t != nil {
+		stmuo.SetCreatedAt(*t)
+	}
+	return stmuo
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (stmuo *SupportTicketMappingUpdateOne) SetUpdatedAt(t time.Time) *SupportTicketMappingUpdateOne {
+	stmuo.mutation.SetUpdatedAt(t)
+	return stmuo
+}
+
 // SetAccountID sets the "account_id" field.
 func (stmuo *SupportTicketMappingUpdateOne) SetAccountID(s string) *SupportTicketMappingUpdateOne {
 	stmuo.mutation.SetAccountID(s)
@@ -768,34 +311,6 @@ func (stmuo *SupportTicketMappingUpdateOne) SetNillableAccountID(s *string) *Sup
 	return stmuo
 }
 
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetOwnerAccountID(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetOwnerAccountID(s)
-	return stmuo
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableOwnerAccountID(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetOwnerAccountID(*s)
-	}
-	return stmuo
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetOwnerUserID(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetOwnerUserID(s)
-	return stmuo
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableOwnerUserID(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetOwnerUserID(*s)
-	}
-	return stmuo
-}
-
 // SetUserID sets the "user_id" field.
 func (stmuo *SupportTicketMappingUpdateOne) SetUserID(s string) *SupportTicketMappingUpdateOne {
 	stmuo.mutation.SetUserID(s)
@@ -806,62 +321,6 @@ func (stmuo *SupportTicketMappingUpdateOne) SetUserID(s string) *SupportTicketMa
 func (stmuo *SupportTicketMappingUpdateOne) SetNillableUserID(s *string) *SupportTicketMappingUpdateOne {
 	if s != nil {
 		stmuo.SetUserID(*s)
-	}
-	return stmuo
-}
-
-// SetEmail sets the "email" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetEmail(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetEmail(s)
-	return stmuo
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableEmail(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetEmail(*s)
-	}
-	return stmuo
-}
-
-// SetRole sets the "role" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetRole(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetRole(s)
-	return stmuo
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableRole(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetRole(*s)
-	}
-	return stmuo
-}
-
-// SetStatus sets the "status" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetStatus(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetStatus(s)
-	return stmuo
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableStatus(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetStatus(*s)
-	}
-	return stmuo
-}
-
-// SetName sets the "name" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetName(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetName(s)
-	return stmuo
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableName(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetName(*s)
 	}
 	return stmuo
 }
@@ -908,310 +367,16 @@ func (stmuo *SupportTicketMappingUpdateOne) SetNillableResourceKind(s *string) *
 	return stmuo
 }
 
-// SetOperationID sets the "operation_id" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetOperationID(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetOperationID(s)
+// SetStatus sets the "status" field.
+func (stmuo *SupportTicketMappingUpdateOne) SetStatus(s string) *SupportTicketMappingUpdateOne {
+	stmuo.mutation.SetStatus(s)
 	return stmuo
 }
 
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableOperationID(s *string) *SupportTicketMappingUpdateOne {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (stmuo *SupportTicketMappingUpdateOne) SetNillableStatus(s *string) *SupportTicketMappingUpdateOne {
 	if s != nil {
-		stmuo.SetOperationID(*s)
-	}
-	return stmuo
-}
-
-// SetProvider sets the "provider" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetProvider(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetProvider(s)
-	return stmuo
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableProvider(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetProvider(*s)
-	}
-	return stmuo
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetProviderResourceID(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetProviderResourceID(s)
-	return stmuo
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableProviderResourceID(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetProviderResourceID(*s)
-	}
-	return stmuo
-}
-
-// SetURL sets the "url" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetURL(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetURL(s)
-	return stmuo
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableURL(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetURL(*s)
-	}
-	return stmuo
-}
-
-// SetHoldID sets the "hold_id" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetHoldID(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetHoldID(s)
-	return stmuo
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableHoldID(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetHoldID(*s)
-	}
-	return stmuo
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetHoldReleaseID(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetHoldReleaseID(s)
-	return stmuo
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableHoldReleaseID(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetHoldReleaseID(*s)
-	}
-	return stmuo
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetLedgerEntryID(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetLedgerEntryID(s)
-	return stmuo
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableLedgerEntryID(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetLedgerEntryID(*s)
-	}
-	return stmuo
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetWalletTransactionID(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetWalletTransactionID(s)
-	return stmuo
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableWalletTransactionID(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetWalletTransactionID(*s)
-	}
-	return stmuo
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetSettlementID(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetSettlementID(s)
-	return stmuo
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableSettlementID(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetSettlementID(*s)
-	}
-	return stmuo
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetPricingVersion(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetPricingVersion(s)
-	return stmuo
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillablePricingVersion(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetPricingVersion(*s)
-	}
-	return stmuo
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetAmountCents(i int64) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.ResetAmountCents()
-	stmuo.mutation.SetAmountCents(i)
-	return stmuo
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableAmountCents(i *int64) *SupportTicketMappingUpdateOne {
-	if i != nil {
-		stmuo.SetAmountCents(*i)
-	}
-	return stmuo
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (stmuo *SupportTicketMappingUpdateOne) AddAmountCents(i int64) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.AddAmountCents(i)
-	return stmuo
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetBalanceCents(i int64) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.ResetBalanceCents()
-	stmuo.mutation.SetBalanceCents(i)
-	return stmuo
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableBalanceCents(i *int64) *SupportTicketMappingUpdateOne {
-	if i != nil {
-		stmuo.SetBalanceCents(*i)
-	}
-	return stmuo
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (stmuo *SupportTicketMappingUpdateOne) AddBalanceCents(i int64) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.AddBalanceCents(i)
-	return stmuo
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetFrozenCents(i int64) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.ResetFrozenCents()
-	stmuo.mutation.SetFrozenCents(i)
-	return stmuo
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableFrozenCents(i *int64) *SupportTicketMappingUpdateOne {
-	if i != nil {
-		stmuo.SetFrozenCents(*i)
-	}
-	return stmuo
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (stmuo *SupportTicketMappingUpdateOne) AddFrozenCents(i int64) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.AddFrozenCents(i)
-	return stmuo
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetAvailableCents(i int64) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.ResetAvailableCents()
-	stmuo.mutation.SetAvailableCents(i)
-	return stmuo
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableAvailableCents(i *int64) *SupportTicketMappingUpdateOne {
-	if i != nil {
-		stmuo.SetAvailableCents(*i)
-	}
-	return stmuo
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (stmuo *SupportTicketMappingUpdateOne) AddAvailableCents(i int64) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.AddAvailableCents(i)
-	return stmuo
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetTotalSpentCents(i int64) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.ResetTotalSpentCents()
-	stmuo.mutation.SetTotalSpentCents(i)
-	return stmuo
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableTotalSpentCents(i *int64) *SupportTicketMappingUpdateOne {
-	if i != nil {
-		stmuo.SetTotalSpentCents(*i)
-	}
-	return stmuo
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (stmuo *SupportTicketMappingUpdateOne) AddTotalSpentCents(i int64) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.AddTotalSpentCents(i)
-	return stmuo
-}
-
-// SetQuantity sets the "quantity" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetQuantity(f float64) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.ResetQuantity()
-	stmuo.mutation.SetQuantity(f)
-	return stmuo
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableQuantity(f *float64) *SupportTicketMappingUpdateOne {
-	if f != nil {
-		stmuo.SetQuantity(*f)
-	}
-	return stmuo
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (stmuo *SupportTicketMappingUpdateOne) AddQuantity(f float64) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.AddQuantity(f)
-	return stmuo
-}
-
-// SetUnit sets the "unit" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetUnit(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetUnit(s)
-	return stmuo
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableUnit(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetUnit(*s)
-	}
-	return stmuo
-}
-
-// SetReason sets the "reason" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetReason(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetReason(s)
-	return stmuo
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableReason(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetReason(*s)
-	}
-	return stmuo
-}
-
-// SetResult sets the "result" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetResult(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetResult(s)
-	return stmuo
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableResult(s *string) *SupportTicketMappingUpdateOne {
-	if s != nil {
-		stmuo.SetResult(*s)
+		stmuo.SetStatus(*s)
 	}
 	return stmuo
 }
@@ -1230,57 +395,31 @@ func (stmuo *SupportTicketMappingUpdateOne) SetNillableSource(s *string) *Suppor
 	return stmuo
 }
 
-// SetDirection sets the "direction" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetDirection(s string) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetDirection(s)
+// SetURL sets the "url" field.
+func (stmuo *SupportTicketMappingUpdateOne) SetURL(s string) *SupportTicketMappingUpdateOne {
+	stmuo.mutation.SetURL(s)
 	return stmuo
 }
 
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableDirection(s *string) *SupportTicketMappingUpdateOne {
+// SetNillableURL sets the "url" field if the given value is not nil.
+func (stmuo *SupportTicketMappingUpdateOne) SetNillableURL(s *string) *SupportTicketMappingUpdateOne {
 	if s != nil {
-		stmuo.SetDirection(*s)
+		stmuo.SetURL(*s)
 	}
 	return stmuo
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetCreatedAt(t time.Time) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetCreatedAt(t)
+// SetReason sets the "reason" field.
+func (stmuo *SupportTicketMappingUpdateOne) SetReason(s string) *SupportTicketMappingUpdateOne {
+	stmuo.mutation.SetReason(s)
 	return stmuo
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableCreatedAt(t *time.Time) *SupportTicketMappingUpdateOne {
-	if t != nil {
-		stmuo.SetCreatedAt(*t)
+// SetNillableReason sets the "reason" field if the given value is not nil.
+func (stmuo *SupportTicketMappingUpdateOne) SetNillableReason(s *string) *SupportTicketMappingUpdateOne {
+	if s != nil {
+		stmuo.SetReason(*s)
 	}
-	return stmuo
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetUpdatedAt(t time.Time) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetUpdatedAt(t)
-	return stmuo
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (stmuo *SupportTicketMappingUpdateOne) SetArchivedAt(t time.Time) *SupportTicketMappingUpdateOne {
-	stmuo.mutation.SetArchivedAt(t)
-	return stmuo
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (stmuo *SupportTicketMappingUpdateOne) SetNillableArchivedAt(t *time.Time) *SupportTicketMappingUpdateOne {
-	if t != nil {
-		stmuo.SetArchivedAt(*t)
-	}
-	return stmuo
-}
-
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (stmuo *SupportTicketMappingUpdateOne) ClearArchivedAt() *SupportTicketMappingUpdateOne {
-	stmuo.mutation.ClearArchivedAt()
 	return stmuo
 }
 
@@ -1364,29 +503,17 @@ func (stmuo *SupportTicketMappingUpdateOne) sqlSave(ctx context.Context) (_node 
 			}
 		}
 	}
+	if value, ok := stmuo.mutation.CreatedAt(); ok {
+		_spec.SetField(supportticketmapping.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := stmuo.mutation.UpdatedAt(); ok {
+		_spec.SetField(supportticketmapping.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := stmuo.mutation.AccountID(); ok {
 		_spec.SetField(supportticketmapping.FieldAccountID, field.TypeString, value)
 	}
-	if value, ok := stmuo.mutation.OwnerAccountID(); ok {
-		_spec.SetField(supportticketmapping.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.OwnerUserID(); ok {
-		_spec.SetField(supportticketmapping.FieldOwnerUserID, field.TypeString, value)
-	}
 	if value, ok := stmuo.mutation.UserID(); ok {
 		_spec.SetField(supportticketmapping.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.Email(); ok {
-		_spec.SetField(supportticketmapping.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.Role(); ok {
-		_spec.SetField(supportticketmapping.FieldRole, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.Status(); ok {
-		_spec.SetField(supportticketmapping.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.Name(); ok {
-		_spec.SetField(supportticketmapping.FieldName, field.TypeString, value)
 	}
 	if value, ok := stmuo.mutation.WorkspaceID(); ok {
 		_spec.SetField(supportticketmapping.FieldWorkspaceID, field.TypeString, value)
@@ -1397,98 +524,17 @@ func (stmuo *SupportTicketMappingUpdateOne) sqlSave(ctx context.Context) (_node 
 	if value, ok := stmuo.mutation.ResourceKind(); ok {
 		_spec.SetField(supportticketmapping.FieldResourceKind, field.TypeString, value)
 	}
-	if value, ok := stmuo.mutation.OperationID(); ok {
-		_spec.SetField(supportticketmapping.FieldOperationID, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.Provider(); ok {
-		_spec.SetField(supportticketmapping.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.ProviderResourceID(); ok {
-		_spec.SetField(supportticketmapping.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.URL(); ok {
-		_spec.SetField(supportticketmapping.FieldURL, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.HoldID(); ok {
-		_spec.SetField(supportticketmapping.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.HoldReleaseID(); ok {
-		_spec.SetField(supportticketmapping.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.LedgerEntryID(); ok {
-		_spec.SetField(supportticketmapping.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.WalletTransactionID(); ok {
-		_spec.SetField(supportticketmapping.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.SettlementID(); ok {
-		_spec.SetField(supportticketmapping.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.PricingVersion(); ok {
-		_spec.SetField(supportticketmapping.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.AmountCents(); ok {
-		_spec.SetField(supportticketmapping.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := stmuo.mutation.AddedAmountCents(); ok {
-		_spec.AddField(supportticketmapping.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := stmuo.mutation.BalanceCents(); ok {
-		_spec.SetField(supportticketmapping.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := stmuo.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(supportticketmapping.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := stmuo.mutation.FrozenCents(); ok {
-		_spec.SetField(supportticketmapping.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := stmuo.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(supportticketmapping.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := stmuo.mutation.AvailableCents(); ok {
-		_spec.SetField(supportticketmapping.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := stmuo.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(supportticketmapping.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := stmuo.mutation.TotalSpentCents(); ok {
-		_spec.SetField(supportticketmapping.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := stmuo.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(supportticketmapping.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := stmuo.mutation.Quantity(); ok {
-		_spec.SetField(supportticketmapping.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := stmuo.mutation.AddedQuantity(); ok {
-		_spec.AddField(supportticketmapping.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := stmuo.mutation.Unit(); ok {
-		_spec.SetField(supportticketmapping.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.Reason(); ok {
-		_spec.SetField(supportticketmapping.FieldReason, field.TypeString, value)
-	}
-	if value, ok := stmuo.mutation.Result(); ok {
-		_spec.SetField(supportticketmapping.FieldResult, field.TypeString, value)
+	if value, ok := stmuo.mutation.Status(); ok {
+		_spec.SetField(supportticketmapping.FieldStatus, field.TypeString, value)
 	}
 	if value, ok := stmuo.mutation.Source(); ok {
 		_spec.SetField(supportticketmapping.FieldSource, field.TypeString, value)
 	}
-	if value, ok := stmuo.mutation.Direction(); ok {
-		_spec.SetField(supportticketmapping.FieldDirection, field.TypeString, value)
+	if value, ok := stmuo.mutation.URL(); ok {
+		_spec.SetField(supportticketmapping.FieldURL, field.TypeString, value)
 	}
-	if value, ok := stmuo.mutation.CreatedAt(); ok {
-		_spec.SetField(supportticketmapping.FieldCreatedAt, field.TypeTime, value)
-	}
-	if value, ok := stmuo.mutation.UpdatedAt(); ok {
-		_spec.SetField(supportticketmapping.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := stmuo.mutation.ArchivedAt(); ok {
-		_spec.SetField(supportticketmapping.FieldArchivedAt, field.TypeTime, value)
-	}
-	if stmuo.mutation.ArchivedAtCleared() {
-		_spec.ClearField(supportticketmapping.FieldArchivedAt, field.TypeTime)
+	if value, ok := stmuo.mutation.Reason(); ok {
+		_spec.SetField(supportticketmapping.FieldReason, field.TypeString, value)
 	}
 	_node = &SupportTicketMapping{config: stmuo.config}
 	_spec.Assign = _node.assignValues

@@ -261,12 +261,12 @@ func (perq *ProductionE2ERecordQuery) Clone() *ProductionE2ERecordQuery {
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.ProductionE2ERecord.Query().
-//		GroupBy(productione2erecord.FieldAccountID).
+//		GroupBy(productione2erecord.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (perq *ProductionE2ERecordQuery) GroupBy(field string, fields ...string) *ProductionE2ERecordGroupBy {
@@ -284,11 +284,11 @@ func (perq *ProductionE2ERecordQuery) GroupBy(field string, fields ...string) *P
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.ProductionE2ERecord.Query().
-//		Select(productione2erecord.FieldAccountID).
+//		Select(productione2erecord.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (perq *ProductionE2ERecordQuery) Select(fields ...string) *ProductionE2ERecordSelect {
 	perq.ctx.Fields = append(perq.ctx.Fields, fields...)

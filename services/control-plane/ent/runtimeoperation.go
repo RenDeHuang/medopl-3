@@ -17,76 +17,46 @@ type RuntimeOperation struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID string `json:"id,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// UpdatedAt holds the value of the "updated_at" field.
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// OperationID holds the value of the "operation_id" field.
+	OperationID string `json:"operation_id,omitempty"`
 	// AccountID holds the value of the "account_id" field.
 	AccountID string `json:"account_id,omitempty"`
-	// OwnerAccountID holds the value of the "owner_account_id" field.
-	OwnerAccountID string `json:"owner_account_id,omitempty"`
-	// OwnerUserID holds the value of the "owner_user_id" field.
-	OwnerUserID string `json:"owner_user_id,omitempty"`
-	// UserID holds the value of the "user_id" field.
-	UserID string `json:"user_id,omitempty"`
-	// Email holds the value of the "email" field.
-	Email string `json:"email,omitempty"`
-	// Role holds the value of the "role" field.
-	Role string `json:"role,omitempty"`
-	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
-	// Name holds the value of the "name" field.
-	Name string `json:"name,omitempty"`
 	// WorkspaceID holds the value of the "workspace_id" field.
 	WorkspaceID string `json:"workspace_id,omitempty"`
 	// ResourceID holds the value of the "resource_id" field.
 	ResourceID string `json:"resource_id,omitempty"`
 	// ResourceKind holds the value of the "resource_kind" field.
 	ResourceKind string `json:"resource_kind,omitempty"`
-	// OperationID holds the value of the "operation_id" field.
-	OperationID string `json:"operation_id,omitempty"`
+	// Action holds the value of the "action" field.
+	Action string `json:"action,omitempty"`
 	// Provider holds the value of the "provider" field.
 	Provider string `json:"provider,omitempty"`
-	// ProviderResourceID holds the value of the "provider_resource_id" field.
-	ProviderResourceID string `json:"provider_resource_id,omitempty"`
-	// URL holds the value of the "url" field.
-	URL string `json:"url,omitempty"`
-	// HoldID holds the value of the "hold_id" field.
-	HoldID string `json:"hold_id,omitempty"`
-	// HoldReleaseID holds the value of the "hold_release_id" field.
-	HoldReleaseID string `json:"hold_release_id,omitempty"`
-	// LedgerEntryID holds the value of the "ledger_entry_id" field.
-	LedgerEntryID string `json:"ledger_entry_id,omitempty"`
-	// WalletTransactionID holds the value of the "wallet_transaction_id" field.
-	WalletTransactionID string `json:"wallet_transaction_id,omitempty"`
-	// SettlementID holds the value of the "settlement_id" field.
-	SettlementID string `json:"settlement_id,omitempty"`
-	// PricingVersion holds the value of the "pricing_version" field.
-	PricingVersion string `json:"pricing_version,omitempty"`
-	// AmountCents holds the value of the "amount_cents" field.
-	AmountCents int64 `json:"amount_cents,omitempty"`
-	// BalanceCents holds the value of the "balance_cents" field.
-	BalanceCents int64 `json:"balance_cents,omitempty"`
-	// FrozenCents holds the value of the "frozen_cents" field.
-	FrozenCents int64 `json:"frozen_cents,omitempty"`
-	// AvailableCents holds the value of the "available_cents" field.
-	AvailableCents int64 `json:"available_cents,omitempty"`
-	// TotalSpentCents holds the value of the "total_spent_cents" field.
-	TotalSpentCents int64 `json:"total_spent_cents,omitempty"`
-	// Quantity holds the value of the "quantity" field.
-	Quantity float64 `json:"quantity,omitempty"`
-	// Unit holds the value of the "unit" field.
-	Unit string `json:"unit,omitempty"`
-	// Reason holds the value of the "reason" field.
-	Reason string `json:"reason,omitempty"`
+	// ProviderRequestID holds the value of the "provider_request_id" field.
+	ProviderRequestID string `json:"provider_request_id,omitempty"`
+	// Status holds the value of the "status" field.
+	Status string `json:"status,omitempty"`
 	// Result holds the value of the "result" field.
 	Result string `json:"result,omitempty"`
-	// Source holds the value of the "source" field.
-	Source string `json:"source,omitempty"`
-	// Direction holds the value of the "direction" field.
-	Direction string `json:"direction,omitempty"`
-	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// ArchivedAt holds the value of the "archived_at" field.
-	ArchivedAt   *time.Time `json:"archived_at,omitempty"`
+	// ComputeAllocationID holds the value of the "compute_allocation_id" field.
+	ComputeAllocationID string `json:"compute_allocation_id,omitempty"`
+	// StorageID holds the value of the "storage_id" field.
+	StorageID string `json:"storage_id,omitempty"`
+	// AttachmentID holds the value of the "attachment_id" field.
+	AttachmentID string `json:"attachment_id,omitempty"`
+	// RuntimeServiceName holds the value of the "runtime_service_name" field.
+	RuntimeServiceName string `json:"runtime_service_name,omitempty"`
+	// CvmInstanceID holds the value of the "cvm_instance_id" field.
+	CvmInstanceID string `json:"cvm_instance_id,omitempty"`
+	// InstanceID holds the value of the "instance_id" field.
+	InstanceID string `json:"instance_id,omitempty"`
+	// NodeName holds the value of the "node_name" field.
+	NodeName string `json:"node_name,omitempty"`
+	// MachineName holds the value of the "machine_name" field.
+	MachineName  string `json:"machine_name,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -95,13 +65,9 @@ func (*RuntimeOperation) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case runtimeoperation.FieldQuantity:
-			values[i] = new(sql.NullFloat64)
-		case runtimeoperation.FieldAmountCents, runtimeoperation.FieldBalanceCents, runtimeoperation.FieldFrozenCents, runtimeoperation.FieldAvailableCents, runtimeoperation.FieldTotalSpentCents:
-			values[i] = new(sql.NullInt64)
-		case runtimeoperation.FieldID, runtimeoperation.FieldAccountID, runtimeoperation.FieldOwnerAccountID, runtimeoperation.FieldOwnerUserID, runtimeoperation.FieldUserID, runtimeoperation.FieldEmail, runtimeoperation.FieldRole, runtimeoperation.FieldStatus, runtimeoperation.FieldName, runtimeoperation.FieldWorkspaceID, runtimeoperation.FieldResourceID, runtimeoperation.FieldResourceKind, runtimeoperation.FieldOperationID, runtimeoperation.FieldProvider, runtimeoperation.FieldProviderResourceID, runtimeoperation.FieldURL, runtimeoperation.FieldHoldID, runtimeoperation.FieldHoldReleaseID, runtimeoperation.FieldLedgerEntryID, runtimeoperation.FieldWalletTransactionID, runtimeoperation.FieldSettlementID, runtimeoperation.FieldPricingVersion, runtimeoperation.FieldUnit, runtimeoperation.FieldReason, runtimeoperation.FieldResult, runtimeoperation.FieldSource, runtimeoperation.FieldDirection:
+		case runtimeoperation.FieldID, runtimeoperation.FieldOperationID, runtimeoperation.FieldAccountID, runtimeoperation.FieldWorkspaceID, runtimeoperation.FieldResourceID, runtimeoperation.FieldResourceKind, runtimeoperation.FieldAction, runtimeoperation.FieldProvider, runtimeoperation.FieldProviderRequestID, runtimeoperation.FieldStatus, runtimeoperation.FieldResult, runtimeoperation.FieldComputeAllocationID, runtimeoperation.FieldStorageID, runtimeoperation.FieldAttachmentID, runtimeoperation.FieldRuntimeServiceName, runtimeoperation.FieldCvmInstanceID, runtimeoperation.FieldInstanceID, runtimeoperation.FieldNodeName, runtimeoperation.FieldMachineName:
 			values[i] = new(sql.NullString)
-		case runtimeoperation.FieldCreatedAt, runtimeoperation.FieldUpdatedAt, runtimeoperation.FieldArchivedAt:
+		case runtimeoperation.FieldCreatedAt, runtimeoperation.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -124,53 +90,29 @@ func (ro *RuntimeOperation) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				ro.ID = value.String
 			}
+		case runtimeoperation.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				ro.CreatedAt = value.Time
+			}
+		case runtimeoperation.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				ro.UpdatedAt = value.Time
+			}
+		case runtimeoperation.FieldOperationID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field operation_id", values[i])
+			} else if value.Valid {
+				ro.OperationID = value.String
+			}
 		case runtimeoperation.FieldAccountID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_id", values[i])
 			} else if value.Valid {
 				ro.AccountID = value.String
-			}
-		case runtimeoperation.FieldOwnerAccountID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field owner_account_id", values[i])
-			} else if value.Valid {
-				ro.OwnerAccountID = value.String
-			}
-		case runtimeoperation.FieldOwnerUserID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field owner_user_id", values[i])
-			} else if value.Valid {
-				ro.OwnerUserID = value.String
-			}
-		case runtimeoperation.FieldUserID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field user_id", values[i])
-			} else if value.Valid {
-				ro.UserID = value.String
-			}
-		case runtimeoperation.FieldEmail:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field email", values[i])
-			} else if value.Valid {
-				ro.Email = value.String
-			}
-		case runtimeoperation.FieldRole:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field role", values[i])
-			} else if value.Valid {
-				ro.Role = value.String
-			}
-		case runtimeoperation.FieldStatus:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field status", values[i])
-			} else if value.Valid {
-				ro.Status = value.String
-			}
-		case runtimeoperation.FieldName:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field name", values[i])
-			} else if value.Valid {
-				ro.Name = value.String
 			}
 		case runtimeoperation.FieldWorkspaceID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -190,11 +132,11 @@ func (ro *RuntimeOperation) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				ro.ResourceKind = value.String
 			}
-		case runtimeoperation.FieldOperationID:
+		case runtimeoperation.FieldAction:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field operation_id", values[i])
+				return fmt.Errorf("unexpected type %T for field action", values[i])
 			} else if value.Valid {
-				ro.OperationID = value.String
+				ro.Action = value.String
 			}
 		case runtimeoperation.FieldProvider:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -202,101 +144,17 @@ func (ro *RuntimeOperation) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				ro.Provider = value.String
 			}
-		case runtimeoperation.FieldProviderResourceID:
+		case runtimeoperation.FieldProviderRequestID:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider_resource_id", values[i])
+				return fmt.Errorf("unexpected type %T for field provider_request_id", values[i])
 			} else if value.Valid {
-				ro.ProviderResourceID = value.String
+				ro.ProviderRequestID = value.String
 			}
-		case runtimeoperation.FieldURL:
+		case runtimeoperation.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field url", values[i])
+				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				ro.URL = value.String
-			}
-		case runtimeoperation.FieldHoldID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field hold_id", values[i])
-			} else if value.Valid {
-				ro.HoldID = value.String
-			}
-		case runtimeoperation.FieldHoldReleaseID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field hold_release_id", values[i])
-			} else if value.Valid {
-				ro.HoldReleaseID = value.String
-			}
-		case runtimeoperation.FieldLedgerEntryID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field ledger_entry_id", values[i])
-			} else if value.Valid {
-				ro.LedgerEntryID = value.String
-			}
-		case runtimeoperation.FieldWalletTransactionID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field wallet_transaction_id", values[i])
-			} else if value.Valid {
-				ro.WalletTransactionID = value.String
-			}
-		case runtimeoperation.FieldSettlementID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field settlement_id", values[i])
-			} else if value.Valid {
-				ro.SettlementID = value.String
-			}
-		case runtimeoperation.FieldPricingVersion:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field pricing_version", values[i])
-			} else if value.Valid {
-				ro.PricingVersion = value.String
-			}
-		case runtimeoperation.FieldAmountCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field amount_cents", values[i])
-			} else if value.Valid {
-				ro.AmountCents = value.Int64
-			}
-		case runtimeoperation.FieldBalanceCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field balance_cents", values[i])
-			} else if value.Valid {
-				ro.BalanceCents = value.Int64
-			}
-		case runtimeoperation.FieldFrozenCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field frozen_cents", values[i])
-			} else if value.Valid {
-				ro.FrozenCents = value.Int64
-			}
-		case runtimeoperation.FieldAvailableCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field available_cents", values[i])
-			} else if value.Valid {
-				ro.AvailableCents = value.Int64
-			}
-		case runtimeoperation.FieldTotalSpentCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field total_spent_cents", values[i])
-			} else if value.Valid {
-				ro.TotalSpentCents = value.Int64
-			}
-		case runtimeoperation.FieldQuantity:
-			if value, ok := values[i].(*sql.NullFloat64); !ok {
-				return fmt.Errorf("unexpected type %T for field quantity", values[i])
-			} else if value.Valid {
-				ro.Quantity = value.Float64
-			}
-		case runtimeoperation.FieldUnit:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field unit", values[i])
-			} else if value.Valid {
-				ro.Unit = value.String
-			}
-		case runtimeoperation.FieldReason:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field reason", values[i])
-			} else if value.Valid {
-				ro.Reason = value.String
+				ro.Status = value.String
 			}
 		case runtimeoperation.FieldResult:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -304,36 +162,53 @@ func (ro *RuntimeOperation) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				ro.Result = value.String
 			}
-		case runtimeoperation.FieldSource:
+		case runtimeoperation.FieldComputeAllocationID:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field source", values[i])
+				return fmt.Errorf("unexpected type %T for field compute_allocation_id", values[i])
 			} else if value.Valid {
-				ro.Source = value.String
+				ro.ComputeAllocationID = value.String
 			}
-		case runtimeoperation.FieldDirection:
+		case runtimeoperation.FieldStorageID:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field direction", values[i])
+				return fmt.Errorf("unexpected type %T for field storage_id", values[i])
 			} else if value.Valid {
-				ro.Direction = value.String
+				ro.StorageID = value.String
 			}
-		case runtimeoperation.FieldCreatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+		case runtimeoperation.FieldAttachmentID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field attachment_id", values[i])
 			} else if value.Valid {
-				ro.CreatedAt = value.Time
+				ro.AttachmentID = value.String
 			}
-		case runtimeoperation.FieldUpdatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+		case runtimeoperation.FieldRuntimeServiceName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field runtime_service_name", values[i])
 			} else if value.Valid {
-				ro.UpdatedAt = value.Time
+				ro.RuntimeServiceName = value.String
 			}
-		case runtimeoperation.FieldArchivedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field archived_at", values[i])
+		case runtimeoperation.FieldCvmInstanceID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field cvm_instance_id", values[i])
 			} else if value.Valid {
-				ro.ArchivedAt = new(time.Time)
-				*ro.ArchivedAt = value.Time
+				ro.CvmInstanceID = value.String
+			}
+		case runtimeoperation.FieldInstanceID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field instance_id", values[i])
+			} else if value.Valid {
+				ro.InstanceID = value.String
+			}
+		case runtimeoperation.FieldNodeName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field node_name", values[i])
+			} else if value.Valid {
+				ro.NodeName = value.String
+			}
+		case runtimeoperation.FieldMachineName:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field machine_name", values[i])
+			} else if value.Valid {
+				ro.MachineName = value.String
 			}
 		default:
 			ro.selectValues.Set(columns[i], values[i])
@@ -371,29 +246,17 @@ func (ro *RuntimeOperation) String() string {
 	var builder strings.Builder
 	builder.WriteString("RuntimeOperation(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", ro.ID))
+	builder.WriteString("created_at=")
+	builder.WriteString(ro.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(ro.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("operation_id=")
+	builder.WriteString(ro.OperationID)
+	builder.WriteString(", ")
 	builder.WriteString("account_id=")
 	builder.WriteString(ro.AccountID)
-	builder.WriteString(", ")
-	builder.WriteString("owner_account_id=")
-	builder.WriteString(ro.OwnerAccountID)
-	builder.WriteString(", ")
-	builder.WriteString("owner_user_id=")
-	builder.WriteString(ro.OwnerUserID)
-	builder.WriteString(", ")
-	builder.WriteString("user_id=")
-	builder.WriteString(ro.UserID)
-	builder.WriteString(", ")
-	builder.WriteString("email=")
-	builder.WriteString(ro.Email)
-	builder.WriteString(", ")
-	builder.WriteString("role=")
-	builder.WriteString(ro.Role)
-	builder.WriteString(", ")
-	builder.WriteString("status=")
-	builder.WriteString(ro.Status)
-	builder.WriteString(", ")
-	builder.WriteString("name=")
-	builder.WriteString(ro.Name)
 	builder.WriteString(", ")
 	builder.WriteString("workspace_id=")
 	builder.WriteString(ro.WorkspaceID)
@@ -404,79 +267,44 @@ func (ro *RuntimeOperation) String() string {
 	builder.WriteString("resource_kind=")
 	builder.WriteString(ro.ResourceKind)
 	builder.WriteString(", ")
-	builder.WriteString("operation_id=")
-	builder.WriteString(ro.OperationID)
+	builder.WriteString("action=")
+	builder.WriteString(ro.Action)
 	builder.WriteString(", ")
 	builder.WriteString("provider=")
 	builder.WriteString(ro.Provider)
 	builder.WriteString(", ")
-	builder.WriteString("provider_resource_id=")
-	builder.WriteString(ro.ProviderResourceID)
+	builder.WriteString("provider_request_id=")
+	builder.WriteString(ro.ProviderRequestID)
 	builder.WriteString(", ")
-	builder.WriteString("url=")
-	builder.WriteString(ro.URL)
-	builder.WriteString(", ")
-	builder.WriteString("hold_id=")
-	builder.WriteString(ro.HoldID)
-	builder.WriteString(", ")
-	builder.WriteString("hold_release_id=")
-	builder.WriteString(ro.HoldReleaseID)
-	builder.WriteString(", ")
-	builder.WriteString("ledger_entry_id=")
-	builder.WriteString(ro.LedgerEntryID)
-	builder.WriteString(", ")
-	builder.WriteString("wallet_transaction_id=")
-	builder.WriteString(ro.WalletTransactionID)
-	builder.WriteString(", ")
-	builder.WriteString("settlement_id=")
-	builder.WriteString(ro.SettlementID)
-	builder.WriteString(", ")
-	builder.WriteString("pricing_version=")
-	builder.WriteString(ro.PricingVersion)
-	builder.WriteString(", ")
-	builder.WriteString("amount_cents=")
-	builder.WriteString(fmt.Sprintf("%v", ro.AmountCents))
-	builder.WriteString(", ")
-	builder.WriteString("balance_cents=")
-	builder.WriteString(fmt.Sprintf("%v", ro.BalanceCents))
-	builder.WriteString(", ")
-	builder.WriteString("frozen_cents=")
-	builder.WriteString(fmt.Sprintf("%v", ro.FrozenCents))
-	builder.WriteString(", ")
-	builder.WriteString("available_cents=")
-	builder.WriteString(fmt.Sprintf("%v", ro.AvailableCents))
-	builder.WriteString(", ")
-	builder.WriteString("total_spent_cents=")
-	builder.WriteString(fmt.Sprintf("%v", ro.TotalSpentCents))
-	builder.WriteString(", ")
-	builder.WriteString("quantity=")
-	builder.WriteString(fmt.Sprintf("%v", ro.Quantity))
-	builder.WriteString(", ")
-	builder.WriteString("unit=")
-	builder.WriteString(ro.Unit)
-	builder.WriteString(", ")
-	builder.WriteString("reason=")
-	builder.WriteString(ro.Reason)
+	builder.WriteString("status=")
+	builder.WriteString(ro.Status)
 	builder.WriteString(", ")
 	builder.WriteString("result=")
 	builder.WriteString(ro.Result)
 	builder.WriteString(", ")
-	builder.WriteString("source=")
-	builder.WriteString(ro.Source)
+	builder.WriteString("compute_allocation_id=")
+	builder.WriteString(ro.ComputeAllocationID)
 	builder.WriteString(", ")
-	builder.WriteString("direction=")
-	builder.WriteString(ro.Direction)
+	builder.WriteString("storage_id=")
+	builder.WriteString(ro.StorageID)
 	builder.WriteString(", ")
-	builder.WriteString("created_at=")
-	builder.WriteString(ro.CreatedAt.Format(time.ANSIC))
+	builder.WriteString("attachment_id=")
+	builder.WriteString(ro.AttachmentID)
 	builder.WriteString(", ")
-	builder.WriteString("updated_at=")
-	builder.WriteString(ro.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString("runtime_service_name=")
+	builder.WriteString(ro.RuntimeServiceName)
 	builder.WriteString(", ")
-	if v := ro.ArchivedAt; v != nil {
-		builder.WriteString("archived_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
+	builder.WriteString("cvm_instance_id=")
+	builder.WriteString(ro.CvmInstanceID)
+	builder.WriteString(", ")
+	builder.WriteString("instance_id=")
+	builder.WriteString(ro.InstanceID)
+	builder.WriteString(", ")
+	builder.WriteString("node_name=")
+	builder.WriteString(ro.NodeName)
+	builder.WriteString(", ")
+	builder.WriteString("machine_name=")
+	builder.WriteString(ro.MachineName)
 	builder.WriteByte(')')
 	return builder.String()
 }

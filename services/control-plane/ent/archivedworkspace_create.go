@@ -20,6 +20,34 @@ type ArchivedWorkspaceCreate struct {
 	hooks    []Hook
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (awc *ArchivedWorkspaceCreate) SetCreatedAt(t time.Time) *ArchivedWorkspaceCreate {
+	awc.mutation.SetCreatedAt(t)
+	return awc
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (awc *ArchivedWorkspaceCreate) SetNillableCreatedAt(t *time.Time) *ArchivedWorkspaceCreate {
+	if t != nil {
+		awc.SetCreatedAt(*t)
+	}
+	return awc
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (awc *ArchivedWorkspaceCreate) SetUpdatedAt(t time.Time) *ArchivedWorkspaceCreate {
+	awc.mutation.SetUpdatedAt(t)
+	return awc
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (awc *ArchivedWorkspaceCreate) SetNillableUpdatedAt(t *time.Time) *ArchivedWorkspaceCreate {
+	if t != nil {
+		awc.SetUpdatedAt(*t)
+	}
+	return awc
+}
+
 // SetAccountID sets the "account_id" field.
 func (awc *ArchivedWorkspaceCreate) SetAccountID(s string) *ArchivedWorkspaceCreate {
 	awc.mutation.SetAccountID(s)
@@ -30,104 +58,6 @@ func (awc *ArchivedWorkspaceCreate) SetAccountID(s string) *ArchivedWorkspaceCre
 func (awc *ArchivedWorkspaceCreate) SetNillableAccountID(s *string) *ArchivedWorkspaceCreate {
 	if s != nil {
 		awc.SetAccountID(*s)
-	}
-	return awc
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (awc *ArchivedWorkspaceCreate) SetOwnerAccountID(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetOwnerAccountID(s)
-	return awc
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableOwnerAccountID(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetOwnerAccountID(*s)
-	}
-	return awc
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (awc *ArchivedWorkspaceCreate) SetOwnerUserID(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetOwnerUserID(s)
-	return awc
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableOwnerUserID(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetOwnerUserID(*s)
-	}
-	return awc
-}
-
-// SetUserID sets the "user_id" field.
-func (awc *ArchivedWorkspaceCreate) SetUserID(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetUserID(s)
-	return awc
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableUserID(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetUserID(*s)
-	}
-	return awc
-}
-
-// SetEmail sets the "email" field.
-func (awc *ArchivedWorkspaceCreate) SetEmail(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetEmail(s)
-	return awc
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableEmail(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetEmail(*s)
-	}
-	return awc
-}
-
-// SetRole sets the "role" field.
-func (awc *ArchivedWorkspaceCreate) SetRole(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetRole(s)
-	return awc
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableRole(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetRole(*s)
-	}
-	return awc
-}
-
-// SetStatus sets the "status" field.
-func (awc *ArchivedWorkspaceCreate) SetStatus(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetStatus(s)
-	return awc
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableStatus(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetStatus(*s)
-	}
-	return awc
-}
-
-// SetName sets the "name" field.
-func (awc *ArchivedWorkspaceCreate) SetName(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetName(s)
-	return awc
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableName(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetName(*s)
 	}
 	return awc
 }
@@ -174,240 +104,30 @@ func (awc *ArchivedWorkspaceCreate) SetNillableResourceKind(s *string) *Archived
 	return awc
 }
 
-// SetOperationID sets the "operation_id" field.
-func (awc *ArchivedWorkspaceCreate) SetOperationID(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetOperationID(s)
+// SetName sets the "name" field.
+func (awc *ArchivedWorkspaceCreate) SetName(s string) *ArchivedWorkspaceCreate {
+	awc.mutation.SetName(s)
 	return awc
 }
 
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableOperationID(s *string) *ArchivedWorkspaceCreate {
+// SetNillableName sets the "name" field if the given value is not nil.
+func (awc *ArchivedWorkspaceCreate) SetNillableName(s *string) *ArchivedWorkspaceCreate {
 	if s != nil {
-		awc.SetOperationID(*s)
+		awc.SetName(*s)
 	}
 	return awc
 }
 
-// SetProvider sets the "provider" field.
-func (awc *ArchivedWorkspaceCreate) SetProvider(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetProvider(s)
+// SetStatus sets the "status" field.
+func (awc *ArchivedWorkspaceCreate) SetStatus(s string) *ArchivedWorkspaceCreate {
+	awc.mutation.SetStatus(s)
 	return awc
 }
 
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableProvider(s *string) *ArchivedWorkspaceCreate {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (awc *ArchivedWorkspaceCreate) SetNillableStatus(s *string) *ArchivedWorkspaceCreate {
 	if s != nil {
-		awc.SetProvider(*s)
-	}
-	return awc
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (awc *ArchivedWorkspaceCreate) SetProviderResourceID(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetProviderResourceID(s)
-	return awc
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableProviderResourceID(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetProviderResourceID(*s)
-	}
-	return awc
-}
-
-// SetURL sets the "url" field.
-func (awc *ArchivedWorkspaceCreate) SetURL(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetURL(s)
-	return awc
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableURL(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetURL(*s)
-	}
-	return awc
-}
-
-// SetHoldID sets the "hold_id" field.
-func (awc *ArchivedWorkspaceCreate) SetHoldID(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetHoldID(s)
-	return awc
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableHoldID(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetHoldID(*s)
-	}
-	return awc
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (awc *ArchivedWorkspaceCreate) SetHoldReleaseID(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetHoldReleaseID(s)
-	return awc
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableHoldReleaseID(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetHoldReleaseID(*s)
-	}
-	return awc
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (awc *ArchivedWorkspaceCreate) SetLedgerEntryID(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetLedgerEntryID(s)
-	return awc
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableLedgerEntryID(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetLedgerEntryID(*s)
-	}
-	return awc
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (awc *ArchivedWorkspaceCreate) SetWalletTransactionID(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetWalletTransactionID(s)
-	return awc
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableWalletTransactionID(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetWalletTransactionID(*s)
-	}
-	return awc
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (awc *ArchivedWorkspaceCreate) SetSettlementID(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetSettlementID(s)
-	return awc
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableSettlementID(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetSettlementID(*s)
-	}
-	return awc
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (awc *ArchivedWorkspaceCreate) SetPricingVersion(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetPricingVersion(s)
-	return awc
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillablePricingVersion(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetPricingVersion(*s)
-	}
-	return awc
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (awc *ArchivedWorkspaceCreate) SetAmountCents(i int64) *ArchivedWorkspaceCreate {
-	awc.mutation.SetAmountCents(i)
-	return awc
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableAmountCents(i *int64) *ArchivedWorkspaceCreate {
-	if i != nil {
-		awc.SetAmountCents(*i)
-	}
-	return awc
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (awc *ArchivedWorkspaceCreate) SetBalanceCents(i int64) *ArchivedWorkspaceCreate {
-	awc.mutation.SetBalanceCents(i)
-	return awc
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableBalanceCents(i *int64) *ArchivedWorkspaceCreate {
-	if i != nil {
-		awc.SetBalanceCents(*i)
-	}
-	return awc
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (awc *ArchivedWorkspaceCreate) SetFrozenCents(i int64) *ArchivedWorkspaceCreate {
-	awc.mutation.SetFrozenCents(i)
-	return awc
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableFrozenCents(i *int64) *ArchivedWorkspaceCreate {
-	if i != nil {
-		awc.SetFrozenCents(*i)
-	}
-	return awc
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (awc *ArchivedWorkspaceCreate) SetAvailableCents(i int64) *ArchivedWorkspaceCreate {
-	awc.mutation.SetAvailableCents(i)
-	return awc
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableAvailableCents(i *int64) *ArchivedWorkspaceCreate {
-	if i != nil {
-		awc.SetAvailableCents(*i)
-	}
-	return awc
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (awc *ArchivedWorkspaceCreate) SetTotalSpentCents(i int64) *ArchivedWorkspaceCreate {
-	awc.mutation.SetTotalSpentCents(i)
-	return awc
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableTotalSpentCents(i *int64) *ArchivedWorkspaceCreate {
-	if i != nil {
-		awc.SetTotalSpentCents(*i)
-	}
-	return awc
-}
-
-// SetQuantity sets the "quantity" field.
-func (awc *ArchivedWorkspaceCreate) SetQuantity(f float64) *ArchivedWorkspaceCreate {
-	awc.mutation.SetQuantity(f)
-	return awc
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableQuantity(f *float64) *ArchivedWorkspaceCreate {
-	if f != nil {
-		awc.SetQuantity(*f)
-	}
-	return awc
-}
-
-// SetUnit sets the "unit" field.
-func (awc *ArchivedWorkspaceCreate) SetUnit(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetUnit(s)
-	return awc
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableUnit(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetUnit(*s)
+		awc.SetStatus(*s)
 	}
 	return awc
 }
@@ -422,76 +142,6 @@ func (awc *ArchivedWorkspaceCreate) SetReason(s string) *ArchivedWorkspaceCreate
 func (awc *ArchivedWorkspaceCreate) SetNillableReason(s *string) *ArchivedWorkspaceCreate {
 	if s != nil {
 		awc.SetReason(*s)
-	}
-	return awc
-}
-
-// SetResult sets the "result" field.
-func (awc *ArchivedWorkspaceCreate) SetResult(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetResult(s)
-	return awc
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableResult(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetResult(*s)
-	}
-	return awc
-}
-
-// SetSource sets the "source" field.
-func (awc *ArchivedWorkspaceCreate) SetSource(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetSource(s)
-	return awc
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableSource(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetSource(*s)
-	}
-	return awc
-}
-
-// SetDirection sets the "direction" field.
-func (awc *ArchivedWorkspaceCreate) SetDirection(s string) *ArchivedWorkspaceCreate {
-	awc.mutation.SetDirection(s)
-	return awc
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableDirection(s *string) *ArchivedWorkspaceCreate {
-	if s != nil {
-		awc.SetDirection(*s)
-	}
-	return awc
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (awc *ArchivedWorkspaceCreate) SetCreatedAt(t time.Time) *ArchivedWorkspaceCreate {
-	awc.mutation.SetCreatedAt(t)
-	return awc
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableCreatedAt(t *time.Time) *ArchivedWorkspaceCreate {
-	if t != nil {
-		awc.SetCreatedAt(*t)
-	}
-	return awc
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (awc *ArchivedWorkspaceCreate) SetUpdatedAt(t time.Time) *ArchivedWorkspaceCreate {
-	awc.mutation.SetUpdatedAt(t)
-	return awc
-}
-
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (awc *ArchivedWorkspaceCreate) SetNillableUpdatedAt(t *time.Time) *ArchivedWorkspaceCreate {
-	if t != nil {
-		awc.SetUpdatedAt(*t)
 	}
 	return awc
 }
@@ -551,37 +201,17 @@ func (awc *ArchivedWorkspaceCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (awc *ArchivedWorkspaceCreate) defaults() {
+	if _, ok := awc.mutation.CreatedAt(); !ok {
+		v := archivedworkspace.DefaultCreatedAt()
+		awc.mutation.SetCreatedAt(v)
+	}
+	if _, ok := awc.mutation.UpdatedAt(); !ok {
+		v := archivedworkspace.DefaultUpdatedAt()
+		awc.mutation.SetUpdatedAt(v)
+	}
 	if _, ok := awc.mutation.AccountID(); !ok {
 		v := archivedworkspace.DefaultAccountID
 		awc.mutation.SetAccountID(v)
-	}
-	if _, ok := awc.mutation.OwnerAccountID(); !ok {
-		v := archivedworkspace.DefaultOwnerAccountID
-		awc.mutation.SetOwnerAccountID(v)
-	}
-	if _, ok := awc.mutation.OwnerUserID(); !ok {
-		v := archivedworkspace.DefaultOwnerUserID
-		awc.mutation.SetOwnerUserID(v)
-	}
-	if _, ok := awc.mutation.UserID(); !ok {
-		v := archivedworkspace.DefaultUserID
-		awc.mutation.SetUserID(v)
-	}
-	if _, ok := awc.mutation.Email(); !ok {
-		v := archivedworkspace.DefaultEmail
-		awc.mutation.SetEmail(v)
-	}
-	if _, ok := awc.mutation.Role(); !ok {
-		v := archivedworkspace.DefaultRole
-		awc.mutation.SetRole(v)
-	}
-	if _, ok := awc.mutation.Status(); !ok {
-		v := archivedworkspace.DefaultStatus
-		awc.mutation.SetStatus(v)
-	}
-	if _, ok := awc.mutation.Name(); !ok {
-		v := archivedworkspace.DefaultName
-		awc.mutation.SetName(v)
 	}
 	if _, ok := awc.mutation.WorkspaceID(); !ok {
 		v := archivedworkspace.DefaultWorkspaceID
@@ -595,125 +225,30 @@ func (awc *ArchivedWorkspaceCreate) defaults() {
 		v := archivedworkspace.DefaultResourceKind
 		awc.mutation.SetResourceKind(v)
 	}
-	if _, ok := awc.mutation.OperationID(); !ok {
-		v := archivedworkspace.DefaultOperationID
-		awc.mutation.SetOperationID(v)
+	if _, ok := awc.mutation.Name(); !ok {
+		v := archivedworkspace.DefaultName
+		awc.mutation.SetName(v)
 	}
-	if _, ok := awc.mutation.Provider(); !ok {
-		v := archivedworkspace.DefaultProvider
-		awc.mutation.SetProvider(v)
-	}
-	if _, ok := awc.mutation.ProviderResourceID(); !ok {
-		v := archivedworkspace.DefaultProviderResourceID
-		awc.mutation.SetProviderResourceID(v)
-	}
-	if _, ok := awc.mutation.URL(); !ok {
-		v := archivedworkspace.DefaultURL
-		awc.mutation.SetURL(v)
-	}
-	if _, ok := awc.mutation.HoldID(); !ok {
-		v := archivedworkspace.DefaultHoldID
-		awc.mutation.SetHoldID(v)
-	}
-	if _, ok := awc.mutation.HoldReleaseID(); !ok {
-		v := archivedworkspace.DefaultHoldReleaseID
-		awc.mutation.SetHoldReleaseID(v)
-	}
-	if _, ok := awc.mutation.LedgerEntryID(); !ok {
-		v := archivedworkspace.DefaultLedgerEntryID
-		awc.mutation.SetLedgerEntryID(v)
-	}
-	if _, ok := awc.mutation.WalletTransactionID(); !ok {
-		v := archivedworkspace.DefaultWalletTransactionID
-		awc.mutation.SetWalletTransactionID(v)
-	}
-	if _, ok := awc.mutation.SettlementID(); !ok {
-		v := archivedworkspace.DefaultSettlementID
-		awc.mutation.SetSettlementID(v)
-	}
-	if _, ok := awc.mutation.PricingVersion(); !ok {
-		v := archivedworkspace.DefaultPricingVersion
-		awc.mutation.SetPricingVersion(v)
-	}
-	if _, ok := awc.mutation.AmountCents(); !ok {
-		v := archivedworkspace.DefaultAmountCents
-		awc.mutation.SetAmountCents(v)
-	}
-	if _, ok := awc.mutation.BalanceCents(); !ok {
-		v := archivedworkspace.DefaultBalanceCents
-		awc.mutation.SetBalanceCents(v)
-	}
-	if _, ok := awc.mutation.FrozenCents(); !ok {
-		v := archivedworkspace.DefaultFrozenCents
-		awc.mutation.SetFrozenCents(v)
-	}
-	if _, ok := awc.mutation.AvailableCents(); !ok {
-		v := archivedworkspace.DefaultAvailableCents
-		awc.mutation.SetAvailableCents(v)
-	}
-	if _, ok := awc.mutation.TotalSpentCents(); !ok {
-		v := archivedworkspace.DefaultTotalSpentCents
-		awc.mutation.SetTotalSpentCents(v)
-	}
-	if _, ok := awc.mutation.Quantity(); !ok {
-		v := archivedworkspace.DefaultQuantity
-		awc.mutation.SetQuantity(v)
-	}
-	if _, ok := awc.mutation.Unit(); !ok {
-		v := archivedworkspace.DefaultUnit
-		awc.mutation.SetUnit(v)
+	if _, ok := awc.mutation.Status(); !ok {
+		v := archivedworkspace.DefaultStatus
+		awc.mutation.SetStatus(v)
 	}
 	if _, ok := awc.mutation.Reason(); !ok {
 		v := archivedworkspace.DefaultReason
 		awc.mutation.SetReason(v)
 	}
-	if _, ok := awc.mutation.Result(); !ok {
-		v := archivedworkspace.DefaultResult
-		awc.mutation.SetResult(v)
-	}
-	if _, ok := awc.mutation.Source(); !ok {
-		v := archivedworkspace.DefaultSource
-		awc.mutation.SetSource(v)
-	}
-	if _, ok := awc.mutation.Direction(); !ok {
-		v := archivedworkspace.DefaultDirection
-		awc.mutation.SetDirection(v)
-	}
-	if _, ok := awc.mutation.CreatedAt(); !ok {
-		v := archivedworkspace.DefaultCreatedAt()
-		awc.mutation.SetCreatedAt(v)
-	}
-	if _, ok := awc.mutation.UpdatedAt(); !ok {
-		v := archivedworkspace.DefaultUpdatedAt()
-		awc.mutation.SetUpdatedAt(v)
-	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (awc *ArchivedWorkspaceCreate) check() error {
+	if _, ok := awc.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ArchivedWorkspace.created_at"`)}
+	}
+	if _, ok := awc.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ArchivedWorkspace.updated_at"`)}
+	}
 	if _, ok := awc.mutation.AccountID(); !ok {
 		return &ValidationError{Name: "account_id", err: errors.New(`ent: missing required field "ArchivedWorkspace.account_id"`)}
-	}
-	if _, ok := awc.mutation.OwnerAccountID(); !ok {
-		return &ValidationError{Name: "owner_account_id", err: errors.New(`ent: missing required field "ArchivedWorkspace.owner_account_id"`)}
-	}
-	if _, ok := awc.mutation.OwnerUserID(); !ok {
-		return &ValidationError{Name: "owner_user_id", err: errors.New(`ent: missing required field "ArchivedWorkspace.owner_user_id"`)}
-	}
-	if _, ok := awc.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "ArchivedWorkspace.user_id"`)}
-	}
-	if _, ok := awc.mutation.Email(); !ok {
-		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "ArchivedWorkspace.email"`)}
-	}
-	if _, ok := awc.mutation.Role(); !ok {
-		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "ArchivedWorkspace.role"`)}
-	}
-	if _, ok := awc.mutation.Status(); !ok {
-		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "ArchivedWorkspace.status"`)}
-	}
-	if _, ok := awc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "ArchivedWorkspace.name"`)}
 	}
 	if _, ok := awc.mutation.WorkspaceID(); !ok {
 		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "ArchivedWorkspace.workspace_id"`)}
@@ -724,74 +259,14 @@ func (awc *ArchivedWorkspaceCreate) check() error {
 	if _, ok := awc.mutation.ResourceKind(); !ok {
 		return &ValidationError{Name: "resource_kind", err: errors.New(`ent: missing required field "ArchivedWorkspace.resource_kind"`)}
 	}
-	if _, ok := awc.mutation.OperationID(); !ok {
-		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "ArchivedWorkspace.operation_id"`)}
+	if _, ok := awc.mutation.Name(); !ok {
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "ArchivedWorkspace.name"`)}
 	}
-	if _, ok := awc.mutation.Provider(); !ok {
-		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "ArchivedWorkspace.provider"`)}
-	}
-	if _, ok := awc.mutation.ProviderResourceID(); !ok {
-		return &ValidationError{Name: "provider_resource_id", err: errors.New(`ent: missing required field "ArchivedWorkspace.provider_resource_id"`)}
-	}
-	if _, ok := awc.mutation.URL(); !ok {
-		return &ValidationError{Name: "url", err: errors.New(`ent: missing required field "ArchivedWorkspace.url"`)}
-	}
-	if _, ok := awc.mutation.HoldID(); !ok {
-		return &ValidationError{Name: "hold_id", err: errors.New(`ent: missing required field "ArchivedWorkspace.hold_id"`)}
-	}
-	if _, ok := awc.mutation.HoldReleaseID(); !ok {
-		return &ValidationError{Name: "hold_release_id", err: errors.New(`ent: missing required field "ArchivedWorkspace.hold_release_id"`)}
-	}
-	if _, ok := awc.mutation.LedgerEntryID(); !ok {
-		return &ValidationError{Name: "ledger_entry_id", err: errors.New(`ent: missing required field "ArchivedWorkspace.ledger_entry_id"`)}
-	}
-	if _, ok := awc.mutation.WalletTransactionID(); !ok {
-		return &ValidationError{Name: "wallet_transaction_id", err: errors.New(`ent: missing required field "ArchivedWorkspace.wallet_transaction_id"`)}
-	}
-	if _, ok := awc.mutation.SettlementID(); !ok {
-		return &ValidationError{Name: "settlement_id", err: errors.New(`ent: missing required field "ArchivedWorkspace.settlement_id"`)}
-	}
-	if _, ok := awc.mutation.PricingVersion(); !ok {
-		return &ValidationError{Name: "pricing_version", err: errors.New(`ent: missing required field "ArchivedWorkspace.pricing_version"`)}
-	}
-	if _, ok := awc.mutation.AmountCents(); !ok {
-		return &ValidationError{Name: "amount_cents", err: errors.New(`ent: missing required field "ArchivedWorkspace.amount_cents"`)}
-	}
-	if _, ok := awc.mutation.BalanceCents(); !ok {
-		return &ValidationError{Name: "balance_cents", err: errors.New(`ent: missing required field "ArchivedWorkspace.balance_cents"`)}
-	}
-	if _, ok := awc.mutation.FrozenCents(); !ok {
-		return &ValidationError{Name: "frozen_cents", err: errors.New(`ent: missing required field "ArchivedWorkspace.frozen_cents"`)}
-	}
-	if _, ok := awc.mutation.AvailableCents(); !ok {
-		return &ValidationError{Name: "available_cents", err: errors.New(`ent: missing required field "ArchivedWorkspace.available_cents"`)}
-	}
-	if _, ok := awc.mutation.TotalSpentCents(); !ok {
-		return &ValidationError{Name: "total_spent_cents", err: errors.New(`ent: missing required field "ArchivedWorkspace.total_spent_cents"`)}
-	}
-	if _, ok := awc.mutation.Quantity(); !ok {
-		return &ValidationError{Name: "quantity", err: errors.New(`ent: missing required field "ArchivedWorkspace.quantity"`)}
-	}
-	if _, ok := awc.mutation.Unit(); !ok {
-		return &ValidationError{Name: "unit", err: errors.New(`ent: missing required field "ArchivedWorkspace.unit"`)}
+	if _, ok := awc.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "ArchivedWorkspace.status"`)}
 	}
 	if _, ok := awc.mutation.Reason(); !ok {
 		return &ValidationError{Name: "reason", err: errors.New(`ent: missing required field "ArchivedWorkspace.reason"`)}
-	}
-	if _, ok := awc.mutation.Result(); !ok {
-		return &ValidationError{Name: "result", err: errors.New(`ent: missing required field "ArchivedWorkspace.result"`)}
-	}
-	if _, ok := awc.mutation.Source(); !ok {
-		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "ArchivedWorkspace.source"`)}
-	}
-	if _, ok := awc.mutation.Direction(); !ok {
-		return &ValidationError{Name: "direction", err: errors.New(`ent: missing required field "ArchivedWorkspace.direction"`)}
-	}
-	if _, ok := awc.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ArchivedWorkspace.created_at"`)}
-	}
-	if _, ok := awc.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ArchivedWorkspace.updated_at"`)}
 	}
 	if v, ok := awc.mutation.ID(); ok {
 		if err := archivedworkspace.IDValidator(v); err != nil {
@@ -833,37 +308,17 @@ func (awc *ArchivedWorkspaceCreate) createSpec() (*ArchivedWorkspace, *sqlgraph.
 		_node.ID = id
 		_spec.ID.Value = id
 	}
+	if value, ok := awc.mutation.CreatedAt(); ok {
+		_spec.SetField(archivedworkspace.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := awc.mutation.UpdatedAt(); ok {
+		_spec.SetField(archivedworkspace.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
 	if value, ok := awc.mutation.AccountID(); ok {
 		_spec.SetField(archivedworkspace.FieldAccountID, field.TypeString, value)
 		_node.AccountID = value
-	}
-	if value, ok := awc.mutation.OwnerAccountID(); ok {
-		_spec.SetField(archivedworkspace.FieldOwnerAccountID, field.TypeString, value)
-		_node.OwnerAccountID = value
-	}
-	if value, ok := awc.mutation.OwnerUserID(); ok {
-		_spec.SetField(archivedworkspace.FieldOwnerUserID, field.TypeString, value)
-		_node.OwnerUserID = value
-	}
-	if value, ok := awc.mutation.UserID(); ok {
-		_spec.SetField(archivedworkspace.FieldUserID, field.TypeString, value)
-		_node.UserID = value
-	}
-	if value, ok := awc.mutation.Email(); ok {
-		_spec.SetField(archivedworkspace.FieldEmail, field.TypeString, value)
-		_node.Email = value
-	}
-	if value, ok := awc.mutation.Role(); ok {
-		_spec.SetField(archivedworkspace.FieldRole, field.TypeString, value)
-		_node.Role = value
-	}
-	if value, ok := awc.mutation.Status(); ok {
-		_spec.SetField(archivedworkspace.FieldStatus, field.TypeString, value)
-		_node.Status = value
-	}
-	if value, ok := awc.mutation.Name(); ok {
-		_spec.SetField(archivedworkspace.FieldName, field.TypeString, value)
-		_node.Name = value
 	}
 	if value, ok := awc.mutation.WorkspaceID(); ok {
 		_spec.SetField(archivedworkspace.FieldWorkspaceID, field.TypeString, value)
@@ -877,97 +332,17 @@ func (awc *ArchivedWorkspaceCreate) createSpec() (*ArchivedWorkspace, *sqlgraph.
 		_spec.SetField(archivedworkspace.FieldResourceKind, field.TypeString, value)
 		_node.ResourceKind = value
 	}
-	if value, ok := awc.mutation.OperationID(); ok {
-		_spec.SetField(archivedworkspace.FieldOperationID, field.TypeString, value)
-		_node.OperationID = value
+	if value, ok := awc.mutation.Name(); ok {
+		_spec.SetField(archivedworkspace.FieldName, field.TypeString, value)
+		_node.Name = value
 	}
-	if value, ok := awc.mutation.Provider(); ok {
-		_spec.SetField(archivedworkspace.FieldProvider, field.TypeString, value)
-		_node.Provider = value
-	}
-	if value, ok := awc.mutation.ProviderResourceID(); ok {
-		_spec.SetField(archivedworkspace.FieldProviderResourceID, field.TypeString, value)
-		_node.ProviderResourceID = value
-	}
-	if value, ok := awc.mutation.URL(); ok {
-		_spec.SetField(archivedworkspace.FieldURL, field.TypeString, value)
-		_node.URL = value
-	}
-	if value, ok := awc.mutation.HoldID(); ok {
-		_spec.SetField(archivedworkspace.FieldHoldID, field.TypeString, value)
-		_node.HoldID = value
-	}
-	if value, ok := awc.mutation.HoldReleaseID(); ok {
-		_spec.SetField(archivedworkspace.FieldHoldReleaseID, field.TypeString, value)
-		_node.HoldReleaseID = value
-	}
-	if value, ok := awc.mutation.LedgerEntryID(); ok {
-		_spec.SetField(archivedworkspace.FieldLedgerEntryID, field.TypeString, value)
-		_node.LedgerEntryID = value
-	}
-	if value, ok := awc.mutation.WalletTransactionID(); ok {
-		_spec.SetField(archivedworkspace.FieldWalletTransactionID, field.TypeString, value)
-		_node.WalletTransactionID = value
-	}
-	if value, ok := awc.mutation.SettlementID(); ok {
-		_spec.SetField(archivedworkspace.FieldSettlementID, field.TypeString, value)
-		_node.SettlementID = value
-	}
-	if value, ok := awc.mutation.PricingVersion(); ok {
-		_spec.SetField(archivedworkspace.FieldPricingVersion, field.TypeString, value)
-		_node.PricingVersion = value
-	}
-	if value, ok := awc.mutation.AmountCents(); ok {
-		_spec.SetField(archivedworkspace.FieldAmountCents, field.TypeInt64, value)
-		_node.AmountCents = value
-	}
-	if value, ok := awc.mutation.BalanceCents(); ok {
-		_spec.SetField(archivedworkspace.FieldBalanceCents, field.TypeInt64, value)
-		_node.BalanceCents = value
-	}
-	if value, ok := awc.mutation.FrozenCents(); ok {
-		_spec.SetField(archivedworkspace.FieldFrozenCents, field.TypeInt64, value)
-		_node.FrozenCents = value
-	}
-	if value, ok := awc.mutation.AvailableCents(); ok {
-		_spec.SetField(archivedworkspace.FieldAvailableCents, field.TypeInt64, value)
-		_node.AvailableCents = value
-	}
-	if value, ok := awc.mutation.TotalSpentCents(); ok {
-		_spec.SetField(archivedworkspace.FieldTotalSpentCents, field.TypeInt64, value)
-		_node.TotalSpentCents = value
-	}
-	if value, ok := awc.mutation.Quantity(); ok {
-		_spec.SetField(archivedworkspace.FieldQuantity, field.TypeFloat64, value)
-		_node.Quantity = value
-	}
-	if value, ok := awc.mutation.Unit(); ok {
-		_spec.SetField(archivedworkspace.FieldUnit, field.TypeString, value)
-		_node.Unit = value
+	if value, ok := awc.mutation.Status(); ok {
+		_spec.SetField(archivedworkspace.FieldStatus, field.TypeString, value)
+		_node.Status = value
 	}
 	if value, ok := awc.mutation.Reason(); ok {
 		_spec.SetField(archivedworkspace.FieldReason, field.TypeString, value)
 		_node.Reason = value
-	}
-	if value, ok := awc.mutation.Result(); ok {
-		_spec.SetField(archivedworkspace.FieldResult, field.TypeString, value)
-		_node.Result = value
-	}
-	if value, ok := awc.mutation.Source(); ok {
-		_spec.SetField(archivedworkspace.FieldSource, field.TypeString, value)
-		_node.Source = value
-	}
-	if value, ok := awc.mutation.Direction(); ok {
-		_spec.SetField(archivedworkspace.FieldDirection, field.TypeString, value)
-		_node.Direction = value
-	}
-	if value, ok := awc.mutation.CreatedAt(); ok {
-		_spec.SetField(archivedworkspace.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
-	}
-	if value, ok := awc.mutation.UpdatedAt(); ok {
-		_spec.SetField(archivedworkspace.FieldUpdatedAt, field.TypeTime, value)
-		_node.UpdatedAt = value
 	}
 	if value, ok := awc.mutation.ArchivedAt(); ok {
 		_spec.SetField(archivedworkspace.FieldArchivedAt, field.TypeTime, value)

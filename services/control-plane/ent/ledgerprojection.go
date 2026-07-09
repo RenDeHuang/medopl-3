@@ -17,77 +17,63 @@ type LedgerProjection struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID string `json:"id,omitempty"`
-	// AccountID holds the value of the "account_id" field.
-	AccountID string `json:"account_id,omitempty"`
-	// OwnerAccountID holds the value of the "owner_account_id" field.
-	OwnerAccountID string `json:"owner_account_id,omitempty"`
-	// OwnerUserID holds the value of the "owner_user_id" field.
-	OwnerUserID string `json:"owner_user_id,omitempty"`
-	// UserID holds the value of the "user_id" field.
-	UserID string `json:"user_id,omitempty"`
-	// Email holds the value of the "email" field.
-	Email string `json:"email,omitempty"`
-	// Role holds the value of the "role" field.
-	Role string `json:"role,omitempty"`
-	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
-	// Name holds the value of the "name" field.
-	Name string `json:"name,omitempty"`
-	// WorkspaceID holds the value of the "workspace_id" field.
-	WorkspaceID string `json:"workspace_id,omitempty"`
-	// ResourceID holds the value of the "resource_id" field.
-	ResourceID string `json:"resource_id,omitempty"`
-	// ResourceKind holds the value of the "resource_kind" field.
-	ResourceKind string `json:"resource_kind,omitempty"`
-	// OperationID holds the value of the "operation_id" field.
-	OperationID string `json:"operation_id,omitempty"`
-	// Provider holds the value of the "provider" field.
-	Provider string `json:"provider,omitempty"`
-	// ProviderResourceID holds the value of the "provider_resource_id" field.
-	ProviderResourceID string `json:"provider_resource_id,omitempty"`
-	// URL holds the value of the "url" field.
-	URL string `json:"url,omitempty"`
-	// HoldID holds the value of the "hold_id" field.
-	HoldID string `json:"hold_id,omitempty"`
-	// HoldReleaseID holds the value of the "hold_release_id" field.
-	HoldReleaseID string `json:"hold_release_id,omitempty"`
-	// LedgerEntryID holds the value of the "ledger_entry_id" field.
-	LedgerEntryID string `json:"ledger_entry_id,omitempty"`
-	// WalletTransactionID holds the value of the "wallet_transaction_id" field.
-	WalletTransactionID string `json:"wallet_transaction_id,omitempty"`
-	// SettlementID holds the value of the "settlement_id" field.
-	SettlementID string `json:"settlement_id,omitempty"`
-	// PricingVersion holds the value of the "pricing_version" field.
-	PricingVersion string `json:"pricing_version,omitempty"`
-	// AmountCents holds the value of the "amount_cents" field.
-	AmountCents int64 `json:"amount_cents,omitempty"`
-	// BalanceCents holds the value of the "balance_cents" field.
-	BalanceCents int64 `json:"balance_cents,omitempty"`
-	// FrozenCents holds the value of the "frozen_cents" field.
-	FrozenCents int64 `json:"frozen_cents,omitempty"`
-	// AvailableCents holds the value of the "available_cents" field.
-	AvailableCents int64 `json:"available_cents,omitempty"`
-	// TotalSpentCents holds the value of the "total_spent_cents" field.
-	TotalSpentCents int64 `json:"total_spent_cents,omitempty"`
-	// Quantity holds the value of the "quantity" field.
-	Quantity float64 `json:"quantity,omitempty"`
-	// Unit holds the value of the "unit" field.
-	Unit string `json:"unit,omitempty"`
-	// Reason holds the value of the "reason" field.
-	Reason string `json:"reason,omitempty"`
-	// Result holds the value of the "result" field.
-	Result string `json:"result,omitempty"`
-	// Source holds the value of the "source" field.
-	Source string `json:"source,omitempty"`
-	// Direction holds the value of the "direction" field.
-	Direction string `json:"direction,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// ArchivedAt holds the value of the "archived_at" field.
-	ArchivedAt   *time.Time `json:"archived_at,omitempty"`
-	selectValues sql.SelectValues
+	// AccountID holds the value of the "account_id" field.
+	AccountID string `json:"account_id,omitempty"`
+	// Type holds the value of the "type" field.
+	Type string `json:"type,omitempty"`
+	// ResourceID holds the value of the "resource_id" field.
+	ResourceID string `json:"resource_id,omitempty"`
+	// ResourceKind holds the value of the "resource_kind" field.
+	ResourceKind string `json:"resource_kind,omitempty"`
+	// WorkspaceID holds the value of the "workspace_id" field.
+	WorkspaceID string `json:"workspace_id,omitempty"`
+	// ComputeAllocationID holds the value of the "compute_allocation_id" field.
+	ComputeAllocationID string `json:"compute_allocation_id,omitempty"`
+	// StorageID holds the value of the "storage_id" field.
+	StorageID string `json:"storage_id,omitempty"`
+	// SettlementID holds the value of the "settlement_id" field.
+	SettlementID string `json:"settlement_id,omitempty"`
+	// PricingVersion holds the value of the "pricing_version" field.
+	PricingVersion string `json:"pricing_version,omitempty"`
+	// UsagePeriodStart holds the value of the "usage_period_start" field.
+	UsagePeriodStart string `json:"usage_period_start,omitempty"`
+	// UsagePeriodEnd holds the value of the "usage_period_end" field.
+	UsagePeriodEnd string `json:"usage_period_end,omitempty"`
+	// Unit holds the value of the "unit" field.
+	Unit string `json:"unit,omitempty"`
+	// ProviderCostEvidenceRef holds the value of the "provider_cost_evidence_ref" field.
+	ProviderCostEvidenceRef string `json:"provider_cost_evidence_ref,omitempty"`
+	// Currency holds the value of the "currency" field.
+	Currency string `json:"currency,omitempty"`
+	// AmountCents holds the value of the "amount_cents" field.
+	AmountCents int64 `json:"amount_cents,omitempty"`
+	// Quantity holds the value of the "quantity" field.
+	Quantity float64 `json:"quantity,omitempty"`
+	// Direction holds the value of the "direction" field.
+	Direction string `json:"direction,omitempty"`
+	// PriceSnapshotPackageID holds the value of the "price_snapshot_package_id" field.
+	PriceSnapshotPackageID string `json:"price_snapshot_package_id,omitempty"`
+	// PriceSnapshotResourceType holds the value of the "price_snapshot_resource_type" field.
+	PriceSnapshotResourceType string `json:"price_snapshot_resource_type,omitempty"`
+	// PriceSnapshotCurrency holds the value of the "price_snapshot_currency" field.
+	PriceSnapshotCurrency string `json:"price_snapshot_currency,omitempty"`
+	// PriceSnapshotSource holds the value of the "price_snapshot_source" field.
+	PriceSnapshotSource string `json:"price_snapshot_source,omitempty"`
+	// PriceSnapshotSku holds the value of the "price_snapshot_sku" field.
+	PriceSnapshotSku string `json:"price_snapshot_sku,omitempty"`
+	// PriceSnapshotUnitPriceCents holds the value of the "price_snapshot_unit_price_cents" field.
+	PriceSnapshotUnitPriceCents int64 `json:"price_snapshot_unit_price_cents,omitempty"`
+	// PriceSnapshotComputeHourly holds the value of the "price_snapshot_compute_hourly" field.
+	PriceSnapshotComputeHourly float64 `json:"price_snapshot_compute_hourly,omitempty"`
+	// PriceSnapshotStorageGBMonth holds the value of the "price_snapshot_storage_gb_month" field.
+	PriceSnapshotStorageGBMonth float64 `json:"price_snapshot_storage_gb_month,omitempty"`
+	// PriceSnapshotSizeGB holds the value of the "price_snapshot_size_gb" field.
+	PriceSnapshotSizeGB float64 `json:"price_snapshot_size_gb,omitempty"`
+	selectValues        sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -95,13 +81,13 @@ func (*LedgerProjection) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case ledgerprojection.FieldQuantity:
+		case ledgerprojection.FieldQuantity, ledgerprojection.FieldPriceSnapshotComputeHourly, ledgerprojection.FieldPriceSnapshotStorageGBMonth, ledgerprojection.FieldPriceSnapshotSizeGB:
 			values[i] = new(sql.NullFloat64)
-		case ledgerprojection.FieldAmountCents, ledgerprojection.FieldBalanceCents, ledgerprojection.FieldFrozenCents, ledgerprojection.FieldAvailableCents, ledgerprojection.FieldTotalSpentCents:
+		case ledgerprojection.FieldAmountCents, ledgerprojection.FieldPriceSnapshotUnitPriceCents:
 			values[i] = new(sql.NullInt64)
-		case ledgerprojection.FieldID, ledgerprojection.FieldAccountID, ledgerprojection.FieldOwnerAccountID, ledgerprojection.FieldOwnerUserID, ledgerprojection.FieldUserID, ledgerprojection.FieldEmail, ledgerprojection.FieldRole, ledgerprojection.FieldStatus, ledgerprojection.FieldName, ledgerprojection.FieldWorkspaceID, ledgerprojection.FieldResourceID, ledgerprojection.FieldResourceKind, ledgerprojection.FieldOperationID, ledgerprojection.FieldProvider, ledgerprojection.FieldProviderResourceID, ledgerprojection.FieldURL, ledgerprojection.FieldHoldID, ledgerprojection.FieldHoldReleaseID, ledgerprojection.FieldLedgerEntryID, ledgerprojection.FieldWalletTransactionID, ledgerprojection.FieldSettlementID, ledgerprojection.FieldPricingVersion, ledgerprojection.FieldUnit, ledgerprojection.FieldReason, ledgerprojection.FieldResult, ledgerprojection.FieldSource, ledgerprojection.FieldDirection:
+		case ledgerprojection.FieldID, ledgerprojection.FieldAccountID, ledgerprojection.FieldType, ledgerprojection.FieldResourceID, ledgerprojection.FieldResourceKind, ledgerprojection.FieldWorkspaceID, ledgerprojection.FieldComputeAllocationID, ledgerprojection.FieldStorageID, ledgerprojection.FieldSettlementID, ledgerprojection.FieldPricingVersion, ledgerprojection.FieldUsagePeriodStart, ledgerprojection.FieldUsagePeriodEnd, ledgerprojection.FieldUnit, ledgerprojection.FieldProviderCostEvidenceRef, ledgerprojection.FieldCurrency, ledgerprojection.FieldDirection, ledgerprojection.FieldPriceSnapshotPackageID, ledgerprojection.FieldPriceSnapshotResourceType, ledgerprojection.FieldPriceSnapshotCurrency, ledgerprojection.FieldPriceSnapshotSource, ledgerprojection.FieldPriceSnapshotSku:
 			values[i] = new(sql.NullString)
-		case ledgerprojection.FieldCreatedAt, ledgerprojection.FieldUpdatedAt, ledgerprojection.FieldArchivedAt:
+		case ledgerprojection.FieldCreatedAt, ledgerprojection.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -124,59 +110,29 @@ func (lp *LedgerProjection) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				lp.ID = value.String
 			}
+		case ledgerprojection.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				lp.CreatedAt = value.Time
+			}
+		case ledgerprojection.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				lp.UpdatedAt = value.Time
+			}
 		case ledgerprojection.FieldAccountID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_id", values[i])
 			} else if value.Valid {
 				lp.AccountID = value.String
 			}
-		case ledgerprojection.FieldOwnerAccountID:
+		case ledgerprojection.FieldType:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field owner_account_id", values[i])
+				return fmt.Errorf("unexpected type %T for field type", values[i])
 			} else if value.Valid {
-				lp.OwnerAccountID = value.String
-			}
-		case ledgerprojection.FieldOwnerUserID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field owner_user_id", values[i])
-			} else if value.Valid {
-				lp.OwnerUserID = value.String
-			}
-		case ledgerprojection.FieldUserID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field user_id", values[i])
-			} else if value.Valid {
-				lp.UserID = value.String
-			}
-		case ledgerprojection.FieldEmail:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field email", values[i])
-			} else if value.Valid {
-				lp.Email = value.String
-			}
-		case ledgerprojection.FieldRole:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field role", values[i])
-			} else if value.Valid {
-				lp.Role = value.String
-			}
-		case ledgerprojection.FieldStatus:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field status", values[i])
-			} else if value.Valid {
-				lp.Status = value.String
-			}
-		case ledgerprojection.FieldName:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field name", values[i])
-			} else if value.Valid {
-				lp.Name = value.String
-			}
-		case ledgerprojection.FieldWorkspaceID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field workspace_id", values[i])
-			} else if value.Valid {
-				lp.WorkspaceID = value.String
+				lp.Type = value.String
 			}
 		case ledgerprojection.FieldResourceID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -190,53 +146,23 @@ func (lp *LedgerProjection) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				lp.ResourceKind = value.String
 			}
-		case ledgerprojection.FieldOperationID:
+		case ledgerprojection.FieldWorkspaceID:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field operation_id", values[i])
+				return fmt.Errorf("unexpected type %T for field workspace_id", values[i])
 			} else if value.Valid {
-				lp.OperationID = value.String
+				lp.WorkspaceID = value.String
 			}
-		case ledgerprojection.FieldProvider:
+		case ledgerprojection.FieldComputeAllocationID:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider", values[i])
+				return fmt.Errorf("unexpected type %T for field compute_allocation_id", values[i])
 			} else if value.Valid {
-				lp.Provider = value.String
+				lp.ComputeAllocationID = value.String
 			}
-		case ledgerprojection.FieldProviderResourceID:
+		case ledgerprojection.FieldStorageID:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider_resource_id", values[i])
+				return fmt.Errorf("unexpected type %T for field storage_id", values[i])
 			} else if value.Valid {
-				lp.ProviderResourceID = value.String
-			}
-		case ledgerprojection.FieldURL:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field url", values[i])
-			} else if value.Valid {
-				lp.URL = value.String
-			}
-		case ledgerprojection.FieldHoldID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field hold_id", values[i])
-			} else if value.Valid {
-				lp.HoldID = value.String
-			}
-		case ledgerprojection.FieldHoldReleaseID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field hold_release_id", values[i])
-			} else if value.Valid {
-				lp.HoldReleaseID = value.String
-			}
-		case ledgerprojection.FieldLedgerEntryID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field ledger_entry_id", values[i])
-			} else if value.Valid {
-				lp.LedgerEntryID = value.String
-			}
-		case ledgerprojection.FieldWalletTransactionID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field wallet_transaction_id", values[i])
-			} else if value.Valid {
-				lp.WalletTransactionID = value.String
+				lp.StorageID = value.String
 			}
 		case ledgerprojection.FieldSettlementID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -250,41 +176,17 @@ func (lp *LedgerProjection) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				lp.PricingVersion = value.String
 			}
-		case ledgerprojection.FieldAmountCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field amount_cents", values[i])
+		case ledgerprojection.FieldUsagePeriodStart:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field usage_period_start", values[i])
 			} else if value.Valid {
-				lp.AmountCents = value.Int64
+				lp.UsagePeriodStart = value.String
 			}
-		case ledgerprojection.FieldBalanceCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field balance_cents", values[i])
+		case ledgerprojection.FieldUsagePeriodEnd:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field usage_period_end", values[i])
 			} else if value.Valid {
-				lp.BalanceCents = value.Int64
-			}
-		case ledgerprojection.FieldFrozenCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field frozen_cents", values[i])
-			} else if value.Valid {
-				lp.FrozenCents = value.Int64
-			}
-		case ledgerprojection.FieldAvailableCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field available_cents", values[i])
-			} else if value.Valid {
-				lp.AvailableCents = value.Int64
-			}
-		case ledgerprojection.FieldTotalSpentCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field total_spent_cents", values[i])
-			} else if value.Valid {
-				lp.TotalSpentCents = value.Int64
-			}
-		case ledgerprojection.FieldQuantity:
-			if value, ok := values[i].(*sql.NullFloat64); !ok {
-				return fmt.Errorf("unexpected type %T for field quantity", values[i])
-			} else if value.Valid {
-				lp.Quantity = value.Float64
+				lp.UsagePeriodEnd = value.String
 			}
 		case ledgerprojection.FieldUnit:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -292,23 +194,29 @@ func (lp *LedgerProjection) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				lp.Unit = value.String
 			}
-		case ledgerprojection.FieldReason:
+		case ledgerprojection.FieldProviderCostEvidenceRef:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field reason", values[i])
+				return fmt.Errorf("unexpected type %T for field provider_cost_evidence_ref", values[i])
 			} else if value.Valid {
-				lp.Reason = value.String
+				lp.ProviderCostEvidenceRef = value.String
 			}
-		case ledgerprojection.FieldResult:
+		case ledgerprojection.FieldCurrency:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field result", values[i])
+				return fmt.Errorf("unexpected type %T for field currency", values[i])
 			} else if value.Valid {
-				lp.Result = value.String
+				lp.Currency = value.String
 			}
-		case ledgerprojection.FieldSource:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field source", values[i])
+		case ledgerprojection.FieldAmountCents:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field amount_cents", values[i])
 			} else if value.Valid {
-				lp.Source = value.String
+				lp.AmountCents = value.Int64
+			}
+		case ledgerprojection.FieldQuantity:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field quantity", values[i])
+			} else if value.Valid {
+				lp.Quantity = value.Float64
 			}
 		case ledgerprojection.FieldDirection:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -316,24 +224,59 @@ func (lp *LedgerProjection) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				lp.Direction = value.String
 			}
-		case ledgerprojection.FieldCreatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+		case ledgerprojection.FieldPriceSnapshotPackageID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field price_snapshot_package_id", values[i])
 			} else if value.Valid {
-				lp.CreatedAt = value.Time
+				lp.PriceSnapshotPackageID = value.String
 			}
-		case ledgerprojection.FieldUpdatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+		case ledgerprojection.FieldPriceSnapshotResourceType:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field price_snapshot_resource_type", values[i])
 			} else if value.Valid {
-				lp.UpdatedAt = value.Time
+				lp.PriceSnapshotResourceType = value.String
 			}
-		case ledgerprojection.FieldArchivedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field archived_at", values[i])
+		case ledgerprojection.FieldPriceSnapshotCurrency:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field price_snapshot_currency", values[i])
 			} else if value.Valid {
-				lp.ArchivedAt = new(time.Time)
-				*lp.ArchivedAt = value.Time
+				lp.PriceSnapshotCurrency = value.String
+			}
+		case ledgerprojection.FieldPriceSnapshotSource:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field price_snapshot_source", values[i])
+			} else if value.Valid {
+				lp.PriceSnapshotSource = value.String
+			}
+		case ledgerprojection.FieldPriceSnapshotSku:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field price_snapshot_sku", values[i])
+			} else if value.Valid {
+				lp.PriceSnapshotSku = value.String
+			}
+		case ledgerprojection.FieldPriceSnapshotUnitPriceCents:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field price_snapshot_unit_price_cents", values[i])
+			} else if value.Valid {
+				lp.PriceSnapshotUnitPriceCents = value.Int64
+			}
+		case ledgerprojection.FieldPriceSnapshotComputeHourly:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field price_snapshot_compute_hourly", values[i])
+			} else if value.Valid {
+				lp.PriceSnapshotComputeHourly = value.Float64
+			}
+		case ledgerprojection.FieldPriceSnapshotStorageGBMonth:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field price_snapshot_storage_gb_month", values[i])
+			} else if value.Valid {
+				lp.PriceSnapshotStorageGBMonth = value.Float64
+			}
+		case ledgerprojection.FieldPriceSnapshotSizeGB:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field price_snapshot_size_gb", values[i])
+			} else if value.Valid {
+				lp.PriceSnapshotSizeGB = value.Float64
 			}
 		default:
 			lp.selectValues.Set(columns[i], values[i])
@@ -371,32 +314,17 @@ func (lp *LedgerProjection) String() string {
 	var builder strings.Builder
 	builder.WriteString("LedgerProjection(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", lp.ID))
+	builder.WriteString("created_at=")
+	builder.WriteString(lp.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(lp.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
 	builder.WriteString("account_id=")
 	builder.WriteString(lp.AccountID)
 	builder.WriteString(", ")
-	builder.WriteString("owner_account_id=")
-	builder.WriteString(lp.OwnerAccountID)
-	builder.WriteString(", ")
-	builder.WriteString("owner_user_id=")
-	builder.WriteString(lp.OwnerUserID)
-	builder.WriteString(", ")
-	builder.WriteString("user_id=")
-	builder.WriteString(lp.UserID)
-	builder.WriteString(", ")
-	builder.WriteString("email=")
-	builder.WriteString(lp.Email)
-	builder.WriteString(", ")
-	builder.WriteString("role=")
-	builder.WriteString(lp.Role)
-	builder.WriteString(", ")
-	builder.WriteString("status=")
-	builder.WriteString(lp.Status)
-	builder.WriteString(", ")
-	builder.WriteString("name=")
-	builder.WriteString(lp.Name)
-	builder.WriteString(", ")
-	builder.WriteString("workspace_id=")
-	builder.WriteString(lp.WorkspaceID)
+	builder.WriteString("type=")
+	builder.WriteString(lp.Type)
 	builder.WriteString(", ")
 	builder.WriteString("resource_id=")
 	builder.WriteString(lp.ResourceID)
@@ -404,29 +332,14 @@ func (lp *LedgerProjection) String() string {
 	builder.WriteString("resource_kind=")
 	builder.WriteString(lp.ResourceKind)
 	builder.WriteString(", ")
-	builder.WriteString("operation_id=")
-	builder.WriteString(lp.OperationID)
+	builder.WriteString("workspace_id=")
+	builder.WriteString(lp.WorkspaceID)
 	builder.WriteString(", ")
-	builder.WriteString("provider=")
-	builder.WriteString(lp.Provider)
+	builder.WriteString("compute_allocation_id=")
+	builder.WriteString(lp.ComputeAllocationID)
 	builder.WriteString(", ")
-	builder.WriteString("provider_resource_id=")
-	builder.WriteString(lp.ProviderResourceID)
-	builder.WriteString(", ")
-	builder.WriteString("url=")
-	builder.WriteString(lp.URL)
-	builder.WriteString(", ")
-	builder.WriteString("hold_id=")
-	builder.WriteString(lp.HoldID)
-	builder.WriteString(", ")
-	builder.WriteString("hold_release_id=")
-	builder.WriteString(lp.HoldReleaseID)
-	builder.WriteString(", ")
-	builder.WriteString("ledger_entry_id=")
-	builder.WriteString(lp.LedgerEntryID)
-	builder.WriteString(", ")
-	builder.WriteString("wallet_transaction_id=")
-	builder.WriteString(lp.WalletTransactionID)
+	builder.WriteString("storage_id=")
+	builder.WriteString(lp.StorageID)
 	builder.WriteString(", ")
 	builder.WriteString("settlement_id=")
 	builder.WriteString(lp.SettlementID)
@@ -434,49 +347,56 @@ func (lp *LedgerProjection) String() string {
 	builder.WriteString("pricing_version=")
 	builder.WriteString(lp.PricingVersion)
 	builder.WriteString(", ")
-	builder.WriteString("amount_cents=")
-	builder.WriteString(fmt.Sprintf("%v", lp.AmountCents))
+	builder.WriteString("usage_period_start=")
+	builder.WriteString(lp.UsagePeriodStart)
 	builder.WriteString(", ")
-	builder.WriteString("balance_cents=")
-	builder.WriteString(fmt.Sprintf("%v", lp.BalanceCents))
-	builder.WriteString(", ")
-	builder.WriteString("frozen_cents=")
-	builder.WriteString(fmt.Sprintf("%v", lp.FrozenCents))
-	builder.WriteString(", ")
-	builder.WriteString("available_cents=")
-	builder.WriteString(fmt.Sprintf("%v", lp.AvailableCents))
-	builder.WriteString(", ")
-	builder.WriteString("total_spent_cents=")
-	builder.WriteString(fmt.Sprintf("%v", lp.TotalSpentCents))
-	builder.WriteString(", ")
-	builder.WriteString("quantity=")
-	builder.WriteString(fmt.Sprintf("%v", lp.Quantity))
+	builder.WriteString("usage_period_end=")
+	builder.WriteString(lp.UsagePeriodEnd)
 	builder.WriteString(", ")
 	builder.WriteString("unit=")
 	builder.WriteString(lp.Unit)
 	builder.WriteString(", ")
-	builder.WriteString("reason=")
-	builder.WriteString(lp.Reason)
+	builder.WriteString("provider_cost_evidence_ref=")
+	builder.WriteString(lp.ProviderCostEvidenceRef)
 	builder.WriteString(", ")
-	builder.WriteString("result=")
-	builder.WriteString(lp.Result)
+	builder.WriteString("currency=")
+	builder.WriteString(lp.Currency)
 	builder.WriteString(", ")
-	builder.WriteString("source=")
-	builder.WriteString(lp.Source)
+	builder.WriteString("amount_cents=")
+	builder.WriteString(fmt.Sprintf("%v", lp.AmountCents))
+	builder.WriteString(", ")
+	builder.WriteString("quantity=")
+	builder.WriteString(fmt.Sprintf("%v", lp.Quantity))
 	builder.WriteString(", ")
 	builder.WriteString("direction=")
 	builder.WriteString(lp.Direction)
 	builder.WriteString(", ")
-	builder.WriteString("created_at=")
-	builder.WriteString(lp.CreatedAt.Format(time.ANSIC))
+	builder.WriteString("price_snapshot_package_id=")
+	builder.WriteString(lp.PriceSnapshotPackageID)
 	builder.WriteString(", ")
-	builder.WriteString("updated_at=")
-	builder.WriteString(lp.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString("price_snapshot_resource_type=")
+	builder.WriteString(lp.PriceSnapshotResourceType)
 	builder.WriteString(", ")
-	if v := lp.ArchivedAt; v != nil {
-		builder.WriteString("archived_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
+	builder.WriteString("price_snapshot_currency=")
+	builder.WriteString(lp.PriceSnapshotCurrency)
+	builder.WriteString(", ")
+	builder.WriteString("price_snapshot_source=")
+	builder.WriteString(lp.PriceSnapshotSource)
+	builder.WriteString(", ")
+	builder.WriteString("price_snapshot_sku=")
+	builder.WriteString(lp.PriceSnapshotSku)
+	builder.WriteString(", ")
+	builder.WriteString("price_snapshot_unit_price_cents=")
+	builder.WriteString(fmt.Sprintf("%v", lp.PriceSnapshotUnitPriceCents))
+	builder.WriteString(", ")
+	builder.WriteString("price_snapshot_compute_hourly=")
+	builder.WriteString(fmt.Sprintf("%v", lp.PriceSnapshotComputeHourly))
+	builder.WriteString(", ")
+	builder.WriteString("price_snapshot_storage_gb_month=")
+	builder.WriteString(fmt.Sprintf("%v", lp.PriceSnapshotStorageGBMonth))
+	builder.WriteString(", ")
+	builder.WriteString("price_snapshot_size_gb=")
+	builder.WriteString(fmt.Sprintf("%v", lp.PriceSnapshotSizeGB))
 	builder.WriteByte(')')
 	return builder.String()
 }
