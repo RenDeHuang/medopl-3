@@ -46,3 +46,16 @@ func TestEntStateStorePricingCatalogReadsPricingTables(t *testing.T) {
 		t.Fatalf("pricing catalog must read DB item price, got %#v", basic)
 	}
 }
+
+func TestEntStateStoreIgnoresDuplicateEventProjectionIDs(t *testing.T) {
+	store := NewTestEntStateStore(t, t.TempDir()+"/duplicate-events.sqlite")
+	facts := controlPlaneState{
+		Ledger: []controlPlaneRecord{
+			{"id": "ledger-alpha", "accountId": "acct-alpha", "type": "compute_debit", "amountCents": int64(-100)},
+			{"id": "ledger-alpha", "accountId": "acct-alpha", "type": "compute_debit", "amountCents": int64(-100)},
+		},
+	}
+	if err := store.Save(context.Background(), facts); err != nil {
+		t.Fatalf("duplicate event projections should not break state persistence: %v", err)
+	}
+}

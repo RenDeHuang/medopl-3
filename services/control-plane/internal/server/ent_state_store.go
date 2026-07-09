@@ -1091,8 +1091,13 @@ func saveRecordSet(ctx context.Context, rows controlPlaneRecordSet, create func(
 }
 
 func saveEventRows(ctx context.Context, rows []controlPlaneRecord, create func() any, fields []entRecordField, prefix string) error {
+	seen := map[string]bool{}
 	for index, row := range rows {
 		id := firstNonEmpty(stringValue(row["id"]), prefix+"-"+stableID(stringValue(row["accountId"]), stringValue(row["createdAt"]), stringValue(row["type"]), strconv.Itoa(index))[:12])
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
 		if err := saveRecord(ctx, id, row, create(), fields); err != nil {
 			return err
 		}
