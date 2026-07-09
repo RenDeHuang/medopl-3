@@ -8,7 +8,7 @@ func (app *controlPlaneApp) rememberCompute(allocation any) error {
 		app.mu.Lock()
 		defer app.mu.Unlock()
 		accountID := stringValue(row["accountId"])
-		app.computes[stringValue(row["id"])] = row
+		app.resources.computes[stringValue(row["id"])] = row
 		if isTerminalResourceStatus(stringValue(row["status"])) {
 			app.rememberReleaseLocked(accountID, "compute", stringValue(row["id"]), row)
 			app.suspendWorkspacesForComputeLocked(stringValue(row["id"]))
@@ -25,7 +25,7 @@ func (app *controlPlaneApp) rememberStorage(volume any) error {
 		app.mu.Lock()
 		defer app.mu.Unlock()
 		accountID := stringValue(row["accountId"])
-		app.storages[stringValue(row["id"])] = row
+		app.resources.storages[stringValue(row["id"])] = row
 		if isTerminalResourceStatus(stringValue(row["status"])) {
 			app.rememberReleaseLocked(accountID, "storage", stringValue(row["id"]), row)
 			app.markWorkspacesStorageDestroyedLocked(stringValue(row["id"]))
@@ -83,7 +83,7 @@ func (app *controlPlaneApp) rememberAttachment(attachment any, input map[string]
 			row["ownerAccountId"] = ownerAccountID
 			row["accountId"] = firstNonEmpty(stringValue(row["accountId"]), ownerAccountID)
 		}
-		app.attachments[stringValue(row["id"])] = row
+		app.resources.attachments[stringValue(row["id"])] = row
 		if stringValue(row["status"]) == "detached" {
 			app.clearWorkspacesForAttachmentLocked(stringValue(row["id"]))
 		}
@@ -93,7 +93,7 @@ func (app *controlPlaneApp) rememberAttachment(attachment any, input map[string]
 }
 
 func (app *controlPlaneApp) attachmentFactsLocked() controlPlaneRecordSet {
-	rows := cloneStateTable(app.attachments)
+	rows := cloneStateTable(app.resources.attachments)
 	for _, row := range rows {
 		if accountID := app.attachmentAccountIDLocked(row); accountID != "" {
 			row["accountId"] = firstNonEmpty(stringValue(row["accountId"]), accountID)
@@ -110,9 +110,9 @@ func (app *controlPlaneApp) attachmentAccountIDLocked(row map[string]any) string
 	if accountID := firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"])); accountID != "" {
 		return accountID
 	}
-	compute := app.computes[firstNonEmpty(stringValue(row["computeAllocationId"]), stringValue(row["computeId"]))]
-	storage := app.storages[firstNonEmpty(stringValue(row["storageId"]), stringValue(row["volumeId"]))]
-	workspace := app.workspaces[stringValue(row["workspaceId"])]
+	compute := app.resources.computes[firstNonEmpty(stringValue(row["computeAllocationId"]), stringValue(row["computeId"]))]
+	storage := app.resources.storages[firstNonEmpty(stringValue(row["storageId"]), stringValue(row["volumeId"]))]
+	workspace := app.resources.workspaces[stringValue(row["workspaceId"])]
 	return firstNonEmpty(
 		stringValue(compute["accountId"]),
 		stringValue(compute["ownerAccountId"]),
@@ -165,21 +165,21 @@ func (app *controlPlaneApp) resourceBelongsToAccount(row map[string]any, account
 func (app *controlPlaneApp) getCompute(id string) (map[string]any, bool) {
 	app.mu.Lock()
 	defer app.mu.Unlock()
-	compute, ok := app.computes[id]
+	compute, ok := app.resources.computes[id]
 	return cloneMap(compute), ok
 }
 
 func (app *controlPlaneApp) getStorage(id string) (map[string]any, bool) {
 	app.mu.Lock()
 	defer app.mu.Unlock()
-	storage, ok := app.storages[id]
+	storage, ok := app.resources.storages[id]
 	return cloneMap(storage), ok
 }
 
 func (app *controlPlaneApp) getAttachment(id string) (map[string]any, bool) {
 	app.mu.Lock()
 	defer app.mu.Unlock()
-	attachment, ok := app.attachments[id]
+	attachment, ok := app.resources.attachments[id]
 	return cloneMap(attachment), ok
 }
 

@@ -41,8 +41,8 @@ func (l *settlementWorkerLedger) SettleResource(_ context.Context, input clients
 
 func TestPeriodicSettlementWorkerSettlesActiveResources(t *testing.T) {
 	app := newControlPlaneAppEmpty()
-	app.computes["compute-alpha"] = freshBillableResource(map[string]any{"id": "compute-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "packageId": "basic", "status": "running"})
-	app.storages["storage-alpha"] = freshBillableResource(map[string]any{"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "packageId": "basic", "status": "available", "sizeGb": 10})
+	app.resources.computes["compute-alpha"] = freshBillableResource(map[string]any{"id": "compute-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "packageId": "basic", "status": "running"})
+	app.resources.storages["storage-alpha"] = freshBillableResource(map[string]any{"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "packageId": "basic", "status": "available", "sizeGb": 10})
 	ledger := &settlementWorkerLedger{}
 	service := controlPlaneServiceForTest(ledger)
 	now := time.Date(2026, 7, 9, 12, 30, 0, 0, time.UTC)
@@ -66,7 +66,7 @@ func TestPeriodicSettlementWorkerSettlesActiveResources(t *testing.T) {
 
 func TestPeriodicSettlementWorkerDoesNotDuplicateControlPlaneProjectionsOnReplay(t *testing.T) {
 	app := newControlPlaneAppEmpty()
-	app.computes["compute-alpha"] = freshBillableResource(map[string]any{"id": "compute-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "packageId": "basic", "status": "running"})
+	app.resources.computes["compute-alpha"] = freshBillableResource(map[string]any{"id": "compute-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "packageId": "basic", "status": "running"})
 	ledger := &settlementWorkerLedger{}
 	service := controlPlaneServiceForTest(ledger)
 	now := time.Date(2026, 7, 9, 12, 30, 0, 0, time.UTC)
@@ -86,7 +86,7 @@ func TestPeriodicSettlementWorkerDoesNotDuplicateControlPlaneProjectionsOnReplay
 	if len(app.walletTx) != 1 {
 		t.Fatalf("control-plane wallet transaction projection duplicated replayed settlement: %#v", app.walletTx)
 	}
-	compute := app.computes["compute-alpha"]
+	compute := app.resources.computes["compute-alpha"]
 	if compute["settlementId"] != "settlement-compute-alpha" || compute["usagePeriodEnd"] != "2026-07-09T12:00:00Z" {
 		t.Fatalf("resource missing last settlement metadata: %#v", compute)
 	}
@@ -94,14 +94,14 @@ func TestPeriodicSettlementWorkerDoesNotDuplicateControlPlaneProjectionsOnReplay
 
 func TestPeriodicSettlementWorkerSkipsResourcesWithoutFreshProviderSync(t *testing.T) {
 	app := newControlPlaneAppEmpty()
-	app.computes["compute-stale"] = map[string]any{
+	app.resources.computes["compute-stale"] = map[string]any{
 		"id":                 "compute-stale",
 		"accountId":          "acct-alpha",
 		"packageId":          "basic",
 		"status":             "running",
 		"lastProviderSyncAt": "2026-01-01T00:00:00Z",
 	}
-	app.storages["storage-failed"] = map[string]any{
+	app.resources.storages["storage-failed"] = map[string]any{
 		"id":                 "storage-failed",
 		"accountId":          "acct-alpha",
 		"packageId":          "basic",
@@ -122,7 +122,7 @@ func TestPeriodicSettlementWorkerSkipsResourcesWithoutFreshProviderSync(t *testi
 
 func TestProviderReconcileWorkerPersistsExternalDeleteAndRelease(t *testing.T) {
 	app := newControlPlaneAppEmpty()
-	app.computes["compute-alpha"] = map[string]any{
+	app.resources.computes["compute-alpha"] = map[string]any{
 		"id":                 "compute-alpha",
 		"accountId":          "acct-alpha",
 		"workspaceId":        "ws-alpha",
@@ -139,7 +139,7 @@ func TestProviderReconcileWorkerPersistsExternalDeleteAndRelease(t *testing.T) {
 	if err := app.runProviderReconcileOnce(context.Background(), service, time.Now().UTC()); err != nil {
 		t.Fatalf("run provider reconcile: %v", err)
 	}
-	compute := app.computes["compute-alpha"]
+	compute := app.resources.computes["compute-alpha"]
 	if compute["status"] != "external_deleted" || compute["providerStatus"] != "missing" || compute["billingStatus"] != "stopped" {
 		t.Fatalf("provider reconcile must persist external delete facts: %#v", compute)
 	}

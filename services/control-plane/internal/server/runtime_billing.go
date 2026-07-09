@@ -15,13 +15,13 @@ func (app *controlPlaneApp) billingSummaryLocked(accountID string) map[string]an
 
 func (app *controlPlaneApp) activeHourlyEstimateLocked(accountID string) float64 {
 	total := float64(0)
-	for _, row := range app.computes {
+	for _, row := range app.resources.computes {
 		if accountID != "" && firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"])) != accountID {
 			continue
 		}
 		total += activeHourlyForResource(row)
 	}
-	for _, row := range app.storages {
+	for _, row := range app.resources.storages {
 		if accountID != "" && firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"])) != accountID {
 			continue
 		}
@@ -163,14 +163,14 @@ func (app *controlPlaneApp) applyLedgerFacts(accountID string, wallet clients.Wa
 
 func (app *controlPlaneApp) resourceLedgerEvidenceLocked() []any {
 	rows := []any{}
-	for _, workspace := range app.workspaces {
+	for _, workspace := range app.resources.workspaces {
 		workspaceID := stringValue(workspace["id"])
 		computeID := stringValue(workspace["currentComputeAllocationId"])
 		storageID := stringValue(workspace["storageId"])
 		attachmentID := stringValue(workspace["currentAttachmentId"])
-		compute := app.computes[computeID]
-		storage := app.storages[storageID]
-		attachment := app.attachments[attachmentID]
+		compute := app.resources.computes[computeID]
+		storage := app.resources.storages[storageID]
+		attachment := app.resources.attachments[attachmentID]
 		operation := app.operationEvidenceForResourceLocked(workspaceID, computeID, storageID, attachmentID)
 		ownerAccountID := firstNonEmpty(stringValue(workspace["ownerAccountId"]), stringValue(compute["ownerAccountId"]), stringValue(storage["ownerAccountId"]), stringValue(attachment["ownerAccountId"]))
 		ownerUserID := firstNonEmpty(stringValue(workspace["ownerUserId"]), stringValue(compute["ownerUserId"]), stringValue(storage["ownerUserId"]), stringValue(attachment["ownerUserId"]))

@@ -112,7 +112,7 @@ func (app *controlPlaneApp) settlementResourceRows(ctx context.Context) (control
 	}
 	app.mu.Lock()
 	defer app.mu.Unlock()
-	return cloneStateTable(app.computes), cloneStateTable(app.storages), nil
+	return cloneStateTable(app.resources.computes), cloneStateTable(app.resources.storages), nil
 }
 
 func billableCompute(row map[string]any) bool {
@@ -219,9 +219,9 @@ func (app *controlPlaneApp) markResourceSettlement(result clients.ResourceSettle
 	var table controlPlaneRecordSet
 	switch result.ResourceType {
 	case "storage":
-		table = app.storages
+		table = app.resources.storages
 	default:
-		table = app.computes
+		table = app.resources.computes
 	}
 	row := table[result.ResourceID]
 	if row == nil {

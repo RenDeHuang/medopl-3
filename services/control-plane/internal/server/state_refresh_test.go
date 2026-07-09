@@ -20,21 +20,21 @@ func (s *staticStateStore) Save(context.Context, controlPlaneState) error {
 
 func TestApplyFactsTreatsEmptyTablesAsBackendTruth(t *testing.T) {
 	app := newControlPlaneAppEmpty()
-	app.computes["stale-compute"] = map[string]any{"id": "stale-compute", "status": "running"}
+	app.resources.computes["stale-compute"] = map[string]any{"id": "stale-compute", "status": "running"}
 
 	app.applyFacts(controlPlaneState{
 		Computes: controlPlaneRecordSet{},
 		Users:    controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}},
 	})
 
-	if len(app.computes) != 0 {
-		t.Fatalf("empty backend compute table must clear stale current state: %#v", app.computes)
+	if len(app.resources.computes) != 0 {
+		t.Fatalf("empty backend compute table must clear stale current state: %#v", app.resources.computes)
 	}
 }
 
 func TestRefreshFactsFromStoreReplacesStaleCurrentState(t *testing.T) {
 	app := newControlPlaneAppEmpty()
-	app.computes["stale-compute"] = map[string]any{"id": "stale-compute", "status": "running"}
+	app.resources.computes["stale-compute"] = map[string]any{"id": "stale-compute", "status": "running"}
 	app.store = &staticStateStore{state: controlPlaneState{
 		Computes: controlPlaneRecordSet{"compute-fresh": {"id": "compute-fresh", "status": "running"}},
 		Users:    controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}},
@@ -43,8 +43,8 @@ func TestRefreshFactsFromStoreReplacesStaleCurrentState(t *testing.T) {
 	if err := app.refreshFactsFromStore(context.Background()); err != nil {
 		t.Fatalf("refresh facts: %v", err)
 	}
-	if app.computes["stale-compute"] != nil || app.computes["compute-fresh"] == nil {
-		t.Fatalf("refresh did not replace current state with backend facts: %#v", app.computes)
+	if app.resources.computes["stale-compute"] != nil || app.resources.computes["compute-fresh"] == nil {
+		t.Fatalf("refresh did not replace current state with backend facts: %#v", app.resources.computes)
 	}
 }
 

@@ -20,10 +20,6 @@ import (
 type controlPlaneApp struct {
 	mu          sync.Mutex
 	store       StateStore
-	computes    controlPlaneRecordSet
-	storages    controlPlaneRecordSet
-	attachments controlPlaneRecordSet
-	workspaces  controlPlaneRecordSet
 	orgs        controlPlaneRecordSet
 	memberships controlPlaneRecordSet
 	support     controlPlaneRecordSet
@@ -35,6 +31,7 @@ type controlPlaneApp struct {
 	auditEvents []controlPlaneRecord
 	reconcile   controlPlaneRecord
 	auth        runtimeAuthState
+	resources   runtimeResourceState
 }
 
 type loginFailure struct {
@@ -47,6 +44,13 @@ type runtimeAuthState struct {
 	sessions map[string]sessionRecord
 	// ponytail: per-process limiter; move to Redis when login traffic spans multiple replicas.
 	failures map[string]loginFailure
+}
+
+type runtimeResourceState struct {
+	computes    controlPlaneRecordSet
+	storages    controlPlaneRecordSet
+	attachments controlPlaneRecordSet
+	workspaces  controlPlaneRecordSet
 }
 
 var (
@@ -78,14 +82,16 @@ func newControlPlaneAppWithStore(store StateStore) (*controlPlaneApp, error) {
 
 func newControlPlaneAppEmpty() *controlPlaneApp {
 	return &controlPlaneApp{
-		computes:    controlPlaneRecordSet{},
-		storages:    controlPlaneRecordSet{},
-		attachments: controlPlaneRecordSet{},
-		workspaces:  controlPlaneRecordSet{},
 		orgs:        controlPlaneRecordSet{},
 		memberships: controlPlaneRecordSet{},
 		support:     controlPlaneRecordSet{},
 		wallets:     controlPlaneRecordSet{},
+		resources: runtimeResourceState{
+			computes:    controlPlaneRecordSet{},
+			storages:    controlPlaneRecordSet{},
+			attachments: controlPlaneRecordSet{},
+			workspaces:  controlPlaneRecordSet{},
+		},
 		auth: runtimeAuthState{
 			users:    controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}},
 			sessions: map[string]sessionRecord{},
@@ -97,10 +103,10 @@ func newControlPlaneAppEmpty() *controlPlaneApp {
 func (app *controlPlaneApp) factsLocked() controlPlaneState {
 	return controlPlaneState{
 		Version:     1,
-		Computes:    cloneStateTable(app.computes),
-		Storages:    cloneStateTable(app.storages),
+		Computes:    cloneStateTable(app.resources.computes),
+		Storages:    cloneStateTable(app.resources.storages),
 		Attachments: app.attachmentFactsLocked(),
-		Workspaces:  cloneStateTable(app.workspaces),
+		Workspaces:  cloneStateTable(app.resources.workspaces),
 		Users:       cloneStateTable(app.auth.users),
 		Sessions:    app.sessionFactsLocked(),
 		Orgs:        cloneStateTable(app.orgs),
@@ -118,16 +124,16 @@ func (app *controlPlaneApp) factsLocked() controlPlaneState {
 
 func (app *controlPlaneApp) applyFacts(facts controlPlaneState) {
 	if facts.Computes != nil {
-		app.computes = cloneStateTable(facts.Computes)
+		app.resources.computes = cloneStateTable(facts.Computes)
 	}
 	if facts.Storages != nil {
-		app.storages = cloneStateTable(facts.Storages)
+		app.resources.storages = cloneStateTable(facts.Storages)
 	}
 	if facts.Attachments != nil {
-		app.attachments = cloneStateTable(facts.Attachments)
+		app.resources.attachments = cloneStateTable(facts.Attachments)
 	}
 	if facts.Workspaces != nil {
-		app.workspaces = cloneStateTable(facts.Workspaces)
+		app.resources.workspaces = cloneStateTable(facts.Workspaces)
 	}
 	if facts.Users != nil {
 		app.auth.users = cloneStateTable(facts.Users)
@@ -212,9 +218,9 @@ func (app *controlPlaneApp) state(accountID string, computePools []any) map[stri
 		"account":                app.wallet(accountID),
 		"user":                   app.currentUserLocked(),
 		"workspaces":             workspaces,
-		"computeAllocations":     accountValues(app.computes, accountID),
-		"storageVolumes":         accountValues(app.storages, accountID),
-		"storageAttachments":     accountValues(app.attachments, accountID),
+		"computeAllocations":     accountValues(app.resources.computes, accountID),
+		"storageVolumes":         accountValues(app.resources.storages, accountID),
+		"storageAttachments":     accountValues(app.resources.attachments, accountID),
 		"accounts":               app.accountsLocked(),
 		"billingSummary":         app.billingSummaryLocked(accountID),
 		"billingLedger":          copySlice(app.ledger),

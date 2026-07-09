@@ -9,7 +9,7 @@ import (
 )
 
 func (app *controlPlaneApp) workspaceStateRowsLocked(accountID string) []any {
-	rows := accountValues(app.workspaces, accountID)
+	rows := accountValues(app.resources.workspaces, accountID)
 	output := make([]any, 0, len(rows))
 	for _, raw := range rows {
 		row, _ := raw.(map[string]any)
@@ -22,8 +22,8 @@ func (app *controlPlaneApp) workspaceStateRowsLocked(accountID string) []any {
 
 func (app *controlPlaneApp) workspaceBillingLocked(workspace map[string]any) map[string]any {
 	workspaceID := stringValue(workspace["id"])
-	compute := app.computes[stringValue(workspace["currentComputeAllocationId"])]
-	storage := app.storages[stringValue(workspace["storageId"])]
+	compute := app.resources.computes[stringValue(workspace["currentComputeAllocationId"])]
+	storage := app.resources.storages[stringValue(workspace["storageId"])]
 	return map[string]any{
 		"activeHourlyEstimate": activeHourlyForResource(compute) + activeHourlyForResource(storage),
 		"currentChargeTotal":   resourceDebitTotal(app.ledger, firstNonEmpty(stringValue(workspace["accountId"]), stringValue(workspace["ownerAccountId"])), workspaceID),
@@ -33,7 +33,7 @@ func (app *controlPlaneApp) workspaceBillingLocked(workspace map[string]any) map
 func (app *controlPlaneApp) setWorkspaceAccess(workspaceID string, tokenStatus string) (map[string]any, bool, error) {
 	app.mu.Lock()
 	defer app.mu.Unlock()
-	workspace := app.workspaces[workspaceID]
+	workspace := app.resources.workspaces[workspaceID]
 	if workspace == nil {
 		return nil, false, nil
 	}
@@ -66,7 +66,7 @@ func (app *controlPlaneApp) rememberWorkspaceProjection(workspace domain.Workspa
 	if workspace.CredentialSecretRef != "" {
 		access["secretRef"] = workspace.CredentialSecretRef
 	}
-	app.workspaces[workspace.ID] = map[string]any{
+	app.resources.workspaces[workspace.ID] = map[string]any{
 		"id":                         workspace.ID,
 		"ownerAccountId":             workspace.AccountID,
 		"ownerUserId":                workspace.OwnerID,
@@ -91,7 +91,7 @@ func (app *controlPlaneApp) rememberWorkspaceProjection(workspace domain.Workspa
 }
 
 func (app *controlPlaneApp) suspendWorkspacesForComputeLocked(computeID string) {
-	for _, workspace := range app.workspaces {
+	for _, workspace := range app.resources.workspaces {
 		if stringValue(workspace["currentComputeAllocationId"]) == computeID || stringValue(workspace["computeAllocationId"]) == computeID {
 			workspace["currentComputeAllocationId"] = ""
 			workspace["computeAllocationId"] = ""
@@ -107,7 +107,7 @@ func (app *controlPlaneApp) suspendWorkspacesForComputeLocked(computeID string) 
 }
 
 func (app *controlPlaneApp) clearWorkspacesForAttachmentLocked(attachmentID string) {
-	for _, workspace := range app.workspaces {
+	for _, workspace := range app.resources.workspaces {
 		if stringValue(workspace["currentAttachmentId"]) == attachmentID || stringValue(workspace["attachmentId"]) == attachmentID {
 			workspace["currentAttachmentId"] = ""
 			workspace["attachmentId"] = ""
@@ -120,7 +120,7 @@ func (app *controlPlaneApp) clearWorkspacesForAttachmentLocked(attachmentID stri
 }
 
 func (app *controlPlaneApp) markWorkspacesStorageDestroyedLocked(storageID string) {
-	for _, workspace := range app.workspaces {
+	for _, workspace := range app.resources.workspaces {
 		if stringValue(workspace["storageId"]) == storageID {
 			workspace["state"] = "data_deleted"
 			workspace["status"] = "unrecoverable"
@@ -140,7 +140,7 @@ func (app *controlPlaneApp) markWorkspacesStorageDestroyedLocked(storageID strin
 func (app *controlPlaneApp) getWorkspace(id string) (map[string]any, bool) {
 	app.mu.Lock()
 	defer app.mu.Unlock()
-	workspace, ok := app.workspaces[id]
+	workspace, ok := app.resources.workspaces[id]
 	return cloneMap(workspace), ok
 }
 
@@ -178,7 +178,7 @@ func (app *controlPlaneApp) proxyWorkspaceRoot(w http.ResponseWriter, r *http.Re
 
 func (app *controlPlaneApp) proxyWorkspaceTo(w http.ResponseWriter, r *http.Request, workspaceID string, proxyPath string) {
 	app.mu.Lock()
-	workspace := cloneMap(app.workspaces[workspaceID])
+	workspace := cloneMap(app.resources.workspaces[workspaceID])
 	app.mu.Unlock()
 	if stringValue(workspace["state"]) == "data_deleted" || stringValue(nested(workspace, "access", "tokenStatus")) == "disabled" {
 		writeError(w, http.StatusGone, "workspace_storage_destroyed")
