@@ -33,7 +33,7 @@
 - [x] Remove file fact store and `OPL_CONTROL_PLANE_FACTS_FILE`.
 - [x] Make `/api/state` and `/api/management/state` aggregate Ent facts plus Ledger/Fabric HTTP reads only.
 - [ ] Delete old fact-store tests once Ent repository tests cover the behavior.
-- [ ] Confirm frontend-facing DTOs still expose price, wallet, resources, URL, account, audit, and support facts from backend responses.
+- [x] Confirm frontend-facing DTOs still expose price, wallet, resources, URL, account, audit, and support facts from backend responses.
 
 ## Phase 4: Ledger Ent Store
 
@@ -67,8 +67,8 @@
 
 ## Phase 8: Hard Cut Cleanup
 
-- [ ] Delete old compatibility paths, file persistence, generic fact store, and demo/fallback data.
+- [x] Delete old compatibility paths, file persistence, generic fact store, and demo/fallback data.
 - [x] Run `rg "fact_store|postgresFactStore|fileFactStore|controlPlaneFacts|payload JSONB|demo|fallback|compat|legacy"` and leave only tests/history docs that intentionally forbid retired paths.
 - [x] Run `go test ./...` in all three services.
 - [x] Run `npm test`, `npm run typecheck`, and `sentrux check .`.
-- [ ] Commit and push the feature branch. Do not rollout.
+- [x] Commit and push the feature branch. Do not rollout.

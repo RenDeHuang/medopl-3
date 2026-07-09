@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"strings"
 	"testing"
 )
 
@@ -44,5 +45,14 @@ func TestRefreshFactsFromStoreReplacesStaleCurrentState(t *testing.T) {
 	}
 	if app.computes["stale-compute"] != nil || app.computes["compute-fresh"] == nil {
 		t.Fatalf("refresh did not replace current state with backend facts: %#v", app.computes)
+	}
+}
+
+func TestStateStoreFromEnvRequiresDatabaseURL(t *testing.T) {
+	t.Setenv("DATABASE_URL", "")
+
+	store, err := StateStoreFromEnv()
+	if err == nil || !strings.Contains(err.Error(), "DATABASE_URL") || store != nil {
+		t.Fatalf("StateStoreFromEnv must fail closed without DATABASE_URL: store=%#v err=%v", store, err)
 	}
 }

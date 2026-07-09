@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"os"
 	"reflect"
 	"strconv"
@@ -56,7 +57,7 @@ func StateStoreFromEnv() (StateStore, error) {
 	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
 		return NewPostgresEntStateStore(databaseURL)
 	}
-	return nil, nil
+	return nil, errors.New("DATABASE_URL is required for control-plane persistence")
 }
 
 type postgresEntStateStore struct {
