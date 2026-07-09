@@ -16,6 +16,8 @@ import (
 
 	"opl-cloud/services/control-plane/internal/clients"
 	"opl-cloud/services/control-plane/internal/controlplane"
+	"opl-cloud/services/control-plane/internal/handler"
+	controlplaneroutes "opl-cloud/services/control-plane/internal/server/routes"
 )
 
 func NewServer(service *controlplane.Service) http.Handler {
@@ -38,14 +40,14 @@ func NewPersistentServer(service *controlplane.Service, store StateStore) (http.
 		app.startArchiveRetentionWorker(context.Background(), archiveRetentionWorkerInterval())
 	}
 	mux := http.NewServeMux()
-	registerCoreRoutes(mux, app, service)
-	registerAuthRoutes(mux, app)
-	registerStateRoutes(mux, app, service)
-	registerWorkspaceRoutes(mux, app, service)
-	registerBillingRoutes(mux, app, service)
-	registerResourceRoutes(mux, app, service)
-	registerSupportRoutes(mux, app)
-	registerAdminRoutes(mux, app)
+	controlplaneroutes.RegisterCore(mux, handler.CoreHandler{Register: func(mux *http.ServeMux) { registerCoreRoutes(mux, app, service) }})
+	controlplaneroutes.RegisterAuth(mux, handler.AuthHandler{Register: func(mux *http.ServeMux) { registerAuthRoutes(mux, app) }})
+	controlplaneroutes.RegisterState(mux, handler.StateHandler{Register: func(mux *http.ServeMux) { registerStateRoutes(mux, app, service) }})
+	controlplaneroutes.RegisterWorkspace(mux, handler.WorkspaceHandler{Register: func(mux *http.ServeMux) { registerWorkspaceRoutes(mux, app, service) }})
+	controlplaneroutes.RegisterBilling(mux, handler.BillingHandler{Register: func(mux *http.ServeMux) { registerBillingRoutes(mux, app, service) }})
+	controlplaneroutes.RegisterResource(mux, handler.ResourceHandler{Register: func(mux *http.ServeMux) { registerResourceRoutes(mux, app, service) }})
+	controlplaneroutes.RegisterSupport(mux, handler.SupportHandler{Register: func(mux *http.ServeMux) { registerSupportRoutes(mux, app) }})
+	controlplaneroutes.RegisterAdmin(mux, handler.AdminHandler{Register: func(mux *http.ServeMux) { registerAdminRoutes(mux, app) }})
 	return mux, nil
 }
 

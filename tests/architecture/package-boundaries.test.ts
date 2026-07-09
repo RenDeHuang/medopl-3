@@ -172,6 +172,31 @@ test("Control Plane current facts are not backed by retired JSON read model symb
   }
 });
 
+test("Control Plane HTTP stack is directoryized by repository service handler and routes", async () => {
+  const requiredFiles = [
+    "services/control-plane/internal/repository/user_repository.go",
+    "services/control-plane/internal/repository/resource_repository.go",
+    "services/control-plane/internal/repository/workspace_repository.go",
+    "services/control-plane/internal/repository/archive_repository.go",
+    "services/control-plane/internal/service/auth_service.go",
+    "services/control-plane/internal/service/resource_service.go",
+    "services/control-plane/internal/service/workspace_service.go",
+    "services/control-plane/internal/service/billing_service.go",
+    "services/control-plane/internal/service/archive_service.go",
+    "services/control-plane/internal/handler/auth_handler.go",
+    "services/control-plane/internal/handler/resource_handler.go",
+    "services/control-plane/internal/handler/admin_handler.go",
+    "services/control-plane/internal/server/routes/auth.go",
+    "services/control-plane/internal/server/routes/resources.go"
+  ];
+  for (const file of requiredFiles) {
+    await assertFile(file);
+  }
+  const serverSource = await source("services/control-plane/internal/server/server.go");
+  assert.match(serverSource, /internal\/server\/routes/, "server startup must register routes through the routes package");
+  assert.match(serverSource, /internal\/handler/, "server startup must pass domain handlers through the handler package");
+});
+
 test("Console UI source is TypeScript-only with no ts-nocheck escape hatches", async () => {
   const uiFiles = await files("apps/console-ui/src");
   assert.ok(uiFiles.length > 0, "apps/console-ui/src must contain UI source files");
