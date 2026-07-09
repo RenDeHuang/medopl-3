@@ -10,6 +10,7 @@ func TestPostgresSchemaUsesEntMigrationLedgerTables(t *testing.T) {
 	schema := PostgresSchemaSQL()
 	required := []string{
 		"CREATE TABLE IF NOT EXISTS wallets",
+		"ALTER TABLE wallets ADD COLUMN IF NOT EXISTS available_cents",
 		"CREATE TABLE IF NOT EXISTS ledger_entries",
 		"CREATE TABLE IF NOT EXISTS wallet_transactions",
 		"CREATE TABLE IF NOT EXISTS manual_topups",

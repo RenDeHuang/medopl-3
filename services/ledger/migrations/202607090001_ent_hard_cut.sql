@@ -1,4 +1,8 @@
 CREATE TABLE IF NOT EXISTS wallets (account_id TEXT PRIMARY KEY, balance_cents BIGINT NOT NULL DEFAULT 0, frozen_cents BIGINT NOT NULL DEFAULT 0, available_cents BIGINT NOT NULL DEFAULT 0, total_spent_cents BIGINT NOT NULL DEFAULT 0, currency TEXT NOT NULL DEFAULT 'CNY', updated_at TIMESTAMPTZ NOT NULL DEFAULT now());
+ALTER TABLE wallets ADD COLUMN IF NOT EXISTS available_cents BIGINT;
+UPDATE wallets SET available_cents = COALESCE(balance_cents, 0) - COALESCE(frozen_cents, 0) WHERE available_cents IS NULL;
+ALTER TABLE wallets ALTER COLUMN available_cents SET DEFAULT 0;
+ALTER TABLE wallets ALTER COLUMN available_cents SET NOT NULL;
 CREATE TABLE IF NOT EXISTS ledger_entries (id TEXT PRIMARY KEY, account_id TEXT NOT NULL, amount_cents BIGINT NOT NULL, currency TEXT NOT NULL, direction TEXT NOT NULL, source TEXT NOT NULL, operator_user_id TEXT NOT NULL DEFAULT '', reason TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS wallet_transactions (id TEXT PRIMARY KEY, account_id TEXT NOT NULL, ledger_entry_id TEXT NOT NULL, amount_cents BIGINT NOT NULL, balance_cents BIGINT NOT NULL, frozen_cents BIGINT NOT NULL, available_cents BIGINT NOT NULL, total_spent_cents BIGINT NOT NULL, currency TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now());
 CREATE TABLE IF NOT EXISTS manual_topups (id TEXT PRIMARY KEY, account_id TEXT NOT NULL, amount_cents BIGINT NOT NULL, currency TEXT NOT NULL, operator_user_id TEXT NOT NULL, ledger_entry_id TEXT NOT NULL, wallet_transaction_id TEXT NOT NULL, idempotency_key TEXT NOT NULL UNIQUE, request_hash TEXT NOT NULL, reason TEXT NOT NULL DEFAULT '', created_at TIMESTAMPTZ NOT NULL DEFAULT now());
