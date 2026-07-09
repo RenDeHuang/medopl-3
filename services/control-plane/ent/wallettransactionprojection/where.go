@@ -124,6 +124,26 @@ func AmountCents(v int64) predicate.WalletTransactionProjection {
 	return predicate.WalletTransactionProjection(sql.FieldEQ(FieldAmountCents, v))
 }
 
+// BalanceCents applies equality check predicate on the "balance_cents" field. It's identical to BalanceCentsEQ.
+func BalanceCents(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldEQ(FieldBalanceCents, v))
+}
+
+// FrozenCents applies equality check predicate on the "frozen_cents" field. It's identical to FrozenCentsEQ.
+func FrozenCents(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldEQ(FieldFrozenCents, v))
+}
+
+// AvailableCents applies equality check predicate on the "available_cents" field. It's identical to AvailableCentsEQ.
+func AvailableCents(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldEQ(FieldAvailableCents, v))
+}
+
+// TotalSpentCents applies equality check predicate on the "total_spent_cents" field. It's identical to TotalSpentCentsEQ.
+func TotalSpentCents(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldEQ(FieldTotalSpentCents, v))
+}
+
 // MetadataWorkspaceID applies equality check predicate on the "metadata_workspace_id" field. It's identical to MetadataWorkspaceIDEQ.
 func MetadataWorkspaceID(v string) predicate.WalletTransactionProjection {
 	return predicate.WalletTransactionProjection(sql.FieldEQ(FieldMetadataWorkspaceID, v))
@@ -857,6 +877,166 @@ func AmountCentsLT(v int64) predicate.WalletTransactionProjection {
 // AmountCentsLTE applies the LTE predicate on the "amount_cents" field.
 func AmountCentsLTE(v int64) predicate.WalletTransactionProjection {
 	return predicate.WalletTransactionProjection(sql.FieldLTE(FieldAmountCents, v))
+}
+
+// BalanceCentsEQ applies the EQ predicate on the "balance_cents" field.
+func BalanceCentsEQ(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldEQ(FieldBalanceCents, v))
+}
+
+// BalanceCentsNEQ applies the NEQ predicate on the "balance_cents" field.
+func BalanceCentsNEQ(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldNEQ(FieldBalanceCents, v))
+}
+
+// BalanceCentsIn applies the In predicate on the "balance_cents" field.
+func BalanceCentsIn(vs ...int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldIn(FieldBalanceCents, vs...))
+}
+
+// BalanceCentsNotIn applies the NotIn predicate on the "balance_cents" field.
+func BalanceCentsNotIn(vs ...int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldNotIn(FieldBalanceCents, vs...))
+}
+
+// BalanceCentsGT applies the GT predicate on the "balance_cents" field.
+func BalanceCentsGT(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldGT(FieldBalanceCents, v))
+}
+
+// BalanceCentsGTE applies the GTE predicate on the "balance_cents" field.
+func BalanceCentsGTE(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldGTE(FieldBalanceCents, v))
+}
+
+// BalanceCentsLT applies the LT predicate on the "balance_cents" field.
+func BalanceCentsLT(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldLT(FieldBalanceCents, v))
+}
+
+// BalanceCentsLTE applies the LTE predicate on the "balance_cents" field.
+func BalanceCentsLTE(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldLTE(FieldBalanceCents, v))
+}
+
+// FrozenCentsEQ applies the EQ predicate on the "frozen_cents" field.
+func FrozenCentsEQ(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldEQ(FieldFrozenCents, v))
+}
+
+// FrozenCentsNEQ applies the NEQ predicate on the "frozen_cents" field.
+func FrozenCentsNEQ(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldNEQ(FieldFrozenCents, v))
+}
+
+// FrozenCentsIn applies the In predicate on the "frozen_cents" field.
+func FrozenCentsIn(vs ...int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldIn(FieldFrozenCents, vs...))
+}
+
+// FrozenCentsNotIn applies the NotIn predicate on the "frozen_cents" field.
+func FrozenCentsNotIn(vs ...int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldNotIn(FieldFrozenCents, vs...))
+}
+
+// FrozenCentsGT applies the GT predicate on the "frozen_cents" field.
+func FrozenCentsGT(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldGT(FieldFrozenCents, v))
+}
+
+// FrozenCentsGTE applies the GTE predicate on the "frozen_cents" field.
+func FrozenCentsGTE(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldGTE(FieldFrozenCents, v))
+}
+
+// FrozenCentsLT applies the LT predicate on the "frozen_cents" field.
+func FrozenCentsLT(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldLT(FieldFrozenCents, v))
+}
+
+// FrozenCentsLTE applies the LTE predicate on the "frozen_cents" field.
+func FrozenCentsLTE(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldLTE(FieldFrozenCents, v))
+}
+
+// AvailableCentsEQ applies the EQ predicate on the "available_cents" field.
+func AvailableCentsEQ(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldEQ(FieldAvailableCents, v))
+}
+
+// AvailableCentsNEQ applies the NEQ predicate on the "available_cents" field.
+func AvailableCentsNEQ(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldNEQ(FieldAvailableCents, v))
+}
+
+// AvailableCentsIn applies the In predicate on the "available_cents" field.
+func AvailableCentsIn(vs ...int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldIn(FieldAvailableCents, vs...))
+}
+
+// AvailableCentsNotIn applies the NotIn predicate on the "available_cents" field.
+func AvailableCentsNotIn(vs ...int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldNotIn(FieldAvailableCents, vs...))
+}
+
+// AvailableCentsGT applies the GT predicate on the "available_cents" field.
+func AvailableCentsGT(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldGT(FieldAvailableCents, v))
+}
+
+// AvailableCentsGTE applies the GTE predicate on the "available_cents" field.
+func AvailableCentsGTE(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldGTE(FieldAvailableCents, v))
+}
+
+// AvailableCentsLT applies the LT predicate on the "available_cents" field.
+func AvailableCentsLT(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldLT(FieldAvailableCents, v))
+}
+
+// AvailableCentsLTE applies the LTE predicate on the "available_cents" field.
+func AvailableCentsLTE(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldLTE(FieldAvailableCents, v))
+}
+
+// TotalSpentCentsEQ applies the EQ predicate on the "total_spent_cents" field.
+func TotalSpentCentsEQ(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldEQ(FieldTotalSpentCents, v))
+}
+
+// TotalSpentCentsNEQ applies the NEQ predicate on the "total_spent_cents" field.
+func TotalSpentCentsNEQ(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldNEQ(FieldTotalSpentCents, v))
+}
+
+// TotalSpentCentsIn applies the In predicate on the "total_spent_cents" field.
+func TotalSpentCentsIn(vs ...int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldIn(FieldTotalSpentCents, vs...))
+}
+
+// TotalSpentCentsNotIn applies the NotIn predicate on the "total_spent_cents" field.
+func TotalSpentCentsNotIn(vs ...int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldNotIn(FieldTotalSpentCents, vs...))
+}
+
+// TotalSpentCentsGT applies the GT predicate on the "total_spent_cents" field.
+func TotalSpentCentsGT(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldGT(FieldTotalSpentCents, v))
+}
+
+// TotalSpentCentsGTE applies the GTE predicate on the "total_spent_cents" field.
+func TotalSpentCentsGTE(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldGTE(FieldTotalSpentCents, v))
+}
+
+// TotalSpentCentsLT applies the LT predicate on the "total_spent_cents" field.
+func TotalSpentCentsLT(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldLT(FieldTotalSpentCents, v))
+}
+
+// TotalSpentCentsLTE applies the LTE predicate on the "total_spent_cents" field.
+func TotalSpentCentsLTE(v int64) predicate.WalletTransactionProjection {
+	return predicate.WalletTransactionProjection(sql.FieldLTE(FieldTotalSpentCents, v))
 }
 
 // MetadataWorkspaceIDEQ applies the EQ predicate on the "metadata_workspace_id" field.

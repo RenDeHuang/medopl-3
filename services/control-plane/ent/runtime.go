@@ -1582,28 +1582,44 @@ func init() {
 	wallettransactionprojectionDescAmountCents := wallettransactionprojectionFields[12].Descriptor()
 	// wallettransactionprojection.DefaultAmountCents holds the default value on creation for the amount_cents field.
 	wallettransactionprojection.DefaultAmountCents = wallettransactionprojectionDescAmountCents.Default.(int64)
+	// wallettransactionprojectionDescBalanceCents is the schema descriptor for balance_cents field.
+	wallettransactionprojectionDescBalanceCents := wallettransactionprojectionFields[13].Descriptor()
+	// wallettransactionprojection.DefaultBalanceCents holds the default value on creation for the balance_cents field.
+	wallettransactionprojection.DefaultBalanceCents = wallettransactionprojectionDescBalanceCents.Default.(int64)
+	// wallettransactionprojectionDescFrozenCents is the schema descriptor for frozen_cents field.
+	wallettransactionprojectionDescFrozenCents := wallettransactionprojectionFields[14].Descriptor()
+	// wallettransactionprojection.DefaultFrozenCents holds the default value on creation for the frozen_cents field.
+	wallettransactionprojection.DefaultFrozenCents = wallettransactionprojectionDescFrozenCents.Default.(int64)
+	// wallettransactionprojectionDescAvailableCents is the schema descriptor for available_cents field.
+	wallettransactionprojectionDescAvailableCents := wallettransactionprojectionFields[15].Descriptor()
+	// wallettransactionprojection.DefaultAvailableCents holds the default value on creation for the available_cents field.
+	wallettransactionprojection.DefaultAvailableCents = wallettransactionprojectionDescAvailableCents.Default.(int64)
+	// wallettransactionprojectionDescTotalSpentCents is the schema descriptor for total_spent_cents field.
+	wallettransactionprojectionDescTotalSpentCents := wallettransactionprojectionFields[16].Descriptor()
+	// wallettransactionprojection.DefaultTotalSpentCents holds the default value on creation for the total_spent_cents field.
+	wallettransactionprojection.DefaultTotalSpentCents = wallettransactionprojectionDescTotalSpentCents.Default.(int64)
 	// wallettransactionprojectionDescMetadataWorkspaceID is the schema descriptor for metadata_workspace_id field.
-	wallettransactionprojectionDescMetadataWorkspaceID := wallettransactionprojectionFields[13].Descriptor()
+	wallettransactionprojectionDescMetadataWorkspaceID := wallettransactionprojectionFields[17].Descriptor()
 	// wallettransactionprojection.DefaultMetadataWorkspaceID holds the default value on creation for the metadata_workspace_id field.
 	wallettransactionprojection.DefaultMetadataWorkspaceID = wallettransactionprojectionDescMetadataWorkspaceID.Default.(string)
 	// wallettransactionprojectionDescMetadataResourceID is the schema descriptor for metadata_resource_id field.
-	wallettransactionprojectionDescMetadataResourceID := wallettransactionprojectionFields[14].Descriptor()
+	wallettransactionprojectionDescMetadataResourceID := wallettransactionprojectionFields[18].Descriptor()
 	// wallettransactionprojection.DefaultMetadataResourceID holds the default value on creation for the metadata_resource_id field.
 	wallettransactionprojection.DefaultMetadataResourceID = wallettransactionprojectionDescMetadataResourceID.Default.(string)
 	// wallettransactionprojectionDescMetadataSettlementID is the schema descriptor for metadata_settlement_id field.
-	wallettransactionprojectionDescMetadataSettlementID := wallettransactionprojectionFields[15].Descriptor()
+	wallettransactionprojectionDescMetadataSettlementID := wallettransactionprojectionFields[19].Descriptor()
 	// wallettransactionprojection.DefaultMetadataSettlementID holds the default value on creation for the metadata_settlement_id field.
 	wallettransactionprojection.DefaultMetadataSettlementID = wallettransactionprojectionDescMetadataSettlementID.Default.(string)
 	// wallettransactionprojectionDescMetadataLedgerEntryID is the schema descriptor for metadata_ledger_entry_id field.
-	wallettransactionprojectionDescMetadataLedgerEntryID := wallettransactionprojectionFields[16].Descriptor()
+	wallettransactionprojectionDescMetadataLedgerEntryID := wallettransactionprojectionFields[20].Descriptor()
 	// wallettransactionprojection.DefaultMetadataLedgerEntryID holds the default value on creation for the metadata_ledger_entry_id field.
 	wallettransactionprojection.DefaultMetadataLedgerEntryID = wallettransactionprojectionDescMetadataLedgerEntryID.Default.(string)
 	// wallettransactionprojectionDescMetadataComputeAllocationID is the schema descriptor for metadata_compute_allocation_id field.
-	wallettransactionprojectionDescMetadataComputeAllocationID := wallettransactionprojectionFields[17].Descriptor()
+	wallettransactionprojectionDescMetadataComputeAllocationID := wallettransactionprojectionFields[21].Descriptor()
 	// wallettransactionprojection.DefaultMetadataComputeAllocationID holds the default value on creation for the metadata_compute_allocation_id field.
 	wallettransactionprojection.DefaultMetadataComputeAllocationID = wallettransactionprojectionDescMetadataComputeAllocationID.Default.(string)
 	// wallettransactionprojectionDescMetadataStorageID is the schema descriptor for metadata_storage_id field.
-	wallettransactionprojectionDescMetadataStorageID := wallettransactionprojectionFields[18].Descriptor()
+	wallettransactionprojectionDescMetadataStorageID := wallettransactionprojectionFields[22].Descriptor()
 	// wallettransactionprojection.DefaultMetadataStorageID holds the default value on creation for the metadata_storage_id field.
 	wallettransactionprojection.DefaultMetadataStorageID = wallettransactionprojectionDescMetadataStorageID.Default.(string)
 	// wallettransactionprojectionDescID is the schema descriptor for id field.

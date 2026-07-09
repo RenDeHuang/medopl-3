@@ -26042,6 +26042,14 @@ type WalletTransactionProjectionMutation struct {
 	currency                       *string
 	amount_cents                   *int64
 	addamount_cents                *int64
+	balance_cents                  *int64
+	addbalance_cents               *int64
+	frozen_cents                   *int64
+	addfrozen_cents                *int64
+	available_cents                *int64
+	addavailable_cents             *int64
+	total_spent_cents              *int64
+	addtotal_spent_cents           *int64
 	metadata_workspace_id          *string
 	metadata_resource_id           *string
 	metadata_settlement_id         *string
@@ -26610,6 +26618,230 @@ func (m *WalletTransactionProjectionMutation) ResetAmountCents() {
 	m.addamount_cents = nil
 }
 
+// SetBalanceCents sets the "balance_cents" field.
+func (m *WalletTransactionProjectionMutation) SetBalanceCents(i int64) {
+	m.balance_cents = &i
+	m.addbalance_cents = nil
+}
+
+// BalanceCents returns the value of the "balance_cents" field in the mutation.
+func (m *WalletTransactionProjectionMutation) BalanceCents() (r int64, exists bool) {
+	v := m.balance_cents
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBalanceCents returns the old "balance_cents" field's value of the WalletTransactionProjection entity.
+// If the WalletTransactionProjection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WalletTransactionProjectionMutation) OldBalanceCents(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBalanceCents is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBalanceCents requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBalanceCents: %w", err)
+	}
+	return oldValue.BalanceCents, nil
+}
+
+// AddBalanceCents adds i to the "balance_cents" field.
+func (m *WalletTransactionProjectionMutation) AddBalanceCents(i int64) {
+	if m.addbalance_cents != nil {
+		*m.addbalance_cents += i
+	} else {
+		m.addbalance_cents = &i
+	}
+}
+
+// AddedBalanceCents returns the value that was added to the "balance_cents" field in this mutation.
+func (m *WalletTransactionProjectionMutation) AddedBalanceCents() (r int64, exists bool) {
+	v := m.addbalance_cents
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBalanceCents resets all changes to the "balance_cents" field.
+func (m *WalletTransactionProjectionMutation) ResetBalanceCents() {
+	m.balance_cents = nil
+	m.addbalance_cents = nil
+}
+
+// SetFrozenCents sets the "frozen_cents" field.
+func (m *WalletTransactionProjectionMutation) SetFrozenCents(i int64) {
+	m.frozen_cents = &i
+	m.addfrozen_cents = nil
+}
+
+// FrozenCents returns the value of the "frozen_cents" field in the mutation.
+func (m *WalletTransactionProjectionMutation) FrozenCents() (r int64, exists bool) {
+	v := m.frozen_cents
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFrozenCents returns the old "frozen_cents" field's value of the WalletTransactionProjection entity.
+// If the WalletTransactionProjection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WalletTransactionProjectionMutation) OldFrozenCents(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFrozenCents is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFrozenCents requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFrozenCents: %w", err)
+	}
+	return oldValue.FrozenCents, nil
+}
+
+// AddFrozenCents adds i to the "frozen_cents" field.
+func (m *WalletTransactionProjectionMutation) AddFrozenCents(i int64) {
+	if m.addfrozen_cents != nil {
+		*m.addfrozen_cents += i
+	} else {
+		m.addfrozen_cents = &i
+	}
+}
+
+// AddedFrozenCents returns the value that was added to the "frozen_cents" field in this mutation.
+func (m *WalletTransactionProjectionMutation) AddedFrozenCents() (r int64, exists bool) {
+	v := m.addfrozen_cents
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetFrozenCents resets all changes to the "frozen_cents" field.
+func (m *WalletTransactionProjectionMutation) ResetFrozenCents() {
+	m.frozen_cents = nil
+	m.addfrozen_cents = nil
+}
+
+// SetAvailableCents sets the "available_cents" field.
+func (m *WalletTransactionProjectionMutation) SetAvailableCents(i int64) {
+	m.available_cents = &i
+	m.addavailable_cents = nil
+}
+
+// AvailableCents returns the value of the "available_cents" field in the mutation.
+func (m *WalletTransactionProjectionMutation) AvailableCents() (r int64, exists bool) {
+	v := m.available_cents
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAvailableCents returns the old "available_cents" field's value of the WalletTransactionProjection entity.
+// If the WalletTransactionProjection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WalletTransactionProjectionMutation) OldAvailableCents(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAvailableCents is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAvailableCents requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAvailableCents: %w", err)
+	}
+	return oldValue.AvailableCents, nil
+}
+
+// AddAvailableCents adds i to the "available_cents" field.
+func (m *WalletTransactionProjectionMutation) AddAvailableCents(i int64) {
+	if m.addavailable_cents != nil {
+		*m.addavailable_cents += i
+	} else {
+		m.addavailable_cents = &i
+	}
+}
+
+// AddedAvailableCents returns the value that was added to the "available_cents" field in this mutation.
+func (m *WalletTransactionProjectionMutation) AddedAvailableCents() (r int64, exists bool) {
+	v := m.addavailable_cents
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAvailableCents resets all changes to the "available_cents" field.
+func (m *WalletTransactionProjectionMutation) ResetAvailableCents() {
+	m.available_cents = nil
+	m.addavailable_cents = nil
+}
+
+// SetTotalSpentCents sets the "total_spent_cents" field.
+func (m *WalletTransactionProjectionMutation) SetTotalSpentCents(i int64) {
+	m.total_spent_cents = &i
+	m.addtotal_spent_cents = nil
+}
+
+// TotalSpentCents returns the value of the "total_spent_cents" field in the mutation.
+func (m *WalletTransactionProjectionMutation) TotalSpentCents() (r int64, exists bool) {
+	v := m.total_spent_cents
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldTotalSpentCents returns the old "total_spent_cents" field's value of the WalletTransactionProjection entity.
+// If the WalletTransactionProjection object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WalletTransactionProjectionMutation) OldTotalSpentCents(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldTotalSpentCents is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldTotalSpentCents requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldTotalSpentCents: %w", err)
+	}
+	return oldValue.TotalSpentCents, nil
+}
+
+// AddTotalSpentCents adds i to the "total_spent_cents" field.
+func (m *WalletTransactionProjectionMutation) AddTotalSpentCents(i int64) {
+	if m.addtotal_spent_cents != nil {
+		*m.addtotal_spent_cents += i
+	} else {
+		m.addtotal_spent_cents = &i
+	}
+}
+
+// AddedTotalSpentCents returns the value that was added to the "total_spent_cents" field in this mutation.
+func (m *WalletTransactionProjectionMutation) AddedTotalSpentCents() (r int64, exists bool) {
+	v := m.addtotal_spent_cents
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetTotalSpentCents resets all changes to the "total_spent_cents" field.
+func (m *WalletTransactionProjectionMutation) ResetTotalSpentCents() {
+	m.total_spent_cents = nil
+	m.addtotal_spent_cents = nil
+}
+
 // SetMetadataWorkspaceID sets the "metadata_workspace_id" field.
 func (m *WalletTransactionProjectionMutation) SetMetadataWorkspaceID(s string) {
 	m.metadata_workspace_id = &s
@@ -26860,7 +27092,7 @@ func (m *WalletTransactionProjectionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *WalletTransactionProjectionMutation) Fields() []string {
-	fields := make([]string, 0, 18)
+	fields := make([]string, 0, 22)
 	if m.created_at != nil {
 		fields = append(fields, wallettransactionprojection.FieldCreatedAt)
 	}
@@ -26896,6 +27128,18 @@ func (m *WalletTransactionProjectionMutation) Fields() []string {
 	}
 	if m.amount_cents != nil {
 		fields = append(fields, wallettransactionprojection.FieldAmountCents)
+	}
+	if m.balance_cents != nil {
+		fields = append(fields, wallettransactionprojection.FieldBalanceCents)
+	}
+	if m.frozen_cents != nil {
+		fields = append(fields, wallettransactionprojection.FieldFrozenCents)
+	}
+	if m.available_cents != nil {
+		fields = append(fields, wallettransactionprojection.FieldAvailableCents)
+	}
+	if m.total_spent_cents != nil {
+		fields = append(fields, wallettransactionprojection.FieldTotalSpentCents)
 	}
 	if m.metadata_workspace_id != nil {
 		fields = append(fields, wallettransactionprojection.FieldMetadataWorkspaceID)
@@ -26947,6 +27191,14 @@ func (m *WalletTransactionProjectionMutation) Field(name string) (ent.Value, boo
 		return m.Currency()
 	case wallettransactionprojection.FieldAmountCents:
 		return m.AmountCents()
+	case wallettransactionprojection.FieldBalanceCents:
+		return m.BalanceCents()
+	case wallettransactionprojection.FieldFrozenCents:
+		return m.FrozenCents()
+	case wallettransactionprojection.FieldAvailableCents:
+		return m.AvailableCents()
+	case wallettransactionprojection.FieldTotalSpentCents:
+		return m.TotalSpentCents()
 	case wallettransactionprojection.FieldMetadataWorkspaceID:
 		return m.MetadataWorkspaceID()
 	case wallettransactionprojection.FieldMetadataResourceID:
@@ -26992,6 +27244,14 @@ func (m *WalletTransactionProjectionMutation) OldField(ctx context.Context, name
 		return m.OldCurrency(ctx)
 	case wallettransactionprojection.FieldAmountCents:
 		return m.OldAmountCents(ctx)
+	case wallettransactionprojection.FieldBalanceCents:
+		return m.OldBalanceCents(ctx)
+	case wallettransactionprojection.FieldFrozenCents:
+		return m.OldFrozenCents(ctx)
+	case wallettransactionprojection.FieldAvailableCents:
+		return m.OldAvailableCents(ctx)
+	case wallettransactionprojection.FieldTotalSpentCents:
+		return m.OldTotalSpentCents(ctx)
 	case wallettransactionprojection.FieldMetadataWorkspaceID:
 		return m.OldMetadataWorkspaceID(ctx)
 	case wallettransactionprojection.FieldMetadataResourceID:
@@ -27097,6 +27357,34 @@ func (m *WalletTransactionProjectionMutation) SetField(name string, value ent.Va
 		}
 		m.SetAmountCents(v)
 		return nil
+	case wallettransactionprojection.FieldBalanceCents:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBalanceCents(v)
+		return nil
+	case wallettransactionprojection.FieldFrozenCents:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFrozenCents(v)
+		return nil
+	case wallettransactionprojection.FieldAvailableCents:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAvailableCents(v)
+		return nil
+	case wallettransactionprojection.FieldTotalSpentCents:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetTotalSpentCents(v)
+		return nil
 	case wallettransactionprojection.FieldMetadataWorkspaceID:
 		v, ok := value.(string)
 		if !ok {
@@ -27150,6 +27438,18 @@ func (m *WalletTransactionProjectionMutation) AddedFields() []string {
 	if m.addamount_cents != nil {
 		fields = append(fields, wallettransactionprojection.FieldAmountCents)
 	}
+	if m.addbalance_cents != nil {
+		fields = append(fields, wallettransactionprojection.FieldBalanceCents)
+	}
+	if m.addfrozen_cents != nil {
+		fields = append(fields, wallettransactionprojection.FieldFrozenCents)
+	}
+	if m.addavailable_cents != nil {
+		fields = append(fields, wallettransactionprojection.FieldAvailableCents)
+	}
+	if m.addtotal_spent_cents != nil {
+		fields = append(fields, wallettransactionprojection.FieldTotalSpentCents)
+	}
 	return fields
 }
 
@@ -27160,6 +27460,14 @@ func (m *WalletTransactionProjectionMutation) AddedField(name string) (ent.Value
 	switch name {
 	case wallettransactionprojection.FieldAmountCents:
 		return m.AddedAmountCents()
+	case wallettransactionprojection.FieldBalanceCents:
+		return m.AddedBalanceCents()
+	case wallettransactionprojection.FieldFrozenCents:
+		return m.AddedFrozenCents()
+	case wallettransactionprojection.FieldAvailableCents:
+		return m.AddedAvailableCents()
+	case wallettransactionprojection.FieldTotalSpentCents:
+		return m.AddedTotalSpentCents()
 	}
 	return nil, false
 }
@@ -27175,6 +27483,34 @@ func (m *WalletTransactionProjectionMutation) AddField(name string, value ent.Va
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddAmountCents(v)
+		return nil
+	case wallettransactionprojection.FieldBalanceCents:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBalanceCents(v)
+		return nil
+	case wallettransactionprojection.FieldFrozenCents:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddFrozenCents(v)
+		return nil
+	case wallettransactionprojection.FieldAvailableCents:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAvailableCents(v)
+		return nil
+	case wallettransactionprojection.FieldTotalSpentCents:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddTotalSpentCents(v)
 		return nil
 	}
 	return fmt.Errorf("unknown WalletTransactionProjection numeric field %s", name)
@@ -27238,6 +27574,18 @@ func (m *WalletTransactionProjectionMutation) ResetField(name string) error {
 		return nil
 	case wallettransactionprojection.FieldAmountCents:
 		m.ResetAmountCents()
+		return nil
+	case wallettransactionprojection.FieldBalanceCents:
+		m.ResetBalanceCents()
+		return nil
+	case wallettransactionprojection.FieldFrozenCents:
+		m.ResetFrozenCents()
+		return nil
+	case wallettransactionprojection.FieldAvailableCents:
+		m.ResetAvailableCents()
+		return nil
+	case wallettransactionprojection.FieldTotalSpentCents:
+		m.ResetTotalSpentCents()
 		return nil
 	case wallettransactionprojection.FieldMetadataWorkspaceID:
 		m.ResetMetadataWorkspaceID()

@@ -41,6 +41,14 @@ type WalletTransactionProjection struct {
 	Currency string `json:"currency,omitempty"`
 	// AmountCents holds the value of the "amount_cents" field.
 	AmountCents int64 `json:"amount_cents,omitempty"`
+	// BalanceCents holds the value of the "balance_cents" field.
+	BalanceCents int64 `json:"balance_cents,omitempty"`
+	// FrozenCents holds the value of the "frozen_cents" field.
+	FrozenCents int64 `json:"frozen_cents,omitempty"`
+	// AvailableCents holds the value of the "available_cents" field.
+	AvailableCents int64 `json:"available_cents,omitempty"`
+	// TotalSpentCents holds the value of the "total_spent_cents" field.
+	TotalSpentCents int64 `json:"total_spent_cents,omitempty"`
 	// MetadataWorkspaceID holds the value of the "metadata_workspace_id" field.
 	MetadataWorkspaceID string `json:"metadata_workspace_id,omitempty"`
 	// MetadataResourceID holds the value of the "metadata_resource_id" field.
@@ -61,7 +69,7 @@ func (*WalletTransactionProjection) scanValues(columns []string) ([]any, error) 
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case wallettransactionprojection.FieldAmountCents:
+		case wallettransactionprojection.FieldAmountCents, wallettransactionprojection.FieldBalanceCents, wallettransactionprojection.FieldFrozenCents, wallettransactionprojection.FieldAvailableCents, wallettransactionprojection.FieldTotalSpentCents:
 			values[i] = new(sql.NullInt64)
 		case wallettransactionprojection.FieldID, wallettransactionprojection.FieldAccountID, wallettransactionprojection.FieldType, wallettransactionprojection.FieldLedgerEntryID, wallettransactionprojection.FieldResourceID, wallettransactionprojection.FieldWorkspaceID, wallettransactionprojection.FieldComputeAllocationID, wallettransactionprojection.FieldStorageID, wallettransactionprojection.FieldSettlementID, wallettransactionprojection.FieldCurrency, wallettransactionprojection.FieldMetadataWorkspaceID, wallettransactionprojection.FieldMetadataResourceID, wallettransactionprojection.FieldMetadataSettlementID, wallettransactionprojection.FieldMetadataLedgerEntryID, wallettransactionprojection.FieldMetadataComputeAllocationID, wallettransactionprojection.FieldMetadataStorageID:
 			values[i] = new(sql.NullString)
@@ -159,6 +167,30 @@ func (wtp *WalletTransactionProjection) assignValues(columns []string, values []
 				return fmt.Errorf("unexpected type %T for field amount_cents", values[i])
 			} else if value.Valid {
 				wtp.AmountCents = value.Int64
+			}
+		case wallettransactionprojection.FieldBalanceCents:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field balance_cents", values[i])
+			} else if value.Valid {
+				wtp.BalanceCents = value.Int64
+			}
+		case wallettransactionprojection.FieldFrozenCents:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field frozen_cents", values[i])
+			} else if value.Valid {
+				wtp.FrozenCents = value.Int64
+			}
+		case wallettransactionprojection.FieldAvailableCents:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field available_cents", values[i])
+			} else if value.Valid {
+				wtp.AvailableCents = value.Int64
+			}
+		case wallettransactionprojection.FieldTotalSpentCents:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field total_spent_cents", values[i])
+			} else if value.Valid {
+				wtp.TotalSpentCents = value.Int64
 			}
 		case wallettransactionprojection.FieldMetadataWorkspaceID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -267,6 +299,18 @@ func (wtp *WalletTransactionProjection) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("amount_cents=")
 	builder.WriteString(fmt.Sprintf("%v", wtp.AmountCents))
+	builder.WriteString(", ")
+	builder.WriteString("balance_cents=")
+	builder.WriteString(fmt.Sprintf("%v", wtp.BalanceCents))
+	builder.WriteString(", ")
+	builder.WriteString("frozen_cents=")
+	builder.WriteString(fmt.Sprintf("%v", wtp.FrozenCents))
+	builder.WriteString(", ")
+	builder.WriteString("available_cents=")
+	builder.WriteString(fmt.Sprintf("%v", wtp.AvailableCents))
+	builder.WriteString(", ")
+	builder.WriteString("total_spent_cents=")
+	builder.WriteString(fmt.Sprintf("%v", wtp.TotalSpentCents))
 	builder.WriteString(", ")
 	builder.WriteString("metadata_workspace_id=")
 	builder.WriteString(wtp.MetadataWorkspaceID)

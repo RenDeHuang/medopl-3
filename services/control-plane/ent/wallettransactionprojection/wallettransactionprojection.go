@@ -37,6 +37,14 @@ const (
 	FieldCurrency = "currency"
 	// FieldAmountCents holds the string denoting the amount_cents field in the database.
 	FieldAmountCents = "amount_cents"
+	// FieldBalanceCents holds the string denoting the balance_cents field in the database.
+	FieldBalanceCents = "balance_cents"
+	// FieldFrozenCents holds the string denoting the frozen_cents field in the database.
+	FieldFrozenCents = "frozen_cents"
+	// FieldAvailableCents holds the string denoting the available_cents field in the database.
+	FieldAvailableCents = "available_cents"
+	// FieldTotalSpentCents holds the string denoting the total_spent_cents field in the database.
+	FieldTotalSpentCents = "total_spent_cents"
 	// FieldMetadataWorkspaceID holds the string denoting the metadata_workspace_id field in the database.
 	FieldMetadataWorkspaceID = "metadata_workspace_id"
 	// FieldMetadataResourceID holds the string denoting the metadata_resource_id field in the database.
@@ -68,6 +76,10 @@ var Columns = []string{
 	FieldSettlementID,
 	FieldCurrency,
 	FieldAmountCents,
+	FieldBalanceCents,
+	FieldFrozenCents,
+	FieldAvailableCents,
+	FieldTotalSpentCents,
 	FieldMetadataWorkspaceID,
 	FieldMetadataResourceID,
 	FieldMetadataSettlementID,
@@ -113,6 +125,14 @@ var (
 	DefaultCurrency string
 	// DefaultAmountCents holds the default value on creation for the "amount_cents" field.
 	DefaultAmountCents int64
+	// DefaultBalanceCents holds the default value on creation for the "balance_cents" field.
+	DefaultBalanceCents int64
+	// DefaultFrozenCents holds the default value on creation for the "frozen_cents" field.
+	DefaultFrozenCents int64
+	// DefaultAvailableCents holds the default value on creation for the "available_cents" field.
+	DefaultAvailableCents int64
+	// DefaultTotalSpentCents holds the default value on creation for the "total_spent_cents" field.
+	DefaultTotalSpentCents int64
 	// DefaultMetadataWorkspaceID holds the default value on creation for the "metadata_workspace_id" field.
 	DefaultMetadataWorkspaceID string
 	// DefaultMetadataResourceID holds the default value on creation for the "metadata_resource_id" field.
@@ -195,6 +215,26 @@ func ByCurrency(opts ...sql.OrderTermOption) OrderOption {
 // ByAmountCents orders the results by the amount_cents field.
 func ByAmountCents(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAmountCents, opts...).ToFunc()
+}
+
+// ByBalanceCents orders the results by the balance_cents field.
+func ByBalanceCents(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBalanceCents, opts...).ToFunc()
+}
+
+// ByFrozenCents orders the results by the frozen_cents field.
+func ByFrozenCents(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFrozenCents, opts...).ToFunc()
+}
+
+// ByAvailableCents orders the results by the available_cents field.
+func ByAvailableCents(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldAvailableCents, opts...).ToFunc()
+}
+
+// ByTotalSpentCents orders the results by the total_spent_cents field.
+func ByTotalSpentCents(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTotalSpentCents, opts...).ToFunc()
 }
 
 // ByMetadataWorkspaceID orders the results by the metadata_workspace_id field.

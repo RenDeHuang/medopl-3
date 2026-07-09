@@ -180,6 +180,62 @@ func (wtpc *WalletTransactionProjectionCreate) SetNillableAmountCents(i *int64) 
 	return wtpc
 }
 
+// SetBalanceCents sets the "balance_cents" field.
+func (wtpc *WalletTransactionProjectionCreate) SetBalanceCents(i int64) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetBalanceCents(i)
+	return wtpc
+}
+
+// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableBalanceCents(i *int64) *WalletTransactionProjectionCreate {
+	if i != nil {
+		wtpc.SetBalanceCents(*i)
+	}
+	return wtpc
+}
+
+// SetFrozenCents sets the "frozen_cents" field.
+func (wtpc *WalletTransactionProjectionCreate) SetFrozenCents(i int64) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetFrozenCents(i)
+	return wtpc
+}
+
+// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableFrozenCents(i *int64) *WalletTransactionProjectionCreate {
+	if i != nil {
+		wtpc.SetFrozenCents(*i)
+	}
+	return wtpc
+}
+
+// SetAvailableCents sets the "available_cents" field.
+func (wtpc *WalletTransactionProjectionCreate) SetAvailableCents(i int64) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetAvailableCents(i)
+	return wtpc
+}
+
+// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableAvailableCents(i *int64) *WalletTransactionProjectionCreate {
+	if i != nil {
+		wtpc.SetAvailableCents(*i)
+	}
+	return wtpc
+}
+
+// SetTotalSpentCents sets the "total_spent_cents" field.
+func (wtpc *WalletTransactionProjectionCreate) SetTotalSpentCents(i int64) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetTotalSpentCents(i)
+	return wtpc
+}
+
+// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableTotalSpentCents(i *int64) *WalletTransactionProjectionCreate {
+	if i != nil {
+		wtpc.SetTotalSpentCents(*i)
+	}
+	return wtpc
+}
+
 // SetMetadataWorkspaceID sets the "metadata_workspace_id" field.
 func (wtpc *WalletTransactionProjectionCreate) SetMetadataWorkspaceID(s string) *WalletTransactionProjectionCreate {
 	wtpc.mutation.SetMetadataWorkspaceID(s)
@@ -349,6 +405,22 @@ func (wtpc *WalletTransactionProjectionCreate) defaults() {
 		v := wallettransactionprojection.DefaultAmountCents
 		wtpc.mutation.SetAmountCents(v)
 	}
+	if _, ok := wtpc.mutation.BalanceCents(); !ok {
+		v := wallettransactionprojection.DefaultBalanceCents
+		wtpc.mutation.SetBalanceCents(v)
+	}
+	if _, ok := wtpc.mutation.FrozenCents(); !ok {
+		v := wallettransactionprojection.DefaultFrozenCents
+		wtpc.mutation.SetFrozenCents(v)
+	}
+	if _, ok := wtpc.mutation.AvailableCents(); !ok {
+		v := wallettransactionprojection.DefaultAvailableCents
+		wtpc.mutation.SetAvailableCents(v)
+	}
+	if _, ok := wtpc.mutation.TotalSpentCents(); !ok {
+		v := wallettransactionprojection.DefaultTotalSpentCents
+		wtpc.mutation.SetTotalSpentCents(v)
+	}
 	if _, ok := wtpc.mutation.MetadataWorkspaceID(); !ok {
 		v := wallettransactionprojection.DefaultMetadataWorkspaceID
 		wtpc.mutation.SetMetadataWorkspaceID(v)
@@ -417,6 +489,18 @@ func (wtpc *WalletTransactionProjectionCreate) check() error {
 	}
 	if _, ok := wtpc.mutation.AmountCents(); !ok {
 		return &ValidationError{Name: "amount_cents", err: errors.New(`ent: missing required field "WalletTransactionProjection.amount_cents"`)}
+	}
+	if _, ok := wtpc.mutation.BalanceCents(); !ok {
+		return &ValidationError{Name: "balance_cents", err: errors.New(`ent: missing required field "WalletTransactionProjection.balance_cents"`)}
+	}
+	if _, ok := wtpc.mutation.FrozenCents(); !ok {
+		return &ValidationError{Name: "frozen_cents", err: errors.New(`ent: missing required field "WalletTransactionProjection.frozen_cents"`)}
+	}
+	if _, ok := wtpc.mutation.AvailableCents(); !ok {
+		return &ValidationError{Name: "available_cents", err: errors.New(`ent: missing required field "WalletTransactionProjection.available_cents"`)}
+	}
+	if _, ok := wtpc.mutation.TotalSpentCents(); !ok {
+		return &ValidationError{Name: "total_spent_cents", err: errors.New(`ent: missing required field "WalletTransactionProjection.total_spent_cents"`)}
 	}
 	if _, ok := wtpc.mutation.MetadataWorkspaceID(); !ok {
 		return &ValidationError{Name: "metadata_workspace_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.metadata_workspace_id"`)}
@@ -523,6 +607,22 @@ func (wtpc *WalletTransactionProjectionCreate) createSpec() (*WalletTransactionP
 	if value, ok := wtpc.mutation.AmountCents(); ok {
 		_spec.SetField(wallettransactionprojection.FieldAmountCents, field.TypeInt64, value)
 		_node.AmountCents = value
+	}
+	if value, ok := wtpc.mutation.BalanceCents(); ok {
+		_spec.SetField(wallettransactionprojection.FieldBalanceCents, field.TypeInt64, value)
+		_node.BalanceCents = value
+	}
+	if value, ok := wtpc.mutation.FrozenCents(); ok {
+		_spec.SetField(wallettransactionprojection.FieldFrozenCents, field.TypeInt64, value)
+		_node.FrozenCents = value
+	}
+	if value, ok := wtpc.mutation.AvailableCents(); ok {
+		_spec.SetField(wallettransactionprojection.FieldAvailableCents, field.TypeInt64, value)
+		_node.AvailableCents = value
+	}
+	if value, ok := wtpc.mutation.TotalSpentCents(); ok {
+		_spec.SetField(wallettransactionprojection.FieldTotalSpentCents, field.TypeInt64, value)
+		_node.TotalSpentCents = value
 	}
 	if value, ok := wtpc.mutation.MetadataWorkspaceID(); ok {
 		_spec.SetField(wallettransactionprojection.FieldMetadataWorkspaceID, field.TypeString, value)

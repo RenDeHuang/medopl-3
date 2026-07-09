@@ -59,3 +59,42 @@ func TestEntStateStoreIgnoresDuplicateEventProjectionIDs(t *testing.T) {
 		t.Fatalf("duplicate event projections should not break state persistence: %v", err)
 	}
 }
+
+func TestEntStateStorePersistsWalletTransactionWalletAfter(t *testing.T) {
+	store := NewTestEntStateStore(t, t.TempDir()+"/wallet-after.sqlite")
+	facts := controlPlaneState{
+		WalletTx: []controlPlaneRecord{{
+			"id":              "wallet-tx-alpha",
+			"accountId":       "acct-alpha",
+			"type":            "compute_debit",
+			"ledgerEntryId":   "ledger-alpha",
+			"amountCents":     int64(-100),
+			"balanceCents":    int64(900),
+			"frozenCents":     int64(10),
+			"availableCents":  int64(890),
+			"totalSpentCents": int64(100),
+			"currency":        "CNY",
+			"metadata": map[string]any{
+				"computeAllocationId": "compute-alpha",
+			},
+		}},
+	}
+	if err := store.Save(context.Background(), facts); err != nil {
+		t.Fatalf("save wallet transaction projection: %v", err)
+	}
+	loaded, err := store.Load(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx := loaded.WalletTx[0]
+	for key, want := range map[string]int64{
+		"balanceCents":    900,
+		"frozenCents":     10,
+		"availableCents":  890,
+		"totalSpentCents": 100,
+	} {
+		if got := int64(numberField(tx, key, 0)); got != want {
+			t.Fatalf("%s = %d, want %d in %#v", key, got, want, tx)
+		}
+	}
+}

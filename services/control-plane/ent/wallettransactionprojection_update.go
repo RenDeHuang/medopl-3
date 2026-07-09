@@ -195,6 +195,90 @@ func (wtpu *WalletTransactionProjectionUpdate) AddAmountCents(i int64) *WalletTr
 	return wtpu
 }
 
+// SetBalanceCents sets the "balance_cents" field.
+func (wtpu *WalletTransactionProjectionUpdate) SetBalanceCents(i int64) *WalletTransactionProjectionUpdate {
+	wtpu.mutation.ResetBalanceCents()
+	wtpu.mutation.SetBalanceCents(i)
+	return wtpu
+}
+
+// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
+func (wtpu *WalletTransactionProjectionUpdate) SetNillableBalanceCents(i *int64) *WalletTransactionProjectionUpdate {
+	if i != nil {
+		wtpu.SetBalanceCents(*i)
+	}
+	return wtpu
+}
+
+// AddBalanceCents adds i to the "balance_cents" field.
+func (wtpu *WalletTransactionProjectionUpdate) AddBalanceCents(i int64) *WalletTransactionProjectionUpdate {
+	wtpu.mutation.AddBalanceCents(i)
+	return wtpu
+}
+
+// SetFrozenCents sets the "frozen_cents" field.
+func (wtpu *WalletTransactionProjectionUpdate) SetFrozenCents(i int64) *WalletTransactionProjectionUpdate {
+	wtpu.mutation.ResetFrozenCents()
+	wtpu.mutation.SetFrozenCents(i)
+	return wtpu
+}
+
+// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
+func (wtpu *WalletTransactionProjectionUpdate) SetNillableFrozenCents(i *int64) *WalletTransactionProjectionUpdate {
+	if i != nil {
+		wtpu.SetFrozenCents(*i)
+	}
+	return wtpu
+}
+
+// AddFrozenCents adds i to the "frozen_cents" field.
+func (wtpu *WalletTransactionProjectionUpdate) AddFrozenCents(i int64) *WalletTransactionProjectionUpdate {
+	wtpu.mutation.AddFrozenCents(i)
+	return wtpu
+}
+
+// SetAvailableCents sets the "available_cents" field.
+func (wtpu *WalletTransactionProjectionUpdate) SetAvailableCents(i int64) *WalletTransactionProjectionUpdate {
+	wtpu.mutation.ResetAvailableCents()
+	wtpu.mutation.SetAvailableCents(i)
+	return wtpu
+}
+
+// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
+func (wtpu *WalletTransactionProjectionUpdate) SetNillableAvailableCents(i *int64) *WalletTransactionProjectionUpdate {
+	if i != nil {
+		wtpu.SetAvailableCents(*i)
+	}
+	return wtpu
+}
+
+// AddAvailableCents adds i to the "available_cents" field.
+func (wtpu *WalletTransactionProjectionUpdate) AddAvailableCents(i int64) *WalletTransactionProjectionUpdate {
+	wtpu.mutation.AddAvailableCents(i)
+	return wtpu
+}
+
+// SetTotalSpentCents sets the "total_spent_cents" field.
+func (wtpu *WalletTransactionProjectionUpdate) SetTotalSpentCents(i int64) *WalletTransactionProjectionUpdate {
+	wtpu.mutation.ResetTotalSpentCents()
+	wtpu.mutation.SetTotalSpentCents(i)
+	return wtpu
+}
+
+// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
+func (wtpu *WalletTransactionProjectionUpdate) SetNillableTotalSpentCents(i *int64) *WalletTransactionProjectionUpdate {
+	if i != nil {
+		wtpu.SetTotalSpentCents(*i)
+	}
+	return wtpu
+}
+
+// AddTotalSpentCents adds i to the "total_spent_cents" field.
+func (wtpu *WalletTransactionProjectionUpdate) AddTotalSpentCents(i int64) *WalletTransactionProjectionUpdate {
+	wtpu.mutation.AddTotalSpentCents(i)
+	return wtpu
+}
+
 // SetMetadataWorkspaceID sets the "metadata_workspace_id" field.
 func (wtpu *WalletTransactionProjectionUpdate) SetMetadataWorkspaceID(s string) *WalletTransactionProjectionUpdate {
 	wtpu.mutation.SetMetadataWorkspaceID(s)
@@ -380,6 +464,30 @@ func (wtpu *WalletTransactionProjectionUpdate) sqlSave(ctx context.Context) (n i
 	}
 	if value, ok := wtpu.mutation.AddedAmountCents(); ok {
 		_spec.AddField(wallettransactionprojection.FieldAmountCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpu.mutation.BalanceCents(); ok {
+		_spec.SetField(wallettransactionprojection.FieldBalanceCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpu.mutation.AddedBalanceCents(); ok {
+		_spec.AddField(wallettransactionprojection.FieldBalanceCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpu.mutation.FrozenCents(); ok {
+		_spec.SetField(wallettransactionprojection.FieldFrozenCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpu.mutation.AddedFrozenCents(); ok {
+		_spec.AddField(wallettransactionprojection.FieldFrozenCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpu.mutation.AvailableCents(); ok {
+		_spec.SetField(wallettransactionprojection.FieldAvailableCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpu.mutation.AddedAvailableCents(); ok {
+		_spec.AddField(wallettransactionprojection.FieldAvailableCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpu.mutation.TotalSpentCents(); ok {
+		_spec.SetField(wallettransactionprojection.FieldTotalSpentCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpu.mutation.AddedTotalSpentCents(); ok {
+		_spec.AddField(wallettransactionprojection.FieldTotalSpentCents, field.TypeInt64, value)
 	}
 	if value, ok := wtpu.mutation.MetadataWorkspaceID(); ok {
 		_spec.SetField(wallettransactionprojection.FieldMetadataWorkspaceID, field.TypeString, value)
@@ -583,6 +691,90 @@ func (wtpuo *WalletTransactionProjectionUpdateOne) SetNillableAmountCents(i *int
 // AddAmountCents adds i to the "amount_cents" field.
 func (wtpuo *WalletTransactionProjectionUpdateOne) AddAmountCents(i int64) *WalletTransactionProjectionUpdateOne {
 	wtpuo.mutation.AddAmountCents(i)
+	return wtpuo
+}
+
+// SetBalanceCents sets the "balance_cents" field.
+func (wtpuo *WalletTransactionProjectionUpdateOne) SetBalanceCents(i int64) *WalletTransactionProjectionUpdateOne {
+	wtpuo.mutation.ResetBalanceCents()
+	wtpuo.mutation.SetBalanceCents(i)
+	return wtpuo
+}
+
+// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
+func (wtpuo *WalletTransactionProjectionUpdateOne) SetNillableBalanceCents(i *int64) *WalletTransactionProjectionUpdateOne {
+	if i != nil {
+		wtpuo.SetBalanceCents(*i)
+	}
+	return wtpuo
+}
+
+// AddBalanceCents adds i to the "balance_cents" field.
+func (wtpuo *WalletTransactionProjectionUpdateOne) AddBalanceCents(i int64) *WalletTransactionProjectionUpdateOne {
+	wtpuo.mutation.AddBalanceCents(i)
+	return wtpuo
+}
+
+// SetFrozenCents sets the "frozen_cents" field.
+func (wtpuo *WalletTransactionProjectionUpdateOne) SetFrozenCents(i int64) *WalletTransactionProjectionUpdateOne {
+	wtpuo.mutation.ResetFrozenCents()
+	wtpuo.mutation.SetFrozenCents(i)
+	return wtpuo
+}
+
+// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
+func (wtpuo *WalletTransactionProjectionUpdateOne) SetNillableFrozenCents(i *int64) *WalletTransactionProjectionUpdateOne {
+	if i != nil {
+		wtpuo.SetFrozenCents(*i)
+	}
+	return wtpuo
+}
+
+// AddFrozenCents adds i to the "frozen_cents" field.
+func (wtpuo *WalletTransactionProjectionUpdateOne) AddFrozenCents(i int64) *WalletTransactionProjectionUpdateOne {
+	wtpuo.mutation.AddFrozenCents(i)
+	return wtpuo
+}
+
+// SetAvailableCents sets the "available_cents" field.
+func (wtpuo *WalletTransactionProjectionUpdateOne) SetAvailableCents(i int64) *WalletTransactionProjectionUpdateOne {
+	wtpuo.mutation.ResetAvailableCents()
+	wtpuo.mutation.SetAvailableCents(i)
+	return wtpuo
+}
+
+// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
+func (wtpuo *WalletTransactionProjectionUpdateOne) SetNillableAvailableCents(i *int64) *WalletTransactionProjectionUpdateOne {
+	if i != nil {
+		wtpuo.SetAvailableCents(*i)
+	}
+	return wtpuo
+}
+
+// AddAvailableCents adds i to the "available_cents" field.
+func (wtpuo *WalletTransactionProjectionUpdateOne) AddAvailableCents(i int64) *WalletTransactionProjectionUpdateOne {
+	wtpuo.mutation.AddAvailableCents(i)
+	return wtpuo
+}
+
+// SetTotalSpentCents sets the "total_spent_cents" field.
+func (wtpuo *WalletTransactionProjectionUpdateOne) SetTotalSpentCents(i int64) *WalletTransactionProjectionUpdateOne {
+	wtpuo.mutation.ResetTotalSpentCents()
+	wtpuo.mutation.SetTotalSpentCents(i)
+	return wtpuo
+}
+
+// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
+func (wtpuo *WalletTransactionProjectionUpdateOne) SetNillableTotalSpentCents(i *int64) *WalletTransactionProjectionUpdateOne {
+	if i != nil {
+		wtpuo.SetTotalSpentCents(*i)
+	}
+	return wtpuo
+}
+
+// AddTotalSpentCents adds i to the "total_spent_cents" field.
+func (wtpuo *WalletTransactionProjectionUpdateOne) AddTotalSpentCents(i int64) *WalletTransactionProjectionUpdateOne {
+	wtpuo.mutation.AddTotalSpentCents(i)
 	return wtpuo
 }
 
@@ -801,6 +993,30 @@ func (wtpuo *WalletTransactionProjectionUpdateOne) sqlSave(ctx context.Context) 
 	}
 	if value, ok := wtpuo.mutation.AddedAmountCents(); ok {
 		_spec.AddField(wallettransactionprojection.FieldAmountCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpuo.mutation.BalanceCents(); ok {
+		_spec.SetField(wallettransactionprojection.FieldBalanceCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpuo.mutation.AddedBalanceCents(); ok {
+		_spec.AddField(wallettransactionprojection.FieldBalanceCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpuo.mutation.FrozenCents(); ok {
+		_spec.SetField(wallettransactionprojection.FieldFrozenCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpuo.mutation.AddedFrozenCents(); ok {
+		_spec.AddField(wallettransactionprojection.FieldFrozenCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpuo.mutation.AvailableCents(); ok {
+		_spec.SetField(wallettransactionprojection.FieldAvailableCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpuo.mutation.AddedAvailableCents(); ok {
+		_spec.AddField(wallettransactionprojection.FieldAvailableCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpuo.mutation.TotalSpentCents(); ok {
+		_spec.SetField(wallettransactionprojection.FieldTotalSpentCents, field.TypeInt64, value)
+	}
+	if value, ok := wtpuo.mutation.AddedTotalSpentCents(); ok {
+		_spec.AddField(wallettransactionprojection.FieldTotalSpentCents, field.TypeInt64, value)
 	}
 	if value, ok := wtpuo.mutation.MetadataWorkspaceID(); ok {
 		_spec.SetField(wallettransactionprojection.FieldMetadataWorkspaceID, field.TypeString, value)
