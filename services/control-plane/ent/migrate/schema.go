@@ -216,6 +216,11 @@ var (
 		{Name: "provider_request_id", Type: field.TypeString, Default: ""},
 		{Name: "operation_id", Type: field.TypeString, Default: ""},
 		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "desired_status", Type: field.TypeString, Default: ""},
+		{Name: "provider_status", Type: field.TypeString, Default: ""},
+		{Name: "last_provider_sync_at", Type: field.TypeString, Default: ""},
+		{Name: "last_provider_sync_error", Type: field.TypeString, Default: ""},
+		{Name: "external_deleted_at", Type: field.TypeString, Default: ""},
 		{Name: "billing_status", Type: field.TypeString, Default: ""},
 		{Name: "hold_id", Type: field.TypeString, Default: ""},
 		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
@@ -336,6 +341,47 @@ var (
 		Columns:    ControlPlaneOrganizationsColumns,
 		PrimaryKey: []*schema.Column{ControlPlaneOrganizationsColumns[0]},
 	}
+	// ControlPlanePricingCatalogsColumns holds the columns for the "control_plane_pricing_catalogs" table.
+	ControlPlanePricingCatalogsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "version", Type: field.TypeString, Unique: true},
+		{Name: "currency", Type: field.TypeString, Default: "CNY"},
+		{Name: "hold_days", Type: field.TypeInt, Default: 7},
+		{Name: "effective_from", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString, Default: "current"},
+	}
+	// ControlPlanePricingCatalogsTable holds the schema information for the "control_plane_pricing_catalogs" table.
+	ControlPlanePricingCatalogsTable = &schema.Table{
+		Name:       "control_plane_pricing_catalogs",
+		Columns:    ControlPlanePricingCatalogsColumns,
+		PrimaryKey: []*schema.Column{ControlPlanePricingCatalogsColumns[0]},
+	}
+	// ControlPlanePricingItemsColumns holds the columns for the "control_plane_pricing_items" table.
+	ControlPlanePricingItemsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "catalog_version", Type: field.TypeString},
+		{Name: "package_id", Type: field.TypeString},
+		{Name: "resource_type", Type: field.TypeString},
+		{Name: "unit", Type: field.TypeString},
+		{Name: "unit_price", Type: field.TypeFloat64, Default: 0},
+		{Name: "unit_price_cents", Type: field.TypeInt64, Default: 0},
+		{Name: "available", Type: field.TypeBool, Default: true},
+		{Name: "name", Type: field.TypeString, Default: ""},
+		{Name: "server", Type: field.TypeString, Default: ""},
+		{Name: "cpu", Type: field.TypeFloat64, Default: 0},
+		{Name: "memory_gb", Type: field.TypeFloat64, Default: 0},
+		{Name: "disk_gb", Type: field.TypeFloat64, Default: 0},
+	}
+	// ControlPlanePricingItemsTable holds the schema information for the "control_plane_pricing_items" table.
+	ControlPlanePricingItemsTable = &schema.Table{
+		Name:       "control_plane_pricing_items",
+		Columns:    ControlPlanePricingItemsColumns,
+		PrimaryKey: []*schema.Column{ControlPlanePricingItemsColumns[0]},
+	}
 	// ControlPlaneProductionE2eRecordsColumns holds the columns for the "control_plane_production_e2e_records" table.
 	ControlPlaneProductionE2eRecordsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeString, Unique: true},
@@ -430,11 +476,17 @@ var (
 		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
 		{Name: "workspace_id", Type: field.TypeString, Default: ""},
 		{Name: "name", Type: field.TypeString, Default: ""},
+		{Name: "package_id", Type: field.TypeString, Default: ""},
 		{Name: "provider", Type: field.TypeString, Default: ""},
 		{Name: "provider_resource_id", Type: field.TypeString, Default: ""},
 		{Name: "provider_request_id", Type: field.TypeString, Default: ""},
 		{Name: "operation_id", Type: field.TypeString, Default: ""},
 		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "desired_status", Type: field.TypeString, Default: ""},
+		{Name: "provider_status", Type: field.TypeString, Default: ""},
+		{Name: "last_provider_sync_at", Type: field.TypeString, Default: ""},
+		{Name: "last_provider_sync_error", Type: field.TypeString, Default: ""},
+		{Name: "external_deleted_at", Type: field.TypeString, Default: ""},
 		{Name: "billing_status", Type: field.TypeString, Default: ""},
 		{Name: "hold_id", Type: field.TypeString, Default: ""},
 		{Name: "hold_release_id", Type: field.TypeString, Default: ""},
@@ -614,6 +666,8 @@ var (
 		ControlPlaneManualTopupProjectionsTable,
 		ControlPlaneMembershipsTable,
 		ControlPlaneOrganizationsTable,
+		ControlPlanePricingCatalogsTable,
+		ControlPlanePricingItemsTable,
 		ControlPlaneProductionE2eRecordsTable,
 		ControlPlaneRuntimeOperationsTable,
 		ControlPlaneSessionsTable,
@@ -672,6 +726,12 @@ func init() {
 	}
 	ControlPlaneOrganizationsTable.Annotation = &entsql.Annotation{
 		Table: "control_plane_organizations",
+	}
+	ControlPlanePricingCatalogsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_pricing_catalogs",
+	}
+	ControlPlanePricingItemsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_pricing_items",
 	}
 	ControlPlaneProductionE2eRecordsTable.Annotation = &entsql.Annotation{
 		Table: "control_plane_production_e2e_records",

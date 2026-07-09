@@ -457,10 +457,7 @@ func walletFromMap(row map[string]any) clients.Wallet {
 }
 
 func packageList() []any {
-	return []any{
-		map[string]any{"id": "basic", "name": "Basic", "available": true, "cpu": 2, "memoryGb": 4, "diskGb": 10, "server": "2c4g", "price": map[string]any{"computeHourly": 0.468, "storageGbMonth": 0.432}},
-		map[string]any{"id": "pro", "name": "Pro", "available": true, "cpu": 8, "memoryGb": 16, "diskGb": 100, "server": "8c16g", "price": map[string]any{"computeHourly": 1.38, "storageGbMonth": 0.432}},
-	}
+	return packageRows(defaultPricingCatalog())
 }
 
 func computePoolsFromFabricCatalog(catalog clients.FabricCatalog) []any {

@@ -94,6 +94,11 @@ func Name(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldName, v))
 }
 
+// PackageID applies equality check predicate on the "package_id" field. It's identical to PackageIDEQ.
+func PackageID(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldPackageID, v))
+}
+
 // Provider applies equality check predicate on the "provider" field. It's identical to ProviderEQ.
 func Provider(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldProvider, v))
@@ -117,6 +122,31 @@ func OperationID(v string) predicate.StorageVolume {
 // Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
 func Status(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldStatus, v))
+}
+
+// DesiredStatus applies equality check predicate on the "desired_status" field. It's identical to DesiredStatusEQ.
+func DesiredStatus(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldDesiredStatus, v))
+}
+
+// ProviderStatus applies equality check predicate on the "provider_status" field. It's identical to ProviderStatusEQ.
+func ProviderStatus(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldProviderStatus, v))
+}
+
+// LastProviderSyncAt applies equality check predicate on the "last_provider_sync_at" field. It's identical to LastProviderSyncAtEQ.
+func LastProviderSyncAt(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncError applies equality check predicate on the "last_provider_sync_error" field. It's identical to LastProviderSyncErrorEQ.
+func LastProviderSyncError(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldLastProviderSyncError, v))
+}
+
+// ExternalDeletedAt applies equality check predicate on the "external_deleted_at" field. It's identical to ExternalDeletedAtEQ.
+func ExternalDeletedAt(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldExternalDeletedAt, v))
 }
 
 // BillingStatus applies equality check predicate on the "billing_status" field. It's identical to BillingStatusEQ.
@@ -549,6 +579,71 @@ func NameContainsFold(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldContainsFold(FieldName, v))
 }
 
+// PackageIDEQ applies the EQ predicate on the "package_id" field.
+func PackageIDEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldPackageID, v))
+}
+
+// PackageIDNEQ applies the NEQ predicate on the "package_id" field.
+func PackageIDNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldPackageID, v))
+}
+
+// PackageIDIn applies the In predicate on the "package_id" field.
+func PackageIDIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldPackageID, vs...))
+}
+
+// PackageIDNotIn applies the NotIn predicate on the "package_id" field.
+func PackageIDNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldPackageID, vs...))
+}
+
+// PackageIDGT applies the GT predicate on the "package_id" field.
+func PackageIDGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldPackageID, v))
+}
+
+// PackageIDGTE applies the GTE predicate on the "package_id" field.
+func PackageIDGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldPackageID, v))
+}
+
+// PackageIDLT applies the LT predicate on the "package_id" field.
+func PackageIDLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldPackageID, v))
+}
+
+// PackageIDLTE applies the LTE predicate on the "package_id" field.
+func PackageIDLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldPackageID, v))
+}
+
+// PackageIDContains applies the Contains predicate on the "package_id" field.
+func PackageIDContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldPackageID, v))
+}
+
+// PackageIDHasPrefix applies the HasPrefix predicate on the "package_id" field.
+func PackageIDHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldPackageID, v))
+}
+
+// PackageIDHasSuffix applies the HasSuffix predicate on the "package_id" field.
+func PackageIDHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldPackageID, v))
+}
+
+// PackageIDEqualFold applies the EqualFold predicate on the "package_id" field.
+func PackageIDEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldPackageID, v))
+}
+
+// PackageIDContainsFold applies the ContainsFold predicate on the "package_id" field.
+func PackageIDContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldPackageID, v))
+}
+
 // ProviderEQ applies the EQ predicate on the "provider" field.
 func ProviderEQ(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldProvider, v))
@@ -872,6 +967,331 @@ func StatusEqualFold(v string) predicate.StorageVolume {
 // StatusContainsFold applies the ContainsFold predicate on the "status" field.
 func StatusContainsFold(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldContainsFold(FieldStatus, v))
+}
+
+// DesiredStatusEQ applies the EQ predicate on the "desired_status" field.
+func DesiredStatusEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldDesiredStatus, v))
+}
+
+// DesiredStatusNEQ applies the NEQ predicate on the "desired_status" field.
+func DesiredStatusNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldDesiredStatus, v))
+}
+
+// DesiredStatusIn applies the In predicate on the "desired_status" field.
+func DesiredStatusIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldDesiredStatus, vs...))
+}
+
+// DesiredStatusNotIn applies the NotIn predicate on the "desired_status" field.
+func DesiredStatusNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldDesiredStatus, vs...))
+}
+
+// DesiredStatusGT applies the GT predicate on the "desired_status" field.
+func DesiredStatusGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldDesiredStatus, v))
+}
+
+// DesiredStatusGTE applies the GTE predicate on the "desired_status" field.
+func DesiredStatusGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldDesiredStatus, v))
+}
+
+// DesiredStatusLT applies the LT predicate on the "desired_status" field.
+func DesiredStatusLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldDesiredStatus, v))
+}
+
+// DesiredStatusLTE applies the LTE predicate on the "desired_status" field.
+func DesiredStatusLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldDesiredStatus, v))
+}
+
+// DesiredStatusContains applies the Contains predicate on the "desired_status" field.
+func DesiredStatusContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldDesiredStatus, v))
+}
+
+// DesiredStatusHasPrefix applies the HasPrefix predicate on the "desired_status" field.
+func DesiredStatusHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldDesiredStatus, v))
+}
+
+// DesiredStatusHasSuffix applies the HasSuffix predicate on the "desired_status" field.
+func DesiredStatusHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldDesiredStatus, v))
+}
+
+// DesiredStatusEqualFold applies the EqualFold predicate on the "desired_status" field.
+func DesiredStatusEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldDesiredStatus, v))
+}
+
+// DesiredStatusContainsFold applies the ContainsFold predicate on the "desired_status" field.
+func DesiredStatusContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldDesiredStatus, v))
+}
+
+// ProviderStatusEQ applies the EQ predicate on the "provider_status" field.
+func ProviderStatusEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldProviderStatus, v))
+}
+
+// ProviderStatusNEQ applies the NEQ predicate on the "provider_status" field.
+func ProviderStatusNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldProviderStatus, v))
+}
+
+// ProviderStatusIn applies the In predicate on the "provider_status" field.
+func ProviderStatusIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldProviderStatus, vs...))
+}
+
+// ProviderStatusNotIn applies the NotIn predicate on the "provider_status" field.
+func ProviderStatusNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldProviderStatus, vs...))
+}
+
+// ProviderStatusGT applies the GT predicate on the "provider_status" field.
+func ProviderStatusGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldProviderStatus, v))
+}
+
+// ProviderStatusGTE applies the GTE predicate on the "provider_status" field.
+func ProviderStatusGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldProviderStatus, v))
+}
+
+// ProviderStatusLT applies the LT predicate on the "provider_status" field.
+func ProviderStatusLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldProviderStatus, v))
+}
+
+// ProviderStatusLTE applies the LTE predicate on the "provider_status" field.
+func ProviderStatusLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldProviderStatus, v))
+}
+
+// ProviderStatusContains applies the Contains predicate on the "provider_status" field.
+func ProviderStatusContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldProviderStatus, v))
+}
+
+// ProviderStatusHasPrefix applies the HasPrefix predicate on the "provider_status" field.
+func ProviderStatusHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldProviderStatus, v))
+}
+
+// ProviderStatusHasSuffix applies the HasSuffix predicate on the "provider_status" field.
+func ProviderStatusHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldProviderStatus, v))
+}
+
+// ProviderStatusEqualFold applies the EqualFold predicate on the "provider_status" field.
+func ProviderStatusEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldProviderStatus, v))
+}
+
+// ProviderStatusContainsFold applies the ContainsFold predicate on the "provider_status" field.
+func ProviderStatusContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldProviderStatus, v))
+}
+
+// LastProviderSyncAtEQ applies the EQ predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtNEQ applies the NEQ predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtIn applies the In predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldLastProviderSyncAt, vs...))
+}
+
+// LastProviderSyncAtNotIn applies the NotIn predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldLastProviderSyncAt, vs...))
+}
+
+// LastProviderSyncAtGT applies the GT predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtGTE applies the GTE predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtLT applies the LT predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtLTE applies the LTE predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtContains applies the Contains predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtHasPrefix applies the HasPrefix predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtHasSuffix applies the HasSuffix predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtEqualFold applies the EqualFold predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtContainsFold applies the ContainsFold predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncErrorEQ applies the EQ predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorNEQ applies the NEQ predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorIn applies the In predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldLastProviderSyncError, vs...))
+}
+
+// LastProviderSyncErrorNotIn applies the NotIn predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldLastProviderSyncError, vs...))
+}
+
+// LastProviderSyncErrorGT applies the GT predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorGTE applies the GTE predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorLT applies the LT predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorLTE applies the LTE predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorContains applies the Contains predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorHasPrefix applies the HasPrefix predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorHasSuffix applies the HasSuffix predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorEqualFold applies the EqualFold predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorContainsFold applies the ContainsFold predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldLastProviderSyncError, v))
+}
+
+// ExternalDeletedAtEQ applies the EQ predicate on the "external_deleted_at" field.
+func ExternalDeletedAtEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtNEQ applies the NEQ predicate on the "external_deleted_at" field.
+func ExternalDeletedAtNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtIn applies the In predicate on the "external_deleted_at" field.
+func ExternalDeletedAtIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldExternalDeletedAt, vs...))
+}
+
+// ExternalDeletedAtNotIn applies the NotIn predicate on the "external_deleted_at" field.
+func ExternalDeletedAtNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldExternalDeletedAt, vs...))
+}
+
+// ExternalDeletedAtGT applies the GT predicate on the "external_deleted_at" field.
+func ExternalDeletedAtGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtGTE applies the GTE predicate on the "external_deleted_at" field.
+func ExternalDeletedAtGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtLT applies the LT predicate on the "external_deleted_at" field.
+func ExternalDeletedAtLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtLTE applies the LTE predicate on the "external_deleted_at" field.
+func ExternalDeletedAtLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtContains applies the Contains predicate on the "external_deleted_at" field.
+func ExternalDeletedAtContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtHasPrefix applies the HasPrefix predicate on the "external_deleted_at" field.
+func ExternalDeletedAtHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtHasSuffix applies the HasSuffix predicate on the "external_deleted_at" field.
+func ExternalDeletedAtHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtEqualFold applies the EqualFold predicate on the "external_deleted_at" field.
+func ExternalDeletedAtEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtContainsFold applies the ContainsFold predicate on the "external_deleted_at" field.
+func ExternalDeletedAtContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldExternalDeletedAt, v))
 }
 
 // BillingStatusEQ applies the EQ predicate on the "billing_status" field.

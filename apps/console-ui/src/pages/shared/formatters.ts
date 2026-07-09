@@ -7,7 +7,7 @@ export function moneyCents(value) {
 }
 
 export function available(wallet) {
-  return Number(wallet?.available ?? (Number(wallet?.balance || 0) - Number(wallet?.frozen || 0)));
+  return Number(wallet?.available || 0);
 }
 
 export function statusLabel(workspace) {
@@ -49,25 +49,24 @@ export function customerSafeMessage(value = "", fallback = "操作正在处理�
 }
 
 export function workspaceUrlReady(workspace: any = {}) {
-  const runtimeStatus = workspace.runtime?.status || workspace.docker?.status || workspace.state;
-  return workspace.access?.tokenStatus === "active" && ["running", "ready", "available", "active"].includes(runtimeStatus);
+  return Boolean(workspace.openable);
 }
 
 export function workspaceAccessLabel(workspace: any = {}) {
-  if (workspaceUrlReady(workspace)) return "可打开";
-  if (workspace.access?.tokenStatus === "active") return "分发中";
+  if (workspace.accessState === "available") return "可打开";
+  if (workspace.accessState === "distributing") return "分发中";
   return "未启用";
 }
 
 export function workspaceOpenActionLabel(workspace: any = {}) {
-  if (workspaceUrlReady(workspace)) return "打开";
-  if (workspace.access?.tokenStatus === "active") return "分发中";
+  if (workspace.accessState === "available") return "打开";
+  if (workspace.accessState === "distributing") return "分发中";
   return "已停用";
 }
 
 export function workspaceAccessTone(workspace: any = {}) {
-  if (workspaceUrlReady(workspace)) return "good";
-  if (workspace.access?.tokenStatus === "active") return "warn";
+  if (workspace.accessState === "available") return "good";
+  if (workspace.accessState === "distributing") return "warn";
   return "neutral";
 }
 
@@ -81,23 +80,4 @@ export function statusColor(value) {
 export function packageText(plan) {
   if (!plan) return "-";
   return `${plan.cpu} CPU / ${plan.memoryGb}GB / ${plan.diskGb}GB`;
-}
-
-export function usageAmount(logs, resourceType = "") {
-  return (logs || [])
-    .filter((log) => !resourceType || log.resourceType === resourceType)
-    .reduce((sum, log) => sum + Number(log.amount || 0), 0);
-}
-
-export function moneyValue(event) {
-  if (!event) return 0;
-  if (event.amount != null) return Number(event.amount || 0);
-  if (event.amountCents != null) return Number(event.amountCents || 0) / 100;
-  return 0;
-}
-
-export function resourceDebitEvents(state: any = {}, resourceType = "") {
-  return (state.billingLedger || [])
-    .filter((event) => ["compute_debit", "storage_debit"].includes(event.type))
-    .filter((event) => !resourceType || event.type === `${resourceType}_debit`);
 }

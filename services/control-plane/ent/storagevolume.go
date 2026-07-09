@@ -29,6 +29,8 @@ type StorageVolume struct {
 	WorkspaceID string `json:"workspace_id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
+	// PackageID holds the value of the "package_id" field.
+	PackageID string `json:"package_id,omitempty"`
 	// Provider holds the value of the "provider" field.
 	Provider string `json:"provider,omitempty"`
 	// ProviderResourceID holds the value of the "provider_resource_id" field.
@@ -39,6 +41,16 @@ type StorageVolume struct {
 	OperationID string `json:"operation_id,omitempty"`
 	// Status holds the value of the "status" field.
 	Status string `json:"status,omitempty"`
+	// DesiredStatus holds the value of the "desired_status" field.
+	DesiredStatus string `json:"desired_status,omitempty"`
+	// ProviderStatus holds the value of the "provider_status" field.
+	ProviderStatus string `json:"provider_status,omitempty"`
+	// LastProviderSyncAt holds the value of the "last_provider_sync_at" field.
+	LastProviderSyncAt string `json:"last_provider_sync_at,omitempty"`
+	// LastProviderSyncError holds the value of the "last_provider_sync_error" field.
+	LastProviderSyncError string `json:"last_provider_sync_error,omitempty"`
+	// ExternalDeletedAt holds the value of the "external_deleted_at" field.
+	ExternalDeletedAt string `json:"external_deleted_at,omitempty"`
 	// BillingStatus holds the value of the "billing_status" field.
 	BillingStatus string `json:"billing_status,omitempty"`
 	// HoldID holds the value of the "hold_id" field.
@@ -87,7 +99,7 @@ func (*StorageVolume) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case storagevolume.FieldHoldAmountCents, storagevolume.FieldPriceSnapshotUnitPriceCents:
 			values[i] = new(sql.NullInt64)
-		case storagevolume.FieldID, storagevolume.FieldAccountID, storagevolume.FieldOwnerUserID, storagevolume.FieldWorkspaceID, storagevolume.FieldName, storagevolume.FieldProvider, storagevolume.FieldProviderResourceID, storagevolume.FieldProviderRequestID, storagevolume.FieldOperationID, storagevolume.FieldStatus, storagevolume.FieldBillingStatus, storagevolume.FieldHoldID, storagevolume.FieldHoldReleaseID, storagevolume.FieldSettlementID, storagevolume.FieldLedgerEntryID, storagevolume.FieldWalletTransactionID, storagevolume.FieldPricingVersion, storagevolume.FieldUsagePeriodEnd, storagevolume.FieldMountPath, storagevolume.FieldPriceSnapshotResourceType, storagevolume.FieldPriceSnapshotCurrency, storagevolume.FieldPriceSnapshotSource:
+		case storagevolume.FieldID, storagevolume.FieldAccountID, storagevolume.FieldOwnerUserID, storagevolume.FieldWorkspaceID, storagevolume.FieldName, storagevolume.FieldPackageID, storagevolume.FieldProvider, storagevolume.FieldProviderResourceID, storagevolume.FieldProviderRequestID, storagevolume.FieldOperationID, storagevolume.FieldStatus, storagevolume.FieldDesiredStatus, storagevolume.FieldProviderStatus, storagevolume.FieldLastProviderSyncAt, storagevolume.FieldLastProviderSyncError, storagevolume.FieldExternalDeletedAt, storagevolume.FieldBillingStatus, storagevolume.FieldHoldID, storagevolume.FieldHoldReleaseID, storagevolume.FieldSettlementID, storagevolume.FieldLedgerEntryID, storagevolume.FieldWalletTransactionID, storagevolume.FieldPricingVersion, storagevolume.FieldUsagePeriodEnd, storagevolume.FieldMountPath, storagevolume.FieldPriceSnapshotResourceType, storagevolume.FieldPriceSnapshotCurrency, storagevolume.FieldPriceSnapshotSource:
 			values[i] = new(sql.NullString)
 		case storagevolume.FieldCreatedAt, storagevolume.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -148,6 +160,12 @@ func (sv *StorageVolume) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				sv.Name = value.String
 			}
+		case storagevolume.FieldPackageID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field package_id", values[i])
+			} else if value.Valid {
+				sv.PackageID = value.String
+			}
 		case storagevolume.FieldProvider:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider", values[i])
@@ -177,6 +195,36 @@ func (sv *StorageVolume) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				sv.Status = value.String
+			}
+		case storagevolume.FieldDesiredStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field desired_status", values[i])
+			} else if value.Valid {
+				sv.DesiredStatus = value.String
+			}
+		case storagevolume.FieldProviderStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field provider_status", values[i])
+			} else if value.Valid {
+				sv.ProviderStatus = value.String
+			}
+		case storagevolume.FieldLastProviderSyncAt:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field last_provider_sync_at", values[i])
+			} else if value.Valid {
+				sv.LastProviderSyncAt = value.String
+			}
+		case storagevolume.FieldLastProviderSyncError:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field last_provider_sync_error", values[i])
+			} else if value.Valid {
+				sv.LastProviderSyncError = value.String
+			}
+		case storagevolume.FieldExternalDeletedAt:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field external_deleted_at", values[i])
+			} else if value.Valid {
+				sv.ExternalDeletedAt = value.String
 			}
 		case storagevolume.FieldBillingStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -340,6 +388,9 @@ func (sv *StorageVolume) String() string {
 	builder.WriteString("name=")
 	builder.WriteString(sv.Name)
 	builder.WriteString(", ")
+	builder.WriteString("package_id=")
+	builder.WriteString(sv.PackageID)
+	builder.WriteString(", ")
 	builder.WriteString("provider=")
 	builder.WriteString(sv.Provider)
 	builder.WriteString(", ")
@@ -354,6 +405,21 @@ func (sv *StorageVolume) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(sv.Status)
+	builder.WriteString(", ")
+	builder.WriteString("desired_status=")
+	builder.WriteString(sv.DesiredStatus)
+	builder.WriteString(", ")
+	builder.WriteString("provider_status=")
+	builder.WriteString(sv.ProviderStatus)
+	builder.WriteString(", ")
+	builder.WriteString("last_provider_sync_at=")
+	builder.WriteString(sv.LastProviderSyncAt)
+	builder.WriteString(", ")
+	builder.WriteString("last_provider_sync_error=")
+	builder.WriteString(sv.LastProviderSyncError)
+	builder.WriteString(", ")
+	builder.WriteString("external_deleted_at=")
+	builder.WriteString(sv.ExternalDeletedAt)
 	builder.WriteString(", ")
 	builder.WriteString("billing_status=")
 	builder.WriteString(sv.BillingStatus)

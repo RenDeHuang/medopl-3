@@ -188,6 +188,76 @@ func (cau *ComputeAllocationUpdate) SetNillableStatus(s *string) *ComputeAllocat
 	return cau
 }
 
+// SetDesiredStatus sets the "desired_status" field.
+func (cau *ComputeAllocationUpdate) SetDesiredStatus(s string) *ComputeAllocationUpdate {
+	cau.mutation.SetDesiredStatus(s)
+	return cau
+}
+
+// SetNillableDesiredStatus sets the "desired_status" field if the given value is not nil.
+func (cau *ComputeAllocationUpdate) SetNillableDesiredStatus(s *string) *ComputeAllocationUpdate {
+	if s != nil {
+		cau.SetDesiredStatus(*s)
+	}
+	return cau
+}
+
+// SetProviderStatus sets the "provider_status" field.
+func (cau *ComputeAllocationUpdate) SetProviderStatus(s string) *ComputeAllocationUpdate {
+	cau.mutation.SetProviderStatus(s)
+	return cau
+}
+
+// SetNillableProviderStatus sets the "provider_status" field if the given value is not nil.
+func (cau *ComputeAllocationUpdate) SetNillableProviderStatus(s *string) *ComputeAllocationUpdate {
+	if s != nil {
+		cau.SetProviderStatus(*s)
+	}
+	return cau
+}
+
+// SetLastProviderSyncAt sets the "last_provider_sync_at" field.
+func (cau *ComputeAllocationUpdate) SetLastProviderSyncAt(s string) *ComputeAllocationUpdate {
+	cau.mutation.SetLastProviderSyncAt(s)
+	return cau
+}
+
+// SetNillableLastProviderSyncAt sets the "last_provider_sync_at" field if the given value is not nil.
+func (cau *ComputeAllocationUpdate) SetNillableLastProviderSyncAt(s *string) *ComputeAllocationUpdate {
+	if s != nil {
+		cau.SetLastProviderSyncAt(*s)
+	}
+	return cau
+}
+
+// SetLastProviderSyncError sets the "last_provider_sync_error" field.
+func (cau *ComputeAllocationUpdate) SetLastProviderSyncError(s string) *ComputeAllocationUpdate {
+	cau.mutation.SetLastProviderSyncError(s)
+	return cau
+}
+
+// SetNillableLastProviderSyncError sets the "last_provider_sync_error" field if the given value is not nil.
+func (cau *ComputeAllocationUpdate) SetNillableLastProviderSyncError(s *string) *ComputeAllocationUpdate {
+	if s != nil {
+		cau.SetLastProviderSyncError(*s)
+	}
+	return cau
+}
+
+// SetExternalDeletedAt sets the "external_deleted_at" field.
+func (cau *ComputeAllocationUpdate) SetExternalDeletedAt(s string) *ComputeAllocationUpdate {
+	cau.mutation.SetExternalDeletedAt(s)
+	return cau
+}
+
+// SetNillableExternalDeletedAt sets the "external_deleted_at" field if the given value is not nil.
+func (cau *ComputeAllocationUpdate) SetNillableExternalDeletedAt(s *string) *ComputeAllocationUpdate {
+	if s != nil {
+		cau.SetExternalDeletedAt(*s)
+	}
+	return cau
+}
+
 // SetBillingStatus sets the "billing_status" field.
 func (cau *ComputeAllocationUpdate) SetBillingStatus(s string) *ComputeAllocationUpdate {
 	cau.mutation.SetBillingStatus(s)
@@ -686,6 +756,21 @@ func (cau *ComputeAllocationUpdate) sqlSave(ctx context.Context) (n int, err err
 	if value, ok := cau.mutation.Status(); ok {
 		_spec.SetField(computeallocation.FieldStatus, field.TypeString, value)
 	}
+	if value, ok := cau.mutation.DesiredStatus(); ok {
+		_spec.SetField(computeallocation.FieldDesiredStatus, field.TypeString, value)
+	}
+	if value, ok := cau.mutation.ProviderStatus(); ok {
+		_spec.SetField(computeallocation.FieldProviderStatus, field.TypeString, value)
+	}
+	if value, ok := cau.mutation.LastProviderSyncAt(); ok {
+		_spec.SetField(computeallocation.FieldLastProviderSyncAt, field.TypeString, value)
+	}
+	if value, ok := cau.mutation.LastProviderSyncError(); ok {
+		_spec.SetField(computeallocation.FieldLastProviderSyncError, field.TypeString, value)
+	}
+	if value, ok := cau.mutation.ExternalDeletedAt(); ok {
+		_spec.SetField(computeallocation.FieldExternalDeletedAt, field.TypeString, value)
+	}
 	if value, ok := cau.mutation.BillingStatus(); ok {
 		_spec.SetField(computeallocation.FieldBillingStatus, field.TypeString, value)
 	}
@@ -958,6 +1043,76 @@ func (cauo *ComputeAllocationUpdateOne) SetStatus(s string) *ComputeAllocationUp
 func (cauo *ComputeAllocationUpdateOne) SetNillableStatus(s *string) *ComputeAllocationUpdateOne {
 	if s != nil {
 		cauo.SetStatus(*s)
+	}
+	return cauo
+}
+
+// SetDesiredStatus sets the "desired_status" field.
+func (cauo *ComputeAllocationUpdateOne) SetDesiredStatus(s string) *ComputeAllocationUpdateOne {
+	cauo.mutation.SetDesiredStatus(s)
+	return cauo
+}
+
+// SetNillableDesiredStatus sets the "desired_status" field if the given value is not nil.
+func (cauo *ComputeAllocationUpdateOne) SetNillableDesiredStatus(s *string) *ComputeAllocationUpdateOne {
+	if s != nil {
+		cauo.SetDesiredStatus(*s)
+	}
+	return cauo
+}
+
+// SetProviderStatus sets the "provider_status" field.
+func (cauo *ComputeAllocationUpdateOne) SetProviderStatus(s string) *ComputeAllocationUpdateOne {
+	cauo.mutation.SetProviderStatus(s)
+	return cauo
+}
+
+// SetNillableProviderStatus sets the "provider_status" field if the given value is not nil.
+func (cauo *ComputeAllocationUpdateOne) SetNillableProviderStatus(s *string) *ComputeAllocationUpdateOne {
+	if s != nil {
+		cauo.SetProviderStatus(*s)
+	}
+	return cauo
+}
+
+// SetLastProviderSyncAt sets the "last_provider_sync_at" field.
+func (cauo *ComputeAllocationUpdateOne) SetLastProviderSyncAt(s string) *ComputeAllocationUpdateOne {
+	cauo.mutation.SetLastProviderSyncAt(s)
+	return cauo
+}
+
+// SetNillableLastProviderSyncAt sets the "last_provider_sync_at" field if the given value is not nil.
+func (cauo *ComputeAllocationUpdateOne) SetNillableLastProviderSyncAt(s *string) *ComputeAllocationUpdateOne {
+	if s != nil {
+		cauo.SetLastProviderSyncAt(*s)
+	}
+	return cauo
+}
+
+// SetLastProviderSyncError sets the "last_provider_sync_error" field.
+func (cauo *ComputeAllocationUpdateOne) SetLastProviderSyncError(s string) *ComputeAllocationUpdateOne {
+	cauo.mutation.SetLastProviderSyncError(s)
+	return cauo
+}
+
+// SetNillableLastProviderSyncError sets the "last_provider_sync_error" field if the given value is not nil.
+func (cauo *ComputeAllocationUpdateOne) SetNillableLastProviderSyncError(s *string) *ComputeAllocationUpdateOne {
+	if s != nil {
+		cauo.SetLastProviderSyncError(*s)
+	}
+	return cauo
+}
+
+// SetExternalDeletedAt sets the "external_deleted_at" field.
+func (cauo *ComputeAllocationUpdateOne) SetExternalDeletedAt(s string) *ComputeAllocationUpdateOne {
+	cauo.mutation.SetExternalDeletedAt(s)
+	return cauo
+}
+
+// SetNillableExternalDeletedAt sets the "external_deleted_at" field if the given value is not nil.
+func (cauo *ComputeAllocationUpdateOne) SetNillableExternalDeletedAt(s *string) *ComputeAllocationUpdateOne {
+	if s != nil {
+		cauo.SetExternalDeletedAt(*s)
 	}
 	return cauo
 }
@@ -1489,6 +1644,21 @@ func (cauo *ComputeAllocationUpdateOne) sqlSave(ctx context.Context) (_node *Com
 	}
 	if value, ok := cauo.mutation.Status(); ok {
 		_spec.SetField(computeallocation.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := cauo.mutation.DesiredStatus(); ok {
+		_spec.SetField(computeallocation.FieldDesiredStatus, field.TypeString, value)
+	}
+	if value, ok := cauo.mutation.ProviderStatus(); ok {
+		_spec.SetField(computeallocation.FieldProviderStatus, field.TypeString, value)
+	}
+	if value, ok := cauo.mutation.LastProviderSyncAt(); ok {
+		_spec.SetField(computeallocation.FieldLastProviderSyncAt, field.TypeString, value)
+	}
+	if value, ok := cauo.mutation.LastProviderSyncError(); ok {
+		_spec.SetField(computeallocation.FieldLastProviderSyncError, field.TypeString, value)
+	}
+	if value, ok := cauo.mutation.ExternalDeletedAt(); ok {
+		_spec.SetField(computeallocation.FieldExternalDeletedAt, field.TypeString, value)
 	}
 	if value, ok := cauo.mutation.BillingStatus(); ok {
 		_spec.SetField(computeallocation.FieldBillingStatus, field.TypeString, value)

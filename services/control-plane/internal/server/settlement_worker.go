@@ -117,18 +117,29 @@ func (app *controlPlaneApp) settlementResourceRows(ctx context.Context) (control
 
 func billableCompute(row map[string]any) bool {
 	status := stringValue(row["status"])
-	return billingStatusFor(row) != "stopped" && (status == "running" || status == "ready" || status == "active")
+	return providerFreshEnough(row) && billingStatusFor(row) != "stopped" && (status == "running" || status == "ready" || status == "active")
 }
 
 func billableStorage(row map[string]any) bool {
 	status := stringValue(row["status"])
-	return billingStatusFor(row) != "stopped" && (status == "available" || status == "ready" || status == "bound")
+	return providerFreshEnough(row) && billingStatusFor(row) != "stopped" && (status == "available" || status == "ready" || status == "bound")
+}
+
+func providerFreshEnough(row map[string]any) bool {
+	switch stringValue(row["providerStatus"]) {
+	case "missing", "sync_failed":
+		return false
+	}
+	lastSync, ok := parseTimeString(stringValue(row["lastProviderSyncAt"]))
+	if !ok {
+		return false
+	}
+	return time.Since(lastSync) <= providerFreshnessWindow()
 }
 
 func periodicSettlementInput(row map[string]any, resourceType string, periodStart time.Time, periodEnd time.Time) controlplane.ResourceSettlementInput {
 	packageID := firstNonEmpty(stringValue(row["packageId"]), "basic")
-	plan := packageByID(packageID)
-	amountCents := periodicSettlementAmountCents(row, resourceType, plan)
+	amountCents := periodicSettlementAmountCents(row, resourceType)
 	unitPriceCents := amountCents
 	return controlplane.ResourceSettlementInput{
 		AccountID:               firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"]), "acct-local"),
@@ -136,9 +147,9 @@ func periodicSettlementInput(row map[string]any, resourceType string, periodStar
 		ResourceType:            resourceType,
 		ResourceID:              stringValue(row["id"]),
 		AmountCents:             amountCents,
-		Currency:                pricingCurrency,
-		PricingVersion:          pricingCatalogVersion,
-		PriceSnapshot:           map[string]any{"packageId": packageID, "resourceType": resourceType, "unitPriceCents": unitPriceCents, "currency": pricingCurrency, "source": "periodic_settlement_worker"},
+		Currency:                firstNonEmpty(stringValue(valueOrNil(row, "priceSnapshot", "currency")), pricingCurrency),
+		PricingVersion:          firstNonEmpty(stringValue(row["pricingVersion"]), pricingCatalogVersion),
+		PriceSnapshot:           settlementPriceSnapshot(row, packageID, resourceType, unitPriceCents),
 		UsagePeriodStart:        periodStart.UTC().Format(time.RFC3339),
 		UsagePeriodEnd:          periodEnd.UTC().Format(time.RFC3339),
 		Quantity:                1,
@@ -151,12 +162,51 @@ func alreadySettledForPeriod(row map[string]any, periodEnd time.Time) bool {
 	return stringValue(row["settlementId"]) != "" && stringValue(row["usagePeriodEnd"]) == periodEnd.UTC().Format(time.RFC3339)
 }
 
-func periodicSettlementAmountCents(row map[string]any, resourceType string, plan map[string]any) int64 {
+func periodicSettlementAmountCents(row map[string]any, resourceType string) int64 {
+	if snapshot, _ := row["priceSnapshot"].(map[string]any); snapshot != nil {
+		if unitPriceCents := int64(numberField(snapshot, "unitPriceCents", 0)); unitPriceCents > 0 {
+			return unitPriceCents
+		}
+		if resourceType == "storage" {
+			sizeGB := numberField(row, "sizeGb", numberField(snapshot, "sizeGb", 10))
+			return cents(numberField(snapshot, "storageGbMonth", 0) * sizeGB / 30 / 24)
+		}
+		if hourly := numberField(snapshot, "computeHourly", 0); hourly > 0 {
+			return cents(hourly)
+		}
+	}
+	plan := packageByID(packageIDFromRow(row))
 	if resourceType == "storage" {
 		sizeGB := numberField(row, "sizeGb", 10)
 		return cents(priceField(plan, "storageGbMonth") * sizeGB / 30 / 24)
 	}
 	return cents(priceField(plan, "computeHourly"))
+}
+
+func settlementPriceSnapshot(row map[string]any, packageID string, resourceType string, unitPriceCents int64) map[string]any {
+	if snapshot, _ := row["priceSnapshot"].(map[string]any); snapshot != nil {
+		out := cloneMap(snapshot)
+		out["unitPriceCents"] = unitPriceCents
+		out["source"] = firstNonEmpty(stringValue(out["source"]), "resource_price_snapshot")
+		return out
+	}
+	return map[string]any{"packageId": packageID, "resourceType": resourceType, "unitPriceCents": unitPriceCents, "currency": pricingCurrency, "source": "periodic_settlement_worker"}
+}
+
+func packageIDFromRow(row map[string]any) string {
+	return firstNonEmpty(stringValue(row["packageId"]), stringValue(valueOrNil(row, "priceSnapshot", "packageId")), "basic")
+}
+
+func valueOrNil(row map[string]any, path ...string) any {
+	var current any = row
+	for _, part := range path {
+		asMap, ok := current.(map[string]any)
+		if !ok {
+			return nil
+		}
+		current = asMap[part]
+	}
+	return current
 }
 
 func periodicSettlementKey(input controlplane.ResourceSettlementInput) string {

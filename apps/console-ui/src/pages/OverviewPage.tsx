@@ -12,8 +12,6 @@ import {
 import {
   available,
   money,
-  moneyValue,
-  resourceDebitEvents,
   statusColor,
   statusLabel,
   workspaceAccessLabel,
@@ -24,7 +22,7 @@ import {
 export function OverviewPage({ state, wallet, tickets }: any) {
   const activeTickets = tickets.tickets.filter((ticket) => ticket.status !== "closed").length;
   const usable = available(wallet);
-  const spent = resourceDebitEvents(state).reduce((sum, event) => sum + Math.abs(moneyValue(event)), 0);
+  const spent = Number(state.billingSummary?.recentResourceDebitTotal || wallet.totalSpent || 0);
   const workspaces = state.workspaces || [];
   const computeResources = (state.computeAllocations || []).filter((item) => item.status !== "destroyed");
   const storageResources = (state.storageVolumes || []).filter((item) => item.status !== "destroyed");
@@ -32,7 +30,7 @@ export function OverviewPage({ state, wallet, tickets }: any) {
   const computeCount = computeResources.filter((item) => item.status !== "failed").length;
   const storageCount = storageResources.length;
   const attachmentCount = (state.storageAttachments || []).filter((item) => item.status === "attached").length;
-  const activeWorkspaceCount = workspaces.filter((item) => item.access?.tokenStatus === "active").length;
+  const activeWorkspaceCount = workspaces.filter((item) => item.openable).length;
 
   return (
     <ConsoleSurface

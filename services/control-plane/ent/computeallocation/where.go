@@ -124,6 +124,31 @@ func Status(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldStatus, v))
 }
 
+// DesiredStatus applies equality check predicate on the "desired_status" field. It's identical to DesiredStatusEQ.
+func DesiredStatus(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldDesiredStatus, v))
+}
+
+// ProviderStatus applies equality check predicate on the "provider_status" field. It's identical to ProviderStatusEQ.
+func ProviderStatus(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldProviderStatus, v))
+}
+
+// LastProviderSyncAt applies equality check predicate on the "last_provider_sync_at" field. It's identical to LastProviderSyncAtEQ.
+func LastProviderSyncAt(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncError applies equality check predicate on the "last_provider_sync_error" field. It's identical to LastProviderSyncErrorEQ.
+func LastProviderSyncError(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldLastProviderSyncError, v))
+}
+
+// ExternalDeletedAt applies equality check predicate on the "external_deleted_at" field. It's identical to ExternalDeletedAtEQ.
+func ExternalDeletedAt(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldExternalDeletedAt, v))
+}
+
 // BillingStatus applies equality check predicate on the "billing_status" field. It's identical to BillingStatusEQ.
 func BillingStatus(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldBillingStatus, v))
@@ -977,6 +1002,331 @@ func StatusEqualFold(v string) predicate.ComputeAllocation {
 // StatusContainsFold applies the ContainsFold predicate on the "status" field.
 func StatusContainsFold(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldStatus, v))
+}
+
+// DesiredStatusEQ applies the EQ predicate on the "desired_status" field.
+func DesiredStatusEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldDesiredStatus, v))
+}
+
+// DesiredStatusNEQ applies the NEQ predicate on the "desired_status" field.
+func DesiredStatusNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldDesiredStatus, v))
+}
+
+// DesiredStatusIn applies the In predicate on the "desired_status" field.
+func DesiredStatusIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldDesiredStatus, vs...))
+}
+
+// DesiredStatusNotIn applies the NotIn predicate on the "desired_status" field.
+func DesiredStatusNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldDesiredStatus, vs...))
+}
+
+// DesiredStatusGT applies the GT predicate on the "desired_status" field.
+func DesiredStatusGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldDesiredStatus, v))
+}
+
+// DesiredStatusGTE applies the GTE predicate on the "desired_status" field.
+func DesiredStatusGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldDesiredStatus, v))
+}
+
+// DesiredStatusLT applies the LT predicate on the "desired_status" field.
+func DesiredStatusLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldDesiredStatus, v))
+}
+
+// DesiredStatusLTE applies the LTE predicate on the "desired_status" field.
+func DesiredStatusLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldDesiredStatus, v))
+}
+
+// DesiredStatusContains applies the Contains predicate on the "desired_status" field.
+func DesiredStatusContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldDesiredStatus, v))
+}
+
+// DesiredStatusHasPrefix applies the HasPrefix predicate on the "desired_status" field.
+func DesiredStatusHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldDesiredStatus, v))
+}
+
+// DesiredStatusHasSuffix applies the HasSuffix predicate on the "desired_status" field.
+func DesiredStatusHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldDesiredStatus, v))
+}
+
+// DesiredStatusEqualFold applies the EqualFold predicate on the "desired_status" field.
+func DesiredStatusEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldDesiredStatus, v))
+}
+
+// DesiredStatusContainsFold applies the ContainsFold predicate on the "desired_status" field.
+func DesiredStatusContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldDesiredStatus, v))
+}
+
+// ProviderStatusEQ applies the EQ predicate on the "provider_status" field.
+func ProviderStatusEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldProviderStatus, v))
+}
+
+// ProviderStatusNEQ applies the NEQ predicate on the "provider_status" field.
+func ProviderStatusNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldProviderStatus, v))
+}
+
+// ProviderStatusIn applies the In predicate on the "provider_status" field.
+func ProviderStatusIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldProviderStatus, vs...))
+}
+
+// ProviderStatusNotIn applies the NotIn predicate on the "provider_status" field.
+func ProviderStatusNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldProviderStatus, vs...))
+}
+
+// ProviderStatusGT applies the GT predicate on the "provider_status" field.
+func ProviderStatusGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldProviderStatus, v))
+}
+
+// ProviderStatusGTE applies the GTE predicate on the "provider_status" field.
+func ProviderStatusGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldProviderStatus, v))
+}
+
+// ProviderStatusLT applies the LT predicate on the "provider_status" field.
+func ProviderStatusLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldProviderStatus, v))
+}
+
+// ProviderStatusLTE applies the LTE predicate on the "provider_status" field.
+func ProviderStatusLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldProviderStatus, v))
+}
+
+// ProviderStatusContains applies the Contains predicate on the "provider_status" field.
+func ProviderStatusContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldProviderStatus, v))
+}
+
+// ProviderStatusHasPrefix applies the HasPrefix predicate on the "provider_status" field.
+func ProviderStatusHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldProviderStatus, v))
+}
+
+// ProviderStatusHasSuffix applies the HasSuffix predicate on the "provider_status" field.
+func ProviderStatusHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldProviderStatus, v))
+}
+
+// ProviderStatusEqualFold applies the EqualFold predicate on the "provider_status" field.
+func ProviderStatusEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldProviderStatus, v))
+}
+
+// ProviderStatusContainsFold applies the ContainsFold predicate on the "provider_status" field.
+func ProviderStatusContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldProviderStatus, v))
+}
+
+// LastProviderSyncAtEQ applies the EQ predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtNEQ applies the NEQ predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtIn applies the In predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldLastProviderSyncAt, vs...))
+}
+
+// LastProviderSyncAtNotIn applies the NotIn predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldLastProviderSyncAt, vs...))
+}
+
+// LastProviderSyncAtGT applies the GT predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtGTE applies the GTE predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtLT applies the LT predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtLTE applies the LTE predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtContains applies the Contains predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtHasPrefix applies the HasPrefix predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtHasSuffix applies the HasSuffix predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtEqualFold applies the EqualFold predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncAtContainsFold applies the ContainsFold predicate on the "last_provider_sync_at" field.
+func LastProviderSyncAtContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldLastProviderSyncAt, v))
+}
+
+// LastProviderSyncErrorEQ applies the EQ predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorNEQ applies the NEQ predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorIn applies the In predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldLastProviderSyncError, vs...))
+}
+
+// LastProviderSyncErrorNotIn applies the NotIn predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldLastProviderSyncError, vs...))
+}
+
+// LastProviderSyncErrorGT applies the GT predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorGTE applies the GTE predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorLT applies the LT predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorLTE applies the LTE predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorContains applies the Contains predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorHasPrefix applies the HasPrefix predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorHasSuffix applies the HasSuffix predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorEqualFold applies the EqualFold predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldLastProviderSyncError, v))
+}
+
+// LastProviderSyncErrorContainsFold applies the ContainsFold predicate on the "last_provider_sync_error" field.
+func LastProviderSyncErrorContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldLastProviderSyncError, v))
+}
+
+// ExternalDeletedAtEQ applies the EQ predicate on the "external_deleted_at" field.
+func ExternalDeletedAtEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtNEQ applies the NEQ predicate on the "external_deleted_at" field.
+func ExternalDeletedAtNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtIn applies the In predicate on the "external_deleted_at" field.
+func ExternalDeletedAtIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldExternalDeletedAt, vs...))
+}
+
+// ExternalDeletedAtNotIn applies the NotIn predicate on the "external_deleted_at" field.
+func ExternalDeletedAtNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldExternalDeletedAt, vs...))
+}
+
+// ExternalDeletedAtGT applies the GT predicate on the "external_deleted_at" field.
+func ExternalDeletedAtGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtGTE applies the GTE predicate on the "external_deleted_at" field.
+func ExternalDeletedAtGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtLT applies the LT predicate on the "external_deleted_at" field.
+func ExternalDeletedAtLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtLTE applies the LTE predicate on the "external_deleted_at" field.
+func ExternalDeletedAtLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtContains applies the Contains predicate on the "external_deleted_at" field.
+func ExternalDeletedAtContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtHasPrefix applies the HasPrefix predicate on the "external_deleted_at" field.
+func ExternalDeletedAtHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtHasSuffix applies the HasSuffix predicate on the "external_deleted_at" field.
+func ExternalDeletedAtHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtEqualFold applies the EqualFold predicate on the "external_deleted_at" field.
+func ExternalDeletedAtEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldExternalDeletedAt, v))
+}
+
+// ExternalDeletedAtContainsFold applies the ContainsFold predicate on the "external_deleted_at" field.
+func ExternalDeletedAtContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldExternalDeletedAt, v))
 }
 
 // BillingStatusEQ applies the EQ predicate on the "billing_status" field.

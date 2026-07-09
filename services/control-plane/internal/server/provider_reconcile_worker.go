@@ -1,0 +1,130 @@
+package server
+
+import (
+	"context"
+	"log"
+	"os"
+	"strconv"
+	"strings"
+	"time"
+
+	"opl-cloud/services/control-plane/internal/controlplane"
+)
+
+const (
+	defaultProviderReconcileInterval = 10 * time.Minute
+	defaultProviderFreshnessWindow   = 15 * time.Minute
+)
+
+func providerReconcileWorkerEnabled() bool {
+	value := strings.TrimSpace(os.Getenv("OPL_PROVIDER_RECONCILE_WORKER_ENABLED"))
+	return value == "1" || strings.EqualFold(value, "true") || strings.EqualFold(value, "yes")
+}
+
+func providerReconcileInterval() time.Duration {
+	return durationFromEnv("OPL_PROVIDER_RECONCILE_INTERVAL_MS", defaultProviderReconcileInterval)
+}
+
+func providerFreshnessWindow() time.Duration {
+	return durationFromEnv("OPL_PROVIDER_FRESHNESS_WINDOW_MS", defaultProviderFreshnessWindow)
+}
+
+func durationFromEnv(key string, fallback time.Duration) time.Duration {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return fallback
+	}
+	ms, err := strconv.Atoi(raw)
+	if err != nil || ms <= 0 {
+		return fallback
+	}
+	return time.Duration(ms) * time.Millisecond
+}
+
+func (app *controlPlaneApp) startProviderReconcileWorker(ctx context.Context, service *controlplane.Service, interval time.Duration) {
+	if interval <= 0 {
+		interval = defaultProviderReconcileInterval
+	}
+	go func() {
+		if err := app.runProviderReconcileOnce(ctx, service, time.Now().UTC()); err != nil {
+			log.Printf("provider reconcile failed: %v", err)
+		}
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case now := <-ticker.C:
+				if err := app.runProviderReconcileOnce(ctx, service, now.UTC()); err != nil {
+					log.Printf("provider reconcile failed: %v", err)
+				}
+			}
+		}
+	}()
+}
+
+func (app *controlPlaneApp) runProviderReconcileOnce(ctx context.Context, service *controlplane.Service, now time.Time) error {
+	computes, storages, err := app.settlementResourceRows(ctx)
+	if err != nil {
+		return err
+	}
+	for id, row := range computes {
+		if !providerSyncDue(row, now) {
+			continue
+		}
+		result, err := service.SyncComputeAllocation(ctx, destroyResourceInput(id, row), "provider-reconcile:compute:"+id)
+		if err != nil {
+			if saveErr := app.rememberCompute(providerSyncFacts(row, err)); saveErr != nil {
+				return saveErr
+			}
+			continue
+		}
+		body := providerSyncFacts(computeResponse(mergeMaps(row, structToMap(result))), nil)
+		if err := app.rememberCompute(body); err != nil {
+			return err
+		}
+	}
+	for id, row := range storages {
+		if !providerSyncDue(row, now) {
+			continue
+		}
+		result, err := service.SyncStorageVolume(ctx, destroyResourceInput(id, row), "provider-reconcile:storage:"+id)
+		if err != nil {
+			if saveErr := app.rememberStorage(providerSyncFacts(row, err)); saveErr != nil {
+				return saveErr
+			}
+			continue
+		}
+		body := providerSyncFacts(storageResponse(mergeMaps(row, structToMap(result))), nil)
+		if err := app.rememberStorage(body); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func providerSyncDue(row map[string]any, now time.Time) bool {
+	if billingStatusFor(row) == "stopped" || isTerminalResourceStatus(stringValue(row["status"])) {
+		return false
+	}
+	status := stringValue(row["status"])
+	if status != "running" && status != "ready" && status != "active" && status != "available" && status != "bound" {
+		return false
+	}
+	lastSync, ok := parseTimeString(stringValue(row["lastProviderSyncAt"]))
+	return !ok || now.Sub(lastSync) >= providerFreshnessWindow()
+}
+
+func parseTimeString(value string) (time.Time, bool) {
+	if value == "" {
+		return time.Time{}, false
+	}
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339} {
+		parsed, err := time.Parse(layout, value)
+		if err == nil {
+			return parsed.UTC(), true
+		}
+	}
+	return time.Time{}, false
+}

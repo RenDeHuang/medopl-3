@@ -188,6 +188,30 @@ func (f OrganizationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OrganizationMutation", m)
 }
 
+// The PricingCatalogFunc type is an adapter to allow the use of ordinary
+// function as PricingCatalog mutator.
+type PricingCatalogFunc func(context.Context, *ent.PricingCatalogMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PricingCatalogFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PricingCatalogMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PricingCatalogMutation", m)
+}
+
+// The PricingItemFunc type is an adapter to allow the use of ordinary
+// function as PricingItem mutator.
+type PricingItemFunc func(context.Context, *ent.PricingItemMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f PricingItemFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.PricingItemMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.PricingItemMutation", m)
+}
+
 // The ProductionE2ERecordFunc type is an adapter to allow the use of ordinary
 // function as ProductionE2ERecord mutator.
 type ProductionE2ERecordFunc func(context.Context, *ent.ProductionE2ERecordMutation) (ent.Value, error)

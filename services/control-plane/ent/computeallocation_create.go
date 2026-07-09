@@ -180,6 +180,76 @@ func (cac *ComputeAllocationCreate) SetNillableStatus(s *string) *ComputeAllocat
 	return cac
 }
 
+// SetDesiredStatus sets the "desired_status" field.
+func (cac *ComputeAllocationCreate) SetDesiredStatus(s string) *ComputeAllocationCreate {
+	cac.mutation.SetDesiredStatus(s)
+	return cac
+}
+
+// SetNillableDesiredStatus sets the "desired_status" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableDesiredStatus(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetDesiredStatus(*s)
+	}
+	return cac
+}
+
+// SetProviderStatus sets the "provider_status" field.
+func (cac *ComputeAllocationCreate) SetProviderStatus(s string) *ComputeAllocationCreate {
+	cac.mutation.SetProviderStatus(s)
+	return cac
+}
+
+// SetNillableProviderStatus sets the "provider_status" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableProviderStatus(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetProviderStatus(*s)
+	}
+	return cac
+}
+
+// SetLastProviderSyncAt sets the "last_provider_sync_at" field.
+func (cac *ComputeAllocationCreate) SetLastProviderSyncAt(s string) *ComputeAllocationCreate {
+	cac.mutation.SetLastProviderSyncAt(s)
+	return cac
+}
+
+// SetNillableLastProviderSyncAt sets the "last_provider_sync_at" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableLastProviderSyncAt(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetLastProviderSyncAt(*s)
+	}
+	return cac
+}
+
+// SetLastProviderSyncError sets the "last_provider_sync_error" field.
+func (cac *ComputeAllocationCreate) SetLastProviderSyncError(s string) *ComputeAllocationCreate {
+	cac.mutation.SetLastProviderSyncError(s)
+	return cac
+}
+
+// SetNillableLastProviderSyncError sets the "last_provider_sync_error" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableLastProviderSyncError(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetLastProviderSyncError(*s)
+	}
+	return cac
+}
+
+// SetExternalDeletedAt sets the "external_deleted_at" field.
+func (cac *ComputeAllocationCreate) SetExternalDeletedAt(s string) *ComputeAllocationCreate {
+	cac.mutation.SetExternalDeletedAt(s)
+	return cac
+}
+
+// SetNillableExternalDeletedAt sets the "external_deleted_at" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableExternalDeletedAt(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetExternalDeletedAt(*s)
+	}
+	return cac
+}
+
 // SetBillingStatus sets the "billing_status" field.
 func (cac *ComputeAllocationCreate) SetBillingStatus(s string) *ComputeAllocationCreate {
 	cac.mutation.SetBillingStatus(s)
@@ -615,6 +685,26 @@ func (cac *ComputeAllocationCreate) defaults() {
 		v := computeallocation.DefaultStatus
 		cac.mutation.SetStatus(v)
 	}
+	if _, ok := cac.mutation.DesiredStatus(); !ok {
+		v := computeallocation.DefaultDesiredStatus
+		cac.mutation.SetDesiredStatus(v)
+	}
+	if _, ok := cac.mutation.ProviderStatus(); !ok {
+		v := computeallocation.DefaultProviderStatus
+		cac.mutation.SetProviderStatus(v)
+	}
+	if _, ok := cac.mutation.LastProviderSyncAt(); !ok {
+		v := computeallocation.DefaultLastProviderSyncAt
+		cac.mutation.SetLastProviderSyncAt(v)
+	}
+	if _, ok := cac.mutation.LastProviderSyncError(); !ok {
+		v := computeallocation.DefaultLastProviderSyncError
+		cac.mutation.SetLastProviderSyncError(v)
+	}
+	if _, ok := cac.mutation.ExternalDeletedAt(); !ok {
+		v := computeallocation.DefaultExternalDeletedAt
+		cac.mutation.SetExternalDeletedAt(v)
+	}
 	if _, ok := cac.mutation.BillingStatus(); !ok {
 		v := computeallocation.DefaultBillingStatus
 		cac.mutation.SetBillingStatus(v)
@@ -759,6 +849,21 @@ func (cac *ComputeAllocationCreate) check() error {
 	}
 	if _, ok := cac.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "ComputeAllocation.status"`)}
+	}
+	if _, ok := cac.mutation.DesiredStatus(); !ok {
+		return &ValidationError{Name: "desired_status", err: errors.New(`ent: missing required field "ComputeAllocation.desired_status"`)}
+	}
+	if _, ok := cac.mutation.ProviderStatus(); !ok {
+		return &ValidationError{Name: "provider_status", err: errors.New(`ent: missing required field "ComputeAllocation.provider_status"`)}
+	}
+	if _, ok := cac.mutation.LastProviderSyncAt(); !ok {
+		return &ValidationError{Name: "last_provider_sync_at", err: errors.New(`ent: missing required field "ComputeAllocation.last_provider_sync_at"`)}
+	}
+	if _, ok := cac.mutation.LastProviderSyncError(); !ok {
+		return &ValidationError{Name: "last_provider_sync_error", err: errors.New(`ent: missing required field "ComputeAllocation.last_provider_sync_error"`)}
+	}
+	if _, ok := cac.mutation.ExternalDeletedAt(); !ok {
+		return &ValidationError{Name: "external_deleted_at", err: errors.New(`ent: missing required field "ComputeAllocation.external_deleted_at"`)}
 	}
 	if _, ok := cac.mutation.BillingStatus(); !ok {
 		return &ValidationError{Name: "billing_status", err: errors.New(`ent: missing required field "ComputeAllocation.billing_status"`)}
@@ -922,6 +1027,26 @@ func (cac *ComputeAllocationCreate) createSpec() (*ComputeAllocation, *sqlgraph.
 	if value, ok := cac.mutation.Status(); ok {
 		_spec.SetField(computeallocation.FieldStatus, field.TypeString, value)
 		_node.Status = value
+	}
+	if value, ok := cac.mutation.DesiredStatus(); ok {
+		_spec.SetField(computeallocation.FieldDesiredStatus, field.TypeString, value)
+		_node.DesiredStatus = value
+	}
+	if value, ok := cac.mutation.ProviderStatus(); ok {
+		_spec.SetField(computeallocation.FieldProviderStatus, field.TypeString, value)
+		_node.ProviderStatus = value
+	}
+	if value, ok := cac.mutation.LastProviderSyncAt(); ok {
+		_spec.SetField(computeallocation.FieldLastProviderSyncAt, field.TypeString, value)
+		_node.LastProviderSyncAt = value
+	}
+	if value, ok := cac.mutation.LastProviderSyncError(); ok {
+		_spec.SetField(computeallocation.FieldLastProviderSyncError, field.TypeString, value)
+		_node.LastProviderSyncError = value
+	}
+	if value, ok := cac.mutation.ExternalDeletedAt(); ok {
+		_spec.SetField(computeallocation.FieldExternalDeletedAt, field.TypeString, value)
+		_node.ExternalDeletedAt = value
 	}
 	if value, ok := cac.mutation.BillingStatus(); ok {
 		_spec.SetField(computeallocation.FieldBillingStatus, field.TypeString, value)

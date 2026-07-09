@@ -51,6 +51,12 @@ type Membership func(*sql.Selector)
 // Organization is the predicate function for organization builders.
 type Organization func(*sql.Selector)
 
+// PricingCatalog is the predicate function for pricingcatalog builders.
+type PricingCatalog func(*sql.Selector)
+
+// PricingItem is the predicate function for pricingitem builders.
+type PricingItem func(*sql.Selector)
+
 // ProductionE2ERecord is the predicate function for productione2erecord builders.
 type ProductionE2ERecord func(*sql.Selector)
 

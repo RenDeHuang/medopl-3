@@ -54,6 +54,7 @@ type ReconciliationInput struct {
 }
 
 type ComputeAllocationInput struct {
+	ID              string `json:"id,omitempty"`
 	AccountID       string `json:"accountId"`
 	WorkspaceID     string `json:"workspaceId"`
 	PackageID       string `json:"packageId"`
@@ -61,6 +62,7 @@ type ComputeAllocationInput struct {
 }
 
 type StorageVolumeInput struct {
+	ID              string `json:"id,omitempty"`
 	AccountID       string `json:"accountId"`
 	WorkspaceID     string `json:"workspaceId"`
 	SizeGB          int    `json:"sizeGb"`
@@ -157,14 +159,17 @@ func (s *Service) CreateComputeAllocation(ctx context.Context, input ComputeAllo
 	if input.HoldAmountCents <= 0 {
 		return clients.ComputeAllocation{}, fmt.Errorf("compute_hold_amount_required")
 	}
-	resourceID := resourceID("ca")
-	hold, err := s.ledger.CreateHold(ctx, clients.HoldInput{AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: "compute", ResourceID: resourceID, AmountCents: input.HoldAmountCents, Currency: "CNY"}, idempotencyKey+":hold")
+	id := input.ID
+	if id == "" {
+		id = resourceID("ca")
+	}
+	hold, err := s.ledger.CreateHold(ctx, clients.HoldInput{AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: "compute", ResourceID: id, AmountCents: input.HoldAmountCents, Currency: "CNY"}, idempotencyKey+":hold")
 	if err != nil {
 		return clients.ComputeAllocation{}, err
 	}
-	allocation, err := s.fabric.CreateComputeAllocation(ctx, clients.ComputeAllocationInput{ID: resourceID, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, PackageID: input.PackageID}, idempotencyKey)
+	allocation, err := s.fabric.CreateComputeAllocation(ctx, clients.ComputeAllocationInput{ID: id, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, PackageID: input.PackageID}, idempotencyKey)
 	if err != nil {
-		_, releaseErr := s.ledger.ReleaseHold(ctx, clients.HoldReleaseInput{AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: "compute", ResourceID: resourceID, HoldID: hold.ID, AmountCents: hold.AmountCents, Currency: "CNY", Reason: "compute_create_failed"}, idempotencyKey+":hold-release")
+		_, releaseErr := s.ledger.ReleaseHold(ctx, clients.HoldReleaseInput{AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: "compute", ResourceID: id, HoldID: hold.ID, AmountCents: hold.AmountCents, Currency: "CNY", Reason: "compute_create_failed"}, idempotencyKey+":hold-release")
 		return clients.ComputeAllocation{}, errors.Join(err, releaseErr)
 	}
 	allocation.HoldID = hold.ID
@@ -222,14 +227,17 @@ func (s *Service) CreateStorageVolume(ctx context.Context, input StorageVolumeIn
 	if input.HoldAmountCents <= 0 {
 		return clients.StorageVolume{}, fmt.Errorf("storage_hold_amount_required")
 	}
-	resourceID := resourceID("vol")
-	hold, err := s.ledger.CreateHold(ctx, clients.HoldInput{AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: "storage", ResourceID: resourceID, AmountCents: input.HoldAmountCents, Currency: "CNY"}, idempotencyKey+":hold")
+	id := input.ID
+	if id == "" {
+		id = resourceID("vol")
+	}
+	hold, err := s.ledger.CreateHold(ctx, clients.HoldInput{AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: "storage", ResourceID: id, AmountCents: input.HoldAmountCents, Currency: "CNY"}, idempotencyKey+":hold")
 	if err != nil {
 		return clients.StorageVolume{}, err
 	}
-	volume, err := s.fabric.CreateStorageVolume(ctx, clients.StorageVolumeInput{ID: resourceID, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, SizeGB: input.SizeGB}, idempotencyKey)
+	volume, err := s.fabric.CreateStorageVolume(ctx, clients.StorageVolumeInput{ID: id, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, SizeGB: input.SizeGB}, idempotencyKey)
 	if err != nil {
-		_, releaseErr := s.ledger.ReleaseHold(ctx, clients.HoldReleaseInput{AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: "storage", ResourceID: resourceID, HoldID: hold.ID, AmountCents: hold.AmountCents, Currency: "CNY", Reason: "storage_create_failed"}, idempotencyKey+":hold-release")
+		_, releaseErr := s.ledger.ReleaseHold(ctx, clients.HoldReleaseInput{AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: "storage", ResourceID: id, HoldID: hold.ID, AmountCents: hold.AmountCents, Currency: "CNY", Reason: "storage_create_failed"}, idempotencyKey+":hold-release")
 		return clients.StorageVolume{}, errors.Join(err, releaseErr)
 	}
 	volume.HoldID = hold.ID

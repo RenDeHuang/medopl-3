@@ -81,6 +81,33 @@ func authAttemptFields() []ent.Field {
 	)
 }
 
+func pricingCatalogFields() []ent.Field {
+	return append(baseFields(),
+		field.String("version").NotEmpty().Unique(),
+		field.String("currency").Default("CNY"),
+		field.Int("hold_days").Default(7),
+		field.String("effective_from").Default(""),
+		field.String("status").Default("current"),
+	)
+}
+
+func pricingItemFields() []ent.Field {
+	return append(baseFields(),
+		field.String("catalog_version").NotEmpty(),
+		field.String("package_id").NotEmpty(),
+		field.String("resource_type").NotEmpty(),
+		field.String("unit").NotEmpty(),
+		field.Float("unit_price").Default(0),
+		field.Int64("unit_price_cents").Default(0),
+		field.Bool("available").Default(true),
+		field.String("name").Default(""),
+		field.String("server").Default(""),
+		field.Float("cpu").Default(0),
+		field.Float("memory_gb").Default(0),
+		field.Float("disk_gb").Default(0),
+	)
+}
+
 func computeAllocationFields() []ent.Field {
 	return append(baseFields(),
 		field.String("account_id").NotEmpty(),
@@ -93,6 +120,11 @@ func computeAllocationFields() []ent.Field {
 		field.String("provider_request_id").Default(""),
 		field.String("operation_id").Default(""),
 		field.String("status").Default(""),
+		field.String("desired_status").Default(""),
+		field.String("provider_status").Default(""),
+		field.String("last_provider_sync_at").Default(""),
+		field.String("last_provider_sync_error").Default(""),
+		field.String("external_deleted_at").Default(""),
 		field.String("billing_status").Default(""),
 		field.String("hold_id").Default(""),
 		field.String("hold_release_id").Default(""),
@@ -127,11 +159,17 @@ func storageVolumeFields() []ent.Field {
 		field.String("owner_user_id").Default(""),
 		field.String("workspace_id").Default(""),
 		field.String("name").Default(""),
+		field.String("package_id").Default(""),
 		field.String("provider").Default(""),
 		field.String("provider_resource_id").Default(""),
 		field.String("provider_request_id").Default(""),
 		field.String("operation_id").Default(""),
 		field.String("status").Default(""),
+		field.String("desired_status").Default(""),
+		field.String("provider_status").Default(""),
+		field.String("last_provider_sync_at").Default(""),
+		field.String("last_provider_sync_error").Default(""),
+		field.String("external_deleted_at").Default(""),
 		field.String("billing_status").Default(""),
 		field.String("hold_id").Default(""),
 		field.String("hold_release_id").Default(""),
@@ -386,6 +424,10 @@ func (User) Annotations() []schema.Annotation         { return table("control_pl
 func (Membership) Annotations() []schema.Annotation   { return table("control_plane_memberships") }
 func (Session) Annotations() []schema.Annotation      { return table("control_plane_sessions") }
 func (AuthAttempt) Annotations() []schema.Annotation  { return table("control_plane_auth_attempts") }
+func (PricingCatalog) Annotations() []schema.Annotation {
+	return table("control_plane_pricing_catalogs")
+}
+func (PricingItem) Annotations() []schema.Annotation { return table("control_plane_pricing_items") }
 func (ComputeAllocation) Annotations() []schema.Annotation {
 	return table("control_plane_compute_allocations")
 }

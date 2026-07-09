@@ -41,8 +41,8 @@ func (l *settlementWorkerLedger) SettleResource(_ context.Context, input clients
 
 func TestPeriodicSettlementWorkerSettlesActiveResources(t *testing.T) {
 	app := newControlPlaneAppEmpty()
-	app.computes["compute-alpha"] = map[string]any{"id": "compute-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "packageId": "basic", "status": "running"}
-	app.storages["storage-alpha"] = map[string]any{"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "packageId": "basic", "status": "available", "sizeGb": 10}
+	app.computes["compute-alpha"] = freshBillableResource(map[string]any{"id": "compute-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "packageId": "basic", "status": "running"})
+	app.storages["storage-alpha"] = freshBillableResource(map[string]any{"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "packageId": "basic", "status": "available", "sizeGb": 10})
 	ledger := &settlementWorkerLedger{}
 	service := controlPlaneServiceForTest(ledger)
 	now := time.Date(2026, 7, 9, 12, 30, 0, 0, time.UTC)
@@ -66,7 +66,7 @@ func TestPeriodicSettlementWorkerSettlesActiveResources(t *testing.T) {
 
 func TestPeriodicSettlementWorkerDoesNotDuplicateControlPlaneProjectionsOnReplay(t *testing.T) {
 	app := newControlPlaneAppEmpty()
-	app.computes["compute-alpha"] = map[string]any{"id": "compute-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "packageId": "basic", "status": "running"}
+	app.computes["compute-alpha"] = freshBillableResource(map[string]any{"id": "compute-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "packageId": "basic", "status": "running"})
 	ledger := &settlementWorkerLedger{}
 	service := controlPlaneServiceForTest(ledger)
 	now := time.Date(2026, 7, 9, 12, 30, 0, 0, time.UTC)
@@ -90,6 +90,68 @@ func TestPeriodicSettlementWorkerDoesNotDuplicateControlPlaneProjectionsOnReplay
 	if compute["settlementId"] != "settlement-compute-alpha" || compute["usagePeriodEnd"] != "2026-07-09T12:00:00Z" {
 		t.Fatalf("resource missing last settlement metadata: %#v", compute)
 	}
+}
+
+func TestPeriodicSettlementWorkerSkipsResourcesWithoutFreshProviderSync(t *testing.T) {
+	app := newControlPlaneAppEmpty()
+	app.computes["compute-stale"] = map[string]any{
+		"id":                 "compute-stale",
+		"accountId":          "acct-alpha",
+		"packageId":          "basic",
+		"status":             "running",
+		"lastProviderSyncAt": "2026-01-01T00:00:00Z",
+	}
+	app.storages["storage-failed"] = map[string]any{
+		"id":                 "storage-failed",
+		"accountId":          "acct-alpha",
+		"packageId":          "basic",
+		"status":             "available",
+		"providerStatus":     "sync_failed",
+		"lastProviderSyncAt": time.Now().UTC().Format(time.RFC3339Nano),
+	}
+	ledger := &settlementWorkerLedger{}
+	service := controlPlaneServiceForTest(ledger)
+
+	if err := app.runPeriodicSettlementOnce(context.Background(), service, time.Now().UTC()); err != nil {
+		t.Fatalf("run settlement worker: %v", err)
+	}
+	if len(ledger.settlements) != 0 {
+		t.Fatalf("stale or failed provider state must not be billed: %#v", ledger.settlements)
+	}
+}
+
+func TestProviderReconcileWorkerPersistsExternalDeleteAndRelease(t *testing.T) {
+	app := newControlPlaneAppEmpty()
+	app.computes["compute-alpha"] = map[string]any{
+		"id":                 "compute-alpha",
+		"accountId":          "acct-alpha",
+		"workspaceId":        "ws-alpha",
+		"packageId":          "basic",
+		"status":             "running",
+		"billingStatus":      "active",
+		"holdId":             "hold-compute-alpha",
+		"holdAmountCents":    int64(7862),
+		"lastProviderSyncAt": "2026-01-01T00:00:00Z",
+	}
+	ledger := &settlementWorkerLedger{}
+	service := controlPlaneServiceForTest(ledger)
+
+	if err := app.runProviderReconcileOnce(context.Background(), service, time.Now().UTC()); err != nil {
+		t.Fatalf("run provider reconcile: %v", err)
+	}
+	compute := app.computes["compute-alpha"]
+	if compute["status"] != "external_deleted" || compute["providerStatus"] != "missing" || compute["billingStatus"] != "stopped" {
+		t.Fatalf("provider reconcile must persist external delete facts: %#v", compute)
+	}
+	if compute["holdReleaseId"] != "release-compute-compute-alpha" || compute["externalDeletedAt"] == "" || compute["lastProviderSyncAt"] == "" {
+		t.Fatalf("provider reconcile missing release/sync evidence: %#v", compute)
+	}
+}
+
+func freshBillableResource(row map[string]any) map[string]any {
+	row["providerStatus"] = firstNonEmpty(stringValue(row["providerStatus"]), stringValue(row["status"]))
+	row["lastProviderSyncAt"] = time.Now().UTC().Format(time.RFC3339Nano)
+	return row
 }
 
 func controlPlaneServiceForTest(ledger clients.LedgerClient) *controlplane.Service {

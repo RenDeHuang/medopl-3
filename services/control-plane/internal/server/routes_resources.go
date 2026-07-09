@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"opl-cloud/services/control-plane/internal/controlplane"
 )
@@ -32,17 +33,51 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneApp, service *c
 			writeJSON(w, http.StatusConflict, map[string]any{"error": "billing_reconciliation_blocked", "billingReconciliation": guard})
 			return
 		}
+		key := mutationKey(r, input)
+		resourceID := firstNonEmpty(stringField(input, "id", ""), newResourceID("ca"))
+		preview, err := app.pricingPreviewResponse(r.Context(), map[string]any{
+			"accountId":      accountID,
+			"resourceType":   "compute",
+			"packageId":      stringField(input, "packageId", "basic"),
+			"computeId":      resourceID,
+			"idempotencyKey": key,
+		}, map[string]any{})
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "pricing_catalog_unavailable")
+			return
+		}
+		pending := computeResponse(map[string]any{
+			"id":              resourceID,
+			"accountId":       accountID,
+			"ownerUserId":     app.sessionUserID(r),
+			"workspaceId":     stringField(input, "workspaceId", ""),
+			"name":            stringField(input, "name", ""),
+			"packageId":       stringField(input, "packageId", "basic"),
+			"status":          "provisioning",
+			"desiredStatus":   "running",
+			"providerStatus":  "pending",
+			"billingStatus":   "pending",
+			"pricingVersion":  stringValue(preview["pricingVersion"]),
+			"priceSnapshot":   mapField(preview, "priceSnapshot"),
+			"holdAmountCents": int64(numberField(preview, "holdAmountCents", 0)),
+			"createdAt":       time.Now().UTC().Format(time.RFC3339Nano),
+		})
+		if err := app.rememberCompute(pending); err != nil {
+			writeError(w, http.StatusInternalServerError, "state_persist_failed")
+			return
+		}
 		compute, err := service.CreateComputeAllocation(r.Context(), controlplane.ComputeAllocationInput{
+			ID:              resourceID,
 			AccountID:       accountID,
 			WorkspaceID:     stringField(input, "workspaceId", ""),
 			PackageID:       stringField(input, "packageId", "basic"),
-			HoldAmountCents: computeHoldAmountCents(stringField(input, "packageId", "basic")),
-		}, mutationKey(r, input))
+			HoldAmountCents: int64(numberField(preview, "holdAmountCents", 0)),
+		}, key)
 		if err != nil {
 			writeUpstreamError(w)
 			return
 		}
-		body := computeResponse(structToMap(compute))
+		body := providerSyncFacts(computeResponse(mergeMaps(pending, structToMap(compute))), nil)
 		if err := app.rememberCompute(body); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
@@ -103,10 +138,11 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneApp, service *c
 		}
 		compute, err := service.SyncComputeAllocation(r.Context(), releaseInput, mutationKey(r, input))
 		if err != nil {
+			_ = app.rememberCompute(providerSyncFacts(existing, err))
 			writeUpstreamError(w)
 			return
 		}
-		body := computeResponse(mergeMaps(existing, structToMap(compute)))
+		body := providerSyncFacts(computeResponse(mergeMaps(existing, structToMap(compute))), nil)
 		if err := app.rememberCompute(body); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
@@ -131,10 +167,11 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneApp, service *c
 		}
 		compute, err := service.DestroyComputeAllocation(r.Context(), destroyResourceInput(id, existing), mutationKey(r, input))
 		if err != nil {
+			_ = app.rememberCompute(providerSyncFacts(existing, err))
 			writeUpstreamError(w)
 			return
 		}
-		body := computeResponse(structToMap(compute))
+		body := providerSyncFacts(computeResponse(mergeMaps(existing, structToMap(compute))), nil)
 		if err := app.rememberCompute(body); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
@@ -155,17 +192,54 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneApp, service *c
 			writeJSON(w, http.StatusConflict, map[string]any{"error": "billing_reconciliation_blocked", "billingReconciliation": guard})
 			return
 		}
+		key := mutationKey(r, input)
+		resourceID := firstNonEmpty(stringField(input, "id", ""), newResourceID("vol"))
+		packageID := stringField(input, "packageId", "basic")
+		preview, err := app.pricingPreviewResponse(r.Context(), map[string]any{
+			"accountId":      accountID,
+			"resourceType":   "storage",
+			"packageId":      packageID,
+			"sizeGb":         numberField(input, "sizeGb", 10),
+			"storageId":      resourceID,
+			"idempotencyKey": key,
+		}, map[string]any{})
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "pricing_catalog_unavailable")
+			return
+		}
+		pending := storageResponse(map[string]any{
+			"id":              resourceID,
+			"accountId":       accountID,
+			"ownerUserId":     app.sessionUserID(r),
+			"workspaceId":     stringField(input, "workspaceId", ""),
+			"name":            stringField(input, "name", ""),
+			"packageId":       packageID,
+			"sizeGb":          numberField(input, "sizeGb", 10),
+			"status":          "provisioning",
+			"desiredStatus":   "available",
+			"providerStatus":  "pending",
+			"billingStatus":   "pending",
+			"pricingVersion":  stringValue(preview["pricingVersion"]),
+			"priceSnapshot":   mapField(preview, "priceSnapshot"),
+			"holdAmountCents": int64(numberField(preview, "holdAmountCents", 0)),
+			"createdAt":       time.Now().UTC().Format(time.RFC3339Nano),
+		})
+		if err := app.rememberStorage(pending); err != nil {
+			writeError(w, http.StatusInternalServerError, "state_persist_failed")
+			return
+		}
 		storage, err := service.CreateStorageVolume(r.Context(), controlplane.StorageVolumeInput{
+			ID:              resourceID,
 			AccountID:       accountID,
 			WorkspaceID:     stringField(input, "workspaceId", ""),
 			SizeGB:          int(numberField(input, "sizeGb", 10)),
-			HoldAmountCents: storageHoldAmountCents(stringField(input, "packageId", "basic"), numberField(input, "sizeGb", 10)),
-		}, mutationKey(r, input))
+			HoldAmountCents: int64(numberField(preview, "holdAmountCents", 0)),
+		}, key)
 		if err != nil {
 			writeUpstreamError(w)
 			return
 		}
-		body := storageResponse(structToMap(storage))
+		body := providerSyncFacts(storageResponse(mergeMaps(pending, structToMap(storage))), nil)
 		if err := app.rememberStorage(body); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
@@ -190,10 +264,11 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneApp, service *c
 		}
 		storage, err := service.DestroyStorageVolume(r.Context(), destroyResourceInput(id, existing), mutationKey(r, input))
 		if err != nil {
+			_ = app.rememberStorage(providerSyncFacts(existing, err))
 			writeUpstreamError(w)
 			return
 		}
-		body := storageResponse(structToMap(storage))
+		body := providerSyncFacts(storageResponse(mergeMaps(existing, structToMap(storage))), nil)
 		if err := app.rememberStorage(body); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
@@ -223,10 +298,11 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneApp, service *c
 		}
 		storage, err := service.SyncStorageVolume(r.Context(), releaseInput, mutationKey(r, input))
 		if err != nil {
+			_ = app.rememberStorage(providerSyncFacts(existing, err))
 			writeUpstreamError(w)
 			return
 		}
-		body := storageResponse(mergeMaps(existing, structToMap(storage)))
+		body := providerSyncFacts(storageResponse(mergeMaps(existing, structToMap(storage))), nil)
 		if err := app.rememberStorage(body); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return

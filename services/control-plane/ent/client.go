@@ -26,6 +26,8 @@ import (
 	"opl-cloud/services/control-plane/ent/manualtopupprojection"
 	"opl-cloud/services/control-plane/ent/membership"
 	"opl-cloud/services/control-plane/ent/organization"
+	"opl-cloud/services/control-plane/ent/pricingcatalog"
+	"opl-cloud/services/control-plane/ent/pricingitem"
 	"opl-cloud/services/control-plane/ent/productione2erecord"
 	"opl-cloud/services/control-plane/ent/runtimeoperation"
 	"opl-cloud/services/control-plane/ent/session"
@@ -77,6 +79,10 @@ type Client struct {
 	Membership *MembershipClient
 	// Organization is the client for interacting with the Organization builders.
 	Organization *OrganizationClient
+	// PricingCatalog is the client for interacting with the PricingCatalog builders.
+	PricingCatalog *PricingCatalogClient
+	// PricingItem is the client for interacting with the PricingItem builders.
+	PricingItem *PricingItemClient
 	// ProductionE2ERecord is the client for interacting with the ProductionE2ERecord builders.
 	ProductionE2ERecord *ProductionE2ERecordClient
 	// RuntimeOperation is the client for interacting with the RuntimeOperation builders.
@@ -123,6 +129,8 @@ func (c *Client) init() {
 	c.ManualTopupProjection = NewManualTopupProjectionClient(c.config)
 	c.Membership = NewMembershipClient(c.config)
 	c.Organization = NewOrganizationClient(c.config)
+	c.PricingCatalog = NewPricingCatalogClient(c.config)
+	c.PricingItem = NewPricingItemClient(c.config)
 	c.ProductionE2ERecord = NewProductionE2ERecordClient(c.config)
 	c.RuntimeOperation = NewRuntimeOperationClient(c.config)
 	c.Session = NewSessionClient(c.config)
@@ -240,6 +248,8 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ManualTopupProjection:       NewManualTopupProjectionClient(cfg),
 		Membership:                  NewMembershipClient(cfg),
 		Organization:                NewOrganizationClient(cfg),
+		PricingCatalog:              NewPricingCatalogClient(cfg),
+		PricingItem:                 NewPricingItemClient(cfg),
 		ProductionE2ERecord:         NewProductionE2ERecordClient(cfg),
 		RuntimeOperation:            NewRuntimeOperationClient(cfg),
 		Session:                     NewSessionClient(cfg),
@@ -284,6 +294,8 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ManualTopupProjection:       NewManualTopupProjectionClient(cfg),
 		Membership:                  NewMembershipClient(cfg),
 		Organization:                NewOrganizationClient(cfg),
+		PricingCatalog:              NewPricingCatalogClient(cfg),
+		PricingItem:                 NewPricingItemClient(cfg),
 		ProductionE2ERecord:         NewProductionE2ERecordClient(cfg),
 		RuntimeOperation:            NewRuntimeOperationClient(cfg),
 		Session:                     NewSessionClient(cfg),
@@ -327,10 +339,10 @@ func (c *Client) Use(hooks ...Hook) {
 		c.ArchivedComputeAllocation, c.ArchivedStorageAttachment,
 		c.ArchivedStorageVolume, c.ArchivedWorkspace, c.AuthAttempt,
 		c.BillingReconciliation, c.ComputeAllocation, c.LedgerProjection,
-		c.ManualTopupProjection, c.Membership, c.Organization, c.ProductionE2ERecord,
-		c.RuntimeOperation, c.Session, c.StorageAttachment, c.StorageVolume,
-		c.SupportTicketMapping, c.User, c.WalletProjection,
-		c.WalletTransactionProjection, c.Workspace,
+		c.ManualTopupProjection, c.Membership, c.Organization, c.PricingCatalog,
+		c.PricingItem, c.ProductionE2ERecord, c.RuntimeOperation, c.Session,
+		c.StorageAttachment, c.StorageVolume, c.SupportTicketMapping, c.User,
+		c.WalletProjection, c.WalletTransactionProjection, c.Workspace,
 	} {
 		n.Use(hooks...)
 	}
@@ -344,10 +356,10 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.ArchivedComputeAllocation, c.ArchivedStorageAttachment,
 		c.ArchivedStorageVolume, c.ArchivedWorkspace, c.AuthAttempt,
 		c.BillingReconciliation, c.ComputeAllocation, c.LedgerProjection,
-		c.ManualTopupProjection, c.Membership, c.Organization, c.ProductionE2ERecord,
-		c.RuntimeOperation, c.Session, c.StorageAttachment, c.StorageVolume,
-		c.SupportTicketMapping, c.User, c.WalletProjection,
-		c.WalletTransactionProjection, c.Workspace,
+		c.ManualTopupProjection, c.Membership, c.Organization, c.PricingCatalog,
+		c.PricingItem, c.ProductionE2ERecord, c.RuntimeOperation, c.Session,
+		c.StorageAttachment, c.StorageVolume, c.SupportTicketMapping, c.User,
+		c.WalletProjection, c.WalletTransactionProjection, c.Workspace,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -386,6 +398,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Membership.mutate(ctx, m)
 	case *OrganizationMutation:
 		return c.Organization.mutate(ctx, m)
+	case *PricingCatalogMutation:
+		return c.PricingCatalog.mutate(ctx, m)
+	case *PricingItemMutation:
+		return c.PricingItem.mutate(ctx, m)
 	case *ProductionE2ERecordMutation:
 		return c.ProductionE2ERecord.mutate(ctx, m)
 	case *RuntimeOperationMutation:
@@ -2406,6 +2422,272 @@ func (c *OrganizationClient) mutate(ctx context.Context, m *OrganizationMutation
 	}
 }
 
+// PricingCatalogClient is a client for the PricingCatalog schema.
+type PricingCatalogClient struct {
+	config
+}
+
+// NewPricingCatalogClient returns a client for the PricingCatalog from the given config.
+func NewPricingCatalogClient(c config) *PricingCatalogClient {
+	return &PricingCatalogClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `pricingcatalog.Hooks(f(g(h())))`.
+func (c *PricingCatalogClient) Use(hooks ...Hook) {
+	c.hooks.PricingCatalog = append(c.hooks.PricingCatalog, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `pricingcatalog.Intercept(f(g(h())))`.
+func (c *PricingCatalogClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PricingCatalog = append(c.inters.PricingCatalog, interceptors...)
+}
+
+// Create returns a builder for creating a PricingCatalog entity.
+func (c *PricingCatalogClient) Create() *PricingCatalogCreate {
+	mutation := newPricingCatalogMutation(c.config, OpCreate)
+	return &PricingCatalogCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PricingCatalog entities.
+func (c *PricingCatalogClient) CreateBulk(builders ...*PricingCatalogCreate) *PricingCatalogCreateBulk {
+	return &PricingCatalogCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PricingCatalogClient) MapCreateBulk(slice any, setFunc func(*PricingCatalogCreate, int)) *PricingCatalogCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PricingCatalogCreateBulk{err: fmt.Errorf("calling to PricingCatalogClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PricingCatalogCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PricingCatalogCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PricingCatalog.
+func (c *PricingCatalogClient) Update() *PricingCatalogUpdate {
+	mutation := newPricingCatalogMutation(c.config, OpUpdate)
+	return &PricingCatalogUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PricingCatalogClient) UpdateOne(pc *PricingCatalog) *PricingCatalogUpdateOne {
+	mutation := newPricingCatalogMutation(c.config, OpUpdateOne, withPricingCatalog(pc))
+	return &PricingCatalogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PricingCatalogClient) UpdateOneID(id string) *PricingCatalogUpdateOne {
+	mutation := newPricingCatalogMutation(c.config, OpUpdateOne, withPricingCatalogID(id))
+	return &PricingCatalogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PricingCatalog.
+func (c *PricingCatalogClient) Delete() *PricingCatalogDelete {
+	mutation := newPricingCatalogMutation(c.config, OpDelete)
+	return &PricingCatalogDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PricingCatalogClient) DeleteOne(pc *PricingCatalog) *PricingCatalogDeleteOne {
+	return c.DeleteOneID(pc.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PricingCatalogClient) DeleteOneID(id string) *PricingCatalogDeleteOne {
+	builder := c.Delete().Where(pricingcatalog.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PricingCatalogDeleteOne{builder}
+}
+
+// Query returns a query builder for PricingCatalog.
+func (c *PricingCatalogClient) Query() *PricingCatalogQuery {
+	return &PricingCatalogQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePricingCatalog},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PricingCatalog entity by its id.
+func (c *PricingCatalogClient) Get(ctx context.Context, id string) (*PricingCatalog, error) {
+	return c.Query().Where(pricingcatalog.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PricingCatalogClient) GetX(ctx context.Context, id string) *PricingCatalog {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PricingCatalogClient) Hooks() []Hook {
+	return c.hooks.PricingCatalog
+}
+
+// Interceptors returns the client interceptors.
+func (c *PricingCatalogClient) Interceptors() []Interceptor {
+	return c.inters.PricingCatalog
+}
+
+func (c *PricingCatalogClient) mutate(ctx context.Context, m *PricingCatalogMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PricingCatalogCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PricingCatalogUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PricingCatalogUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PricingCatalogDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PricingCatalog mutation op: %q", m.Op())
+	}
+}
+
+// PricingItemClient is a client for the PricingItem schema.
+type PricingItemClient struct {
+	config
+}
+
+// NewPricingItemClient returns a client for the PricingItem from the given config.
+func NewPricingItemClient(c config) *PricingItemClient {
+	return &PricingItemClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `pricingitem.Hooks(f(g(h())))`.
+func (c *PricingItemClient) Use(hooks ...Hook) {
+	c.hooks.PricingItem = append(c.hooks.PricingItem, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `pricingitem.Intercept(f(g(h())))`.
+func (c *PricingItemClient) Intercept(interceptors ...Interceptor) {
+	c.inters.PricingItem = append(c.inters.PricingItem, interceptors...)
+}
+
+// Create returns a builder for creating a PricingItem entity.
+func (c *PricingItemClient) Create() *PricingItemCreate {
+	mutation := newPricingItemMutation(c.config, OpCreate)
+	return &PricingItemCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of PricingItem entities.
+func (c *PricingItemClient) CreateBulk(builders ...*PricingItemCreate) *PricingItemCreateBulk {
+	return &PricingItemCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *PricingItemClient) MapCreateBulk(slice any, setFunc func(*PricingItemCreate, int)) *PricingItemCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &PricingItemCreateBulk{err: fmt.Errorf("calling to PricingItemClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*PricingItemCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &PricingItemCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for PricingItem.
+func (c *PricingItemClient) Update() *PricingItemUpdate {
+	mutation := newPricingItemMutation(c.config, OpUpdate)
+	return &PricingItemUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *PricingItemClient) UpdateOne(pi *PricingItem) *PricingItemUpdateOne {
+	mutation := newPricingItemMutation(c.config, OpUpdateOne, withPricingItem(pi))
+	return &PricingItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *PricingItemClient) UpdateOneID(id string) *PricingItemUpdateOne {
+	mutation := newPricingItemMutation(c.config, OpUpdateOne, withPricingItemID(id))
+	return &PricingItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for PricingItem.
+func (c *PricingItemClient) Delete() *PricingItemDelete {
+	mutation := newPricingItemMutation(c.config, OpDelete)
+	return &PricingItemDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *PricingItemClient) DeleteOne(pi *PricingItem) *PricingItemDeleteOne {
+	return c.DeleteOneID(pi.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *PricingItemClient) DeleteOneID(id string) *PricingItemDeleteOne {
+	builder := c.Delete().Where(pricingitem.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &PricingItemDeleteOne{builder}
+}
+
+// Query returns a query builder for PricingItem.
+func (c *PricingItemClient) Query() *PricingItemQuery {
+	return &PricingItemQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypePricingItem},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a PricingItem entity by its id.
+func (c *PricingItemClient) Get(ctx context.Context, id string) (*PricingItem, error) {
+	return c.Query().Where(pricingitem.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *PricingItemClient) GetX(ctx context.Context, id string) *PricingItem {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *PricingItemClient) Hooks() []Hook {
+	return c.hooks.PricingItem
+}
+
+// Interceptors returns the client interceptors.
+func (c *PricingItemClient) Interceptors() []Interceptor {
+	return c.inters.PricingItem
+}
+
+func (c *PricingItemClient) mutate(ctx context.Context, m *PricingItemMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&PricingItemCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&PricingItemUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&PricingItemUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&PricingItemDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown PricingItem mutation op: %q", m.Op())
+	}
+}
+
 // ProductionE2ERecordClient is a client for the ProductionE2ERecord schema.
 type ProductionE2ERecordClient struct {
 	config
@@ -3743,8 +4025,8 @@ type (
 		ArchivedComputeAllocation, ArchivedStorageAttachment, ArchivedStorageVolume,
 		ArchivedWorkspace, AuthAttempt, BillingReconciliation, ComputeAllocation,
 		LedgerProjection, ManualTopupProjection, Membership, Organization,
-		ProductionE2ERecord, RuntimeOperation, Session, StorageAttachment,
-		StorageVolume, SupportTicketMapping, User, WalletProjection,
+		PricingCatalog, PricingItem, ProductionE2ERecord, RuntimeOperation, Session,
+		StorageAttachment, StorageVolume, SupportTicketMapping, User, WalletProjection,
 		WalletTransactionProjection, Workspace []ent.Hook
 	}
 	inters struct {
@@ -3752,8 +4034,8 @@ type (
 		ArchivedComputeAllocation, ArchivedStorageAttachment, ArchivedStorageVolume,
 		ArchivedWorkspace, AuthAttempt, BillingReconciliation, ComputeAllocation,
 		LedgerProjection, ManualTopupProjection, Membership, Organization,
-		ProductionE2ERecord, RuntimeOperation, Session, StorageAttachment,
-		StorageVolume, SupportTicketMapping, User, WalletProjection,
+		PricingCatalog, PricingItem, ProductionE2ERecord, RuntimeOperation, Session,
+		StorageAttachment, StorageVolume, SupportTicketMapping, User, WalletProjection,
 		WalletTransactionProjection, Workspace []ent.Interceptor
 	}
 )

@@ -37,6 +37,16 @@ const (
 	FieldOperationID = "operation_id"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldDesiredStatus holds the string denoting the desired_status field in the database.
+	FieldDesiredStatus = "desired_status"
+	// FieldProviderStatus holds the string denoting the provider_status field in the database.
+	FieldProviderStatus = "provider_status"
+	// FieldLastProviderSyncAt holds the string denoting the last_provider_sync_at field in the database.
+	FieldLastProviderSyncAt = "last_provider_sync_at"
+	// FieldLastProviderSyncError holds the string denoting the last_provider_sync_error field in the database.
+	FieldLastProviderSyncError = "last_provider_sync_error"
+	// FieldExternalDeletedAt holds the string denoting the external_deleted_at field in the database.
+	FieldExternalDeletedAt = "external_deleted_at"
 	// FieldBillingStatus holds the string denoting the billing_status field in the database.
 	FieldBillingStatus = "billing_status"
 	// FieldHoldID holds the string denoting the hold_id field in the database.
@@ -106,6 +116,11 @@ var Columns = []string{
 	FieldProviderRequestID,
 	FieldOperationID,
 	FieldStatus,
+	FieldDesiredStatus,
+	FieldProviderStatus,
+	FieldLastProviderSyncAt,
+	FieldLastProviderSyncError,
+	FieldExternalDeletedAt,
 	FieldBillingStatus,
 	FieldHoldID,
 	FieldHoldReleaseID,
@@ -170,6 +185,16 @@ var (
 	DefaultOperationID string
 	// DefaultStatus holds the default value on creation for the "status" field.
 	DefaultStatus string
+	// DefaultDesiredStatus holds the default value on creation for the "desired_status" field.
+	DefaultDesiredStatus string
+	// DefaultProviderStatus holds the default value on creation for the "provider_status" field.
+	DefaultProviderStatus string
+	// DefaultLastProviderSyncAt holds the default value on creation for the "last_provider_sync_at" field.
+	DefaultLastProviderSyncAt string
+	// DefaultLastProviderSyncError holds the default value on creation for the "last_provider_sync_error" field.
+	DefaultLastProviderSyncError string
+	// DefaultExternalDeletedAt holds the default value on creation for the "external_deleted_at" field.
+	DefaultExternalDeletedAt string
 	// DefaultBillingStatus holds the default value on creation for the "billing_status" field.
 	DefaultBillingStatus string
 	// DefaultHoldID holds the default value on creation for the "hold_id" field.
@@ -290,6 +315,31 @@ func ByOperationID(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByDesiredStatus orders the results by the desired_status field.
+func ByDesiredStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldDesiredStatus, opts...).ToFunc()
+}
+
+// ByProviderStatus orders the results by the provider_status field.
+func ByProviderStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProviderStatus, opts...).ToFunc()
+}
+
+// ByLastProviderSyncAt orders the results by the last_provider_sync_at field.
+func ByLastProviderSyncAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastProviderSyncAt, opts...).ToFunc()
+}
+
+// ByLastProviderSyncError orders the results by the last_provider_sync_error field.
+func ByLastProviderSyncError(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldLastProviderSyncError, opts...).ToFunc()
+}
+
+// ByExternalDeletedAt orders the results by the external_deleted_at field.
+func ByExternalDeletedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldExternalDeletedAt, opts...).ToFunc()
 }
 
 // ByBillingStatus orders the results by the billing_status field.

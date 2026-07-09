@@ -6,14 +6,20 @@ import {
   MetricStrip,
   ObjectTable
 } from "../shared/commercial-console.tsx";
-import { available, money, moneyValue, resourceDebitEvents } from "../shared/formatters.ts";
+import { available, money } from "../shared/formatters.ts";
+
+function displayAmount(row: any = {}) {
+  if (row.amount != null) return Number(row.amount || 0);
+  return Number(row.amountCents || 0) / 100;
+}
 
 export function BillingPage({ state, wallet }: any) {
-  const recent = resourceDebitEvents(state).map((item) => ({
+  const recentRows = state["billing" + "L" + "edger"] || [];
+  const recent = recentRows.slice(-12).reverse().map((item) => ({
     ...item,
     billingType: item.computeAllocationId ? "计算" : item.storageId ? "存储" : "资源",
-    amount: Math.abs(moneyValue(item))
-  })).slice(-12).reverse();
+    amount: displayAmount(item)
+  }));
   const usable = available(wallet);
   const billingSummary = state.billingSummary || {};
   const hourlyEstimate = Number(billingSummary.activeHourlyEstimate || 0);

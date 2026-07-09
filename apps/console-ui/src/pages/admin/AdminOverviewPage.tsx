@@ -17,7 +17,7 @@ import {
   StatusPill,
   TimelineList
 } from "../shared/commercial-console.tsx";
-import { money, moneyValue } from "../shared/formatters.ts";
+import { money } from "../shared/formatters.ts";
 
 type AnyRecord = Record<string, any>;
 
@@ -34,11 +34,9 @@ function manualTopUpIdempotencyKey() {
   return `manual-topup-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function totalDebited(transactions: AnyRecord[] = []) {
-  return transactions.reduce((sum, event) => {
-    const amount = Number(event.amount || 0);
-    return amount < 0 ? sum + Math.abs(amount) : sum;
-  }, 0);
+function moneyValue(row: AnyRecord = {}) {
+  if (row.amount != null) return Number(row.amount || 0);
+  return Number(row.amountCents || 0) / 100;
 }
 
 function firstMessage(ticket: AnyRecord = {}) {
@@ -70,7 +68,7 @@ function costTagsLabel(tags: AnyRecord = {}) {
 
 export function AdminOverviewPage({ state, managementState = {}, adminOps }: any) {
   const failed = adminOps.operator?.runtimeOperations?.failed ?? 0;
-  const totalSpent = adminOps.operator?.accounts?.totalSpent ?? totalDebited(state.walletTransactions || state.billingLedger || []);
+  const totalSpent = adminOps.operator?.accounts?.totalSpent ?? 0;
   const usersByAccount = new Map<string, AnyRecord>((managementState.users || []).map((user) => [user.accountId, user]));
   const spendRows = (managementState.accounts || []).slice(0, 8);
   const resourceLedgerEvidence = managementState.resourceLedgerEvidence || [];
@@ -410,7 +408,7 @@ function TopUpDrawer({ open, setOpen, form, session, runAction }: any) {
 export function AdminBillingPage({ state, managementState, adminOps, session, runAction }: any) {
   const [reconciliationOpen, setReconciliationOpen] = React.useState(false);
   const [reconciliationForm] = Form.useForm();
-  const totalSpent = adminOps.operator?.accounts?.totalSpent ?? totalDebited(state.walletTransactions || state.billingLedger || []);
+  const totalSpent = adminOps.operator?.accounts?.totalSpent ?? 0;
   const reconciliationGuard = state.billingReconciliation?.guard || adminOps.operator?.billingReconciliation?.guard || {};
   return (
     <ConsoleSurface

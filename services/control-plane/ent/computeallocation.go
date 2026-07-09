@@ -41,6 +41,16 @@ type ComputeAllocation struct {
 	OperationID string `json:"operation_id,omitempty"`
 	// Status holds the value of the "status" field.
 	Status string `json:"status,omitempty"`
+	// DesiredStatus holds the value of the "desired_status" field.
+	DesiredStatus string `json:"desired_status,omitempty"`
+	// ProviderStatus holds the value of the "provider_status" field.
+	ProviderStatus string `json:"provider_status,omitempty"`
+	// LastProviderSyncAt holds the value of the "last_provider_sync_at" field.
+	LastProviderSyncAt string `json:"last_provider_sync_at,omitempty"`
+	// LastProviderSyncError holds the value of the "last_provider_sync_error" field.
+	LastProviderSyncError string `json:"last_provider_sync_error,omitempty"`
+	// ExternalDeletedAt holds the value of the "external_deleted_at" field.
+	ExternalDeletedAt string `json:"external_deleted_at,omitempty"`
 	// BillingStatus holds the value of the "billing_status" field.
 	BillingStatus string `json:"billing_status,omitempty"`
 	// HoldID holds the value of the "hold_id" field.
@@ -103,7 +113,7 @@ func (*ComputeAllocation) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case computeallocation.FieldHoldAmountCents, computeallocation.FieldPriceSnapshotUnitPriceCents:
 			values[i] = new(sql.NullInt64)
-		case computeallocation.FieldID, computeallocation.FieldAccountID, computeallocation.FieldOwnerUserID, computeallocation.FieldWorkspaceID, computeallocation.FieldName, computeallocation.FieldPackageID, computeallocation.FieldProvider, computeallocation.FieldProviderResourceID, computeallocation.FieldProviderRequestID, computeallocation.FieldOperationID, computeallocation.FieldStatus, computeallocation.FieldBillingStatus, computeallocation.FieldHoldID, computeallocation.FieldHoldReleaseID, computeallocation.FieldSettlementID, computeallocation.FieldLedgerEntryID, computeallocation.FieldWalletTransactionID, computeallocation.FieldPricingVersion, computeallocation.FieldUsagePeriodEnd, computeallocation.FieldEvidenceID, computeallocation.FieldCvmInstanceID, computeallocation.FieldInstanceID, computeallocation.FieldNodeName, computeallocation.FieldMachineName, computeallocation.FieldPriceSnapshotPackageID, computeallocation.FieldPriceSnapshotResourceType, computeallocation.FieldPriceSnapshotCurrency, computeallocation.FieldPriceSnapshotSource, computeallocation.FieldPriceSnapshotSku:
+		case computeallocation.FieldID, computeallocation.FieldAccountID, computeallocation.FieldOwnerUserID, computeallocation.FieldWorkspaceID, computeallocation.FieldName, computeallocation.FieldPackageID, computeallocation.FieldProvider, computeallocation.FieldProviderResourceID, computeallocation.FieldProviderRequestID, computeallocation.FieldOperationID, computeallocation.FieldStatus, computeallocation.FieldDesiredStatus, computeallocation.FieldProviderStatus, computeallocation.FieldLastProviderSyncAt, computeallocation.FieldLastProviderSyncError, computeallocation.FieldExternalDeletedAt, computeallocation.FieldBillingStatus, computeallocation.FieldHoldID, computeallocation.FieldHoldReleaseID, computeallocation.FieldSettlementID, computeallocation.FieldLedgerEntryID, computeallocation.FieldWalletTransactionID, computeallocation.FieldPricingVersion, computeallocation.FieldUsagePeriodEnd, computeallocation.FieldEvidenceID, computeallocation.FieldCvmInstanceID, computeallocation.FieldInstanceID, computeallocation.FieldNodeName, computeallocation.FieldMachineName, computeallocation.FieldPriceSnapshotPackageID, computeallocation.FieldPriceSnapshotResourceType, computeallocation.FieldPriceSnapshotCurrency, computeallocation.FieldPriceSnapshotSource, computeallocation.FieldPriceSnapshotSku:
 			values[i] = new(sql.NullString)
 		case computeallocation.FieldCreatedAt, computeallocation.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -199,6 +209,36 @@ func (ca *ComputeAllocation) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				ca.Status = value.String
+			}
+		case computeallocation.FieldDesiredStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field desired_status", values[i])
+			} else if value.Valid {
+				ca.DesiredStatus = value.String
+			}
+		case computeallocation.FieldProviderStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field provider_status", values[i])
+			} else if value.Valid {
+				ca.ProviderStatus = value.String
+			}
+		case computeallocation.FieldLastProviderSyncAt:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field last_provider_sync_at", values[i])
+			} else if value.Valid {
+				ca.LastProviderSyncAt = value.String
+			}
+		case computeallocation.FieldLastProviderSyncError:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field last_provider_sync_error", values[i])
+			} else if value.Valid {
+				ca.LastProviderSyncError = value.String
+			}
+		case computeallocation.FieldExternalDeletedAt:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field external_deleted_at", values[i])
+			} else if value.Valid {
+				ca.ExternalDeletedAt = value.String
 			}
 		case computeallocation.FieldBillingStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -421,6 +461,21 @@ func (ca *ComputeAllocation) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(ca.Status)
+	builder.WriteString(", ")
+	builder.WriteString("desired_status=")
+	builder.WriteString(ca.DesiredStatus)
+	builder.WriteString(", ")
+	builder.WriteString("provider_status=")
+	builder.WriteString(ca.ProviderStatus)
+	builder.WriteString(", ")
+	builder.WriteString("last_provider_sync_at=")
+	builder.WriteString(ca.LastProviderSyncAt)
+	builder.WriteString(", ")
+	builder.WriteString("last_provider_sync_error=")
+	builder.WriteString(ca.LastProviderSyncError)
+	builder.WriteString(", ")
+	builder.WriteString("external_deleted_at=")
+	builder.WriteString(ca.ExternalDeletedAt)
 	builder.WriteString(", ")
 	builder.WriteString("billing_status=")
 	builder.WriteString(ca.BillingStatus)

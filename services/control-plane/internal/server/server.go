@@ -36,6 +36,9 @@ func NewPersistentServer(service *controlplane.Service, store StateStore) (http.
 	if settlementWorkerEnabled() {
 		app.startPeriodicSettlementWorker(context.Background(), service, settlementWorkerInterval())
 	}
+	if providerReconcileWorkerEnabled() {
+		app.startProviderReconcileWorker(context.Background(), service, providerReconcileInterval())
+	}
 	if archiveRetentionWorkerEnabled() {
 		app.startArchiveRetentionWorker(context.Background(), archiveRetentionWorkerInterval())
 	}
@@ -297,6 +300,10 @@ func numberField(input map[string]any, key string, fallback float64) float64 {
 		return value
 	case int:
 		return float64(value)
+	case int64:
+		return float64(value)
+	case int32:
+		return float64(value)
 	default:
 		return fallback
 	}
@@ -321,6 +328,10 @@ func moneyToCents(input map[string]any) int64 {
 
 func mutationKey(r *http.Request, input map[string]any) string {
 	return firstNonEmpty(r.Header.Get("Idempotency-Key"), stringField(input, "idempotencyKey", ""), stringField(input, "sourceEventId", ""), stableID(r.Method, r.URL.Path, time.Now().UTC().String()))
+}
+
+func newResourceID(prefix string) string {
+	return prefix + "_" + stableID(prefix, time.Now().UTC().Format(time.RFC3339Nano))[:18]
 }
 
 func structToMap(value any) map[string]any {
@@ -397,6 +408,8 @@ func workspaceResponse(row map[string]any) map[string]any {
 	if serviceName := stringValue(row["runtimeServiceName"]); serviceName != "" {
 		row["runtime"] = map[string]any{"serviceName": serviceName}
 	}
+	runtimeStatus := firstNonEmpty(stringValue(valueOrNil(row, "runtime", "status")), stringValue(row["runtimeStatus"]), stringValue(row["state"]))
+	row["runtimeStatus"] = runtimeStatus
 	access, _ := row["access"].(map[string]any)
 	access = cloneMap(access)
 	access["tokenStatus"] = firstNonEmpty(stringValue(access["tokenStatus"]), "active")
@@ -416,6 +429,19 @@ func workspaceResponse(row map[string]any) map[string]any {
 	}
 	if secretRef := stringValue(row["credentialSecretRef"]); secretRef != "" {
 		access["secretRef"] = secretRef
+	}
+	openable := access["tokenStatus"] == "active" && (runtimeStatus == "running" || runtimeStatus == "ready" || runtimeStatus == "available" || runtimeStatus == "active")
+	if state := stringValue(row["state"]); state == "suspended" || state == "data_deleted" || state == "storage_missing" || state == "destroyed" {
+		openable = false
+	}
+	row["openable"] = openable
+	switch {
+	case openable:
+		row["accessState"] = "available"
+	case access["tokenStatus"] == "active" && stringValue(row["state"]) != "data_deleted":
+		row["accessState"] = "distributing"
+	default:
+		row["accessState"] = "disabled"
 	}
 	row["access"] = access
 	return row
@@ -507,13 +533,11 @@ func destroyResourceInput(id string, row map[string]any) controlplane.DestroyRes
 }
 
 func computeHoldAmountCents(packageID string) int64 {
-	plan := packageByID(packageID)
-	return cents(priceField(plan, "computeHourly") * 24 * 7)
+	return computeHoldAmountCentsFromCatalog(defaultPricingCatalog(), packageID)
 }
 
 func storageHoldAmountCents(packageID string, sizeGB float64) int64 {
-	plan := packageByID(packageID)
-	return cents(priceField(plan, "storageGbMonth") * sizeGB / 30 * 7)
+	return storageHoldAmountCentsFromCatalog(defaultPricingCatalog(), packageID, sizeGB)
 }
 
 func packageByID(packageID string) map[string]any {

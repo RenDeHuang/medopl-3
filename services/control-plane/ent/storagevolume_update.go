@@ -104,6 +104,20 @@ func (svu *StorageVolumeUpdate) SetNillableName(s *string) *StorageVolumeUpdate 
 	return svu
 }
 
+// SetPackageID sets the "package_id" field.
+func (svu *StorageVolumeUpdate) SetPackageID(s string) *StorageVolumeUpdate {
+	svu.mutation.SetPackageID(s)
+	return svu
+}
+
+// SetNillablePackageID sets the "package_id" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillablePackageID(s *string) *StorageVolumeUpdate {
+	if s != nil {
+		svu.SetPackageID(*s)
+	}
+	return svu
+}
+
 // SetProvider sets the "provider" field.
 func (svu *StorageVolumeUpdate) SetProvider(s string) *StorageVolumeUpdate {
 	svu.mutation.SetProvider(s)
@@ -170,6 +184,76 @@ func (svu *StorageVolumeUpdate) SetStatus(s string) *StorageVolumeUpdate {
 func (svu *StorageVolumeUpdate) SetNillableStatus(s *string) *StorageVolumeUpdate {
 	if s != nil {
 		svu.SetStatus(*s)
+	}
+	return svu
+}
+
+// SetDesiredStatus sets the "desired_status" field.
+func (svu *StorageVolumeUpdate) SetDesiredStatus(s string) *StorageVolumeUpdate {
+	svu.mutation.SetDesiredStatus(s)
+	return svu
+}
+
+// SetNillableDesiredStatus sets the "desired_status" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableDesiredStatus(s *string) *StorageVolumeUpdate {
+	if s != nil {
+		svu.SetDesiredStatus(*s)
+	}
+	return svu
+}
+
+// SetProviderStatus sets the "provider_status" field.
+func (svu *StorageVolumeUpdate) SetProviderStatus(s string) *StorageVolumeUpdate {
+	svu.mutation.SetProviderStatus(s)
+	return svu
+}
+
+// SetNillableProviderStatus sets the "provider_status" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableProviderStatus(s *string) *StorageVolumeUpdate {
+	if s != nil {
+		svu.SetProviderStatus(*s)
+	}
+	return svu
+}
+
+// SetLastProviderSyncAt sets the "last_provider_sync_at" field.
+func (svu *StorageVolumeUpdate) SetLastProviderSyncAt(s string) *StorageVolumeUpdate {
+	svu.mutation.SetLastProviderSyncAt(s)
+	return svu
+}
+
+// SetNillableLastProviderSyncAt sets the "last_provider_sync_at" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableLastProviderSyncAt(s *string) *StorageVolumeUpdate {
+	if s != nil {
+		svu.SetLastProviderSyncAt(*s)
+	}
+	return svu
+}
+
+// SetLastProviderSyncError sets the "last_provider_sync_error" field.
+func (svu *StorageVolumeUpdate) SetLastProviderSyncError(s string) *StorageVolumeUpdate {
+	svu.mutation.SetLastProviderSyncError(s)
+	return svu
+}
+
+// SetNillableLastProviderSyncError sets the "last_provider_sync_error" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableLastProviderSyncError(s *string) *StorageVolumeUpdate {
+	if s != nil {
+		svu.SetLastProviderSyncError(*s)
+	}
+	return svu
+}
+
+// SetExternalDeletedAt sets the "external_deleted_at" field.
+func (svu *StorageVolumeUpdate) SetExternalDeletedAt(s string) *StorageVolumeUpdate {
+	svu.mutation.SetExternalDeletedAt(s)
+	return svu
+}
+
+// SetNillableExternalDeletedAt sets the "external_deleted_at" field if the given value is not nil.
+func (svu *StorageVolumeUpdate) SetNillableExternalDeletedAt(s *string) *StorageVolumeUpdate {
+	if s != nil {
+		svu.SetExternalDeletedAt(*s)
 	}
 	return svu
 }
@@ -549,6 +633,9 @@ func (svu *StorageVolumeUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	if value, ok := svu.mutation.Name(); ok {
 		_spec.SetField(storagevolume.FieldName, field.TypeString, value)
 	}
+	if value, ok := svu.mutation.PackageID(); ok {
+		_spec.SetField(storagevolume.FieldPackageID, field.TypeString, value)
+	}
 	if value, ok := svu.mutation.Provider(); ok {
 		_spec.SetField(storagevolume.FieldProvider, field.TypeString, value)
 	}
@@ -563,6 +650,21 @@ func (svu *StorageVolumeUpdate) sqlSave(ctx context.Context) (n int, err error) 
 	}
 	if value, ok := svu.mutation.Status(); ok {
 		_spec.SetField(storagevolume.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := svu.mutation.DesiredStatus(); ok {
+		_spec.SetField(storagevolume.FieldDesiredStatus, field.TypeString, value)
+	}
+	if value, ok := svu.mutation.ProviderStatus(); ok {
+		_spec.SetField(storagevolume.FieldProviderStatus, field.TypeString, value)
+	}
+	if value, ok := svu.mutation.LastProviderSyncAt(); ok {
+		_spec.SetField(storagevolume.FieldLastProviderSyncAt, field.TypeString, value)
+	}
+	if value, ok := svu.mutation.LastProviderSyncError(); ok {
+		_spec.SetField(storagevolume.FieldLastProviderSyncError, field.TypeString, value)
+	}
+	if value, ok := svu.mutation.ExternalDeletedAt(); ok {
+		_spec.SetField(storagevolume.FieldExternalDeletedAt, field.TypeString, value)
 	}
 	if value, ok := svu.mutation.BillingStatus(); ok {
 		_spec.SetField(storagevolume.FieldBillingStatus, field.TypeString, value)
@@ -732,6 +834,20 @@ func (svuo *StorageVolumeUpdateOne) SetNillableName(s *string) *StorageVolumeUpd
 	return svuo
 }
 
+// SetPackageID sets the "package_id" field.
+func (svuo *StorageVolumeUpdateOne) SetPackageID(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetPackageID(s)
+	return svuo
+}
+
+// SetNillablePackageID sets the "package_id" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillablePackageID(s *string) *StorageVolumeUpdateOne {
+	if s != nil {
+		svuo.SetPackageID(*s)
+	}
+	return svuo
+}
+
 // SetProvider sets the "provider" field.
 func (svuo *StorageVolumeUpdateOne) SetProvider(s string) *StorageVolumeUpdateOne {
 	svuo.mutation.SetProvider(s)
@@ -798,6 +914,76 @@ func (svuo *StorageVolumeUpdateOne) SetStatus(s string) *StorageVolumeUpdateOne 
 func (svuo *StorageVolumeUpdateOne) SetNillableStatus(s *string) *StorageVolumeUpdateOne {
 	if s != nil {
 		svuo.SetStatus(*s)
+	}
+	return svuo
+}
+
+// SetDesiredStatus sets the "desired_status" field.
+func (svuo *StorageVolumeUpdateOne) SetDesiredStatus(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetDesiredStatus(s)
+	return svuo
+}
+
+// SetNillableDesiredStatus sets the "desired_status" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableDesiredStatus(s *string) *StorageVolumeUpdateOne {
+	if s != nil {
+		svuo.SetDesiredStatus(*s)
+	}
+	return svuo
+}
+
+// SetProviderStatus sets the "provider_status" field.
+func (svuo *StorageVolumeUpdateOne) SetProviderStatus(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetProviderStatus(s)
+	return svuo
+}
+
+// SetNillableProviderStatus sets the "provider_status" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableProviderStatus(s *string) *StorageVolumeUpdateOne {
+	if s != nil {
+		svuo.SetProviderStatus(*s)
+	}
+	return svuo
+}
+
+// SetLastProviderSyncAt sets the "last_provider_sync_at" field.
+func (svuo *StorageVolumeUpdateOne) SetLastProviderSyncAt(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetLastProviderSyncAt(s)
+	return svuo
+}
+
+// SetNillableLastProviderSyncAt sets the "last_provider_sync_at" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableLastProviderSyncAt(s *string) *StorageVolumeUpdateOne {
+	if s != nil {
+		svuo.SetLastProviderSyncAt(*s)
+	}
+	return svuo
+}
+
+// SetLastProviderSyncError sets the "last_provider_sync_error" field.
+func (svuo *StorageVolumeUpdateOne) SetLastProviderSyncError(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetLastProviderSyncError(s)
+	return svuo
+}
+
+// SetNillableLastProviderSyncError sets the "last_provider_sync_error" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableLastProviderSyncError(s *string) *StorageVolumeUpdateOne {
+	if s != nil {
+		svuo.SetLastProviderSyncError(*s)
+	}
+	return svuo
+}
+
+// SetExternalDeletedAt sets the "external_deleted_at" field.
+func (svuo *StorageVolumeUpdateOne) SetExternalDeletedAt(s string) *StorageVolumeUpdateOne {
+	svuo.mutation.SetExternalDeletedAt(s)
+	return svuo
+}
+
+// SetNillableExternalDeletedAt sets the "external_deleted_at" field if the given value is not nil.
+func (svuo *StorageVolumeUpdateOne) SetNillableExternalDeletedAt(s *string) *StorageVolumeUpdateOne {
+	if s != nil {
+		svuo.SetExternalDeletedAt(*s)
 	}
 	return svuo
 }
@@ -1207,6 +1393,9 @@ func (svuo *StorageVolumeUpdateOne) sqlSave(ctx context.Context) (_node *Storage
 	if value, ok := svuo.mutation.Name(); ok {
 		_spec.SetField(storagevolume.FieldName, field.TypeString, value)
 	}
+	if value, ok := svuo.mutation.PackageID(); ok {
+		_spec.SetField(storagevolume.FieldPackageID, field.TypeString, value)
+	}
 	if value, ok := svuo.mutation.Provider(); ok {
 		_spec.SetField(storagevolume.FieldProvider, field.TypeString, value)
 	}
@@ -1221,6 +1410,21 @@ func (svuo *StorageVolumeUpdateOne) sqlSave(ctx context.Context) (_node *Storage
 	}
 	if value, ok := svuo.mutation.Status(); ok {
 		_spec.SetField(storagevolume.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := svuo.mutation.DesiredStatus(); ok {
+		_spec.SetField(storagevolume.FieldDesiredStatus, field.TypeString, value)
+	}
+	if value, ok := svuo.mutation.ProviderStatus(); ok {
+		_spec.SetField(storagevolume.FieldProviderStatus, field.TypeString, value)
+	}
+	if value, ok := svuo.mutation.LastProviderSyncAt(); ok {
+		_spec.SetField(storagevolume.FieldLastProviderSyncAt, field.TypeString, value)
+	}
+	if value, ok := svuo.mutation.LastProviderSyncError(); ok {
+		_spec.SetField(storagevolume.FieldLastProviderSyncError, field.TypeString, value)
+	}
+	if value, ok := svuo.mutation.ExternalDeletedAt(); ok {
+		_spec.SetField(storagevolume.FieldExternalDeletedAt, field.TypeString, value)
 	}
 	if value, ok := svuo.mutation.BillingStatus(); ok {
 		_spec.SetField(storagevolume.FieldBillingStatus, field.TypeString, value)

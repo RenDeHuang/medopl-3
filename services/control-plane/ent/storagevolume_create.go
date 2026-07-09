@@ -96,6 +96,20 @@ func (svc *StorageVolumeCreate) SetNillableName(s *string) *StorageVolumeCreate 
 	return svc
 }
 
+// SetPackageID sets the "package_id" field.
+func (svc *StorageVolumeCreate) SetPackageID(s string) *StorageVolumeCreate {
+	svc.mutation.SetPackageID(s)
+	return svc
+}
+
+// SetNillablePackageID sets the "package_id" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillablePackageID(s *string) *StorageVolumeCreate {
+	if s != nil {
+		svc.SetPackageID(*s)
+	}
+	return svc
+}
+
 // SetProvider sets the "provider" field.
 func (svc *StorageVolumeCreate) SetProvider(s string) *StorageVolumeCreate {
 	svc.mutation.SetProvider(s)
@@ -162,6 +176,76 @@ func (svc *StorageVolumeCreate) SetStatus(s string) *StorageVolumeCreate {
 func (svc *StorageVolumeCreate) SetNillableStatus(s *string) *StorageVolumeCreate {
 	if s != nil {
 		svc.SetStatus(*s)
+	}
+	return svc
+}
+
+// SetDesiredStatus sets the "desired_status" field.
+func (svc *StorageVolumeCreate) SetDesiredStatus(s string) *StorageVolumeCreate {
+	svc.mutation.SetDesiredStatus(s)
+	return svc
+}
+
+// SetNillableDesiredStatus sets the "desired_status" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableDesiredStatus(s *string) *StorageVolumeCreate {
+	if s != nil {
+		svc.SetDesiredStatus(*s)
+	}
+	return svc
+}
+
+// SetProviderStatus sets the "provider_status" field.
+func (svc *StorageVolumeCreate) SetProviderStatus(s string) *StorageVolumeCreate {
+	svc.mutation.SetProviderStatus(s)
+	return svc
+}
+
+// SetNillableProviderStatus sets the "provider_status" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableProviderStatus(s *string) *StorageVolumeCreate {
+	if s != nil {
+		svc.SetProviderStatus(*s)
+	}
+	return svc
+}
+
+// SetLastProviderSyncAt sets the "last_provider_sync_at" field.
+func (svc *StorageVolumeCreate) SetLastProviderSyncAt(s string) *StorageVolumeCreate {
+	svc.mutation.SetLastProviderSyncAt(s)
+	return svc
+}
+
+// SetNillableLastProviderSyncAt sets the "last_provider_sync_at" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableLastProviderSyncAt(s *string) *StorageVolumeCreate {
+	if s != nil {
+		svc.SetLastProviderSyncAt(*s)
+	}
+	return svc
+}
+
+// SetLastProviderSyncError sets the "last_provider_sync_error" field.
+func (svc *StorageVolumeCreate) SetLastProviderSyncError(s string) *StorageVolumeCreate {
+	svc.mutation.SetLastProviderSyncError(s)
+	return svc
+}
+
+// SetNillableLastProviderSyncError sets the "last_provider_sync_error" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableLastProviderSyncError(s *string) *StorageVolumeCreate {
+	if s != nil {
+		svc.SetLastProviderSyncError(*s)
+	}
+	return svc
+}
+
+// SetExternalDeletedAt sets the "external_deleted_at" field.
+func (svc *StorageVolumeCreate) SetExternalDeletedAt(s string) *StorageVolumeCreate {
+	svc.mutation.SetExternalDeletedAt(s)
+	return svc
+}
+
+// SetNillableExternalDeletedAt sets the "external_deleted_at" field if the given value is not nil.
+func (svc *StorageVolumeCreate) SetNillableExternalDeletedAt(s *string) *StorageVolumeCreate {
+	if s != nil {
+		svc.SetExternalDeletedAt(*s)
 	}
 	return svc
 }
@@ -479,6 +563,10 @@ func (svc *StorageVolumeCreate) defaults() {
 		v := storagevolume.DefaultName
 		svc.mutation.SetName(v)
 	}
+	if _, ok := svc.mutation.PackageID(); !ok {
+		v := storagevolume.DefaultPackageID
+		svc.mutation.SetPackageID(v)
+	}
 	if _, ok := svc.mutation.Provider(); !ok {
 		v := storagevolume.DefaultProvider
 		svc.mutation.SetProvider(v)
@@ -498,6 +586,26 @@ func (svc *StorageVolumeCreate) defaults() {
 	if _, ok := svc.mutation.Status(); !ok {
 		v := storagevolume.DefaultStatus
 		svc.mutation.SetStatus(v)
+	}
+	if _, ok := svc.mutation.DesiredStatus(); !ok {
+		v := storagevolume.DefaultDesiredStatus
+		svc.mutation.SetDesiredStatus(v)
+	}
+	if _, ok := svc.mutation.ProviderStatus(); !ok {
+		v := storagevolume.DefaultProviderStatus
+		svc.mutation.SetProviderStatus(v)
+	}
+	if _, ok := svc.mutation.LastProviderSyncAt(); !ok {
+		v := storagevolume.DefaultLastProviderSyncAt
+		svc.mutation.SetLastProviderSyncAt(v)
+	}
+	if _, ok := svc.mutation.LastProviderSyncError(); !ok {
+		v := storagevolume.DefaultLastProviderSyncError
+		svc.mutation.SetLastProviderSyncError(v)
+	}
+	if _, ok := svc.mutation.ExternalDeletedAt(); !ok {
+		v := storagevolume.DefaultExternalDeletedAt
+		svc.mutation.SetExternalDeletedAt(v)
 	}
 	if _, ok := svc.mutation.BillingStatus(); !ok {
 		v := storagevolume.DefaultBillingStatus
@@ -598,6 +706,9 @@ func (svc *StorageVolumeCreate) check() error {
 	if _, ok := svc.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "StorageVolume.name"`)}
 	}
+	if _, ok := svc.mutation.PackageID(); !ok {
+		return &ValidationError{Name: "package_id", err: errors.New(`ent: missing required field "StorageVolume.package_id"`)}
+	}
 	if _, ok := svc.mutation.Provider(); !ok {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "StorageVolume.provider"`)}
 	}
@@ -612,6 +723,21 @@ func (svc *StorageVolumeCreate) check() error {
 	}
 	if _, ok := svc.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "StorageVolume.status"`)}
+	}
+	if _, ok := svc.mutation.DesiredStatus(); !ok {
+		return &ValidationError{Name: "desired_status", err: errors.New(`ent: missing required field "StorageVolume.desired_status"`)}
+	}
+	if _, ok := svc.mutation.ProviderStatus(); !ok {
+		return &ValidationError{Name: "provider_status", err: errors.New(`ent: missing required field "StorageVolume.provider_status"`)}
+	}
+	if _, ok := svc.mutation.LastProviderSyncAt(); !ok {
+		return &ValidationError{Name: "last_provider_sync_at", err: errors.New(`ent: missing required field "StorageVolume.last_provider_sync_at"`)}
+	}
+	if _, ok := svc.mutation.LastProviderSyncError(); !ok {
+		return &ValidationError{Name: "last_provider_sync_error", err: errors.New(`ent: missing required field "StorageVolume.last_provider_sync_error"`)}
+	}
+	if _, ok := svc.mutation.ExternalDeletedAt(); !ok {
+		return &ValidationError{Name: "external_deleted_at", err: errors.New(`ent: missing required field "StorageVolume.external_deleted_at"`)}
 	}
 	if _, ok := svc.mutation.BillingStatus(); !ok {
 		return &ValidationError{Name: "billing_status", err: errors.New(`ent: missing required field "StorageVolume.billing_status"`)}
@@ -731,6 +857,10 @@ func (svc *StorageVolumeCreate) createSpec() (*StorageVolume, *sqlgraph.CreateSp
 		_spec.SetField(storagevolume.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
+	if value, ok := svc.mutation.PackageID(); ok {
+		_spec.SetField(storagevolume.FieldPackageID, field.TypeString, value)
+		_node.PackageID = value
+	}
 	if value, ok := svc.mutation.Provider(); ok {
 		_spec.SetField(storagevolume.FieldProvider, field.TypeString, value)
 		_node.Provider = value
@@ -750,6 +880,26 @@ func (svc *StorageVolumeCreate) createSpec() (*StorageVolume, *sqlgraph.CreateSp
 	if value, ok := svc.mutation.Status(); ok {
 		_spec.SetField(storagevolume.FieldStatus, field.TypeString, value)
 		_node.Status = value
+	}
+	if value, ok := svc.mutation.DesiredStatus(); ok {
+		_spec.SetField(storagevolume.FieldDesiredStatus, field.TypeString, value)
+		_node.DesiredStatus = value
+	}
+	if value, ok := svc.mutation.ProviderStatus(); ok {
+		_spec.SetField(storagevolume.FieldProviderStatus, field.TypeString, value)
+		_node.ProviderStatus = value
+	}
+	if value, ok := svc.mutation.LastProviderSyncAt(); ok {
+		_spec.SetField(storagevolume.FieldLastProviderSyncAt, field.TypeString, value)
+		_node.LastProviderSyncAt = value
+	}
+	if value, ok := svc.mutation.LastProviderSyncError(); ok {
+		_spec.SetField(storagevolume.FieldLastProviderSyncError, field.TypeString, value)
+		_node.LastProviderSyncError = value
+	}
+	if value, ok := svc.mutation.ExternalDeletedAt(); ok {
+		_spec.SetField(storagevolume.FieldExternalDeletedAt, field.TypeString, value)
+		_node.ExternalDeletedAt = value
 	}
 	if value, ok := svc.mutation.BillingStatus(); ok {
 		_spec.SetField(storagevolume.FieldBillingStatus, field.TypeString, value)

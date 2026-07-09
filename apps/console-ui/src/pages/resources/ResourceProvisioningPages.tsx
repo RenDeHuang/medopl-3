@@ -294,9 +294,11 @@ export function ComputeAllocationDetailPage({ state, path, session, runAction }:
         <ResourceSplit
           items={[
             { label: "状态", value: resource.status || "-", status: resource.status || "pending", tone: resourceStatus(resource.status) },
+            { label: "云端状态", value: resource.providerStatus || "-", meta: resource.lastProviderSyncAt || "尚未同步", status: resource.providerStatus || "unknown", tone: resource.providerStatus === "missing" ? "danger" : "info" },
             { label: "规格", value: resource.spec || "-", meta: resource.packageId },
             { label: "计费状态", value: billingStatusLabel(resource.billingStatus), meta: `${money(resource.hourlyPrice)}/小时`, status: resource.billingStatus || "pending", tone: resource.billingStatus === "active" ? "good" : "warn" },
             { label: "绑定入口", value: workspace?.name || workspaceId || "-", meta: workspaceId || "尚未创建工作区入口" },
+            { label: "同步错误", value: resource.lastProviderSyncError ? customerSafeMessage(resource.lastProviderSyncError) : "-", meta: "来自后端同步任务", status: resource.lastProviderSyncError ? "异常" : "正常", tone: resource.lastProviderSyncError ? "danger" : "neutral" },
             { label: "失败原因", value: resource.safeMessage ? customerSafeMessage(resource.safeMessage) : "-", meta: "如需帮助可提交工单", status: resource.safeMessage ? "异常" : "正常", tone: resource.safeMessage ? "danger" : "neutral" }
           ]}
         />
@@ -489,9 +491,11 @@ export function StorageVolumeDetailPage({ state, path, session, runAction }: any
         <ResourceSplit
           items={[
             { label: "状态", value: resource.status || "-", status: resource.status || "pending", tone: resourceStatus(resource.status) },
+            { label: "云端状态", value: resource.providerStatus || "-", meta: resource.lastProviderSyncAt || "尚未同步", status: resource.providerStatus || "unknown", tone: resource.providerStatus === "missing" ? "danger" : "info" },
             { label: "容量", value: `${resource.sizeGb || 0}GB`, meta: "当前存储容量" },
             { label: "计费状态", value: billingStatusLabel(resource.billingStatus), meta: `${money(resource.hourlyEstimate)}/小时`, status: resource.billingStatus || "pending", tone: resource.billingStatus === "active" ? "good" : "warn" },
             { label: "绑定入口", value: workspace?.name || workspaceId || "-", meta: workspaceId || "尚未创建工作区入口" },
+            { label: "同步错误", value: resource.lastProviderSyncError ? customerSafeMessage(resource.lastProviderSyncError) : "-", meta: "来自后端同步任务", status: resource.lastProviderSyncError ? "异常" : "正常", tone: resource.lastProviderSyncError ? "danger" : "neutral" },
             { label: "失败原因", value: resource.safeMessage ? customerSafeMessage(resource.safeMessage) : "-", meta: "如需帮助可提交工单", status: resource.safeMessage ? "异常" : "正常", tone: resource.safeMessage ? "danger" : "neutral" }
           ]}
         />

@@ -1,6 +1,7 @@
 package server
 
 import "net/http"
+import "time"
 
 func (app *controlPlaneApp) rememberCompute(allocation any) error {
 	if row, ok := allocation.(map[string]any); ok {
@@ -96,6 +97,38 @@ func (app *controlPlaneApp) rememberAttachment(attachment any, input map[string]
 		return app.persistLocked()
 	}
 	return nil
+}
+
+func providerSyncFacts(row map[string]any, err error) map[string]any {
+	out := cloneMap(row)
+	now := time.Now().UTC().Format(time.RFC3339Nano)
+	out["lastProviderSyncAt"] = now
+	if err != nil {
+		out["providerStatus"] = "sync_failed"
+		out["lastProviderSyncError"] = customerSafeProviderError(err)
+		return out
+	}
+	status := stringValue(out["status"])
+	out["lastProviderSyncError"] = ""
+	if isExternallyDeletedStatus(status) {
+		out["providerStatus"] = "missing"
+		out["externalDeletedAt"] = firstNonEmpty(stringValue(out["externalDeletedAt"]), now)
+		out["billingStatus"] = "stopped"
+		return out
+	}
+	out["providerStatus"] = firstNonEmpty(status, "running")
+	return out
+}
+
+func isExternallyDeletedStatus(status string) bool {
+	return status == "external_deleted" || status == "deleted" || status == "missing"
+}
+
+func customerSafeProviderError(err error) string {
+	if err == nil {
+		return ""
+	}
+	return err.Error()
 }
 
 func (app *controlPlaneApp) resourceBelongsToAccount(row map[string]any, accountID string) bool {

@@ -42,6 +42,10 @@ type Tx struct {
 	Membership *MembershipClient
 	// Organization is the client for interacting with the Organization builders.
 	Organization *OrganizationClient
+	// PricingCatalog is the client for interacting with the PricingCatalog builders.
+	PricingCatalog *PricingCatalogClient
+	// PricingItem is the client for interacting with the PricingItem builders.
+	PricingItem *PricingItemClient
 	// ProductionE2ERecord is the client for interacting with the ProductionE2ERecord builders.
 	ProductionE2ERecord *ProductionE2ERecordClient
 	// RuntimeOperation is the client for interacting with the RuntimeOperation builders.
@@ -208,6 +212,8 @@ func (tx *Tx) init() {
 	tx.ManualTopupProjection = NewManualTopupProjectionClient(tx.config)
 	tx.Membership = NewMembershipClient(tx.config)
 	tx.Organization = NewOrganizationClient(tx.config)
+	tx.PricingCatalog = NewPricingCatalogClient(tx.config)
+	tx.PricingItem = NewPricingItemClient(tx.config)
 	tx.ProductionE2ERecord = NewProductionE2ERecordClient(tx.config)
 	tx.RuntimeOperation = NewRuntimeOperationClient(tx.config)
 	tx.Session = NewSessionClient(tx.config)

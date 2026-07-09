@@ -28,7 +28,12 @@ func registerStateRoutes(mux *http.ServeMux, app *controlPlaneApp, service *cont
 		writeJSON(w, http.StatusOK, app.state(accountID, computePools))
 	}))
 	mux.HandleFunc("GET /api/pricing/catalog", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, pricingCatalogResponse())
+		catalog, err := app.pricingCatalogResponse(r.Context())
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "pricing_catalog_unavailable")
+			return
+		}
+		writeJSON(w, http.StatusOK, catalog)
 	}))
 	mux.HandleFunc("POST /api/pricing/preview", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		if !limitJSONBody(w, r) {
@@ -44,7 +49,12 @@ func registerStateRoutes(mux *http.ServeMux, app *controlPlaneApp, service *cont
 			writeUpstreamError(w)
 			return
 		}
-		writeJSON(w, http.StatusOK, pricingPreviewResponse(input, walletProjection(wallet)))
+		preview, err := app.pricingPreviewResponse(r.Context(), input, walletProjection(wallet))
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "pricing_catalog_unavailable")
+			return
+		}
+		writeJSON(w, http.StatusOK, preview)
 	}))
 	mux.HandleFunc("GET /api/management/state", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		if !app.syncRuntimeOperations(w, r, service) {

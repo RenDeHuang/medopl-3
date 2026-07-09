@@ -16,6 +16,8 @@ import (
 	"opl-cloud/services/control-plane/ent/computeallocation"
 	"opl-cloud/services/control-plane/ent/ledgerprojection"
 	"opl-cloud/services/control-plane/ent/manualtopupprojection"
+	"opl-cloud/services/control-plane/ent/pricingcatalog"
+	"opl-cloud/services/control-plane/ent/pricingitem"
 	"opl-cloud/services/control-plane/ent/productione2erecord"
 	"opl-cloud/services/control-plane/ent/runtimeoperation"
 	"opl-cloud/services/control-plane/ent/storageattachment"
@@ -75,7 +77,12 @@ func NewPostgresEntStateStore(databaseURL string) (StateStore, error) {
 		_ = client.Close()
 		return nil, err
 	}
-	return &postgresEntStateStore{client: client}, nil
+	store := &postgresEntStateStore{client: client}
+	if err := store.ensureDefaultPricingCatalog(context.Background()); err != nil {
+		_ = client.Close()
+		return nil, err
+	}
+	return store, nil
 }
 
 type entRecordField struct {
@@ -148,6 +155,11 @@ var (
 		textField("ProviderRequestID", "SetProviderRequestID", "providerRequestId"),
 		textField("OperationID", "SetOperationID", "operationId"),
 		textField("Status", "SetStatus", "status"),
+		textField("DesiredStatus", "SetDesiredStatus", "desiredStatus"),
+		textField("ProviderStatus", "SetProviderStatus", "providerStatus"),
+		textField("LastProviderSyncAt", "SetLastProviderSyncAt", "lastProviderSyncAt"),
+		textField("LastProviderSyncError", "SetLastProviderSyncError", "lastProviderSyncError"),
+		textField("ExternalDeletedAt", "SetExternalDeletedAt", "externalDeletedAt"),
 		textField("BillingStatus", "SetBillingStatus", "billingStatus"),
 		textField("HoldID", "SetHoldID", "holdId"),
 		textField("HoldReleaseID", "SetHoldReleaseID", "holdReleaseId"),
@@ -179,11 +191,17 @@ var (
 		textField("OwnerUserID", "SetOwnerUserID", "ownerUserId"),
 		textField("WorkspaceID", "SetWorkspaceID", "workspaceId"),
 		textField("Name", "SetName", "name"),
+		textField("PackageID", "SetPackageID", "packageId"),
 		textField("Provider", "SetProvider", "provider"),
 		textField("ProviderResourceID", "SetProviderResourceID", "providerResourceId"),
 		textField("ProviderRequestID", "SetProviderRequestID", "providerRequestId"),
 		textField("OperationID", "SetOperationID", "operationId"),
 		textField("Status", "SetStatus", "status"),
+		textField("DesiredStatus", "SetDesiredStatus", "desiredStatus"),
+		textField("ProviderStatus", "SetProviderStatus", "providerStatus"),
+		textField("LastProviderSyncAt", "SetLastProviderSyncAt", "lastProviderSyncAt"),
+		textField("LastProviderSyncError", "SetLastProviderSyncError", "lastProviderSyncError"),
+		textField("ExternalDeletedAt", "SetExternalDeletedAt", "externalDeletedAt"),
 		textField("BillingStatus", "SetBillingStatus", "billingStatus"),
 		textField("HoldID", "SetHoldID", "holdId"),
 		textField("HoldReleaseID", "SetHoldReleaseID", "holdReleaseId"),
@@ -461,6 +479,112 @@ func (s *postgresEntStateStore) SettlementResourceRows(ctx context.Context) (con
 		return nil, nil, err
 	}
 	return computes, storages, nil
+}
+
+func (s *postgresEntStateStore) ensureDefaultPricingCatalog(ctx context.Context) error {
+	catalog := defaultPricingCatalog()
+	existing, err := s.client.PricingCatalog.Query().Where(pricingcatalog.Version(catalog.Version)).Only(ctx)
+	if err != nil && !controlplaneent.IsNotFound(err) {
+		return err
+	}
+	if existing == nil {
+		if err := s.client.PricingCatalog.Create().
+			SetID("pricing-catalog-" + stableID(catalog.Version)[:12]).
+			SetVersion(catalog.Version).
+			SetCurrency(catalog.Currency).
+			SetHoldDays(catalog.HoldDays).
+			SetEffectiveFrom("2026-07-06T00:00:00Z").
+			SetStatus("current").
+			Exec(ctx); err != nil && !controlplaneent.IsConstraintError(err) {
+			return err
+		}
+	}
+	count, err := s.client.PricingItem.Query().Where(pricingitem.CatalogVersion(catalog.Version)).Count(ctx)
+	if err != nil {
+		return err
+	}
+	if count > 0 {
+		return nil
+	}
+	for _, plan := range catalog.Packages {
+		for _, item := range []struct {
+			resourceType string
+			unit         string
+			unitPrice    float64
+		}{
+			{resourceType: "compute", unit: "hour", unitPrice: plan.ComputeHourly},
+			{resourceType: "storage", unit: "gb_month", unitPrice: plan.StorageGBMonth},
+		} {
+			id := "pricing-item-" + stableID(catalog.Version, plan.ID, item.resourceType)[:16]
+			if err := s.client.PricingItem.Create().
+				SetID(id).
+				SetCatalogVersion(catalog.Version).
+				SetPackageID(plan.ID).
+				SetResourceType(item.resourceType).
+				SetUnit(item.unit).
+				SetUnitPrice(item.unitPrice).
+				SetUnitPriceCents(cents(item.unitPrice)).
+				SetAvailable(plan.Available).
+				SetName(plan.Name).
+				SetServer(plan.Server).
+				SetCPU(plan.CPU).
+				SetMemoryGB(plan.MemoryGB).
+				SetDiskGB(plan.DiskGB).
+				Exec(ctx); err != nil && !controlplaneent.IsConstraintError(err) {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (s *postgresEntStateStore) PricingCatalog(ctx context.Context) (pricingCatalogData, error) {
+	if err := s.ensureDefaultPricingCatalog(ctx); err != nil {
+		return pricingCatalogData{}, err
+	}
+	row, err := s.client.PricingCatalog.Query().Where(pricingcatalog.Status("current")).Only(ctx)
+	if controlplaneent.IsNotFound(err) {
+		return defaultPricingCatalog(), nil
+	}
+	if err != nil {
+		return pricingCatalogData{}, err
+	}
+	items, err := s.client.PricingItem.Query().
+		Where(pricingitem.CatalogVersion(row.Version)).
+		Order(controlplaneent.Asc(pricingitem.FieldPackageID, pricingitem.FieldResourceType)).
+		All(ctx)
+	if err != nil {
+		return pricingCatalogData{}, err
+	}
+	byPackage := map[string]*pricingPackageData{}
+	order := []string{}
+	for _, item := range items {
+		plan := byPackage[item.PackageID]
+		if plan == nil {
+			plan = &pricingPackageData{
+				ID:        item.PackageID,
+				Name:      item.Name,
+				Available: item.Available,
+				CPU:       item.CPU,
+				MemoryGB:  item.MemoryGB,
+				DiskGB:    item.DiskGB,
+				Server:    item.Server,
+			}
+			byPackage[item.PackageID] = plan
+			order = append(order, item.PackageID)
+		}
+		switch item.ResourceType {
+		case "storage":
+			plan.StorageGBMonth = item.UnitPrice
+		default:
+			plan.ComputeHourly = item.UnitPrice
+		}
+	}
+	catalog := pricingCatalogData{Version: row.Version, Currency: row.Currency, HoldDays: row.HoldDays}
+	for _, packageID := range order {
+		catalog.Packages = append(catalog.Packages, *byPackage[packageID])
+	}
+	return catalog, nil
 }
 
 func (s *postgresEntStateStore) ArchiveTerminalResources(ctx context.Context, reason string) (map[string]any, error) {
