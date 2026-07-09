@@ -34,6 +34,9 @@ func NewPersistentServer(service *controlplane.Service, store StateStore) (http.
 	if settlementWorkerEnabled() {
 		app.startPeriodicSettlementWorker(context.Background(), service, settlementWorkerInterval())
 	}
+	if archiveRetentionWorkerEnabled() {
+		app.startArchiveRetentionWorker(context.Background(), archiveRetentionWorkerInterval())
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/w/", app.proxyWorkspace)
 	mux.HandleFunc("/api/", app.proxyWorkspaceRoot)
@@ -121,6 +124,9 @@ func NewPersistentServer(service *controlplane.Service, store StateStore) (http.
 		if !app.syncLedgerFacts(w, r, service, accountID) {
 			return
 		}
+		if !app.refreshFacts(w, r) {
+			return
+		}
 		computePools, ok := fabricComputePools(w, r, service)
 		if !ok {
 			return
@@ -153,6 +159,9 @@ func NewPersistentServer(service *controlplane.Service, store StateStore) (http.
 		if !app.syncLedgerFacts(w, r, service, "") {
 			return
 		}
+		if !app.refreshFacts(w, r) {
+			return
+		}
 		computePools, ok := fabricComputePools(w, r, service)
 		if !ok {
 			return
@@ -164,6 +173,9 @@ func NewPersistentServer(service *controlplane.Service, store StateStore) (http.
 			return
 		}
 		if !app.syncLedgerFacts(w, r, service, "") {
+			return
+		}
+		if !app.refreshFacts(w, r) {
 			return
 		}
 		writeJSON(w, http.StatusOK, app.operatorSummary())
@@ -191,6 +203,9 @@ func NewPersistentServer(service *controlplane.Service, store StateStore) (http.
 	mux.HandleFunc("GET /api/workspaces", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		accountID, ok := app.scopedAccountID(w, r, nil)
 		if !ok {
+			return
+		}
+		if !app.refreshFacts(w, r) {
 			return
 		}
 		writeJSON(w, http.StatusOK, app.state(accountID, nil)["workspaces"])
@@ -945,6 +960,14 @@ func (app *controlPlaneApp) syncLedgerFacts(w http.ResponseWriter, r *http.Reque
 	}
 	if err := app.applyLedgerFacts(accountID, wallet, entries, transactions, topups, settlements); err != nil {
 		writeError(w, http.StatusInternalServerError, "state_persist_failed")
+		return false
+	}
+	return true
+}
+
+func (app *controlPlaneApp) refreshFacts(w http.ResponseWriter, r *http.Request) bool {
+	if err := app.refreshFactsFromStore(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "state_load_failed")
 		return false
 	}
 	return true

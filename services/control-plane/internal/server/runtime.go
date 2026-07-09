@@ -113,34 +113,37 @@ func (app *controlPlaneApp) factsLocked() controlPlaneState {
 }
 
 func (app *controlPlaneApp) applyFacts(facts controlPlaneState) {
-	if len(facts.Computes) > 0 {
+	if facts.Computes != nil {
 		app.computes = cloneStateTable(facts.Computes)
 	}
-	if len(facts.Storages) > 0 {
+	if facts.Storages != nil {
 		app.storages = cloneStateTable(facts.Storages)
 	}
-	if len(facts.Attachments) > 0 {
+	if facts.Attachments != nil {
 		app.attachments = cloneStateTable(facts.Attachments)
 	}
-	if len(facts.Workspaces) > 0 {
+	if facts.Workspaces != nil {
 		app.workspaces = cloneStateTable(facts.Workspaces)
 	}
-	if len(facts.Users) > 0 {
+	if facts.Users != nil {
 		app.users = cloneStateTable(facts.Users)
 	}
-	if len(facts.Sessions) > 0 {
+	if len(app.users) == 0 {
+		app.users = controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}}
+	}
+	if facts.Sessions != nil {
 		app.sessions = sessionsFromFacts(facts.Sessions)
 	}
-	if len(facts.Orgs) > 0 {
+	if facts.Orgs != nil {
 		app.orgs = cloneStateTable(facts.Orgs)
 	}
-	if len(facts.Memberships) > 0 {
+	if facts.Memberships != nil {
 		app.memberships = cloneStateTable(facts.Memberships)
 	}
-	if len(facts.Support) > 0 {
+	if facts.Support != nil {
 		app.support = cloneStateTable(facts.Support)
 	}
-	if len(facts.Wallets) > 0 {
+	if facts.Wallets != nil {
 		app.wallets = cloneStateTable(facts.Wallets)
 	}
 	if facts.Ledger != nil {
@@ -161,6 +164,20 @@ func (app *controlPlaneApp) applyFacts(facts controlPlaneState) {
 	if facts.Reconcile != nil {
 		app.reconcile = cloneMap(facts.Reconcile)
 	}
+}
+
+func (app *controlPlaneApp) refreshFactsFromStore(ctx context.Context) error {
+	if app.store == nil {
+		return nil
+	}
+	facts, err := app.store.Load(ctx)
+	if err != nil {
+		return err
+	}
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	app.applyFacts(facts)
+	return nil
 }
 
 func (app *controlPlaneApp) persistLocked() error {

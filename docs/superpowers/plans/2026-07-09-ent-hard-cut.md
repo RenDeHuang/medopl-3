@@ -31,7 +31,7 @@
 
 - [x] Replace `FactStore` with typed Ent repositories.
 - [x] Remove file fact store and `OPL_CONTROL_PLANE_FACTS_FILE`.
-- [ ] Make `/api/state` and `/api/management/state` aggregate Ent facts plus Ledger/Fabric HTTP reads only.
+- [x] Make `/api/state` and `/api/management/state` aggregate Ent facts plus Ledger/Fabric HTTP reads only.
 - [ ] Delete old fact-store tests once Ent repository tests cover the behavior.
 - [ ] Confirm frontend-facing DTOs still expose price, wallet, resources, URL, account, audit, and support facts from backend responses.
 
@@ -53,7 +53,7 @@
 
 - [x] Add archive tables for destroyed compute allocations, storage volumes, storage attachments, workspaces, and admin audit events.
 - [x] Add `ArchiveService` for terminal Control Plane facts.
-- [ ] Add scheduled retention worker for terminal Control Plane facts.
+- [x] Add scheduled retention worker for terminal Control Plane facts.
 - [x] Exclude archived resources from customer current-state pages.
 - [x] Add admin archive API and frontend API client surface.
 - [x] Do not archive or delete Ledger accounting facts in this phase.
@@ -69,6 +69,6 @@
 
 - [ ] Delete old compatibility paths, file persistence, generic fact store, and demo/fallback data.
 - [x] Run `rg "fact_store|postgresFactStore|fileFactStore|controlPlaneFacts|payload JSONB|demo|fallback|compat|legacy"` and leave only tests/history docs that intentionally forbid retired paths.
-- [ ] Run `go test ./...` in all three services.
-- [ ] Run `npm test`, `npm run typecheck`, and `sentrux check .`.
+- [x] Run `go test ./...` in all three services.
+- [x] Run `npm test`, `npm run typecheck`, and `sentrux check .`.
 - [ ] Commit and push the feature branch. Do not rollout.
