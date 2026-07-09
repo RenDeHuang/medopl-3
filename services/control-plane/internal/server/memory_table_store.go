@@ -52,6 +52,13 @@ func (s *memoryTableStore) SaveUser(_ context.Context, row map[string]any) error
 	return nil
 }
 
+func (s *memoryTableStore) DeleteUser(_ context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.users, id)
+	return nil
+}
+
 func (s *memoryTableStore) ListSessions(_ context.Context) (controlPlaneRecordSet, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

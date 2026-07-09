@@ -5,6 +5,7 @@ import "context"
 type controlPlaneTableStore interface {
 	ListUsers(ctx context.Context, includeDeleted bool) ([]map[string]any, error)
 	SaveUser(ctx context.Context, row map[string]any) error
+	DeleteUser(ctx context.Context, id string) error
 	ListSessions(ctx context.Context) (controlPlaneRecordSet, error)
 	SaveSession(ctx context.Context, row map[string]any) error
 	DeleteSession(ctx context.Context, id string) error

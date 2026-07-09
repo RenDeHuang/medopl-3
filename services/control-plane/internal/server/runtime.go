@@ -20,6 +20,7 @@ import (
 type controlPlaneApp struct {
 	mu          sync.Mutex
 	store       StateStore
+	tables      controlPlaneTableStore
 	orgs        controlPlaneRecordSet
 	memberships controlPlaneRecordSet
 	support     controlPlaneRecordSet
@@ -71,6 +72,12 @@ func newControlPlaneApp() *controlPlaneApp {
 func newControlPlaneAppWithStore(store StateStore) (*controlPlaneApp, error) {
 	app := newControlPlaneAppEmpty()
 	app.store = store
+	if tableStore, ok := store.(controlPlaneTableStore); ok {
+		app.tables = tableStore
+	}
+	if app.tables == nil {
+		app.tables = newMemoryTableStore()
+	}
 	if store != nil {
 		facts, err := store.Load(context.Background())
 		if err != nil {
@@ -78,14 +85,30 @@ func newControlPlaneAppWithStore(store StateStore) (*controlPlaneApp, error) {
 		}
 		app.applyFacts(facts)
 	}
+	if err := app.ensureBootstrapAdmin(); err != nil {
+		return nil, err
+	}
 	if err := app.importBootstrapUsers(); err != nil {
 		return nil, err
 	}
 	return app, nil
 }
 
+func (app *controlPlaneApp) ensureBootstrapAdmin() error {
+	users, err := app.tables.ListUsers(context.Background(), true)
+	if err != nil {
+		return err
+	}
+	if len(users) > 0 {
+		return nil
+	}
+	return app.tables.SaveUser(context.Background(), map[string]any{"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"})
+}
+
 func newControlPlaneAppEmpty() *controlPlaneApp {
+	tables := newMemoryTableStore()
 	return &controlPlaneApp{
+		tables:      tables,
 		orgs:        controlPlaneRecordSet{},
 		memberships: controlPlaneRecordSet{},
 		support:     controlPlaneRecordSet{},
@@ -113,7 +136,7 @@ func (app *controlPlaneApp) factsLocked() controlPlaneState {
 		Storages:    cloneStateTable(app.resources.storages),
 		Attachments: app.attachmentFactsLocked(),
 		Workspaces:  cloneStateTable(app.resources.workspaces),
-		Users:       cloneStateTable(app.auth.users),
+		Users:       app.userRecordSet(true),
 		Sessions:    app.sessionFactsLocked(),
 		Orgs:        cloneStateTable(app.orgs),
 		Memberships: cloneStateTable(app.memberships),
@@ -208,7 +231,7 @@ func (app *controlPlaneApp) persistLocked() error {
 }
 
 func (app *controlPlaneApp) authUsersLocked() controlPlaneRecordSet {
-	return app.auth.users
+	return app.userRecordSet(true)
 }
 
 func (app *controlPlaneApp) state(accountID string, computePools []any) map[string]any {
@@ -243,12 +266,24 @@ func (app *controlPlaneApp) state(accountID string, computePools []any) map[stri
 }
 
 func (app *controlPlaneApp) currentUserLocked() map[string]any {
-	for _, user := range app.auth.users {
+	for _, user := range app.userRecordSet(false) {
 		if stringValue(user["role"]) == "admin" && stringValue(user["status"]) == "active" {
 			return sanitizeUser(user)
 		}
 	}
 	return nil
+}
+
+func (app *controlPlaneApp) userRecordSet(includeDeleted bool) controlPlaneRecordSet {
+	users, err := app.tables.ListUsers(context.Background(), includeDeleted)
+	if err != nil {
+		return controlPlaneRecordSet{}
+	}
+	out := controlPlaneRecordSet{}
+	for _, user := range users {
+		out[stringValue(user["id"])] = cloneMap(user)
+	}
+	return out
 }
 
 func failedRuntimeOperations(operations []map[string]any) []any {

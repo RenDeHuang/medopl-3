@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/http"
@@ -9,10 +10,12 @@ import (
 )
 
 func (app *controlPlaneApp) createUser(input map[string]any) (map[string]any, error) {
-	app.mu.Lock()
-	defer app.mu.Unlock()
 	email := stringField(input, "email", "admin@medopl.cn")
-	for _, existing := range app.auth.users {
+	users, err := app.tables.ListUsers(context.Background(), true)
+	if err != nil {
+		return nil, err
+	}
+	for _, existing := range users {
 		if strings.EqualFold(stringValue(existing["email"]), email) {
 			return nil, errUserExists
 		}
@@ -27,57 +30,66 @@ func (app *controlPlaneApp) createUser(input map[string]any) (map[string]any, er
 		return nil, err
 	}
 	user := map[string]any{"id": id, "email": email, "accountId": stringField(input, "accountId", "acct-admin"), "role": stringField(input, "role", "owner"), "status": "active", "passwordHash": passwordHash}
-	app.auth.users[id] = user
-	return sanitizeUser(user), app.persistLocked()
+	return sanitizeUser(user), app.tables.SaveUser(context.Background(), user)
 }
 
 func (app *controlPlaneApp) disableUser(input map[string]any) (map[string]any, error) {
-	app.mu.Lock()
-	defer app.mu.Unlock()
 	id := stringField(input, "userId", "")
-	user := app.auth.users[id]
+	user, err := app.findUserByID(context.Background(), id)
+	if err != nil {
+		return nil, err
+	}
 	if user == nil {
 		return nil, errUserNotFound
 	}
 	if stringValue(user["status"]) == "deleted" {
 		return nil, errUserDeleted
 	}
-	if stringValue(user["role"]) == "admin" && stringValue(user["status"]) == "active" && app.activeAdminCountLocked() <= 1 {
+	if stringValue(user["role"]) == "admin" && stringValue(user["status"]) == "active" && app.activeAdminCount() <= 1 {
 		return nil, errLastActiveAdmin
 	}
 	user["status"] = "disabled"
 	user["disabledAt"] = time.Now().UTC().Format(time.RFC3339)
 	user["disabledBy"] = firstNonEmpty(stringField(input, "operatorUserId", ""), stringField(input, "disabledBy", ""), "usr-admin")
 	user["disabledReason"] = stringField(input, "reason", "admin_disabled")
-	app.revokeUserSessionsLocked(id)
-	return sanitizeUser(user), app.persistLocked()
+	if err := app.revokeUserSessions(id); err != nil {
+		return nil, err
+	}
+	return sanitizeUser(user), app.tables.SaveUser(context.Background(), user)
 }
 
 func (app *controlPlaneApp) softDeleteUser(input map[string]any) (map[string]any, error) {
-	app.mu.Lock()
-	defer app.mu.Unlock()
 	id := stringField(input, "userId", "")
-	user := app.auth.users[id]
+	user, err := app.findUserByID(context.Background(), id)
+	if err != nil {
+		return nil, err
+	}
 	if user == nil {
 		return nil, errUserNotFound
 	}
 	if stringValue(user["status"]) == "deleted" {
 		return sanitizeUser(user), nil
 	}
-	if stringValue(user["role"]) == "admin" && stringValue(user["status"]) == "active" && app.activeAdminCountLocked() <= 1 {
+	if stringValue(user["role"]) == "admin" && stringValue(user["status"]) == "active" && app.activeAdminCount() <= 1 {
 		return nil, errLastActiveAdmin
 	}
 	user["status"] = "deleted"
 	user["deletedAt"] = time.Now().UTC().Format(time.RFC3339)
 	user["deletedBy"] = firstNonEmpty(stringField(input, "operatorUserId", ""), stringField(input, "deletedBy", ""), "usr-admin")
 	user["deleteReason"] = stringField(input, "reason", "admin_deleted")
-	app.revokeUserSessionsLocked(id)
-	return sanitizeUser(user), app.persistLocked()
+	if err := app.revokeUserSessions(id); err != nil {
+		return nil, err
+	}
+	return sanitizeUser(user), app.tables.SaveUser(context.Background(), user)
 }
 
-func (app *controlPlaneApp) activeAdminCountLocked() int {
+func (app *controlPlaneApp) activeAdminCount() int {
+	users, err := app.tables.ListUsers(context.Background(), false)
+	if err != nil {
+		return 0
+	}
 	count := 0
-	for _, user := range app.auth.users {
+	for _, user := range users {
 		if stringValue(user["role"]) == "admin" && stringValue(user["status"]) == "active" {
 			count++
 		}
@@ -85,12 +97,19 @@ func (app *controlPlaneApp) activeAdminCountLocked() int {
 	return count
 }
 
-func (app *controlPlaneApp) revokeUserSessionsLocked(userID string) {
-	for sessionID, session := range app.auth.sessions {
-		if session.UserID == userID {
-			delete(app.auth.sessions, sessionID)
+func (app *controlPlaneApp) revokeUserSessions(userID string) error {
+	sessions, err := app.tables.ListSessions(context.Background())
+	if err != nil {
+		return err
+	}
+	for sessionID, session := range sessions {
+		if stringValue(session["userId"]) == userID {
+			if err := app.tables.DeleteSession(context.Background(), sessionID); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 func (app *controlPlaneApp) importBootstrapUsers() error {
@@ -98,27 +117,40 @@ func (app *controlPlaneApp) importBootstrapUsers() error {
 	if err != nil {
 		return err
 	}
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	app.dropLegacyOwnerUserLocked()
-	for _, user := range users {
-		app.upsertBootstrapUserLocked(user)
+	if err := app.dropLegacyOwnerUser(); err != nil {
+		return err
 	}
-	return app.persistLocked()
-}
-
-func (app *controlPlaneApp) dropLegacyOwnerUserLocked() {
-	for id, user := range app.auth.users {
-		if strings.EqualFold(stringValue(user["email"]), "owner@example.com") {
-			delete(app.auth.users, id)
+	for _, user := range users {
+		if err := app.upsertBootstrapUser(user); err != nil {
+			return err
 		}
 	}
+	return nil
 }
 
-func (app *controlPlaneApp) upsertBootstrapUserLocked(seed map[string]any) {
+func (app *controlPlaneApp) dropLegacyOwnerUser() error {
+	users, err := app.tables.ListUsers(context.Background(), true)
+	if err != nil {
+		return err
+	}
+	for _, user := range users {
+		if strings.EqualFold(stringValue(user["email"]), "owner@example.com") {
+			if err := app.tables.DeleteUser(context.Background(), stringValue(user["id"])); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (app *controlPlaneApp) upsertBootstrapUser(seed map[string]any) error {
 	id := stringValue(seed["id"])
-	for existingID, existing := range app.auth.users {
-		if existingID == id || strings.EqualFold(stringValue(existing["email"]), stringValue(seed["email"])) {
+	users, err := app.tables.ListUsers(context.Background(), true)
+	if err != nil {
+		return err
+	}
+	for _, existing := range users {
+		if stringValue(existing["id"]) == id || strings.EqualFold(stringValue(existing["email"]), stringValue(seed["email"])) {
 			for key, value := range seed {
 				if key == "passwordHash" && stringValue(existing["passwordHash"]) != "" {
 					continue
@@ -128,25 +160,27 @@ func (app *controlPlaneApp) upsertBootstrapUserLocked(seed map[string]any) {
 				}
 				existing[key] = value
 			}
-			return
+			return app.tables.SaveUser(context.Background(), existing)
 		}
 	}
-	app.auth.users[id] = seed
+	return app.tables.SaveUser(context.Background(), seed)
 }
 
 func (app *controlPlaneApp) login(input map[string]any) (map[string]any, string, error) {
 	email := strings.ToLower(strings.TrimSpace(stringField(input, "email", "")))
 	password := stringField(input, "password", "")
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	for _, user := range app.auth.users {
+	users, err := app.tables.ListUsers(context.Background(), false)
+	if err != nil {
+		return nil, "", err
+	}
+	for _, user := range users {
 		if strings.ToLower(stringValue(user["email"])) != email {
 			continue
 		}
 		if stringValue(user["status"]) != "active" || !verifyPassword(password, stringValue(user["passwordHash"])) {
 			return nil, "", errors.New("invalid_credentials")
 		}
-		return app.createSessionLocked(user)
+		return app.createSession(user)
 	}
 	return nil, "", errors.New("invalid_credentials")
 }
@@ -192,18 +226,23 @@ func loginFailureKey(r *http.Request, input map[string]any) string {
 }
 
 func (app *controlPlaneApp) operatorLogin() (map[string]any, string, error) {
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	for _, user := range app.auth.users {
+	users, err := app.tables.ListUsers(context.Background(), false)
+	if err != nil {
+		return nil, "", err
+	}
+	for _, user := range users {
 		if stringValue(user["role"]) == "admin" && stringValue(user["status"]) == "active" {
-			return app.createSessionLocked(user)
+			return app.createSession(user)
 		}
 	}
 	operator := map[string]any{"id": "usr-operator", "email": "operator@opl.local", "accountId": "acct-operator", "role": "admin", "status": "active"}
-	return app.createSessionLocked(operator)
+	if err := app.tables.SaveUser(context.Background(), operator); err != nil {
+		return nil, "", err
+	}
+	return app.createSession(operator)
 }
 
-func (app *controlPlaneApp) createSessionLocked(user map[string]any) (map[string]any, string, error) {
+func (app *controlPlaneApp) createSession(user map[string]any) (map[string]any, string, error) {
 	sessionID, err := randomToken(32)
 	if err != nil {
 		return nil, "", err
@@ -213,12 +252,11 @@ func (app *controlPlaneApp) createSessionLocked(user map[string]any) (map[string
 		return nil, "", err
 	}
 	sessionKey := sessionLookupKey(sessionID)
-	app.auth.sessions[sessionKey] = sessionRecord{ID: sessionKey, UserID: stringValue(user["id"]), CSRF: csrf, ExpiresAt: time.Now().UTC().Add(12 * time.Hour)}
-	if err := app.persistLocked(); err != nil {
-		delete(app.auth.sessions, sessionKey)
+	expiresAt := time.Now().UTC().Add(12 * time.Hour)
+	if err := app.tables.SaveSession(context.Background(), map[string]any{"id": sessionKey, "userId": stringValue(user["id"]), "csrf": csrf, "expiresAt": expiresAt.Format(time.RFC3339)}); err != nil {
 		return nil, "", err
 	}
-	return map[string]any{"user": sanitizeUser(user), "csrfToken": csrf, "expiresAt": app.auth.sessions[sessionKey].ExpiresAt.Format(time.RFC3339)}, sessionID, nil
+	return map[string]any{"user": sanitizeUser(user), "csrfToken": csrf, "expiresAt": expiresAt.Format(time.RFC3339)}, sessionID, nil
 }
 
 func (app *controlPlaneApp) session(r *http.Request) (map[string]any, bool) {
@@ -226,20 +264,25 @@ func (app *controlPlaneApp) session(r *http.Request) (map[string]any, bool) {
 	if err != nil || cookie.Value == "" {
 		return nil, false
 	}
-	app.mu.Lock()
-	defer app.mu.Unlock()
 	sessionKey := sessionLookupKey(cookie.Value)
-	session, ok := app.auth.sessions[sessionKey]
-	if !ok || time.Now().UTC().After(session.ExpiresAt) {
-		delete(app.auth.sessions, sessionKey)
-		_ = app.persistLocked()
+	sessions, err := app.tables.ListSessions(r.Context())
+	if err != nil {
 		return nil, false
 	}
-	user := app.auth.users[session.UserID]
+	session, ok := sessions[sessionKey]
+	expiresAt, _ := time.Parse(time.RFC3339, stringValue(session["expiresAt"]))
+	if !ok || time.Now().UTC().After(expiresAt) {
+		_ = app.tables.DeleteSession(r.Context(), sessionKey)
+		return nil, false
+	}
+	user, err := app.findUserByID(r.Context(), stringValue(session["userId"]))
+	if err != nil {
+		return nil, false
+	}
 	if user == nil || stringValue(user["status"]) != "active" {
 		return nil, false
 	}
-	return map[string]any{"user": sanitizeUser(user), "csrfToken": session.CSRF, "expiresAt": session.ExpiresAt.Format(time.RFC3339)}, true
+	return map[string]any{"user": sanitizeUser(user), "csrfToken": stringValue(session["csrf"]), "expiresAt": expiresAt.Format(time.RFC3339)}, true
 }
 
 func (app *controlPlaneApp) sessionUserID(r *http.Request) string {
@@ -264,21 +307,26 @@ func (app *controlPlaneApp) logout(r *http.Request) error {
 	if err != nil {
 		return nil
 	}
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	delete(app.auth.sessions, sessionLookupKey(cookie.Value))
-	return app.persistLocked()
+	return app.tables.DeleteSession(r.Context(), sessionLookupKey(cookie.Value))
 }
 
 func (app *controlPlaneApp) sessionFactsLocked() controlPlaneRecordSet {
-	output := controlPlaneRecordSet{}
-	for id, session := range app.auth.sessions {
-		output[id] = controlPlaneRecord{
-			"id":        session.ID,
-			"userId":    session.UserID,
-			"csrf":      session.CSRF,
-			"expiresAt": session.ExpiresAt.UTC().Format(time.RFC3339),
+	sessions, err := app.tables.ListSessions(context.Background())
+	if err != nil {
+		return controlPlaneRecordSet{}
+	}
+	return sessions
+}
+
+func (app *controlPlaneApp) findUserByID(ctx context.Context, id string) (map[string]any, error) {
+	users, err := app.tables.ListUsers(ctx, true)
+	if err != nil {
+		return nil, err
+	}
+	for _, user := range users {
+		if stringValue(user["id"]) == id {
+			return cloneMap(user), nil
 		}
 	}
-	return output
+	return nil, nil
 }

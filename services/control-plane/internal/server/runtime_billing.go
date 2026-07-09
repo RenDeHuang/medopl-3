@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"time"
 
 	"opl-cloud/services/control-plane/internal/clients"
@@ -266,6 +267,10 @@ func (app *controlPlaneApp) addWalletTxLocked(accountID string, txType string, m
 func (app *controlPlaneApp) wallet(accountID string) map[string]any {
 	if accountID == "" {
 		accountID = "acct-local"
+	}
+	wallets, err := app.tables.ListWallets(context.Background(), accountID)
+	if err == nil && len(wallets) > 0 {
+		return cloneMap(wallets[0])
 	}
 	if wallet, ok := app.billing.wallets[accountID]; ok {
 		return wallet

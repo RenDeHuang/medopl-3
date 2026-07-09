@@ -17,6 +17,13 @@ import (
 	"opl-cloud/services/control-plane/internal/controlplane"
 )
 
+func mustStore(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("store setup failed: %v", err)
+	}
+}
+
 func TestCreateWorkspaceHTTPUsesMutationKeyWhenHeaderIsAbsent(t *testing.T) {
 	calls := []string{}
 	ledger := &fakeLedgerClientWithKeys{fakeLedgerClient{}, []string{}}
@@ -378,7 +385,7 @@ func TestBootstrapImportsAdminSeedAndDoesNotExposeLegacyOwner(t *testing.T) {
 
 func TestLoginAcceptsLegacyScryptPasswordHash(t *testing.T) {
 	app := newControlPlaneApp()
-	app.auth.users["usr-admin"]["passwordHash"] = "scrypt:00112233445566778899aabbccddeeff:4904ad313c8dcfe466e3babafef2471d2f5bcc7b0d4d893d5eb6c57666c8c5c1e9a26e8e1b9035f6625718daa983ae2798cbeb16b404e8418c901315147f642f"
+	mustStore(t, app.tables.SaveUser(context.Background(), map[string]any{"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active", "passwordHash": "scrypt:00112233445566778899aabbccddeeff:4904ad313c8dcfe466e3babafef2471d2f5bcc7b0d4d893d5eb6c57666c8c5c1e9a26e8e1b9035f6625718daa983ae2798cbeb16b404e8418c901315147f642f"}))
 	if _, _, err := app.login(map[string]any{"email": "admin@medopl.cn", "password": "legacy-secret"}); err != nil {
 		t.Fatalf("legacy scrypt password did not verify: %v", err)
 	}
@@ -1290,13 +1297,11 @@ func TestManagementStateUsesRealAccountsAndLedger(t *testing.T) {
 
 func TestOperatorAccountTotalsIgnoreDeletedUserWalletResiduals(t *testing.T) {
 	app := newControlPlaneApp()
-	app.mu.Lock()
-	app.auth.users["usr-active"] = map[string]any{"id": "usr-active", "accountId": "acct-active", "status": "active", "email": "active@example.test"}
-	app.auth.users["usr-deleted"] = map[string]any{"id": "usr-deleted", "accountId": "acct-deleted", "status": "deleted", "email": "deleted@example.test"}
-	app.billing.wallets["acct-active"] = map[string]any{"accountId": "acct-active", "balance": 10.0, "frozen": 2.0, "totalSpent": 3.0}
-	app.billing.wallets["acct-deleted"] = map[string]any{"accountId": "acct-deleted", "balance": 99.0, "frozen": 88.0, "totalSpent": 77.0}
-	app.billing.wallets["acct-wallet-only"] = map[string]any{"accountId": "acct-wallet-only", "balance": 50.0, "frozen": 40.0, "totalSpent": 30.0}
-	app.mu.Unlock()
+	mustStore(t, app.tables.SaveUser(context.Background(), map[string]any{"id": "usr-active", "accountId": "acct-active", "status": "active", "email": "active@example.test"}))
+	mustStore(t, app.tables.SaveUser(context.Background(), map[string]any{"id": "usr-deleted", "accountId": "acct-deleted", "status": "deleted", "email": "deleted@example.test"}))
+	mustStore(t, app.tables.SaveWallet(context.Background(), map[string]any{"id": "acct-active", "accountId": "acct-active", "balance": 10.0, "frozen": 2.0, "totalSpent": 3.0}))
+	mustStore(t, app.tables.SaveWallet(context.Background(), map[string]any{"id": "acct-deleted", "accountId": "acct-deleted", "balance": 99.0, "frozen": 88.0, "totalSpent": 77.0}))
+	mustStore(t, app.tables.SaveWallet(context.Background(), map[string]any{"id": "acct-wallet-only", "accountId": "acct-wallet-only", "balance": 50.0, "frozen": 40.0, "totalSpent": 30.0}))
 	summary := app.operatorSummary()
 
 	accounts := summary["accounts"].(map[string]any)

@@ -638,6 +638,14 @@ func (s *postgresEntStateStore) SaveUser(ctx context.Context, row map[string]any
 	return s.replaceRecord(ctx, row, func(id string) error { return s.client.User.DeleteOneID(id).Exec(ctx) }, func() any { return s.client.User.Create() }, userEntFields)
 }
 
+func (s *postgresEntStateStore) DeleteUser(ctx context.Context, id string) error {
+	err := s.client.User.DeleteOneID(id).Exec(ctx)
+	if controlplaneent.IsNotFound(err) {
+		return nil
+	}
+	return err
+}
+
 func (s *postgresEntStateStore) ListSessions(ctx context.Context) (controlPlaneRecordSet, error) {
 	return loadRecordSet(ctx, s.client.Session.Query().All, sessionEntFields)
 }

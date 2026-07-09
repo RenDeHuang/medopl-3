@@ -36,7 +36,7 @@ func (app *controlPlaneApp) managementState(includeDeleted bool, computePools []
 	return map[string]any{
 		"organization":           nil,
 		"organizations":          values(app.orgs),
-		"users":                  sanitizedUserValues(app.auth.users, includeDeleted),
+		"users":                  sanitizedUserValues(app.userRecordSet(includeDeleted), includeDeleted),
 		"memberships":            values(app.memberships),
 		"supportTickets":         values(app.support),
 		"accounts":               app.accountsLocked(),
@@ -176,7 +176,7 @@ func (app *controlPlaneApp) accountsLocked() []any {
 		if number(row["totalSpent"]) == 0 {
 			row["totalSpent"] = totalDebitsForAccount(accountID, app.billing.walletTx, app.billing.ledger)
 		}
-		for _, user := range app.auth.users {
+		for _, user := range app.userRecordSet(true) {
 			if stringValue(user["accountId"]) == accountID && stringValue(user["status"]) != "deleted" {
 				row["userId"] = firstNonEmpty(stringValue(row["userId"]), stringValue(user["id"]))
 				row["email"] = firstNonEmpty(stringValue(row["email"]), stringValue(user["email"]))
@@ -189,7 +189,7 @@ func (app *controlPlaneApp) accountsLocked() []any {
 
 func (app *controlPlaneApp) activeBusinessAccountIDsLocked() map[string]bool {
 	accountIDs := map[string]bool{}
-	for _, user := range app.auth.users {
+	for _, user := range app.userRecordSet(true) {
 		if stringValue(user["status"]) != "deleted" {
 			if accountID := stringValue(user["accountId"]); accountID != "" {
 				accountIDs[accountID] = true
