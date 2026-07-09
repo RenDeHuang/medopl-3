@@ -16,9 +16,11 @@ import (
 	"opl-cloud/services/control-plane/ent/computeallocation"
 	"opl-cloud/services/control-plane/ent/ledgerprojection"
 	"opl-cloud/services/control-plane/ent/manualtopupprojection"
+	"opl-cloud/services/control-plane/ent/productione2erecord"
 	"opl-cloud/services/control-plane/ent/runtimeoperation"
 	"opl-cloud/services/control-plane/ent/storageattachment"
 	"opl-cloud/services/control-plane/ent/storagevolume"
+	"opl-cloud/services/control-plane/ent/supportticketmapping"
 	"opl-cloud/services/control-plane/ent/wallettransactionprojection"
 	"opl-cloud/services/control-plane/ent/workspace"
 )
@@ -355,6 +357,29 @@ var (
 		textField("URL", "SetURL", "url"),
 		textField("Reason", "SetReason", "reason"),
 	}
+	productionE2EEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("WorkspaceID", "SetWorkspaceID", "workspaceId"),
+		textField("Status", "SetStatus", "status"),
+		textField("Result", "SetResult", "result"),
+		textField("Reason", "SetReason", "reason"),
+		textField("URL", "SetURL", "url"),
+	}
+	archiveJobEntFields = []entRecordField{
+		textField("ResourceKind", "SetResourceKind", "resourceKind"),
+		textField("Status", "SetStatus", "status"),
+		textField("Reason", "SetReason", "reason"),
+		intField("AmountCents", "SetAmountCents", "amountCents"),
+	}
+	archivedResourceEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("WorkspaceID", "SetWorkspaceID", "workspaceId"),
+		textField("ResourceID", "SetResourceID", "resourceId"),
+		textField("ResourceKind", "SetResourceKind", "resourceKind"),
+		textField("Name", "SetName", "name"),
+		textField("Status", "SetStatus", "status"),
+		textField("Reason", "SetReason", "reason"),
+	}
 	reconcileEntFields = []entRecordField{
 		textField("Status", "SetStatus", "status"),
 		textField("GuardStatus", "SetGuardStatus", "guard", "status"),
@@ -537,6 +562,103 @@ func (s *postgresEntStateStore) ArchiveTerminalResources(ctx context.Context, re
 	}
 	result["archived"] = total
 	result["reason"] = reason
+	return result, tx.Commit()
+}
+
+func (s *postgresEntStateStore) ArchiveState(ctx context.Context) (map[string]any, error) {
+	jobs, err := loadEventRows(ctx, s.client.ArchiveJob.Query().All, archiveJobEntFields)
+	if err != nil {
+		return nil, err
+	}
+	computes, err := loadEventRows(ctx, s.client.ArchivedComputeAllocation.Query().All, archivedResourceEntFields)
+	if err != nil {
+		return nil, err
+	}
+	storages, err := loadEventRows(ctx, s.client.ArchivedStorageVolume.Query().All, archivedResourceEntFields)
+	if err != nil {
+		return nil, err
+	}
+	attachments, err := loadEventRows(ctx, s.client.ArchivedStorageAttachment.Query().All, archivedResourceEntFields)
+	if err != nil {
+		return nil, err
+	}
+	workspaces, err := loadEventRows(ctx, s.client.ArchivedWorkspace.Query().All, archivedResourceEntFields)
+	if err != nil {
+		return nil, err
+	}
+	auditEvents, err := loadEventRows(ctx, s.client.ArchivedAdminAuditEvent.Query().All, auditEntFields)
+	if err != nil {
+		return nil, err
+	}
+	e2eRecords, err := loadEventRows(ctx, s.client.ProductionE2ERecord.Query().All, productionE2EEntFields)
+	if err != nil {
+		return nil, err
+	}
+	resources := make([]any, 0, len(computes)+len(storages)+len(attachments)+len(workspaces))
+	for _, rows := range [][]controlPlaneRecord{computes, storages, attachments, workspaces} {
+		for _, row := range rows {
+			resources = append(resources, row)
+		}
+	}
+	return map[string]any{
+		"jobs":             rowsAsAny(jobs),
+		"resources":        resources,
+		"adminAuditEvents": rowsAsAny(auditEvents),
+		"productionE2E":    productionE2ESummary(e2eRecords),
+		"retentionPolicy":  currentRetentionPolicy().dto(),
+	}, nil
+}
+
+func (s *postgresEntStateStore) ApplyRetention(ctx context.Context, policy retentionPolicy) (map[string]any, error) {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	result := map[string]any{"retentionPolicy": policy.dto()}
+	if cutoff := policy.cutoff(policy.AdminAuditDays); !cutoff.IsZero() {
+		rows, err := tx.AdminAuditEvent.Query().Where(adminauditevent.CreatedAtLT(cutoff)).All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range rows {
+			record := recordFromEnt(row, auditEntFields)
+			if err := saveRecord(ctx, row.ID, record, tx.ArchivedAdminAuditEvent.Create(), auditEntFields); err != nil {
+				return nil, err
+			}
+		}
+		if len(rows) > 0 {
+			if _, err := tx.AdminAuditEvent.Delete().Where(adminauditevent.CreatedAtLT(cutoff)).Exec(ctx); err != nil {
+				return nil, err
+			}
+		}
+		result["adminAuditArchived"] = len(rows)
+	}
+	if cutoff := policy.cutoff(policy.SupportDays); !cutoff.IsZero() {
+		deleted, err := tx.SupportTicketMapping.Delete().Where(supportticketmapping.CreatedAtLT(cutoff)).Exec(ctx)
+		if err != nil {
+			return nil, err
+		}
+		result["supportDeleted"] = deleted
+	}
+	if cutoff := policy.cutoff(policy.ProductionE2EDays); !cutoff.IsZero() {
+		deleted, err := tx.ProductionE2ERecord.Delete().Where(productione2erecord.CreatedAtLT(cutoff)).Exec(ctx)
+		if err != nil {
+			return nil, err
+		}
+		result["productionE2EDeleted"] = deleted
+	}
+	if err := tx.ArchiveJob.Create().
+		SetID("archive-job-" + stableID(time.Now().UTC().Format(time.RFC3339Nano), "scheduled_retention")[:12]).
+		SetResourceKind("retention_policy").
+		SetStatus("succeeded").
+		SetReason("scheduled_retention").
+		SetCreatedAt(time.Now().UTC()).
+		SetUpdatedAt(time.Now().UTC()).
+		Exec(ctx); err != nil {
+		return nil, err
+	}
 	return result, tx.Commit()
 }
 

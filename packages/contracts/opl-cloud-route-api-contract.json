@@ -1341,7 +1341,9 @@
       "apiClient": "apps/console-ui/src/api/console-read-api.ts",
       "apiRoutes": [
         "GET /api/management/state",
+        "GET /api/operator/archive",
         "GET /api/operator/summary",
+        "POST /api/operator/archive-terminal-resources",
         "POST /api/operator/cleanup-workspace-access"
       ],
       "serviceBoundary": "WorkspaceLifecycleService",

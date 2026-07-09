@@ -1255,6 +1255,37 @@ func TestArchiveTerminalResourcesRemovesCurrentStateWithoutLedger(t *testing.T) 
 	}
 }
 
+func TestArchiveStateEndpointReturnsBackendArchiveAndRetentionPolicy(t *testing.T) {
+	path := t.TempDir() + "/control-plane-state.sqlite"
+	store := NewTestEntStateStore(t, path)
+	if err := store.Save(context.Background(), controlPlaneState{
+		Computes: controlPlaneRecordSet{
+			"compute-dead": {"id": "compute-dead", "accountId": "acct-alpha", "status": "destroyed"},
+		},
+	}); err != nil {
+		t.Fatalf("seed terminal compute: %v", err)
+	}
+	service := controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{})
+	server, err := NewPersistentServer(service, store)
+	if err != nil {
+		t.Fatalf("server: %v", err)
+	}
+	admin := operatorSessionForTest(t, server)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/operator/archive-terminal-resources", `{"confirm":true,"reason":"test_archive_query"}`)
+
+	rec := requestWithSession(t, server, admin, http.MethodGet, "/api/operator/archive", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("archive state status = %d: %s", rec.Code, rec.Body.String())
+	}
+	var archive map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&archive); err != nil {
+		t.Fatalf("decode archive state: %v", err)
+	}
+	if len(archive["resources"].([]any)) == 0 || archive["retentionPolicy"].(map[string]any)["adminAuditDays"] == nil {
+		t.Fatalf("archive state must come from backend archive facts and policy: %#v", archive)
+	}
+}
+
 func TestManagementStateIncludesBackendCleanupAndAnomalySummary(t *testing.T) {
 	app := newControlPlaneApp()
 	app.workspaces["ws-missing-storage"] = map[string]any{

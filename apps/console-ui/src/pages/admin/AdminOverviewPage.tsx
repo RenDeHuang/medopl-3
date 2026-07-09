@@ -705,33 +705,26 @@ export function AdminDiagnosticsPage({ managementState, adminOps }: any) {
   );
 }
 
-export function AdminE2EPage({ adminOps }: any) {
+export function AdminE2EPage({ adminOps, managementState = {} }: any) {
+  const archive = managementState.archive || {};
   return (
     <ConsoleSurface title="E2E记录" eyebrow="管理" subtitle="真实上线验证摘要">
-      <ProductionE2EPanel summary={adminOps.operator?.productionE2E || {}} />
-      <DataRetentionPolicyPanel />
+      <ProductionE2EPanel summary={archive.productionE2E || adminOps.operator?.productionE2E || {}} />
+      <DataRetentionPolicyPanel policy={managementState.retentionPolicy || archive.retentionPolicy || {}} />
     </ConsoleSurface>
   );
 }
 
 export function AdminCleanupPage({ managementState, session, runAction }: any) {
-  const activeWorkspaces = (managementState.workspaces || []).filter((workspace) => workspace.access?.tokenStatus === "active");
-  const storageById = new Map<string, AnyRecord>((managementState.storageVolumes || []).map((storage) => [storage.id, storage]));
-  const localCleanupCandidateCount = activeWorkspaces.filter((workspace) => {
-    const storageId = String(workspace.storageId || "").trim();
-    const storage = storageId ? storageById.get(storageId) : null;
-    return !workspace.ownerAccountId ||
-      !storageId ||
-      !storage ||
-      storage.status === "destroyed" ||
-      storage.billingStatus === "stopped";
-  }).length;
   const cleanupSummary = managementState.workspaceAccessCleanup || {};
-  const cleanupCandidateCount = Number(cleanupSummary.cleanupCandidateCount ?? localCleanupCandidateCount);
-  const activeUrlCount = Number(cleanupSummary.activeUrlCount ?? activeWorkspaces.length);
-  const destroyedCompute = Number(cleanupSummary.destroyedComputeCount ?? (managementState.computeAllocations || []).filter((item) => item.status === "destroyed").length);
-  const destroyedStorage = Number(cleanupSummary.destroyedStorageCount ?? (managementState.storageVolumes || []).filter((item) => item.status === "destroyed").length);
-  const detachedAttachments = Number(cleanupSummary.detachedAttachmentCount ?? (managementState.storageAttachments || []).filter((item) => item.status === "detached").length);
+  const archive = managementState.archive || {};
+  const archiveResources = archive.resources || [];
+  const archiveJobs = archive.jobs || [];
+  const cleanupCandidateCount = Number(cleanupSummary.cleanupCandidateCount || 0);
+  const activeUrlCount = Number(cleanupSummary.activeUrlCount || 0);
+  const destroyedCompute = Number(cleanupSummary.destroyedComputeCount || 0);
+  const destroyedStorage = Number(cleanupSummary.destroyedStorageCount || 0);
+  const detachedAttachments = Number(cleanupSummary.detachedAttachmentCount || 0);
   return (
     <ConsoleSurface title="入口清理" eyebrow="管理" subtitle="清理已失效资源对应的访问 URL">
       <MetricStrip
@@ -772,6 +765,30 @@ export function AdminCleanupPage({ managementState, session, runAction }: any) {
           )}
         />
       </InsightPanel>
+      <InsightPanel title="归档记录" eyebrow="后端归档">
+        <MetricStrip
+          items={[
+            { label: "归档资源", value: archiveResources.length, caption: "archive resources", tone: archiveResources.length ? "info" : "neutral" },
+            { label: "归档任务", value: archiveJobs.length, caption: "archive jobs", tone: archiveJobs.length ? "info" : "neutral" },
+            { label: "归档审计", value: (archive.adminAuditEvents || []).length, caption: "admin audit", tone: (archive.adminAuditEvents || []).length ? "info" : "neutral" },
+            { label: "E2E记录", value: archive.productionE2E?.total || 0, caption: "production e2e", tone: archive.productionE2E?.failed ? "danger" : "neutral" }
+          ]}
+        />
+        <ObjectTable
+          rowKey="id"
+          data={archiveResources}
+          emptyText="暂无归档资源"
+          columns={[
+            { title: "资源", dataIndex: "resourceId", ellipsis: true },
+            { title: "类型", dataIndex: "resourceKind" },
+            { title: "账号", dataIndex: "accountId", ellipsis: true },
+            { title: "工作区", dataIndex: "workspaceId", ellipsis: true },
+            { title: "状态", dataIndex: "status", render: (value) => <StatusPill label={value || "-"} tone="neutral" /> },
+            { title: "原因", dataIndex: "reason", ellipsis: true },
+            { title: "归档时间", dataIndex: "createdAt" }
+          ]}
+        />
+      </InsightPanel>
       <InsightPanel title="清理边界" eyebrow="安全">
         <ResourceSplit
           items={[
@@ -793,6 +810,7 @@ export function AdminCleanupPage({ managementState, session, runAction }: any) {
           )}
         />
       </InsightPanel>
+      <DataRetentionPolicyPanel policy={managementState.retentionPolicy || archive.retentionPolicy || {}} />
     </ConsoleSurface>
   );
 }

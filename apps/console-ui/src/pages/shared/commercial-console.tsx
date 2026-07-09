@@ -264,11 +264,15 @@ export function WalletRiskPanel({ wallet = {}, requiredHold = 0, resourceLabel =
   );
 }
 
-export function DataRetentionPolicyPanel({ compact = false }: any) {
+export function DataRetentionPolicyPanel({ compact = false, policy = {} }: any) {
+  const terminal = policy.terminalResources || {};
+  const ledger = policy.billingLedger || {};
   const items = [
-    { label: "销毁计算", value: "只删除计算", meta: "存储资源和 /data 数据保留", status: "数据保留", tone: "good" },
-    { label: "销毁存储", value: "删除数据", meta: "会删除 /data 用户文件，需要强确认", status: "高风险", tone: "danger" },
-    { label: "迁移 / rollout", value: "不删数据", meta: "用户、账单在后端账本；用户文件在持久存储", status: "持久化", tone: "info" }
+    { label: "终态资源", value: terminal.action || "-", meta: terminal.currentStateOnly ? "只归档 Control Plane 当前态" : "后端策略", status: terminal.enabled ? "启用" : "策略", tone: terminal.enabled ? "good" : "neutral" },
+    { label: "审计", value: `${policy.adminAuditDays || 0} 天`, meta: "超过周期归档", status: "retention", tone: "info" },
+    { label: "工单", value: `${policy.supportDays || 0} 天`, meta: "超过周期清理映射", status: "retention", tone: "info" },
+    { label: "E2E", value: `${policy.productionE2EDays || 0} 天`, meta: "超过周期清理记录", status: "retention", tone: "info" },
+    { label: "账本", value: ledger.action || "-", meta: ledger.reason || "后端账本保留", status: "保留", tone: "good" }
   ];
   if (compact) return <ResourceSplit items={items} />;
   return (

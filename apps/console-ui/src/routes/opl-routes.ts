@@ -783,7 +783,7 @@ export const oplRoutes = Object.freeze([
     objectKind: "AdminAuditEvent",
     pageModule: "apps/console-ui/src/pages/admin/AdminOverviewPage.tsx",
     apiClient: "apps/console-ui/src/api/console-read-api.ts",
-    apiRoutes: ["GET /api/management/state", "GET /api/operator/summary", "POST /api/operator/cleanup-workspace-access"],
+    apiRoutes: ["GET /api/management/state", "GET /api/operator/summary", "GET /api/operator/archive", "POST /api/operator/cleanup-workspace-access", "POST /api/operator/archive-terminal-resources"],
     serviceBoundary: "WorkspaceLifecycleService",
     capabilities: ["read", "list", "action", "audit"],
     operationProtocol: destructiveMutationProtocol

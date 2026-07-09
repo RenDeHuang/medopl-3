@@ -1,0 +1,138 @@
+package server
+
+import "net/http"
+
+func (app *controlPlaneApp) rememberCompute(allocation any) error {
+	if row, ok := allocation.(map[string]any); ok {
+		app.mu.Lock()
+		defer app.mu.Unlock()
+		accountID := stringValue(row["accountId"])
+		app.computes[stringValue(row["id"])] = row
+		if isTerminalResourceStatus(stringValue(row["status"])) {
+			app.rememberReleaseLocked(accountID, "compute", stringValue(row["id"]), row)
+			app.suspendWorkspacesForComputeLocked(stringValue(row["id"]))
+			return app.persistLocked()
+		}
+		app.rememberHoldLocked(accountID, "compute", stringValue(row["id"]), row)
+		return app.persistLocked()
+	}
+	return nil
+}
+
+func (app *controlPlaneApp) rememberStorage(volume any) error {
+	if row, ok := volume.(map[string]any); ok {
+		app.mu.Lock()
+		defer app.mu.Unlock()
+		accountID := stringValue(row["accountId"])
+		app.storages[stringValue(row["id"])] = row
+		if isTerminalResourceStatus(stringValue(row["status"])) {
+			app.rememberReleaseLocked(accountID, "storage", stringValue(row["id"]), row)
+			app.markWorkspacesStorageDestroyedLocked(stringValue(row["id"]))
+			return app.persistLocked()
+		}
+		app.rememberHoldLocked(accountID, "storage", stringValue(row["id"]), row)
+		return app.persistLocked()
+	}
+	return nil
+}
+
+func (app *controlPlaneApp) rememberHoldLocked(accountID string, resourceType string, resourceID string, row map[string]any) {
+	holdID := stringValue(row["holdId"])
+	if accountID == "" || holdID == "" {
+		return
+	}
+	if wallet, ok := row["wallet"].(map[string]any); ok {
+		app.wallets[accountID] = walletProjection(walletFromMap(wallet))
+	}
+	ledger := map[string]any{"id": holdID, "accountId": accountID, "type": resourceType + "_hold", "resourceId": resourceID, "amountCents": int64(numberField(row, "holdAmountCents", 0))}
+	if resourceType == "storage" {
+		ledger["storageId"] = resourceID
+	} else {
+		ledger["computeAllocationId"] = resourceID
+	}
+	app.ledger = append(app.ledger, ledger)
+}
+
+func (app *controlPlaneApp) rememberReleaseLocked(accountID string, resourceType string, resourceID string, row map[string]any) {
+	releaseID := stringValue(row["holdReleaseId"])
+	if accountID == "" || releaseID == "" {
+		return
+	}
+	if wallet, ok := row["wallet"].(map[string]any); ok {
+		app.wallets[accountID] = walletProjection(walletFromMap(wallet))
+	}
+	ledger := map[string]any{"id": releaseID, "accountId": accountID, "type": resourceType + "_hold_released", "resourceId": resourceID, "amountCents": int64(numberField(row, "holdAmountCents", 0))}
+	if resourceType == "storage" {
+		ledger["storageId"] = resourceID
+	} else {
+		ledger["computeAllocationId"] = resourceID
+	}
+	app.ledger = append(app.ledger, ledger)
+}
+
+func (app *controlPlaneApp) rememberAttachment(attachment any, input map[string]any) error {
+	if row, ok := attachment.(map[string]any); ok {
+		row["computeAllocationId"] = stringField(input, "computeAllocationId", "")
+		row["storageId"] = firstNonEmpty(stringValue(row["volumeId"]), stringField(input, "storageId", ""))
+		row["mountPath"] = firstNonEmpty(stringValue(row["mountPath"]), stringField(input, "mountPath", "/data"))
+		app.mu.Lock()
+		defer app.mu.Unlock()
+		ownerAccountID := firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]))
+		if ownerAccountID == "" {
+			compute := app.computes[stringValue(row["computeAllocationId"])]
+			storage := app.storages[stringValue(row["storageId"])]
+			if stringValue(compute["ownerAccountId"]) != "" && stringValue(compute["ownerAccountId"]) == stringValue(storage["ownerAccountId"]) {
+				ownerAccountID = stringValue(compute["ownerAccountId"])
+			}
+		}
+		if ownerAccountID != "" {
+			row["ownerAccountId"] = ownerAccountID
+			row["accountId"] = firstNonEmpty(stringValue(row["accountId"]), ownerAccountID)
+		}
+		app.attachments[stringValue(row["id"])] = row
+		if stringValue(row["status"]) == "detached" {
+			app.clearWorkspacesForAttachmentLocked(stringValue(row["id"]))
+		}
+		return app.persistLocked()
+	}
+	return nil
+}
+
+func (app *controlPlaneApp) resourceBelongsToAccount(row map[string]any, accountID string) bool {
+	if accountID == "" {
+		return false
+	}
+	return firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"])) == accountID
+}
+
+func (app *controlPlaneApp) getCompute(id string) (map[string]any, bool) {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	compute, ok := app.computes[id]
+	return cloneMap(compute), ok
+}
+
+func (app *controlPlaneApp) getStorage(id string) (map[string]any, bool) {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	storage, ok := app.storages[id]
+	return cloneMap(storage), ok
+}
+
+func (app *controlPlaneApp) getAttachment(id string) (map[string]any, bool) {
+	app.mu.Lock()
+	defer app.mu.Unlock()
+	attachment, ok := app.attachments[id]
+	return cloneMap(attachment), ok
+}
+
+func (app *controlPlaneApp) canAccessResource(r *http.Request, row map[string]any) bool {
+	user, ok := app.sessionUserContext(r)
+	if !ok {
+		return false
+	}
+	if stringValue(user["role"]) == "admin" {
+		return true
+	}
+	return app.resourceBelongsToAccount(row, stringValue(user["accountId"]))
+}

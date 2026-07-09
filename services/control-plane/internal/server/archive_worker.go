@@ -52,6 +52,9 @@ func (app *controlPlaneApp) startArchiveRetentionWorker(ctx context.Context, int
 }
 
 func (app *controlPlaneApp) runArchiveRetentionOnce(ctx context.Context) error {
-	_, err := app.archiveTerminalResources(ctx, map[string]any{"reason": "scheduled_terminal_retention"})
+	if _, err := app.archiveTerminalResources(ctx, map[string]any{"reason": "scheduled_terminal_retention"}); err != nil {
+		return err
+	}
+	_, err := app.applyRetention(ctx)
 	return err
 }

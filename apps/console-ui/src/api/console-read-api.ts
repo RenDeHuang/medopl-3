@@ -11,6 +11,10 @@ export function getOperatorSummary() {
   return getJson("/api/operator/summary");
 }
 
+export function getArchiveState() {
+  return getJson("/api/operator/archive");
+}
+
 export function getRuntimeReadiness() {
   return getJson("/api/runtime/readiness");
 }
