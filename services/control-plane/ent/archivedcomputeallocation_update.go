@@ -28,6 +28,26 @@ func (acau *ArchivedComputeAllocationUpdate) Where(ps ...predicate.ArchivedCompu
 	return acau
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (acau *ArchivedComputeAllocationUpdate) SetCreatedAt(t time.Time) *ArchivedComputeAllocationUpdate {
+	acau.mutation.SetCreatedAt(t)
+	return acau
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (acau *ArchivedComputeAllocationUpdate) SetNillableCreatedAt(t *time.Time) *ArchivedComputeAllocationUpdate {
+	if t != nil {
+		acau.SetCreatedAt(*t)
+	}
+	return acau
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (acau *ArchivedComputeAllocationUpdate) SetUpdatedAt(t time.Time) *ArchivedComputeAllocationUpdate {
+	acau.mutation.SetUpdatedAt(t)
+	return acau
+}
+
 // SetAccountID sets the "account_id" field.
 func (acau *ArchivedComputeAllocationUpdate) SetAccountID(s string) *ArchivedComputeAllocationUpdate {
 	acau.mutation.SetAccountID(s)
@@ -38,104 +58,6 @@ func (acau *ArchivedComputeAllocationUpdate) SetAccountID(s string) *ArchivedCom
 func (acau *ArchivedComputeAllocationUpdate) SetNillableAccountID(s *string) *ArchivedComputeAllocationUpdate {
 	if s != nil {
 		acau.SetAccountID(*s)
-	}
-	return acau
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (acau *ArchivedComputeAllocationUpdate) SetOwnerAccountID(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetOwnerAccountID(s)
-	return acau
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableOwnerAccountID(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetOwnerAccountID(*s)
-	}
-	return acau
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (acau *ArchivedComputeAllocationUpdate) SetOwnerUserID(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetOwnerUserID(s)
-	return acau
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableOwnerUserID(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetOwnerUserID(*s)
-	}
-	return acau
-}
-
-// SetUserID sets the "user_id" field.
-func (acau *ArchivedComputeAllocationUpdate) SetUserID(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetUserID(s)
-	return acau
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableUserID(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetUserID(*s)
-	}
-	return acau
-}
-
-// SetEmail sets the "email" field.
-func (acau *ArchivedComputeAllocationUpdate) SetEmail(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetEmail(s)
-	return acau
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableEmail(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetEmail(*s)
-	}
-	return acau
-}
-
-// SetRole sets the "role" field.
-func (acau *ArchivedComputeAllocationUpdate) SetRole(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetRole(s)
-	return acau
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableRole(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetRole(*s)
-	}
-	return acau
-}
-
-// SetStatus sets the "status" field.
-func (acau *ArchivedComputeAllocationUpdate) SetStatus(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetStatus(s)
-	return acau
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableStatus(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetStatus(*s)
-	}
-	return acau
-}
-
-// SetName sets the "name" field.
-func (acau *ArchivedComputeAllocationUpdate) SetName(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetName(s)
-	return acau
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableName(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetName(*s)
 	}
 	return acau
 }
@@ -182,282 +104,30 @@ func (acau *ArchivedComputeAllocationUpdate) SetNillableResourceKind(s *string) 
 	return acau
 }
 
-// SetOperationID sets the "operation_id" field.
-func (acau *ArchivedComputeAllocationUpdate) SetOperationID(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetOperationID(s)
+// SetName sets the "name" field.
+func (acau *ArchivedComputeAllocationUpdate) SetName(s string) *ArchivedComputeAllocationUpdate {
+	acau.mutation.SetName(s)
 	return acau
 }
 
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableOperationID(s *string) *ArchivedComputeAllocationUpdate {
+// SetNillableName sets the "name" field if the given value is not nil.
+func (acau *ArchivedComputeAllocationUpdate) SetNillableName(s *string) *ArchivedComputeAllocationUpdate {
 	if s != nil {
-		acau.SetOperationID(*s)
+		acau.SetName(*s)
 	}
 	return acau
 }
 
-// SetProvider sets the "provider" field.
-func (acau *ArchivedComputeAllocationUpdate) SetProvider(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetProvider(s)
+// SetStatus sets the "status" field.
+func (acau *ArchivedComputeAllocationUpdate) SetStatus(s string) *ArchivedComputeAllocationUpdate {
+	acau.mutation.SetStatus(s)
 	return acau
 }
 
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableProvider(s *string) *ArchivedComputeAllocationUpdate {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (acau *ArchivedComputeAllocationUpdate) SetNillableStatus(s *string) *ArchivedComputeAllocationUpdate {
 	if s != nil {
-		acau.SetProvider(*s)
-	}
-	return acau
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (acau *ArchivedComputeAllocationUpdate) SetProviderResourceID(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetProviderResourceID(s)
-	return acau
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableProviderResourceID(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetProviderResourceID(*s)
-	}
-	return acau
-}
-
-// SetURL sets the "url" field.
-func (acau *ArchivedComputeAllocationUpdate) SetURL(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetURL(s)
-	return acau
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableURL(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetURL(*s)
-	}
-	return acau
-}
-
-// SetHoldID sets the "hold_id" field.
-func (acau *ArchivedComputeAllocationUpdate) SetHoldID(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetHoldID(s)
-	return acau
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableHoldID(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetHoldID(*s)
-	}
-	return acau
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (acau *ArchivedComputeAllocationUpdate) SetHoldReleaseID(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetHoldReleaseID(s)
-	return acau
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableHoldReleaseID(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetHoldReleaseID(*s)
-	}
-	return acau
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (acau *ArchivedComputeAllocationUpdate) SetLedgerEntryID(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetLedgerEntryID(s)
-	return acau
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableLedgerEntryID(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetLedgerEntryID(*s)
-	}
-	return acau
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (acau *ArchivedComputeAllocationUpdate) SetWalletTransactionID(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetWalletTransactionID(s)
-	return acau
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableWalletTransactionID(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetWalletTransactionID(*s)
-	}
-	return acau
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (acau *ArchivedComputeAllocationUpdate) SetSettlementID(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetSettlementID(s)
-	return acau
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableSettlementID(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetSettlementID(*s)
-	}
-	return acau
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (acau *ArchivedComputeAllocationUpdate) SetPricingVersion(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetPricingVersion(s)
-	return acau
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillablePricingVersion(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetPricingVersion(*s)
-	}
-	return acau
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (acau *ArchivedComputeAllocationUpdate) SetAmountCents(i int64) *ArchivedComputeAllocationUpdate {
-	acau.mutation.ResetAmountCents()
-	acau.mutation.SetAmountCents(i)
-	return acau
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableAmountCents(i *int64) *ArchivedComputeAllocationUpdate {
-	if i != nil {
-		acau.SetAmountCents(*i)
-	}
-	return acau
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (acau *ArchivedComputeAllocationUpdate) AddAmountCents(i int64) *ArchivedComputeAllocationUpdate {
-	acau.mutation.AddAmountCents(i)
-	return acau
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (acau *ArchivedComputeAllocationUpdate) SetBalanceCents(i int64) *ArchivedComputeAllocationUpdate {
-	acau.mutation.ResetBalanceCents()
-	acau.mutation.SetBalanceCents(i)
-	return acau
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableBalanceCents(i *int64) *ArchivedComputeAllocationUpdate {
-	if i != nil {
-		acau.SetBalanceCents(*i)
-	}
-	return acau
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (acau *ArchivedComputeAllocationUpdate) AddBalanceCents(i int64) *ArchivedComputeAllocationUpdate {
-	acau.mutation.AddBalanceCents(i)
-	return acau
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (acau *ArchivedComputeAllocationUpdate) SetFrozenCents(i int64) *ArchivedComputeAllocationUpdate {
-	acau.mutation.ResetFrozenCents()
-	acau.mutation.SetFrozenCents(i)
-	return acau
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableFrozenCents(i *int64) *ArchivedComputeAllocationUpdate {
-	if i != nil {
-		acau.SetFrozenCents(*i)
-	}
-	return acau
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (acau *ArchivedComputeAllocationUpdate) AddFrozenCents(i int64) *ArchivedComputeAllocationUpdate {
-	acau.mutation.AddFrozenCents(i)
-	return acau
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (acau *ArchivedComputeAllocationUpdate) SetAvailableCents(i int64) *ArchivedComputeAllocationUpdate {
-	acau.mutation.ResetAvailableCents()
-	acau.mutation.SetAvailableCents(i)
-	return acau
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableAvailableCents(i *int64) *ArchivedComputeAllocationUpdate {
-	if i != nil {
-		acau.SetAvailableCents(*i)
-	}
-	return acau
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (acau *ArchivedComputeAllocationUpdate) AddAvailableCents(i int64) *ArchivedComputeAllocationUpdate {
-	acau.mutation.AddAvailableCents(i)
-	return acau
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (acau *ArchivedComputeAllocationUpdate) SetTotalSpentCents(i int64) *ArchivedComputeAllocationUpdate {
-	acau.mutation.ResetTotalSpentCents()
-	acau.mutation.SetTotalSpentCents(i)
-	return acau
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableTotalSpentCents(i *int64) *ArchivedComputeAllocationUpdate {
-	if i != nil {
-		acau.SetTotalSpentCents(*i)
-	}
-	return acau
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (acau *ArchivedComputeAllocationUpdate) AddTotalSpentCents(i int64) *ArchivedComputeAllocationUpdate {
-	acau.mutation.AddTotalSpentCents(i)
-	return acau
-}
-
-// SetQuantity sets the "quantity" field.
-func (acau *ArchivedComputeAllocationUpdate) SetQuantity(f float64) *ArchivedComputeAllocationUpdate {
-	acau.mutation.ResetQuantity()
-	acau.mutation.SetQuantity(f)
-	return acau
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableQuantity(f *float64) *ArchivedComputeAllocationUpdate {
-	if f != nil {
-		acau.SetQuantity(*f)
-	}
-	return acau
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (acau *ArchivedComputeAllocationUpdate) AddQuantity(f float64) *ArchivedComputeAllocationUpdate {
-	acau.mutation.AddQuantity(f)
-	return acau
-}
-
-// SetUnit sets the "unit" field.
-func (acau *ArchivedComputeAllocationUpdate) SetUnit(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetUnit(s)
-	return acau
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableUnit(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetUnit(*s)
+		acau.SetStatus(*s)
 	}
 	return acau
 }
@@ -473,68 +143,6 @@ func (acau *ArchivedComputeAllocationUpdate) SetNillableReason(s *string) *Archi
 	if s != nil {
 		acau.SetReason(*s)
 	}
-	return acau
-}
-
-// SetResult sets the "result" field.
-func (acau *ArchivedComputeAllocationUpdate) SetResult(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetResult(s)
-	return acau
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableResult(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetResult(*s)
-	}
-	return acau
-}
-
-// SetSource sets the "source" field.
-func (acau *ArchivedComputeAllocationUpdate) SetSource(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetSource(s)
-	return acau
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableSource(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetSource(*s)
-	}
-	return acau
-}
-
-// SetDirection sets the "direction" field.
-func (acau *ArchivedComputeAllocationUpdate) SetDirection(s string) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetDirection(s)
-	return acau
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableDirection(s *string) *ArchivedComputeAllocationUpdate {
-	if s != nil {
-		acau.SetDirection(*s)
-	}
-	return acau
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (acau *ArchivedComputeAllocationUpdate) SetCreatedAt(t time.Time) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetCreatedAt(t)
-	return acau
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (acau *ArchivedComputeAllocationUpdate) SetNillableCreatedAt(t *time.Time) *ArchivedComputeAllocationUpdate {
-	if t != nil {
-		acau.SetCreatedAt(*t)
-	}
-	return acau
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (acau *ArchivedComputeAllocationUpdate) SetUpdatedAt(t time.Time) *ArchivedComputeAllocationUpdate {
-	acau.mutation.SetUpdatedAt(t)
 	return acau
 }
 
@@ -608,29 +216,14 @@ func (acau *ArchivedComputeAllocationUpdate) sqlSave(ctx context.Context) (n int
 			}
 		}
 	}
+	if value, ok := acau.mutation.CreatedAt(); ok {
+		_spec.SetField(archivedcomputeallocation.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := acau.mutation.UpdatedAt(); ok {
+		_spec.SetField(archivedcomputeallocation.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := acau.mutation.AccountID(); ok {
 		_spec.SetField(archivedcomputeallocation.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.OwnerAccountID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.OwnerUserID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.UserID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.Email(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.Role(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldRole, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.Status(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.Name(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldName, field.TypeString, value)
 	}
 	if value, ok := acau.mutation.WorkspaceID(); ok {
 		_spec.SetField(archivedcomputeallocation.FieldWorkspaceID, field.TypeString, value)
@@ -641,92 +234,14 @@ func (acau *ArchivedComputeAllocationUpdate) sqlSave(ctx context.Context) (n int
 	if value, ok := acau.mutation.ResourceKind(); ok {
 		_spec.SetField(archivedcomputeallocation.FieldResourceKind, field.TypeString, value)
 	}
-	if value, ok := acau.mutation.OperationID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldOperationID, field.TypeString, value)
+	if value, ok := acau.mutation.Name(); ok {
+		_spec.SetField(archivedcomputeallocation.FieldName, field.TypeString, value)
 	}
-	if value, ok := acau.mutation.Provider(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.ProviderResourceID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.URL(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldURL, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.HoldID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.HoldReleaseID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.LedgerEntryID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.WalletTransactionID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.SettlementID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.PricingVersion(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.AmountCents(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := acau.mutation.AddedAmountCents(); ok {
-		_spec.AddField(archivedcomputeallocation.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := acau.mutation.BalanceCents(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := acau.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(archivedcomputeallocation.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := acau.mutation.FrozenCents(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := acau.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(archivedcomputeallocation.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := acau.mutation.AvailableCents(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := acau.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(archivedcomputeallocation.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := acau.mutation.TotalSpentCents(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := acau.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(archivedcomputeallocation.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := acau.mutation.Quantity(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := acau.mutation.AddedQuantity(); ok {
-		_spec.AddField(archivedcomputeallocation.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := acau.mutation.Unit(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldUnit, field.TypeString, value)
+	if value, ok := acau.mutation.Status(); ok {
+		_spec.SetField(archivedcomputeallocation.FieldStatus, field.TypeString, value)
 	}
 	if value, ok := acau.mutation.Reason(); ok {
 		_spec.SetField(archivedcomputeallocation.FieldReason, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.Result(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldResult, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.Source(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldSource, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.Direction(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldDirection, field.TypeString, value)
-	}
-	if value, ok := acau.mutation.CreatedAt(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldCreatedAt, field.TypeTime, value)
-	}
-	if value, ok := acau.mutation.UpdatedAt(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldUpdatedAt, field.TypeTime, value)
 	}
 	if value, ok := acau.mutation.ArchivedAt(); ok {
 		_spec.SetField(archivedcomputeallocation.FieldArchivedAt, field.TypeTime, value)
@@ -754,6 +269,26 @@ type ArchivedComputeAllocationUpdateOne struct {
 	mutation *ArchivedComputeAllocationMutation
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (acauo *ArchivedComputeAllocationUpdateOne) SetCreatedAt(t time.Time) *ArchivedComputeAllocationUpdateOne {
+	acauo.mutation.SetCreatedAt(t)
+	return acauo
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableCreatedAt(t *time.Time) *ArchivedComputeAllocationUpdateOne {
+	if t != nil {
+		acauo.SetCreatedAt(*t)
+	}
+	return acauo
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (acauo *ArchivedComputeAllocationUpdateOne) SetUpdatedAt(t time.Time) *ArchivedComputeAllocationUpdateOne {
+	acauo.mutation.SetUpdatedAt(t)
+	return acauo
+}
+
 // SetAccountID sets the "account_id" field.
 func (acauo *ArchivedComputeAllocationUpdateOne) SetAccountID(s string) *ArchivedComputeAllocationUpdateOne {
 	acauo.mutation.SetAccountID(s)
@@ -764,104 +299,6 @@ func (acauo *ArchivedComputeAllocationUpdateOne) SetAccountID(s string) *Archive
 func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableAccountID(s *string) *ArchivedComputeAllocationUpdateOne {
 	if s != nil {
 		acauo.SetAccountID(*s)
-	}
-	return acauo
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetOwnerAccountID(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetOwnerAccountID(s)
-	return acauo
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableOwnerAccountID(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetOwnerAccountID(*s)
-	}
-	return acauo
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetOwnerUserID(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetOwnerUserID(s)
-	return acauo
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableOwnerUserID(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetOwnerUserID(*s)
-	}
-	return acauo
-}
-
-// SetUserID sets the "user_id" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetUserID(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetUserID(s)
-	return acauo
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableUserID(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetUserID(*s)
-	}
-	return acauo
-}
-
-// SetEmail sets the "email" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetEmail(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetEmail(s)
-	return acauo
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableEmail(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetEmail(*s)
-	}
-	return acauo
-}
-
-// SetRole sets the "role" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetRole(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetRole(s)
-	return acauo
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableRole(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetRole(*s)
-	}
-	return acauo
-}
-
-// SetStatus sets the "status" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetStatus(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetStatus(s)
-	return acauo
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableStatus(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetStatus(*s)
-	}
-	return acauo
-}
-
-// SetName sets the "name" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetName(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetName(s)
-	return acauo
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableName(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetName(*s)
 	}
 	return acauo
 }
@@ -908,282 +345,30 @@ func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableResourceKind(s *stri
 	return acauo
 }
 
-// SetOperationID sets the "operation_id" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetOperationID(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetOperationID(s)
+// SetName sets the "name" field.
+func (acauo *ArchivedComputeAllocationUpdateOne) SetName(s string) *ArchivedComputeAllocationUpdateOne {
+	acauo.mutation.SetName(s)
 	return acauo
 }
 
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableOperationID(s *string) *ArchivedComputeAllocationUpdateOne {
+// SetNillableName sets the "name" field if the given value is not nil.
+func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableName(s *string) *ArchivedComputeAllocationUpdateOne {
 	if s != nil {
-		acauo.SetOperationID(*s)
+		acauo.SetName(*s)
 	}
 	return acauo
 }
 
-// SetProvider sets the "provider" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetProvider(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetProvider(s)
+// SetStatus sets the "status" field.
+func (acauo *ArchivedComputeAllocationUpdateOne) SetStatus(s string) *ArchivedComputeAllocationUpdateOne {
+	acauo.mutation.SetStatus(s)
 	return acauo
 }
 
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableProvider(s *string) *ArchivedComputeAllocationUpdateOne {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableStatus(s *string) *ArchivedComputeAllocationUpdateOne {
 	if s != nil {
-		acauo.SetProvider(*s)
-	}
-	return acauo
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetProviderResourceID(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetProviderResourceID(s)
-	return acauo
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableProviderResourceID(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetProviderResourceID(*s)
-	}
-	return acauo
-}
-
-// SetURL sets the "url" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetURL(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetURL(s)
-	return acauo
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableURL(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetURL(*s)
-	}
-	return acauo
-}
-
-// SetHoldID sets the "hold_id" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetHoldID(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetHoldID(s)
-	return acauo
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableHoldID(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetHoldID(*s)
-	}
-	return acauo
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetHoldReleaseID(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetHoldReleaseID(s)
-	return acauo
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableHoldReleaseID(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetHoldReleaseID(*s)
-	}
-	return acauo
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetLedgerEntryID(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetLedgerEntryID(s)
-	return acauo
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableLedgerEntryID(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetLedgerEntryID(*s)
-	}
-	return acauo
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetWalletTransactionID(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetWalletTransactionID(s)
-	return acauo
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableWalletTransactionID(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetWalletTransactionID(*s)
-	}
-	return acauo
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetSettlementID(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetSettlementID(s)
-	return acauo
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableSettlementID(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetSettlementID(*s)
-	}
-	return acauo
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetPricingVersion(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetPricingVersion(s)
-	return acauo
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillablePricingVersion(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetPricingVersion(*s)
-	}
-	return acauo
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetAmountCents(i int64) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.ResetAmountCents()
-	acauo.mutation.SetAmountCents(i)
-	return acauo
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableAmountCents(i *int64) *ArchivedComputeAllocationUpdateOne {
-	if i != nil {
-		acauo.SetAmountCents(*i)
-	}
-	return acauo
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) AddAmountCents(i int64) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.AddAmountCents(i)
-	return acauo
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetBalanceCents(i int64) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.ResetBalanceCents()
-	acauo.mutation.SetBalanceCents(i)
-	return acauo
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableBalanceCents(i *int64) *ArchivedComputeAllocationUpdateOne {
-	if i != nil {
-		acauo.SetBalanceCents(*i)
-	}
-	return acauo
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) AddBalanceCents(i int64) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.AddBalanceCents(i)
-	return acauo
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetFrozenCents(i int64) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.ResetFrozenCents()
-	acauo.mutation.SetFrozenCents(i)
-	return acauo
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableFrozenCents(i *int64) *ArchivedComputeAllocationUpdateOne {
-	if i != nil {
-		acauo.SetFrozenCents(*i)
-	}
-	return acauo
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) AddFrozenCents(i int64) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.AddFrozenCents(i)
-	return acauo
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetAvailableCents(i int64) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.ResetAvailableCents()
-	acauo.mutation.SetAvailableCents(i)
-	return acauo
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableAvailableCents(i *int64) *ArchivedComputeAllocationUpdateOne {
-	if i != nil {
-		acauo.SetAvailableCents(*i)
-	}
-	return acauo
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) AddAvailableCents(i int64) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.AddAvailableCents(i)
-	return acauo
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetTotalSpentCents(i int64) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.ResetTotalSpentCents()
-	acauo.mutation.SetTotalSpentCents(i)
-	return acauo
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableTotalSpentCents(i *int64) *ArchivedComputeAllocationUpdateOne {
-	if i != nil {
-		acauo.SetTotalSpentCents(*i)
-	}
-	return acauo
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) AddTotalSpentCents(i int64) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.AddTotalSpentCents(i)
-	return acauo
-}
-
-// SetQuantity sets the "quantity" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetQuantity(f float64) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.ResetQuantity()
-	acauo.mutation.SetQuantity(f)
-	return acauo
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableQuantity(f *float64) *ArchivedComputeAllocationUpdateOne {
-	if f != nil {
-		acauo.SetQuantity(*f)
-	}
-	return acauo
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) AddQuantity(f float64) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.AddQuantity(f)
-	return acauo
-}
-
-// SetUnit sets the "unit" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetUnit(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetUnit(s)
-	return acauo
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableUnit(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetUnit(*s)
+		acauo.SetStatus(*s)
 	}
 	return acauo
 }
@@ -1199,68 +384,6 @@ func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableReason(s *string) *A
 	if s != nil {
 		acauo.SetReason(*s)
 	}
-	return acauo
-}
-
-// SetResult sets the "result" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetResult(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetResult(s)
-	return acauo
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableResult(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetResult(*s)
-	}
-	return acauo
-}
-
-// SetSource sets the "source" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetSource(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetSource(s)
-	return acauo
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableSource(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetSource(*s)
-	}
-	return acauo
-}
-
-// SetDirection sets the "direction" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetDirection(s string) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetDirection(s)
-	return acauo
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableDirection(s *string) *ArchivedComputeAllocationUpdateOne {
-	if s != nil {
-		acauo.SetDirection(*s)
-	}
-	return acauo
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetCreatedAt(t time.Time) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetCreatedAt(t)
-	return acauo
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetNillableCreatedAt(t *time.Time) *ArchivedComputeAllocationUpdateOne {
-	if t != nil {
-		acauo.SetCreatedAt(*t)
-	}
-	return acauo
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (acauo *ArchivedComputeAllocationUpdateOne) SetUpdatedAt(t time.Time) *ArchivedComputeAllocationUpdateOne {
-	acauo.mutation.SetUpdatedAt(t)
 	return acauo
 }
 
@@ -1364,29 +487,14 @@ func (acauo *ArchivedComputeAllocationUpdateOne) sqlSave(ctx context.Context) (_
 			}
 		}
 	}
+	if value, ok := acauo.mutation.CreatedAt(); ok {
+		_spec.SetField(archivedcomputeallocation.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := acauo.mutation.UpdatedAt(); ok {
+		_spec.SetField(archivedcomputeallocation.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := acauo.mutation.AccountID(); ok {
 		_spec.SetField(archivedcomputeallocation.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.OwnerAccountID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.OwnerUserID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.UserID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.Email(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.Role(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldRole, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.Status(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.Name(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldName, field.TypeString, value)
 	}
 	if value, ok := acauo.mutation.WorkspaceID(); ok {
 		_spec.SetField(archivedcomputeallocation.FieldWorkspaceID, field.TypeString, value)
@@ -1397,92 +505,14 @@ func (acauo *ArchivedComputeAllocationUpdateOne) sqlSave(ctx context.Context) (_
 	if value, ok := acauo.mutation.ResourceKind(); ok {
 		_spec.SetField(archivedcomputeallocation.FieldResourceKind, field.TypeString, value)
 	}
-	if value, ok := acauo.mutation.OperationID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldOperationID, field.TypeString, value)
+	if value, ok := acauo.mutation.Name(); ok {
+		_spec.SetField(archivedcomputeallocation.FieldName, field.TypeString, value)
 	}
-	if value, ok := acauo.mutation.Provider(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.ProviderResourceID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.URL(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldURL, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.HoldID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.HoldReleaseID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.LedgerEntryID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.WalletTransactionID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.SettlementID(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.PricingVersion(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.AmountCents(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := acauo.mutation.AddedAmountCents(); ok {
-		_spec.AddField(archivedcomputeallocation.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := acauo.mutation.BalanceCents(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := acauo.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(archivedcomputeallocation.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := acauo.mutation.FrozenCents(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := acauo.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(archivedcomputeallocation.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := acauo.mutation.AvailableCents(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := acauo.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(archivedcomputeallocation.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := acauo.mutation.TotalSpentCents(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := acauo.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(archivedcomputeallocation.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := acauo.mutation.Quantity(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := acauo.mutation.AddedQuantity(); ok {
-		_spec.AddField(archivedcomputeallocation.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := acauo.mutation.Unit(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldUnit, field.TypeString, value)
+	if value, ok := acauo.mutation.Status(); ok {
+		_spec.SetField(archivedcomputeallocation.FieldStatus, field.TypeString, value)
 	}
 	if value, ok := acauo.mutation.Reason(); ok {
 		_spec.SetField(archivedcomputeallocation.FieldReason, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.Result(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldResult, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.Source(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldSource, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.Direction(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldDirection, field.TypeString, value)
-	}
-	if value, ok := acauo.mutation.CreatedAt(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldCreatedAt, field.TypeTime, value)
-	}
-	if value, ok := acauo.mutation.UpdatedAt(); ok {
-		_spec.SetField(archivedcomputeallocation.FieldUpdatedAt, field.TypeTime, value)
 	}
 	if value, ok := acauo.mutation.ArchivedAt(); ok {
 		_spec.SetField(archivedcomputeallocation.FieldArchivedAt, field.TypeTime, value)

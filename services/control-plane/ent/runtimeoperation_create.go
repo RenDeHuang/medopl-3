@@ -20,6 +20,48 @@ type RuntimeOperationCreate struct {
 	hooks    []Hook
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (roc *RuntimeOperationCreate) SetCreatedAt(t time.Time) *RuntimeOperationCreate {
+	roc.mutation.SetCreatedAt(t)
+	return roc
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (roc *RuntimeOperationCreate) SetNillableCreatedAt(t *time.Time) *RuntimeOperationCreate {
+	if t != nil {
+		roc.SetCreatedAt(*t)
+	}
+	return roc
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (roc *RuntimeOperationCreate) SetUpdatedAt(t time.Time) *RuntimeOperationCreate {
+	roc.mutation.SetUpdatedAt(t)
+	return roc
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (roc *RuntimeOperationCreate) SetNillableUpdatedAt(t *time.Time) *RuntimeOperationCreate {
+	if t != nil {
+		roc.SetUpdatedAt(*t)
+	}
+	return roc
+}
+
+// SetOperationID sets the "operation_id" field.
+func (roc *RuntimeOperationCreate) SetOperationID(s string) *RuntimeOperationCreate {
+	roc.mutation.SetOperationID(s)
+	return roc
+}
+
+// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
+func (roc *RuntimeOperationCreate) SetNillableOperationID(s *string) *RuntimeOperationCreate {
+	if s != nil {
+		roc.SetOperationID(*s)
+	}
+	return roc
+}
+
 // SetAccountID sets the "account_id" field.
 func (roc *RuntimeOperationCreate) SetAccountID(s string) *RuntimeOperationCreate {
 	roc.mutation.SetAccountID(s)
@@ -30,104 +72,6 @@ func (roc *RuntimeOperationCreate) SetAccountID(s string) *RuntimeOperationCreat
 func (roc *RuntimeOperationCreate) SetNillableAccountID(s *string) *RuntimeOperationCreate {
 	if s != nil {
 		roc.SetAccountID(*s)
-	}
-	return roc
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (roc *RuntimeOperationCreate) SetOwnerAccountID(s string) *RuntimeOperationCreate {
-	roc.mutation.SetOwnerAccountID(s)
-	return roc
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableOwnerAccountID(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetOwnerAccountID(*s)
-	}
-	return roc
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (roc *RuntimeOperationCreate) SetOwnerUserID(s string) *RuntimeOperationCreate {
-	roc.mutation.SetOwnerUserID(s)
-	return roc
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableOwnerUserID(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetOwnerUserID(*s)
-	}
-	return roc
-}
-
-// SetUserID sets the "user_id" field.
-func (roc *RuntimeOperationCreate) SetUserID(s string) *RuntimeOperationCreate {
-	roc.mutation.SetUserID(s)
-	return roc
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableUserID(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetUserID(*s)
-	}
-	return roc
-}
-
-// SetEmail sets the "email" field.
-func (roc *RuntimeOperationCreate) SetEmail(s string) *RuntimeOperationCreate {
-	roc.mutation.SetEmail(s)
-	return roc
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableEmail(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetEmail(*s)
-	}
-	return roc
-}
-
-// SetRole sets the "role" field.
-func (roc *RuntimeOperationCreate) SetRole(s string) *RuntimeOperationCreate {
-	roc.mutation.SetRole(s)
-	return roc
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableRole(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetRole(*s)
-	}
-	return roc
-}
-
-// SetStatus sets the "status" field.
-func (roc *RuntimeOperationCreate) SetStatus(s string) *RuntimeOperationCreate {
-	roc.mutation.SetStatus(s)
-	return roc
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableStatus(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetStatus(*s)
-	}
-	return roc
-}
-
-// SetName sets the "name" field.
-func (roc *RuntimeOperationCreate) SetName(s string) *RuntimeOperationCreate {
-	roc.mutation.SetName(s)
-	return roc
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableName(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetName(*s)
 	}
 	return roc
 }
@@ -174,16 +118,16 @@ func (roc *RuntimeOperationCreate) SetNillableResourceKind(s *string) *RuntimeOp
 	return roc
 }
 
-// SetOperationID sets the "operation_id" field.
-func (roc *RuntimeOperationCreate) SetOperationID(s string) *RuntimeOperationCreate {
-	roc.mutation.SetOperationID(s)
+// SetAction sets the "action" field.
+func (roc *RuntimeOperationCreate) SetAction(s string) *RuntimeOperationCreate {
+	roc.mutation.SetAction(s)
 	return roc
 }
 
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableOperationID(s *string) *RuntimeOperationCreate {
+// SetNillableAction sets the "action" field if the given value is not nil.
+func (roc *RuntimeOperationCreate) SetNillableAction(s *string) *RuntimeOperationCreate {
 	if s != nil {
-		roc.SetOperationID(*s)
+		roc.SetAction(*s)
 	}
 	return roc
 }
@@ -202,226 +146,30 @@ func (roc *RuntimeOperationCreate) SetNillableProvider(s *string) *RuntimeOperat
 	return roc
 }
 
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (roc *RuntimeOperationCreate) SetProviderResourceID(s string) *RuntimeOperationCreate {
-	roc.mutation.SetProviderResourceID(s)
+// SetProviderRequestID sets the "provider_request_id" field.
+func (roc *RuntimeOperationCreate) SetProviderRequestID(s string) *RuntimeOperationCreate {
+	roc.mutation.SetProviderRequestID(s)
 	return roc
 }
 
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableProviderResourceID(s *string) *RuntimeOperationCreate {
+// SetNillableProviderRequestID sets the "provider_request_id" field if the given value is not nil.
+func (roc *RuntimeOperationCreate) SetNillableProviderRequestID(s *string) *RuntimeOperationCreate {
 	if s != nil {
-		roc.SetProviderResourceID(*s)
+		roc.SetProviderRequestID(*s)
 	}
 	return roc
 }
 
-// SetURL sets the "url" field.
-func (roc *RuntimeOperationCreate) SetURL(s string) *RuntimeOperationCreate {
-	roc.mutation.SetURL(s)
+// SetStatus sets the "status" field.
+func (roc *RuntimeOperationCreate) SetStatus(s string) *RuntimeOperationCreate {
+	roc.mutation.SetStatus(s)
 	return roc
 }
 
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableURL(s *string) *RuntimeOperationCreate {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (roc *RuntimeOperationCreate) SetNillableStatus(s *string) *RuntimeOperationCreate {
 	if s != nil {
-		roc.SetURL(*s)
-	}
-	return roc
-}
-
-// SetHoldID sets the "hold_id" field.
-func (roc *RuntimeOperationCreate) SetHoldID(s string) *RuntimeOperationCreate {
-	roc.mutation.SetHoldID(s)
-	return roc
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableHoldID(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetHoldID(*s)
-	}
-	return roc
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (roc *RuntimeOperationCreate) SetHoldReleaseID(s string) *RuntimeOperationCreate {
-	roc.mutation.SetHoldReleaseID(s)
-	return roc
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableHoldReleaseID(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetHoldReleaseID(*s)
-	}
-	return roc
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (roc *RuntimeOperationCreate) SetLedgerEntryID(s string) *RuntimeOperationCreate {
-	roc.mutation.SetLedgerEntryID(s)
-	return roc
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableLedgerEntryID(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetLedgerEntryID(*s)
-	}
-	return roc
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (roc *RuntimeOperationCreate) SetWalletTransactionID(s string) *RuntimeOperationCreate {
-	roc.mutation.SetWalletTransactionID(s)
-	return roc
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableWalletTransactionID(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetWalletTransactionID(*s)
-	}
-	return roc
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (roc *RuntimeOperationCreate) SetSettlementID(s string) *RuntimeOperationCreate {
-	roc.mutation.SetSettlementID(s)
-	return roc
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableSettlementID(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetSettlementID(*s)
-	}
-	return roc
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (roc *RuntimeOperationCreate) SetPricingVersion(s string) *RuntimeOperationCreate {
-	roc.mutation.SetPricingVersion(s)
-	return roc
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillablePricingVersion(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetPricingVersion(*s)
-	}
-	return roc
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (roc *RuntimeOperationCreate) SetAmountCents(i int64) *RuntimeOperationCreate {
-	roc.mutation.SetAmountCents(i)
-	return roc
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableAmountCents(i *int64) *RuntimeOperationCreate {
-	if i != nil {
-		roc.SetAmountCents(*i)
-	}
-	return roc
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (roc *RuntimeOperationCreate) SetBalanceCents(i int64) *RuntimeOperationCreate {
-	roc.mutation.SetBalanceCents(i)
-	return roc
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableBalanceCents(i *int64) *RuntimeOperationCreate {
-	if i != nil {
-		roc.SetBalanceCents(*i)
-	}
-	return roc
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (roc *RuntimeOperationCreate) SetFrozenCents(i int64) *RuntimeOperationCreate {
-	roc.mutation.SetFrozenCents(i)
-	return roc
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableFrozenCents(i *int64) *RuntimeOperationCreate {
-	if i != nil {
-		roc.SetFrozenCents(*i)
-	}
-	return roc
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (roc *RuntimeOperationCreate) SetAvailableCents(i int64) *RuntimeOperationCreate {
-	roc.mutation.SetAvailableCents(i)
-	return roc
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableAvailableCents(i *int64) *RuntimeOperationCreate {
-	if i != nil {
-		roc.SetAvailableCents(*i)
-	}
-	return roc
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (roc *RuntimeOperationCreate) SetTotalSpentCents(i int64) *RuntimeOperationCreate {
-	roc.mutation.SetTotalSpentCents(i)
-	return roc
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableTotalSpentCents(i *int64) *RuntimeOperationCreate {
-	if i != nil {
-		roc.SetTotalSpentCents(*i)
-	}
-	return roc
-}
-
-// SetQuantity sets the "quantity" field.
-func (roc *RuntimeOperationCreate) SetQuantity(f float64) *RuntimeOperationCreate {
-	roc.mutation.SetQuantity(f)
-	return roc
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableQuantity(f *float64) *RuntimeOperationCreate {
-	if f != nil {
-		roc.SetQuantity(*f)
-	}
-	return roc
-}
-
-// SetUnit sets the "unit" field.
-func (roc *RuntimeOperationCreate) SetUnit(s string) *RuntimeOperationCreate {
-	roc.mutation.SetUnit(s)
-	return roc
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableUnit(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetUnit(*s)
-	}
-	return roc
-}
-
-// SetReason sets the "reason" field.
-func (roc *RuntimeOperationCreate) SetReason(s string) *RuntimeOperationCreate {
-	roc.mutation.SetReason(s)
-	return roc
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableReason(s *string) *RuntimeOperationCreate {
-	if s != nil {
-		roc.SetReason(*s)
+		roc.SetStatus(*s)
 	}
 	return roc
 }
@@ -440,72 +188,114 @@ func (roc *RuntimeOperationCreate) SetNillableResult(s *string) *RuntimeOperatio
 	return roc
 }
 
-// SetSource sets the "source" field.
-func (roc *RuntimeOperationCreate) SetSource(s string) *RuntimeOperationCreate {
-	roc.mutation.SetSource(s)
+// SetComputeAllocationID sets the "compute_allocation_id" field.
+func (roc *RuntimeOperationCreate) SetComputeAllocationID(s string) *RuntimeOperationCreate {
+	roc.mutation.SetComputeAllocationID(s)
 	return roc
 }
 
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableSource(s *string) *RuntimeOperationCreate {
+// SetNillableComputeAllocationID sets the "compute_allocation_id" field if the given value is not nil.
+func (roc *RuntimeOperationCreate) SetNillableComputeAllocationID(s *string) *RuntimeOperationCreate {
 	if s != nil {
-		roc.SetSource(*s)
+		roc.SetComputeAllocationID(*s)
 	}
 	return roc
 }
 
-// SetDirection sets the "direction" field.
-func (roc *RuntimeOperationCreate) SetDirection(s string) *RuntimeOperationCreate {
-	roc.mutation.SetDirection(s)
+// SetStorageID sets the "storage_id" field.
+func (roc *RuntimeOperationCreate) SetStorageID(s string) *RuntimeOperationCreate {
+	roc.mutation.SetStorageID(s)
 	return roc
 }
 
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableDirection(s *string) *RuntimeOperationCreate {
+// SetNillableStorageID sets the "storage_id" field if the given value is not nil.
+func (roc *RuntimeOperationCreate) SetNillableStorageID(s *string) *RuntimeOperationCreate {
 	if s != nil {
-		roc.SetDirection(*s)
+		roc.SetStorageID(*s)
 	}
 	return roc
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (roc *RuntimeOperationCreate) SetCreatedAt(t time.Time) *RuntimeOperationCreate {
-	roc.mutation.SetCreatedAt(t)
+// SetAttachmentID sets the "attachment_id" field.
+func (roc *RuntimeOperationCreate) SetAttachmentID(s string) *RuntimeOperationCreate {
+	roc.mutation.SetAttachmentID(s)
 	return roc
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableCreatedAt(t *time.Time) *RuntimeOperationCreate {
-	if t != nil {
-		roc.SetCreatedAt(*t)
+// SetNillableAttachmentID sets the "attachment_id" field if the given value is not nil.
+func (roc *RuntimeOperationCreate) SetNillableAttachmentID(s *string) *RuntimeOperationCreate {
+	if s != nil {
+		roc.SetAttachmentID(*s)
 	}
 	return roc
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (roc *RuntimeOperationCreate) SetUpdatedAt(t time.Time) *RuntimeOperationCreate {
-	roc.mutation.SetUpdatedAt(t)
+// SetRuntimeServiceName sets the "runtime_service_name" field.
+func (roc *RuntimeOperationCreate) SetRuntimeServiceName(s string) *RuntimeOperationCreate {
+	roc.mutation.SetRuntimeServiceName(s)
 	return roc
 }
 
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableUpdatedAt(t *time.Time) *RuntimeOperationCreate {
-	if t != nil {
-		roc.SetUpdatedAt(*t)
+// SetNillableRuntimeServiceName sets the "runtime_service_name" field if the given value is not nil.
+func (roc *RuntimeOperationCreate) SetNillableRuntimeServiceName(s *string) *RuntimeOperationCreate {
+	if s != nil {
+		roc.SetRuntimeServiceName(*s)
 	}
 	return roc
 }
 
-// SetArchivedAt sets the "archived_at" field.
-func (roc *RuntimeOperationCreate) SetArchivedAt(t time.Time) *RuntimeOperationCreate {
-	roc.mutation.SetArchivedAt(t)
+// SetCvmInstanceID sets the "cvm_instance_id" field.
+func (roc *RuntimeOperationCreate) SetCvmInstanceID(s string) *RuntimeOperationCreate {
+	roc.mutation.SetCvmInstanceID(s)
 	return roc
 }
 
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (roc *RuntimeOperationCreate) SetNillableArchivedAt(t *time.Time) *RuntimeOperationCreate {
-	if t != nil {
-		roc.SetArchivedAt(*t)
+// SetNillableCvmInstanceID sets the "cvm_instance_id" field if the given value is not nil.
+func (roc *RuntimeOperationCreate) SetNillableCvmInstanceID(s *string) *RuntimeOperationCreate {
+	if s != nil {
+		roc.SetCvmInstanceID(*s)
+	}
+	return roc
+}
+
+// SetInstanceID sets the "instance_id" field.
+func (roc *RuntimeOperationCreate) SetInstanceID(s string) *RuntimeOperationCreate {
+	roc.mutation.SetInstanceID(s)
+	return roc
+}
+
+// SetNillableInstanceID sets the "instance_id" field if the given value is not nil.
+func (roc *RuntimeOperationCreate) SetNillableInstanceID(s *string) *RuntimeOperationCreate {
+	if s != nil {
+		roc.SetInstanceID(*s)
+	}
+	return roc
+}
+
+// SetNodeName sets the "node_name" field.
+func (roc *RuntimeOperationCreate) SetNodeName(s string) *RuntimeOperationCreate {
+	roc.mutation.SetNodeName(s)
+	return roc
+}
+
+// SetNillableNodeName sets the "node_name" field if the given value is not nil.
+func (roc *RuntimeOperationCreate) SetNillableNodeName(s *string) *RuntimeOperationCreate {
+	if s != nil {
+		roc.SetNodeName(*s)
+	}
+	return roc
+}
+
+// SetMachineName sets the "machine_name" field.
+func (roc *RuntimeOperationCreate) SetMachineName(s string) *RuntimeOperationCreate {
+	roc.mutation.SetMachineName(s)
+	return roc
+}
+
+// SetNillableMachineName sets the "machine_name" field if the given value is not nil.
+func (roc *RuntimeOperationCreate) SetNillableMachineName(s *string) *RuntimeOperationCreate {
+	if s != nil {
+		roc.SetMachineName(*s)
 	}
 	return roc
 }
@@ -551,37 +341,21 @@ func (roc *RuntimeOperationCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (roc *RuntimeOperationCreate) defaults() {
+	if _, ok := roc.mutation.CreatedAt(); !ok {
+		v := runtimeoperation.DefaultCreatedAt()
+		roc.mutation.SetCreatedAt(v)
+	}
+	if _, ok := roc.mutation.UpdatedAt(); !ok {
+		v := runtimeoperation.DefaultUpdatedAt()
+		roc.mutation.SetUpdatedAt(v)
+	}
+	if _, ok := roc.mutation.OperationID(); !ok {
+		v := runtimeoperation.DefaultOperationID
+		roc.mutation.SetOperationID(v)
+	}
 	if _, ok := roc.mutation.AccountID(); !ok {
 		v := runtimeoperation.DefaultAccountID
 		roc.mutation.SetAccountID(v)
-	}
-	if _, ok := roc.mutation.OwnerAccountID(); !ok {
-		v := runtimeoperation.DefaultOwnerAccountID
-		roc.mutation.SetOwnerAccountID(v)
-	}
-	if _, ok := roc.mutation.OwnerUserID(); !ok {
-		v := runtimeoperation.DefaultOwnerUserID
-		roc.mutation.SetOwnerUserID(v)
-	}
-	if _, ok := roc.mutation.UserID(); !ok {
-		v := runtimeoperation.DefaultUserID
-		roc.mutation.SetUserID(v)
-	}
-	if _, ok := roc.mutation.Email(); !ok {
-		v := runtimeoperation.DefaultEmail
-		roc.mutation.SetEmail(v)
-	}
-	if _, ok := roc.mutation.Role(); !ok {
-		v := runtimeoperation.DefaultRole
-		roc.mutation.SetRole(v)
-	}
-	if _, ok := roc.mutation.Status(); !ok {
-		v := runtimeoperation.DefaultStatus
-		roc.mutation.SetStatus(v)
-	}
-	if _, ok := roc.mutation.Name(); !ok {
-		v := runtimeoperation.DefaultName
-		roc.mutation.SetName(v)
 	}
 	if _, ok := roc.mutation.WorkspaceID(); !ok {
 		v := runtimeoperation.DefaultWorkspaceID
@@ -595,125 +369,73 @@ func (roc *RuntimeOperationCreate) defaults() {
 		v := runtimeoperation.DefaultResourceKind
 		roc.mutation.SetResourceKind(v)
 	}
-	if _, ok := roc.mutation.OperationID(); !ok {
-		v := runtimeoperation.DefaultOperationID
-		roc.mutation.SetOperationID(v)
+	if _, ok := roc.mutation.Action(); !ok {
+		v := runtimeoperation.DefaultAction
+		roc.mutation.SetAction(v)
 	}
 	if _, ok := roc.mutation.Provider(); !ok {
 		v := runtimeoperation.DefaultProvider
 		roc.mutation.SetProvider(v)
 	}
-	if _, ok := roc.mutation.ProviderResourceID(); !ok {
-		v := runtimeoperation.DefaultProviderResourceID
-		roc.mutation.SetProviderResourceID(v)
+	if _, ok := roc.mutation.ProviderRequestID(); !ok {
+		v := runtimeoperation.DefaultProviderRequestID
+		roc.mutation.SetProviderRequestID(v)
 	}
-	if _, ok := roc.mutation.URL(); !ok {
-		v := runtimeoperation.DefaultURL
-		roc.mutation.SetURL(v)
-	}
-	if _, ok := roc.mutation.HoldID(); !ok {
-		v := runtimeoperation.DefaultHoldID
-		roc.mutation.SetHoldID(v)
-	}
-	if _, ok := roc.mutation.HoldReleaseID(); !ok {
-		v := runtimeoperation.DefaultHoldReleaseID
-		roc.mutation.SetHoldReleaseID(v)
-	}
-	if _, ok := roc.mutation.LedgerEntryID(); !ok {
-		v := runtimeoperation.DefaultLedgerEntryID
-		roc.mutation.SetLedgerEntryID(v)
-	}
-	if _, ok := roc.mutation.WalletTransactionID(); !ok {
-		v := runtimeoperation.DefaultWalletTransactionID
-		roc.mutation.SetWalletTransactionID(v)
-	}
-	if _, ok := roc.mutation.SettlementID(); !ok {
-		v := runtimeoperation.DefaultSettlementID
-		roc.mutation.SetSettlementID(v)
-	}
-	if _, ok := roc.mutation.PricingVersion(); !ok {
-		v := runtimeoperation.DefaultPricingVersion
-		roc.mutation.SetPricingVersion(v)
-	}
-	if _, ok := roc.mutation.AmountCents(); !ok {
-		v := runtimeoperation.DefaultAmountCents
-		roc.mutation.SetAmountCents(v)
-	}
-	if _, ok := roc.mutation.BalanceCents(); !ok {
-		v := runtimeoperation.DefaultBalanceCents
-		roc.mutation.SetBalanceCents(v)
-	}
-	if _, ok := roc.mutation.FrozenCents(); !ok {
-		v := runtimeoperation.DefaultFrozenCents
-		roc.mutation.SetFrozenCents(v)
-	}
-	if _, ok := roc.mutation.AvailableCents(); !ok {
-		v := runtimeoperation.DefaultAvailableCents
-		roc.mutation.SetAvailableCents(v)
-	}
-	if _, ok := roc.mutation.TotalSpentCents(); !ok {
-		v := runtimeoperation.DefaultTotalSpentCents
-		roc.mutation.SetTotalSpentCents(v)
-	}
-	if _, ok := roc.mutation.Quantity(); !ok {
-		v := runtimeoperation.DefaultQuantity
-		roc.mutation.SetQuantity(v)
-	}
-	if _, ok := roc.mutation.Unit(); !ok {
-		v := runtimeoperation.DefaultUnit
-		roc.mutation.SetUnit(v)
-	}
-	if _, ok := roc.mutation.Reason(); !ok {
-		v := runtimeoperation.DefaultReason
-		roc.mutation.SetReason(v)
+	if _, ok := roc.mutation.Status(); !ok {
+		v := runtimeoperation.DefaultStatus
+		roc.mutation.SetStatus(v)
 	}
 	if _, ok := roc.mutation.Result(); !ok {
 		v := runtimeoperation.DefaultResult
 		roc.mutation.SetResult(v)
 	}
-	if _, ok := roc.mutation.Source(); !ok {
-		v := runtimeoperation.DefaultSource
-		roc.mutation.SetSource(v)
+	if _, ok := roc.mutation.ComputeAllocationID(); !ok {
+		v := runtimeoperation.DefaultComputeAllocationID
+		roc.mutation.SetComputeAllocationID(v)
 	}
-	if _, ok := roc.mutation.Direction(); !ok {
-		v := runtimeoperation.DefaultDirection
-		roc.mutation.SetDirection(v)
+	if _, ok := roc.mutation.StorageID(); !ok {
+		v := runtimeoperation.DefaultStorageID
+		roc.mutation.SetStorageID(v)
 	}
-	if _, ok := roc.mutation.CreatedAt(); !ok {
-		v := runtimeoperation.DefaultCreatedAt()
-		roc.mutation.SetCreatedAt(v)
+	if _, ok := roc.mutation.AttachmentID(); !ok {
+		v := runtimeoperation.DefaultAttachmentID
+		roc.mutation.SetAttachmentID(v)
 	}
-	if _, ok := roc.mutation.UpdatedAt(); !ok {
-		v := runtimeoperation.DefaultUpdatedAt()
-		roc.mutation.SetUpdatedAt(v)
+	if _, ok := roc.mutation.RuntimeServiceName(); !ok {
+		v := runtimeoperation.DefaultRuntimeServiceName
+		roc.mutation.SetRuntimeServiceName(v)
+	}
+	if _, ok := roc.mutation.CvmInstanceID(); !ok {
+		v := runtimeoperation.DefaultCvmInstanceID
+		roc.mutation.SetCvmInstanceID(v)
+	}
+	if _, ok := roc.mutation.InstanceID(); !ok {
+		v := runtimeoperation.DefaultInstanceID
+		roc.mutation.SetInstanceID(v)
+	}
+	if _, ok := roc.mutation.NodeName(); !ok {
+		v := runtimeoperation.DefaultNodeName
+		roc.mutation.SetNodeName(v)
+	}
+	if _, ok := roc.mutation.MachineName(); !ok {
+		v := runtimeoperation.DefaultMachineName
+		roc.mutation.SetMachineName(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (roc *RuntimeOperationCreate) check() error {
+	if _, ok := roc.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "RuntimeOperation.created_at"`)}
+	}
+	if _, ok := roc.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "RuntimeOperation.updated_at"`)}
+	}
+	if _, ok := roc.mutation.OperationID(); !ok {
+		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "RuntimeOperation.operation_id"`)}
+	}
 	if _, ok := roc.mutation.AccountID(); !ok {
 		return &ValidationError{Name: "account_id", err: errors.New(`ent: missing required field "RuntimeOperation.account_id"`)}
-	}
-	if _, ok := roc.mutation.OwnerAccountID(); !ok {
-		return &ValidationError{Name: "owner_account_id", err: errors.New(`ent: missing required field "RuntimeOperation.owner_account_id"`)}
-	}
-	if _, ok := roc.mutation.OwnerUserID(); !ok {
-		return &ValidationError{Name: "owner_user_id", err: errors.New(`ent: missing required field "RuntimeOperation.owner_user_id"`)}
-	}
-	if _, ok := roc.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "RuntimeOperation.user_id"`)}
-	}
-	if _, ok := roc.mutation.Email(); !ok {
-		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "RuntimeOperation.email"`)}
-	}
-	if _, ok := roc.mutation.Role(); !ok {
-		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "RuntimeOperation.role"`)}
-	}
-	if _, ok := roc.mutation.Status(); !ok {
-		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "RuntimeOperation.status"`)}
-	}
-	if _, ok := roc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "RuntimeOperation.name"`)}
 	}
 	if _, ok := roc.mutation.WorkspaceID(); !ok {
 		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "RuntimeOperation.workspace_id"`)}
@@ -724,74 +446,44 @@ func (roc *RuntimeOperationCreate) check() error {
 	if _, ok := roc.mutation.ResourceKind(); !ok {
 		return &ValidationError{Name: "resource_kind", err: errors.New(`ent: missing required field "RuntimeOperation.resource_kind"`)}
 	}
-	if _, ok := roc.mutation.OperationID(); !ok {
-		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "RuntimeOperation.operation_id"`)}
+	if _, ok := roc.mutation.Action(); !ok {
+		return &ValidationError{Name: "action", err: errors.New(`ent: missing required field "RuntimeOperation.action"`)}
 	}
 	if _, ok := roc.mutation.Provider(); !ok {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "RuntimeOperation.provider"`)}
 	}
-	if _, ok := roc.mutation.ProviderResourceID(); !ok {
-		return &ValidationError{Name: "provider_resource_id", err: errors.New(`ent: missing required field "RuntimeOperation.provider_resource_id"`)}
+	if _, ok := roc.mutation.ProviderRequestID(); !ok {
+		return &ValidationError{Name: "provider_request_id", err: errors.New(`ent: missing required field "RuntimeOperation.provider_request_id"`)}
 	}
-	if _, ok := roc.mutation.URL(); !ok {
-		return &ValidationError{Name: "url", err: errors.New(`ent: missing required field "RuntimeOperation.url"`)}
-	}
-	if _, ok := roc.mutation.HoldID(); !ok {
-		return &ValidationError{Name: "hold_id", err: errors.New(`ent: missing required field "RuntimeOperation.hold_id"`)}
-	}
-	if _, ok := roc.mutation.HoldReleaseID(); !ok {
-		return &ValidationError{Name: "hold_release_id", err: errors.New(`ent: missing required field "RuntimeOperation.hold_release_id"`)}
-	}
-	if _, ok := roc.mutation.LedgerEntryID(); !ok {
-		return &ValidationError{Name: "ledger_entry_id", err: errors.New(`ent: missing required field "RuntimeOperation.ledger_entry_id"`)}
-	}
-	if _, ok := roc.mutation.WalletTransactionID(); !ok {
-		return &ValidationError{Name: "wallet_transaction_id", err: errors.New(`ent: missing required field "RuntimeOperation.wallet_transaction_id"`)}
-	}
-	if _, ok := roc.mutation.SettlementID(); !ok {
-		return &ValidationError{Name: "settlement_id", err: errors.New(`ent: missing required field "RuntimeOperation.settlement_id"`)}
-	}
-	if _, ok := roc.mutation.PricingVersion(); !ok {
-		return &ValidationError{Name: "pricing_version", err: errors.New(`ent: missing required field "RuntimeOperation.pricing_version"`)}
-	}
-	if _, ok := roc.mutation.AmountCents(); !ok {
-		return &ValidationError{Name: "amount_cents", err: errors.New(`ent: missing required field "RuntimeOperation.amount_cents"`)}
-	}
-	if _, ok := roc.mutation.BalanceCents(); !ok {
-		return &ValidationError{Name: "balance_cents", err: errors.New(`ent: missing required field "RuntimeOperation.balance_cents"`)}
-	}
-	if _, ok := roc.mutation.FrozenCents(); !ok {
-		return &ValidationError{Name: "frozen_cents", err: errors.New(`ent: missing required field "RuntimeOperation.frozen_cents"`)}
-	}
-	if _, ok := roc.mutation.AvailableCents(); !ok {
-		return &ValidationError{Name: "available_cents", err: errors.New(`ent: missing required field "RuntimeOperation.available_cents"`)}
-	}
-	if _, ok := roc.mutation.TotalSpentCents(); !ok {
-		return &ValidationError{Name: "total_spent_cents", err: errors.New(`ent: missing required field "RuntimeOperation.total_spent_cents"`)}
-	}
-	if _, ok := roc.mutation.Quantity(); !ok {
-		return &ValidationError{Name: "quantity", err: errors.New(`ent: missing required field "RuntimeOperation.quantity"`)}
-	}
-	if _, ok := roc.mutation.Unit(); !ok {
-		return &ValidationError{Name: "unit", err: errors.New(`ent: missing required field "RuntimeOperation.unit"`)}
-	}
-	if _, ok := roc.mutation.Reason(); !ok {
-		return &ValidationError{Name: "reason", err: errors.New(`ent: missing required field "RuntimeOperation.reason"`)}
+	if _, ok := roc.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "RuntimeOperation.status"`)}
 	}
 	if _, ok := roc.mutation.Result(); !ok {
 		return &ValidationError{Name: "result", err: errors.New(`ent: missing required field "RuntimeOperation.result"`)}
 	}
-	if _, ok := roc.mutation.Source(); !ok {
-		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "RuntimeOperation.source"`)}
+	if _, ok := roc.mutation.ComputeAllocationID(); !ok {
+		return &ValidationError{Name: "compute_allocation_id", err: errors.New(`ent: missing required field "RuntimeOperation.compute_allocation_id"`)}
 	}
-	if _, ok := roc.mutation.Direction(); !ok {
-		return &ValidationError{Name: "direction", err: errors.New(`ent: missing required field "RuntimeOperation.direction"`)}
+	if _, ok := roc.mutation.StorageID(); !ok {
+		return &ValidationError{Name: "storage_id", err: errors.New(`ent: missing required field "RuntimeOperation.storage_id"`)}
 	}
-	if _, ok := roc.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "RuntimeOperation.created_at"`)}
+	if _, ok := roc.mutation.AttachmentID(); !ok {
+		return &ValidationError{Name: "attachment_id", err: errors.New(`ent: missing required field "RuntimeOperation.attachment_id"`)}
 	}
-	if _, ok := roc.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "RuntimeOperation.updated_at"`)}
+	if _, ok := roc.mutation.RuntimeServiceName(); !ok {
+		return &ValidationError{Name: "runtime_service_name", err: errors.New(`ent: missing required field "RuntimeOperation.runtime_service_name"`)}
+	}
+	if _, ok := roc.mutation.CvmInstanceID(); !ok {
+		return &ValidationError{Name: "cvm_instance_id", err: errors.New(`ent: missing required field "RuntimeOperation.cvm_instance_id"`)}
+	}
+	if _, ok := roc.mutation.InstanceID(); !ok {
+		return &ValidationError{Name: "instance_id", err: errors.New(`ent: missing required field "RuntimeOperation.instance_id"`)}
+	}
+	if _, ok := roc.mutation.NodeName(); !ok {
+		return &ValidationError{Name: "node_name", err: errors.New(`ent: missing required field "RuntimeOperation.node_name"`)}
+	}
+	if _, ok := roc.mutation.MachineName(); !ok {
+		return &ValidationError{Name: "machine_name", err: errors.New(`ent: missing required field "RuntimeOperation.machine_name"`)}
 	}
 	if v, ok := roc.mutation.ID(); ok {
 		if err := runtimeoperation.IDValidator(v); err != nil {
@@ -833,37 +525,21 @@ func (roc *RuntimeOperationCreate) createSpec() (*RuntimeOperation, *sqlgraph.Cr
 		_node.ID = id
 		_spec.ID.Value = id
 	}
+	if value, ok := roc.mutation.CreatedAt(); ok {
+		_spec.SetField(runtimeoperation.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := roc.mutation.UpdatedAt(); ok {
+		_spec.SetField(runtimeoperation.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
+	if value, ok := roc.mutation.OperationID(); ok {
+		_spec.SetField(runtimeoperation.FieldOperationID, field.TypeString, value)
+		_node.OperationID = value
+	}
 	if value, ok := roc.mutation.AccountID(); ok {
 		_spec.SetField(runtimeoperation.FieldAccountID, field.TypeString, value)
 		_node.AccountID = value
-	}
-	if value, ok := roc.mutation.OwnerAccountID(); ok {
-		_spec.SetField(runtimeoperation.FieldOwnerAccountID, field.TypeString, value)
-		_node.OwnerAccountID = value
-	}
-	if value, ok := roc.mutation.OwnerUserID(); ok {
-		_spec.SetField(runtimeoperation.FieldOwnerUserID, field.TypeString, value)
-		_node.OwnerUserID = value
-	}
-	if value, ok := roc.mutation.UserID(); ok {
-		_spec.SetField(runtimeoperation.FieldUserID, field.TypeString, value)
-		_node.UserID = value
-	}
-	if value, ok := roc.mutation.Email(); ok {
-		_spec.SetField(runtimeoperation.FieldEmail, field.TypeString, value)
-		_node.Email = value
-	}
-	if value, ok := roc.mutation.Role(); ok {
-		_spec.SetField(runtimeoperation.FieldRole, field.TypeString, value)
-		_node.Role = value
-	}
-	if value, ok := roc.mutation.Status(); ok {
-		_spec.SetField(runtimeoperation.FieldStatus, field.TypeString, value)
-		_node.Status = value
-	}
-	if value, ok := roc.mutation.Name(); ok {
-		_spec.SetField(runtimeoperation.FieldName, field.TypeString, value)
-		_node.Name = value
 	}
 	if value, ok := roc.mutation.WorkspaceID(); ok {
 		_spec.SetField(runtimeoperation.FieldWorkspaceID, field.TypeString, value)
@@ -877,101 +553,57 @@ func (roc *RuntimeOperationCreate) createSpec() (*RuntimeOperation, *sqlgraph.Cr
 		_spec.SetField(runtimeoperation.FieldResourceKind, field.TypeString, value)
 		_node.ResourceKind = value
 	}
-	if value, ok := roc.mutation.OperationID(); ok {
-		_spec.SetField(runtimeoperation.FieldOperationID, field.TypeString, value)
-		_node.OperationID = value
+	if value, ok := roc.mutation.Action(); ok {
+		_spec.SetField(runtimeoperation.FieldAction, field.TypeString, value)
+		_node.Action = value
 	}
 	if value, ok := roc.mutation.Provider(); ok {
 		_spec.SetField(runtimeoperation.FieldProvider, field.TypeString, value)
 		_node.Provider = value
 	}
-	if value, ok := roc.mutation.ProviderResourceID(); ok {
-		_spec.SetField(runtimeoperation.FieldProviderResourceID, field.TypeString, value)
-		_node.ProviderResourceID = value
+	if value, ok := roc.mutation.ProviderRequestID(); ok {
+		_spec.SetField(runtimeoperation.FieldProviderRequestID, field.TypeString, value)
+		_node.ProviderRequestID = value
 	}
-	if value, ok := roc.mutation.URL(); ok {
-		_spec.SetField(runtimeoperation.FieldURL, field.TypeString, value)
-		_node.URL = value
-	}
-	if value, ok := roc.mutation.HoldID(); ok {
-		_spec.SetField(runtimeoperation.FieldHoldID, field.TypeString, value)
-		_node.HoldID = value
-	}
-	if value, ok := roc.mutation.HoldReleaseID(); ok {
-		_spec.SetField(runtimeoperation.FieldHoldReleaseID, field.TypeString, value)
-		_node.HoldReleaseID = value
-	}
-	if value, ok := roc.mutation.LedgerEntryID(); ok {
-		_spec.SetField(runtimeoperation.FieldLedgerEntryID, field.TypeString, value)
-		_node.LedgerEntryID = value
-	}
-	if value, ok := roc.mutation.WalletTransactionID(); ok {
-		_spec.SetField(runtimeoperation.FieldWalletTransactionID, field.TypeString, value)
-		_node.WalletTransactionID = value
-	}
-	if value, ok := roc.mutation.SettlementID(); ok {
-		_spec.SetField(runtimeoperation.FieldSettlementID, field.TypeString, value)
-		_node.SettlementID = value
-	}
-	if value, ok := roc.mutation.PricingVersion(); ok {
-		_spec.SetField(runtimeoperation.FieldPricingVersion, field.TypeString, value)
-		_node.PricingVersion = value
-	}
-	if value, ok := roc.mutation.AmountCents(); ok {
-		_spec.SetField(runtimeoperation.FieldAmountCents, field.TypeInt64, value)
-		_node.AmountCents = value
-	}
-	if value, ok := roc.mutation.BalanceCents(); ok {
-		_spec.SetField(runtimeoperation.FieldBalanceCents, field.TypeInt64, value)
-		_node.BalanceCents = value
-	}
-	if value, ok := roc.mutation.FrozenCents(); ok {
-		_spec.SetField(runtimeoperation.FieldFrozenCents, field.TypeInt64, value)
-		_node.FrozenCents = value
-	}
-	if value, ok := roc.mutation.AvailableCents(); ok {
-		_spec.SetField(runtimeoperation.FieldAvailableCents, field.TypeInt64, value)
-		_node.AvailableCents = value
-	}
-	if value, ok := roc.mutation.TotalSpentCents(); ok {
-		_spec.SetField(runtimeoperation.FieldTotalSpentCents, field.TypeInt64, value)
-		_node.TotalSpentCents = value
-	}
-	if value, ok := roc.mutation.Quantity(); ok {
-		_spec.SetField(runtimeoperation.FieldQuantity, field.TypeFloat64, value)
-		_node.Quantity = value
-	}
-	if value, ok := roc.mutation.Unit(); ok {
-		_spec.SetField(runtimeoperation.FieldUnit, field.TypeString, value)
-		_node.Unit = value
-	}
-	if value, ok := roc.mutation.Reason(); ok {
-		_spec.SetField(runtimeoperation.FieldReason, field.TypeString, value)
-		_node.Reason = value
+	if value, ok := roc.mutation.Status(); ok {
+		_spec.SetField(runtimeoperation.FieldStatus, field.TypeString, value)
+		_node.Status = value
 	}
 	if value, ok := roc.mutation.Result(); ok {
 		_spec.SetField(runtimeoperation.FieldResult, field.TypeString, value)
 		_node.Result = value
 	}
-	if value, ok := roc.mutation.Source(); ok {
-		_spec.SetField(runtimeoperation.FieldSource, field.TypeString, value)
-		_node.Source = value
+	if value, ok := roc.mutation.ComputeAllocationID(); ok {
+		_spec.SetField(runtimeoperation.FieldComputeAllocationID, field.TypeString, value)
+		_node.ComputeAllocationID = value
 	}
-	if value, ok := roc.mutation.Direction(); ok {
-		_spec.SetField(runtimeoperation.FieldDirection, field.TypeString, value)
-		_node.Direction = value
+	if value, ok := roc.mutation.StorageID(); ok {
+		_spec.SetField(runtimeoperation.FieldStorageID, field.TypeString, value)
+		_node.StorageID = value
 	}
-	if value, ok := roc.mutation.CreatedAt(); ok {
-		_spec.SetField(runtimeoperation.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
+	if value, ok := roc.mutation.AttachmentID(); ok {
+		_spec.SetField(runtimeoperation.FieldAttachmentID, field.TypeString, value)
+		_node.AttachmentID = value
 	}
-	if value, ok := roc.mutation.UpdatedAt(); ok {
-		_spec.SetField(runtimeoperation.FieldUpdatedAt, field.TypeTime, value)
-		_node.UpdatedAt = value
+	if value, ok := roc.mutation.RuntimeServiceName(); ok {
+		_spec.SetField(runtimeoperation.FieldRuntimeServiceName, field.TypeString, value)
+		_node.RuntimeServiceName = value
 	}
-	if value, ok := roc.mutation.ArchivedAt(); ok {
-		_spec.SetField(runtimeoperation.FieldArchivedAt, field.TypeTime, value)
-		_node.ArchivedAt = &value
+	if value, ok := roc.mutation.CvmInstanceID(); ok {
+		_spec.SetField(runtimeoperation.FieldCvmInstanceID, field.TypeString, value)
+		_node.CvmInstanceID = value
+	}
+	if value, ok := roc.mutation.InstanceID(); ok {
+		_spec.SetField(runtimeoperation.FieldInstanceID, field.TypeString, value)
+		_node.InstanceID = value
+	}
+	if value, ok := roc.mutation.NodeName(); ok {
+		_spec.SetField(runtimeoperation.FieldNodeName, field.TypeString, value)
+		_node.NodeName = value
+	}
+	if value, ok := roc.mutation.MachineName(); ok {
+		_spec.SetField(runtimeoperation.FieldMachineName, field.TypeString, value)
+		_node.MachineName = value
 	}
 	return _node, _spec
 }

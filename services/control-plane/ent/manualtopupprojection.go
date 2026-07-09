@@ -17,76 +17,22 @@ type ManualTopupProjection struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID string `json:"id,omitempty"`
-	// AccountID holds the value of the "account_id" field.
-	AccountID string `json:"account_id,omitempty"`
-	// OwnerAccountID holds the value of the "owner_account_id" field.
-	OwnerAccountID string `json:"owner_account_id,omitempty"`
-	// OwnerUserID holds the value of the "owner_user_id" field.
-	OwnerUserID string `json:"owner_user_id,omitempty"`
-	// UserID holds the value of the "user_id" field.
-	UserID string `json:"user_id,omitempty"`
-	// Email holds the value of the "email" field.
-	Email string `json:"email,omitempty"`
-	// Role holds the value of the "role" field.
-	Role string `json:"role,omitempty"`
-	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
-	// Name holds the value of the "name" field.
-	Name string `json:"name,omitempty"`
-	// WorkspaceID holds the value of the "workspace_id" field.
-	WorkspaceID string `json:"workspace_id,omitempty"`
-	// ResourceID holds the value of the "resource_id" field.
-	ResourceID string `json:"resource_id,omitempty"`
-	// ResourceKind holds the value of the "resource_kind" field.
-	ResourceKind string `json:"resource_kind,omitempty"`
-	// OperationID holds the value of the "operation_id" field.
-	OperationID string `json:"operation_id,omitempty"`
-	// Provider holds the value of the "provider" field.
-	Provider string `json:"provider,omitempty"`
-	// ProviderResourceID holds the value of the "provider_resource_id" field.
-	ProviderResourceID string `json:"provider_resource_id,omitempty"`
-	// URL holds the value of the "url" field.
-	URL string `json:"url,omitempty"`
-	// HoldID holds the value of the "hold_id" field.
-	HoldID string `json:"hold_id,omitempty"`
-	// HoldReleaseID holds the value of the "hold_release_id" field.
-	HoldReleaseID string `json:"hold_release_id,omitempty"`
-	// LedgerEntryID holds the value of the "ledger_entry_id" field.
-	LedgerEntryID string `json:"ledger_entry_id,omitempty"`
-	// WalletTransactionID holds the value of the "wallet_transaction_id" field.
-	WalletTransactionID string `json:"wallet_transaction_id,omitempty"`
-	// SettlementID holds the value of the "settlement_id" field.
-	SettlementID string `json:"settlement_id,omitempty"`
-	// PricingVersion holds the value of the "pricing_version" field.
-	PricingVersion string `json:"pricing_version,omitempty"`
-	// AmountCents holds the value of the "amount_cents" field.
-	AmountCents int64 `json:"amount_cents,omitempty"`
-	// BalanceCents holds the value of the "balance_cents" field.
-	BalanceCents int64 `json:"balance_cents,omitempty"`
-	// FrozenCents holds the value of the "frozen_cents" field.
-	FrozenCents int64 `json:"frozen_cents,omitempty"`
-	// AvailableCents holds the value of the "available_cents" field.
-	AvailableCents int64 `json:"available_cents,omitempty"`
-	// TotalSpentCents holds the value of the "total_spent_cents" field.
-	TotalSpentCents int64 `json:"total_spent_cents,omitempty"`
-	// Quantity holds the value of the "quantity" field.
-	Quantity float64 `json:"quantity,omitempty"`
-	// Unit holds the value of the "unit" field.
-	Unit string `json:"unit,omitempty"`
-	// Reason holds the value of the "reason" field.
-	Reason string `json:"reason,omitempty"`
-	// Result holds the value of the "result" field.
-	Result string `json:"result,omitempty"`
-	// Source holds the value of the "source" field.
-	Source string `json:"source,omitempty"`
-	// Direction holds the value of the "direction" field.
-	Direction string `json:"direction,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// ArchivedAt holds the value of the "archived_at" field.
-	ArchivedAt   *time.Time `json:"archived_at,omitempty"`
+	// AccountID holds the value of the "account_id" field.
+	AccountID string `json:"account_id,omitempty"`
+	// OperatorUserID holds the value of the "operator_user_id" field.
+	OperatorUserID string `json:"operator_user_id,omitempty"`
+	// Currency holds the value of the "currency" field.
+	Currency string `json:"currency,omitempty"`
+	// Source holds the value of the "source" field.
+	Source string `json:"source,omitempty"`
+	// Reason holds the value of the "reason" field.
+	Reason string `json:"reason,omitempty"`
+	// AmountCents holds the value of the "amount_cents" field.
+	AmountCents  int64 `json:"amount_cents,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -95,13 +41,11 @@ func (*ManualTopupProjection) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case manualtopupprojection.FieldQuantity:
-			values[i] = new(sql.NullFloat64)
-		case manualtopupprojection.FieldAmountCents, manualtopupprojection.FieldBalanceCents, manualtopupprojection.FieldFrozenCents, manualtopupprojection.FieldAvailableCents, manualtopupprojection.FieldTotalSpentCents:
+		case manualtopupprojection.FieldAmountCents:
 			values[i] = new(sql.NullInt64)
-		case manualtopupprojection.FieldID, manualtopupprojection.FieldAccountID, manualtopupprojection.FieldOwnerAccountID, manualtopupprojection.FieldOwnerUserID, manualtopupprojection.FieldUserID, manualtopupprojection.FieldEmail, manualtopupprojection.FieldRole, manualtopupprojection.FieldStatus, manualtopupprojection.FieldName, manualtopupprojection.FieldWorkspaceID, manualtopupprojection.FieldResourceID, manualtopupprojection.FieldResourceKind, manualtopupprojection.FieldOperationID, manualtopupprojection.FieldProvider, manualtopupprojection.FieldProviderResourceID, manualtopupprojection.FieldURL, manualtopupprojection.FieldHoldID, manualtopupprojection.FieldHoldReleaseID, manualtopupprojection.FieldLedgerEntryID, manualtopupprojection.FieldWalletTransactionID, manualtopupprojection.FieldSettlementID, manualtopupprojection.FieldPricingVersion, manualtopupprojection.FieldUnit, manualtopupprojection.FieldReason, manualtopupprojection.FieldResult, manualtopupprojection.FieldSource, manualtopupprojection.FieldDirection:
+		case manualtopupprojection.FieldID, manualtopupprojection.FieldAccountID, manualtopupprojection.FieldOperatorUserID, manualtopupprojection.FieldCurrency, manualtopupprojection.FieldSource, manualtopupprojection.FieldReason:
 			values[i] = new(sql.NullString)
-		case manualtopupprojection.FieldCreatedAt, manualtopupprojection.FieldUpdatedAt, manualtopupprojection.FieldArchivedAt:
+		case manualtopupprojection.FieldCreatedAt, manualtopupprojection.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -124,198 +68,6 @@ func (mtp *ManualTopupProjection) assignValues(columns []string, values []any) e
 			} else if value.Valid {
 				mtp.ID = value.String
 			}
-		case manualtopupprojection.FieldAccountID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field account_id", values[i])
-			} else if value.Valid {
-				mtp.AccountID = value.String
-			}
-		case manualtopupprojection.FieldOwnerAccountID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field owner_account_id", values[i])
-			} else if value.Valid {
-				mtp.OwnerAccountID = value.String
-			}
-		case manualtopupprojection.FieldOwnerUserID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field owner_user_id", values[i])
-			} else if value.Valid {
-				mtp.OwnerUserID = value.String
-			}
-		case manualtopupprojection.FieldUserID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field user_id", values[i])
-			} else if value.Valid {
-				mtp.UserID = value.String
-			}
-		case manualtopupprojection.FieldEmail:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field email", values[i])
-			} else if value.Valid {
-				mtp.Email = value.String
-			}
-		case manualtopupprojection.FieldRole:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field role", values[i])
-			} else if value.Valid {
-				mtp.Role = value.String
-			}
-		case manualtopupprojection.FieldStatus:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field status", values[i])
-			} else if value.Valid {
-				mtp.Status = value.String
-			}
-		case manualtopupprojection.FieldName:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field name", values[i])
-			} else if value.Valid {
-				mtp.Name = value.String
-			}
-		case manualtopupprojection.FieldWorkspaceID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field workspace_id", values[i])
-			} else if value.Valid {
-				mtp.WorkspaceID = value.String
-			}
-		case manualtopupprojection.FieldResourceID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field resource_id", values[i])
-			} else if value.Valid {
-				mtp.ResourceID = value.String
-			}
-		case manualtopupprojection.FieldResourceKind:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field resource_kind", values[i])
-			} else if value.Valid {
-				mtp.ResourceKind = value.String
-			}
-		case manualtopupprojection.FieldOperationID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field operation_id", values[i])
-			} else if value.Valid {
-				mtp.OperationID = value.String
-			}
-		case manualtopupprojection.FieldProvider:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider", values[i])
-			} else if value.Valid {
-				mtp.Provider = value.String
-			}
-		case manualtopupprojection.FieldProviderResourceID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider_resource_id", values[i])
-			} else if value.Valid {
-				mtp.ProviderResourceID = value.String
-			}
-		case manualtopupprojection.FieldURL:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field url", values[i])
-			} else if value.Valid {
-				mtp.URL = value.String
-			}
-		case manualtopupprojection.FieldHoldID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field hold_id", values[i])
-			} else if value.Valid {
-				mtp.HoldID = value.String
-			}
-		case manualtopupprojection.FieldHoldReleaseID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field hold_release_id", values[i])
-			} else if value.Valid {
-				mtp.HoldReleaseID = value.String
-			}
-		case manualtopupprojection.FieldLedgerEntryID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field ledger_entry_id", values[i])
-			} else if value.Valid {
-				mtp.LedgerEntryID = value.String
-			}
-		case manualtopupprojection.FieldWalletTransactionID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field wallet_transaction_id", values[i])
-			} else if value.Valid {
-				mtp.WalletTransactionID = value.String
-			}
-		case manualtopupprojection.FieldSettlementID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field settlement_id", values[i])
-			} else if value.Valid {
-				mtp.SettlementID = value.String
-			}
-		case manualtopupprojection.FieldPricingVersion:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field pricing_version", values[i])
-			} else if value.Valid {
-				mtp.PricingVersion = value.String
-			}
-		case manualtopupprojection.FieldAmountCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field amount_cents", values[i])
-			} else if value.Valid {
-				mtp.AmountCents = value.Int64
-			}
-		case manualtopupprojection.FieldBalanceCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field balance_cents", values[i])
-			} else if value.Valid {
-				mtp.BalanceCents = value.Int64
-			}
-		case manualtopupprojection.FieldFrozenCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field frozen_cents", values[i])
-			} else if value.Valid {
-				mtp.FrozenCents = value.Int64
-			}
-		case manualtopupprojection.FieldAvailableCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field available_cents", values[i])
-			} else if value.Valid {
-				mtp.AvailableCents = value.Int64
-			}
-		case manualtopupprojection.FieldTotalSpentCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field total_spent_cents", values[i])
-			} else if value.Valid {
-				mtp.TotalSpentCents = value.Int64
-			}
-		case manualtopupprojection.FieldQuantity:
-			if value, ok := values[i].(*sql.NullFloat64); !ok {
-				return fmt.Errorf("unexpected type %T for field quantity", values[i])
-			} else if value.Valid {
-				mtp.Quantity = value.Float64
-			}
-		case manualtopupprojection.FieldUnit:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field unit", values[i])
-			} else if value.Valid {
-				mtp.Unit = value.String
-			}
-		case manualtopupprojection.FieldReason:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field reason", values[i])
-			} else if value.Valid {
-				mtp.Reason = value.String
-			}
-		case manualtopupprojection.FieldResult:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field result", values[i])
-			} else if value.Valid {
-				mtp.Result = value.String
-			}
-		case manualtopupprojection.FieldSource:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field source", values[i])
-			} else if value.Valid {
-				mtp.Source = value.String
-			}
-		case manualtopupprojection.FieldDirection:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field direction", values[i])
-			} else if value.Valid {
-				mtp.Direction = value.String
-			}
 		case manualtopupprojection.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -328,12 +80,41 @@ func (mtp *ManualTopupProjection) assignValues(columns []string, values []any) e
 			} else if value.Valid {
 				mtp.UpdatedAt = value.Time
 			}
-		case manualtopupprojection.FieldArchivedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field archived_at", values[i])
+		case manualtopupprojection.FieldAccountID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field account_id", values[i])
 			} else if value.Valid {
-				mtp.ArchivedAt = new(time.Time)
-				*mtp.ArchivedAt = value.Time
+				mtp.AccountID = value.String
+			}
+		case manualtopupprojection.FieldOperatorUserID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field operator_user_id", values[i])
+			} else if value.Valid {
+				mtp.OperatorUserID = value.String
+			}
+		case manualtopupprojection.FieldCurrency:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field currency", values[i])
+			} else if value.Valid {
+				mtp.Currency = value.String
+			}
+		case manualtopupprojection.FieldSource:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field source", values[i])
+			} else if value.Valid {
+				mtp.Source = value.String
+			}
+		case manualtopupprojection.FieldReason:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field reason", values[i])
+			} else if value.Valid {
+				mtp.Reason = value.String
+			}
+		case manualtopupprojection.FieldAmountCents:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field amount_cents", values[i])
+			} else if value.Valid {
+				mtp.AmountCents = value.Int64
 			}
 		default:
 			mtp.selectValues.Set(columns[i], values[i])
@@ -371,112 +152,29 @@ func (mtp *ManualTopupProjection) String() string {
 	var builder strings.Builder
 	builder.WriteString("ManualTopupProjection(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", mtp.ID))
-	builder.WriteString("account_id=")
-	builder.WriteString(mtp.AccountID)
-	builder.WriteString(", ")
-	builder.WriteString("owner_account_id=")
-	builder.WriteString(mtp.OwnerAccountID)
-	builder.WriteString(", ")
-	builder.WriteString("owner_user_id=")
-	builder.WriteString(mtp.OwnerUserID)
-	builder.WriteString(", ")
-	builder.WriteString("user_id=")
-	builder.WriteString(mtp.UserID)
-	builder.WriteString(", ")
-	builder.WriteString("email=")
-	builder.WriteString(mtp.Email)
-	builder.WriteString(", ")
-	builder.WriteString("role=")
-	builder.WriteString(mtp.Role)
-	builder.WriteString(", ")
-	builder.WriteString("status=")
-	builder.WriteString(mtp.Status)
-	builder.WriteString(", ")
-	builder.WriteString("name=")
-	builder.WriteString(mtp.Name)
-	builder.WriteString(", ")
-	builder.WriteString("workspace_id=")
-	builder.WriteString(mtp.WorkspaceID)
-	builder.WriteString(", ")
-	builder.WriteString("resource_id=")
-	builder.WriteString(mtp.ResourceID)
-	builder.WriteString(", ")
-	builder.WriteString("resource_kind=")
-	builder.WriteString(mtp.ResourceKind)
-	builder.WriteString(", ")
-	builder.WriteString("operation_id=")
-	builder.WriteString(mtp.OperationID)
-	builder.WriteString(", ")
-	builder.WriteString("provider=")
-	builder.WriteString(mtp.Provider)
-	builder.WriteString(", ")
-	builder.WriteString("provider_resource_id=")
-	builder.WriteString(mtp.ProviderResourceID)
-	builder.WriteString(", ")
-	builder.WriteString("url=")
-	builder.WriteString(mtp.URL)
-	builder.WriteString(", ")
-	builder.WriteString("hold_id=")
-	builder.WriteString(mtp.HoldID)
-	builder.WriteString(", ")
-	builder.WriteString("hold_release_id=")
-	builder.WriteString(mtp.HoldReleaseID)
-	builder.WriteString(", ")
-	builder.WriteString("ledger_entry_id=")
-	builder.WriteString(mtp.LedgerEntryID)
-	builder.WriteString(", ")
-	builder.WriteString("wallet_transaction_id=")
-	builder.WriteString(mtp.WalletTransactionID)
-	builder.WriteString(", ")
-	builder.WriteString("settlement_id=")
-	builder.WriteString(mtp.SettlementID)
-	builder.WriteString(", ")
-	builder.WriteString("pricing_version=")
-	builder.WriteString(mtp.PricingVersion)
-	builder.WriteString(", ")
-	builder.WriteString("amount_cents=")
-	builder.WriteString(fmt.Sprintf("%v", mtp.AmountCents))
-	builder.WriteString(", ")
-	builder.WriteString("balance_cents=")
-	builder.WriteString(fmt.Sprintf("%v", mtp.BalanceCents))
-	builder.WriteString(", ")
-	builder.WriteString("frozen_cents=")
-	builder.WriteString(fmt.Sprintf("%v", mtp.FrozenCents))
-	builder.WriteString(", ")
-	builder.WriteString("available_cents=")
-	builder.WriteString(fmt.Sprintf("%v", mtp.AvailableCents))
-	builder.WriteString(", ")
-	builder.WriteString("total_spent_cents=")
-	builder.WriteString(fmt.Sprintf("%v", mtp.TotalSpentCents))
-	builder.WriteString(", ")
-	builder.WriteString("quantity=")
-	builder.WriteString(fmt.Sprintf("%v", mtp.Quantity))
-	builder.WriteString(", ")
-	builder.WriteString("unit=")
-	builder.WriteString(mtp.Unit)
-	builder.WriteString(", ")
-	builder.WriteString("reason=")
-	builder.WriteString(mtp.Reason)
-	builder.WriteString(", ")
-	builder.WriteString("result=")
-	builder.WriteString(mtp.Result)
-	builder.WriteString(", ")
-	builder.WriteString("source=")
-	builder.WriteString(mtp.Source)
-	builder.WriteString(", ")
-	builder.WriteString("direction=")
-	builder.WriteString(mtp.Direction)
-	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(mtp.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("updated_at=")
 	builder.WriteString(mtp.UpdatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
-	if v := mtp.ArchivedAt; v != nil {
-		builder.WriteString("archived_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
+	builder.WriteString("account_id=")
+	builder.WriteString(mtp.AccountID)
+	builder.WriteString(", ")
+	builder.WriteString("operator_user_id=")
+	builder.WriteString(mtp.OperatorUserID)
+	builder.WriteString(", ")
+	builder.WriteString("currency=")
+	builder.WriteString(mtp.Currency)
+	builder.WriteString(", ")
+	builder.WriteString("source=")
+	builder.WriteString(mtp.Source)
+	builder.WriteString(", ")
+	builder.WriteString("reason=")
+	builder.WriteString(mtp.Reason)
+	builder.WriteString(", ")
+	builder.WriteString("amount_cents=")
+	builder.WriteString(fmt.Sprintf("%v", mtp.AmountCents))
 	builder.WriteByte(')')
 	return builder.String()
 }

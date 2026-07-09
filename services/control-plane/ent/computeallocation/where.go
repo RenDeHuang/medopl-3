@@ -64,14 +64,19 @@ func IDContainsFold(id string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldID, id))
 }
 
+// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
+func CreatedAt(v time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
+func UpdatedAt(v time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldUpdatedAt, v))
+}
+
 // AccountID applies equality check predicate on the "account_id" field. It's identical to AccountIDEQ.
 func AccountID(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldAccountID, v))
-}
-
-// OwnerAccountID applies equality check predicate on the "owner_account_id" field. It's identical to OwnerAccountIDEQ.
-func OwnerAccountID(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldOwnerAccountID, v))
 }
 
 // OwnerUserID applies equality check predicate on the "owner_user_id" field. It's identical to OwnerUserIDEQ.
@@ -79,24 +84,9 @@ func OwnerUserID(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldOwnerUserID, v))
 }
 
-// UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
-func UserID(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldUserID, v))
-}
-
-// Email applies equality check predicate on the "email" field. It's identical to EmailEQ.
-func Email(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldEmail, v))
-}
-
-// Role applies equality check predicate on the "role" field. It's identical to RoleEQ.
-func Role(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldRole, v))
-}
-
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldStatus, v))
+// WorkspaceID applies equality check predicate on the "workspace_id" field. It's identical to WorkspaceIDEQ.
+func WorkspaceID(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldWorkspaceID, v))
 }
 
 // Name applies equality check predicate on the "name" field. It's identical to NameEQ.
@@ -104,24 +94,9 @@ func Name(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldName, v))
 }
 
-// WorkspaceID applies equality check predicate on the "workspace_id" field. It's identical to WorkspaceIDEQ.
-func WorkspaceID(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldWorkspaceID, v))
-}
-
-// ResourceID applies equality check predicate on the "resource_id" field. It's identical to ResourceIDEQ.
-func ResourceID(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldResourceID, v))
-}
-
-// ResourceKind applies equality check predicate on the "resource_kind" field. It's identical to ResourceKindEQ.
-func ResourceKind(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldResourceKind, v))
-}
-
-// OperationID applies equality check predicate on the "operation_id" field. It's identical to OperationIDEQ.
-func OperationID(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldOperationID, v))
+// PackageID applies equality check predicate on the "package_id" field. It's identical to PackageIDEQ.
+func PackageID(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPackageID, v))
 }
 
 // Provider applies equality check predicate on the "provider" field. It's identical to ProviderEQ.
@@ -134,9 +109,24 @@ func ProviderResourceID(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldProviderResourceID, v))
 }
 
-// URL applies equality check predicate on the "url" field. It's identical to URLEQ.
-func URL(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldURL, v))
+// ProviderRequestID applies equality check predicate on the "provider_request_id" field. It's identical to ProviderRequestIDEQ.
+func ProviderRequestID(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldProviderRequestID, v))
+}
+
+// OperationID applies equality check predicate on the "operation_id" field. It's identical to OperationIDEQ.
+func OperationID(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldOperationID, v))
+}
+
+// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
+func Status(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldStatus, v))
+}
+
+// BillingStatus applies equality check predicate on the "billing_status" field. It's identical to BillingStatusEQ.
+func BillingStatus(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldBillingStatus, v))
 }
 
 // HoldID applies equality check predicate on the "hold_id" field. It's identical to HoldIDEQ.
@@ -149,6 +139,11 @@ func HoldReleaseID(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldHoldReleaseID, v))
 }
 
+// SettlementID applies equality check predicate on the "settlement_id" field. It's identical to SettlementIDEQ.
+func SettlementID(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldSettlementID, v))
+}
+
 // LedgerEntryID applies equality check predicate on the "ledger_entry_id" field. It's identical to LedgerEntryIDEQ.
 func LedgerEntryID(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldLedgerEntryID, v))
@@ -159,84 +154,179 @@ func WalletTransactionID(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldWalletTransactionID, v))
 }
 
-// SettlementID applies equality check predicate on the "settlement_id" field. It's identical to SettlementIDEQ.
-func SettlementID(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldSettlementID, v))
-}
-
 // PricingVersion applies equality check predicate on the "pricing_version" field. It's identical to PricingVersionEQ.
 func PricingVersion(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldPricingVersion, v))
 }
 
-// AmountCents applies equality check predicate on the "amount_cents" field. It's identical to AmountCentsEQ.
-func AmountCents(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldAmountCents, v))
+// UsagePeriodEnd applies equality check predicate on the "usage_period_end" field. It's identical to UsagePeriodEndEQ.
+func UsagePeriodEnd(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCents applies equality check predicate on the "balance_cents" field. It's identical to BalanceCentsEQ.
-func BalanceCents(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldBalanceCents, v))
+// EvidenceID applies equality check predicate on the "evidence_id" field. It's identical to EvidenceIDEQ.
+func EvidenceID(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldEvidenceID, v))
 }
 
-// FrozenCents applies equality check predicate on the "frozen_cents" field. It's identical to FrozenCentsEQ.
-func FrozenCents(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldFrozenCents, v))
+// CvmInstanceID applies equality check predicate on the "cvm_instance_id" field. It's identical to CvmInstanceIDEQ.
+func CvmInstanceID(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldCvmInstanceID, v))
 }
 
-// AvailableCents applies equality check predicate on the "available_cents" field. It's identical to AvailableCentsEQ.
-func AvailableCents(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldAvailableCents, v))
+// InstanceID applies equality check predicate on the "instance_id" field. It's identical to InstanceIDEQ.
+func InstanceID(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldInstanceID, v))
 }
 
-// TotalSpentCents applies equality check predicate on the "total_spent_cents" field. It's identical to TotalSpentCentsEQ.
-func TotalSpentCents(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldTotalSpentCents, v))
+// NodeName applies equality check predicate on the "node_name" field. It's identical to NodeNameEQ.
+func NodeName(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldNodeName, v))
 }
 
-// Quantity applies equality check predicate on the "quantity" field. It's identical to QuantityEQ.
-func Quantity(v float64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldQuantity, v))
+// MachineName applies equality check predicate on the "machine_name" field. It's identical to MachineNameEQ.
+func MachineName(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldMachineName, v))
 }
 
-// Unit applies equality check predicate on the "unit" field. It's identical to UnitEQ.
-func Unit(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldUnit, v))
+// HoldAmountCents applies equality check predicate on the "hold_amount_cents" field. It's identical to HoldAmountCentsEQ.
+func HoldAmountCents(v int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldHoldAmountCents, v))
 }
 
-// Reason applies equality check predicate on the "reason" field. It's identical to ReasonEQ.
-func Reason(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldReason, v))
+// HoldAmount applies equality check predicate on the "hold_amount" field. It's identical to HoldAmountEQ.
+func HoldAmount(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldHoldAmount, v))
 }
 
-// Result applies equality check predicate on the "result" field. It's identical to ResultEQ.
-func Result(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldResult, v))
+// CPU applies equality check predicate on the "cpu" field. It's identical to CPUEQ.
+func CPU(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldCPU, v))
 }
 
-// Source applies equality check predicate on the "source" field. It's identical to SourceEQ.
-func Source(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldSource, v))
+// MemoryGB applies equality check predicate on the "memory_gb" field. It's identical to MemoryGBEQ.
+func MemoryGB(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldMemoryGB, v))
 }
 
-// Direction applies equality check predicate on the "direction" field. It's identical to DirectionEQ.
-func Direction(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldDirection, v))
+// DiskGB applies equality check predicate on the "disk_gb" field. It's identical to DiskGBEQ.
+func DiskGB(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldDiskGB, v))
 }
 
-// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
-func CreatedAt(v time.Time) predicate.ComputeAllocation {
+// PriceSnapshotPackageID applies equality check predicate on the "price_snapshot_package_id" field. It's identical to PriceSnapshotPackageIDEQ.
+func PriceSnapshotPackageID(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPriceSnapshotPackageID, v))
+}
+
+// PriceSnapshotResourceType applies equality check predicate on the "price_snapshot_resource_type" field. It's identical to PriceSnapshotResourceTypeEQ.
+func PriceSnapshotResourceType(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPriceSnapshotResourceType, v))
+}
+
+// PriceSnapshotCurrency applies equality check predicate on the "price_snapshot_currency" field. It's identical to PriceSnapshotCurrencyEQ.
+func PriceSnapshotCurrency(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotSource applies equality check predicate on the "price_snapshot_source" field. It's identical to PriceSnapshotSourceEQ.
+func PriceSnapshotSource(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSku applies equality check predicate on the "price_snapshot_sku" field. It's identical to PriceSnapshotSkuEQ.
+func PriceSnapshotSku(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotUnitPriceCents applies equality check predicate on the "price_snapshot_unit_price_cents" field. It's identical to PriceSnapshotUnitPriceCentsEQ.
+func PriceSnapshotUnitPriceCents(v int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPriceSnapshotUnitPriceCents, v))
+}
+
+// PriceSnapshotComputeHourly applies equality check predicate on the "price_snapshot_compute_hourly" field. It's identical to PriceSnapshotComputeHourlyEQ.
+func PriceSnapshotComputeHourly(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPriceSnapshotComputeHourly, v))
+}
+
+// CreatedAtEQ applies the EQ predicate on the "created_at" field.
+func CreatedAtEQ(v time.Time) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldCreatedAt, v))
 }
 
-// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
-func UpdatedAt(v time.Time) predicate.ComputeAllocation {
+// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
+func CreatedAtNEQ(v time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldCreatedAt, v))
+}
+
+// CreatedAtIn applies the In predicate on the "created_at" field.
+func CreatedAtIn(vs ...time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldCreatedAt, vs...))
+}
+
+// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
+func CreatedAtNotIn(vs ...time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldCreatedAt, vs...))
+}
+
+// CreatedAtGT applies the GT predicate on the "created_at" field.
+func CreatedAtGT(v time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldCreatedAt, v))
+}
+
+// CreatedAtGTE applies the GTE predicate on the "created_at" field.
+func CreatedAtGTE(v time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldCreatedAt, v))
+}
+
+// CreatedAtLT applies the LT predicate on the "created_at" field.
+func CreatedAtLT(v time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldCreatedAt, v))
+}
+
+// CreatedAtLTE applies the LTE predicate on the "created_at" field.
+func CreatedAtLTE(v time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
+func UpdatedAtEQ(v time.Time) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
-// ArchivedAt applies equality check predicate on the "archived_at" field. It's identical to ArchivedAtEQ.
-func ArchivedAt(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldArchivedAt, v))
+// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
+func UpdatedAtNEQ(v time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldUpdatedAt, v))
+}
+
+// UpdatedAtIn applies the In predicate on the "updated_at" field.
+func UpdatedAtIn(vs ...time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
+func UpdatedAtNotIn(vs ...time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtGT applies the GT predicate on the "updated_at" field.
+func UpdatedAtGT(v time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
+func UpdatedAtGTE(v time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLT applies the LT predicate on the "updated_at" field.
+func UpdatedAtLT(v time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
+func UpdatedAtLTE(v time.Time) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
 // AccountIDEQ applies the EQ predicate on the "account_id" field.
@@ -304,71 +394,6 @@ func AccountIDContainsFold(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldAccountID, v))
 }
 
-// OwnerAccountIDEQ applies the EQ predicate on the "owner_account_id" field.
-func OwnerAccountIDEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDNEQ applies the NEQ predicate on the "owner_account_id" field.
-func OwnerAccountIDNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDIn applies the In predicate on the "owner_account_id" field.
-func OwnerAccountIDIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldOwnerAccountID, vs...))
-}
-
-// OwnerAccountIDNotIn applies the NotIn predicate on the "owner_account_id" field.
-func OwnerAccountIDNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldOwnerAccountID, vs...))
-}
-
-// OwnerAccountIDGT applies the GT predicate on the "owner_account_id" field.
-func OwnerAccountIDGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDGTE applies the GTE predicate on the "owner_account_id" field.
-func OwnerAccountIDGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDLT applies the LT predicate on the "owner_account_id" field.
-func OwnerAccountIDLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDLTE applies the LTE predicate on the "owner_account_id" field.
-func OwnerAccountIDLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDContains applies the Contains predicate on the "owner_account_id" field.
-func OwnerAccountIDContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDHasPrefix applies the HasPrefix predicate on the "owner_account_id" field.
-func OwnerAccountIDHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDHasSuffix applies the HasSuffix predicate on the "owner_account_id" field.
-func OwnerAccountIDHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDEqualFold applies the EqualFold predicate on the "owner_account_id" field.
-func OwnerAccountIDEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDContainsFold applies the ContainsFold predicate on the "owner_account_id" field.
-func OwnerAccountIDContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldOwnerAccountID, v))
-}
-
 // OwnerUserIDEQ applies the EQ predicate on the "owner_user_id" field.
 func OwnerUserIDEQ(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldOwnerUserID, v))
@@ -432,331 +457,6 @@ func OwnerUserIDEqualFold(v string) predicate.ComputeAllocation {
 // OwnerUserIDContainsFold applies the ContainsFold predicate on the "owner_user_id" field.
 func OwnerUserIDContainsFold(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldOwnerUserID, v))
-}
-
-// UserIDEQ applies the EQ predicate on the "user_id" field.
-func UserIDEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldUserID, v))
-}
-
-// UserIDNEQ applies the NEQ predicate on the "user_id" field.
-func UserIDNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldUserID, v))
-}
-
-// UserIDIn applies the In predicate on the "user_id" field.
-func UserIDIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldUserID, vs...))
-}
-
-// UserIDNotIn applies the NotIn predicate on the "user_id" field.
-func UserIDNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldUserID, vs...))
-}
-
-// UserIDGT applies the GT predicate on the "user_id" field.
-func UserIDGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldUserID, v))
-}
-
-// UserIDGTE applies the GTE predicate on the "user_id" field.
-func UserIDGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldUserID, v))
-}
-
-// UserIDLT applies the LT predicate on the "user_id" field.
-func UserIDLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldUserID, v))
-}
-
-// UserIDLTE applies the LTE predicate on the "user_id" field.
-func UserIDLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldUserID, v))
-}
-
-// UserIDContains applies the Contains predicate on the "user_id" field.
-func UserIDContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldUserID, v))
-}
-
-// UserIDHasPrefix applies the HasPrefix predicate on the "user_id" field.
-func UserIDHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldUserID, v))
-}
-
-// UserIDHasSuffix applies the HasSuffix predicate on the "user_id" field.
-func UserIDHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldUserID, v))
-}
-
-// UserIDEqualFold applies the EqualFold predicate on the "user_id" field.
-func UserIDEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldUserID, v))
-}
-
-// UserIDContainsFold applies the ContainsFold predicate on the "user_id" field.
-func UserIDContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldUserID, v))
-}
-
-// EmailEQ applies the EQ predicate on the "email" field.
-func EmailEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldEmail, v))
-}
-
-// EmailNEQ applies the NEQ predicate on the "email" field.
-func EmailNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldEmail, v))
-}
-
-// EmailIn applies the In predicate on the "email" field.
-func EmailIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldEmail, vs...))
-}
-
-// EmailNotIn applies the NotIn predicate on the "email" field.
-func EmailNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldEmail, vs...))
-}
-
-// EmailGT applies the GT predicate on the "email" field.
-func EmailGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldEmail, v))
-}
-
-// EmailGTE applies the GTE predicate on the "email" field.
-func EmailGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldEmail, v))
-}
-
-// EmailLT applies the LT predicate on the "email" field.
-func EmailLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldEmail, v))
-}
-
-// EmailLTE applies the LTE predicate on the "email" field.
-func EmailLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldEmail, v))
-}
-
-// EmailContains applies the Contains predicate on the "email" field.
-func EmailContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldEmail, v))
-}
-
-// EmailHasPrefix applies the HasPrefix predicate on the "email" field.
-func EmailHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldEmail, v))
-}
-
-// EmailHasSuffix applies the HasSuffix predicate on the "email" field.
-func EmailHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldEmail, v))
-}
-
-// EmailEqualFold applies the EqualFold predicate on the "email" field.
-func EmailEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldEmail, v))
-}
-
-// EmailContainsFold applies the ContainsFold predicate on the "email" field.
-func EmailContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldEmail, v))
-}
-
-// RoleEQ applies the EQ predicate on the "role" field.
-func RoleEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldRole, v))
-}
-
-// RoleNEQ applies the NEQ predicate on the "role" field.
-func RoleNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldRole, v))
-}
-
-// RoleIn applies the In predicate on the "role" field.
-func RoleIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldRole, vs...))
-}
-
-// RoleNotIn applies the NotIn predicate on the "role" field.
-func RoleNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldRole, vs...))
-}
-
-// RoleGT applies the GT predicate on the "role" field.
-func RoleGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldRole, v))
-}
-
-// RoleGTE applies the GTE predicate on the "role" field.
-func RoleGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldRole, v))
-}
-
-// RoleLT applies the LT predicate on the "role" field.
-func RoleLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldRole, v))
-}
-
-// RoleLTE applies the LTE predicate on the "role" field.
-func RoleLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldRole, v))
-}
-
-// RoleContains applies the Contains predicate on the "role" field.
-func RoleContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldRole, v))
-}
-
-// RoleHasPrefix applies the HasPrefix predicate on the "role" field.
-func RoleHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldRole, v))
-}
-
-// RoleHasSuffix applies the HasSuffix predicate on the "role" field.
-func RoleHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldRole, v))
-}
-
-// RoleEqualFold applies the EqualFold predicate on the "role" field.
-func RoleEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldRole, v))
-}
-
-// RoleContainsFold applies the ContainsFold predicate on the "role" field.
-func RoleContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldRole, v))
-}
-
-// StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldStatus, v))
-}
-
-// StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldStatus, v))
-}
-
-// StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldStatus, vs...))
-}
-
-// StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldStatus, vs...))
-}
-
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldStatus, v))
-}
-
-// NameEQ applies the EQ predicate on the "name" field.
-func NameEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldName, v))
-}
-
-// NameNEQ applies the NEQ predicate on the "name" field.
-func NameNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldName, v))
-}
-
-// NameIn applies the In predicate on the "name" field.
-func NameIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldName, vs...))
-}
-
-// NameNotIn applies the NotIn predicate on the "name" field.
-func NameNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldName, vs...))
-}
-
-// NameGT applies the GT predicate on the "name" field.
-func NameGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldName, v))
-}
-
-// NameGTE applies the GTE predicate on the "name" field.
-func NameGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldName, v))
-}
-
-// NameLT applies the LT predicate on the "name" field.
-func NameLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldName, v))
-}
-
-// NameLTE applies the LTE predicate on the "name" field.
-func NameLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldName, v))
-}
-
-// NameContains applies the Contains predicate on the "name" field.
-func NameContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldName, v))
-}
-
-// NameHasPrefix applies the HasPrefix predicate on the "name" field.
-func NameHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldName, v))
-}
-
-// NameHasSuffix applies the HasSuffix predicate on the "name" field.
-func NameHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldName, v))
-}
-
-// NameEqualFold applies the EqualFold predicate on the "name" field.
-func NameEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldName, v))
-}
-
-// NameContainsFold applies the ContainsFold predicate on the "name" field.
-func NameContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldName, v))
 }
 
 // WorkspaceIDEQ applies the EQ predicate on the "workspace_id" field.
@@ -824,199 +524,134 @@ func WorkspaceIDContainsFold(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldWorkspaceID, v))
 }
 
-// ResourceIDEQ applies the EQ predicate on the "resource_id" field.
-func ResourceIDEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldResourceID, v))
+// NameEQ applies the EQ predicate on the "name" field.
+func NameEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldName, v))
 }
 
-// ResourceIDNEQ applies the NEQ predicate on the "resource_id" field.
-func ResourceIDNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldResourceID, v))
+// NameNEQ applies the NEQ predicate on the "name" field.
+func NameNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldName, v))
 }
 
-// ResourceIDIn applies the In predicate on the "resource_id" field.
-func ResourceIDIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldResourceID, vs...))
+// NameIn applies the In predicate on the "name" field.
+func NameIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldName, vs...))
 }
 
-// ResourceIDNotIn applies the NotIn predicate on the "resource_id" field.
-func ResourceIDNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldResourceID, vs...))
+// NameNotIn applies the NotIn predicate on the "name" field.
+func NameNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldName, vs...))
 }
 
-// ResourceIDGT applies the GT predicate on the "resource_id" field.
-func ResourceIDGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldResourceID, v))
+// NameGT applies the GT predicate on the "name" field.
+func NameGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldName, v))
 }
 
-// ResourceIDGTE applies the GTE predicate on the "resource_id" field.
-func ResourceIDGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldResourceID, v))
+// NameGTE applies the GTE predicate on the "name" field.
+func NameGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldName, v))
 }
 
-// ResourceIDLT applies the LT predicate on the "resource_id" field.
-func ResourceIDLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldResourceID, v))
+// NameLT applies the LT predicate on the "name" field.
+func NameLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldName, v))
 }
 
-// ResourceIDLTE applies the LTE predicate on the "resource_id" field.
-func ResourceIDLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldResourceID, v))
+// NameLTE applies the LTE predicate on the "name" field.
+func NameLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldName, v))
 }
 
-// ResourceIDContains applies the Contains predicate on the "resource_id" field.
-func ResourceIDContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldResourceID, v))
+// NameContains applies the Contains predicate on the "name" field.
+func NameContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldName, v))
 }
 
-// ResourceIDHasPrefix applies the HasPrefix predicate on the "resource_id" field.
-func ResourceIDHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldResourceID, v))
+// NameHasPrefix applies the HasPrefix predicate on the "name" field.
+func NameHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldName, v))
 }
 
-// ResourceIDHasSuffix applies the HasSuffix predicate on the "resource_id" field.
-func ResourceIDHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldResourceID, v))
+// NameHasSuffix applies the HasSuffix predicate on the "name" field.
+func NameHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldName, v))
 }
 
-// ResourceIDEqualFold applies the EqualFold predicate on the "resource_id" field.
-func ResourceIDEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldResourceID, v))
+// NameEqualFold applies the EqualFold predicate on the "name" field.
+func NameEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldName, v))
 }
 
-// ResourceIDContainsFold applies the ContainsFold predicate on the "resource_id" field.
-func ResourceIDContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldResourceID, v))
+// NameContainsFold applies the ContainsFold predicate on the "name" field.
+func NameContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldName, v))
 }
 
-// ResourceKindEQ applies the EQ predicate on the "resource_kind" field.
-func ResourceKindEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldResourceKind, v))
+// PackageIDEQ applies the EQ predicate on the "package_id" field.
+func PackageIDEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPackageID, v))
 }
 
-// ResourceKindNEQ applies the NEQ predicate on the "resource_kind" field.
-func ResourceKindNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldResourceKind, v))
+// PackageIDNEQ applies the NEQ predicate on the "package_id" field.
+func PackageIDNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldPackageID, v))
 }
 
-// ResourceKindIn applies the In predicate on the "resource_kind" field.
-func ResourceKindIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldResourceKind, vs...))
+// PackageIDIn applies the In predicate on the "package_id" field.
+func PackageIDIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldPackageID, vs...))
 }
 
-// ResourceKindNotIn applies the NotIn predicate on the "resource_kind" field.
-func ResourceKindNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldResourceKind, vs...))
+// PackageIDNotIn applies the NotIn predicate on the "package_id" field.
+func PackageIDNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldPackageID, vs...))
 }
 
-// ResourceKindGT applies the GT predicate on the "resource_kind" field.
-func ResourceKindGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldResourceKind, v))
+// PackageIDGT applies the GT predicate on the "package_id" field.
+func PackageIDGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldPackageID, v))
 }
 
-// ResourceKindGTE applies the GTE predicate on the "resource_kind" field.
-func ResourceKindGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldResourceKind, v))
+// PackageIDGTE applies the GTE predicate on the "package_id" field.
+func PackageIDGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldPackageID, v))
 }
 
-// ResourceKindLT applies the LT predicate on the "resource_kind" field.
-func ResourceKindLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldResourceKind, v))
+// PackageIDLT applies the LT predicate on the "package_id" field.
+func PackageIDLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldPackageID, v))
 }
 
-// ResourceKindLTE applies the LTE predicate on the "resource_kind" field.
-func ResourceKindLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldResourceKind, v))
+// PackageIDLTE applies the LTE predicate on the "package_id" field.
+func PackageIDLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldPackageID, v))
 }
 
-// ResourceKindContains applies the Contains predicate on the "resource_kind" field.
-func ResourceKindContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldResourceKind, v))
+// PackageIDContains applies the Contains predicate on the "package_id" field.
+func PackageIDContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldPackageID, v))
 }
 
-// ResourceKindHasPrefix applies the HasPrefix predicate on the "resource_kind" field.
-func ResourceKindHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldResourceKind, v))
+// PackageIDHasPrefix applies the HasPrefix predicate on the "package_id" field.
+func PackageIDHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldPackageID, v))
 }
 
-// ResourceKindHasSuffix applies the HasSuffix predicate on the "resource_kind" field.
-func ResourceKindHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldResourceKind, v))
+// PackageIDHasSuffix applies the HasSuffix predicate on the "package_id" field.
+func PackageIDHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldPackageID, v))
 }
 
-// ResourceKindEqualFold applies the EqualFold predicate on the "resource_kind" field.
-func ResourceKindEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldResourceKind, v))
+// PackageIDEqualFold applies the EqualFold predicate on the "package_id" field.
+func PackageIDEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldPackageID, v))
 }
 
-// ResourceKindContainsFold applies the ContainsFold predicate on the "resource_kind" field.
-func ResourceKindContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldResourceKind, v))
-}
-
-// OperationIDEQ applies the EQ predicate on the "operation_id" field.
-func OperationIDEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldOperationID, v))
-}
-
-// OperationIDNEQ applies the NEQ predicate on the "operation_id" field.
-func OperationIDNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldOperationID, v))
-}
-
-// OperationIDIn applies the In predicate on the "operation_id" field.
-func OperationIDIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldOperationID, vs...))
-}
-
-// OperationIDNotIn applies the NotIn predicate on the "operation_id" field.
-func OperationIDNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldOperationID, vs...))
-}
-
-// OperationIDGT applies the GT predicate on the "operation_id" field.
-func OperationIDGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldOperationID, v))
-}
-
-// OperationIDGTE applies the GTE predicate on the "operation_id" field.
-func OperationIDGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldOperationID, v))
-}
-
-// OperationIDLT applies the LT predicate on the "operation_id" field.
-func OperationIDLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldOperationID, v))
-}
-
-// OperationIDLTE applies the LTE predicate on the "operation_id" field.
-func OperationIDLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldOperationID, v))
-}
-
-// OperationIDContains applies the Contains predicate on the "operation_id" field.
-func OperationIDContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldOperationID, v))
-}
-
-// OperationIDHasPrefix applies the HasPrefix predicate on the "operation_id" field.
-func OperationIDHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldOperationID, v))
-}
-
-// OperationIDHasSuffix applies the HasSuffix predicate on the "operation_id" field.
-func OperationIDHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldOperationID, v))
-}
-
-// OperationIDEqualFold applies the EqualFold predicate on the "operation_id" field.
-func OperationIDEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldOperationID, v))
-}
-
-// OperationIDContainsFold applies the ContainsFold predicate on the "operation_id" field.
-func OperationIDContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldOperationID, v))
+// PackageIDContainsFold applies the ContainsFold predicate on the "package_id" field.
+func PackageIDContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldPackageID, v))
 }
 
 // ProviderEQ applies the EQ predicate on the "provider" field.
@@ -1149,69 +784,264 @@ func ProviderResourceIDContainsFold(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldProviderResourceID, v))
 }
 
-// URLEQ applies the EQ predicate on the "url" field.
-func URLEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldURL, v))
+// ProviderRequestIDEQ applies the EQ predicate on the "provider_request_id" field.
+func ProviderRequestIDEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldProviderRequestID, v))
 }
 
-// URLNEQ applies the NEQ predicate on the "url" field.
-func URLNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldURL, v))
+// ProviderRequestIDNEQ applies the NEQ predicate on the "provider_request_id" field.
+func ProviderRequestIDNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldProviderRequestID, v))
 }
 
-// URLIn applies the In predicate on the "url" field.
-func URLIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldURL, vs...))
+// ProviderRequestIDIn applies the In predicate on the "provider_request_id" field.
+func ProviderRequestIDIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldProviderRequestID, vs...))
 }
 
-// URLNotIn applies the NotIn predicate on the "url" field.
-func URLNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldURL, vs...))
+// ProviderRequestIDNotIn applies the NotIn predicate on the "provider_request_id" field.
+func ProviderRequestIDNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldProviderRequestID, vs...))
 }
 
-// URLGT applies the GT predicate on the "url" field.
-func URLGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldURL, v))
+// ProviderRequestIDGT applies the GT predicate on the "provider_request_id" field.
+func ProviderRequestIDGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldProviderRequestID, v))
 }
 
-// URLGTE applies the GTE predicate on the "url" field.
-func URLGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldURL, v))
+// ProviderRequestIDGTE applies the GTE predicate on the "provider_request_id" field.
+func ProviderRequestIDGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldProviderRequestID, v))
 }
 
-// URLLT applies the LT predicate on the "url" field.
-func URLLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldURL, v))
+// ProviderRequestIDLT applies the LT predicate on the "provider_request_id" field.
+func ProviderRequestIDLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldProviderRequestID, v))
 }
 
-// URLLTE applies the LTE predicate on the "url" field.
-func URLLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldURL, v))
+// ProviderRequestIDLTE applies the LTE predicate on the "provider_request_id" field.
+func ProviderRequestIDLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldProviderRequestID, v))
 }
 
-// URLContains applies the Contains predicate on the "url" field.
-func URLContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldURL, v))
+// ProviderRequestIDContains applies the Contains predicate on the "provider_request_id" field.
+func ProviderRequestIDContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldProviderRequestID, v))
 }
 
-// URLHasPrefix applies the HasPrefix predicate on the "url" field.
-func URLHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldURL, v))
+// ProviderRequestIDHasPrefix applies the HasPrefix predicate on the "provider_request_id" field.
+func ProviderRequestIDHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldProviderRequestID, v))
 }
 
-// URLHasSuffix applies the HasSuffix predicate on the "url" field.
-func URLHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldURL, v))
+// ProviderRequestIDHasSuffix applies the HasSuffix predicate on the "provider_request_id" field.
+func ProviderRequestIDHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldProviderRequestID, v))
 }
 
-// URLEqualFold applies the EqualFold predicate on the "url" field.
-func URLEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldURL, v))
+// ProviderRequestIDEqualFold applies the EqualFold predicate on the "provider_request_id" field.
+func ProviderRequestIDEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldProviderRequestID, v))
 }
 
-// URLContainsFold applies the ContainsFold predicate on the "url" field.
-func URLContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldURL, v))
+// ProviderRequestIDContainsFold applies the ContainsFold predicate on the "provider_request_id" field.
+func ProviderRequestIDContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldProviderRequestID, v))
+}
+
+// OperationIDEQ applies the EQ predicate on the "operation_id" field.
+func OperationIDEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldOperationID, v))
+}
+
+// OperationIDNEQ applies the NEQ predicate on the "operation_id" field.
+func OperationIDNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldOperationID, v))
+}
+
+// OperationIDIn applies the In predicate on the "operation_id" field.
+func OperationIDIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldOperationID, vs...))
+}
+
+// OperationIDNotIn applies the NotIn predicate on the "operation_id" field.
+func OperationIDNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldOperationID, vs...))
+}
+
+// OperationIDGT applies the GT predicate on the "operation_id" field.
+func OperationIDGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldOperationID, v))
+}
+
+// OperationIDGTE applies the GTE predicate on the "operation_id" field.
+func OperationIDGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldOperationID, v))
+}
+
+// OperationIDLT applies the LT predicate on the "operation_id" field.
+func OperationIDLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldOperationID, v))
+}
+
+// OperationIDLTE applies the LTE predicate on the "operation_id" field.
+func OperationIDLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldOperationID, v))
+}
+
+// OperationIDContains applies the Contains predicate on the "operation_id" field.
+func OperationIDContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldOperationID, v))
+}
+
+// OperationIDHasPrefix applies the HasPrefix predicate on the "operation_id" field.
+func OperationIDHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldOperationID, v))
+}
+
+// OperationIDHasSuffix applies the HasSuffix predicate on the "operation_id" field.
+func OperationIDHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldOperationID, v))
+}
+
+// OperationIDEqualFold applies the EqualFold predicate on the "operation_id" field.
+func OperationIDEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldOperationID, v))
+}
+
+// OperationIDContainsFold applies the ContainsFold predicate on the "operation_id" field.
+func OperationIDContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldOperationID, v))
+}
+
+// StatusEQ applies the EQ predicate on the "status" field.
+func StatusEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldStatus, v))
+}
+
+// StatusNEQ applies the NEQ predicate on the "status" field.
+func StatusNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldStatus, v))
+}
+
+// StatusIn applies the In predicate on the "status" field.
+func StatusIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldStatus, vs...))
+}
+
+// StatusNotIn applies the NotIn predicate on the "status" field.
+func StatusNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldStatus, vs...))
+}
+
+// StatusGT applies the GT predicate on the "status" field.
+func StatusGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldStatus, v))
+}
+
+// StatusGTE applies the GTE predicate on the "status" field.
+func StatusGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldStatus, v))
+}
+
+// StatusLT applies the LT predicate on the "status" field.
+func StatusLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldStatus, v))
+}
+
+// StatusLTE applies the LTE predicate on the "status" field.
+func StatusLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldStatus, v))
+}
+
+// StatusContains applies the Contains predicate on the "status" field.
+func StatusContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldStatus, v))
+}
+
+// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
+func StatusHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldStatus, v))
+}
+
+// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
+func StatusHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldStatus, v))
+}
+
+// StatusEqualFold applies the EqualFold predicate on the "status" field.
+func StatusEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldStatus, v))
+}
+
+// StatusContainsFold applies the ContainsFold predicate on the "status" field.
+func StatusContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldStatus, v))
+}
+
+// BillingStatusEQ applies the EQ predicate on the "billing_status" field.
+func BillingStatusEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldBillingStatus, v))
+}
+
+// BillingStatusNEQ applies the NEQ predicate on the "billing_status" field.
+func BillingStatusNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldBillingStatus, v))
+}
+
+// BillingStatusIn applies the In predicate on the "billing_status" field.
+func BillingStatusIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldBillingStatus, vs...))
+}
+
+// BillingStatusNotIn applies the NotIn predicate on the "billing_status" field.
+func BillingStatusNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldBillingStatus, vs...))
+}
+
+// BillingStatusGT applies the GT predicate on the "billing_status" field.
+func BillingStatusGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldBillingStatus, v))
+}
+
+// BillingStatusGTE applies the GTE predicate on the "billing_status" field.
+func BillingStatusGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldBillingStatus, v))
+}
+
+// BillingStatusLT applies the LT predicate on the "billing_status" field.
+func BillingStatusLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldBillingStatus, v))
+}
+
+// BillingStatusLTE applies the LTE predicate on the "billing_status" field.
+func BillingStatusLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldBillingStatus, v))
+}
+
+// BillingStatusContains applies the Contains predicate on the "billing_status" field.
+func BillingStatusContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldBillingStatus, v))
+}
+
+// BillingStatusHasPrefix applies the HasPrefix predicate on the "billing_status" field.
+func BillingStatusHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldBillingStatus, v))
+}
+
+// BillingStatusHasSuffix applies the HasSuffix predicate on the "billing_status" field.
+func BillingStatusHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldBillingStatus, v))
+}
+
+// BillingStatusEqualFold applies the EqualFold predicate on the "billing_status" field.
+func BillingStatusEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldBillingStatus, v))
+}
+
+// BillingStatusContainsFold applies the ContainsFold predicate on the "billing_status" field.
+func BillingStatusContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldBillingStatus, v))
 }
 
 // HoldIDEQ applies the EQ predicate on the "hold_id" field.
@@ -1344,6 +1174,71 @@ func HoldReleaseIDContainsFold(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldHoldReleaseID, v))
 }
 
+// SettlementIDEQ applies the EQ predicate on the "settlement_id" field.
+func SettlementIDEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldSettlementID, v))
+}
+
+// SettlementIDNEQ applies the NEQ predicate on the "settlement_id" field.
+func SettlementIDNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldSettlementID, v))
+}
+
+// SettlementIDIn applies the In predicate on the "settlement_id" field.
+func SettlementIDIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldSettlementID, vs...))
+}
+
+// SettlementIDNotIn applies the NotIn predicate on the "settlement_id" field.
+func SettlementIDNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldSettlementID, vs...))
+}
+
+// SettlementIDGT applies the GT predicate on the "settlement_id" field.
+func SettlementIDGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldSettlementID, v))
+}
+
+// SettlementIDGTE applies the GTE predicate on the "settlement_id" field.
+func SettlementIDGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldSettlementID, v))
+}
+
+// SettlementIDLT applies the LT predicate on the "settlement_id" field.
+func SettlementIDLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldSettlementID, v))
+}
+
+// SettlementIDLTE applies the LTE predicate on the "settlement_id" field.
+func SettlementIDLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldSettlementID, v))
+}
+
+// SettlementIDContains applies the Contains predicate on the "settlement_id" field.
+func SettlementIDContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldSettlementID, v))
+}
+
+// SettlementIDHasPrefix applies the HasPrefix predicate on the "settlement_id" field.
+func SettlementIDHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldSettlementID, v))
+}
+
+// SettlementIDHasSuffix applies the HasSuffix predicate on the "settlement_id" field.
+func SettlementIDHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldSettlementID, v))
+}
+
+// SettlementIDEqualFold applies the EqualFold predicate on the "settlement_id" field.
+func SettlementIDEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldSettlementID, v))
+}
+
+// SettlementIDContainsFold applies the ContainsFold predicate on the "settlement_id" field.
+func SettlementIDContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldSettlementID, v))
+}
+
 // LedgerEntryIDEQ applies the EQ predicate on the "ledger_entry_id" field.
 func LedgerEntryIDEQ(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldLedgerEntryID, v))
@@ -1474,71 +1369,6 @@ func WalletTransactionIDContainsFold(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldWalletTransactionID, v))
 }
 
-// SettlementIDEQ applies the EQ predicate on the "settlement_id" field.
-func SettlementIDEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldSettlementID, v))
-}
-
-// SettlementIDNEQ applies the NEQ predicate on the "settlement_id" field.
-func SettlementIDNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldSettlementID, v))
-}
-
-// SettlementIDIn applies the In predicate on the "settlement_id" field.
-func SettlementIDIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldSettlementID, vs...))
-}
-
-// SettlementIDNotIn applies the NotIn predicate on the "settlement_id" field.
-func SettlementIDNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldSettlementID, vs...))
-}
-
-// SettlementIDGT applies the GT predicate on the "settlement_id" field.
-func SettlementIDGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldSettlementID, v))
-}
-
-// SettlementIDGTE applies the GTE predicate on the "settlement_id" field.
-func SettlementIDGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldSettlementID, v))
-}
-
-// SettlementIDLT applies the LT predicate on the "settlement_id" field.
-func SettlementIDLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldSettlementID, v))
-}
-
-// SettlementIDLTE applies the LTE predicate on the "settlement_id" field.
-func SettlementIDLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldSettlementID, v))
-}
-
-// SettlementIDContains applies the Contains predicate on the "settlement_id" field.
-func SettlementIDContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldSettlementID, v))
-}
-
-// SettlementIDHasPrefix applies the HasPrefix predicate on the "settlement_id" field.
-func SettlementIDHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldSettlementID, v))
-}
-
-// SettlementIDHasSuffix applies the HasSuffix predicate on the "settlement_id" field.
-func SettlementIDHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldSettlementID, v))
-}
-
-// SettlementIDEqualFold applies the EqualFold predicate on the "settlement_id" field.
-func SettlementIDEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldSettlementID, v))
-}
-
-// SettlementIDContainsFold applies the ContainsFold predicate on the "settlement_id" field.
-func SettlementIDContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldSettlementID, v))
-}
-
 // PricingVersionEQ applies the EQ predicate on the "pricing_version" field.
 func PricingVersionEQ(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldEQ(FieldPricingVersion, v))
@@ -1604,699 +1434,999 @@ func PricingVersionContainsFold(v string) predicate.ComputeAllocation {
 	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldPricingVersion, v))
 }
 
-// AmountCentsEQ applies the EQ predicate on the "amount_cents" field.
-func AmountCentsEQ(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldAmountCents, v))
+// UsagePeriodEndEQ applies the EQ predicate on the "usage_period_end" field.
+func UsagePeriodEndEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldUsagePeriodEnd, v))
 }
 
-// AmountCentsNEQ applies the NEQ predicate on the "amount_cents" field.
-func AmountCentsNEQ(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldAmountCents, v))
+// UsagePeriodEndNEQ applies the NEQ predicate on the "usage_period_end" field.
+func UsagePeriodEndNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldUsagePeriodEnd, v))
 }
 
-// AmountCentsIn applies the In predicate on the "amount_cents" field.
-func AmountCentsIn(vs ...int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldAmountCents, vs...))
+// UsagePeriodEndIn applies the In predicate on the "usage_period_end" field.
+func UsagePeriodEndIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldUsagePeriodEnd, vs...))
 }
 
-// AmountCentsNotIn applies the NotIn predicate on the "amount_cents" field.
-func AmountCentsNotIn(vs ...int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldAmountCents, vs...))
+// UsagePeriodEndNotIn applies the NotIn predicate on the "usage_period_end" field.
+func UsagePeriodEndNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldUsagePeriodEnd, vs...))
 }
 
-// AmountCentsGT applies the GT predicate on the "amount_cents" field.
-func AmountCentsGT(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldAmountCents, v))
+// UsagePeriodEndGT applies the GT predicate on the "usage_period_end" field.
+func UsagePeriodEndGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldUsagePeriodEnd, v))
 }
 
-// AmountCentsGTE applies the GTE predicate on the "amount_cents" field.
-func AmountCentsGTE(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldAmountCents, v))
+// UsagePeriodEndGTE applies the GTE predicate on the "usage_period_end" field.
+func UsagePeriodEndGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldUsagePeriodEnd, v))
 }
 
-// AmountCentsLT applies the LT predicate on the "amount_cents" field.
-func AmountCentsLT(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldAmountCents, v))
+// UsagePeriodEndLT applies the LT predicate on the "usage_period_end" field.
+func UsagePeriodEndLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldUsagePeriodEnd, v))
 }
 
-// AmountCentsLTE applies the LTE predicate on the "amount_cents" field.
-func AmountCentsLTE(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldAmountCents, v))
+// UsagePeriodEndLTE applies the LTE predicate on the "usage_period_end" field.
+func UsagePeriodEndLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCentsEQ applies the EQ predicate on the "balance_cents" field.
-func BalanceCentsEQ(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldBalanceCents, v))
+// UsagePeriodEndContains applies the Contains predicate on the "usage_period_end" field.
+func UsagePeriodEndContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCentsNEQ applies the NEQ predicate on the "balance_cents" field.
-func BalanceCentsNEQ(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldBalanceCents, v))
+// UsagePeriodEndHasPrefix applies the HasPrefix predicate on the "usage_period_end" field.
+func UsagePeriodEndHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCentsIn applies the In predicate on the "balance_cents" field.
-func BalanceCentsIn(vs ...int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldBalanceCents, vs...))
+// UsagePeriodEndHasSuffix applies the HasSuffix predicate on the "usage_period_end" field.
+func UsagePeriodEndHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCentsNotIn applies the NotIn predicate on the "balance_cents" field.
-func BalanceCentsNotIn(vs ...int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldBalanceCents, vs...))
+// UsagePeriodEndEqualFold applies the EqualFold predicate on the "usage_period_end" field.
+func UsagePeriodEndEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCentsGT applies the GT predicate on the "balance_cents" field.
-func BalanceCentsGT(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldBalanceCents, v))
+// UsagePeriodEndContainsFold applies the ContainsFold predicate on the "usage_period_end" field.
+func UsagePeriodEndContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCentsGTE applies the GTE predicate on the "balance_cents" field.
-func BalanceCentsGTE(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldBalanceCents, v))
+// EvidenceIDEQ applies the EQ predicate on the "evidence_id" field.
+func EvidenceIDEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldEvidenceID, v))
 }
 
-// BalanceCentsLT applies the LT predicate on the "balance_cents" field.
-func BalanceCentsLT(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldBalanceCents, v))
+// EvidenceIDNEQ applies the NEQ predicate on the "evidence_id" field.
+func EvidenceIDNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldEvidenceID, v))
 }
 
-// BalanceCentsLTE applies the LTE predicate on the "balance_cents" field.
-func BalanceCentsLTE(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldBalanceCents, v))
+// EvidenceIDIn applies the In predicate on the "evidence_id" field.
+func EvidenceIDIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldEvidenceID, vs...))
 }
 
-// FrozenCentsEQ applies the EQ predicate on the "frozen_cents" field.
-func FrozenCentsEQ(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldFrozenCents, v))
+// EvidenceIDNotIn applies the NotIn predicate on the "evidence_id" field.
+func EvidenceIDNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldEvidenceID, vs...))
 }
 
-// FrozenCentsNEQ applies the NEQ predicate on the "frozen_cents" field.
-func FrozenCentsNEQ(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldFrozenCents, v))
+// EvidenceIDGT applies the GT predicate on the "evidence_id" field.
+func EvidenceIDGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldEvidenceID, v))
 }
 
-// FrozenCentsIn applies the In predicate on the "frozen_cents" field.
-func FrozenCentsIn(vs ...int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldFrozenCents, vs...))
+// EvidenceIDGTE applies the GTE predicate on the "evidence_id" field.
+func EvidenceIDGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldEvidenceID, v))
 }
 
-// FrozenCentsNotIn applies the NotIn predicate on the "frozen_cents" field.
-func FrozenCentsNotIn(vs ...int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldFrozenCents, vs...))
+// EvidenceIDLT applies the LT predicate on the "evidence_id" field.
+func EvidenceIDLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldEvidenceID, v))
 }
 
-// FrozenCentsGT applies the GT predicate on the "frozen_cents" field.
-func FrozenCentsGT(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldFrozenCents, v))
+// EvidenceIDLTE applies the LTE predicate on the "evidence_id" field.
+func EvidenceIDLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldEvidenceID, v))
 }
 
-// FrozenCentsGTE applies the GTE predicate on the "frozen_cents" field.
-func FrozenCentsGTE(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldFrozenCents, v))
+// EvidenceIDContains applies the Contains predicate on the "evidence_id" field.
+func EvidenceIDContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldEvidenceID, v))
 }
 
-// FrozenCentsLT applies the LT predicate on the "frozen_cents" field.
-func FrozenCentsLT(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldFrozenCents, v))
+// EvidenceIDHasPrefix applies the HasPrefix predicate on the "evidence_id" field.
+func EvidenceIDHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldEvidenceID, v))
 }
 
-// FrozenCentsLTE applies the LTE predicate on the "frozen_cents" field.
-func FrozenCentsLTE(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldFrozenCents, v))
+// EvidenceIDHasSuffix applies the HasSuffix predicate on the "evidence_id" field.
+func EvidenceIDHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldEvidenceID, v))
 }
 
-// AvailableCentsEQ applies the EQ predicate on the "available_cents" field.
-func AvailableCentsEQ(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldAvailableCents, v))
+// EvidenceIDEqualFold applies the EqualFold predicate on the "evidence_id" field.
+func EvidenceIDEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldEvidenceID, v))
 }
 
-// AvailableCentsNEQ applies the NEQ predicate on the "available_cents" field.
-func AvailableCentsNEQ(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldAvailableCents, v))
+// EvidenceIDContainsFold applies the ContainsFold predicate on the "evidence_id" field.
+func EvidenceIDContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldEvidenceID, v))
 }
 
-// AvailableCentsIn applies the In predicate on the "available_cents" field.
-func AvailableCentsIn(vs ...int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldAvailableCents, vs...))
+// CvmInstanceIDEQ applies the EQ predicate on the "cvm_instance_id" field.
+func CvmInstanceIDEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldCvmInstanceID, v))
 }
 
-// AvailableCentsNotIn applies the NotIn predicate on the "available_cents" field.
-func AvailableCentsNotIn(vs ...int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldAvailableCents, vs...))
+// CvmInstanceIDNEQ applies the NEQ predicate on the "cvm_instance_id" field.
+func CvmInstanceIDNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldCvmInstanceID, v))
 }
 
-// AvailableCentsGT applies the GT predicate on the "available_cents" field.
-func AvailableCentsGT(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldAvailableCents, v))
+// CvmInstanceIDIn applies the In predicate on the "cvm_instance_id" field.
+func CvmInstanceIDIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldCvmInstanceID, vs...))
 }
 
-// AvailableCentsGTE applies the GTE predicate on the "available_cents" field.
-func AvailableCentsGTE(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldAvailableCents, v))
+// CvmInstanceIDNotIn applies the NotIn predicate on the "cvm_instance_id" field.
+func CvmInstanceIDNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldCvmInstanceID, vs...))
 }
 
-// AvailableCentsLT applies the LT predicate on the "available_cents" field.
-func AvailableCentsLT(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldAvailableCents, v))
+// CvmInstanceIDGT applies the GT predicate on the "cvm_instance_id" field.
+func CvmInstanceIDGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldCvmInstanceID, v))
 }
 
-// AvailableCentsLTE applies the LTE predicate on the "available_cents" field.
-func AvailableCentsLTE(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldAvailableCents, v))
+// CvmInstanceIDGTE applies the GTE predicate on the "cvm_instance_id" field.
+func CvmInstanceIDGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldCvmInstanceID, v))
 }
 
-// TotalSpentCentsEQ applies the EQ predicate on the "total_spent_cents" field.
-func TotalSpentCentsEQ(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldTotalSpentCents, v))
+// CvmInstanceIDLT applies the LT predicate on the "cvm_instance_id" field.
+func CvmInstanceIDLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldCvmInstanceID, v))
 }
 
-// TotalSpentCentsNEQ applies the NEQ predicate on the "total_spent_cents" field.
-func TotalSpentCentsNEQ(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldTotalSpentCents, v))
+// CvmInstanceIDLTE applies the LTE predicate on the "cvm_instance_id" field.
+func CvmInstanceIDLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldCvmInstanceID, v))
 }
 
-// TotalSpentCentsIn applies the In predicate on the "total_spent_cents" field.
-func TotalSpentCentsIn(vs ...int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldTotalSpentCents, vs...))
+// CvmInstanceIDContains applies the Contains predicate on the "cvm_instance_id" field.
+func CvmInstanceIDContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldCvmInstanceID, v))
 }
 
-// TotalSpentCentsNotIn applies the NotIn predicate on the "total_spent_cents" field.
-func TotalSpentCentsNotIn(vs ...int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldTotalSpentCents, vs...))
+// CvmInstanceIDHasPrefix applies the HasPrefix predicate on the "cvm_instance_id" field.
+func CvmInstanceIDHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldCvmInstanceID, v))
 }
 
-// TotalSpentCentsGT applies the GT predicate on the "total_spent_cents" field.
-func TotalSpentCentsGT(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldTotalSpentCents, v))
+// CvmInstanceIDHasSuffix applies the HasSuffix predicate on the "cvm_instance_id" field.
+func CvmInstanceIDHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldCvmInstanceID, v))
 }
 
-// TotalSpentCentsGTE applies the GTE predicate on the "total_spent_cents" field.
-func TotalSpentCentsGTE(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldTotalSpentCents, v))
+// CvmInstanceIDEqualFold applies the EqualFold predicate on the "cvm_instance_id" field.
+func CvmInstanceIDEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldCvmInstanceID, v))
 }
 
-// TotalSpentCentsLT applies the LT predicate on the "total_spent_cents" field.
-func TotalSpentCentsLT(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldTotalSpentCents, v))
+// CvmInstanceIDContainsFold applies the ContainsFold predicate on the "cvm_instance_id" field.
+func CvmInstanceIDContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldCvmInstanceID, v))
 }
 
-// TotalSpentCentsLTE applies the LTE predicate on the "total_spent_cents" field.
-func TotalSpentCentsLTE(v int64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldTotalSpentCents, v))
+// InstanceIDEQ applies the EQ predicate on the "instance_id" field.
+func InstanceIDEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldInstanceID, v))
 }
 
-// QuantityEQ applies the EQ predicate on the "quantity" field.
-func QuantityEQ(v float64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldQuantity, v))
+// InstanceIDNEQ applies the NEQ predicate on the "instance_id" field.
+func InstanceIDNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldInstanceID, v))
 }
 
-// QuantityNEQ applies the NEQ predicate on the "quantity" field.
-func QuantityNEQ(v float64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldQuantity, v))
+// InstanceIDIn applies the In predicate on the "instance_id" field.
+func InstanceIDIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldInstanceID, vs...))
 }
 
-// QuantityIn applies the In predicate on the "quantity" field.
-func QuantityIn(vs ...float64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldQuantity, vs...))
+// InstanceIDNotIn applies the NotIn predicate on the "instance_id" field.
+func InstanceIDNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldInstanceID, vs...))
 }
 
-// QuantityNotIn applies the NotIn predicate on the "quantity" field.
-func QuantityNotIn(vs ...float64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldQuantity, vs...))
+// InstanceIDGT applies the GT predicate on the "instance_id" field.
+func InstanceIDGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldInstanceID, v))
 }
 
-// QuantityGT applies the GT predicate on the "quantity" field.
-func QuantityGT(v float64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldQuantity, v))
+// InstanceIDGTE applies the GTE predicate on the "instance_id" field.
+func InstanceIDGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldInstanceID, v))
 }
 
-// QuantityGTE applies the GTE predicate on the "quantity" field.
-func QuantityGTE(v float64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldQuantity, v))
+// InstanceIDLT applies the LT predicate on the "instance_id" field.
+func InstanceIDLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldInstanceID, v))
 }
 
-// QuantityLT applies the LT predicate on the "quantity" field.
-func QuantityLT(v float64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldQuantity, v))
+// InstanceIDLTE applies the LTE predicate on the "instance_id" field.
+func InstanceIDLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldInstanceID, v))
 }
 
-// QuantityLTE applies the LTE predicate on the "quantity" field.
-func QuantityLTE(v float64) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldQuantity, v))
+// InstanceIDContains applies the Contains predicate on the "instance_id" field.
+func InstanceIDContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldInstanceID, v))
 }
 
-// UnitEQ applies the EQ predicate on the "unit" field.
-func UnitEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldUnit, v))
+// InstanceIDHasPrefix applies the HasPrefix predicate on the "instance_id" field.
+func InstanceIDHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldInstanceID, v))
 }
 
-// UnitNEQ applies the NEQ predicate on the "unit" field.
-func UnitNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldUnit, v))
+// InstanceIDHasSuffix applies the HasSuffix predicate on the "instance_id" field.
+func InstanceIDHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldInstanceID, v))
 }
 
-// UnitIn applies the In predicate on the "unit" field.
-func UnitIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldUnit, vs...))
+// InstanceIDEqualFold applies the EqualFold predicate on the "instance_id" field.
+func InstanceIDEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldInstanceID, v))
 }
 
-// UnitNotIn applies the NotIn predicate on the "unit" field.
-func UnitNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldUnit, vs...))
+// InstanceIDContainsFold applies the ContainsFold predicate on the "instance_id" field.
+func InstanceIDContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldInstanceID, v))
 }
 
-// UnitGT applies the GT predicate on the "unit" field.
-func UnitGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldUnit, v))
+// NodeNameEQ applies the EQ predicate on the "node_name" field.
+func NodeNameEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldNodeName, v))
 }
 
-// UnitGTE applies the GTE predicate on the "unit" field.
-func UnitGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldUnit, v))
+// NodeNameNEQ applies the NEQ predicate on the "node_name" field.
+func NodeNameNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldNodeName, v))
 }
 
-// UnitLT applies the LT predicate on the "unit" field.
-func UnitLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldUnit, v))
+// NodeNameIn applies the In predicate on the "node_name" field.
+func NodeNameIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldNodeName, vs...))
 }
 
-// UnitLTE applies the LTE predicate on the "unit" field.
-func UnitLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldUnit, v))
+// NodeNameNotIn applies the NotIn predicate on the "node_name" field.
+func NodeNameNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldNodeName, vs...))
 }
 
-// UnitContains applies the Contains predicate on the "unit" field.
-func UnitContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldUnit, v))
+// NodeNameGT applies the GT predicate on the "node_name" field.
+func NodeNameGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldNodeName, v))
 }
 
-// UnitHasPrefix applies the HasPrefix predicate on the "unit" field.
-func UnitHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldUnit, v))
+// NodeNameGTE applies the GTE predicate on the "node_name" field.
+func NodeNameGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldNodeName, v))
 }
 
-// UnitHasSuffix applies the HasSuffix predicate on the "unit" field.
-func UnitHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldUnit, v))
+// NodeNameLT applies the LT predicate on the "node_name" field.
+func NodeNameLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldNodeName, v))
 }
 
-// UnitEqualFold applies the EqualFold predicate on the "unit" field.
-func UnitEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldUnit, v))
+// NodeNameLTE applies the LTE predicate on the "node_name" field.
+func NodeNameLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldNodeName, v))
 }
 
-// UnitContainsFold applies the ContainsFold predicate on the "unit" field.
-func UnitContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldUnit, v))
+// NodeNameContains applies the Contains predicate on the "node_name" field.
+func NodeNameContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldNodeName, v))
 }
 
-// ReasonEQ applies the EQ predicate on the "reason" field.
-func ReasonEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldReason, v))
+// NodeNameHasPrefix applies the HasPrefix predicate on the "node_name" field.
+func NodeNameHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldNodeName, v))
 }
 
-// ReasonNEQ applies the NEQ predicate on the "reason" field.
-func ReasonNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldReason, v))
+// NodeNameHasSuffix applies the HasSuffix predicate on the "node_name" field.
+func NodeNameHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldNodeName, v))
 }
 
-// ReasonIn applies the In predicate on the "reason" field.
-func ReasonIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldReason, vs...))
+// NodeNameEqualFold applies the EqualFold predicate on the "node_name" field.
+func NodeNameEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldNodeName, v))
 }
 
-// ReasonNotIn applies the NotIn predicate on the "reason" field.
-func ReasonNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldReason, vs...))
+// NodeNameContainsFold applies the ContainsFold predicate on the "node_name" field.
+func NodeNameContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldNodeName, v))
 }
 
-// ReasonGT applies the GT predicate on the "reason" field.
-func ReasonGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldReason, v))
+// MachineNameEQ applies the EQ predicate on the "machine_name" field.
+func MachineNameEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldMachineName, v))
 }
 
-// ReasonGTE applies the GTE predicate on the "reason" field.
-func ReasonGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldReason, v))
+// MachineNameNEQ applies the NEQ predicate on the "machine_name" field.
+func MachineNameNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldMachineName, v))
 }
 
-// ReasonLT applies the LT predicate on the "reason" field.
-func ReasonLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldReason, v))
+// MachineNameIn applies the In predicate on the "machine_name" field.
+func MachineNameIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldMachineName, vs...))
 }
 
-// ReasonLTE applies the LTE predicate on the "reason" field.
-func ReasonLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldReason, v))
+// MachineNameNotIn applies the NotIn predicate on the "machine_name" field.
+func MachineNameNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldMachineName, vs...))
 }
 
-// ReasonContains applies the Contains predicate on the "reason" field.
-func ReasonContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldReason, v))
+// MachineNameGT applies the GT predicate on the "machine_name" field.
+func MachineNameGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldMachineName, v))
 }
 
-// ReasonHasPrefix applies the HasPrefix predicate on the "reason" field.
-func ReasonHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldReason, v))
+// MachineNameGTE applies the GTE predicate on the "machine_name" field.
+func MachineNameGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldMachineName, v))
 }
 
-// ReasonHasSuffix applies the HasSuffix predicate on the "reason" field.
-func ReasonHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldReason, v))
+// MachineNameLT applies the LT predicate on the "machine_name" field.
+func MachineNameLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldMachineName, v))
 }
 
-// ReasonEqualFold applies the EqualFold predicate on the "reason" field.
-func ReasonEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldReason, v))
+// MachineNameLTE applies the LTE predicate on the "machine_name" field.
+func MachineNameLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldMachineName, v))
 }
 
-// ReasonContainsFold applies the ContainsFold predicate on the "reason" field.
-func ReasonContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldReason, v))
+// MachineNameContains applies the Contains predicate on the "machine_name" field.
+func MachineNameContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldMachineName, v))
 }
 
-// ResultEQ applies the EQ predicate on the "result" field.
-func ResultEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldResult, v))
+// MachineNameHasPrefix applies the HasPrefix predicate on the "machine_name" field.
+func MachineNameHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldMachineName, v))
 }
 
-// ResultNEQ applies the NEQ predicate on the "result" field.
-func ResultNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldResult, v))
+// MachineNameHasSuffix applies the HasSuffix predicate on the "machine_name" field.
+func MachineNameHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldMachineName, v))
 }
 
-// ResultIn applies the In predicate on the "result" field.
-func ResultIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldResult, vs...))
+// MachineNameEqualFold applies the EqualFold predicate on the "machine_name" field.
+func MachineNameEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldMachineName, v))
 }
 
-// ResultNotIn applies the NotIn predicate on the "result" field.
-func ResultNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldResult, vs...))
+// MachineNameContainsFold applies the ContainsFold predicate on the "machine_name" field.
+func MachineNameContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldMachineName, v))
 }
 
-// ResultGT applies the GT predicate on the "result" field.
-func ResultGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldResult, v))
+// HoldAmountCentsEQ applies the EQ predicate on the "hold_amount_cents" field.
+func HoldAmountCentsEQ(v int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldHoldAmountCents, v))
 }
 
-// ResultGTE applies the GTE predicate on the "result" field.
-func ResultGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldResult, v))
+// HoldAmountCentsNEQ applies the NEQ predicate on the "hold_amount_cents" field.
+func HoldAmountCentsNEQ(v int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldHoldAmountCents, v))
 }
 
-// ResultLT applies the LT predicate on the "result" field.
-func ResultLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldResult, v))
+// HoldAmountCentsIn applies the In predicate on the "hold_amount_cents" field.
+func HoldAmountCentsIn(vs ...int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldHoldAmountCents, vs...))
 }
 
-// ResultLTE applies the LTE predicate on the "result" field.
-func ResultLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldResult, v))
+// HoldAmountCentsNotIn applies the NotIn predicate on the "hold_amount_cents" field.
+func HoldAmountCentsNotIn(vs ...int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldHoldAmountCents, vs...))
 }
 
-// ResultContains applies the Contains predicate on the "result" field.
-func ResultContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldResult, v))
+// HoldAmountCentsGT applies the GT predicate on the "hold_amount_cents" field.
+func HoldAmountCentsGT(v int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldHoldAmountCents, v))
 }
 
-// ResultHasPrefix applies the HasPrefix predicate on the "result" field.
-func ResultHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldResult, v))
+// HoldAmountCentsGTE applies the GTE predicate on the "hold_amount_cents" field.
+func HoldAmountCentsGTE(v int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldHoldAmountCents, v))
 }
 
-// ResultHasSuffix applies the HasSuffix predicate on the "result" field.
-func ResultHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldResult, v))
+// HoldAmountCentsLT applies the LT predicate on the "hold_amount_cents" field.
+func HoldAmountCentsLT(v int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldHoldAmountCents, v))
 }
 
-// ResultEqualFold applies the EqualFold predicate on the "result" field.
-func ResultEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldResult, v))
+// HoldAmountCentsLTE applies the LTE predicate on the "hold_amount_cents" field.
+func HoldAmountCentsLTE(v int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldHoldAmountCents, v))
 }
 
-// ResultContainsFold applies the ContainsFold predicate on the "result" field.
-func ResultContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldResult, v))
+// HoldAmountEQ applies the EQ predicate on the "hold_amount" field.
+func HoldAmountEQ(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldHoldAmount, v))
 }
 
-// SourceEQ applies the EQ predicate on the "source" field.
-func SourceEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldSource, v))
+// HoldAmountNEQ applies the NEQ predicate on the "hold_amount" field.
+func HoldAmountNEQ(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldHoldAmount, v))
 }
 
-// SourceNEQ applies the NEQ predicate on the "source" field.
-func SourceNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldSource, v))
+// HoldAmountIn applies the In predicate on the "hold_amount" field.
+func HoldAmountIn(vs ...float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldHoldAmount, vs...))
 }
 
-// SourceIn applies the In predicate on the "source" field.
-func SourceIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldSource, vs...))
+// HoldAmountNotIn applies the NotIn predicate on the "hold_amount" field.
+func HoldAmountNotIn(vs ...float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldHoldAmount, vs...))
 }
 
-// SourceNotIn applies the NotIn predicate on the "source" field.
-func SourceNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldSource, vs...))
+// HoldAmountGT applies the GT predicate on the "hold_amount" field.
+func HoldAmountGT(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldHoldAmount, v))
 }
 
-// SourceGT applies the GT predicate on the "source" field.
-func SourceGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldSource, v))
+// HoldAmountGTE applies the GTE predicate on the "hold_amount" field.
+func HoldAmountGTE(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldHoldAmount, v))
 }
 
-// SourceGTE applies the GTE predicate on the "source" field.
-func SourceGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldSource, v))
+// HoldAmountLT applies the LT predicate on the "hold_amount" field.
+func HoldAmountLT(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldHoldAmount, v))
 }
 
-// SourceLT applies the LT predicate on the "source" field.
-func SourceLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldSource, v))
+// HoldAmountLTE applies the LTE predicate on the "hold_amount" field.
+func HoldAmountLTE(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldHoldAmount, v))
 }
 
-// SourceLTE applies the LTE predicate on the "source" field.
-func SourceLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldSource, v))
+// CPUEQ applies the EQ predicate on the "cpu" field.
+func CPUEQ(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldCPU, v))
 }
 
-// SourceContains applies the Contains predicate on the "source" field.
-func SourceContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldSource, v))
+// CPUNEQ applies the NEQ predicate on the "cpu" field.
+func CPUNEQ(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldCPU, v))
 }
 
-// SourceHasPrefix applies the HasPrefix predicate on the "source" field.
-func SourceHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldSource, v))
+// CPUIn applies the In predicate on the "cpu" field.
+func CPUIn(vs ...float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldCPU, vs...))
 }
 
-// SourceHasSuffix applies the HasSuffix predicate on the "source" field.
-func SourceHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldSource, v))
+// CPUNotIn applies the NotIn predicate on the "cpu" field.
+func CPUNotIn(vs ...float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldCPU, vs...))
 }
 
-// SourceEqualFold applies the EqualFold predicate on the "source" field.
-func SourceEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldSource, v))
+// CPUGT applies the GT predicate on the "cpu" field.
+func CPUGT(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldCPU, v))
 }
 
-// SourceContainsFold applies the ContainsFold predicate on the "source" field.
-func SourceContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldSource, v))
+// CPUGTE applies the GTE predicate on the "cpu" field.
+func CPUGTE(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldCPU, v))
 }
 
-// DirectionEQ applies the EQ predicate on the "direction" field.
-func DirectionEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldDirection, v))
+// CPULT applies the LT predicate on the "cpu" field.
+func CPULT(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldCPU, v))
 }
 
-// DirectionNEQ applies the NEQ predicate on the "direction" field.
-func DirectionNEQ(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldDirection, v))
+// CPULTE applies the LTE predicate on the "cpu" field.
+func CPULTE(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldCPU, v))
 }
 
-// DirectionIn applies the In predicate on the "direction" field.
-func DirectionIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldDirection, vs...))
+// MemoryGBEQ applies the EQ predicate on the "memory_gb" field.
+func MemoryGBEQ(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldMemoryGB, v))
 }
 
-// DirectionNotIn applies the NotIn predicate on the "direction" field.
-func DirectionNotIn(vs ...string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldDirection, vs...))
+// MemoryGBNEQ applies the NEQ predicate on the "memory_gb" field.
+func MemoryGBNEQ(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldMemoryGB, v))
 }
 
-// DirectionGT applies the GT predicate on the "direction" field.
-func DirectionGT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldDirection, v))
+// MemoryGBIn applies the In predicate on the "memory_gb" field.
+func MemoryGBIn(vs ...float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldMemoryGB, vs...))
 }
 
-// DirectionGTE applies the GTE predicate on the "direction" field.
-func DirectionGTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldDirection, v))
+// MemoryGBNotIn applies the NotIn predicate on the "memory_gb" field.
+func MemoryGBNotIn(vs ...float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldMemoryGB, vs...))
 }
 
-// DirectionLT applies the LT predicate on the "direction" field.
-func DirectionLT(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldDirection, v))
+// MemoryGBGT applies the GT predicate on the "memory_gb" field.
+func MemoryGBGT(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldMemoryGB, v))
 }
 
-// DirectionLTE applies the LTE predicate on the "direction" field.
-func DirectionLTE(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldDirection, v))
+// MemoryGBGTE applies the GTE predicate on the "memory_gb" field.
+func MemoryGBGTE(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldMemoryGB, v))
 }
 
-// DirectionContains applies the Contains predicate on the "direction" field.
-func DirectionContains(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContains(FieldDirection, v))
+// MemoryGBLT applies the LT predicate on the "memory_gb" field.
+func MemoryGBLT(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldMemoryGB, v))
 }
 
-// DirectionHasPrefix applies the HasPrefix predicate on the "direction" field.
-func DirectionHasPrefix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldDirection, v))
+// MemoryGBLTE applies the LTE predicate on the "memory_gb" field.
+func MemoryGBLTE(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldMemoryGB, v))
 }
 
-// DirectionHasSuffix applies the HasSuffix predicate on the "direction" field.
-func DirectionHasSuffix(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldDirection, v))
+// DiskGBEQ applies the EQ predicate on the "disk_gb" field.
+func DiskGBEQ(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldDiskGB, v))
 }
 
-// DirectionEqualFold applies the EqualFold predicate on the "direction" field.
-func DirectionEqualFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldDirection, v))
+// DiskGBNEQ applies the NEQ predicate on the "disk_gb" field.
+func DiskGBNEQ(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldDiskGB, v))
 }
 
-// DirectionContainsFold applies the ContainsFold predicate on the "direction" field.
-func DirectionContainsFold(v string) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldDirection, v))
+// DiskGBIn applies the In predicate on the "disk_gb" field.
+func DiskGBIn(vs ...float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldDiskGB, vs...))
 }
 
-// CreatedAtEQ applies the EQ predicate on the "created_at" field.
-func CreatedAtEQ(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldCreatedAt, v))
+// DiskGBNotIn applies the NotIn predicate on the "disk_gb" field.
+func DiskGBNotIn(vs ...float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldDiskGB, vs...))
 }
 
-// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
-func CreatedAtNEQ(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldCreatedAt, v))
+// DiskGBGT applies the GT predicate on the "disk_gb" field.
+func DiskGBGT(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldDiskGB, v))
 }
 
-// CreatedAtIn applies the In predicate on the "created_at" field.
-func CreatedAtIn(vs ...time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldCreatedAt, vs...))
+// DiskGBGTE applies the GTE predicate on the "disk_gb" field.
+func DiskGBGTE(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldDiskGB, v))
 }
 
-// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
-func CreatedAtNotIn(vs ...time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldCreatedAt, vs...))
+// DiskGBLT applies the LT predicate on the "disk_gb" field.
+func DiskGBLT(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldDiskGB, v))
 }
 
-// CreatedAtGT applies the GT predicate on the "created_at" field.
-func CreatedAtGT(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldCreatedAt, v))
+// DiskGBLTE applies the LTE predicate on the "disk_gb" field.
+func DiskGBLTE(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldDiskGB, v))
 }
 
-// CreatedAtGTE applies the GTE predicate on the "created_at" field.
-func CreatedAtGTE(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldCreatedAt, v))
+// PriceSnapshotPackageIDEQ applies the EQ predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPriceSnapshotPackageID, v))
 }
 
-// CreatedAtLT applies the LT predicate on the "created_at" field.
-func CreatedAtLT(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldCreatedAt, v))
+// PriceSnapshotPackageIDNEQ applies the NEQ predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldPriceSnapshotPackageID, v))
 }
 
-// CreatedAtLTE applies the LTE predicate on the "created_at" field.
-func CreatedAtLTE(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldCreatedAt, v))
+// PriceSnapshotPackageIDIn applies the In predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldPriceSnapshotPackageID, vs...))
 }
 
-// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
-func UpdatedAtEQ(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldUpdatedAt, v))
+// PriceSnapshotPackageIDNotIn applies the NotIn predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldPriceSnapshotPackageID, vs...))
 }
 
-// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
-func UpdatedAtNEQ(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldUpdatedAt, v))
+// PriceSnapshotPackageIDGT applies the GT predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldPriceSnapshotPackageID, v))
 }
 
-// UpdatedAtIn applies the In predicate on the "updated_at" field.
-func UpdatedAtIn(vs ...time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldUpdatedAt, vs...))
+// PriceSnapshotPackageIDGTE applies the GTE predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldPriceSnapshotPackageID, v))
 }
 
-// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
-func UpdatedAtNotIn(vs ...time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldUpdatedAt, vs...))
+// PriceSnapshotPackageIDLT applies the LT predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldPriceSnapshotPackageID, v))
 }
 
-// UpdatedAtGT applies the GT predicate on the "updated_at" field.
-func UpdatedAtGT(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldUpdatedAt, v))
+// PriceSnapshotPackageIDLTE applies the LTE predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldPriceSnapshotPackageID, v))
 }
 
-// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
-func UpdatedAtGTE(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldUpdatedAt, v))
+// PriceSnapshotPackageIDContains applies the Contains predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldPriceSnapshotPackageID, v))
 }
 
-// UpdatedAtLT applies the LT predicate on the "updated_at" field.
-func UpdatedAtLT(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldUpdatedAt, v))
+// PriceSnapshotPackageIDHasPrefix applies the HasPrefix predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldPriceSnapshotPackageID, v))
 }
 
-// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
-func UpdatedAtLTE(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldUpdatedAt, v))
+// PriceSnapshotPackageIDHasSuffix applies the HasSuffix predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldPriceSnapshotPackageID, v))
 }
 
-// ArchivedAtEQ applies the EQ predicate on the "archived_at" field.
-func ArchivedAtEQ(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldEQ(FieldArchivedAt, v))
+// PriceSnapshotPackageIDEqualFold applies the EqualFold predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldPriceSnapshotPackageID, v))
 }
 
-// ArchivedAtNEQ applies the NEQ predicate on the "archived_at" field.
-func ArchivedAtNEQ(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNEQ(FieldArchivedAt, v))
+// PriceSnapshotPackageIDContainsFold applies the ContainsFold predicate on the "price_snapshot_package_id" field.
+func PriceSnapshotPackageIDContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldPriceSnapshotPackageID, v))
 }
 
-// ArchivedAtIn applies the In predicate on the "archived_at" field.
-func ArchivedAtIn(vs ...time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIn(FieldArchivedAt, vs...))
+// PriceSnapshotResourceTypeEQ applies the EQ predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPriceSnapshotResourceType, v))
 }
 
-// ArchivedAtNotIn applies the NotIn predicate on the "archived_at" field.
-func ArchivedAtNotIn(vs ...time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotIn(FieldArchivedAt, vs...))
+// PriceSnapshotResourceTypeNEQ applies the NEQ predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldPriceSnapshotResourceType, v))
 }
 
-// ArchivedAtGT applies the GT predicate on the "archived_at" field.
-func ArchivedAtGT(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGT(FieldArchivedAt, v))
+// PriceSnapshotResourceTypeIn applies the In predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldPriceSnapshotResourceType, vs...))
 }
 
-// ArchivedAtGTE applies the GTE predicate on the "archived_at" field.
-func ArchivedAtGTE(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldGTE(FieldArchivedAt, v))
+// PriceSnapshotResourceTypeNotIn applies the NotIn predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldPriceSnapshotResourceType, vs...))
 }
 
-// ArchivedAtLT applies the LT predicate on the "archived_at" field.
-func ArchivedAtLT(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLT(FieldArchivedAt, v))
+// PriceSnapshotResourceTypeGT applies the GT predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldPriceSnapshotResourceType, v))
 }
 
-// ArchivedAtLTE applies the LTE predicate on the "archived_at" field.
-func ArchivedAtLTE(v time.Time) predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldLTE(FieldArchivedAt, v))
+// PriceSnapshotResourceTypeGTE applies the GTE predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldPriceSnapshotResourceType, v))
 }
 
-// ArchivedAtIsNil applies the IsNil predicate on the "archived_at" field.
-func ArchivedAtIsNil() predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldIsNull(FieldArchivedAt))
+// PriceSnapshotResourceTypeLT applies the LT predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldPriceSnapshotResourceType, v))
 }
 
-// ArchivedAtNotNil applies the NotNil predicate on the "archived_at" field.
-func ArchivedAtNotNil() predicate.ComputeAllocation {
-	return predicate.ComputeAllocation(sql.FieldNotNull(FieldArchivedAt))
+// PriceSnapshotResourceTypeLTE applies the LTE predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldPriceSnapshotResourceType, v))
+}
+
+// PriceSnapshotResourceTypeContains applies the Contains predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldPriceSnapshotResourceType, v))
+}
+
+// PriceSnapshotResourceTypeHasPrefix applies the HasPrefix predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldPriceSnapshotResourceType, v))
+}
+
+// PriceSnapshotResourceTypeHasSuffix applies the HasSuffix predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldPriceSnapshotResourceType, v))
+}
+
+// PriceSnapshotResourceTypeEqualFold applies the EqualFold predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldPriceSnapshotResourceType, v))
+}
+
+// PriceSnapshotResourceTypeContainsFold applies the ContainsFold predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldPriceSnapshotResourceType, v))
+}
+
+// PriceSnapshotCurrencyEQ applies the EQ predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyNEQ applies the NEQ predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyIn applies the In predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldPriceSnapshotCurrency, vs...))
+}
+
+// PriceSnapshotCurrencyNotIn applies the NotIn predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldPriceSnapshotCurrency, vs...))
+}
+
+// PriceSnapshotCurrencyGT applies the GT predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyGTE applies the GTE predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyLT applies the LT predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyLTE applies the LTE predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyContains applies the Contains predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyHasPrefix applies the HasPrefix predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyHasSuffix applies the HasSuffix predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyEqualFold applies the EqualFold predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotCurrencyContainsFold applies the ContainsFold predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldPriceSnapshotCurrency, v))
+}
+
+// PriceSnapshotSourceEQ applies the EQ predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceNEQ applies the NEQ predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceIn applies the In predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldPriceSnapshotSource, vs...))
+}
+
+// PriceSnapshotSourceNotIn applies the NotIn predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldPriceSnapshotSource, vs...))
+}
+
+// PriceSnapshotSourceGT applies the GT predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceGTE applies the GTE predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceLT applies the LT predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceLTE applies the LTE predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceContains applies the Contains predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceHasPrefix applies the HasPrefix predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceHasSuffix applies the HasSuffix predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceEqualFold applies the EqualFold predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSourceContainsFold applies the ContainsFold predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldPriceSnapshotSource, v))
+}
+
+// PriceSnapshotSkuEQ applies the EQ predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuNEQ applies the NEQ predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuNEQ(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuIn applies the In predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldPriceSnapshotSku, vs...))
+}
+
+// PriceSnapshotSkuNotIn applies the NotIn predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuNotIn(vs ...string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldPriceSnapshotSku, vs...))
+}
+
+// PriceSnapshotSkuGT applies the GT predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuGT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuGTE applies the GTE predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuGTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuLT applies the LT predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuLT(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuLTE applies the LTE predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuLTE(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuContains applies the Contains predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuContains(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContains(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuHasPrefix applies the HasPrefix predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuHasPrefix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasPrefix(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuHasSuffix applies the HasSuffix predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuHasSuffix(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldHasSuffix(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuEqualFold applies the EqualFold predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuEqualFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEqualFold(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotSkuContainsFold applies the ContainsFold predicate on the "price_snapshot_sku" field.
+func PriceSnapshotSkuContainsFold(v string) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldContainsFold(FieldPriceSnapshotSku, v))
+}
+
+// PriceSnapshotUnitPriceCentsEQ applies the EQ predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsEQ(v int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPriceSnapshotUnitPriceCents, v))
+}
+
+// PriceSnapshotUnitPriceCentsNEQ applies the NEQ predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsNEQ(v int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldPriceSnapshotUnitPriceCents, v))
+}
+
+// PriceSnapshotUnitPriceCentsIn applies the In predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsIn(vs ...int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldPriceSnapshotUnitPriceCents, vs...))
+}
+
+// PriceSnapshotUnitPriceCentsNotIn applies the NotIn predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsNotIn(vs ...int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldPriceSnapshotUnitPriceCents, vs...))
+}
+
+// PriceSnapshotUnitPriceCentsGT applies the GT predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsGT(v int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldPriceSnapshotUnitPriceCents, v))
+}
+
+// PriceSnapshotUnitPriceCentsGTE applies the GTE predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsGTE(v int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldPriceSnapshotUnitPriceCents, v))
+}
+
+// PriceSnapshotUnitPriceCentsLT applies the LT predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsLT(v int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldPriceSnapshotUnitPriceCents, v))
+}
+
+// PriceSnapshotUnitPriceCentsLTE applies the LTE predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsLTE(v int64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldPriceSnapshotUnitPriceCents, v))
+}
+
+// PriceSnapshotComputeHourlyEQ applies the EQ predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyEQ(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldEQ(FieldPriceSnapshotComputeHourly, v))
+}
+
+// PriceSnapshotComputeHourlyNEQ applies the NEQ predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyNEQ(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNEQ(FieldPriceSnapshotComputeHourly, v))
+}
+
+// PriceSnapshotComputeHourlyIn applies the In predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyIn(vs ...float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldIn(FieldPriceSnapshotComputeHourly, vs...))
+}
+
+// PriceSnapshotComputeHourlyNotIn applies the NotIn predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyNotIn(vs ...float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldNotIn(FieldPriceSnapshotComputeHourly, vs...))
+}
+
+// PriceSnapshotComputeHourlyGT applies the GT predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyGT(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGT(FieldPriceSnapshotComputeHourly, v))
+}
+
+// PriceSnapshotComputeHourlyGTE applies the GTE predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyGTE(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldGTE(FieldPriceSnapshotComputeHourly, v))
+}
+
+// PriceSnapshotComputeHourlyLT applies the LT predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyLT(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLT(FieldPriceSnapshotComputeHourly, v))
+}
+
+// PriceSnapshotComputeHourlyLTE applies the LTE predicate on the "price_snapshot_compute_hourly" field.
+func PriceSnapshotComputeHourlyLTE(v float64) predicate.ComputeAllocation {
+	return predicate.ComputeAllocation(sql.FieldLTE(FieldPriceSnapshotComputeHourly, v))
 }
 
 // And groups predicates with the AND operator between them.

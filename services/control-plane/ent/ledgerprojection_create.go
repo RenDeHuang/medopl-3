@@ -20,128 +20,50 @@ type LedgerProjectionCreate struct {
 	hooks    []Hook
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (lpc *LedgerProjectionCreate) SetCreatedAt(t time.Time) *LedgerProjectionCreate {
+	lpc.mutation.SetCreatedAt(t)
+	return lpc
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillableCreatedAt(t *time.Time) *LedgerProjectionCreate {
+	if t != nil {
+		lpc.SetCreatedAt(*t)
+	}
+	return lpc
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (lpc *LedgerProjectionCreate) SetUpdatedAt(t time.Time) *LedgerProjectionCreate {
+	lpc.mutation.SetUpdatedAt(t)
+	return lpc
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillableUpdatedAt(t *time.Time) *LedgerProjectionCreate {
+	if t != nil {
+		lpc.SetUpdatedAt(*t)
+	}
+	return lpc
+}
+
 // SetAccountID sets the "account_id" field.
 func (lpc *LedgerProjectionCreate) SetAccountID(s string) *LedgerProjectionCreate {
 	lpc.mutation.SetAccountID(s)
 	return lpc
 }
 
-// SetNillableAccountID sets the "account_id" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableAccountID(s *string) *LedgerProjectionCreate {
+// SetType sets the "type" field.
+func (lpc *LedgerProjectionCreate) SetType(s string) *LedgerProjectionCreate {
+	lpc.mutation.SetType(s)
+	return lpc
+}
+
+// SetNillableType sets the "type" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillableType(s *string) *LedgerProjectionCreate {
 	if s != nil {
-		lpc.SetAccountID(*s)
-	}
-	return lpc
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (lpc *LedgerProjectionCreate) SetOwnerAccountID(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetOwnerAccountID(s)
-	return lpc
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableOwnerAccountID(s *string) *LedgerProjectionCreate {
-	if s != nil {
-		lpc.SetOwnerAccountID(*s)
-	}
-	return lpc
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (lpc *LedgerProjectionCreate) SetOwnerUserID(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetOwnerUserID(s)
-	return lpc
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableOwnerUserID(s *string) *LedgerProjectionCreate {
-	if s != nil {
-		lpc.SetOwnerUserID(*s)
-	}
-	return lpc
-}
-
-// SetUserID sets the "user_id" field.
-func (lpc *LedgerProjectionCreate) SetUserID(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetUserID(s)
-	return lpc
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableUserID(s *string) *LedgerProjectionCreate {
-	if s != nil {
-		lpc.SetUserID(*s)
-	}
-	return lpc
-}
-
-// SetEmail sets the "email" field.
-func (lpc *LedgerProjectionCreate) SetEmail(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetEmail(s)
-	return lpc
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableEmail(s *string) *LedgerProjectionCreate {
-	if s != nil {
-		lpc.SetEmail(*s)
-	}
-	return lpc
-}
-
-// SetRole sets the "role" field.
-func (lpc *LedgerProjectionCreate) SetRole(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetRole(s)
-	return lpc
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableRole(s *string) *LedgerProjectionCreate {
-	if s != nil {
-		lpc.SetRole(*s)
-	}
-	return lpc
-}
-
-// SetStatus sets the "status" field.
-func (lpc *LedgerProjectionCreate) SetStatus(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetStatus(s)
-	return lpc
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableStatus(s *string) *LedgerProjectionCreate {
-	if s != nil {
-		lpc.SetStatus(*s)
-	}
-	return lpc
-}
-
-// SetName sets the "name" field.
-func (lpc *LedgerProjectionCreate) SetName(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetName(s)
-	return lpc
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableName(s *string) *LedgerProjectionCreate {
-	if s != nil {
-		lpc.SetName(*s)
-	}
-	return lpc
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (lpc *LedgerProjectionCreate) SetWorkspaceID(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetWorkspaceID(s)
-	return lpc
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableWorkspaceID(s *string) *LedgerProjectionCreate {
-	if s != nil {
-		lpc.SetWorkspaceID(*s)
+		lpc.SetType(*s)
 	}
 	return lpc
 }
@@ -174,114 +96,44 @@ func (lpc *LedgerProjectionCreate) SetNillableResourceKind(s *string) *LedgerPro
 	return lpc
 }
 
-// SetOperationID sets the "operation_id" field.
-func (lpc *LedgerProjectionCreate) SetOperationID(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetOperationID(s)
+// SetWorkspaceID sets the "workspace_id" field.
+func (lpc *LedgerProjectionCreate) SetWorkspaceID(s string) *LedgerProjectionCreate {
+	lpc.mutation.SetWorkspaceID(s)
 	return lpc
 }
 
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableOperationID(s *string) *LedgerProjectionCreate {
+// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillableWorkspaceID(s *string) *LedgerProjectionCreate {
 	if s != nil {
-		lpc.SetOperationID(*s)
+		lpc.SetWorkspaceID(*s)
 	}
 	return lpc
 }
 
-// SetProvider sets the "provider" field.
-func (lpc *LedgerProjectionCreate) SetProvider(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetProvider(s)
+// SetComputeAllocationID sets the "compute_allocation_id" field.
+func (lpc *LedgerProjectionCreate) SetComputeAllocationID(s string) *LedgerProjectionCreate {
+	lpc.mutation.SetComputeAllocationID(s)
 	return lpc
 }
 
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableProvider(s *string) *LedgerProjectionCreate {
+// SetNillableComputeAllocationID sets the "compute_allocation_id" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillableComputeAllocationID(s *string) *LedgerProjectionCreate {
 	if s != nil {
-		lpc.SetProvider(*s)
+		lpc.SetComputeAllocationID(*s)
 	}
 	return lpc
 }
 
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (lpc *LedgerProjectionCreate) SetProviderResourceID(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetProviderResourceID(s)
+// SetStorageID sets the "storage_id" field.
+func (lpc *LedgerProjectionCreate) SetStorageID(s string) *LedgerProjectionCreate {
+	lpc.mutation.SetStorageID(s)
 	return lpc
 }
 
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableProviderResourceID(s *string) *LedgerProjectionCreate {
+// SetNillableStorageID sets the "storage_id" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillableStorageID(s *string) *LedgerProjectionCreate {
 	if s != nil {
-		lpc.SetProviderResourceID(*s)
-	}
-	return lpc
-}
-
-// SetURL sets the "url" field.
-func (lpc *LedgerProjectionCreate) SetURL(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetURL(s)
-	return lpc
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableURL(s *string) *LedgerProjectionCreate {
-	if s != nil {
-		lpc.SetURL(*s)
-	}
-	return lpc
-}
-
-// SetHoldID sets the "hold_id" field.
-func (lpc *LedgerProjectionCreate) SetHoldID(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetHoldID(s)
-	return lpc
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableHoldID(s *string) *LedgerProjectionCreate {
-	if s != nil {
-		lpc.SetHoldID(*s)
-	}
-	return lpc
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (lpc *LedgerProjectionCreate) SetHoldReleaseID(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetHoldReleaseID(s)
-	return lpc
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableHoldReleaseID(s *string) *LedgerProjectionCreate {
-	if s != nil {
-		lpc.SetHoldReleaseID(*s)
-	}
-	return lpc
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (lpc *LedgerProjectionCreate) SetLedgerEntryID(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetLedgerEntryID(s)
-	return lpc
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableLedgerEntryID(s *string) *LedgerProjectionCreate {
-	if s != nil {
-		lpc.SetLedgerEntryID(*s)
-	}
-	return lpc
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (lpc *LedgerProjectionCreate) SetWalletTransactionID(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetWalletTransactionID(s)
-	return lpc
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableWalletTransactionID(s *string) *LedgerProjectionCreate {
-	if s != nil {
-		lpc.SetWalletTransactionID(*s)
+		lpc.SetStorageID(*s)
 	}
 	return lpc
 }
@@ -314,86 +166,30 @@ func (lpc *LedgerProjectionCreate) SetNillablePricingVersion(s *string) *LedgerP
 	return lpc
 }
 
-// SetAmountCents sets the "amount_cents" field.
-func (lpc *LedgerProjectionCreate) SetAmountCents(i int64) *LedgerProjectionCreate {
-	lpc.mutation.SetAmountCents(i)
+// SetUsagePeriodStart sets the "usage_period_start" field.
+func (lpc *LedgerProjectionCreate) SetUsagePeriodStart(s string) *LedgerProjectionCreate {
+	lpc.mutation.SetUsagePeriodStart(s)
 	return lpc
 }
 
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableAmountCents(i *int64) *LedgerProjectionCreate {
-	if i != nil {
-		lpc.SetAmountCents(*i)
+// SetNillableUsagePeriodStart sets the "usage_period_start" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillableUsagePeriodStart(s *string) *LedgerProjectionCreate {
+	if s != nil {
+		lpc.SetUsagePeriodStart(*s)
 	}
 	return lpc
 }
 
-// SetBalanceCents sets the "balance_cents" field.
-func (lpc *LedgerProjectionCreate) SetBalanceCents(i int64) *LedgerProjectionCreate {
-	lpc.mutation.SetBalanceCents(i)
+// SetUsagePeriodEnd sets the "usage_period_end" field.
+func (lpc *LedgerProjectionCreate) SetUsagePeriodEnd(s string) *LedgerProjectionCreate {
+	lpc.mutation.SetUsagePeriodEnd(s)
 	return lpc
 }
 
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableBalanceCents(i *int64) *LedgerProjectionCreate {
-	if i != nil {
-		lpc.SetBalanceCents(*i)
-	}
-	return lpc
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (lpc *LedgerProjectionCreate) SetFrozenCents(i int64) *LedgerProjectionCreate {
-	lpc.mutation.SetFrozenCents(i)
-	return lpc
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableFrozenCents(i *int64) *LedgerProjectionCreate {
-	if i != nil {
-		lpc.SetFrozenCents(*i)
-	}
-	return lpc
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (lpc *LedgerProjectionCreate) SetAvailableCents(i int64) *LedgerProjectionCreate {
-	lpc.mutation.SetAvailableCents(i)
-	return lpc
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableAvailableCents(i *int64) *LedgerProjectionCreate {
-	if i != nil {
-		lpc.SetAvailableCents(*i)
-	}
-	return lpc
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (lpc *LedgerProjectionCreate) SetTotalSpentCents(i int64) *LedgerProjectionCreate {
-	lpc.mutation.SetTotalSpentCents(i)
-	return lpc
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableTotalSpentCents(i *int64) *LedgerProjectionCreate {
-	if i != nil {
-		lpc.SetTotalSpentCents(*i)
-	}
-	return lpc
-}
-
-// SetQuantity sets the "quantity" field.
-func (lpc *LedgerProjectionCreate) SetQuantity(f float64) *LedgerProjectionCreate {
-	lpc.mutation.SetQuantity(f)
-	return lpc
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableQuantity(f *float64) *LedgerProjectionCreate {
-	if f != nil {
-		lpc.SetQuantity(*f)
+// SetNillableUsagePeriodEnd sets the "usage_period_end" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillableUsagePeriodEnd(s *string) *LedgerProjectionCreate {
+	if s != nil {
+		lpc.SetUsagePeriodEnd(*s)
 	}
 	return lpc
 }
@@ -412,44 +208,58 @@ func (lpc *LedgerProjectionCreate) SetNillableUnit(s *string) *LedgerProjectionC
 	return lpc
 }
 
-// SetReason sets the "reason" field.
-func (lpc *LedgerProjectionCreate) SetReason(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetReason(s)
+// SetProviderCostEvidenceRef sets the "provider_cost_evidence_ref" field.
+func (lpc *LedgerProjectionCreate) SetProviderCostEvidenceRef(s string) *LedgerProjectionCreate {
+	lpc.mutation.SetProviderCostEvidenceRef(s)
 	return lpc
 }
 
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableReason(s *string) *LedgerProjectionCreate {
+// SetNillableProviderCostEvidenceRef sets the "provider_cost_evidence_ref" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillableProviderCostEvidenceRef(s *string) *LedgerProjectionCreate {
 	if s != nil {
-		lpc.SetReason(*s)
+		lpc.SetProviderCostEvidenceRef(*s)
 	}
 	return lpc
 }
 
-// SetResult sets the "result" field.
-func (lpc *LedgerProjectionCreate) SetResult(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetResult(s)
+// SetCurrency sets the "currency" field.
+func (lpc *LedgerProjectionCreate) SetCurrency(s string) *LedgerProjectionCreate {
+	lpc.mutation.SetCurrency(s)
 	return lpc
 }
 
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableResult(s *string) *LedgerProjectionCreate {
+// SetNillableCurrency sets the "currency" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillableCurrency(s *string) *LedgerProjectionCreate {
 	if s != nil {
-		lpc.SetResult(*s)
+		lpc.SetCurrency(*s)
 	}
 	return lpc
 }
 
-// SetSource sets the "source" field.
-func (lpc *LedgerProjectionCreate) SetSource(s string) *LedgerProjectionCreate {
-	lpc.mutation.SetSource(s)
+// SetAmountCents sets the "amount_cents" field.
+func (lpc *LedgerProjectionCreate) SetAmountCents(i int64) *LedgerProjectionCreate {
+	lpc.mutation.SetAmountCents(i)
 	return lpc
 }
 
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableSource(s *string) *LedgerProjectionCreate {
-	if s != nil {
-		lpc.SetSource(*s)
+// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillableAmountCents(i *int64) *LedgerProjectionCreate {
+	if i != nil {
+		lpc.SetAmountCents(*i)
+	}
+	return lpc
+}
+
+// SetQuantity sets the "quantity" field.
+func (lpc *LedgerProjectionCreate) SetQuantity(f float64) *LedgerProjectionCreate {
+	lpc.mutation.SetQuantity(f)
+	return lpc
+}
+
+// SetNillableQuantity sets the "quantity" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillableQuantity(f *float64) *LedgerProjectionCreate {
+	if f != nil {
+		lpc.SetQuantity(*f)
 	}
 	return lpc
 }
@@ -468,44 +278,128 @@ func (lpc *LedgerProjectionCreate) SetNillableDirection(s *string) *LedgerProjec
 	return lpc
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (lpc *LedgerProjectionCreate) SetCreatedAt(t time.Time) *LedgerProjectionCreate {
-	lpc.mutation.SetCreatedAt(t)
+// SetPriceSnapshotPackageID sets the "price_snapshot_package_id" field.
+func (lpc *LedgerProjectionCreate) SetPriceSnapshotPackageID(s string) *LedgerProjectionCreate {
+	lpc.mutation.SetPriceSnapshotPackageID(s)
 	return lpc
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableCreatedAt(t *time.Time) *LedgerProjectionCreate {
-	if t != nil {
-		lpc.SetCreatedAt(*t)
+// SetNillablePriceSnapshotPackageID sets the "price_snapshot_package_id" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillablePriceSnapshotPackageID(s *string) *LedgerProjectionCreate {
+	if s != nil {
+		lpc.SetPriceSnapshotPackageID(*s)
 	}
 	return lpc
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (lpc *LedgerProjectionCreate) SetUpdatedAt(t time.Time) *LedgerProjectionCreate {
-	lpc.mutation.SetUpdatedAt(t)
+// SetPriceSnapshotResourceType sets the "price_snapshot_resource_type" field.
+func (lpc *LedgerProjectionCreate) SetPriceSnapshotResourceType(s string) *LedgerProjectionCreate {
+	lpc.mutation.SetPriceSnapshotResourceType(s)
 	return lpc
 }
 
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableUpdatedAt(t *time.Time) *LedgerProjectionCreate {
-	if t != nil {
-		lpc.SetUpdatedAt(*t)
+// SetNillablePriceSnapshotResourceType sets the "price_snapshot_resource_type" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillablePriceSnapshotResourceType(s *string) *LedgerProjectionCreate {
+	if s != nil {
+		lpc.SetPriceSnapshotResourceType(*s)
 	}
 	return lpc
 }
 
-// SetArchivedAt sets the "archived_at" field.
-func (lpc *LedgerProjectionCreate) SetArchivedAt(t time.Time) *LedgerProjectionCreate {
-	lpc.mutation.SetArchivedAt(t)
+// SetPriceSnapshotCurrency sets the "price_snapshot_currency" field.
+func (lpc *LedgerProjectionCreate) SetPriceSnapshotCurrency(s string) *LedgerProjectionCreate {
+	lpc.mutation.SetPriceSnapshotCurrency(s)
 	return lpc
 }
 
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (lpc *LedgerProjectionCreate) SetNillableArchivedAt(t *time.Time) *LedgerProjectionCreate {
-	if t != nil {
-		lpc.SetArchivedAt(*t)
+// SetNillablePriceSnapshotCurrency sets the "price_snapshot_currency" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillablePriceSnapshotCurrency(s *string) *LedgerProjectionCreate {
+	if s != nil {
+		lpc.SetPriceSnapshotCurrency(*s)
+	}
+	return lpc
+}
+
+// SetPriceSnapshotSource sets the "price_snapshot_source" field.
+func (lpc *LedgerProjectionCreate) SetPriceSnapshotSource(s string) *LedgerProjectionCreate {
+	lpc.mutation.SetPriceSnapshotSource(s)
+	return lpc
+}
+
+// SetNillablePriceSnapshotSource sets the "price_snapshot_source" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillablePriceSnapshotSource(s *string) *LedgerProjectionCreate {
+	if s != nil {
+		lpc.SetPriceSnapshotSource(*s)
+	}
+	return lpc
+}
+
+// SetPriceSnapshotSku sets the "price_snapshot_sku" field.
+func (lpc *LedgerProjectionCreate) SetPriceSnapshotSku(s string) *LedgerProjectionCreate {
+	lpc.mutation.SetPriceSnapshotSku(s)
+	return lpc
+}
+
+// SetNillablePriceSnapshotSku sets the "price_snapshot_sku" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillablePriceSnapshotSku(s *string) *LedgerProjectionCreate {
+	if s != nil {
+		lpc.SetPriceSnapshotSku(*s)
+	}
+	return lpc
+}
+
+// SetPriceSnapshotUnitPriceCents sets the "price_snapshot_unit_price_cents" field.
+func (lpc *LedgerProjectionCreate) SetPriceSnapshotUnitPriceCents(i int64) *LedgerProjectionCreate {
+	lpc.mutation.SetPriceSnapshotUnitPriceCents(i)
+	return lpc
+}
+
+// SetNillablePriceSnapshotUnitPriceCents sets the "price_snapshot_unit_price_cents" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillablePriceSnapshotUnitPriceCents(i *int64) *LedgerProjectionCreate {
+	if i != nil {
+		lpc.SetPriceSnapshotUnitPriceCents(*i)
+	}
+	return lpc
+}
+
+// SetPriceSnapshotComputeHourly sets the "price_snapshot_compute_hourly" field.
+func (lpc *LedgerProjectionCreate) SetPriceSnapshotComputeHourly(f float64) *LedgerProjectionCreate {
+	lpc.mutation.SetPriceSnapshotComputeHourly(f)
+	return lpc
+}
+
+// SetNillablePriceSnapshotComputeHourly sets the "price_snapshot_compute_hourly" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillablePriceSnapshotComputeHourly(f *float64) *LedgerProjectionCreate {
+	if f != nil {
+		lpc.SetPriceSnapshotComputeHourly(*f)
+	}
+	return lpc
+}
+
+// SetPriceSnapshotStorageGBMonth sets the "price_snapshot_storage_gb_month" field.
+func (lpc *LedgerProjectionCreate) SetPriceSnapshotStorageGBMonth(f float64) *LedgerProjectionCreate {
+	lpc.mutation.SetPriceSnapshotStorageGBMonth(f)
+	return lpc
+}
+
+// SetNillablePriceSnapshotStorageGBMonth sets the "price_snapshot_storage_gb_month" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillablePriceSnapshotStorageGBMonth(f *float64) *LedgerProjectionCreate {
+	if f != nil {
+		lpc.SetPriceSnapshotStorageGBMonth(*f)
+	}
+	return lpc
+}
+
+// SetPriceSnapshotSizeGB sets the "price_snapshot_size_gb" field.
+func (lpc *LedgerProjectionCreate) SetPriceSnapshotSizeGB(f float64) *LedgerProjectionCreate {
+	lpc.mutation.SetPriceSnapshotSizeGB(f)
+	return lpc
+}
+
+// SetNillablePriceSnapshotSizeGB sets the "price_snapshot_size_gb" field if the given value is not nil.
+func (lpc *LedgerProjectionCreate) SetNillablePriceSnapshotSizeGB(f *float64) *LedgerProjectionCreate {
+	if f != nil {
+		lpc.SetPriceSnapshotSizeGB(*f)
 	}
 	return lpc
 }
@@ -551,41 +445,17 @@ func (lpc *LedgerProjectionCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (lpc *LedgerProjectionCreate) defaults() {
-	if _, ok := lpc.mutation.AccountID(); !ok {
-		v := ledgerprojection.DefaultAccountID
-		lpc.mutation.SetAccountID(v)
+	if _, ok := lpc.mutation.CreatedAt(); !ok {
+		v := ledgerprojection.DefaultCreatedAt()
+		lpc.mutation.SetCreatedAt(v)
 	}
-	if _, ok := lpc.mutation.OwnerAccountID(); !ok {
-		v := ledgerprojection.DefaultOwnerAccountID
-		lpc.mutation.SetOwnerAccountID(v)
+	if _, ok := lpc.mutation.UpdatedAt(); !ok {
+		v := ledgerprojection.DefaultUpdatedAt()
+		lpc.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := lpc.mutation.OwnerUserID(); !ok {
-		v := ledgerprojection.DefaultOwnerUserID
-		lpc.mutation.SetOwnerUserID(v)
-	}
-	if _, ok := lpc.mutation.UserID(); !ok {
-		v := ledgerprojection.DefaultUserID
-		lpc.mutation.SetUserID(v)
-	}
-	if _, ok := lpc.mutation.Email(); !ok {
-		v := ledgerprojection.DefaultEmail
-		lpc.mutation.SetEmail(v)
-	}
-	if _, ok := lpc.mutation.Role(); !ok {
-		v := ledgerprojection.DefaultRole
-		lpc.mutation.SetRole(v)
-	}
-	if _, ok := lpc.mutation.Status(); !ok {
-		v := ledgerprojection.DefaultStatus
-		lpc.mutation.SetStatus(v)
-	}
-	if _, ok := lpc.mutation.Name(); !ok {
-		v := ledgerprojection.DefaultName
-		lpc.mutation.SetName(v)
-	}
-	if _, ok := lpc.mutation.WorkspaceID(); !ok {
-		v := ledgerprojection.DefaultWorkspaceID
-		lpc.mutation.SetWorkspaceID(v)
+	if _, ok := lpc.mutation.GetType(); !ok {
+		v := ledgerprojection.DefaultType
+		lpc.mutation.SetType(v)
 	}
 	if _, ok := lpc.mutation.ResourceID(); !ok {
 		v := ledgerprojection.DefaultResourceID
@@ -595,37 +465,17 @@ func (lpc *LedgerProjectionCreate) defaults() {
 		v := ledgerprojection.DefaultResourceKind
 		lpc.mutation.SetResourceKind(v)
 	}
-	if _, ok := lpc.mutation.OperationID(); !ok {
-		v := ledgerprojection.DefaultOperationID
-		lpc.mutation.SetOperationID(v)
+	if _, ok := lpc.mutation.WorkspaceID(); !ok {
+		v := ledgerprojection.DefaultWorkspaceID
+		lpc.mutation.SetWorkspaceID(v)
 	}
-	if _, ok := lpc.mutation.Provider(); !ok {
-		v := ledgerprojection.DefaultProvider
-		lpc.mutation.SetProvider(v)
+	if _, ok := lpc.mutation.ComputeAllocationID(); !ok {
+		v := ledgerprojection.DefaultComputeAllocationID
+		lpc.mutation.SetComputeAllocationID(v)
 	}
-	if _, ok := lpc.mutation.ProviderResourceID(); !ok {
-		v := ledgerprojection.DefaultProviderResourceID
-		lpc.mutation.SetProviderResourceID(v)
-	}
-	if _, ok := lpc.mutation.URL(); !ok {
-		v := ledgerprojection.DefaultURL
-		lpc.mutation.SetURL(v)
-	}
-	if _, ok := lpc.mutation.HoldID(); !ok {
-		v := ledgerprojection.DefaultHoldID
-		lpc.mutation.SetHoldID(v)
-	}
-	if _, ok := lpc.mutation.HoldReleaseID(); !ok {
-		v := ledgerprojection.DefaultHoldReleaseID
-		lpc.mutation.SetHoldReleaseID(v)
-	}
-	if _, ok := lpc.mutation.LedgerEntryID(); !ok {
-		v := ledgerprojection.DefaultLedgerEntryID
-		lpc.mutation.SetLedgerEntryID(v)
-	}
-	if _, ok := lpc.mutation.WalletTransactionID(); !ok {
-		v := ledgerprojection.DefaultWalletTransactionID
-		lpc.mutation.SetWalletTransactionID(v)
+	if _, ok := lpc.mutation.StorageID(); !ok {
+		v := ledgerprojection.DefaultStorageID
+		lpc.mutation.SetStorageID(v)
 	}
 	if _, ok := lpc.mutation.SettlementID(); !ok {
 		v := ledgerprojection.DefaultSettlementID
@@ -635,88 +485,94 @@ func (lpc *LedgerProjectionCreate) defaults() {
 		v := ledgerprojection.DefaultPricingVersion
 		lpc.mutation.SetPricingVersion(v)
 	}
-	if _, ok := lpc.mutation.AmountCents(); !ok {
-		v := ledgerprojection.DefaultAmountCents
-		lpc.mutation.SetAmountCents(v)
+	if _, ok := lpc.mutation.UsagePeriodStart(); !ok {
+		v := ledgerprojection.DefaultUsagePeriodStart
+		lpc.mutation.SetUsagePeriodStart(v)
 	}
-	if _, ok := lpc.mutation.BalanceCents(); !ok {
-		v := ledgerprojection.DefaultBalanceCents
-		lpc.mutation.SetBalanceCents(v)
-	}
-	if _, ok := lpc.mutation.FrozenCents(); !ok {
-		v := ledgerprojection.DefaultFrozenCents
-		lpc.mutation.SetFrozenCents(v)
-	}
-	if _, ok := lpc.mutation.AvailableCents(); !ok {
-		v := ledgerprojection.DefaultAvailableCents
-		lpc.mutation.SetAvailableCents(v)
-	}
-	if _, ok := lpc.mutation.TotalSpentCents(); !ok {
-		v := ledgerprojection.DefaultTotalSpentCents
-		lpc.mutation.SetTotalSpentCents(v)
-	}
-	if _, ok := lpc.mutation.Quantity(); !ok {
-		v := ledgerprojection.DefaultQuantity
-		lpc.mutation.SetQuantity(v)
+	if _, ok := lpc.mutation.UsagePeriodEnd(); !ok {
+		v := ledgerprojection.DefaultUsagePeriodEnd
+		lpc.mutation.SetUsagePeriodEnd(v)
 	}
 	if _, ok := lpc.mutation.Unit(); !ok {
 		v := ledgerprojection.DefaultUnit
 		lpc.mutation.SetUnit(v)
 	}
-	if _, ok := lpc.mutation.Reason(); !ok {
-		v := ledgerprojection.DefaultReason
-		lpc.mutation.SetReason(v)
+	if _, ok := lpc.mutation.ProviderCostEvidenceRef(); !ok {
+		v := ledgerprojection.DefaultProviderCostEvidenceRef
+		lpc.mutation.SetProviderCostEvidenceRef(v)
 	}
-	if _, ok := lpc.mutation.Result(); !ok {
-		v := ledgerprojection.DefaultResult
-		lpc.mutation.SetResult(v)
+	if _, ok := lpc.mutation.Currency(); !ok {
+		v := ledgerprojection.DefaultCurrency
+		lpc.mutation.SetCurrency(v)
 	}
-	if _, ok := lpc.mutation.Source(); !ok {
-		v := ledgerprojection.DefaultSource
-		lpc.mutation.SetSource(v)
+	if _, ok := lpc.mutation.AmountCents(); !ok {
+		v := ledgerprojection.DefaultAmountCents
+		lpc.mutation.SetAmountCents(v)
+	}
+	if _, ok := lpc.mutation.Quantity(); !ok {
+		v := ledgerprojection.DefaultQuantity
+		lpc.mutation.SetQuantity(v)
 	}
 	if _, ok := lpc.mutation.Direction(); !ok {
 		v := ledgerprojection.DefaultDirection
 		lpc.mutation.SetDirection(v)
 	}
-	if _, ok := lpc.mutation.CreatedAt(); !ok {
-		v := ledgerprojection.DefaultCreatedAt()
-		lpc.mutation.SetCreatedAt(v)
+	if _, ok := lpc.mutation.PriceSnapshotPackageID(); !ok {
+		v := ledgerprojection.DefaultPriceSnapshotPackageID
+		lpc.mutation.SetPriceSnapshotPackageID(v)
 	}
-	if _, ok := lpc.mutation.UpdatedAt(); !ok {
-		v := ledgerprojection.DefaultUpdatedAt()
-		lpc.mutation.SetUpdatedAt(v)
+	if _, ok := lpc.mutation.PriceSnapshotResourceType(); !ok {
+		v := ledgerprojection.DefaultPriceSnapshotResourceType
+		lpc.mutation.SetPriceSnapshotResourceType(v)
+	}
+	if _, ok := lpc.mutation.PriceSnapshotCurrency(); !ok {
+		v := ledgerprojection.DefaultPriceSnapshotCurrency
+		lpc.mutation.SetPriceSnapshotCurrency(v)
+	}
+	if _, ok := lpc.mutation.PriceSnapshotSource(); !ok {
+		v := ledgerprojection.DefaultPriceSnapshotSource
+		lpc.mutation.SetPriceSnapshotSource(v)
+	}
+	if _, ok := lpc.mutation.PriceSnapshotSku(); !ok {
+		v := ledgerprojection.DefaultPriceSnapshotSku
+		lpc.mutation.SetPriceSnapshotSku(v)
+	}
+	if _, ok := lpc.mutation.PriceSnapshotUnitPriceCents(); !ok {
+		v := ledgerprojection.DefaultPriceSnapshotUnitPriceCents
+		lpc.mutation.SetPriceSnapshotUnitPriceCents(v)
+	}
+	if _, ok := lpc.mutation.PriceSnapshotComputeHourly(); !ok {
+		v := ledgerprojection.DefaultPriceSnapshotComputeHourly
+		lpc.mutation.SetPriceSnapshotComputeHourly(v)
+	}
+	if _, ok := lpc.mutation.PriceSnapshotStorageGBMonth(); !ok {
+		v := ledgerprojection.DefaultPriceSnapshotStorageGBMonth
+		lpc.mutation.SetPriceSnapshotStorageGBMonth(v)
+	}
+	if _, ok := lpc.mutation.PriceSnapshotSizeGB(); !ok {
+		v := ledgerprojection.DefaultPriceSnapshotSizeGB
+		lpc.mutation.SetPriceSnapshotSizeGB(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (lpc *LedgerProjectionCreate) check() error {
+	if _, ok := lpc.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "LedgerProjection.created_at"`)}
+	}
+	if _, ok := lpc.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "LedgerProjection.updated_at"`)}
+	}
 	if _, ok := lpc.mutation.AccountID(); !ok {
 		return &ValidationError{Name: "account_id", err: errors.New(`ent: missing required field "LedgerProjection.account_id"`)}
 	}
-	if _, ok := lpc.mutation.OwnerAccountID(); !ok {
-		return &ValidationError{Name: "owner_account_id", err: errors.New(`ent: missing required field "LedgerProjection.owner_account_id"`)}
+	if v, ok := lpc.mutation.AccountID(); ok {
+		if err := ledgerprojection.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "LedgerProjection.account_id": %w`, err)}
+		}
 	}
-	if _, ok := lpc.mutation.OwnerUserID(); !ok {
-		return &ValidationError{Name: "owner_user_id", err: errors.New(`ent: missing required field "LedgerProjection.owner_user_id"`)}
-	}
-	if _, ok := lpc.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "LedgerProjection.user_id"`)}
-	}
-	if _, ok := lpc.mutation.Email(); !ok {
-		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "LedgerProjection.email"`)}
-	}
-	if _, ok := lpc.mutation.Role(); !ok {
-		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "LedgerProjection.role"`)}
-	}
-	if _, ok := lpc.mutation.Status(); !ok {
-		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "LedgerProjection.status"`)}
-	}
-	if _, ok := lpc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "LedgerProjection.name"`)}
-	}
-	if _, ok := lpc.mutation.WorkspaceID(); !ok {
-		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "LedgerProjection.workspace_id"`)}
+	if _, ok := lpc.mutation.GetType(); !ok {
+		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "LedgerProjection.type"`)}
 	}
 	if _, ok := lpc.mutation.ResourceID(); !ok {
 		return &ValidationError{Name: "resource_id", err: errors.New(`ent: missing required field "LedgerProjection.resource_id"`)}
@@ -724,29 +580,14 @@ func (lpc *LedgerProjectionCreate) check() error {
 	if _, ok := lpc.mutation.ResourceKind(); !ok {
 		return &ValidationError{Name: "resource_kind", err: errors.New(`ent: missing required field "LedgerProjection.resource_kind"`)}
 	}
-	if _, ok := lpc.mutation.OperationID(); !ok {
-		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "LedgerProjection.operation_id"`)}
+	if _, ok := lpc.mutation.WorkspaceID(); !ok {
+		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "LedgerProjection.workspace_id"`)}
 	}
-	if _, ok := lpc.mutation.Provider(); !ok {
-		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "LedgerProjection.provider"`)}
+	if _, ok := lpc.mutation.ComputeAllocationID(); !ok {
+		return &ValidationError{Name: "compute_allocation_id", err: errors.New(`ent: missing required field "LedgerProjection.compute_allocation_id"`)}
 	}
-	if _, ok := lpc.mutation.ProviderResourceID(); !ok {
-		return &ValidationError{Name: "provider_resource_id", err: errors.New(`ent: missing required field "LedgerProjection.provider_resource_id"`)}
-	}
-	if _, ok := lpc.mutation.URL(); !ok {
-		return &ValidationError{Name: "url", err: errors.New(`ent: missing required field "LedgerProjection.url"`)}
-	}
-	if _, ok := lpc.mutation.HoldID(); !ok {
-		return &ValidationError{Name: "hold_id", err: errors.New(`ent: missing required field "LedgerProjection.hold_id"`)}
-	}
-	if _, ok := lpc.mutation.HoldReleaseID(); !ok {
-		return &ValidationError{Name: "hold_release_id", err: errors.New(`ent: missing required field "LedgerProjection.hold_release_id"`)}
-	}
-	if _, ok := lpc.mutation.LedgerEntryID(); !ok {
-		return &ValidationError{Name: "ledger_entry_id", err: errors.New(`ent: missing required field "LedgerProjection.ledger_entry_id"`)}
-	}
-	if _, ok := lpc.mutation.WalletTransactionID(); !ok {
-		return &ValidationError{Name: "wallet_transaction_id", err: errors.New(`ent: missing required field "LedgerProjection.wallet_transaction_id"`)}
+	if _, ok := lpc.mutation.StorageID(); !ok {
+		return &ValidationError{Name: "storage_id", err: errors.New(`ent: missing required field "LedgerProjection.storage_id"`)}
 	}
 	if _, ok := lpc.mutation.SettlementID(); !ok {
 		return &ValidationError{Name: "settlement_id", err: errors.New(`ent: missing required field "LedgerProjection.settlement_id"`)}
@@ -754,44 +595,56 @@ func (lpc *LedgerProjectionCreate) check() error {
 	if _, ok := lpc.mutation.PricingVersion(); !ok {
 		return &ValidationError{Name: "pricing_version", err: errors.New(`ent: missing required field "LedgerProjection.pricing_version"`)}
 	}
-	if _, ok := lpc.mutation.AmountCents(); !ok {
-		return &ValidationError{Name: "amount_cents", err: errors.New(`ent: missing required field "LedgerProjection.amount_cents"`)}
+	if _, ok := lpc.mutation.UsagePeriodStart(); !ok {
+		return &ValidationError{Name: "usage_period_start", err: errors.New(`ent: missing required field "LedgerProjection.usage_period_start"`)}
 	}
-	if _, ok := lpc.mutation.BalanceCents(); !ok {
-		return &ValidationError{Name: "balance_cents", err: errors.New(`ent: missing required field "LedgerProjection.balance_cents"`)}
-	}
-	if _, ok := lpc.mutation.FrozenCents(); !ok {
-		return &ValidationError{Name: "frozen_cents", err: errors.New(`ent: missing required field "LedgerProjection.frozen_cents"`)}
-	}
-	if _, ok := lpc.mutation.AvailableCents(); !ok {
-		return &ValidationError{Name: "available_cents", err: errors.New(`ent: missing required field "LedgerProjection.available_cents"`)}
-	}
-	if _, ok := lpc.mutation.TotalSpentCents(); !ok {
-		return &ValidationError{Name: "total_spent_cents", err: errors.New(`ent: missing required field "LedgerProjection.total_spent_cents"`)}
-	}
-	if _, ok := lpc.mutation.Quantity(); !ok {
-		return &ValidationError{Name: "quantity", err: errors.New(`ent: missing required field "LedgerProjection.quantity"`)}
+	if _, ok := lpc.mutation.UsagePeriodEnd(); !ok {
+		return &ValidationError{Name: "usage_period_end", err: errors.New(`ent: missing required field "LedgerProjection.usage_period_end"`)}
 	}
 	if _, ok := lpc.mutation.Unit(); !ok {
 		return &ValidationError{Name: "unit", err: errors.New(`ent: missing required field "LedgerProjection.unit"`)}
 	}
-	if _, ok := lpc.mutation.Reason(); !ok {
-		return &ValidationError{Name: "reason", err: errors.New(`ent: missing required field "LedgerProjection.reason"`)}
+	if _, ok := lpc.mutation.ProviderCostEvidenceRef(); !ok {
+		return &ValidationError{Name: "provider_cost_evidence_ref", err: errors.New(`ent: missing required field "LedgerProjection.provider_cost_evidence_ref"`)}
 	}
-	if _, ok := lpc.mutation.Result(); !ok {
-		return &ValidationError{Name: "result", err: errors.New(`ent: missing required field "LedgerProjection.result"`)}
+	if _, ok := lpc.mutation.Currency(); !ok {
+		return &ValidationError{Name: "currency", err: errors.New(`ent: missing required field "LedgerProjection.currency"`)}
 	}
-	if _, ok := lpc.mutation.Source(); !ok {
-		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "LedgerProjection.source"`)}
+	if _, ok := lpc.mutation.AmountCents(); !ok {
+		return &ValidationError{Name: "amount_cents", err: errors.New(`ent: missing required field "LedgerProjection.amount_cents"`)}
+	}
+	if _, ok := lpc.mutation.Quantity(); !ok {
+		return &ValidationError{Name: "quantity", err: errors.New(`ent: missing required field "LedgerProjection.quantity"`)}
 	}
 	if _, ok := lpc.mutation.Direction(); !ok {
 		return &ValidationError{Name: "direction", err: errors.New(`ent: missing required field "LedgerProjection.direction"`)}
 	}
-	if _, ok := lpc.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "LedgerProjection.created_at"`)}
+	if _, ok := lpc.mutation.PriceSnapshotPackageID(); !ok {
+		return &ValidationError{Name: "price_snapshot_package_id", err: errors.New(`ent: missing required field "LedgerProjection.price_snapshot_package_id"`)}
 	}
-	if _, ok := lpc.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "LedgerProjection.updated_at"`)}
+	if _, ok := lpc.mutation.PriceSnapshotResourceType(); !ok {
+		return &ValidationError{Name: "price_snapshot_resource_type", err: errors.New(`ent: missing required field "LedgerProjection.price_snapshot_resource_type"`)}
+	}
+	if _, ok := lpc.mutation.PriceSnapshotCurrency(); !ok {
+		return &ValidationError{Name: "price_snapshot_currency", err: errors.New(`ent: missing required field "LedgerProjection.price_snapshot_currency"`)}
+	}
+	if _, ok := lpc.mutation.PriceSnapshotSource(); !ok {
+		return &ValidationError{Name: "price_snapshot_source", err: errors.New(`ent: missing required field "LedgerProjection.price_snapshot_source"`)}
+	}
+	if _, ok := lpc.mutation.PriceSnapshotSku(); !ok {
+		return &ValidationError{Name: "price_snapshot_sku", err: errors.New(`ent: missing required field "LedgerProjection.price_snapshot_sku"`)}
+	}
+	if _, ok := lpc.mutation.PriceSnapshotUnitPriceCents(); !ok {
+		return &ValidationError{Name: "price_snapshot_unit_price_cents", err: errors.New(`ent: missing required field "LedgerProjection.price_snapshot_unit_price_cents"`)}
+	}
+	if _, ok := lpc.mutation.PriceSnapshotComputeHourly(); !ok {
+		return &ValidationError{Name: "price_snapshot_compute_hourly", err: errors.New(`ent: missing required field "LedgerProjection.price_snapshot_compute_hourly"`)}
+	}
+	if _, ok := lpc.mutation.PriceSnapshotStorageGBMonth(); !ok {
+		return &ValidationError{Name: "price_snapshot_storage_gb_month", err: errors.New(`ent: missing required field "LedgerProjection.price_snapshot_storage_gb_month"`)}
+	}
+	if _, ok := lpc.mutation.PriceSnapshotSizeGB(); !ok {
+		return &ValidationError{Name: "price_snapshot_size_gb", err: errors.New(`ent: missing required field "LedgerProjection.price_snapshot_size_gb"`)}
 	}
 	if v, ok := lpc.mutation.ID(); ok {
 		if err := ledgerprojection.IDValidator(v); err != nil {
@@ -833,41 +686,21 @@ func (lpc *LedgerProjectionCreate) createSpec() (*LedgerProjection, *sqlgraph.Cr
 		_node.ID = id
 		_spec.ID.Value = id
 	}
+	if value, ok := lpc.mutation.CreatedAt(); ok {
+		_spec.SetField(ledgerprojection.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := lpc.mutation.UpdatedAt(); ok {
+		_spec.SetField(ledgerprojection.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
 	if value, ok := lpc.mutation.AccountID(); ok {
 		_spec.SetField(ledgerprojection.FieldAccountID, field.TypeString, value)
 		_node.AccountID = value
 	}
-	if value, ok := lpc.mutation.OwnerAccountID(); ok {
-		_spec.SetField(ledgerprojection.FieldOwnerAccountID, field.TypeString, value)
-		_node.OwnerAccountID = value
-	}
-	if value, ok := lpc.mutation.OwnerUserID(); ok {
-		_spec.SetField(ledgerprojection.FieldOwnerUserID, field.TypeString, value)
-		_node.OwnerUserID = value
-	}
-	if value, ok := lpc.mutation.UserID(); ok {
-		_spec.SetField(ledgerprojection.FieldUserID, field.TypeString, value)
-		_node.UserID = value
-	}
-	if value, ok := lpc.mutation.Email(); ok {
-		_spec.SetField(ledgerprojection.FieldEmail, field.TypeString, value)
-		_node.Email = value
-	}
-	if value, ok := lpc.mutation.Role(); ok {
-		_spec.SetField(ledgerprojection.FieldRole, field.TypeString, value)
-		_node.Role = value
-	}
-	if value, ok := lpc.mutation.Status(); ok {
-		_spec.SetField(ledgerprojection.FieldStatus, field.TypeString, value)
-		_node.Status = value
-	}
-	if value, ok := lpc.mutation.Name(); ok {
-		_spec.SetField(ledgerprojection.FieldName, field.TypeString, value)
-		_node.Name = value
-	}
-	if value, ok := lpc.mutation.WorkspaceID(); ok {
-		_spec.SetField(ledgerprojection.FieldWorkspaceID, field.TypeString, value)
-		_node.WorkspaceID = value
+	if value, ok := lpc.mutation.GetType(); ok {
+		_spec.SetField(ledgerprojection.FieldType, field.TypeString, value)
+		_node.Type = value
 	}
 	if value, ok := lpc.mutation.ResourceID(); ok {
 		_spec.SetField(ledgerprojection.FieldResourceID, field.TypeString, value)
@@ -877,37 +710,17 @@ func (lpc *LedgerProjectionCreate) createSpec() (*LedgerProjection, *sqlgraph.Cr
 		_spec.SetField(ledgerprojection.FieldResourceKind, field.TypeString, value)
 		_node.ResourceKind = value
 	}
-	if value, ok := lpc.mutation.OperationID(); ok {
-		_spec.SetField(ledgerprojection.FieldOperationID, field.TypeString, value)
-		_node.OperationID = value
+	if value, ok := lpc.mutation.WorkspaceID(); ok {
+		_spec.SetField(ledgerprojection.FieldWorkspaceID, field.TypeString, value)
+		_node.WorkspaceID = value
 	}
-	if value, ok := lpc.mutation.Provider(); ok {
-		_spec.SetField(ledgerprojection.FieldProvider, field.TypeString, value)
-		_node.Provider = value
+	if value, ok := lpc.mutation.ComputeAllocationID(); ok {
+		_spec.SetField(ledgerprojection.FieldComputeAllocationID, field.TypeString, value)
+		_node.ComputeAllocationID = value
 	}
-	if value, ok := lpc.mutation.ProviderResourceID(); ok {
-		_spec.SetField(ledgerprojection.FieldProviderResourceID, field.TypeString, value)
-		_node.ProviderResourceID = value
-	}
-	if value, ok := lpc.mutation.URL(); ok {
-		_spec.SetField(ledgerprojection.FieldURL, field.TypeString, value)
-		_node.URL = value
-	}
-	if value, ok := lpc.mutation.HoldID(); ok {
-		_spec.SetField(ledgerprojection.FieldHoldID, field.TypeString, value)
-		_node.HoldID = value
-	}
-	if value, ok := lpc.mutation.HoldReleaseID(); ok {
-		_spec.SetField(ledgerprojection.FieldHoldReleaseID, field.TypeString, value)
-		_node.HoldReleaseID = value
-	}
-	if value, ok := lpc.mutation.LedgerEntryID(); ok {
-		_spec.SetField(ledgerprojection.FieldLedgerEntryID, field.TypeString, value)
-		_node.LedgerEntryID = value
-	}
-	if value, ok := lpc.mutation.WalletTransactionID(); ok {
-		_spec.SetField(ledgerprojection.FieldWalletTransactionID, field.TypeString, value)
-		_node.WalletTransactionID = value
+	if value, ok := lpc.mutation.StorageID(); ok {
+		_spec.SetField(ledgerprojection.FieldStorageID, field.TypeString, value)
+		_node.StorageID = value
 	}
 	if value, ok := lpc.mutation.SettlementID(); ok {
 		_spec.SetField(ledgerprojection.FieldSettlementID, field.TypeString, value)
@@ -917,61 +730,73 @@ func (lpc *LedgerProjectionCreate) createSpec() (*LedgerProjection, *sqlgraph.Cr
 		_spec.SetField(ledgerprojection.FieldPricingVersion, field.TypeString, value)
 		_node.PricingVersion = value
 	}
-	if value, ok := lpc.mutation.AmountCents(); ok {
-		_spec.SetField(ledgerprojection.FieldAmountCents, field.TypeInt64, value)
-		_node.AmountCents = value
+	if value, ok := lpc.mutation.UsagePeriodStart(); ok {
+		_spec.SetField(ledgerprojection.FieldUsagePeriodStart, field.TypeString, value)
+		_node.UsagePeriodStart = value
 	}
-	if value, ok := lpc.mutation.BalanceCents(); ok {
-		_spec.SetField(ledgerprojection.FieldBalanceCents, field.TypeInt64, value)
-		_node.BalanceCents = value
-	}
-	if value, ok := lpc.mutation.FrozenCents(); ok {
-		_spec.SetField(ledgerprojection.FieldFrozenCents, field.TypeInt64, value)
-		_node.FrozenCents = value
-	}
-	if value, ok := lpc.mutation.AvailableCents(); ok {
-		_spec.SetField(ledgerprojection.FieldAvailableCents, field.TypeInt64, value)
-		_node.AvailableCents = value
-	}
-	if value, ok := lpc.mutation.TotalSpentCents(); ok {
-		_spec.SetField(ledgerprojection.FieldTotalSpentCents, field.TypeInt64, value)
-		_node.TotalSpentCents = value
-	}
-	if value, ok := lpc.mutation.Quantity(); ok {
-		_spec.SetField(ledgerprojection.FieldQuantity, field.TypeFloat64, value)
-		_node.Quantity = value
+	if value, ok := lpc.mutation.UsagePeriodEnd(); ok {
+		_spec.SetField(ledgerprojection.FieldUsagePeriodEnd, field.TypeString, value)
+		_node.UsagePeriodEnd = value
 	}
 	if value, ok := lpc.mutation.Unit(); ok {
 		_spec.SetField(ledgerprojection.FieldUnit, field.TypeString, value)
 		_node.Unit = value
 	}
-	if value, ok := lpc.mutation.Reason(); ok {
-		_spec.SetField(ledgerprojection.FieldReason, field.TypeString, value)
-		_node.Reason = value
+	if value, ok := lpc.mutation.ProviderCostEvidenceRef(); ok {
+		_spec.SetField(ledgerprojection.FieldProviderCostEvidenceRef, field.TypeString, value)
+		_node.ProviderCostEvidenceRef = value
 	}
-	if value, ok := lpc.mutation.Result(); ok {
-		_spec.SetField(ledgerprojection.FieldResult, field.TypeString, value)
-		_node.Result = value
+	if value, ok := lpc.mutation.Currency(); ok {
+		_spec.SetField(ledgerprojection.FieldCurrency, field.TypeString, value)
+		_node.Currency = value
 	}
-	if value, ok := lpc.mutation.Source(); ok {
-		_spec.SetField(ledgerprojection.FieldSource, field.TypeString, value)
-		_node.Source = value
+	if value, ok := lpc.mutation.AmountCents(); ok {
+		_spec.SetField(ledgerprojection.FieldAmountCents, field.TypeInt64, value)
+		_node.AmountCents = value
+	}
+	if value, ok := lpc.mutation.Quantity(); ok {
+		_spec.SetField(ledgerprojection.FieldQuantity, field.TypeFloat64, value)
+		_node.Quantity = value
 	}
 	if value, ok := lpc.mutation.Direction(); ok {
 		_spec.SetField(ledgerprojection.FieldDirection, field.TypeString, value)
 		_node.Direction = value
 	}
-	if value, ok := lpc.mutation.CreatedAt(); ok {
-		_spec.SetField(ledgerprojection.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
+	if value, ok := lpc.mutation.PriceSnapshotPackageID(); ok {
+		_spec.SetField(ledgerprojection.FieldPriceSnapshotPackageID, field.TypeString, value)
+		_node.PriceSnapshotPackageID = value
 	}
-	if value, ok := lpc.mutation.UpdatedAt(); ok {
-		_spec.SetField(ledgerprojection.FieldUpdatedAt, field.TypeTime, value)
-		_node.UpdatedAt = value
+	if value, ok := lpc.mutation.PriceSnapshotResourceType(); ok {
+		_spec.SetField(ledgerprojection.FieldPriceSnapshotResourceType, field.TypeString, value)
+		_node.PriceSnapshotResourceType = value
 	}
-	if value, ok := lpc.mutation.ArchivedAt(); ok {
-		_spec.SetField(ledgerprojection.FieldArchivedAt, field.TypeTime, value)
-		_node.ArchivedAt = &value
+	if value, ok := lpc.mutation.PriceSnapshotCurrency(); ok {
+		_spec.SetField(ledgerprojection.FieldPriceSnapshotCurrency, field.TypeString, value)
+		_node.PriceSnapshotCurrency = value
+	}
+	if value, ok := lpc.mutation.PriceSnapshotSource(); ok {
+		_spec.SetField(ledgerprojection.FieldPriceSnapshotSource, field.TypeString, value)
+		_node.PriceSnapshotSource = value
+	}
+	if value, ok := lpc.mutation.PriceSnapshotSku(); ok {
+		_spec.SetField(ledgerprojection.FieldPriceSnapshotSku, field.TypeString, value)
+		_node.PriceSnapshotSku = value
+	}
+	if value, ok := lpc.mutation.PriceSnapshotUnitPriceCents(); ok {
+		_spec.SetField(ledgerprojection.FieldPriceSnapshotUnitPriceCents, field.TypeInt64, value)
+		_node.PriceSnapshotUnitPriceCents = value
+	}
+	if value, ok := lpc.mutation.PriceSnapshotComputeHourly(); ok {
+		_spec.SetField(ledgerprojection.FieldPriceSnapshotComputeHourly, field.TypeFloat64, value)
+		_node.PriceSnapshotComputeHourly = value
+	}
+	if value, ok := lpc.mutation.PriceSnapshotStorageGBMonth(); ok {
+		_spec.SetField(ledgerprojection.FieldPriceSnapshotStorageGBMonth, field.TypeFloat64, value)
+		_node.PriceSnapshotStorageGBMonth = value
+	}
+	if value, ok := lpc.mutation.PriceSnapshotSizeGB(); ok {
+		_spec.SetField(ledgerprojection.FieldPriceSnapshotSizeGB, field.TypeFloat64, value)
+		_node.PriceSnapshotSizeGB = value
 	}
 	return _node, _spec
 }

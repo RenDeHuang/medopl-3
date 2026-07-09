@@ -20,6 +20,7 @@ import (
 	"opl-cloud/services/control-plane/ent/ledgerprojection"
 	"opl-cloud/services/control-plane/ent/manualtopupprojection"
 	"opl-cloud/services/control-plane/ent/membership"
+	"opl-cloud/services/control-plane/ent/organization"
 	"opl-cloud/services/control-plane/ent/productione2erecord"
 	"opl-cloud/services/control-plane/ent/runtimeoperation"
 	"opl-cloud/services/control-plane/ent/session"
@@ -110,6 +111,7 @@ func checkColumn(table, column string) error {
 			ledgerprojection.Table:            ledgerprojection.ValidColumn,
 			manualtopupprojection.Table:       manualtopupprojection.ValidColumn,
 			membership.Table:                  membership.ValidColumn,
+			organization.Table:                organization.ValidColumn,
 			productione2erecord.Table:         productione2erecord.ValidColumn,
 			runtimeoperation.Table:            runtimeoperation.ValidColumn,
 			session.Table:                     session.ValidColumn,

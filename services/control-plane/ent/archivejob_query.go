@@ -261,12 +261,12 @@ func (ajq *ArchiveJobQuery) Clone() *ArchiveJobQuery {
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.ArchiveJob.Query().
-//		GroupBy(archivejob.FieldAccountID).
+//		GroupBy(archivejob.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (ajq *ArchiveJobQuery) GroupBy(field string, fields ...string) *ArchiveJobGroupBy {
@@ -284,11 +284,11 @@ func (ajq *ArchiveJobQuery) GroupBy(field string, fields ...string) *ArchiveJobG
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.ArchiveJob.Query().
-//		Select(archivejob.FieldAccountID).
+//		Select(archivejob.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (ajq *ArchiveJobQuery) Select(fields ...string) *ArchiveJobSelect {
 	ajq.ctx.Fields = append(ajq.ctx.Fields, fields...)

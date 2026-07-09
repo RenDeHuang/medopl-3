@@ -40,6 +40,8 @@ type Tx struct {
 	ManualTopupProjection *ManualTopupProjectionClient
 	// Membership is the client for interacting with the Membership builders.
 	Membership *MembershipClient
+	// Organization is the client for interacting with the Organization builders.
+	Organization *OrganizationClient
 	// ProductionE2ERecord is the client for interacting with the ProductionE2ERecord builders.
 	ProductionE2ERecord *ProductionE2ERecordClient
 	// RuntimeOperation is the client for interacting with the RuntimeOperation builders.
@@ -205,6 +207,7 @@ func (tx *Tx) init() {
 	tx.LedgerProjection = NewLedgerProjectionClient(tx.config)
 	tx.ManualTopupProjection = NewManualTopupProjectionClient(tx.config)
 	tx.Membership = NewMembershipClient(tx.config)
+	tx.Organization = NewOrganizationClient(tx.config)
 	tx.ProductionE2ERecord = NewProductionE2ERecordClient(tx.config)
 	tx.RuntimeOperation = NewRuntimeOperationClient(tx.config)
 	tx.Session = NewSessionClient(tx.config)

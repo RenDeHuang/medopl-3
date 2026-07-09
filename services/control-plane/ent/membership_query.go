@@ -261,12 +261,12 @@ func (mq *MembershipQuery) Clone() *MembershipQuery {
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Membership.Query().
-//		GroupBy(membership.FieldAccountID).
+//		GroupBy(membership.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (mq *MembershipQuery) GroupBy(field string, fields ...string) *MembershipGroupBy {
@@ -284,11 +284,11 @@ func (mq *MembershipQuery) GroupBy(field string, fields ...string) *MembershipGr
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.Membership.Query().
-//		Select(membership.FieldAccountID).
+//		Select(membership.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (mq *MembershipQuery) Select(fields ...string) *MembershipSelect {
 	mq.ctx.Fields = append(mq.ctx.Fields, fields...)

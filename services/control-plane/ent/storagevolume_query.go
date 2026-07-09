@@ -261,12 +261,12 @@ func (svq *StorageVolumeQuery) Clone() *StorageVolumeQuery {
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.StorageVolume.Query().
-//		GroupBy(storagevolume.FieldAccountID).
+//		GroupBy(storagevolume.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (svq *StorageVolumeQuery) GroupBy(field string, fields ...string) *StorageVolumeGroupBy {
@@ -284,11 +284,11 @@ func (svq *StorageVolumeQuery) GroupBy(field string, fields ...string) *StorageV
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.StorageVolume.Query().
-//		Select(storagevolume.FieldAccountID).
+//		Select(storagevolume.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (svq *StorageVolumeQuery) Select(fields ...string) *StorageVolumeSelect {
 	svq.ctx.Fields = append(svq.ctx.Fields, fields...)

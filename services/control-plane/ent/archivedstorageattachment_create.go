@@ -20,6 +20,34 @@ type ArchivedStorageAttachmentCreate struct {
 	hooks    []Hook
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (asac *ArchivedStorageAttachmentCreate) SetCreatedAt(t time.Time) *ArchivedStorageAttachmentCreate {
+	asac.mutation.SetCreatedAt(t)
+	return asac
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (asac *ArchivedStorageAttachmentCreate) SetNillableCreatedAt(t *time.Time) *ArchivedStorageAttachmentCreate {
+	if t != nil {
+		asac.SetCreatedAt(*t)
+	}
+	return asac
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (asac *ArchivedStorageAttachmentCreate) SetUpdatedAt(t time.Time) *ArchivedStorageAttachmentCreate {
+	asac.mutation.SetUpdatedAt(t)
+	return asac
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (asac *ArchivedStorageAttachmentCreate) SetNillableUpdatedAt(t *time.Time) *ArchivedStorageAttachmentCreate {
+	if t != nil {
+		asac.SetUpdatedAt(*t)
+	}
+	return asac
+}
+
 // SetAccountID sets the "account_id" field.
 func (asac *ArchivedStorageAttachmentCreate) SetAccountID(s string) *ArchivedStorageAttachmentCreate {
 	asac.mutation.SetAccountID(s)
@@ -30,104 +58,6 @@ func (asac *ArchivedStorageAttachmentCreate) SetAccountID(s string) *ArchivedSto
 func (asac *ArchivedStorageAttachmentCreate) SetNillableAccountID(s *string) *ArchivedStorageAttachmentCreate {
 	if s != nil {
 		asac.SetAccountID(*s)
-	}
-	return asac
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (asac *ArchivedStorageAttachmentCreate) SetOwnerAccountID(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetOwnerAccountID(s)
-	return asac
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableOwnerAccountID(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetOwnerAccountID(*s)
-	}
-	return asac
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (asac *ArchivedStorageAttachmentCreate) SetOwnerUserID(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetOwnerUserID(s)
-	return asac
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableOwnerUserID(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetOwnerUserID(*s)
-	}
-	return asac
-}
-
-// SetUserID sets the "user_id" field.
-func (asac *ArchivedStorageAttachmentCreate) SetUserID(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetUserID(s)
-	return asac
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableUserID(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetUserID(*s)
-	}
-	return asac
-}
-
-// SetEmail sets the "email" field.
-func (asac *ArchivedStorageAttachmentCreate) SetEmail(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetEmail(s)
-	return asac
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableEmail(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetEmail(*s)
-	}
-	return asac
-}
-
-// SetRole sets the "role" field.
-func (asac *ArchivedStorageAttachmentCreate) SetRole(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetRole(s)
-	return asac
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableRole(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetRole(*s)
-	}
-	return asac
-}
-
-// SetStatus sets the "status" field.
-func (asac *ArchivedStorageAttachmentCreate) SetStatus(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetStatus(s)
-	return asac
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableStatus(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetStatus(*s)
-	}
-	return asac
-}
-
-// SetName sets the "name" field.
-func (asac *ArchivedStorageAttachmentCreate) SetName(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetName(s)
-	return asac
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableName(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetName(*s)
 	}
 	return asac
 }
@@ -174,240 +104,30 @@ func (asac *ArchivedStorageAttachmentCreate) SetNillableResourceKind(s *string) 
 	return asac
 }
 
-// SetOperationID sets the "operation_id" field.
-func (asac *ArchivedStorageAttachmentCreate) SetOperationID(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetOperationID(s)
+// SetName sets the "name" field.
+func (asac *ArchivedStorageAttachmentCreate) SetName(s string) *ArchivedStorageAttachmentCreate {
+	asac.mutation.SetName(s)
 	return asac
 }
 
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableOperationID(s *string) *ArchivedStorageAttachmentCreate {
+// SetNillableName sets the "name" field if the given value is not nil.
+func (asac *ArchivedStorageAttachmentCreate) SetNillableName(s *string) *ArchivedStorageAttachmentCreate {
 	if s != nil {
-		asac.SetOperationID(*s)
+		asac.SetName(*s)
 	}
 	return asac
 }
 
-// SetProvider sets the "provider" field.
-func (asac *ArchivedStorageAttachmentCreate) SetProvider(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetProvider(s)
+// SetStatus sets the "status" field.
+func (asac *ArchivedStorageAttachmentCreate) SetStatus(s string) *ArchivedStorageAttachmentCreate {
+	asac.mutation.SetStatus(s)
 	return asac
 }
 
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableProvider(s *string) *ArchivedStorageAttachmentCreate {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (asac *ArchivedStorageAttachmentCreate) SetNillableStatus(s *string) *ArchivedStorageAttachmentCreate {
 	if s != nil {
-		asac.SetProvider(*s)
-	}
-	return asac
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (asac *ArchivedStorageAttachmentCreate) SetProviderResourceID(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetProviderResourceID(s)
-	return asac
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableProviderResourceID(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetProviderResourceID(*s)
-	}
-	return asac
-}
-
-// SetURL sets the "url" field.
-func (asac *ArchivedStorageAttachmentCreate) SetURL(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetURL(s)
-	return asac
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableURL(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetURL(*s)
-	}
-	return asac
-}
-
-// SetHoldID sets the "hold_id" field.
-func (asac *ArchivedStorageAttachmentCreate) SetHoldID(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetHoldID(s)
-	return asac
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableHoldID(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetHoldID(*s)
-	}
-	return asac
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (asac *ArchivedStorageAttachmentCreate) SetHoldReleaseID(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetHoldReleaseID(s)
-	return asac
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableHoldReleaseID(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetHoldReleaseID(*s)
-	}
-	return asac
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (asac *ArchivedStorageAttachmentCreate) SetLedgerEntryID(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetLedgerEntryID(s)
-	return asac
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableLedgerEntryID(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetLedgerEntryID(*s)
-	}
-	return asac
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (asac *ArchivedStorageAttachmentCreate) SetWalletTransactionID(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetWalletTransactionID(s)
-	return asac
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableWalletTransactionID(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetWalletTransactionID(*s)
-	}
-	return asac
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (asac *ArchivedStorageAttachmentCreate) SetSettlementID(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetSettlementID(s)
-	return asac
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableSettlementID(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetSettlementID(*s)
-	}
-	return asac
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (asac *ArchivedStorageAttachmentCreate) SetPricingVersion(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetPricingVersion(s)
-	return asac
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillablePricingVersion(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetPricingVersion(*s)
-	}
-	return asac
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (asac *ArchivedStorageAttachmentCreate) SetAmountCents(i int64) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetAmountCents(i)
-	return asac
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableAmountCents(i *int64) *ArchivedStorageAttachmentCreate {
-	if i != nil {
-		asac.SetAmountCents(*i)
-	}
-	return asac
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (asac *ArchivedStorageAttachmentCreate) SetBalanceCents(i int64) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetBalanceCents(i)
-	return asac
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableBalanceCents(i *int64) *ArchivedStorageAttachmentCreate {
-	if i != nil {
-		asac.SetBalanceCents(*i)
-	}
-	return asac
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (asac *ArchivedStorageAttachmentCreate) SetFrozenCents(i int64) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetFrozenCents(i)
-	return asac
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableFrozenCents(i *int64) *ArchivedStorageAttachmentCreate {
-	if i != nil {
-		asac.SetFrozenCents(*i)
-	}
-	return asac
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (asac *ArchivedStorageAttachmentCreate) SetAvailableCents(i int64) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetAvailableCents(i)
-	return asac
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableAvailableCents(i *int64) *ArchivedStorageAttachmentCreate {
-	if i != nil {
-		asac.SetAvailableCents(*i)
-	}
-	return asac
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (asac *ArchivedStorageAttachmentCreate) SetTotalSpentCents(i int64) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetTotalSpentCents(i)
-	return asac
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableTotalSpentCents(i *int64) *ArchivedStorageAttachmentCreate {
-	if i != nil {
-		asac.SetTotalSpentCents(*i)
-	}
-	return asac
-}
-
-// SetQuantity sets the "quantity" field.
-func (asac *ArchivedStorageAttachmentCreate) SetQuantity(f float64) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetQuantity(f)
-	return asac
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableQuantity(f *float64) *ArchivedStorageAttachmentCreate {
-	if f != nil {
-		asac.SetQuantity(*f)
-	}
-	return asac
-}
-
-// SetUnit sets the "unit" field.
-func (asac *ArchivedStorageAttachmentCreate) SetUnit(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetUnit(s)
-	return asac
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableUnit(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetUnit(*s)
+		asac.SetStatus(*s)
 	}
 	return asac
 }
@@ -422,76 +142,6 @@ func (asac *ArchivedStorageAttachmentCreate) SetReason(s string) *ArchivedStorag
 func (asac *ArchivedStorageAttachmentCreate) SetNillableReason(s *string) *ArchivedStorageAttachmentCreate {
 	if s != nil {
 		asac.SetReason(*s)
-	}
-	return asac
-}
-
-// SetResult sets the "result" field.
-func (asac *ArchivedStorageAttachmentCreate) SetResult(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetResult(s)
-	return asac
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableResult(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetResult(*s)
-	}
-	return asac
-}
-
-// SetSource sets the "source" field.
-func (asac *ArchivedStorageAttachmentCreate) SetSource(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetSource(s)
-	return asac
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableSource(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetSource(*s)
-	}
-	return asac
-}
-
-// SetDirection sets the "direction" field.
-func (asac *ArchivedStorageAttachmentCreate) SetDirection(s string) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetDirection(s)
-	return asac
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableDirection(s *string) *ArchivedStorageAttachmentCreate {
-	if s != nil {
-		asac.SetDirection(*s)
-	}
-	return asac
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (asac *ArchivedStorageAttachmentCreate) SetCreatedAt(t time.Time) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetCreatedAt(t)
-	return asac
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableCreatedAt(t *time.Time) *ArchivedStorageAttachmentCreate {
-	if t != nil {
-		asac.SetCreatedAt(*t)
-	}
-	return asac
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (asac *ArchivedStorageAttachmentCreate) SetUpdatedAt(t time.Time) *ArchivedStorageAttachmentCreate {
-	asac.mutation.SetUpdatedAt(t)
-	return asac
-}
-
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (asac *ArchivedStorageAttachmentCreate) SetNillableUpdatedAt(t *time.Time) *ArchivedStorageAttachmentCreate {
-	if t != nil {
-		asac.SetUpdatedAt(*t)
 	}
 	return asac
 }
@@ -551,37 +201,17 @@ func (asac *ArchivedStorageAttachmentCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (asac *ArchivedStorageAttachmentCreate) defaults() {
+	if _, ok := asac.mutation.CreatedAt(); !ok {
+		v := archivedstorageattachment.DefaultCreatedAt()
+		asac.mutation.SetCreatedAt(v)
+	}
+	if _, ok := asac.mutation.UpdatedAt(); !ok {
+		v := archivedstorageattachment.DefaultUpdatedAt()
+		asac.mutation.SetUpdatedAt(v)
+	}
 	if _, ok := asac.mutation.AccountID(); !ok {
 		v := archivedstorageattachment.DefaultAccountID
 		asac.mutation.SetAccountID(v)
-	}
-	if _, ok := asac.mutation.OwnerAccountID(); !ok {
-		v := archivedstorageattachment.DefaultOwnerAccountID
-		asac.mutation.SetOwnerAccountID(v)
-	}
-	if _, ok := asac.mutation.OwnerUserID(); !ok {
-		v := archivedstorageattachment.DefaultOwnerUserID
-		asac.mutation.SetOwnerUserID(v)
-	}
-	if _, ok := asac.mutation.UserID(); !ok {
-		v := archivedstorageattachment.DefaultUserID
-		asac.mutation.SetUserID(v)
-	}
-	if _, ok := asac.mutation.Email(); !ok {
-		v := archivedstorageattachment.DefaultEmail
-		asac.mutation.SetEmail(v)
-	}
-	if _, ok := asac.mutation.Role(); !ok {
-		v := archivedstorageattachment.DefaultRole
-		asac.mutation.SetRole(v)
-	}
-	if _, ok := asac.mutation.Status(); !ok {
-		v := archivedstorageattachment.DefaultStatus
-		asac.mutation.SetStatus(v)
-	}
-	if _, ok := asac.mutation.Name(); !ok {
-		v := archivedstorageattachment.DefaultName
-		asac.mutation.SetName(v)
 	}
 	if _, ok := asac.mutation.WorkspaceID(); !ok {
 		v := archivedstorageattachment.DefaultWorkspaceID
@@ -595,125 +225,30 @@ func (asac *ArchivedStorageAttachmentCreate) defaults() {
 		v := archivedstorageattachment.DefaultResourceKind
 		asac.mutation.SetResourceKind(v)
 	}
-	if _, ok := asac.mutation.OperationID(); !ok {
-		v := archivedstorageattachment.DefaultOperationID
-		asac.mutation.SetOperationID(v)
+	if _, ok := asac.mutation.Name(); !ok {
+		v := archivedstorageattachment.DefaultName
+		asac.mutation.SetName(v)
 	}
-	if _, ok := asac.mutation.Provider(); !ok {
-		v := archivedstorageattachment.DefaultProvider
-		asac.mutation.SetProvider(v)
-	}
-	if _, ok := asac.mutation.ProviderResourceID(); !ok {
-		v := archivedstorageattachment.DefaultProviderResourceID
-		asac.mutation.SetProviderResourceID(v)
-	}
-	if _, ok := asac.mutation.URL(); !ok {
-		v := archivedstorageattachment.DefaultURL
-		asac.mutation.SetURL(v)
-	}
-	if _, ok := asac.mutation.HoldID(); !ok {
-		v := archivedstorageattachment.DefaultHoldID
-		asac.mutation.SetHoldID(v)
-	}
-	if _, ok := asac.mutation.HoldReleaseID(); !ok {
-		v := archivedstorageattachment.DefaultHoldReleaseID
-		asac.mutation.SetHoldReleaseID(v)
-	}
-	if _, ok := asac.mutation.LedgerEntryID(); !ok {
-		v := archivedstorageattachment.DefaultLedgerEntryID
-		asac.mutation.SetLedgerEntryID(v)
-	}
-	if _, ok := asac.mutation.WalletTransactionID(); !ok {
-		v := archivedstorageattachment.DefaultWalletTransactionID
-		asac.mutation.SetWalletTransactionID(v)
-	}
-	if _, ok := asac.mutation.SettlementID(); !ok {
-		v := archivedstorageattachment.DefaultSettlementID
-		asac.mutation.SetSettlementID(v)
-	}
-	if _, ok := asac.mutation.PricingVersion(); !ok {
-		v := archivedstorageattachment.DefaultPricingVersion
-		asac.mutation.SetPricingVersion(v)
-	}
-	if _, ok := asac.mutation.AmountCents(); !ok {
-		v := archivedstorageattachment.DefaultAmountCents
-		asac.mutation.SetAmountCents(v)
-	}
-	if _, ok := asac.mutation.BalanceCents(); !ok {
-		v := archivedstorageattachment.DefaultBalanceCents
-		asac.mutation.SetBalanceCents(v)
-	}
-	if _, ok := asac.mutation.FrozenCents(); !ok {
-		v := archivedstorageattachment.DefaultFrozenCents
-		asac.mutation.SetFrozenCents(v)
-	}
-	if _, ok := asac.mutation.AvailableCents(); !ok {
-		v := archivedstorageattachment.DefaultAvailableCents
-		asac.mutation.SetAvailableCents(v)
-	}
-	if _, ok := asac.mutation.TotalSpentCents(); !ok {
-		v := archivedstorageattachment.DefaultTotalSpentCents
-		asac.mutation.SetTotalSpentCents(v)
-	}
-	if _, ok := asac.mutation.Quantity(); !ok {
-		v := archivedstorageattachment.DefaultQuantity
-		asac.mutation.SetQuantity(v)
-	}
-	if _, ok := asac.mutation.Unit(); !ok {
-		v := archivedstorageattachment.DefaultUnit
-		asac.mutation.SetUnit(v)
+	if _, ok := asac.mutation.Status(); !ok {
+		v := archivedstorageattachment.DefaultStatus
+		asac.mutation.SetStatus(v)
 	}
 	if _, ok := asac.mutation.Reason(); !ok {
 		v := archivedstorageattachment.DefaultReason
 		asac.mutation.SetReason(v)
 	}
-	if _, ok := asac.mutation.Result(); !ok {
-		v := archivedstorageattachment.DefaultResult
-		asac.mutation.SetResult(v)
-	}
-	if _, ok := asac.mutation.Source(); !ok {
-		v := archivedstorageattachment.DefaultSource
-		asac.mutation.SetSource(v)
-	}
-	if _, ok := asac.mutation.Direction(); !ok {
-		v := archivedstorageattachment.DefaultDirection
-		asac.mutation.SetDirection(v)
-	}
-	if _, ok := asac.mutation.CreatedAt(); !ok {
-		v := archivedstorageattachment.DefaultCreatedAt()
-		asac.mutation.SetCreatedAt(v)
-	}
-	if _, ok := asac.mutation.UpdatedAt(); !ok {
-		v := archivedstorageattachment.DefaultUpdatedAt()
-		asac.mutation.SetUpdatedAt(v)
-	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (asac *ArchivedStorageAttachmentCreate) check() error {
+	if _, ok := asac.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.created_at"`)}
+	}
+	if _, ok := asac.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.updated_at"`)}
+	}
 	if _, ok := asac.mutation.AccountID(); !ok {
 		return &ValidationError{Name: "account_id", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.account_id"`)}
-	}
-	if _, ok := asac.mutation.OwnerAccountID(); !ok {
-		return &ValidationError{Name: "owner_account_id", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.owner_account_id"`)}
-	}
-	if _, ok := asac.mutation.OwnerUserID(); !ok {
-		return &ValidationError{Name: "owner_user_id", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.owner_user_id"`)}
-	}
-	if _, ok := asac.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.user_id"`)}
-	}
-	if _, ok := asac.mutation.Email(); !ok {
-		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.email"`)}
-	}
-	if _, ok := asac.mutation.Role(); !ok {
-		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.role"`)}
-	}
-	if _, ok := asac.mutation.Status(); !ok {
-		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.status"`)}
-	}
-	if _, ok := asac.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.name"`)}
 	}
 	if _, ok := asac.mutation.WorkspaceID(); !ok {
 		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.workspace_id"`)}
@@ -724,74 +259,14 @@ func (asac *ArchivedStorageAttachmentCreate) check() error {
 	if _, ok := asac.mutation.ResourceKind(); !ok {
 		return &ValidationError{Name: "resource_kind", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.resource_kind"`)}
 	}
-	if _, ok := asac.mutation.OperationID(); !ok {
-		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.operation_id"`)}
+	if _, ok := asac.mutation.Name(); !ok {
+		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.name"`)}
 	}
-	if _, ok := asac.mutation.Provider(); !ok {
-		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.provider"`)}
-	}
-	if _, ok := asac.mutation.ProviderResourceID(); !ok {
-		return &ValidationError{Name: "provider_resource_id", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.provider_resource_id"`)}
-	}
-	if _, ok := asac.mutation.URL(); !ok {
-		return &ValidationError{Name: "url", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.url"`)}
-	}
-	if _, ok := asac.mutation.HoldID(); !ok {
-		return &ValidationError{Name: "hold_id", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.hold_id"`)}
-	}
-	if _, ok := asac.mutation.HoldReleaseID(); !ok {
-		return &ValidationError{Name: "hold_release_id", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.hold_release_id"`)}
-	}
-	if _, ok := asac.mutation.LedgerEntryID(); !ok {
-		return &ValidationError{Name: "ledger_entry_id", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.ledger_entry_id"`)}
-	}
-	if _, ok := asac.mutation.WalletTransactionID(); !ok {
-		return &ValidationError{Name: "wallet_transaction_id", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.wallet_transaction_id"`)}
-	}
-	if _, ok := asac.mutation.SettlementID(); !ok {
-		return &ValidationError{Name: "settlement_id", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.settlement_id"`)}
-	}
-	if _, ok := asac.mutation.PricingVersion(); !ok {
-		return &ValidationError{Name: "pricing_version", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.pricing_version"`)}
-	}
-	if _, ok := asac.mutation.AmountCents(); !ok {
-		return &ValidationError{Name: "amount_cents", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.amount_cents"`)}
-	}
-	if _, ok := asac.mutation.BalanceCents(); !ok {
-		return &ValidationError{Name: "balance_cents", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.balance_cents"`)}
-	}
-	if _, ok := asac.mutation.FrozenCents(); !ok {
-		return &ValidationError{Name: "frozen_cents", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.frozen_cents"`)}
-	}
-	if _, ok := asac.mutation.AvailableCents(); !ok {
-		return &ValidationError{Name: "available_cents", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.available_cents"`)}
-	}
-	if _, ok := asac.mutation.TotalSpentCents(); !ok {
-		return &ValidationError{Name: "total_spent_cents", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.total_spent_cents"`)}
-	}
-	if _, ok := asac.mutation.Quantity(); !ok {
-		return &ValidationError{Name: "quantity", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.quantity"`)}
-	}
-	if _, ok := asac.mutation.Unit(); !ok {
-		return &ValidationError{Name: "unit", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.unit"`)}
+	if _, ok := asac.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.status"`)}
 	}
 	if _, ok := asac.mutation.Reason(); !ok {
 		return &ValidationError{Name: "reason", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.reason"`)}
-	}
-	if _, ok := asac.mutation.Result(); !ok {
-		return &ValidationError{Name: "result", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.result"`)}
-	}
-	if _, ok := asac.mutation.Source(); !ok {
-		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.source"`)}
-	}
-	if _, ok := asac.mutation.Direction(); !ok {
-		return &ValidationError{Name: "direction", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.direction"`)}
-	}
-	if _, ok := asac.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.created_at"`)}
-	}
-	if _, ok := asac.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ArchivedStorageAttachment.updated_at"`)}
 	}
 	if v, ok := asac.mutation.ID(); ok {
 		if err := archivedstorageattachment.IDValidator(v); err != nil {
@@ -833,37 +308,17 @@ func (asac *ArchivedStorageAttachmentCreate) createSpec() (*ArchivedStorageAttac
 		_node.ID = id
 		_spec.ID.Value = id
 	}
+	if value, ok := asac.mutation.CreatedAt(); ok {
+		_spec.SetField(archivedstorageattachment.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := asac.mutation.UpdatedAt(); ok {
+		_spec.SetField(archivedstorageattachment.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
 	if value, ok := asac.mutation.AccountID(); ok {
 		_spec.SetField(archivedstorageattachment.FieldAccountID, field.TypeString, value)
 		_node.AccountID = value
-	}
-	if value, ok := asac.mutation.OwnerAccountID(); ok {
-		_spec.SetField(archivedstorageattachment.FieldOwnerAccountID, field.TypeString, value)
-		_node.OwnerAccountID = value
-	}
-	if value, ok := asac.mutation.OwnerUserID(); ok {
-		_spec.SetField(archivedstorageattachment.FieldOwnerUserID, field.TypeString, value)
-		_node.OwnerUserID = value
-	}
-	if value, ok := asac.mutation.UserID(); ok {
-		_spec.SetField(archivedstorageattachment.FieldUserID, field.TypeString, value)
-		_node.UserID = value
-	}
-	if value, ok := asac.mutation.Email(); ok {
-		_spec.SetField(archivedstorageattachment.FieldEmail, field.TypeString, value)
-		_node.Email = value
-	}
-	if value, ok := asac.mutation.Role(); ok {
-		_spec.SetField(archivedstorageattachment.FieldRole, field.TypeString, value)
-		_node.Role = value
-	}
-	if value, ok := asac.mutation.Status(); ok {
-		_spec.SetField(archivedstorageattachment.FieldStatus, field.TypeString, value)
-		_node.Status = value
-	}
-	if value, ok := asac.mutation.Name(); ok {
-		_spec.SetField(archivedstorageattachment.FieldName, field.TypeString, value)
-		_node.Name = value
 	}
 	if value, ok := asac.mutation.WorkspaceID(); ok {
 		_spec.SetField(archivedstorageattachment.FieldWorkspaceID, field.TypeString, value)
@@ -877,97 +332,17 @@ func (asac *ArchivedStorageAttachmentCreate) createSpec() (*ArchivedStorageAttac
 		_spec.SetField(archivedstorageattachment.FieldResourceKind, field.TypeString, value)
 		_node.ResourceKind = value
 	}
-	if value, ok := asac.mutation.OperationID(); ok {
-		_spec.SetField(archivedstorageattachment.FieldOperationID, field.TypeString, value)
-		_node.OperationID = value
+	if value, ok := asac.mutation.Name(); ok {
+		_spec.SetField(archivedstorageattachment.FieldName, field.TypeString, value)
+		_node.Name = value
 	}
-	if value, ok := asac.mutation.Provider(); ok {
-		_spec.SetField(archivedstorageattachment.FieldProvider, field.TypeString, value)
-		_node.Provider = value
-	}
-	if value, ok := asac.mutation.ProviderResourceID(); ok {
-		_spec.SetField(archivedstorageattachment.FieldProviderResourceID, field.TypeString, value)
-		_node.ProviderResourceID = value
-	}
-	if value, ok := asac.mutation.URL(); ok {
-		_spec.SetField(archivedstorageattachment.FieldURL, field.TypeString, value)
-		_node.URL = value
-	}
-	if value, ok := asac.mutation.HoldID(); ok {
-		_spec.SetField(archivedstorageattachment.FieldHoldID, field.TypeString, value)
-		_node.HoldID = value
-	}
-	if value, ok := asac.mutation.HoldReleaseID(); ok {
-		_spec.SetField(archivedstorageattachment.FieldHoldReleaseID, field.TypeString, value)
-		_node.HoldReleaseID = value
-	}
-	if value, ok := asac.mutation.LedgerEntryID(); ok {
-		_spec.SetField(archivedstorageattachment.FieldLedgerEntryID, field.TypeString, value)
-		_node.LedgerEntryID = value
-	}
-	if value, ok := asac.mutation.WalletTransactionID(); ok {
-		_spec.SetField(archivedstorageattachment.FieldWalletTransactionID, field.TypeString, value)
-		_node.WalletTransactionID = value
-	}
-	if value, ok := asac.mutation.SettlementID(); ok {
-		_spec.SetField(archivedstorageattachment.FieldSettlementID, field.TypeString, value)
-		_node.SettlementID = value
-	}
-	if value, ok := asac.mutation.PricingVersion(); ok {
-		_spec.SetField(archivedstorageattachment.FieldPricingVersion, field.TypeString, value)
-		_node.PricingVersion = value
-	}
-	if value, ok := asac.mutation.AmountCents(); ok {
-		_spec.SetField(archivedstorageattachment.FieldAmountCents, field.TypeInt64, value)
-		_node.AmountCents = value
-	}
-	if value, ok := asac.mutation.BalanceCents(); ok {
-		_spec.SetField(archivedstorageattachment.FieldBalanceCents, field.TypeInt64, value)
-		_node.BalanceCents = value
-	}
-	if value, ok := asac.mutation.FrozenCents(); ok {
-		_spec.SetField(archivedstorageattachment.FieldFrozenCents, field.TypeInt64, value)
-		_node.FrozenCents = value
-	}
-	if value, ok := asac.mutation.AvailableCents(); ok {
-		_spec.SetField(archivedstorageattachment.FieldAvailableCents, field.TypeInt64, value)
-		_node.AvailableCents = value
-	}
-	if value, ok := asac.mutation.TotalSpentCents(); ok {
-		_spec.SetField(archivedstorageattachment.FieldTotalSpentCents, field.TypeInt64, value)
-		_node.TotalSpentCents = value
-	}
-	if value, ok := asac.mutation.Quantity(); ok {
-		_spec.SetField(archivedstorageattachment.FieldQuantity, field.TypeFloat64, value)
-		_node.Quantity = value
-	}
-	if value, ok := asac.mutation.Unit(); ok {
-		_spec.SetField(archivedstorageattachment.FieldUnit, field.TypeString, value)
-		_node.Unit = value
+	if value, ok := asac.mutation.Status(); ok {
+		_spec.SetField(archivedstorageattachment.FieldStatus, field.TypeString, value)
+		_node.Status = value
 	}
 	if value, ok := asac.mutation.Reason(); ok {
 		_spec.SetField(archivedstorageattachment.FieldReason, field.TypeString, value)
 		_node.Reason = value
-	}
-	if value, ok := asac.mutation.Result(); ok {
-		_spec.SetField(archivedstorageattachment.FieldResult, field.TypeString, value)
-		_node.Result = value
-	}
-	if value, ok := asac.mutation.Source(); ok {
-		_spec.SetField(archivedstorageattachment.FieldSource, field.TypeString, value)
-		_node.Source = value
-	}
-	if value, ok := asac.mutation.Direction(); ok {
-		_spec.SetField(archivedstorageattachment.FieldDirection, field.TypeString, value)
-		_node.Direction = value
-	}
-	if value, ok := asac.mutation.CreatedAt(); ok {
-		_spec.SetField(archivedstorageattachment.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
-	}
-	if value, ok := asac.mutation.UpdatedAt(); ok {
-		_spec.SetField(archivedstorageattachment.FieldUpdatedAt, field.TypeTime, value)
-		_node.UpdatedAt = value
 	}
 	if value, ok := asac.mutation.ArchivedAt(); ok {
 		_spec.SetField(archivedstorageattachment.FieldArchivedAt, field.TypeTime, value)

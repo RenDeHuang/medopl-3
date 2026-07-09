@@ -17,76 +17,42 @@ type SupportTicketMapping struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID string `json:"id,omitempty"`
-	// AccountID holds the value of the "account_id" field.
-	AccountID string `json:"account_id,omitempty"`
-	// OwnerAccountID holds the value of the "owner_account_id" field.
-	OwnerAccountID string `json:"owner_account_id,omitempty"`
-	// OwnerUserID holds the value of the "owner_user_id" field.
-	OwnerUserID string `json:"owner_user_id,omitempty"`
-	// UserID holds the value of the "user_id" field.
-	UserID string `json:"user_id,omitempty"`
-	// Email holds the value of the "email" field.
-	Email string `json:"email,omitempty"`
-	// Role holds the value of the "role" field.
-	Role string `json:"role,omitempty"`
-	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
-	// Name holds the value of the "name" field.
-	Name string `json:"name,omitempty"`
-	// WorkspaceID holds the value of the "workspace_id" field.
-	WorkspaceID string `json:"workspace_id,omitempty"`
-	// ResourceID holds the value of the "resource_id" field.
-	ResourceID string `json:"resource_id,omitempty"`
-	// ResourceKind holds the value of the "resource_kind" field.
-	ResourceKind string `json:"resource_kind,omitempty"`
-	// OperationID holds the value of the "operation_id" field.
-	OperationID string `json:"operation_id,omitempty"`
-	// Provider holds the value of the "provider" field.
-	Provider string `json:"provider,omitempty"`
-	// ProviderResourceID holds the value of the "provider_resource_id" field.
-	ProviderResourceID string `json:"provider_resource_id,omitempty"`
-	// URL holds the value of the "url" field.
-	URL string `json:"url,omitempty"`
-	// HoldID holds the value of the "hold_id" field.
-	HoldID string `json:"hold_id,omitempty"`
-	// HoldReleaseID holds the value of the "hold_release_id" field.
-	HoldReleaseID string `json:"hold_release_id,omitempty"`
-	// LedgerEntryID holds the value of the "ledger_entry_id" field.
-	LedgerEntryID string `json:"ledger_entry_id,omitempty"`
-	// WalletTransactionID holds the value of the "wallet_transaction_id" field.
-	WalletTransactionID string `json:"wallet_transaction_id,omitempty"`
-	// SettlementID holds the value of the "settlement_id" field.
-	SettlementID string `json:"settlement_id,omitempty"`
-	// PricingVersion holds the value of the "pricing_version" field.
-	PricingVersion string `json:"pricing_version,omitempty"`
-	// AmountCents holds the value of the "amount_cents" field.
-	AmountCents int64 `json:"amount_cents,omitempty"`
-	// BalanceCents holds the value of the "balance_cents" field.
-	BalanceCents int64 `json:"balance_cents,omitempty"`
-	// FrozenCents holds the value of the "frozen_cents" field.
-	FrozenCents int64 `json:"frozen_cents,omitempty"`
-	// AvailableCents holds the value of the "available_cents" field.
-	AvailableCents int64 `json:"available_cents,omitempty"`
-	// TotalSpentCents holds the value of the "total_spent_cents" field.
-	TotalSpentCents int64 `json:"total_spent_cents,omitempty"`
-	// Quantity holds the value of the "quantity" field.
-	Quantity float64 `json:"quantity,omitempty"`
-	// Unit holds the value of the "unit" field.
-	Unit string `json:"unit,omitempty"`
-	// Reason holds the value of the "reason" field.
-	Reason string `json:"reason,omitempty"`
-	// Result holds the value of the "result" field.
-	Result string `json:"result,omitempty"`
-	// Source holds the value of the "source" field.
-	Source string `json:"source,omitempty"`
-	// Direction holds the value of the "direction" field.
-	Direction string `json:"direction,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// ArchivedAt holds the value of the "archived_at" field.
-	ArchivedAt   *time.Time `json:"archived_at,omitempty"`
+	// AccountID holds the value of the "account_id" field.
+	AccountID string `json:"account_id,omitempty"`
+	// UserID holds the value of the "user_id" field.
+	UserID string `json:"user_id,omitempty"`
+	// WorkspaceID holds the value of the "workspace_id" field.
+	WorkspaceID string `json:"workspace_id,omitempty"`
+	// ExternalSystem holds the value of the "external_system" field.
+	ExternalSystem string `json:"external_system,omitempty"`
+	// ExternalTicketID holds the value of the "external_ticket_id" field.
+	ExternalTicketID string `json:"external_ticket_id,omitempty"`
+	// ExternalURL holds the value of the "external_url" field.
+	ExternalURL string `json:"external_url,omitempty"`
+	// OperationID holds the value of the "operation_id" field.
+	OperationID string `json:"operation_id,omitempty"`
+	// ResourceID holds the value of the "resource_id" field.
+	ResourceID string `json:"resource_id,omitempty"`
+	// ResourceKind holds the value of the "resource_kind" field.
+	ResourceKind string `json:"resource_kind,omitempty"`
+	// Title holds the value of the "title" field.
+	Title string `json:"title,omitempty"`
+	// Category holds the value of the "category" field.
+	Category string `json:"category,omitempty"`
+	// Priority holds the value of the "priority" field.
+	Priority string `json:"priority,omitempty"`
+	// Status holds the value of the "status" field.
+	Status string `json:"status,omitempty"`
+	// Source holds the value of the "source" field.
+	Source string `json:"source,omitempty"`
+	// URL holds the value of the "url" field.
+	URL string `json:"url,omitempty"`
+	// Reason holds the value of the "reason" field.
+	Reason       string `json:"reason,omitempty"`
 	selectValues sql.SelectValues
 }
 
@@ -95,13 +61,9 @@ func (*SupportTicketMapping) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case supportticketmapping.FieldQuantity:
-			values[i] = new(sql.NullFloat64)
-		case supportticketmapping.FieldAmountCents, supportticketmapping.FieldBalanceCents, supportticketmapping.FieldFrozenCents, supportticketmapping.FieldAvailableCents, supportticketmapping.FieldTotalSpentCents:
-			values[i] = new(sql.NullInt64)
-		case supportticketmapping.FieldID, supportticketmapping.FieldAccountID, supportticketmapping.FieldOwnerAccountID, supportticketmapping.FieldOwnerUserID, supportticketmapping.FieldUserID, supportticketmapping.FieldEmail, supportticketmapping.FieldRole, supportticketmapping.FieldStatus, supportticketmapping.FieldName, supportticketmapping.FieldWorkspaceID, supportticketmapping.FieldResourceID, supportticketmapping.FieldResourceKind, supportticketmapping.FieldOperationID, supportticketmapping.FieldProvider, supportticketmapping.FieldProviderResourceID, supportticketmapping.FieldURL, supportticketmapping.FieldHoldID, supportticketmapping.FieldHoldReleaseID, supportticketmapping.FieldLedgerEntryID, supportticketmapping.FieldWalletTransactionID, supportticketmapping.FieldSettlementID, supportticketmapping.FieldPricingVersion, supportticketmapping.FieldUnit, supportticketmapping.FieldReason, supportticketmapping.FieldResult, supportticketmapping.FieldSource, supportticketmapping.FieldDirection:
+		case supportticketmapping.FieldID, supportticketmapping.FieldAccountID, supportticketmapping.FieldUserID, supportticketmapping.FieldWorkspaceID, supportticketmapping.FieldExternalSystem, supportticketmapping.FieldExternalTicketID, supportticketmapping.FieldExternalURL, supportticketmapping.FieldOperationID, supportticketmapping.FieldResourceID, supportticketmapping.FieldResourceKind, supportticketmapping.FieldTitle, supportticketmapping.FieldCategory, supportticketmapping.FieldPriority, supportticketmapping.FieldStatus, supportticketmapping.FieldSource, supportticketmapping.FieldURL, supportticketmapping.FieldReason:
 			values[i] = new(sql.NullString)
-		case supportticketmapping.FieldCreatedAt, supportticketmapping.FieldUpdatedAt, supportticketmapping.FieldArchivedAt:
+		case supportticketmapping.FieldCreatedAt, supportticketmapping.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -124,23 +86,23 @@ func (stm *SupportTicketMapping) assignValues(columns []string, values []any) er
 			} else if value.Valid {
 				stm.ID = value.String
 			}
+		case supportticketmapping.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				stm.CreatedAt = value.Time
+			}
+		case supportticketmapping.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				stm.UpdatedAt = value.Time
+			}
 		case supportticketmapping.FieldAccountID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_id", values[i])
 			} else if value.Valid {
 				stm.AccountID = value.String
-			}
-		case supportticketmapping.FieldOwnerAccountID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field owner_account_id", values[i])
-			} else if value.Valid {
-				stm.OwnerAccountID = value.String
-			}
-		case supportticketmapping.FieldOwnerUserID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field owner_user_id", values[i])
-			} else if value.Valid {
-				stm.OwnerUserID = value.String
 			}
 		case supportticketmapping.FieldUserID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -148,35 +110,35 @@ func (stm *SupportTicketMapping) assignValues(columns []string, values []any) er
 			} else if value.Valid {
 				stm.UserID = value.String
 			}
-		case supportticketmapping.FieldEmail:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field email", values[i])
-			} else if value.Valid {
-				stm.Email = value.String
-			}
-		case supportticketmapping.FieldRole:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field role", values[i])
-			} else if value.Valid {
-				stm.Role = value.String
-			}
-		case supportticketmapping.FieldStatus:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field status", values[i])
-			} else if value.Valid {
-				stm.Status = value.String
-			}
-		case supportticketmapping.FieldName:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field name", values[i])
-			} else if value.Valid {
-				stm.Name = value.String
-			}
 		case supportticketmapping.FieldWorkspaceID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field workspace_id", values[i])
 			} else if value.Valid {
 				stm.WorkspaceID = value.String
+			}
+		case supportticketmapping.FieldExternalSystem:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field external_system", values[i])
+			} else if value.Valid {
+				stm.ExternalSystem = value.String
+			}
+		case supportticketmapping.FieldExternalTicketID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field external_ticket_id", values[i])
+			} else if value.Valid {
+				stm.ExternalTicketID = value.String
+			}
+		case supportticketmapping.FieldExternalURL:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field external_url", values[i])
+			} else if value.Valid {
+				stm.ExternalURL = value.String
+			}
+		case supportticketmapping.FieldOperationID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field operation_id", values[i])
+			} else if value.Valid {
+				stm.OperationID = value.String
 			}
 		case supportticketmapping.FieldResourceID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -190,119 +152,29 @@ func (stm *SupportTicketMapping) assignValues(columns []string, values []any) er
 			} else if value.Valid {
 				stm.ResourceKind = value.String
 			}
-		case supportticketmapping.FieldOperationID:
+		case supportticketmapping.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field operation_id", values[i])
+				return fmt.Errorf("unexpected type %T for field title", values[i])
 			} else if value.Valid {
-				stm.OperationID = value.String
+				stm.Title = value.String
 			}
-		case supportticketmapping.FieldProvider:
+		case supportticketmapping.FieldCategory:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider", values[i])
+				return fmt.Errorf("unexpected type %T for field category", values[i])
 			} else if value.Valid {
-				stm.Provider = value.String
+				stm.Category = value.String
 			}
-		case supportticketmapping.FieldProviderResourceID:
+		case supportticketmapping.FieldPriority:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider_resource_id", values[i])
+				return fmt.Errorf("unexpected type %T for field priority", values[i])
 			} else if value.Valid {
-				stm.ProviderResourceID = value.String
+				stm.Priority = value.String
 			}
-		case supportticketmapping.FieldURL:
+		case supportticketmapping.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field url", values[i])
+				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				stm.URL = value.String
-			}
-		case supportticketmapping.FieldHoldID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field hold_id", values[i])
-			} else if value.Valid {
-				stm.HoldID = value.String
-			}
-		case supportticketmapping.FieldHoldReleaseID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field hold_release_id", values[i])
-			} else if value.Valid {
-				stm.HoldReleaseID = value.String
-			}
-		case supportticketmapping.FieldLedgerEntryID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field ledger_entry_id", values[i])
-			} else if value.Valid {
-				stm.LedgerEntryID = value.String
-			}
-		case supportticketmapping.FieldWalletTransactionID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field wallet_transaction_id", values[i])
-			} else if value.Valid {
-				stm.WalletTransactionID = value.String
-			}
-		case supportticketmapping.FieldSettlementID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field settlement_id", values[i])
-			} else if value.Valid {
-				stm.SettlementID = value.String
-			}
-		case supportticketmapping.FieldPricingVersion:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field pricing_version", values[i])
-			} else if value.Valid {
-				stm.PricingVersion = value.String
-			}
-		case supportticketmapping.FieldAmountCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field amount_cents", values[i])
-			} else if value.Valid {
-				stm.AmountCents = value.Int64
-			}
-		case supportticketmapping.FieldBalanceCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field balance_cents", values[i])
-			} else if value.Valid {
-				stm.BalanceCents = value.Int64
-			}
-		case supportticketmapping.FieldFrozenCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field frozen_cents", values[i])
-			} else if value.Valid {
-				stm.FrozenCents = value.Int64
-			}
-		case supportticketmapping.FieldAvailableCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field available_cents", values[i])
-			} else if value.Valid {
-				stm.AvailableCents = value.Int64
-			}
-		case supportticketmapping.FieldTotalSpentCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field total_spent_cents", values[i])
-			} else if value.Valid {
-				stm.TotalSpentCents = value.Int64
-			}
-		case supportticketmapping.FieldQuantity:
-			if value, ok := values[i].(*sql.NullFloat64); !ok {
-				return fmt.Errorf("unexpected type %T for field quantity", values[i])
-			} else if value.Valid {
-				stm.Quantity = value.Float64
-			}
-		case supportticketmapping.FieldUnit:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field unit", values[i])
-			} else if value.Valid {
-				stm.Unit = value.String
-			}
-		case supportticketmapping.FieldReason:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field reason", values[i])
-			} else if value.Valid {
-				stm.Reason = value.String
-			}
-		case supportticketmapping.FieldResult:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field result", values[i])
-			} else if value.Valid {
-				stm.Result = value.String
+				stm.Status = value.String
 			}
 		case supportticketmapping.FieldSource:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -310,30 +182,17 @@ func (stm *SupportTicketMapping) assignValues(columns []string, values []any) er
 			} else if value.Valid {
 				stm.Source = value.String
 			}
-		case supportticketmapping.FieldDirection:
+		case supportticketmapping.FieldURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field direction", values[i])
+				return fmt.Errorf("unexpected type %T for field url", values[i])
 			} else if value.Valid {
-				stm.Direction = value.String
+				stm.URL = value.String
 			}
-		case supportticketmapping.FieldCreatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+		case supportticketmapping.FieldReason:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field reason", values[i])
 			} else if value.Valid {
-				stm.CreatedAt = value.Time
-			}
-		case supportticketmapping.FieldUpdatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
-			} else if value.Valid {
-				stm.UpdatedAt = value.Time
-			}
-		case supportticketmapping.FieldArchivedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field archived_at", values[i])
-			} else if value.Valid {
-				stm.ArchivedAt = new(time.Time)
-				*stm.ArchivedAt = value.Time
+				stm.Reason = value.String
 			}
 		default:
 			stm.selectValues.Set(columns[i], values[i])
@@ -371,32 +230,32 @@ func (stm *SupportTicketMapping) String() string {
 	var builder strings.Builder
 	builder.WriteString("SupportTicketMapping(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", stm.ID))
+	builder.WriteString("created_at=")
+	builder.WriteString(stm.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(stm.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
 	builder.WriteString("account_id=")
 	builder.WriteString(stm.AccountID)
-	builder.WriteString(", ")
-	builder.WriteString("owner_account_id=")
-	builder.WriteString(stm.OwnerAccountID)
-	builder.WriteString(", ")
-	builder.WriteString("owner_user_id=")
-	builder.WriteString(stm.OwnerUserID)
 	builder.WriteString(", ")
 	builder.WriteString("user_id=")
 	builder.WriteString(stm.UserID)
 	builder.WriteString(", ")
-	builder.WriteString("email=")
-	builder.WriteString(stm.Email)
-	builder.WriteString(", ")
-	builder.WriteString("role=")
-	builder.WriteString(stm.Role)
-	builder.WriteString(", ")
-	builder.WriteString("status=")
-	builder.WriteString(stm.Status)
-	builder.WriteString(", ")
-	builder.WriteString("name=")
-	builder.WriteString(stm.Name)
-	builder.WriteString(", ")
 	builder.WriteString("workspace_id=")
 	builder.WriteString(stm.WorkspaceID)
+	builder.WriteString(", ")
+	builder.WriteString("external_system=")
+	builder.WriteString(stm.ExternalSystem)
+	builder.WriteString(", ")
+	builder.WriteString("external_ticket_id=")
+	builder.WriteString(stm.ExternalTicketID)
+	builder.WriteString(", ")
+	builder.WriteString("external_url=")
+	builder.WriteString(stm.ExternalURL)
+	builder.WriteString(", ")
+	builder.WriteString("operation_id=")
+	builder.WriteString(stm.OperationID)
 	builder.WriteString(", ")
 	builder.WriteString("resource_id=")
 	builder.WriteString(stm.ResourceID)
@@ -404,79 +263,26 @@ func (stm *SupportTicketMapping) String() string {
 	builder.WriteString("resource_kind=")
 	builder.WriteString(stm.ResourceKind)
 	builder.WriteString(", ")
-	builder.WriteString("operation_id=")
-	builder.WriteString(stm.OperationID)
+	builder.WriteString("title=")
+	builder.WriteString(stm.Title)
 	builder.WriteString(", ")
-	builder.WriteString("provider=")
-	builder.WriteString(stm.Provider)
+	builder.WriteString("category=")
+	builder.WriteString(stm.Category)
 	builder.WriteString(", ")
-	builder.WriteString("provider_resource_id=")
-	builder.WriteString(stm.ProviderResourceID)
+	builder.WriteString("priority=")
+	builder.WriteString(stm.Priority)
 	builder.WriteString(", ")
-	builder.WriteString("url=")
-	builder.WriteString(stm.URL)
-	builder.WriteString(", ")
-	builder.WriteString("hold_id=")
-	builder.WriteString(stm.HoldID)
-	builder.WriteString(", ")
-	builder.WriteString("hold_release_id=")
-	builder.WriteString(stm.HoldReleaseID)
-	builder.WriteString(", ")
-	builder.WriteString("ledger_entry_id=")
-	builder.WriteString(stm.LedgerEntryID)
-	builder.WriteString(", ")
-	builder.WriteString("wallet_transaction_id=")
-	builder.WriteString(stm.WalletTransactionID)
-	builder.WriteString(", ")
-	builder.WriteString("settlement_id=")
-	builder.WriteString(stm.SettlementID)
-	builder.WriteString(", ")
-	builder.WriteString("pricing_version=")
-	builder.WriteString(stm.PricingVersion)
-	builder.WriteString(", ")
-	builder.WriteString("amount_cents=")
-	builder.WriteString(fmt.Sprintf("%v", stm.AmountCents))
-	builder.WriteString(", ")
-	builder.WriteString("balance_cents=")
-	builder.WriteString(fmt.Sprintf("%v", stm.BalanceCents))
-	builder.WriteString(", ")
-	builder.WriteString("frozen_cents=")
-	builder.WriteString(fmt.Sprintf("%v", stm.FrozenCents))
-	builder.WriteString(", ")
-	builder.WriteString("available_cents=")
-	builder.WriteString(fmt.Sprintf("%v", stm.AvailableCents))
-	builder.WriteString(", ")
-	builder.WriteString("total_spent_cents=")
-	builder.WriteString(fmt.Sprintf("%v", stm.TotalSpentCents))
-	builder.WriteString(", ")
-	builder.WriteString("quantity=")
-	builder.WriteString(fmt.Sprintf("%v", stm.Quantity))
-	builder.WriteString(", ")
-	builder.WriteString("unit=")
-	builder.WriteString(stm.Unit)
-	builder.WriteString(", ")
-	builder.WriteString("reason=")
-	builder.WriteString(stm.Reason)
-	builder.WriteString(", ")
-	builder.WriteString("result=")
-	builder.WriteString(stm.Result)
+	builder.WriteString("status=")
+	builder.WriteString(stm.Status)
 	builder.WriteString(", ")
 	builder.WriteString("source=")
 	builder.WriteString(stm.Source)
 	builder.WriteString(", ")
-	builder.WriteString("direction=")
-	builder.WriteString(stm.Direction)
+	builder.WriteString("url=")
+	builder.WriteString(stm.URL)
 	builder.WriteString(", ")
-	builder.WriteString("created_at=")
-	builder.WriteString(stm.CreatedAt.Format(time.ANSIC))
-	builder.WriteString(", ")
-	builder.WriteString("updated_at=")
-	builder.WriteString(stm.UpdatedAt.Format(time.ANSIC))
-	builder.WriteString(", ")
-	if v := stm.ArchivedAt; v != nil {
-		builder.WriteString("archived_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
+	builder.WriteString("reason=")
+	builder.WriteString(stm.Reason)
 	builder.WriteByte(')')
 	return builder.String()
 }

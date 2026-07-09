@@ -261,12 +261,12 @@ func (wtpq *WalletTransactionProjectionQuery) Clone() *WalletTransactionProjecti
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.WalletTransactionProjection.Query().
-//		GroupBy(wallettransactionprojection.FieldAccountID).
+//		GroupBy(wallettransactionprojection.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (wtpq *WalletTransactionProjectionQuery) GroupBy(field string, fields ...string) *WalletTransactionProjectionGroupBy {
@@ -284,11 +284,11 @@ func (wtpq *WalletTransactionProjectionQuery) GroupBy(field string, fields ...st
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.WalletTransactionProjection.Query().
-//		Select(wallettransactionprojection.FieldAccountID).
+//		Select(wallettransactionprojection.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (wtpq *WalletTransactionProjectionQuery) Select(fields ...string) *WalletTransactionProjectionSelect {
 	wtpq.ctx.Fields = append(wtpq.ctx.Fields, fields...)

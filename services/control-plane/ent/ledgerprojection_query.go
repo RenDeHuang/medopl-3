@@ -261,12 +261,12 @@ func (lpq *LedgerProjectionQuery) Clone() *LedgerProjectionQuery {
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.LedgerProjection.Query().
-//		GroupBy(ledgerprojection.FieldAccountID).
+//		GroupBy(ledgerprojection.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (lpq *LedgerProjectionQuery) GroupBy(field string, fields ...string) *LedgerProjectionGroupBy {
@@ -284,11 +284,11 @@ func (lpq *LedgerProjectionQuery) GroupBy(field string, fields ...string) *Ledge
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.LedgerProjection.Query().
-//		Select(ledgerprojection.FieldAccountID).
+//		Select(ledgerprojection.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (lpq *LedgerProjectionQuery) Select(fields ...string) *LedgerProjectionSelect {
 	lpq.ctx.Fields = append(lpq.ctx.Fields, fields...)

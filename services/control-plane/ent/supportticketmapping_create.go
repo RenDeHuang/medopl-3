@@ -20,6 +20,34 @@ type SupportTicketMappingCreate struct {
 	hooks    []Hook
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (stmc *SupportTicketMappingCreate) SetCreatedAt(t time.Time) *SupportTicketMappingCreate {
+	stmc.mutation.SetCreatedAt(t)
+	return stmc
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (stmc *SupportTicketMappingCreate) SetNillableCreatedAt(t *time.Time) *SupportTicketMappingCreate {
+	if t != nil {
+		stmc.SetCreatedAt(*t)
+	}
+	return stmc
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (stmc *SupportTicketMappingCreate) SetUpdatedAt(t time.Time) *SupportTicketMappingCreate {
+	stmc.mutation.SetUpdatedAt(t)
+	return stmc
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (stmc *SupportTicketMappingCreate) SetNillableUpdatedAt(t *time.Time) *SupportTicketMappingCreate {
+	if t != nil {
+		stmc.SetUpdatedAt(*t)
+	}
+	return stmc
+}
+
 // SetAccountID sets the "account_id" field.
 func (stmc *SupportTicketMappingCreate) SetAccountID(s string) *SupportTicketMappingCreate {
 	stmc.mutation.SetAccountID(s)
@@ -30,34 +58,6 @@ func (stmc *SupportTicketMappingCreate) SetAccountID(s string) *SupportTicketMap
 func (stmc *SupportTicketMappingCreate) SetNillableAccountID(s *string) *SupportTicketMappingCreate {
 	if s != nil {
 		stmc.SetAccountID(*s)
-	}
-	return stmc
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (stmc *SupportTicketMappingCreate) SetOwnerAccountID(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetOwnerAccountID(s)
-	return stmc
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableOwnerAccountID(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetOwnerAccountID(*s)
-	}
-	return stmc
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (stmc *SupportTicketMappingCreate) SetOwnerUserID(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetOwnerUserID(s)
-	return stmc
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableOwnerUserID(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetOwnerUserID(*s)
 	}
 	return stmc
 }
@@ -76,62 +76,6 @@ func (stmc *SupportTicketMappingCreate) SetNillableUserID(s *string) *SupportTic
 	return stmc
 }
 
-// SetEmail sets the "email" field.
-func (stmc *SupportTicketMappingCreate) SetEmail(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetEmail(s)
-	return stmc
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableEmail(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetEmail(*s)
-	}
-	return stmc
-}
-
-// SetRole sets the "role" field.
-func (stmc *SupportTicketMappingCreate) SetRole(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetRole(s)
-	return stmc
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableRole(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetRole(*s)
-	}
-	return stmc
-}
-
-// SetStatus sets the "status" field.
-func (stmc *SupportTicketMappingCreate) SetStatus(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetStatus(s)
-	return stmc
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableStatus(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetStatus(*s)
-	}
-	return stmc
-}
-
-// SetName sets the "name" field.
-func (stmc *SupportTicketMappingCreate) SetName(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetName(s)
-	return stmc
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableName(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetName(*s)
-	}
-	return stmc
-}
-
 // SetWorkspaceID sets the "workspace_id" field.
 func (stmc *SupportTicketMappingCreate) SetWorkspaceID(s string) *SupportTicketMappingCreate {
 	stmc.mutation.SetWorkspaceID(s)
@@ -142,6 +86,62 @@ func (stmc *SupportTicketMappingCreate) SetWorkspaceID(s string) *SupportTicketM
 func (stmc *SupportTicketMappingCreate) SetNillableWorkspaceID(s *string) *SupportTicketMappingCreate {
 	if s != nil {
 		stmc.SetWorkspaceID(*s)
+	}
+	return stmc
+}
+
+// SetExternalSystem sets the "external_system" field.
+func (stmc *SupportTicketMappingCreate) SetExternalSystem(s string) *SupportTicketMappingCreate {
+	stmc.mutation.SetExternalSystem(s)
+	return stmc
+}
+
+// SetNillableExternalSystem sets the "external_system" field if the given value is not nil.
+func (stmc *SupportTicketMappingCreate) SetNillableExternalSystem(s *string) *SupportTicketMappingCreate {
+	if s != nil {
+		stmc.SetExternalSystem(*s)
+	}
+	return stmc
+}
+
+// SetExternalTicketID sets the "external_ticket_id" field.
+func (stmc *SupportTicketMappingCreate) SetExternalTicketID(s string) *SupportTicketMappingCreate {
+	stmc.mutation.SetExternalTicketID(s)
+	return stmc
+}
+
+// SetNillableExternalTicketID sets the "external_ticket_id" field if the given value is not nil.
+func (stmc *SupportTicketMappingCreate) SetNillableExternalTicketID(s *string) *SupportTicketMappingCreate {
+	if s != nil {
+		stmc.SetExternalTicketID(*s)
+	}
+	return stmc
+}
+
+// SetExternalURL sets the "external_url" field.
+func (stmc *SupportTicketMappingCreate) SetExternalURL(s string) *SupportTicketMappingCreate {
+	stmc.mutation.SetExternalURL(s)
+	return stmc
+}
+
+// SetNillableExternalURL sets the "external_url" field if the given value is not nil.
+func (stmc *SupportTicketMappingCreate) SetNillableExternalURL(s *string) *SupportTicketMappingCreate {
+	if s != nil {
+		stmc.SetExternalURL(*s)
+	}
+	return stmc
+}
+
+// SetOperationID sets the "operation_id" field.
+func (stmc *SupportTicketMappingCreate) SetOperationID(s string) *SupportTicketMappingCreate {
+	stmc.mutation.SetOperationID(s)
+	return stmc
+}
+
+// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
+func (stmc *SupportTicketMappingCreate) SetNillableOperationID(s *string) *SupportTicketMappingCreate {
+	if s != nil {
+		stmc.SetOperationID(*s)
 	}
 	return stmc
 }
@@ -174,268 +174,58 @@ func (stmc *SupportTicketMappingCreate) SetNillableResourceKind(s *string) *Supp
 	return stmc
 }
 
-// SetOperationID sets the "operation_id" field.
-func (stmc *SupportTicketMappingCreate) SetOperationID(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetOperationID(s)
+// SetTitle sets the "title" field.
+func (stmc *SupportTicketMappingCreate) SetTitle(s string) *SupportTicketMappingCreate {
+	stmc.mutation.SetTitle(s)
 	return stmc
 }
 
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableOperationID(s *string) *SupportTicketMappingCreate {
+// SetNillableTitle sets the "title" field if the given value is not nil.
+func (stmc *SupportTicketMappingCreate) SetNillableTitle(s *string) *SupportTicketMappingCreate {
 	if s != nil {
-		stmc.SetOperationID(*s)
+		stmc.SetTitle(*s)
 	}
 	return stmc
 }
 
-// SetProvider sets the "provider" field.
-func (stmc *SupportTicketMappingCreate) SetProvider(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetProvider(s)
+// SetCategory sets the "category" field.
+func (stmc *SupportTicketMappingCreate) SetCategory(s string) *SupportTicketMappingCreate {
+	stmc.mutation.SetCategory(s)
 	return stmc
 }
 
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableProvider(s *string) *SupportTicketMappingCreate {
+// SetNillableCategory sets the "category" field if the given value is not nil.
+func (stmc *SupportTicketMappingCreate) SetNillableCategory(s *string) *SupportTicketMappingCreate {
 	if s != nil {
-		stmc.SetProvider(*s)
+		stmc.SetCategory(*s)
 	}
 	return stmc
 }
 
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (stmc *SupportTicketMappingCreate) SetProviderResourceID(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetProviderResourceID(s)
+// SetPriority sets the "priority" field.
+func (stmc *SupportTicketMappingCreate) SetPriority(s string) *SupportTicketMappingCreate {
+	stmc.mutation.SetPriority(s)
 	return stmc
 }
 
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableProviderResourceID(s *string) *SupportTicketMappingCreate {
+// SetNillablePriority sets the "priority" field if the given value is not nil.
+func (stmc *SupportTicketMappingCreate) SetNillablePriority(s *string) *SupportTicketMappingCreate {
 	if s != nil {
-		stmc.SetProviderResourceID(*s)
+		stmc.SetPriority(*s)
 	}
 	return stmc
 }
 
-// SetURL sets the "url" field.
-func (stmc *SupportTicketMappingCreate) SetURL(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetURL(s)
+// SetStatus sets the "status" field.
+func (stmc *SupportTicketMappingCreate) SetStatus(s string) *SupportTicketMappingCreate {
+	stmc.mutation.SetStatus(s)
 	return stmc
 }
 
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableURL(s *string) *SupportTicketMappingCreate {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (stmc *SupportTicketMappingCreate) SetNillableStatus(s *string) *SupportTicketMappingCreate {
 	if s != nil {
-		stmc.SetURL(*s)
-	}
-	return stmc
-}
-
-// SetHoldID sets the "hold_id" field.
-func (stmc *SupportTicketMappingCreate) SetHoldID(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetHoldID(s)
-	return stmc
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableHoldID(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetHoldID(*s)
-	}
-	return stmc
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (stmc *SupportTicketMappingCreate) SetHoldReleaseID(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetHoldReleaseID(s)
-	return stmc
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableHoldReleaseID(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetHoldReleaseID(*s)
-	}
-	return stmc
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (stmc *SupportTicketMappingCreate) SetLedgerEntryID(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetLedgerEntryID(s)
-	return stmc
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableLedgerEntryID(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetLedgerEntryID(*s)
-	}
-	return stmc
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (stmc *SupportTicketMappingCreate) SetWalletTransactionID(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetWalletTransactionID(s)
-	return stmc
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableWalletTransactionID(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetWalletTransactionID(*s)
-	}
-	return stmc
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (stmc *SupportTicketMappingCreate) SetSettlementID(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetSettlementID(s)
-	return stmc
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableSettlementID(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetSettlementID(*s)
-	}
-	return stmc
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (stmc *SupportTicketMappingCreate) SetPricingVersion(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetPricingVersion(s)
-	return stmc
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillablePricingVersion(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetPricingVersion(*s)
-	}
-	return stmc
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (stmc *SupportTicketMappingCreate) SetAmountCents(i int64) *SupportTicketMappingCreate {
-	stmc.mutation.SetAmountCents(i)
-	return stmc
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableAmountCents(i *int64) *SupportTicketMappingCreate {
-	if i != nil {
-		stmc.SetAmountCents(*i)
-	}
-	return stmc
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (stmc *SupportTicketMappingCreate) SetBalanceCents(i int64) *SupportTicketMappingCreate {
-	stmc.mutation.SetBalanceCents(i)
-	return stmc
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableBalanceCents(i *int64) *SupportTicketMappingCreate {
-	if i != nil {
-		stmc.SetBalanceCents(*i)
-	}
-	return stmc
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (stmc *SupportTicketMappingCreate) SetFrozenCents(i int64) *SupportTicketMappingCreate {
-	stmc.mutation.SetFrozenCents(i)
-	return stmc
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableFrozenCents(i *int64) *SupportTicketMappingCreate {
-	if i != nil {
-		stmc.SetFrozenCents(*i)
-	}
-	return stmc
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (stmc *SupportTicketMappingCreate) SetAvailableCents(i int64) *SupportTicketMappingCreate {
-	stmc.mutation.SetAvailableCents(i)
-	return stmc
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableAvailableCents(i *int64) *SupportTicketMappingCreate {
-	if i != nil {
-		stmc.SetAvailableCents(*i)
-	}
-	return stmc
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (stmc *SupportTicketMappingCreate) SetTotalSpentCents(i int64) *SupportTicketMappingCreate {
-	stmc.mutation.SetTotalSpentCents(i)
-	return stmc
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableTotalSpentCents(i *int64) *SupportTicketMappingCreate {
-	if i != nil {
-		stmc.SetTotalSpentCents(*i)
-	}
-	return stmc
-}
-
-// SetQuantity sets the "quantity" field.
-func (stmc *SupportTicketMappingCreate) SetQuantity(f float64) *SupportTicketMappingCreate {
-	stmc.mutation.SetQuantity(f)
-	return stmc
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableQuantity(f *float64) *SupportTicketMappingCreate {
-	if f != nil {
-		stmc.SetQuantity(*f)
-	}
-	return stmc
-}
-
-// SetUnit sets the "unit" field.
-func (stmc *SupportTicketMappingCreate) SetUnit(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetUnit(s)
-	return stmc
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableUnit(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetUnit(*s)
-	}
-	return stmc
-}
-
-// SetReason sets the "reason" field.
-func (stmc *SupportTicketMappingCreate) SetReason(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetReason(s)
-	return stmc
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableReason(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetReason(*s)
-	}
-	return stmc
-}
-
-// SetResult sets the "result" field.
-func (stmc *SupportTicketMappingCreate) SetResult(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetResult(s)
-	return stmc
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableResult(s *string) *SupportTicketMappingCreate {
-	if s != nil {
-		stmc.SetResult(*s)
+		stmc.SetStatus(*s)
 	}
 	return stmc
 }
@@ -454,58 +244,30 @@ func (stmc *SupportTicketMappingCreate) SetNillableSource(s *string) *SupportTic
 	return stmc
 }
 
-// SetDirection sets the "direction" field.
-func (stmc *SupportTicketMappingCreate) SetDirection(s string) *SupportTicketMappingCreate {
-	stmc.mutation.SetDirection(s)
+// SetURL sets the "url" field.
+func (stmc *SupportTicketMappingCreate) SetURL(s string) *SupportTicketMappingCreate {
+	stmc.mutation.SetURL(s)
 	return stmc
 }
 
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableDirection(s *string) *SupportTicketMappingCreate {
+// SetNillableURL sets the "url" field if the given value is not nil.
+func (stmc *SupportTicketMappingCreate) SetNillableURL(s *string) *SupportTicketMappingCreate {
 	if s != nil {
-		stmc.SetDirection(*s)
+		stmc.SetURL(*s)
 	}
 	return stmc
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (stmc *SupportTicketMappingCreate) SetCreatedAt(t time.Time) *SupportTicketMappingCreate {
-	stmc.mutation.SetCreatedAt(t)
+// SetReason sets the "reason" field.
+func (stmc *SupportTicketMappingCreate) SetReason(s string) *SupportTicketMappingCreate {
+	stmc.mutation.SetReason(s)
 	return stmc
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableCreatedAt(t *time.Time) *SupportTicketMappingCreate {
-	if t != nil {
-		stmc.SetCreatedAt(*t)
-	}
-	return stmc
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (stmc *SupportTicketMappingCreate) SetUpdatedAt(t time.Time) *SupportTicketMappingCreate {
-	stmc.mutation.SetUpdatedAt(t)
-	return stmc
-}
-
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableUpdatedAt(t *time.Time) *SupportTicketMappingCreate {
-	if t != nil {
-		stmc.SetUpdatedAt(*t)
-	}
-	return stmc
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (stmc *SupportTicketMappingCreate) SetArchivedAt(t time.Time) *SupportTicketMappingCreate {
-	stmc.mutation.SetArchivedAt(t)
-	return stmc
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (stmc *SupportTicketMappingCreate) SetNillableArchivedAt(t *time.Time) *SupportTicketMappingCreate {
-	if t != nil {
-		stmc.SetArchivedAt(*t)
+// SetNillableReason sets the "reason" field if the given value is not nil.
+func (stmc *SupportTicketMappingCreate) SetNillableReason(s *string) *SupportTicketMappingCreate {
+	if s != nil {
+		stmc.SetReason(*s)
 	}
 	return stmc
 }
@@ -551,41 +313,41 @@ func (stmc *SupportTicketMappingCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (stmc *SupportTicketMappingCreate) defaults() {
+	if _, ok := stmc.mutation.CreatedAt(); !ok {
+		v := supportticketmapping.DefaultCreatedAt()
+		stmc.mutation.SetCreatedAt(v)
+	}
+	if _, ok := stmc.mutation.UpdatedAt(); !ok {
+		v := supportticketmapping.DefaultUpdatedAt()
+		stmc.mutation.SetUpdatedAt(v)
+	}
 	if _, ok := stmc.mutation.AccountID(); !ok {
 		v := supportticketmapping.DefaultAccountID
 		stmc.mutation.SetAccountID(v)
-	}
-	if _, ok := stmc.mutation.OwnerAccountID(); !ok {
-		v := supportticketmapping.DefaultOwnerAccountID
-		stmc.mutation.SetOwnerAccountID(v)
-	}
-	if _, ok := stmc.mutation.OwnerUserID(); !ok {
-		v := supportticketmapping.DefaultOwnerUserID
-		stmc.mutation.SetOwnerUserID(v)
 	}
 	if _, ok := stmc.mutation.UserID(); !ok {
 		v := supportticketmapping.DefaultUserID
 		stmc.mutation.SetUserID(v)
 	}
-	if _, ok := stmc.mutation.Email(); !ok {
-		v := supportticketmapping.DefaultEmail
-		stmc.mutation.SetEmail(v)
-	}
-	if _, ok := stmc.mutation.Role(); !ok {
-		v := supportticketmapping.DefaultRole
-		stmc.mutation.SetRole(v)
-	}
-	if _, ok := stmc.mutation.Status(); !ok {
-		v := supportticketmapping.DefaultStatus
-		stmc.mutation.SetStatus(v)
-	}
-	if _, ok := stmc.mutation.Name(); !ok {
-		v := supportticketmapping.DefaultName
-		stmc.mutation.SetName(v)
-	}
 	if _, ok := stmc.mutation.WorkspaceID(); !ok {
 		v := supportticketmapping.DefaultWorkspaceID
 		stmc.mutation.SetWorkspaceID(v)
+	}
+	if _, ok := stmc.mutation.ExternalSystem(); !ok {
+		v := supportticketmapping.DefaultExternalSystem
+		stmc.mutation.SetExternalSystem(v)
+	}
+	if _, ok := stmc.mutation.ExternalTicketID(); !ok {
+		v := supportticketmapping.DefaultExternalTicketID
+		stmc.mutation.SetExternalTicketID(v)
+	}
+	if _, ok := stmc.mutation.ExternalURL(); !ok {
+		v := supportticketmapping.DefaultExternalURL
+		stmc.mutation.SetExternalURL(v)
+	}
+	if _, ok := stmc.mutation.OperationID(); !ok {
+		v := supportticketmapping.DefaultOperationID
+		stmc.mutation.SetOperationID(v)
 	}
 	if _, ok := stmc.mutation.ResourceID(); !ok {
 		v := supportticketmapping.DefaultResourceID
@@ -595,128 +357,64 @@ func (stmc *SupportTicketMappingCreate) defaults() {
 		v := supportticketmapping.DefaultResourceKind
 		stmc.mutation.SetResourceKind(v)
 	}
-	if _, ok := stmc.mutation.OperationID(); !ok {
-		v := supportticketmapping.DefaultOperationID
-		stmc.mutation.SetOperationID(v)
+	if _, ok := stmc.mutation.Title(); !ok {
+		v := supportticketmapping.DefaultTitle
+		stmc.mutation.SetTitle(v)
 	}
-	if _, ok := stmc.mutation.Provider(); !ok {
-		v := supportticketmapping.DefaultProvider
-		stmc.mutation.SetProvider(v)
+	if _, ok := stmc.mutation.Category(); !ok {
+		v := supportticketmapping.DefaultCategory
+		stmc.mutation.SetCategory(v)
 	}
-	if _, ok := stmc.mutation.ProviderResourceID(); !ok {
-		v := supportticketmapping.DefaultProviderResourceID
-		stmc.mutation.SetProviderResourceID(v)
+	if _, ok := stmc.mutation.Priority(); !ok {
+		v := supportticketmapping.DefaultPriority
+		stmc.mutation.SetPriority(v)
 	}
-	if _, ok := stmc.mutation.URL(); !ok {
-		v := supportticketmapping.DefaultURL
-		stmc.mutation.SetURL(v)
-	}
-	if _, ok := stmc.mutation.HoldID(); !ok {
-		v := supportticketmapping.DefaultHoldID
-		stmc.mutation.SetHoldID(v)
-	}
-	if _, ok := stmc.mutation.HoldReleaseID(); !ok {
-		v := supportticketmapping.DefaultHoldReleaseID
-		stmc.mutation.SetHoldReleaseID(v)
-	}
-	if _, ok := stmc.mutation.LedgerEntryID(); !ok {
-		v := supportticketmapping.DefaultLedgerEntryID
-		stmc.mutation.SetLedgerEntryID(v)
-	}
-	if _, ok := stmc.mutation.WalletTransactionID(); !ok {
-		v := supportticketmapping.DefaultWalletTransactionID
-		stmc.mutation.SetWalletTransactionID(v)
-	}
-	if _, ok := stmc.mutation.SettlementID(); !ok {
-		v := supportticketmapping.DefaultSettlementID
-		stmc.mutation.SetSettlementID(v)
-	}
-	if _, ok := stmc.mutation.PricingVersion(); !ok {
-		v := supportticketmapping.DefaultPricingVersion
-		stmc.mutation.SetPricingVersion(v)
-	}
-	if _, ok := stmc.mutation.AmountCents(); !ok {
-		v := supportticketmapping.DefaultAmountCents
-		stmc.mutation.SetAmountCents(v)
-	}
-	if _, ok := stmc.mutation.BalanceCents(); !ok {
-		v := supportticketmapping.DefaultBalanceCents
-		stmc.mutation.SetBalanceCents(v)
-	}
-	if _, ok := stmc.mutation.FrozenCents(); !ok {
-		v := supportticketmapping.DefaultFrozenCents
-		stmc.mutation.SetFrozenCents(v)
-	}
-	if _, ok := stmc.mutation.AvailableCents(); !ok {
-		v := supportticketmapping.DefaultAvailableCents
-		stmc.mutation.SetAvailableCents(v)
-	}
-	if _, ok := stmc.mutation.TotalSpentCents(); !ok {
-		v := supportticketmapping.DefaultTotalSpentCents
-		stmc.mutation.SetTotalSpentCents(v)
-	}
-	if _, ok := stmc.mutation.Quantity(); !ok {
-		v := supportticketmapping.DefaultQuantity
-		stmc.mutation.SetQuantity(v)
-	}
-	if _, ok := stmc.mutation.Unit(); !ok {
-		v := supportticketmapping.DefaultUnit
-		stmc.mutation.SetUnit(v)
-	}
-	if _, ok := stmc.mutation.Reason(); !ok {
-		v := supportticketmapping.DefaultReason
-		stmc.mutation.SetReason(v)
-	}
-	if _, ok := stmc.mutation.Result(); !ok {
-		v := supportticketmapping.DefaultResult
-		stmc.mutation.SetResult(v)
+	if _, ok := stmc.mutation.Status(); !ok {
+		v := supportticketmapping.DefaultStatus
+		stmc.mutation.SetStatus(v)
 	}
 	if _, ok := stmc.mutation.Source(); !ok {
 		v := supportticketmapping.DefaultSource
 		stmc.mutation.SetSource(v)
 	}
-	if _, ok := stmc.mutation.Direction(); !ok {
-		v := supportticketmapping.DefaultDirection
-		stmc.mutation.SetDirection(v)
+	if _, ok := stmc.mutation.URL(); !ok {
+		v := supportticketmapping.DefaultURL
+		stmc.mutation.SetURL(v)
 	}
-	if _, ok := stmc.mutation.CreatedAt(); !ok {
-		v := supportticketmapping.DefaultCreatedAt()
-		stmc.mutation.SetCreatedAt(v)
-	}
-	if _, ok := stmc.mutation.UpdatedAt(); !ok {
-		v := supportticketmapping.DefaultUpdatedAt()
-		stmc.mutation.SetUpdatedAt(v)
+	if _, ok := stmc.mutation.Reason(); !ok {
+		v := supportticketmapping.DefaultReason
+		stmc.mutation.SetReason(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (stmc *SupportTicketMappingCreate) check() error {
+	if _, ok := stmc.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "SupportTicketMapping.created_at"`)}
+	}
+	if _, ok := stmc.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "SupportTicketMapping.updated_at"`)}
+	}
 	if _, ok := stmc.mutation.AccountID(); !ok {
 		return &ValidationError{Name: "account_id", err: errors.New(`ent: missing required field "SupportTicketMapping.account_id"`)}
-	}
-	if _, ok := stmc.mutation.OwnerAccountID(); !ok {
-		return &ValidationError{Name: "owner_account_id", err: errors.New(`ent: missing required field "SupportTicketMapping.owner_account_id"`)}
-	}
-	if _, ok := stmc.mutation.OwnerUserID(); !ok {
-		return &ValidationError{Name: "owner_user_id", err: errors.New(`ent: missing required field "SupportTicketMapping.owner_user_id"`)}
 	}
 	if _, ok := stmc.mutation.UserID(); !ok {
 		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "SupportTicketMapping.user_id"`)}
 	}
-	if _, ok := stmc.mutation.Email(); !ok {
-		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "SupportTicketMapping.email"`)}
-	}
-	if _, ok := stmc.mutation.Role(); !ok {
-		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "SupportTicketMapping.role"`)}
-	}
-	if _, ok := stmc.mutation.Status(); !ok {
-		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "SupportTicketMapping.status"`)}
-	}
-	if _, ok := stmc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "SupportTicketMapping.name"`)}
-	}
 	if _, ok := stmc.mutation.WorkspaceID(); !ok {
 		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "SupportTicketMapping.workspace_id"`)}
+	}
+	if _, ok := stmc.mutation.ExternalSystem(); !ok {
+		return &ValidationError{Name: "external_system", err: errors.New(`ent: missing required field "SupportTicketMapping.external_system"`)}
+	}
+	if _, ok := stmc.mutation.ExternalTicketID(); !ok {
+		return &ValidationError{Name: "external_ticket_id", err: errors.New(`ent: missing required field "SupportTicketMapping.external_ticket_id"`)}
+	}
+	if _, ok := stmc.mutation.ExternalURL(); !ok {
+		return &ValidationError{Name: "external_url", err: errors.New(`ent: missing required field "SupportTicketMapping.external_url"`)}
+	}
+	if _, ok := stmc.mutation.OperationID(); !ok {
+		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "SupportTicketMapping.operation_id"`)}
 	}
 	if _, ok := stmc.mutation.ResourceID(); !ok {
 		return &ValidationError{Name: "resource_id", err: errors.New(`ent: missing required field "SupportTicketMapping.resource_id"`)}
@@ -724,74 +422,26 @@ func (stmc *SupportTicketMappingCreate) check() error {
 	if _, ok := stmc.mutation.ResourceKind(); !ok {
 		return &ValidationError{Name: "resource_kind", err: errors.New(`ent: missing required field "SupportTicketMapping.resource_kind"`)}
 	}
-	if _, ok := stmc.mutation.OperationID(); !ok {
-		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "SupportTicketMapping.operation_id"`)}
+	if _, ok := stmc.mutation.Title(); !ok {
+		return &ValidationError{Name: "title", err: errors.New(`ent: missing required field "SupportTicketMapping.title"`)}
 	}
-	if _, ok := stmc.mutation.Provider(); !ok {
-		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "SupportTicketMapping.provider"`)}
+	if _, ok := stmc.mutation.Category(); !ok {
+		return &ValidationError{Name: "category", err: errors.New(`ent: missing required field "SupportTicketMapping.category"`)}
 	}
-	if _, ok := stmc.mutation.ProviderResourceID(); !ok {
-		return &ValidationError{Name: "provider_resource_id", err: errors.New(`ent: missing required field "SupportTicketMapping.provider_resource_id"`)}
+	if _, ok := stmc.mutation.Priority(); !ok {
+		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "SupportTicketMapping.priority"`)}
 	}
-	if _, ok := stmc.mutation.URL(); !ok {
-		return &ValidationError{Name: "url", err: errors.New(`ent: missing required field "SupportTicketMapping.url"`)}
-	}
-	if _, ok := stmc.mutation.HoldID(); !ok {
-		return &ValidationError{Name: "hold_id", err: errors.New(`ent: missing required field "SupportTicketMapping.hold_id"`)}
-	}
-	if _, ok := stmc.mutation.HoldReleaseID(); !ok {
-		return &ValidationError{Name: "hold_release_id", err: errors.New(`ent: missing required field "SupportTicketMapping.hold_release_id"`)}
-	}
-	if _, ok := stmc.mutation.LedgerEntryID(); !ok {
-		return &ValidationError{Name: "ledger_entry_id", err: errors.New(`ent: missing required field "SupportTicketMapping.ledger_entry_id"`)}
-	}
-	if _, ok := stmc.mutation.WalletTransactionID(); !ok {
-		return &ValidationError{Name: "wallet_transaction_id", err: errors.New(`ent: missing required field "SupportTicketMapping.wallet_transaction_id"`)}
-	}
-	if _, ok := stmc.mutation.SettlementID(); !ok {
-		return &ValidationError{Name: "settlement_id", err: errors.New(`ent: missing required field "SupportTicketMapping.settlement_id"`)}
-	}
-	if _, ok := stmc.mutation.PricingVersion(); !ok {
-		return &ValidationError{Name: "pricing_version", err: errors.New(`ent: missing required field "SupportTicketMapping.pricing_version"`)}
-	}
-	if _, ok := stmc.mutation.AmountCents(); !ok {
-		return &ValidationError{Name: "amount_cents", err: errors.New(`ent: missing required field "SupportTicketMapping.amount_cents"`)}
-	}
-	if _, ok := stmc.mutation.BalanceCents(); !ok {
-		return &ValidationError{Name: "balance_cents", err: errors.New(`ent: missing required field "SupportTicketMapping.balance_cents"`)}
-	}
-	if _, ok := stmc.mutation.FrozenCents(); !ok {
-		return &ValidationError{Name: "frozen_cents", err: errors.New(`ent: missing required field "SupportTicketMapping.frozen_cents"`)}
-	}
-	if _, ok := stmc.mutation.AvailableCents(); !ok {
-		return &ValidationError{Name: "available_cents", err: errors.New(`ent: missing required field "SupportTicketMapping.available_cents"`)}
-	}
-	if _, ok := stmc.mutation.TotalSpentCents(); !ok {
-		return &ValidationError{Name: "total_spent_cents", err: errors.New(`ent: missing required field "SupportTicketMapping.total_spent_cents"`)}
-	}
-	if _, ok := stmc.mutation.Quantity(); !ok {
-		return &ValidationError{Name: "quantity", err: errors.New(`ent: missing required field "SupportTicketMapping.quantity"`)}
-	}
-	if _, ok := stmc.mutation.Unit(); !ok {
-		return &ValidationError{Name: "unit", err: errors.New(`ent: missing required field "SupportTicketMapping.unit"`)}
-	}
-	if _, ok := stmc.mutation.Reason(); !ok {
-		return &ValidationError{Name: "reason", err: errors.New(`ent: missing required field "SupportTicketMapping.reason"`)}
-	}
-	if _, ok := stmc.mutation.Result(); !ok {
-		return &ValidationError{Name: "result", err: errors.New(`ent: missing required field "SupportTicketMapping.result"`)}
+	if _, ok := stmc.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "SupportTicketMapping.status"`)}
 	}
 	if _, ok := stmc.mutation.Source(); !ok {
 		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "SupportTicketMapping.source"`)}
 	}
-	if _, ok := stmc.mutation.Direction(); !ok {
-		return &ValidationError{Name: "direction", err: errors.New(`ent: missing required field "SupportTicketMapping.direction"`)}
+	if _, ok := stmc.mutation.URL(); !ok {
+		return &ValidationError{Name: "url", err: errors.New(`ent: missing required field "SupportTicketMapping.url"`)}
 	}
-	if _, ok := stmc.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "SupportTicketMapping.created_at"`)}
-	}
-	if _, ok := stmc.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "SupportTicketMapping.updated_at"`)}
+	if _, ok := stmc.mutation.Reason(); !ok {
+		return &ValidationError{Name: "reason", err: errors.New(`ent: missing required field "SupportTicketMapping.reason"`)}
 	}
 	if v, ok := stmc.mutation.ID(); ok {
 		if err := supportticketmapping.IDValidator(v); err != nil {
@@ -833,41 +483,41 @@ func (stmc *SupportTicketMappingCreate) createSpec() (*SupportTicketMapping, *sq
 		_node.ID = id
 		_spec.ID.Value = id
 	}
+	if value, ok := stmc.mutation.CreatedAt(); ok {
+		_spec.SetField(supportticketmapping.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := stmc.mutation.UpdatedAt(); ok {
+		_spec.SetField(supportticketmapping.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
 	if value, ok := stmc.mutation.AccountID(); ok {
 		_spec.SetField(supportticketmapping.FieldAccountID, field.TypeString, value)
 		_node.AccountID = value
-	}
-	if value, ok := stmc.mutation.OwnerAccountID(); ok {
-		_spec.SetField(supportticketmapping.FieldOwnerAccountID, field.TypeString, value)
-		_node.OwnerAccountID = value
-	}
-	if value, ok := stmc.mutation.OwnerUserID(); ok {
-		_spec.SetField(supportticketmapping.FieldOwnerUserID, field.TypeString, value)
-		_node.OwnerUserID = value
 	}
 	if value, ok := stmc.mutation.UserID(); ok {
 		_spec.SetField(supportticketmapping.FieldUserID, field.TypeString, value)
 		_node.UserID = value
 	}
-	if value, ok := stmc.mutation.Email(); ok {
-		_spec.SetField(supportticketmapping.FieldEmail, field.TypeString, value)
-		_node.Email = value
-	}
-	if value, ok := stmc.mutation.Role(); ok {
-		_spec.SetField(supportticketmapping.FieldRole, field.TypeString, value)
-		_node.Role = value
-	}
-	if value, ok := stmc.mutation.Status(); ok {
-		_spec.SetField(supportticketmapping.FieldStatus, field.TypeString, value)
-		_node.Status = value
-	}
-	if value, ok := stmc.mutation.Name(); ok {
-		_spec.SetField(supportticketmapping.FieldName, field.TypeString, value)
-		_node.Name = value
-	}
 	if value, ok := stmc.mutation.WorkspaceID(); ok {
 		_spec.SetField(supportticketmapping.FieldWorkspaceID, field.TypeString, value)
 		_node.WorkspaceID = value
+	}
+	if value, ok := stmc.mutation.ExternalSystem(); ok {
+		_spec.SetField(supportticketmapping.FieldExternalSystem, field.TypeString, value)
+		_node.ExternalSystem = value
+	}
+	if value, ok := stmc.mutation.ExternalTicketID(); ok {
+		_spec.SetField(supportticketmapping.FieldExternalTicketID, field.TypeString, value)
+		_node.ExternalTicketID = value
+	}
+	if value, ok := stmc.mutation.ExternalURL(); ok {
+		_spec.SetField(supportticketmapping.FieldExternalURL, field.TypeString, value)
+		_node.ExternalURL = value
+	}
+	if value, ok := stmc.mutation.OperationID(); ok {
+		_spec.SetField(supportticketmapping.FieldOperationID, field.TypeString, value)
+		_node.OperationID = value
 	}
 	if value, ok := stmc.mutation.ResourceID(); ok {
 		_spec.SetField(supportticketmapping.FieldResourceID, field.TypeString, value)
@@ -877,101 +527,33 @@ func (stmc *SupportTicketMappingCreate) createSpec() (*SupportTicketMapping, *sq
 		_spec.SetField(supportticketmapping.FieldResourceKind, field.TypeString, value)
 		_node.ResourceKind = value
 	}
-	if value, ok := stmc.mutation.OperationID(); ok {
-		_spec.SetField(supportticketmapping.FieldOperationID, field.TypeString, value)
-		_node.OperationID = value
+	if value, ok := stmc.mutation.Title(); ok {
+		_spec.SetField(supportticketmapping.FieldTitle, field.TypeString, value)
+		_node.Title = value
 	}
-	if value, ok := stmc.mutation.Provider(); ok {
-		_spec.SetField(supportticketmapping.FieldProvider, field.TypeString, value)
-		_node.Provider = value
+	if value, ok := stmc.mutation.Category(); ok {
+		_spec.SetField(supportticketmapping.FieldCategory, field.TypeString, value)
+		_node.Category = value
 	}
-	if value, ok := stmc.mutation.ProviderResourceID(); ok {
-		_spec.SetField(supportticketmapping.FieldProviderResourceID, field.TypeString, value)
-		_node.ProviderResourceID = value
+	if value, ok := stmc.mutation.Priority(); ok {
+		_spec.SetField(supportticketmapping.FieldPriority, field.TypeString, value)
+		_node.Priority = value
 	}
-	if value, ok := stmc.mutation.URL(); ok {
-		_spec.SetField(supportticketmapping.FieldURL, field.TypeString, value)
-		_node.URL = value
-	}
-	if value, ok := stmc.mutation.HoldID(); ok {
-		_spec.SetField(supportticketmapping.FieldHoldID, field.TypeString, value)
-		_node.HoldID = value
-	}
-	if value, ok := stmc.mutation.HoldReleaseID(); ok {
-		_spec.SetField(supportticketmapping.FieldHoldReleaseID, field.TypeString, value)
-		_node.HoldReleaseID = value
-	}
-	if value, ok := stmc.mutation.LedgerEntryID(); ok {
-		_spec.SetField(supportticketmapping.FieldLedgerEntryID, field.TypeString, value)
-		_node.LedgerEntryID = value
-	}
-	if value, ok := stmc.mutation.WalletTransactionID(); ok {
-		_spec.SetField(supportticketmapping.FieldWalletTransactionID, field.TypeString, value)
-		_node.WalletTransactionID = value
-	}
-	if value, ok := stmc.mutation.SettlementID(); ok {
-		_spec.SetField(supportticketmapping.FieldSettlementID, field.TypeString, value)
-		_node.SettlementID = value
-	}
-	if value, ok := stmc.mutation.PricingVersion(); ok {
-		_spec.SetField(supportticketmapping.FieldPricingVersion, field.TypeString, value)
-		_node.PricingVersion = value
-	}
-	if value, ok := stmc.mutation.AmountCents(); ok {
-		_spec.SetField(supportticketmapping.FieldAmountCents, field.TypeInt64, value)
-		_node.AmountCents = value
-	}
-	if value, ok := stmc.mutation.BalanceCents(); ok {
-		_spec.SetField(supportticketmapping.FieldBalanceCents, field.TypeInt64, value)
-		_node.BalanceCents = value
-	}
-	if value, ok := stmc.mutation.FrozenCents(); ok {
-		_spec.SetField(supportticketmapping.FieldFrozenCents, field.TypeInt64, value)
-		_node.FrozenCents = value
-	}
-	if value, ok := stmc.mutation.AvailableCents(); ok {
-		_spec.SetField(supportticketmapping.FieldAvailableCents, field.TypeInt64, value)
-		_node.AvailableCents = value
-	}
-	if value, ok := stmc.mutation.TotalSpentCents(); ok {
-		_spec.SetField(supportticketmapping.FieldTotalSpentCents, field.TypeInt64, value)
-		_node.TotalSpentCents = value
-	}
-	if value, ok := stmc.mutation.Quantity(); ok {
-		_spec.SetField(supportticketmapping.FieldQuantity, field.TypeFloat64, value)
-		_node.Quantity = value
-	}
-	if value, ok := stmc.mutation.Unit(); ok {
-		_spec.SetField(supportticketmapping.FieldUnit, field.TypeString, value)
-		_node.Unit = value
-	}
-	if value, ok := stmc.mutation.Reason(); ok {
-		_spec.SetField(supportticketmapping.FieldReason, field.TypeString, value)
-		_node.Reason = value
-	}
-	if value, ok := stmc.mutation.Result(); ok {
-		_spec.SetField(supportticketmapping.FieldResult, field.TypeString, value)
-		_node.Result = value
+	if value, ok := stmc.mutation.Status(); ok {
+		_spec.SetField(supportticketmapping.FieldStatus, field.TypeString, value)
+		_node.Status = value
 	}
 	if value, ok := stmc.mutation.Source(); ok {
 		_spec.SetField(supportticketmapping.FieldSource, field.TypeString, value)
 		_node.Source = value
 	}
-	if value, ok := stmc.mutation.Direction(); ok {
-		_spec.SetField(supportticketmapping.FieldDirection, field.TypeString, value)
-		_node.Direction = value
+	if value, ok := stmc.mutation.URL(); ok {
+		_spec.SetField(supportticketmapping.FieldURL, field.TypeString, value)
+		_node.URL = value
 	}
-	if value, ok := stmc.mutation.CreatedAt(); ok {
-		_spec.SetField(supportticketmapping.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
-	}
-	if value, ok := stmc.mutation.UpdatedAt(); ok {
-		_spec.SetField(supportticketmapping.FieldUpdatedAt, field.TypeTime, value)
-		_node.UpdatedAt = value
-	}
-	if value, ok := stmc.mutation.ArchivedAt(); ok {
-		_spec.SetField(supportticketmapping.FieldArchivedAt, field.TypeTime, value)
-		_node.ArchivedAt = &value
+	if value, ok := stmc.mutation.Reason(); ok {
+		_spec.SetField(supportticketmapping.FieldReason, field.TypeString, value)
+		_node.Reason = value
 	}
 	return _node, _spec
 }

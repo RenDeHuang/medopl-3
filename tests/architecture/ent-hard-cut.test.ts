@@ -54,6 +54,7 @@ test("Go services use Ent schema and migrations for production persistence", asy
 test("Control Plane Ent model includes current facts and archive facts", async () => {
   const requiredSchemas = [
     "account.go",
+    "organization.go",
     "user.go",
     "membership.go",
     "session.go",
@@ -128,5 +129,51 @@ test("production data path does not keep hand-written SQL fact stores after Ent 
     for (const marker of forbidden) {
       assert.equal(text.includes(marker), false, `${file} must not keep retired production persistence marker ${marker}`);
     }
+  }
+});
+
+test("Control Plane schema and migrations do not inherit a generic wide fact table", async () => {
+  for (const file of await files("services/control-plane/ent/schema", /\.go$/)) {
+    const text = await source(file);
+    assert.equal(text.includes("commonFactFields()"), false, `${file} must use business-specific Ent fields`);
+  }
+
+  const sharedSchema = await source("services/control-plane/ent/schema/shared.go");
+  assert.match(sharedSchema, /return table\("control_plane_accounts"\)/, "Control Plane Ent schemas must target control_plane_* tables");
+
+  for (const migration of [
+    ...await files("services/control-plane/migrations", /\.sql$/),
+    ...await files("services/control-plane/internal/server/ent_migrations", /\.sql$/)
+  ]) {
+    const text = await source(migration);
+    assert.equal(text.includes("LIKE control_plane_accounts"), false, `${migration} must define tables explicitly`);
+    assert.match(text, /control_plane_organizations/, `${migration} must include the organization facts read by Control Plane`);
+    const accountsTable = text.split("\n").find((line) => line.includes("CREATE TABLE IF NOT EXISTS control_plane_accounts"));
+    const usersTable = text.split("\n").find((line) => line.includes("CREATE TABLE IF NOT EXISTS control_plane_users"));
+    assert.ok(accountsTable, `${migration} must define control_plane_accounts`);
+    assert.ok(usersTable, `${migration} must define control_plane_users`);
+    assert.equal(accountsTable.includes("password_hash"), false, `${migration} accounts must not inherit user columns`);
+    assert.equal(accountsTable.includes("provider_resource_id"), false, `${migration} accounts must not inherit resource columns`);
+    assert.equal(usersTable.includes("provider_resource_id"), false, `${migration} users must not inherit resource columns`);
+  }
+});
+
+test("Control Plane production store does not expose generic state row tables", async () => {
+  const storeSource = await source("services/control-plane/internal/server/ent_state_store.go");
+  for (const marker of [
+    "type stateRow",
+    "type stateTable",
+    "postgresStateColumns",
+    "postgresFactTables",
+    "postgresFactEventTables",
+    "\"database/sql\"",
+    "replaceStateTable",
+    "replaceStateEvents",
+    "replaceSingleton",
+    "controlPlaneRecordColumns",
+    "insertFactSQL",
+    "selectFactSQL"
+  ]) {
+    assert.equal(storeSource.includes(marker), false, `Control Plane store must not keep ${marker}`);
   }
 });

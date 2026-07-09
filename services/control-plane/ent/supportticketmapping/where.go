@@ -64,19 +64,19 @@ func IDContainsFold(id string) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldID, id))
 }
 
+// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
+func CreatedAt(v time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
+func UpdatedAt(v time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldUpdatedAt, v))
+}
+
 // AccountID applies equality check predicate on the "account_id" field. It's identical to AccountIDEQ.
 func AccountID(v string) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldEQ(FieldAccountID, v))
-}
-
-// OwnerAccountID applies equality check predicate on the "owner_account_id" field. It's identical to OwnerAccountIDEQ.
-func OwnerAccountID(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldOwnerAccountID, v))
-}
-
-// OwnerUserID applies equality check predicate on the "owner_user_id" field. It's identical to OwnerUserIDEQ.
-func OwnerUserID(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldOwnerUserID, v))
 }
 
 // UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
@@ -84,29 +84,29 @@ func UserID(v string) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldEQ(FieldUserID, v))
 }
 
-// Email applies equality check predicate on the "email" field. It's identical to EmailEQ.
-func Email(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldEmail, v))
-}
-
-// Role applies equality check predicate on the "role" field. It's identical to RoleEQ.
-func Role(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldRole, v))
-}
-
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldStatus, v))
-}
-
-// Name applies equality check predicate on the "name" field. It's identical to NameEQ.
-func Name(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldName, v))
-}
-
 // WorkspaceID applies equality check predicate on the "workspace_id" field. It's identical to WorkspaceIDEQ.
 func WorkspaceID(v string) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldEQ(FieldWorkspaceID, v))
+}
+
+// ExternalSystem applies equality check predicate on the "external_system" field. It's identical to ExternalSystemEQ.
+func ExternalSystem(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldExternalSystem, v))
+}
+
+// ExternalTicketID applies equality check predicate on the "external_ticket_id" field. It's identical to ExternalTicketIDEQ.
+func ExternalTicketID(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldExternalTicketID, v))
+}
+
+// ExternalURL applies equality check predicate on the "external_url" field. It's identical to ExternalURLEQ.
+func ExternalURL(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldExternalURL, v))
+}
+
+// OperationID applies equality check predicate on the "operation_id" field. It's identical to OperationIDEQ.
+func OperationID(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldOperationID, v))
 }
 
 // ResourceID applies equality check predicate on the "resource_id" field. It's identical to ResourceIDEQ.
@@ -119,99 +119,24 @@ func ResourceKind(v string) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldEQ(FieldResourceKind, v))
 }
 
-// OperationID applies equality check predicate on the "operation_id" field. It's identical to OperationIDEQ.
-func OperationID(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldOperationID, v))
+// Title applies equality check predicate on the "title" field. It's identical to TitleEQ.
+func Title(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldTitle, v))
 }
 
-// Provider applies equality check predicate on the "provider" field. It's identical to ProviderEQ.
-func Provider(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldProvider, v))
+// Category applies equality check predicate on the "category" field. It's identical to CategoryEQ.
+func Category(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldCategory, v))
 }
 
-// ProviderResourceID applies equality check predicate on the "provider_resource_id" field. It's identical to ProviderResourceIDEQ.
-func ProviderResourceID(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldProviderResourceID, v))
+// Priority applies equality check predicate on the "priority" field. It's identical to PriorityEQ.
+func Priority(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldPriority, v))
 }
 
-// URL applies equality check predicate on the "url" field. It's identical to URLEQ.
-func URL(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldURL, v))
-}
-
-// HoldID applies equality check predicate on the "hold_id" field. It's identical to HoldIDEQ.
-func HoldID(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldHoldID, v))
-}
-
-// HoldReleaseID applies equality check predicate on the "hold_release_id" field. It's identical to HoldReleaseIDEQ.
-func HoldReleaseID(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldHoldReleaseID, v))
-}
-
-// LedgerEntryID applies equality check predicate on the "ledger_entry_id" field. It's identical to LedgerEntryIDEQ.
-func LedgerEntryID(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldLedgerEntryID, v))
-}
-
-// WalletTransactionID applies equality check predicate on the "wallet_transaction_id" field. It's identical to WalletTransactionIDEQ.
-func WalletTransactionID(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldWalletTransactionID, v))
-}
-
-// SettlementID applies equality check predicate on the "settlement_id" field. It's identical to SettlementIDEQ.
-func SettlementID(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldSettlementID, v))
-}
-
-// PricingVersion applies equality check predicate on the "pricing_version" field. It's identical to PricingVersionEQ.
-func PricingVersion(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldPricingVersion, v))
-}
-
-// AmountCents applies equality check predicate on the "amount_cents" field. It's identical to AmountCentsEQ.
-func AmountCents(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldAmountCents, v))
-}
-
-// BalanceCents applies equality check predicate on the "balance_cents" field. It's identical to BalanceCentsEQ.
-func BalanceCents(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldBalanceCents, v))
-}
-
-// FrozenCents applies equality check predicate on the "frozen_cents" field. It's identical to FrozenCentsEQ.
-func FrozenCents(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldFrozenCents, v))
-}
-
-// AvailableCents applies equality check predicate on the "available_cents" field. It's identical to AvailableCentsEQ.
-func AvailableCents(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldAvailableCents, v))
-}
-
-// TotalSpentCents applies equality check predicate on the "total_spent_cents" field. It's identical to TotalSpentCentsEQ.
-func TotalSpentCents(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldTotalSpentCents, v))
-}
-
-// Quantity applies equality check predicate on the "quantity" field. It's identical to QuantityEQ.
-func Quantity(v float64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldQuantity, v))
-}
-
-// Unit applies equality check predicate on the "unit" field. It's identical to UnitEQ.
-func Unit(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldUnit, v))
-}
-
-// Reason applies equality check predicate on the "reason" field. It's identical to ReasonEQ.
-func Reason(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldReason, v))
-}
-
-// Result applies equality check predicate on the "result" field. It's identical to ResultEQ.
-func Result(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldResult, v))
+// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
+func Status(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldStatus, v))
 }
 
 // Source applies equality check predicate on the "source" field. It's identical to SourceEQ.
@@ -219,24 +144,94 @@ func Source(v string) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldEQ(FieldSource, v))
 }
 
-// Direction applies equality check predicate on the "direction" field. It's identical to DirectionEQ.
-func Direction(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldDirection, v))
+// URL applies equality check predicate on the "url" field. It's identical to URLEQ.
+func URL(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldURL, v))
 }
 
-// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
-func CreatedAt(v time.Time) predicate.SupportTicketMapping {
+// Reason applies equality check predicate on the "reason" field. It's identical to ReasonEQ.
+func Reason(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldReason, v))
+}
+
+// CreatedAtEQ applies the EQ predicate on the "created_at" field.
+func CreatedAtEQ(v time.Time) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldEQ(FieldCreatedAt, v))
 }
 
-// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
-func UpdatedAt(v time.Time) predicate.SupportTicketMapping {
+// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
+func CreatedAtNEQ(v time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldCreatedAt, v))
+}
+
+// CreatedAtIn applies the In predicate on the "created_at" field.
+func CreatedAtIn(vs ...time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldIn(FieldCreatedAt, vs...))
+}
+
+// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
+func CreatedAtNotIn(vs ...time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldCreatedAt, vs...))
+}
+
+// CreatedAtGT applies the GT predicate on the "created_at" field.
+func CreatedAtGT(v time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGT(FieldCreatedAt, v))
+}
+
+// CreatedAtGTE applies the GTE predicate on the "created_at" field.
+func CreatedAtGTE(v time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGTE(FieldCreatedAt, v))
+}
+
+// CreatedAtLT applies the LT predicate on the "created_at" field.
+func CreatedAtLT(v time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLT(FieldCreatedAt, v))
+}
+
+// CreatedAtLTE applies the LTE predicate on the "created_at" field.
+func CreatedAtLTE(v time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
+func UpdatedAtEQ(v time.Time) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
-// ArchivedAt applies equality check predicate on the "archived_at" field. It's identical to ArchivedAtEQ.
-func ArchivedAt(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldArchivedAt, v))
+// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
+func UpdatedAtNEQ(v time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldUpdatedAt, v))
+}
+
+// UpdatedAtIn applies the In predicate on the "updated_at" field.
+func UpdatedAtIn(vs ...time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
+func UpdatedAtNotIn(vs ...time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtGT applies the GT predicate on the "updated_at" field.
+func UpdatedAtGT(v time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
+func UpdatedAtGTE(v time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGTE(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLT applies the LT predicate on the "updated_at" field.
+func UpdatedAtLT(v time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
+func UpdatedAtLTE(v time.Time) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
 // AccountIDEQ applies the EQ predicate on the "account_id" field.
@@ -304,136 +299,6 @@ func AccountIDContainsFold(v string) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldAccountID, v))
 }
 
-// OwnerAccountIDEQ applies the EQ predicate on the "owner_account_id" field.
-func OwnerAccountIDEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDNEQ applies the NEQ predicate on the "owner_account_id" field.
-func OwnerAccountIDNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDIn applies the In predicate on the "owner_account_id" field.
-func OwnerAccountIDIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldOwnerAccountID, vs...))
-}
-
-// OwnerAccountIDNotIn applies the NotIn predicate on the "owner_account_id" field.
-func OwnerAccountIDNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldOwnerAccountID, vs...))
-}
-
-// OwnerAccountIDGT applies the GT predicate on the "owner_account_id" field.
-func OwnerAccountIDGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDGTE applies the GTE predicate on the "owner_account_id" field.
-func OwnerAccountIDGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDLT applies the LT predicate on the "owner_account_id" field.
-func OwnerAccountIDLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDLTE applies the LTE predicate on the "owner_account_id" field.
-func OwnerAccountIDLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDContains applies the Contains predicate on the "owner_account_id" field.
-func OwnerAccountIDContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDHasPrefix applies the HasPrefix predicate on the "owner_account_id" field.
-func OwnerAccountIDHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDHasSuffix applies the HasSuffix predicate on the "owner_account_id" field.
-func OwnerAccountIDHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDEqualFold applies the EqualFold predicate on the "owner_account_id" field.
-func OwnerAccountIDEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDContainsFold applies the ContainsFold predicate on the "owner_account_id" field.
-func OwnerAccountIDContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldOwnerAccountID, v))
-}
-
-// OwnerUserIDEQ applies the EQ predicate on the "owner_user_id" field.
-func OwnerUserIDEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDNEQ applies the NEQ predicate on the "owner_user_id" field.
-func OwnerUserIDNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDIn applies the In predicate on the "owner_user_id" field.
-func OwnerUserIDIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldOwnerUserID, vs...))
-}
-
-// OwnerUserIDNotIn applies the NotIn predicate on the "owner_user_id" field.
-func OwnerUserIDNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldOwnerUserID, vs...))
-}
-
-// OwnerUserIDGT applies the GT predicate on the "owner_user_id" field.
-func OwnerUserIDGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDGTE applies the GTE predicate on the "owner_user_id" field.
-func OwnerUserIDGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDLT applies the LT predicate on the "owner_user_id" field.
-func OwnerUserIDLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDLTE applies the LTE predicate on the "owner_user_id" field.
-func OwnerUserIDLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDContains applies the Contains predicate on the "owner_user_id" field.
-func OwnerUserIDContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDHasPrefix applies the HasPrefix predicate on the "owner_user_id" field.
-func OwnerUserIDHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDHasSuffix applies the HasSuffix predicate on the "owner_user_id" field.
-func OwnerUserIDHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDEqualFold applies the EqualFold predicate on the "owner_user_id" field.
-func OwnerUserIDEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldOwnerUserID, v))
-}
-
-// OwnerUserIDContainsFold applies the ContainsFold predicate on the "owner_user_id" field.
-func OwnerUserIDContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldOwnerUserID, v))
-}
-
 // UserIDEQ applies the EQ predicate on the "user_id" field.
 func UserIDEQ(v string) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldEQ(FieldUserID, v))
@@ -499,266 +364,6 @@ func UserIDContainsFold(v string) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldUserID, v))
 }
 
-// EmailEQ applies the EQ predicate on the "email" field.
-func EmailEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldEmail, v))
-}
-
-// EmailNEQ applies the NEQ predicate on the "email" field.
-func EmailNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldEmail, v))
-}
-
-// EmailIn applies the In predicate on the "email" field.
-func EmailIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldEmail, vs...))
-}
-
-// EmailNotIn applies the NotIn predicate on the "email" field.
-func EmailNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldEmail, vs...))
-}
-
-// EmailGT applies the GT predicate on the "email" field.
-func EmailGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldEmail, v))
-}
-
-// EmailGTE applies the GTE predicate on the "email" field.
-func EmailGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldEmail, v))
-}
-
-// EmailLT applies the LT predicate on the "email" field.
-func EmailLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldEmail, v))
-}
-
-// EmailLTE applies the LTE predicate on the "email" field.
-func EmailLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldEmail, v))
-}
-
-// EmailContains applies the Contains predicate on the "email" field.
-func EmailContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldEmail, v))
-}
-
-// EmailHasPrefix applies the HasPrefix predicate on the "email" field.
-func EmailHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldEmail, v))
-}
-
-// EmailHasSuffix applies the HasSuffix predicate on the "email" field.
-func EmailHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldEmail, v))
-}
-
-// EmailEqualFold applies the EqualFold predicate on the "email" field.
-func EmailEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldEmail, v))
-}
-
-// EmailContainsFold applies the ContainsFold predicate on the "email" field.
-func EmailContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldEmail, v))
-}
-
-// RoleEQ applies the EQ predicate on the "role" field.
-func RoleEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldRole, v))
-}
-
-// RoleNEQ applies the NEQ predicate on the "role" field.
-func RoleNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldRole, v))
-}
-
-// RoleIn applies the In predicate on the "role" field.
-func RoleIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldRole, vs...))
-}
-
-// RoleNotIn applies the NotIn predicate on the "role" field.
-func RoleNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldRole, vs...))
-}
-
-// RoleGT applies the GT predicate on the "role" field.
-func RoleGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldRole, v))
-}
-
-// RoleGTE applies the GTE predicate on the "role" field.
-func RoleGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldRole, v))
-}
-
-// RoleLT applies the LT predicate on the "role" field.
-func RoleLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldRole, v))
-}
-
-// RoleLTE applies the LTE predicate on the "role" field.
-func RoleLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldRole, v))
-}
-
-// RoleContains applies the Contains predicate on the "role" field.
-func RoleContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldRole, v))
-}
-
-// RoleHasPrefix applies the HasPrefix predicate on the "role" field.
-func RoleHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldRole, v))
-}
-
-// RoleHasSuffix applies the HasSuffix predicate on the "role" field.
-func RoleHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldRole, v))
-}
-
-// RoleEqualFold applies the EqualFold predicate on the "role" field.
-func RoleEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldRole, v))
-}
-
-// RoleContainsFold applies the ContainsFold predicate on the "role" field.
-func RoleContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldRole, v))
-}
-
-// StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldStatus, v))
-}
-
-// StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldStatus, v))
-}
-
-// StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldStatus, vs...))
-}
-
-// StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldStatus, vs...))
-}
-
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldStatus, v))
-}
-
-// NameEQ applies the EQ predicate on the "name" field.
-func NameEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldName, v))
-}
-
-// NameNEQ applies the NEQ predicate on the "name" field.
-func NameNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldName, v))
-}
-
-// NameIn applies the In predicate on the "name" field.
-func NameIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldName, vs...))
-}
-
-// NameNotIn applies the NotIn predicate on the "name" field.
-func NameNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldName, vs...))
-}
-
-// NameGT applies the GT predicate on the "name" field.
-func NameGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldName, v))
-}
-
-// NameGTE applies the GTE predicate on the "name" field.
-func NameGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldName, v))
-}
-
-// NameLT applies the LT predicate on the "name" field.
-func NameLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldName, v))
-}
-
-// NameLTE applies the LTE predicate on the "name" field.
-func NameLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldName, v))
-}
-
-// NameContains applies the Contains predicate on the "name" field.
-func NameContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldName, v))
-}
-
-// NameHasPrefix applies the HasPrefix predicate on the "name" field.
-func NameHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldName, v))
-}
-
-// NameHasSuffix applies the HasSuffix predicate on the "name" field.
-func NameHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldName, v))
-}
-
-// NameEqualFold applies the EqualFold predicate on the "name" field.
-func NameEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldName, v))
-}
-
-// NameContainsFold applies the ContainsFold predicate on the "name" field.
-func NameContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldName, v))
-}
-
 // WorkspaceIDEQ applies the EQ predicate on the "workspace_id" field.
 func WorkspaceIDEQ(v string) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldEQ(FieldWorkspaceID, v))
@@ -822,6 +427,266 @@ func WorkspaceIDEqualFold(v string) predicate.SupportTicketMapping {
 // WorkspaceIDContainsFold applies the ContainsFold predicate on the "workspace_id" field.
 func WorkspaceIDContainsFold(v string) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldWorkspaceID, v))
+}
+
+// ExternalSystemEQ applies the EQ predicate on the "external_system" field.
+func ExternalSystemEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldExternalSystem, v))
+}
+
+// ExternalSystemNEQ applies the NEQ predicate on the "external_system" field.
+func ExternalSystemNEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldExternalSystem, v))
+}
+
+// ExternalSystemIn applies the In predicate on the "external_system" field.
+func ExternalSystemIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldIn(FieldExternalSystem, vs...))
+}
+
+// ExternalSystemNotIn applies the NotIn predicate on the "external_system" field.
+func ExternalSystemNotIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldExternalSystem, vs...))
+}
+
+// ExternalSystemGT applies the GT predicate on the "external_system" field.
+func ExternalSystemGT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGT(FieldExternalSystem, v))
+}
+
+// ExternalSystemGTE applies the GTE predicate on the "external_system" field.
+func ExternalSystemGTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGTE(FieldExternalSystem, v))
+}
+
+// ExternalSystemLT applies the LT predicate on the "external_system" field.
+func ExternalSystemLT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLT(FieldExternalSystem, v))
+}
+
+// ExternalSystemLTE applies the LTE predicate on the "external_system" field.
+func ExternalSystemLTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLTE(FieldExternalSystem, v))
+}
+
+// ExternalSystemContains applies the Contains predicate on the "external_system" field.
+func ExternalSystemContains(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContains(FieldExternalSystem, v))
+}
+
+// ExternalSystemHasPrefix applies the HasPrefix predicate on the "external_system" field.
+func ExternalSystemHasPrefix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldExternalSystem, v))
+}
+
+// ExternalSystemHasSuffix applies the HasSuffix predicate on the "external_system" field.
+func ExternalSystemHasSuffix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldExternalSystem, v))
+}
+
+// ExternalSystemEqualFold applies the EqualFold predicate on the "external_system" field.
+func ExternalSystemEqualFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldExternalSystem, v))
+}
+
+// ExternalSystemContainsFold applies the ContainsFold predicate on the "external_system" field.
+func ExternalSystemContainsFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldExternalSystem, v))
+}
+
+// ExternalTicketIDEQ applies the EQ predicate on the "external_ticket_id" field.
+func ExternalTicketIDEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldExternalTicketID, v))
+}
+
+// ExternalTicketIDNEQ applies the NEQ predicate on the "external_ticket_id" field.
+func ExternalTicketIDNEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldExternalTicketID, v))
+}
+
+// ExternalTicketIDIn applies the In predicate on the "external_ticket_id" field.
+func ExternalTicketIDIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldIn(FieldExternalTicketID, vs...))
+}
+
+// ExternalTicketIDNotIn applies the NotIn predicate on the "external_ticket_id" field.
+func ExternalTicketIDNotIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldExternalTicketID, vs...))
+}
+
+// ExternalTicketIDGT applies the GT predicate on the "external_ticket_id" field.
+func ExternalTicketIDGT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGT(FieldExternalTicketID, v))
+}
+
+// ExternalTicketIDGTE applies the GTE predicate on the "external_ticket_id" field.
+func ExternalTicketIDGTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGTE(FieldExternalTicketID, v))
+}
+
+// ExternalTicketIDLT applies the LT predicate on the "external_ticket_id" field.
+func ExternalTicketIDLT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLT(FieldExternalTicketID, v))
+}
+
+// ExternalTicketIDLTE applies the LTE predicate on the "external_ticket_id" field.
+func ExternalTicketIDLTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLTE(FieldExternalTicketID, v))
+}
+
+// ExternalTicketIDContains applies the Contains predicate on the "external_ticket_id" field.
+func ExternalTicketIDContains(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContains(FieldExternalTicketID, v))
+}
+
+// ExternalTicketIDHasPrefix applies the HasPrefix predicate on the "external_ticket_id" field.
+func ExternalTicketIDHasPrefix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldExternalTicketID, v))
+}
+
+// ExternalTicketIDHasSuffix applies the HasSuffix predicate on the "external_ticket_id" field.
+func ExternalTicketIDHasSuffix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldExternalTicketID, v))
+}
+
+// ExternalTicketIDEqualFold applies the EqualFold predicate on the "external_ticket_id" field.
+func ExternalTicketIDEqualFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldExternalTicketID, v))
+}
+
+// ExternalTicketIDContainsFold applies the ContainsFold predicate on the "external_ticket_id" field.
+func ExternalTicketIDContainsFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldExternalTicketID, v))
+}
+
+// ExternalURLEQ applies the EQ predicate on the "external_url" field.
+func ExternalURLEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldExternalURL, v))
+}
+
+// ExternalURLNEQ applies the NEQ predicate on the "external_url" field.
+func ExternalURLNEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldExternalURL, v))
+}
+
+// ExternalURLIn applies the In predicate on the "external_url" field.
+func ExternalURLIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldIn(FieldExternalURL, vs...))
+}
+
+// ExternalURLNotIn applies the NotIn predicate on the "external_url" field.
+func ExternalURLNotIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldExternalURL, vs...))
+}
+
+// ExternalURLGT applies the GT predicate on the "external_url" field.
+func ExternalURLGT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGT(FieldExternalURL, v))
+}
+
+// ExternalURLGTE applies the GTE predicate on the "external_url" field.
+func ExternalURLGTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGTE(FieldExternalURL, v))
+}
+
+// ExternalURLLT applies the LT predicate on the "external_url" field.
+func ExternalURLLT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLT(FieldExternalURL, v))
+}
+
+// ExternalURLLTE applies the LTE predicate on the "external_url" field.
+func ExternalURLLTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLTE(FieldExternalURL, v))
+}
+
+// ExternalURLContains applies the Contains predicate on the "external_url" field.
+func ExternalURLContains(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContains(FieldExternalURL, v))
+}
+
+// ExternalURLHasPrefix applies the HasPrefix predicate on the "external_url" field.
+func ExternalURLHasPrefix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldExternalURL, v))
+}
+
+// ExternalURLHasSuffix applies the HasSuffix predicate on the "external_url" field.
+func ExternalURLHasSuffix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldExternalURL, v))
+}
+
+// ExternalURLEqualFold applies the EqualFold predicate on the "external_url" field.
+func ExternalURLEqualFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldExternalURL, v))
+}
+
+// ExternalURLContainsFold applies the ContainsFold predicate on the "external_url" field.
+func ExternalURLContainsFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldExternalURL, v))
+}
+
+// OperationIDEQ applies the EQ predicate on the "operation_id" field.
+func OperationIDEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldOperationID, v))
+}
+
+// OperationIDNEQ applies the NEQ predicate on the "operation_id" field.
+func OperationIDNEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldOperationID, v))
+}
+
+// OperationIDIn applies the In predicate on the "operation_id" field.
+func OperationIDIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldIn(FieldOperationID, vs...))
+}
+
+// OperationIDNotIn applies the NotIn predicate on the "operation_id" field.
+func OperationIDNotIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldOperationID, vs...))
+}
+
+// OperationIDGT applies the GT predicate on the "operation_id" field.
+func OperationIDGT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGT(FieldOperationID, v))
+}
+
+// OperationIDGTE applies the GTE predicate on the "operation_id" field.
+func OperationIDGTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGTE(FieldOperationID, v))
+}
+
+// OperationIDLT applies the LT predicate on the "operation_id" field.
+func OperationIDLT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLT(FieldOperationID, v))
+}
+
+// OperationIDLTE applies the LTE predicate on the "operation_id" field.
+func OperationIDLTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLTE(FieldOperationID, v))
+}
+
+// OperationIDContains applies the Contains predicate on the "operation_id" field.
+func OperationIDContains(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContains(FieldOperationID, v))
+}
+
+// OperationIDHasPrefix applies the HasPrefix predicate on the "operation_id" field.
+func OperationIDHasPrefix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldOperationID, v))
+}
+
+// OperationIDHasSuffix applies the HasSuffix predicate on the "operation_id" field.
+func OperationIDHasSuffix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldOperationID, v))
+}
+
+// OperationIDEqualFold applies the EqualFold predicate on the "operation_id" field.
+func OperationIDEqualFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldOperationID, v))
+}
+
+// OperationIDContainsFold applies the ContainsFold predicate on the "operation_id" field.
+func OperationIDContainsFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldOperationID, v))
 }
 
 // ResourceIDEQ applies the EQ predicate on the "resource_id" field.
@@ -954,1089 +819,264 @@ func ResourceKindContainsFold(v string) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldResourceKind, v))
 }
 
-// OperationIDEQ applies the EQ predicate on the "operation_id" field.
-func OperationIDEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldOperationID, v))
+// TitleEQ applies the EQ predicate on the "title" field.
+func TitleEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldTitle, v))
 }
 
-// OperationIDNEQ applies the NEQ predicate on the "operation_id" field.
-func OperationIDNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldOperationID, v))
+// TitleNEQ applies the NEQ predicate on the "title" field.
+func TitleNEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldTitle, v))
 }
 
-// OperationIDIn applies the In predicate on the "operation_id" field.
-func OperationIDIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldOperationID, vs...))
+// TitleIn applies the In predicate on the "title" field.
+func TitleIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldIn(FieldTitle, vs...))
 }
 
-// OperationIDNotIn applies the NotIn predicate on the "operation_id" field.
-func OperationIDNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldOperationID, vs...))
+// TitleNotIn applies the NotIn predicate on the "title" field.
+func TitleNotIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldTitle, vs...))
 }
 
-// OperationIDGT applies the GT predicate on the "operation_id" field.
-func OperationIDGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldOperationID, v))
+// TitleGT applies the GT predicate on the "title" field.
+func TitleGT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGT(FieldTitle, v))
 }
 
-// OperationIDGTE applies the GTE predicate on the "operation_id" field.
-func OperationIDGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldOperationID, v))
+// TitleGTE applies the GTE predicate on the "title" field.
+func TitleGTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGTE(FieldTitle, v))
 }
 
-// OperationIDLT applies the LT predicate on the "operation_id" field.
-func OperationIDLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldOperationID, v))
+// TitleLT applies the LT predicate on the "title" field.
+func TitleLT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLT(FieldTitle, v))
 }
 
-// OperationIDLTE applies the LTE predicate on the "operation_id" field.
-func OperationIDLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldOperationID, v))
+// TitleLTE applies the LTE predicate on the "title" field.
+func TitleLTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLTE(FieldTitle, v))
 }
 
-// OperationIDContains applies the Contains predicate on the "operation_id" field.
-func OperationIDContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldOperationID, v))
+// TitleContains applies the Contains predicate on the "title" field.
+func TitleContains(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContains(FieldTitle, v))
 }
 
-// OperationIDHasPrefix applies the HasPrefix predicate on the "operation_id" field.
-func OperationIDHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldOperationID, v))
+// TitleHasPrefix applies the HasPrefix predicate on the "title" field.
+func TitleHasPrefix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldTitle, v))
 }
 
-// OperationIDHasSuffix applies the HasSuffix predicate on the "operation_id" field.
-func OperationIDHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldOperationID, v))
+// TitleHasSuffix applies the HasSuffix predicate on the "title" field.
+func TitleHasSuffix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldTitle, v))
 }
 
-// OperationIDEqualFold applies the EqualFold predicate on the "operation_id" field.
-func OperationIDEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldOperationID, v))
+// TitleEqualFold applies the EqualFold predicate on the "title" field.
+func TitleEqualFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldTitle, v))
 }
 
-// OperationIDContainsFold applies the ContainsFold predicate on the "operation_id" field.
-func OperationIDContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldOperationID, v))
+// TitleContainsFold applies the ContainsFold predicate on the "title" field.
+func TitleContainsFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldTitle, v))
 }
 
-// ProviderEQ applies the EQ predicate on the "provider" field.
-func ProviderEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldProvider, v))
+// CategoryEQ applies the EQ predicate on the "category" field.
+func CategoryEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldCategory, v))
 }
 
-// ProviderNEQ applies the NEQ predicate on the "provider" field.
-func ProviderNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldProvider, v))
+// CategoryNEQ applies the NEQ predicate on the "category" field.
+func CategoryNEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldCategory, v))
 }
 
-// ProviderIn applies the In predicate on the "provider" field.
-func ProviderIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldProvider, vs...))
+// CategoryIn applies the In predicate on the "category" field.
+func CategoryIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldIn(FieldCategory, vs...))
 }
 
-// ProviderNotIn applies the NotIn predicate on the "provider" field.
-func ProviderNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldProvider, vs...))
+// CategoryNotIn applies the NotIn predicate on the "category" field.
+func CategoryNotIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldCategory, vs...))
 }
 
-// ProviderGT applies the GT predicate on the "provider" field.
-func ProviderGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldProvider, v))
+// CategoryGT applies the GT predicate on the "category" field.
+func CategoryGT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGT(FieldCategory, v))
 }
 
-// ProviderGTE applies the GTE predicate on the "provider" field.
-func ProviderGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldProvider, v))
+// CategoryGTE applies the GTE predicate on the "category" field.
+func CategoryGTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGTE(FieldCategory, v))
 }
 
-// ProviderLT applies the LT predicate on the "provider" field.
-func ProviderLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldProvider, v))
+// CategoryLT applies the LT predicate on the "category" field.
+func CategoryLT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLT(FieldCategory, v))
 }
 
-// ProviderLTE applies the LTE predicate on the "provider" field.
-func ProviderLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldProvider, v))
+// CategoryLTE applies the LTE predicate on the "category" field.
+func CategoryLTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLTE(FieldCategory, v))
 }
 
-// ProviderContains applies the Contains predicate on the "provider" field.
-func ProviderContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldProvider, v))
+// CategoryContains applies the Contains predicate on the "category" field.
+func CategoryContains(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContains(FieldCategory, v))
 }
 
-// ProviderHasPrefix applies the HasPrefix predicate on the "provider" field.
-func ProviderHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldProvider, v))
+// CategoryHasPrefix applies the HasPrefix predicate on the "category" field.
+func CategoryHasPrefix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldCategory, v))
 }
 
-// ProviderHasSuffix applies the HasSuffix predicate on the "provider" field.
-func ProviderHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldProvider, v))
+// CategoryHasSuffix applies the HasSuffix predicate on the "category" field.
+func CategoryHasSuffix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldCategory, v))
 }
 
-// ProviderEqualFold applies the EqualFold predicate on the "provider" field.
-func ProviderEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldProvider, v))
+// CategoryEqualFold applies the EqualFold predicate on the "category" field.
+func CategoryEqualFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldCategory, v))
 }
 
-// ProviderContainsFold applies the ContainsFold predicate on the "provider" field.
-func ProviderContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldProvider, v))
+// CategoryContainsFold applies the ContainsFold predicate on the "category" field.
+func CategoryContainsFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldCategory, v))
 }
 
-// ProviderResourceIDEQ applies the EQ predicate on the "provider_resource_id" field.
-func ProviderResourceIDEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldProviderResourceID, v))
+// PriorityEQ applies the EQ predicate on the "priority" field.
+func PriorityEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldPriority, v))
 }
 
-// ProviderResourceIDNEQ applies the NEQ predicate on the "provider_resource_id" field.
-func ProviderResourceIDNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldProviderResourceID, v))
+// PriorityNEQ applies the NEQ predicate on the "priority" field.
+func PriorityNEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldPriority, v))
 }
 
-// ProviderResourceIDIn applies the In predicate on the "provider_resource_id" field.
-func ProviderResourceIDIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldProviderResourceID, vs...))
+// PriorityIn applies the In predicate on the "priority" field.
+func PriorityIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldIn(FieldPriority, vs...))
 }
 
-// ProviderResourceIDNotIn applies the NotIn predicate on the "provider_resource_id" field.
-func ProviderResourceIDNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldProviderResourceID, vs...))
+// PriorityNotIn applies the NotIn predicate on the "priority" field.
+func PriorityNotIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldPriority, vs...))
 }
 
-// ProviderResourceIDGT applies the GT predicate on the "provider_resource_id" field.
-func ProviderResourceIDGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldProviderResourceID, v))
+// PriorityGT applies the GT predicate on the "priority" field.
+func PriorityGT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGT(FieldPriority, v))
 }
 
-// ProviderResourceIDGTE applies the GTE predicate on the "provider_resource_id" field.
-func ProviderResourceIDGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldProviderResourceID, v))
+// PriorityGTE applies the GTE predicate on the "priority" field.
+func PriorityGTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGTE(FieldPriority, v))
 }
 
-// ProviderResourceIDLT applies the LT predicate on the "provider_resource_id" field.
-func ProviderResourceIDLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldProviderResourceID, v))
+// PriorityLT applies the LT predicate on the "priority" field.
+func PriorityLT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLT(FieldPriority, v))
 }
 
-// ProviderResourceIDLTE applies the LTE predicate on the "provider_resource_id" field.
-func ProviderResourceIDLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldProviderResourceID, v))
+// PriorityLTE applies the LTE predicate on the "priority" field.
+func PriorityLTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLTE(FieldPriority, v))
 }
 
-// ProviderResourceIDContains applies the Contains predicate on the "provider_resource_id" field.
-func ProviderResourceIDContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldProviderResourceID, v))
+// PriorityContains applies the Contains predicate on the "priority" field.
+func PriorityContains(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContains(FieldPriority, v))
 }
 
-// ProviderResourceIDHasPrefix applies the HasPrefix predicate on the "provider_resource_id" field.
-func ProviderResourceIDHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldProviderResourceID, v))
+// PriorityHasPrefix applies the HasPrefix predicate on the "priority" field.
+func PriorityHasPrefix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldPriority, v))
 }
 
-// ProviderResourceIDHasSuffix applies the HasSuffix predicate on the "provider_resource_id" field.
-func ProviderResourceIDHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldProviderResourceID, v))
+// PriorityHasSuffix applies the HasSuffix predicate on the "priority" field.
+func PriorityHasSuffix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldPriority, v))
 }
 
-// ProviderResourceIDEqualFold applies the EqualFold predicate on the "provider_resource_id" field.
-func ProviderResourceIDEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldProviderResourceID, v))
+// PriorityEqualFold applies the EqualFold predicate on the "priority" field.
+func PriorityEqualFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldPriority, v))
 }
 
-// ProviderResourceIDContainsFold applies the ContainsFold predicate on the "provider_resource_id" field.
-func ProviderResourceIDContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldProviderResourceID, v))
+// PriorityContainsFold applies the ContainsFold predicate on the "priority" field.
+func PriorityContainsFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldPriority, v))
 }
 
-// URLEQ applies the EQ predicate on the "url" field.
-func URLEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldURL, v))
+// StatusEQ applies the EQ predicate on the "status" field.
+func StatusEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldStatus, v))
 }
 
-// URLNEQ applies the NEQ predicate on the "url" field.
-func URLNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldURL, v))
+// StatusNEQ applies the NEQ predicate on the "status" field.
+func StatusNEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldStatus, v))
 }
 
-// URLIn applies the In predicate on the "url" field.
-func URLIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldURL, vs...))
+// StatusIn applies the In predicate on the "status" field.
+func StatusIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldIn(FieldStatus, vs...))
 }
 
-// URLNotIn applies the NotIn predicate on the "url" field.
-func URLNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldURL, vs...))
+// StatusNotIn applies the NotIn predicate on the "status" field.
+func StatusNotIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldStatus, vs...))
 }
 
-// URLGT applies the GT predicate on the "url" field.
-func URLGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldURL, v))
+// StatusGT applies the GT predicate on the "status" field.
+func StatusGT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGT(FieldStatus, v))
 }
 
-// URLGTE applies the GTE predicate on the "url" field.
-func URLGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldURL, v))
+// StatusGTE applies the GTE predicate on the "status" field.
+func StatusGTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGTE(FieldStatus, v))
 }
 
-// URLLT applies the LT predicate on the "url" field.
-func URLLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldURL, v))
+// StatusLT applies the LT predicate on the "status" field.
+func StatusLT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLT(FieldStatus, v))
 }
 
-// URLLTE applies the LTE predicate on the "url" field.
-func URLLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldURL, v))
+// StatusLTE applies the LTE predicate on the "status" field.
+func StatusLTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLTE(FieldStatus, v))
 }
 
-// URLContains applies the Contains predicate on the "url" field.
-func URLContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldURL, v))
+// StatusContains applies the Contains predicate on the "status" field.
+func StatusContains(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContains(FieldStatus, v))
 }
 
-// URLHasPrefix applies the HasPrefix predicate on the "url" field.
-func URLHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldURL, v))
+// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
+func StatusHasPrefix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldStatus, v))
 }
 
-// URLHasSuffix applies the HasSuffix predicate on the "url" field.
-func URLHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldURL, v))
+// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
+func StatusHasSuffix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldStatus, v))
 }
 
-// URLEqualFold applies the EqualFold predicate on the "url" field.
-func URLEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldURL, v))
+// StatusEqualFold applies the EqualFold predicate on the "status" field.
+func StatusEqualFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldStatus, v))
 }
 
-// URLContainsFold applies the ContainsFold predicate on the "url" field.
-func URLContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldURL, v))
-}
-
-// HoldIDEQ applies the EQ predicate on the "hold_id" field.
-func HoldIDEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldHoldID, v))
-}
-
-// HoldIDNEQ applies the NEQ predicate on the "hold_id" field.
-func HoldIDNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldHoldID, v))
-}
-
-// HoldIDIn applies the In predicate on the "hold_id" field.
-func HoldIDIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldHoldID, vs...))
-}
-
-// HoldIDNotIn applies the NotIn predicate on the "hold_id" field.
-func HoldIDNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldHoldID, vs...))
-}
-
-// HoldIDGT applies the GT predicate on the "hold_id" field.
-func HoldIDGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldHoldID, v))
-}
-
-// HoldIDGTE applies the GTE predicate on the "hold_id" field.
-func HoldIDGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldHoldID, v))
-}
-
-// HoldIDLT applies the LT predicate on the "hold_id" field.
-func HoldIDLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldHoldID, v))
-}
-
-// HoldIDLTE applies the LTE predicate on the "hold_id" field.
-func HoldIDLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldHoldID, v))
-}
-
-// HoldIDContains applies the Contains predicate on the "hold_id" field.
-func HoldIDContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldHoldID, v))
-}
-
-// HoldIDHasPrefix applies the HasPrefix predicate on the "hold_id" field.
-func HoldIDHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldHoldID, v))
-}
-
-// HoldIDHasSuffix applies the HasSuffix predicate on the "hold_id" field.
-func HoldIDHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldHoldID, v))
-}
-
-// HoldIDEqualFold applies the EqualFold predicate on the "hold_id" field.
-func HoldIDEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldHoldID, v))
-}
-
-// HoldIDContainsFold applies the ContainsFold predicate on the "hold_id" field.
-func HoldIDContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldHoldID, v))
-}
-
-// HoldReleaseIDEQ applies the EQ predicate on the "hold_release_id" field.
-func HoldReleaseIDEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDNEQ applies the NEQ predicate on the "hold_release_id" field.
-func HoldReleaseIDNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDIn applies the In predicate on the "hold_release_id" field.
-func HoldReleaseIDIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldHoldReleaseID, vs...))
-}
-
-// HoldReleaseIDNotIn applies the NotIn predicate on the "hold_release_id" field.
-func HoldReleaseIDNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldHoldReleaseID, vs...))
-}
-
-// HoldReleaseIDGT applies the GT predicate on the "hold_release_id" field.
-func HoldReleaseIDGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDGTE applies the GTE predicate on the "hold_release_id" field.
-func HoldReleaseIDGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDLT applies the LT predicate on the "hold_release_id" field.
-func HoldReleaseIDLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDLTE applies the LTE predicate on the "hold_release_id" field.
-func HoldReleaseIDLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDContains applies the Contains predicate on the "hold_release_id" field.
-func HoldReleaseIDContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDHasPrefix applies the HasPrefix predicate on the "hold_release_id" field.
-func HoldReleaseIDHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDHasSuffix applies the HasSuffix predicate on the "hold_release_id" field.
-func HoldReleaseIDHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDEqualFold applies the EqualFold predicate on the "hold_release_id" field.
-func HoldReleaseIDEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldHoldReleaseID, v))
-}
-
-// HoldReleaseIDContainsFold applies the ContainsFold predicate on the "hold_release_id" field.
-func HoldReleaseIDContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldHoldReleaseID, v))
-}
-
-// LedgerEntryIDEQ applies the EQ predicate on the "ledger_entry_id" field.
-func LedgerEntryIDEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDNEQ applies the NEQ predicate on the "ledger_entry_id" field.
-func LedgerEntryIDNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDIn applies the In predicate on the "ledger_entry_id" field.
-func LedgerEntryIDIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldLedgerEntryID, vs...))
-}
-
-// LedgerEntryIDNotIn applies the NotIn predicate on the "ledger_entry_id" field.
-func LedgerEntryIDNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldLedgerEntryID, vs...))
-}
-
-// LedgerEntryIDGT applies the GT predicate on the "ledger_entry_id" field.
-func LedgerEntryIDGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDGTE applies the GTE predicate on the "ledger_entry_id" field.
-func LedgerEntryIDGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDLT applies the LT predicate on the "ledger_entry_id" field.
-func LedgerEntryIDLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDLTE applies the LTE predicate on the "ledger_entry_id" field.
-func LedgerEntryIDLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDContains applies the Contains predicate on the "ledger_entry_id" field.
-func LedgerEntryIDContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDHasPrefix applies the HasPrefix predicate on the "ledger_entry_id" field.
-func LedgerEntryIDHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDHasSuffix applies the HasSuffix predicate on the "ledger_entry_id" field.
-func LedgerEntryIDHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDEqualFold applies the EqualFold predicate on the "ledger_entry_id" field.
-func LedgerEntryIDEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldLedgerEntryID, v))
-}
-
-// LedgerEntryIDContainsFold applies the ContainsFold predicate on the "ledger_entry_id" field.
-func LedgerEntryIDContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldLedgerEntryID, v))
-}
-
-// WalletTransactionIDEQ applies the EQ predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDNEQ applies the NEQ predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDIn applies the In predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldWalletTransactionID, vs...))
-}
-
-// WalletTransactionIDNotIn applies the NotIn predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldWalletTransactionID, vs...))
-}
-
-// WalletTransactionIDGT applies the GT predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDGTE applies the GTE predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDLT applies the LT predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDLTE applies the LTE predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDContains applies the Contains predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDHasPrefix applies the HasPrefix predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDHasSuffix applies the HasSuffix predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDEqualFold applies the EqualFold predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldWalletTransactionID, v))
-}
-
-// WalletTransactionIDContainsFold applies the ContainsFold predicate on the "wallet_transaction_id" field.
-func WalletTransactionIDContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldWalletTransactionID, v))
-}
-
-// SettlementIDEQ applies the EQ predicate on the "settlement_id" field.
-func SettlementIDEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldSettlementID, v))
-}
-
-// SettlementIDNEQ applies the NEQ predicate on the "settlement_id" field.
-func SettlementIDNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldSettlementID, v))
-}
-
-// SettlementIDIn applies the In predicate on the "settlement_id" field.
-func SettlementIDIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldSettlementID, vs...))
-}
-
-// SettlementIDNotIn applies the NotIn predicate on the "settlement_id" field.
-func SettlementIDNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldSettlementID, vs...))
-}
-
-// SettlementIDGT applies the GT predicate on the "settlement_id" field.
-func SettlementIDGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldSettlementID, v))
-}
-
-// SettlementIDGTE applies the GTE predicate on the "settlement_id" field.
-func SettlementIDGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldSettlementID, v))
-}
-
-// SettlementIDLT applies the LT predicate on the "settlement_id" field.
-func SettlementIDLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldSettlementID, v))
-}
-
-// SettlementIDLTE applies the LTE predicate on the "settlement_id" field.
-func SettlementIDLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldSettlementID, v))
-}
-
-// SettlementIDContains applies the Contains predicate on the "settlement_id" field.
-func SettlementIDContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldSettlementID, v))
-}
-
-// SettlementIDHasPrefix applies the HasPrefix predicate on the "settlement_id" field.
-func SettlementIDHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldSettlementID, v))
-}
-
-// SettlementIDHasSuffix applies the HasSuffix predicate on the "settlement_id" field.
-func SettlementIDHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldSettlementID, v))
-}
-
-// SettlementIDEqualFold applies the EqualFold predicate on the "settlement_id" field.
-func SettlementIDEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldSettlementID, v))
-}
-
-// SettlementIDContainsFold applies the ContainsFold predicate on the "settlement_id" field.
-func SettlementIDContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldSettlementID, v))
-}
-
-// PricingVersionEQ applies the EQ predicate on the "pricing_version" field.
-func PricingVersionEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldPricingVersion, v))
-}
-
-// PricingVersionNEQ applies the NEQ predicate on the "pricing_version" field.
-func PricingVersionNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldPricingVersion, v))
-}
-
-// PricingVersionIn applies the In predicate on the "pricing_version" field.
-func PricingVersionIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldPricingVersion, vs...))
-}
-
-// PricingVersionNotIn applies the NotIn predicate on the "pricing_version" field.
-func PricingVersionNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldPricingVersion, vs...))
-}
-
-// PricingVersionGT applies the GT predicate on the "pricing_version" field.
-func PricingVersionGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldPricingVersion, v))
-}
-
-// PricingVersionGTE applies the GTE predicate on the "pricing_version" field.
-func PricingVersionGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldPricingVersion, v))
-}
-
-// PricingVersionLT applies the LT predicate on the "pricing_version" field.
-func PricingVersionLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldPricingVersion, v))
-}
-
-// PricingVersionLTE applies the LTE predicate on the "pricing_version" field.
-func PricingVersionLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldPricingVersion, v))
-}
-
-// PricingVersionContains applies the Contains predicate on the "pricing_version" field.
-func PricingVersionContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldPricingVersion, v))
-}
-
-// PricingVersionHasPrefix applies the HasPrefix predicate on the "pricing_version" field.
-func PricingVersionHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldPricingVersion, v))
-}
-
-// PricingVersionHasSuffix applies the HasSuffix predicate on the "pricing_version" field.
-func PricingVersionHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldPricingVersion, v))
-}
-
-// PricingVersionEqualFold applies the EqualFold predicate on the "pricing_version" field.
-func PricingVersionEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldPricingVersion, v))
-}
-
-// PricingVersionContainsFold applies the ContainsFold predicate on the "pricing_version" field.
-func PricingVersionContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldPricingVersion, v))
-}
-
-// AmountCentsEQ applies the EQ predicate on the "amount_cents" field.
-func AmountCentsEQ(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldAmountCents, v))
-}
-
-// AmountCentsNEQ applies the NEQ predicate on the "amount_cents" field.
-func AmountCentsNEQ(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldAmountCents, v))
-}
-
-// AmountCentsIn applies the In predicate on the "amount_cents" field.
-func AmountCentsIn(vs ...int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldAmountCents, vs...))
-}
-
-// AmountCentsNotIn applies the NotIn predicate on the "amount_cents" field.
-func AmountCentsNotIn(vs ...int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldAmountCents, vs...))
-}
-
-// AmountCentsGT applies the GT predicate on the "amount_cents" field.
-func AmountCentsGT(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldAmountCents, v))
-}
-
-// AmountCentsGTE applies the GTE predicate on the "amount_cents" field.
-func AmountCentsGTE(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldAmountCents, v))
-}
-
-// AmountCentsLT applies the LT predicate on the "amount_cents" field.
-func AmountCentsLT(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldAmountCents, v))
-}
-
-// AmountCentsLTE applies the LTE predicate on the "amount_cents" field.
-func AmountCentsLTE(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldAmountCents, v))
-}
-
-// BalanceCentsEQ applies the EQ predicate on the "balance_cents" field.
-func BalanceCentsEQ(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldBalanceCents, v))
-}
-
-// BalanceCentsNEQ applies the NEQ predicate on the "balance_cents" field.
-func BalanceCentsNEQ(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldBalanceCents, v))
-}
-
-// BalanceCentsIn applies the In predicate on the "balance_cents" field.
-func BalanceCentsIn(vs ...int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldBalanceCents, vs...))
-}
-
-// BalanceCentsNotIn applies the NotIn predicate on the "balance_cents" field.
-func BalanceCentsNotIn(vs ...int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldBalanceCents, vs...))
-}
-
-// BalanceCentsGT applies the GT predicate on the "balance_cents" field.
-func BalanceCentsGT(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldBalanceCents, v))
-}
-
-// BalanceCentsGTE applies the GTE predicate on the "balance_cents" field.
-func BalanceCentsGTE(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldBalanceCents, v))
-}
-
-// BalanceCentsLT applies the LT predicate on the "balance_cents" field.
-func BalanceCentsLT(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldBalanceCents, v))
-}
-
-// BalanceCentsLTE applies the LTE predicate on the "balance_cents" field.
-func BalanceCentsLTE(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldBalanceCents, v))
-}
-
-// FrozenCentsEQ applies the EQ predicate on the "frozen_cents" field.
-func FrozenCentsEQ(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldFrozenCents, v))
-}
-
-// FrozenCentsNEQ applies the NEQ predicate on the "frozen_cents" field.
-func FrozenCentsNEQ(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldFrozenCents, v))
-}
-
-// FrozenCentsIn applies the In predicate on the "frozen_cents" field.
-func FrozenCentsIn(vs ...int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldFrozenCents, vs...))
-}
-
-// FrozenCentsNotIn applies the NotIn predicate on the "frozen_cents" field.
-func FrozenCentsNotIn(vs ...int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldFrozenCents, vs...))
-}
-
-// FrozenCentsGT applies the GT predicate on the "frozen_cents" field.
-func FrozenCentsGT(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldFrozenCents, v))
-}
-
-// FrozenCentsGTE applies the GTE predicate on the "frozen_cents" field.
-func FrozenCentsGTE(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldFrozenCents, v))
-}
-
-// FrozenCentsLT applies the LT predicate on the "frozen_cents" field.
-func FrozenCentsLT(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldFrozenCents, v))
-}
-
-// FrozenCentsLTE applies the LTE predicate on the "frozen_cents" field.
-func FrozenCentsLTE(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldFrozenCents, v))
-}
-
-// AvailableCentsEQ applies the EQ predicate on the "available_cents" field.
-func AvailableCentsEQ(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldAvailableCents, v))
-}
-
-// AvailableCentsNEQ applies the NEQ predicate on the "available_cents" field.
-func AvailableCentsNEQ(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldAvailableCents, v))
-}
-
-// AvailableCentsIn applies the In predicate on the "available_cents" field.
-func AvailableCentsIn(vs ...int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldAvailableCents, vs...))
-}
-
-// AvailableCentsNotIn applies the NotIn predicate on the "available_cents" field.
-func AvailableCentsNotIn(vs ...int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldAvailableCents, vs...))
-}
-
-// AvailableCentsGT applies the GT predicate on the "available_cents" field.
-func AvailableCentsGT(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldAvailableCents, v))
-}
-
-// AvailableCentsGTE applies the GTE predicate on the "available_cents" field.
-func AvailableCentsGTE(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldAvailableCents, v))
-}
-
-// AvailableCentsLT applies the LT predicate on the "available_cents" field.
-func AvailableCentsLT(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldAvailableCents, v))
-}
-
-// AvailableCentsLTE applies the LTE predicate on the "available_cents" field.
-func AvailableCentsLTE(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldAvailableCents, v))
-}
-
-// TotalSpentCentsEQ applies the EQ predicate on the "total_spent_cents" field.
-func TotalSpentCentsEQ(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldTotalSpentCents, v))
-}
-
-// TotalSpentCentsNEQ applies the NEQ predicate on the "total_spent_cents" field.
-func TotalSpentCentsNEQ(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldTotalSpentCents, v))
-}
-
-// TotalSpentCentsIn applies the In predicate on the "total_spent_cents" field.
-func TotalSpentCentsIn(vs ...int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldTotalSpentCents, vs...))
-}
-
-// TotalSpentCentsNotIn applies the NotIn predicate on the "total_spent_cents" field.
-func TotalSpentCentsNotIn(vs ...int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldTotalSpentCents, vs...))
-}
-
-// TotalSpentCentsGT applies the GT predicate on the "total_spent_cents" field.
-func TotalSpentCentsGT(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldTotalSpentCents, v))
-}
-
-// TotalSpentCentsGTE applies the GTE predicate on the "total_spent_cents" field.
-func TotalSpentCentsGTE(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldTotalSpentCents, v))
-}
-
-// TotalSpentCentsLT applies the LT predicate on the "total_spent_cents" field.
-func TotalSpentCentsLT(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldTotalSpentCents, v))
-}
-
-// TotalSpentCentsLTE applies the LTE predicate on the "total_spent_cents" field.
-func TotalSpentCentsLTE(v int64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldTotalSpentCents, v))
-}
-
-// QuantityEQ applies the EQ predicate on the "quantity" field.
-func QuantityEQ(v float64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldQuantity, v))
-}
-
-// QuantityNEQ applies the NEQ predicate on the "quantity" field.
-func QuantityNEQ(v float64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldQuantity, v))
-}
-
-// QuantityIn applies the In predicate on the "quantity" field.
-func QuantityIn(vs ...float64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldQuantity, vs...))
-}
-
-// QuantityNotIn applies the NotIn predicate on the "quantity" field.
-func QuantityNotIn(vs ...float64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldQuantity, vs...))
-}
-
-// QuantityGT applies the GT predicate on the "quantity" field.
-func QuantityGT(v float64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldQuantity, v))
-}
-
-// QuantityGTE applies the GTE predicate on the "quantity" field.
-func QuantityGTE(v float64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldQuantity, v))
-}
-
-// QuantityLT applies the LT predicate on the "quantity" field.
-func QuantityLT(v float64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldQuantity, v))
-}
-
-// QuantityLTE applies the LTE predicate on the "quantity" field.
-func QuantityLTE(v float64) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldQuantity, v))
-}
-
-// UnitEQ applies the EQ predicate on the "unit" field.
-func UnitEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldUnit, v))
-}
-
-// UnitNEQ applies the NEQ predicate on the "unit" field.
-func UnitNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldUnit, v))
-}
-
-// UnitIn applies the In predicate on the "unit" field.
-func UnitIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldUnit, vs...))
-}
-
-// UnitNotIn applies the NotIn predicate on the "unit" field.
-func UnitNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldUnit, vs...))
-}
-
-// UnitGT applies the GT predicate on the "unit" field.
-func UnitGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldUnit, v))
-}
-
-// UnitGTE applies the GTE predicate on the "unit" field.
-func UnitGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldUnit, v))
-}
-
-// UnitLT applies the LT predicate on the "unit" field.
-func UnitLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldUnit, v))
-}
-
-// UnitLTE applies the LTE predicate on the "unit" field.
-func UnitLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldUnit, v))
-}
-
-// UnitContains applies the Contains predicate on the "unit" field.
-func UnitContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldUnit, v))
-}
-
-// UnitHasPrefix applies the HasPrefix predicate on the "unit" field.
-func UnitHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldUnit, v))
-}
-
-// UnitHasSuffix applies the HasSuffix predicate on the "unit" field.
-func UnitHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldUnit, v))
-}
-
-// UnitEqualFold applies the EqualFold predicate on the "unit" field.
-func UnitEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldUnit, v))
-}
-
-// UnitContainsFold applies the ContainsFold predicate on the "unit" field.
-func UnitContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldUnit, v))
-}
-
-// ReasonEQ applies the EQ predicate on the "reason" field.
-func ReasonEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldReason, v))
-}
-
-// ReasonNEQ applies the NEQ predicate on the "reason" field.
-func ReasonNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldReason, v))
-}
-
-// ReasonIn applies the In predicate on the "reason" field.
-func ReasonIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldReason, vs...))
-}
-
-// ReasonNotIn applies the NotIn predicate on the "reason" field.
-func ReasonNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldReason, vs...))
-}
-
-// ReasonGT applies the GT predicate on the "reason" field.
-func ReasonGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldReason, v))
-}
-
-// ReasonGTE applies the GTE predicate on the "reason" field.
-func ReasonGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldReason, v))
-}
-
-// ReasonLT applies the LT predicate on the "reason" field.
-func ReasonLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldReason, v))
-}
-
-// ReasonLTE applies the LTE predicate on the "reason" field.
-func ReasonLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldReason, v))
-}
-
-// ReasonContains applies the Contains predicate on the "reason" field.
-func ReasonContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldReason, v))
-}
-
-// ReasonHasPrefix applies the HasPrefix predicate on the "reason" field.
-func ReasonHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldReason, v))
-}
-
-// ReasonHasSuffix applies the HasSuffix predicate on the "reason" field.
-func ReasonHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldReason, v))
-}
-
-// ReasonEqualFold applies the EqualFold predicate on the "reason" field.
-func ReasonEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldReason, v))
-}
-
-// ReasonContainsFold applies the ContainsFold predicate on the "reason" field.
-func ReasonContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldReason, v))
-}
-
-// ResultEQ applies the EQ predicate on the "result" field.
-func ResultEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldResult, v))
-}
-
-// ResultNEQ applies the NEQ predicate on the "result" field.
-func ResultNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldResult, v))
-}
-
-// ResultIn applies the In predicate on the "result" field.
-func ResultIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldResult, vs...))
-}
-
-// ResultNotIn applies the NotIn predicate on the "result" field.
-func ResultNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldResult, vs...))
-}
-
-// ResultGT applies the GT predicate on the "result" field.
-func ResultGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldResult, v))
-}
-
-// ResultGTE applies the GTE predicate on the "result" field.
-func ResultGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldResult, v))
-}
-
-// ResultLT applies the LT predicate on the "result" field.
-func ResultLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldResult, v))
-}
-
-// ResultLTE applies the LTE predicate on the "result" field.
-func ResultLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldResult, v))
-}
-
-// ResultContains applies the Contains predicate on the "result" field.
-func ResultContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldResult, v))
-}
-
-// ResultHasPrefix applies the HasPrefix predicate on the "result" field.
-func ResultHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldResult, v))
-}
-
-// ResultHasSuffix applies the HasSuffix predicate on the "result" field.
-func ResultHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldResult, v))
-}
-
-// ResultEqualFold applies the EqualFold predicate on the "result" field.
-func ResultEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldResult, v))
-}
-
-// ResultContainsFold applies the ContainsFold predicate on the "result" field.
-func ResultContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldResult, v))
+// StatusContainsFold applies the ContainsFold predicate on the "status" field.
+func StatusContainsFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldStatus, v))
 }
 
 // SourceEQ applies the EQ predicate on the "source" field.
@@ -2104,199 +1144,134 @@ func SourceContainsFold(v string) predicate.SupportTicketMapping {
 	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldSource, v))
 }
 
-// DirectionEQ applies the EQ predicate on the "direction" field.
-func DirectionEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldDirection, v))
+// URLEQ applies the EQ predicate on the "url" field.
+func URLEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldURL, v))
 }
 
-// DirectionNEQ applies the NEQ predicate on the "direction" field.
-func DirectionNEQ(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldDirection, v))
+// URLNEQ applies the NEQ predicate on the "url" field.
+func URLNEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldURL, v))
 }
 
-// DirectionIn applies the In predicate on the "direction" field.
-func DirectionIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldDirection, vs...))
+// URLIn applies the In predicate on the "url" field.
+func URLIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldIn(FieldURL, vs...))
 }
 
-// DirectionNotIn applies the NotIn predicate on the "direction" field.
-func DirectionNotIn(vs ...string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldDirection, vs...))
+// URLNotIn applies the NotIn predicate on the "url" field.
+func URLNotIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldURL, vs...))
 }
 
-// DirectionGT applies the GT predicate on the "direction" field.
-func DirectionGT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldDirection, v))
+// URLGT applies the GT predicate on the "url" field.
+func URLGT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGT(FieldURL, v))
 }
 
-// DirectionGTE applies the GTE predicate on the "direction" field.
-func DirectionGTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldDirection, v))
+// URLGTE applies the GTE predicate on the "url" field.
+func URLGTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGTE(FieldURL, v))
 }
 
-// DirectionLT applies the LT predicate on the "direction" field.
-func DirectionLT(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldDirection, v))
+// URLLT applies the LT predicate on the "url" field.
+func URLLT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLT(FieldURL, v))
 }
 
-// DirectionLTE applies the LTE predicate on the "direction" field.
-func DirectionLTE(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldDirection, v))
+// URLLTE applies the LTE predicate on the "url" field.
+func URLLTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLTE(FieldURL, v))
 }
 
-// DirectionContains applies the Contains predicate on the "direction" field.
-func DirectionContains(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContains(FieldDirection, v))
+// URLContains applies the Contains predicate on the "url" field.
+func URLContains(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContains(FieldURL, v))
 }
 
-// DirectionHasPrefix applies the HasPrefix predicate on the "direction" field.
-func DirectionHasPrefix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldDirection, v))
+// URLHasPrefix applies the HasPrefix predicate on the "url" field.
+func URLHasPrefix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldURL, v))
 }
 
-// DirectionHasSuffix applies the HasSuffix predicate on the "direction" field.
-func DirectionHasSuffix(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldDirection, v))
+// URLHasSuffix applies the HasSuffix predicate on the "url" field.
+func URLHasSuffix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldURL, v))
 }
 
-// DirectionEqualFold applies the EqualFold predicate on the "direction" field.
-func DirectionEqualFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldDirection, v))
+// URLEqualFold applies the EqualFold predicate on the "url" field.
+func URLEqualFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldURL, v))
 }
 
-// DirectionContainsFold applies the ContainsFold predicate on the "direction" field.
-func DirectionContainsFold(v string) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldDirection, v))
+// URLContainsFold applies the ContainsFold predicate on the "url" field.
+func URLContainsFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldURL, v))
 }
 
-// CreatedAtEQ applies the EQ predicate on the "created_at" field.
-func CreatedAtEQ(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldCreatedAt, v))
+// ReasonEQ applies the EQ predicate on the "reason" field.
+func ReasonEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEQ(FieldReason, v))
 }
 
-// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
-func CreatedAtNEQ(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldCreatedAt, v))
+// ReasonNEQ applies the NEQ predicate on the "reason" field.
+func ReasonNEQ(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldReason, v))
 }
 
-// CreatedAtIn applies the In predicate on the "created_at" field.
-func CreatedAtIn(vs ...time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldCreatedAt, vs...))
+// ReasonIn applies the In predicate on the "reason" field.
+func ReasonIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldIn(FieldReason, vs...))
 }
 
-// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
-func CreatedAtNotIn(vs ...time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldCreatedAt, vs...))
+// ReasonNotIn applies the NotIn predicate on the "reason" field.
+func ReasonNotIn(vs ...string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldReason, vs...))
 }
 
-// CreatedAtGT applies the GT predicate on the "created_at" field.
-func CreatedAtGT(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldCreatedAt, v))
+// ReasonGT applies the GT predicate on the "reason" field.
+func ReasonGT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGT(FieldReason, v))
 }
 
-// CreatedAtGTE applies the GTE predicate on the "created_at" field.
-func CreatedAtGTE(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldCreatedAt, v))
+// ReasonGTE applies the GTE predicate on the "reason" field.
+func ReasonGTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldGTE(FieldReason, v))
 }
 
-// CreatedAtLT applies the LT predicate on the "created_at" field.
-func CreatedAtLT(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldCreatedAt, v))
+// ReasonLT applies the LT predicate on the "reason" field.
+func ReasonLT(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLT(FieldReason, v))
 }
 
-// CreatedAtLTE applies the LTE predicate on the "created_at" field.
-func CreatedAtLTE(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldCreatedAt, v))
+// ReasonLTE applies the LTE predicate on the "reason" field.
+func ReasonLTE(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldLTE(FieldReason, v))
 }
 
-// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
-func UpdatedAtEQ(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldUpdatedAt, v))
+// ReasonContains applies the Contains predicate on the "reason" field.
+func ReasonContains(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContains(FieldReason, v))
 }
 
-// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
-func UpdatedAtNEQ(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldUpdatedAt, v))
+// ReasonHasPrefix applies the HasPrefix predicate on the "reason" field.
+func ReasonHasPrefix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasPrefix(FieldReason, v))
 }
 
-// UpdatedAtIn applies the In predicate on the "updated_at" field.
-func UpdatedAtIn(vs ...time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldUpdatedAt, vs...))
+// ReasonHasSuffix applies the HasSuffix predicate on the "reason" field.
+func ReasonHasSuffix(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldHasSuffix(FieldReason, v))
 }
 
-// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
-func UpdatedAtNotIn(vs ...time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldUpdatedAt, vs...))
+// ReasonEqualFold applies the EqualFold predicate on the "reason" field.
+func ReasonEqualFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldEqualFold(FieldReason, v))
 }
 
-// UpdatedAtGT applies the GT predicate on the "updated_at" field.
-func UpdatedAtGT(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldUpdatedAt, v))
-}
-
-// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
-func UpdatedAtGTE(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldUpdatedAt, v))
-}
-
-// UpdatedAtLT applies the LT predicate on the "updated_at" field.
-func UpdatedAtLT(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldUpdatedAt, v))
-}
-
-// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
-func UpdatedAtLTE(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldUpdatedAt, v))
-}
-
-// ArchivedAtEQ applies the EQ predicate on the "archived_at" field.
-func ArchivedAtEQ(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldEQ(FieldArchivedAt, v))
-}
-
-// ArchivedAtNEQ applies the NEQ predicate on the "archived_at" field.
-func ArchivedAtNEQ(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNEQ(FieldArchivedAt, v))
-}
-
-// ArchivedAtIn applies the In predicate on the "archived_at" field.
-func ArchivedAtIn(vs ...time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIn(FieldArchivedAt, vs...))
-}
-
-// ArchivedAtNotIn applies the NotIn predicate on the "archived_at" field.
-func ArchivedAtNotIn(vs ...time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotIn(FieldArchivedAt, vs...))
-}
-
-// ArchivedAtGT applies the GT predicate on the "archived_at" field.
-func ArchivedAtGT(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGT(FieldArchivedAt, v))
-}
-
-// ArchivedAtGTE applies the GTE predicate on the "archived_at" field.
-func ArchivedAtGTE(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldGTE(FieldArchivedAt, v))
-}
-
-// ArchivedAtLT applies the LT predicate on the "archived_at" field.
-func ArchivedAtLT(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLT(FieldArchivedAt, v))
-}
-
-// ArchivedAtLTE applies the LTE predicate on the "archived_at" field.
-func ArchivedAtLTE(v time.Time) predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldLTE(FieldArchivedAt, v))
-}
-
-// ArchivedAtIsNil applies the IsNil predicate on the "archived_at" field.
-func ArchivedAtIsNil() predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldIsNull(FieldArchivedAt))
-}
-
-// ArchivedAtNotNil applies the NotNil predicate on the "archived_at" field.
-func ArchivedAtNotNil() predicate.SupportTicketMapping {
-	return predicate.SupportTicketMapping(sql.FieldNotNull(FieldArchivedAt))
+// ReasonContainsFold applies the ContainsFold predicate on the "reason" field.
+func ReasonContainsFold(v string) predicate.SupportTicketMapping {
+	return predicate.SupportTicketMapping(sql.FieldContainsFold(FieldReason, v))
 }
 
 // And groups predicates with the AND operator between them.

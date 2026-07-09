@@ -261,12 +261,12 @@ func (wq *WorkspaceQuery) Clone() *WorkspaceQuery {
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Workspace.Query().
-//		GroupBy(workspace.FieldAccountID).
+//		GroupBy(workspace.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (wq *WorkspaceQuery) GroupBy(field string, fields ...string) *WorkspaceGroupBy {
@@ -284,11 +284,11 @@ func (wq *WorkspaceQuery) GroupBy(field string, fields ...string) *WorkspaceGrou
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.Workspace.Query().
-//		Select(workspace.FieldAccountID).
+//		Select(workspace.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (wq *WorkspaceQuery) Select(fields ...string) *WorkspaceSelect {
 	wq.ctx.Fields = append(wq.ctx.Fields, fields...)

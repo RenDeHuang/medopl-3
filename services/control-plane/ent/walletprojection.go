@@ -17,50 +17,14 @@ type WalletProjection struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID string `json:"id,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// UpdatedAt holds the value of the "updated_at" field.
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// AccountID holds the value of the "account_id" field.
 	AccountID string `json:"account_id,omitempty"`
-	// OwnerAccountID holds the value of the "owner_account_id" field.
-	OwnerAccountID string `json:"owner_account_id,omitempty"`
-	// OwnerUserID holds the value of the "owner_user_id" field.
-	OwnerUserID string `json:"owner_user_id,omitempty"`
-	// UserID holds the value of the "user_id" field.
-	UserID string `json:"user_id,omitempty"`
-	// Email holds the value of the "email" field.
-	Email string `json:"email,omitempty"`
-	// Role holds the value of the "role" field.
-	Role string `json:"role,omitempty"`
-	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
-	// Name holds the value of the "name" field.
-	Name string `json:"name,omitempty"`
-	// WorkspaceID holds the value of the "workspace_id" field.
-	WorkspaceID string `json:"workspace_id,omitempty"`
-	// ResourceID holds the value of the "resource_id" field.
-	ResourceID string `json:"resource_id,omitempty"`
-	// ResourceKind holds the value of the "resource_kind" field.
-	ResourceKind string `json:"resource_kind,omitempty"`
-	// OperationID holds the value of the "operation_id" field.
-	OperationID string `json:"operation_id,omitempty"`
-	// Provider holds the value of the "provider" field.
-	Provider string `json:"provider,omitempty"`
-	// ProviderResourceID holds the value of the "provider_resource_id" field.
-	ProviderResourceID string `json:"provider_resource_id,omitempty"`
-	// URL holds the value of the "url" field.
-	URL string `json:"url,omitempty"`
-	// HoldID holds the value of the "hold_id" field.
-	HoldID string `json:"hold_id,omitempty"`
-	// HoldReleaseID holds the value of the "hold_release_id" field.
-	HoldReleaseID string `json:"hold_release_id,omitempty"`
-	// LedgerEntryID holds the value of the "ledger_entry_id" field.
-	LedgerEntryID string `json:"ledger_entry_id,omitempty"`
-	// WalletTransactionID holds the value of the "wallet_transaction_id" field.
-	WalletTransactionID string `json:"wallet_transaction_id,omitempty"`
-	// SettlementID holds the value of the "settlement_id" field.
-	SettlementID string `json:"settlement_id,omitempty"`
-	// PricingVersion holds the value of the "pricing_version" field.
-	PricingVersion string `json:"pricing_version,omitempty"`
-	// AmountCents holds the value of the "amount_cents" field.
-	AmountCents int64 `json:"amount_cents,omitempty"`
+	// Currency holds the value of the "currency" field.
+	Currency string `json:"currency,omitempty"`
 	// BalanceCents holds the value of the "balance_cents" field.
 	BalanceCents int64 `json:"balance_cents,omitempty"`
 	// FrozenCents holds the value of the "frozen_cents" field.
@@ -69,25 +33,17 @@ type WalletProjection struct {
 	AvailableCents int64 `json:"available_cents,omitempty"`
 	// TotalSpentCents holds the value of the "total_spent_cents" field.
 	TotalSpentCents int64 `json:"total_spent_cents,omitempty"`
-	// Quantity holds the value of the "quantity" field.
-	Quantity float64 `json:"quantity,omitempty"`
-	// Unit holds the value of the "unit" field.
-	Unit string `json:"unit,omitempty"`
-	// Reason holds the value of the "reason" field.
-	Reason string `json:"reason,omitempty"`
-	// Result holds the value of the "result" field.
-	Result string `json:"result,omitempty"`
-	// Source holds the value of the "source" field.
-	Source string `json:"source,omitempty"`
-	// Direction holds the value of the "direction" field.
-	Direction string `json:"direction,omitempty"`
-	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// ArchivedAt holds the value of the "archived_at" field.
-	ArchivedAt   *time.Time `json:"archived_at,omitempty"`
-	selectValues sql.SelectValues
+	// Balance holds the value of the "balance" field.
+	Balance float64 `json:"balance,omitempty"`
+	// Frozen holds the value of the "frozen" field.
+	Frozen float64 `json:"frozen,omitempty"`
+	// Available holds the value of the "available" field.
+	Available float64 `json:"available,omitempty"`
+	// TotalSpent holds the value of the "total_spent" field.
+	TotalSpent float64 `json:"total_spent,omitempty"`
+	// TotalRecharged holds the value of the "total_recharged" field.
+	TotalRecharged float64 `json:"total_recharged,omitempty"`
+	selectValues   sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -95,13 +51,13 @@ func (*WalletProjection) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case walletprojection.FieldQuantity:
+		case walletprojection.FieldBalance, walletprojection.FieldFrozen, walletprojection.FieldAvailable, walletprojection.FieldTotalSpent, walletprojection.FieldTotalRecharged:
 			values[i] = new(sql.NullFloat64)
-		case walletprojection.FieldAmountCents, walletprojection.FieldBalanceCents, walletprojection.FieldFrozenCents, walletprojection.FieldAvailableCents, walletprojection.FieldTotalSpentCents:
+		case walletprojection.FieldBalanceCents, walletprojection.FieldFrozenCents, walletprojection.FieldAvailableCents, walletprojection.FieldTotalSpentCents:
 			values[i] = new(sql.NullInt64)
-		case walletprojection.FieldID, walletprojection.FieldAccountID, walletprojection.FieldOwnerAccountID, walletprojection.FieldOwnerUserID, walletprojection.FieldUserID, walletprojection.FieldEmail, walletprojection.FieldRole, walletprojection.FieldStatus, walletprojection.FieldName, walletprojection.FieldWorkspaceID, walletprojection.FieldResourceID, walletprojection.FieldResourceKind, walletprojection.FieldOperationID, walletprojection.FieldProvider, walletprojection.FieldProviderResourceID, walletprojection.FieldURL, walletprojection.FieldHoldID, walletprojection.FieldHoldReleaseID, walletprojection.FieldLedgerEntryID, walletprojection.FieldWalletTransactionID, walletprojection.FieldSettlementID, walletprojection.FieldPricingVersion, walletprojection.FieldUnit, walletprojection.FieldReason, walletprojection.FieldResult, walletprojection.FieldSource, walletprojection.FieldDirection:
+		case walletprojection.FieldID, walletprojection.FieldAccountID, walletprojection.FieldCurrency:
 			values[i] = new(sql.NullString)
-		case walletprojection.FieldCreatedAt, walletprojection.FieldUpdatedAt, walletprojection.FieldArchivedAt:
+		case walletprojection.FieldCreatedAt, walletprojection.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -124,137 +80,29 @@ func (wp *WalletProjection) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				wp.ID = value.String
 			}
+		case walletprojection.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				wp.CreatedAt = value.Time
+			}
+		case walletprojection.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				wp.UpdatedAt = value.Time
+			}
 		case walletprojection.FieldAccountID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field account_id", values[i])
 			} else if value.Valid {
 				wp.AccountID = value.String
 			}
-		case walletprojection.FieldOwnerAccountID:
+		case walletprojection.FieldCurrency:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field owner_account_id", values[i])
+				return fmt.Errorf("unexpected type %T for field currency", values[i])
 			} else if value.Valid {
-				wp.OwnerAccountID = value.String
-			}
-		case walletprojection.FieldOwnerUserID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field owner_user_id", values[i])
-			} else if value.Valid {
-				wp.OwnerUserID = value.String
-			}
-		case walletprojection.FieldUserID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field user_id", values[i])
-			} else if value.Valid {
-				wp.UserID = value.String
-			}
-		case walletprojection.FieldEmail:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field email", values[i])
-			} else if value.Valid {
-				wp.Email = value.String
-			}
-		case walletprojection.FieldRole:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field role", values[i])
-			} else if value.Valid {
-				wp.Role = value.String
-			}
-		case walletprojection.FieldStatus:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field status", values[i])
-			} else if value.Valid {
-				wp.Status = value.String
-			}
-		case walletprojection.FieldName:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field name", values[i])
-			} else if value.Valid {
-				wp.Name = value.String
-			}
-		case walletprojection.FieldWorkspaceID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field workspace_id", values[i])
-			} else if value.Valid {
-				wp.WorkspaceID = value.String
-			}
-		case walletprojection.FieldResourceID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field resource_id", values[i])
-			} else if value.Valid {
-				wp.ResourceID = value.String
-			}
-		case walletprojection.FieldResourceKind:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field resource_kind", values[i])
-			} else if value.Valid {
-				wp.ResourceKind = value.String
-			}
-		case walletprojection.FieldOperationID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field operation_id", values[i])
-			} else if value.Valid {
-				wp.OperationID = value.String
-			}
-		case walletprojection.FieldProvider:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider", values[i])
-			} else if value.Valid {
-				wp.Provider = value.String
-			}
-		case walletprojection.FieldProviderResourceID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider_resource_id", values[i])
-			} else if value.Valid {
-				wp.ProviderResourceID = value.String
-			}
-		case walletprojection.FieldURL:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field url", values[i])
-			} else if value.Valid {
-				wp.URL = value.String
-			}
-		case walletprojection.FieldHoldID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field hold_id", values[i])
-			} else if value.Valid {
-				wp.HoldID = value.String
-			}
-		case walletprojection.FieldHoldReleaseID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field hold_release_id", values[i])
-			} else if value.Valid {
-				wp.HoldReleaseID = value.String
-			}
-		case walletprojection.FieldLedgerEntryID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field ledger_entry_id", values[i])
-			} else if value.Valid {
-				wp.LedgerEntryID = value.String
-			}
-		case walletprojection.FieldWalletTransactionID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field wallet_transaction_id", values[i])
-			} else if value.Valid {
-				wp.WalletTransactionID = value.String
-			}
-		case walletprojection.FieldSettlementID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field settlement_id", values[i])
-			} else if value.Valid {
-				wp.SettlementID = value.String
-			}
-		case walletprojection.FieldPricingVersion:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field pricing_version", values[i])
-			} else if value.Valid {
-				wp.PricingVersion = value.String
-			}
-		case walletprojection.FieldAmountCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field amount_cents", values[i])
-			} else if value.Valid {
-				wp.AmountCents = value.Int64
+				wp.Currency = value.String
 			}
 		case walletprojection.FieldBalanceCents:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -280,60 +128,35 @@ func (wp *WalletProjection) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				wp.TotalSpentCents = value.Int64
 			}
-		case walletprojection.FieldQuantity:
+		case walletprojection.FieldBalance:
 			if value, ok := values[i].(*sql.NullFloat64); !ok {
-				return fmt.Errorf("unexpected type %T for field quantity", values[i])
+				return fmt.Errorf("unexpected type %T for field balance", values[i])
 			} else if value.Valid {
-				wp.Quantity = value.Float64
+				wp.Balance = value.Float64
 			}
-		case walletprojection.FieldUnit:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field unit", values[i])
+		case walletprojection.FieldFrozen:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field frozen", values[i])
 			} else if value.Valid {
-				wp.Unit = value.String
+				wp.Frozen = value.Float64
 			}
-		case walletprojection.FieldReason:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field reason", values[i])
+		case walletprojection.FieldAvailable:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field available", values[i])
 			} else if value.Valid {
-				wp.Reason = value.String
+				wp.Available = value.Float64
 			}
-		case walletprojection.FieldResult:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field result", values[i])
+		case walletprojection.FieldTotalSpent:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field total_spent", values[i])
 			} else if value.Valid {
-				wp.Result = value.String
+				wp.TotalSpent = value.Float64
 			}
-		case walletprojection.FieldSource:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field source", values[i])
+		case walletprojection.FieldTotalRecharged:
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
+				return fmt.Errorf("unexpected type %T for field total_recharged", values[i])
 			} else if value.Valid {
-				wp.Source = value.String
-			}
-		case walletprojection.FieldDirection:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field direction", values[i])
-			} else if value.Valid {
-				wp.Direction = value.String
-			}
-		case walletprojection.FieldCreatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field created_at", values[i])
-			} else if value.Valid {
-				wp.CreatedAt = value.Time
-			}
-		case walletprojection.FieldUpdatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
-			} else if value.Valid {
-				wp.UpdatedAt = value.Time
-			}
-		case walletprojection.FieldArchivedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field archived_at", values[i])
-			} else if value.Valid {
-				wp.ArchivedAt = new(time.Time)
-				*wp.ArchivedAt = value.Time
+				wp.TotalRecharged = value.Float64
 			}
 		default:
 			wp.selectValues.Set(columns[i], values[i])
@@ -371,71 +194,17 @@ func (wp *WalletProjection) String() string {
 	var builder strings.Builder
 	builder.WriteString("WalletProjection(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", wp.ID))
+	builder.WriteString("created_at=")
+	builder.WriteString(wp.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(wp.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
 	builder.WriteString("account_id=")
 	builder.WriteString(wp.AccountID)
 	builder.WriteString(", ")
-	builder.WriteString("owner_account_id=")
-	builder.WriteString(wp.OwnerAccountID)
-	builder.WriteString(", ")
-	builder.WriteString("owner_user_id=")
-	builder.WriteString(wp.OwnerUserID)
-	builder.WriteString(", ")
-	builder.WriteString("user_id=")
-	builder.WriteString(wp.UserID)
-	builder.WriteString(", ")
-	builder.WriteString("email=")
-	builder.WriteString(wp.Email)
-	builder.WriteString(", ")
-	builder.WriteString("role=")
-	builder.WriteString(wp.Role)
-	builder.WriteString(", ")
-	builder.WriteString("status=")
-	builder.WriteString(wp.Status)
-	builder.WriteString(", ")
-	builder.WriteString("name=")
-	builder.WriteString(wp.Name)
-	builder.WriteString(", ")
-	builder.WriteString("workspace_id=")
-	builder.WriteString(wp.WorkspaceID)
-	builder.WriteString(", ")
-	builder.WriteString("resource_id=")
-	builder.WriteString(wp.ResourceID)
-	builder.WriteString(", ")
-	builder.WriteString("resource_kind=")
-	builder.WriteString(wp.ResourceKind)
-	builder.WriteString(", ")
-	builder.WriteString("operation_id=")
-	builder.WriteString(wp.OperationID)
-	builder.WriteString(", ")
-	builder.WriteString("provider=")
-	builder.WriteString(wp.Provider)
-	builder.WriteString(", ")
-	builder.WriteString("provider_resource_id=")
-	builder.WriteString(wp.ProviderResourceID)
-	builder.WriteString(", ")
-	builder.WriteString("url=")
-	builder.WriteString(wp.URL)
-	builder.WriteString(", ")
-	builder.WriteString("hold_id=")
-	builder.WriteString(wp.HoldID)
-	builder.WriteString(", ")
-	builder.WriteString("hold_release_id=")
-	builder.WriteString(wp.HoldReleaseID)
-	builder.WriteString(", ")
-	builder.WriteString("ledger_entry_id=")
-	builder.WriteString(wp.LedgerEntryID)
-	builder.WriteString(", ")
-	builder.WriteString("wallet_transaction_id=")
-	builder.WriteString(wp.WalletTransactionID)
-	builder.WriteString(", ")
-	builder.WriteString("settlement_id=")
-	builder.WriteString(wp.SettlementID)
-	builder.WriteString(", ")
-	builder.WriteString("pricing_version=")
-	builder.WriteString(wp.PricingVersion)
-	builder.WriteString(", ")
-	builder.WriteString("amount_cents=")
-	builder.WriteString(fmt.Sprintf("%v", wp.AmountCents))
+	builder.WriteString("currency=")
+	builder.WriteString(wp.Currency)
 	builder.WriteString(", ")
 	builder.WriteString("balance_cents=")
 	builder.WriteString(fmt.Sprintf("%v", wp.BalanceCents))
@@ -449,34 +218,20 @@ func (wp *WalletProjection) String() string {
 	builder.WriteString("total_spent_cents=")
 	builder.WriteString(fmt.Sprintf("%v", wp.TotalSpentCents))
 	builder.WriteString(", ")
-	builder.WriteString("quantity=")
-	builder.WriteString(fmt.Sprintf("%v", wp.Quantity))
+	builder.WriteString("balance=")
+	builder.WriteString(fmt.Sprintf("%v", wp.Balance))
 	builder.WriteString(", ")
-	builder.WriteString("unit=")
-	builder.WriteString(wp.Unit)
+	builder.WriteString("frozen=")
+	builder.WriteString(fmt.Sprintf("%v", wp.Frozen))
 	builder.WriteString(", ")
-	builder.WriteString("reason=")
-	builder.WriteString(wp.Reason)
+	builder.WriteString("available=")
+	builder.WriteString(fmt.Sprintf("%v", wp.Available))
 	builder.WriteString(", ")
-	builder.WriteString("result=")
-	builder.WriteString(wp.Result)
+	builder.WriteString("total_spent=")
+	builder.WriteString(fmt.Sprintf("%v", wp.TotalSpent))
 	builder.WriteString(", ")
-	builder.WriteString("source=")
-	builder.WriteString(wp.Source)
-	builder.WriteString(", ")
-	builder.WriteString("direction=")
-	builder.WriteString(wp.Direction)
-	builder.WriteString(", ")
-	builder.WriteString("created_at=")
-	builder.WriteString(wp.CreatedAt.Format(time.ANSIC))
-	builder.WriteString(", ")
-	builder.WriteString("updated_at=")
-	builder.WriteString(wp.UpdatedAt.Format(time.ANSIC))
-	builder.WriteString(", ")
-	if v := wp.ArchivedAt; v != nil {
-		builder.WriteString("archived_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
+	builder.WriteString("total_recharged=")
+	builder.WriteString(fmt.Sprintf("%v", wp.TotalRecharged))
 	builder.WriteByte(')')
 	return builder.String()
 }

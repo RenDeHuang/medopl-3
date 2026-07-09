@@ -546,7 +546,11 @@ test("Admin diagnostics and E2E records are read-only operator surfaces", async 
 
 test("Admin diagnostics exposes resource ledger evidence chain without operator guesswork", async () => {
   const adminSource = await source("apps/console-ui/src/pages/admin/AdminOverviewPage.tsx");
-  const readModelSource = await source("services/control-plane/internal/server/runtime.go");
+  const readModelSource = [
+    await source("services/control-plane/internal/server/runtime.go"),
+    await source("services/control-plane/internal/server/runtime_billing.go"),
+    await source("services/control-plane/internal/server/runtime_admin.go")
+  ].join("\n");
 
   for (const signal of [
     "resourceLedgerEvidence",

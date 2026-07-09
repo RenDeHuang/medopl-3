@@ -261,12 +261,12 @@ func (stmq *SupportTicketMappingQuery) Clone() *SupportTicketMappingQuery {
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.SupportTicketMapping.Query().
-//		GroupBy(supportticketmapping.FieldAccountID).
+//		GroupBy(supportticketmapping.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (stmq *SupportTicketMappingQuery) GroupBy(field string, fields ...string) *SupportTicketMappingGroupBy {
@@ -284,11 +284,11 @@ func (stmq *SupportTicketMappingQuery) GroupBy(field string, fields ...string) *
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.SupportTicketMapping.Query().
-//		Select(supportticketmapping.FieldAccountID).
+//		Select(supportticketmapping.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (stmq *SupportTicketMappingQuery) Select(fields ...string) *SupportTicketMappingSelect {
 	stmq.ctx.Fields = append(stmq.ctx.Fields, fields...)

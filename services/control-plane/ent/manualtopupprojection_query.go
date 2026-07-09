@@ -261,12 +261,12 @@ func (mtpq *ManualTopupProjectionQuery) Clone() *ManualTopupProjectionQuery {
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.ManualTopupProjection.Query().
-//		GroupBy(manualtopupprojection.FieldAccountID).
+//		GroupBy(manualtopupprojection.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (mtpq *ManualTopupProjectionQuery) GroupBy(field string, fields ...string) *ManualTopupProjectionGroupBy {
@@ -284,11 +284,11 @@ func (mtpq *ManualTopupProjectionQuery) GroupBy(field string, fields ...string) 
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.ManualTopupProjection.Query().
-//		Select(manualtopupprojection.FieldAccountID).
+//		Select(manualtopupprojection.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (mtpq *ManualTopupProjectionQuery) Select(fields ...string) *ManualTopupProjectionSelect {
 	mtpq.ctx.Fields = append(mtpq.ctx.Fields, fields...)

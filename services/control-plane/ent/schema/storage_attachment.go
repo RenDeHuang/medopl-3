@@ -4,4 +4,4 @@ import "entgo.io/ent"
 
 type StorageAttachment struct{ ent.Schema }
 
-func (StorageAttachment) Fields() []ent.Field { return commonFactFields() }
+func (StorageAttachment) Fields() []ent.Field { return storageAttachmentFields() }

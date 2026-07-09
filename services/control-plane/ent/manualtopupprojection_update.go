@@ -28,6 +28,26 @@ func (mtpu *ManualTopupProjectionUpdate) Where(ps ...predicate.ManualTopupProjec
 	return mtpu
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (mtpu *ManualTopupProjectionUpdate) SetCreatedAt(t time.Time) *ManualTopupProjectionUpdate {
+	mtpu.mutation.SetCreatedAt(t)
+	return mtpu
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (mtpu *ManualTopupProjectionUpdate) SetNillableCreatedAt(t *time.Time) *ManualTopupProjectionUpdate {
+	if t != nil {
+		mtpu.SetCreatedAt(*t)
+	}
+	return mtpu
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (mtpu *ManualTopupProjectionUpdate) SetUpdatedAt(t time.Time) *ManualTopupProjectionUpdate {
+	mtpu.mutation.SetUpdatedAt(t)
+	return mtpu
+}
+
 // SetAccountID sets the "account_id" field.
 func (mtpu *ManualTopupProjectionUpdate) SetAccountID(s string) *ManualTopupProjectionUpdate {
 	mtpu.mutation.SetAccountID(s)
@@ -42,282 +62,58 @@ func (mtpu *ManualTopupProjectionUpdate) SetNillableAccountID(s *string) *Manual
 	return mtpu
 }
 
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (mtpu *ManualTopupProjectionUpdate) SetOwnerAccountID(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetOwnerAccountID(s)
+// SetOperatorUserID sets the "operator_user_id" field.
+func (mtpu *ManualTopupProjectionUpdate) SetOperatorUserID(s string) *ManualTopupProjectionUpdate {
+	mtpu.mutation.SetOperatorUserID(s)
 	return mtpu
 }
 
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableOwnerAccountID(s *string) *ManualTopupProjectionUpdate {
+// SetNillableOperatorUserID sets the "operator_user_id" field if the given value is not nil.
+func (mtpu *ManualTopupProjectionUpdate) SetNillableOperatorUserID(s *string) *ManualTopupProjectionUpdate {
 	if s != nil {
-		mtpu.SetOwnerAccountID(*s)
+		mtpu.SetOperatorUserID(*s)
 	}
 	return mtpu
 }
 
-// SetOwnerUserID sets the "owner_user_id" field.
-func (mtpu *ManualTopupProjectionUpdate) SetOwnerUserID(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetOwnerUserID(s)
+// SetCurrency sets the "currency" field.
+func (mtpu *ManualTopupProjectionUpdate) SetCurrency(s string) *ManualTopupProjectionUpdate {
+	mtpu.mutation.SetCurrency(s)
 	return mtpu
 }
 
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableOwnerUserID(s *string) *ManualTopupProjectionUpdate {
+// SetNillableCurrency sets the "currency" field if the given value is not nil.
+func (mtpu *ManualTopupProjectionUpdate) SetNillableCurrency(s *string) *ManualTopupProjectionUpdate {
 	if s != nil {
-		mtpu.SetOwnerUserID(*s)
+		mtpu.SetCurrency(*s)
 	}
 	return mtpu
 }
 
-// SetUserID sets the "user_id" field.
-func (mtpu *ManualTopupProjectionUpdate) SetUserID(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetUserID(s)
+// SetSource sets the "source" field.
+func (mtpu *ManualTopupProjectionUpdate) SetSource(s string) *ManualTopupProjectionUpdate {
+	mtpu.mutation.SetSource(s)
 	return mtpu
 }
 
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableUserID(s *string) *ManualTopupProjectionUpdate {
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (mtpu *ManualTopupProjectionUpdate) SetNillableSource(s *string) *ManualTopupProjectionUpdate {
 	if s != nil {
-		mtpu.SetUserID(*s)
+		mtpu.SetSource(*s)
 	}
 	return mtpu
 }
 
-// SetEmail sets the "email" field.
-func (mtpu *ManualTopupProjectionUpdate) SetEmail(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetEmail(s)
+// SetReason sets the "reason" field.
+func (mtpu *ManualTopupProjectionUpdate) SetReason(s string) *ManualTopupProjectionUpdate {
+	mtpu.mutation.SetReason(s)
 	return mtpu
 }
 
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableEmail(s *string) *ManualTopupProjectionUpdate {
+// SetNillableReason sets the "reason" field if the given value is not nil.
+func (mtpu *ManualTopupProjectionUpdate) SetNillableReason(s *string) *ManualTopupProjectionUpdate {
 	if s != nil {
-		mtpu.SetEmail(*s)
-	}
-	return mtpu
-}
-
-// SetRole sets the "role" field.
-func (mtpu *ManualTopupProjectionUpdate) SetRole(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetRole(s)
-	return mtpu
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableRole(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetRole(*s)
-	}
-	return mtpu
-}
-
-// SetStatus sets the "status" field.
-func (mtpu *ManualTopupProjectionUpdate) SetStatus(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetStatus(s)
-	return mtpu
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableStatus(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetStatus(*s)
-	}
-	return mtpu
-}
-
-// SetName sets the "name" field.
-func (mtpu *ManualTopupProjectionUpdate) SetName(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetName(s)
-	return mtpu
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableName(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetName(*s)
-	}
-	return mtpu
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (mtpu *ManualTopupProjectionUpdate) SetWorkspaceID(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetWorkspaceID(s)
-	return mtpu
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableWorkspaceID(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetWorkspaceID(*s)
-	}
-	return mtpu
-}
-
-// SetResourceID sets the "resource_id" field.
-func (mtpu *ManualTopupProjectionUpdate) SetResourceID(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetResourceID(s)
-	return mtpu
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableResourceID(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetResourceID(*s)
-	}
-	return mtpu
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (mtpu *ManualTopupProjectionUpdate) SetResourceKind(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetResourceKind(s)
-	return mtpu
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableResourceKind(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetResourceKind(*s)
-	}
-	return mtpu
-}
-
-// SetOperationID sets the "operation_id" field.
-func (mtpu *ManualTopupProjectionUpdate) SetOperationID(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetOperationID(s)
-	return mtpu
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableOperationID(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetOperationID(*s)
-	}
-	return mtpu
-}
-
-// SetProvider sets the "provider" field.
-func (mtpu *ManualTopupProjectionUpdate) SetProvider(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetProvider(s)
-	return mtpu
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableProvider(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetProvider(*s)
-	}
-	return mtpu
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (mtpu *ManualTopupProjectionUpdate) SetProviderResourceID(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetProviderResourceID(s)
-	return mtpu
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableProviderResourceID(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetProviderResourceID(*s)
-	}
-	return mtpu
-}
-
-// SetURL sets the "url" field.
-func (mtpu *ManualTopupProjectionUpdate) SetURL(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetURL(s)
-	return mtpu
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableURL(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetURL(*s)
-	}
-	return mtpu
-}
-
-// SetHoldID sets the "hold_id" field.
-func (mtpu *ManualTopupProjectionUpdate) SetHoldID(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetHoldID(s)
-	return mtpu
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableHoldID(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetHoldID(*s)
-	}
-	return mtpu
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (mtpu *ManualTopupProjectionUpdate) SetHoldReleaseID(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetHoldReleaseID(s)
-	return mtpu
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableHoldReleaseID(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetHoldReleaseID(*s)
-	}
-	return mtpu
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (mtpu *ManualTopupProjectionUpdate) SetLedgerEntryID(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetLedgerEntryID(s)
-	return mtpu
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableLedgerEntryID(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetLedgerEntryID(*s)
-	}
-	return mtpu
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (mtpu *ManualTopupProjectionUpdate) SetWalletTransactionID(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetWalletTransactionID(s)
-	return mtpu
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableWalletTransactionID(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetWalletTransactionID(*s)
-	}
-	return mtpu
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (mtpu *ManualTopupProjectionUpdate) SetSettlementID(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetSettlementID(s)
-	return mtpu
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableSettlementID(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetSettlementID(*s)
-	}
-	return mtpu
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (mtpu *ManualTopupProjectionUpdate) SetPricingVersion(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetPricingVersion(s)
-	return mtpu
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillablePricingVersion(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetPricingVersion(*s)
+		mtpu.SetReason(*s)
 	}
 	return mtpu
 }
@@ -340,221 +136,6 @@ func (mtpu *ManualTopupProjectionUpdate) SetNillableAmountCents(i *int64) *Manua
 // AddAmountCents adds i to the "amount_cents" field.
 func (mtpu *ManualTopupProjectionUpdate) AddAmountCents(i int64) *ManualTopupProjectionUpdate {
 	mtpu.mutation.AddAmountCents(i)
-	return mtpu
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (mtpu *ManualTopupProjectionUpdate) SetBalanceCents(i int64) *ManualTopupProjectionUpdate {
-	mtpu.mutation.ResetBalanceCents()
-	mtpu.mutation.SetBalanceCents(i)
-	return mtpu
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableBalanceCents(i *int64) *ManualTopupProjectionUpdate {
-	if i != nil {
-		mtpu.SetBalanceCents(*i)
-	}
-	return mtpu
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (mtpu *ManualTopupProjectionUpdate) AddBalanceCents(i int64) *ManualTopupProjectionUpdate {
-	mtpu.mutation.AddBalanceCents(i)
-	return mtpu
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (mtpu *ManualTopupProjectionUpdate) SetFrozenCents(i int64) *ManualTopupProjectionUpdate {
-	mtpu.mutation.ResetFrozenCents()
-	mtpu.mutation.SetFrozenCents(i)
-	return mtpu
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableFrozenCents(i *int64) *ManualTopupProjectionUpdate {
-	if i != nil {
-		mtpu.SetFrozenCents(*i)
-	}
-	return mtpu
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (mtpu *ManualTopupProjectionUpdate) AddFrozenCents(i int64) *ManualTopupProjectionUpdate {
-	mtpu.mutation.AddFrozenCents(i)
-	return mtpu
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (mtpu *ManualTopupProjectionUpdate) SetAvailableCents(i int64) *ManualTopupProjectionUpdate {
-	mtpu.mutation.ResetAvailableCents()
-	mtpu.mutation.SetAvailableCents(i)
-	return mtpu
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableAvailableCents(i *int64) *ManualTopupProjectionUpdate {
-	if i != nil {
-		mtpu.SetAvailableCents(*i)
-	}
-	return mtpu
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (mtpu *ManualTopupProjectionUpdate) AddAvailableCents(i int64) *ManualTopupProjectionUpdate {
-	mtpu.mutation.AddAvailableCents(i)
-	return mtpu
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (mtpu *ManualTopupProjectionUpdate) SetTotalSpentCents(i int64) *ManualTopupProjectionUpdate {
-	mtpu.mutation.ResetTotalSpentCents()
-	mtpu.mutation.SetTotalSpentCents(i)
-	return mtpu
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableTotalSpentCents(i *int64) *ManualTopupProjectionUpdate {
-	if i != nil {
-		mtpu.SetTotalSpentCents(*i)
-	}
-	return mtpu
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (mtpu *ManualTopupProjectionUpdate) AddTotalSpentCents(i int64) *ManualTopupProjectionUpdate {
-	mtpu.mutation.AddTotalSpentCents(i)
-	return mtpu
-}
-
-// SetQuantity sets the "quantity" field.
-func (mtpu *ManualTopupProjectionUpdate) SetQuantity(f float64) *ManualTopupProjectionUpdate {
-	mtpu.mutation.ResetQuantity()
-	mtpu.mutation.SetQuantity(f)
-	return mtpu
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableQuantity(f *float64) *ManualTopupProjectionUpdate {
-	if f != nil {
-		mtpu.SetQuantity(*f)
-	}
-	return mtpu
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (mtpu *ManualTopupProjectionUpdate) AddQuantity(f float64) *ManualTopupProjectionUpdate {
-	mtpu.mutation.AddQuantity(f)
-	return mtpu
-}
-
-// SetUnit sets the "unit" field.
-func (mtpu *ManualTopupProjectionUpdate) SetUnit(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetUnit(s)
-	return mtpu
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableUnit(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetUnit(*s)
-	}
-	return mtpu
-}
-
-// SetReason sets the "reason" field.
-func (mtpu *ManualTopupProjectionUpdate) SetReason(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetReason(s)
-	return mtpu
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableReason(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetReason(*s)
-	}
-	return mtpu
-}
-
-// SetResult sets the "result" field.
-func (mtpu *ManualTopupProjectionUpdate) SetResult(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetResult(s)
-	return mtpu
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableResult(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetResult(*s)
-	}
-	return mtpu
-}
-
-// SetSource sets the "source" field.
-func (mtpu *ManualTopupProjectionUpdate) SetSource(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetSource(s)
-	return mtpu
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableSource(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetSource(*s)
-	}
-	return mtpu
-}
-
-// SetDirection sets the "direction" field.
-func (mtpu *ManualTopupProjectionUpdate) SetDirection(s string) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetDirection(s)
-	return mtpu
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableDirection(s *string) *ManualTopupProjectionUpdate {
-	if s != nil {
-		mtpu.SetDirection(*s)
-	}
-	return mtpu
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (mtpu *ManualTopupProjectionUpdate) SetCreatedAt(t time.Time) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetCreatedAt(t)
-	return mtpu
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableCreatedAt(t *time.Time) *ManualTopupProjectionUpdate {
-	if t != nil {
-		mtpu.SetCreatedAt(*t)
-	}
-	return mtpu
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (mtpu *ManualTopupProjectionUpdate) SetUpdatedAt(t time.Time) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetUpdatedAt(t)
-	return mtpu
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (mtpu *ManualTopupProjectionUpdate) SetArchivedAt(t time.Time) *ManualTopupProjectionUpdate {
-	mtpu.mutation.SetArchivedAt(t)
-	return mtpu
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (mtpu *ManualTopupProjectionUpdate) SetNillableArchivedAt(t *time.Time) *ManualTopupProjectionUpdate {
-	if t != nil {
-		mtpu.SetArchivedAt(*t)
-	}
-	return mtpu
-}
-
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (mtpu *ManualTopupProjectionUpdate) ClearArchivedAt() *ManualTopupProjectionUpdate {
-	mtpu.mutation.ClearArchivedAt()
 	return mtpu
 }
 
@@ -599,7 +180,20 @@ func (mtpu *ManualTopupProjectionUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (mtpu *ManualTopupProjectionUpdate) check() error {
+	if v, ok := mtpu.mutation.AccountID(); ok {
+		if err := manualtopupprojection.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "ManualTopupProjection.account_id": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (mtpu *ManualTopupProjectionUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := mtpu.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(manualtopupprojection.Table, manualtopupprojection.Columns, sqlgraph.NewFieldSpec(manualtopupprojection.FieldID, field.TypeString))
 	if ps := mtpu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -608,131 +202,32 @@ func (mtpu *ManualTopupProjectionUpdate) sqlSave(ctx context.Context) (n int, er
 			}
 		}
 	}
-	if value, ok := mtpu.mutation.AccountID(); ok {
-		_spec.SetField(manualtopupprojection.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.OwnerAccountID(); ok {
-		_spec.SetField(manualtopupprojection.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.OwnerUserID(); ok {
-		_spec.SetField(manualtopupprojection.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.UserID(); ok {
-		_spec.SetField(manualtopupprojection.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.Email(); ok {
-		_spec.SetField(manualtopupprojection.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.Role(); ok {
-		_spec.SetField(manualtopupprojection.FieldRole, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.Status(); ok {
-		_spec.SetField(manualtopupprojection.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.Name(); ok {
-		_spec.SetField(manualtopupprojection.FieldName, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.WorkspaceID(); ok {
-		_spec.SetField(manualtopupprojection.FieldWorkspaceID, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.ResourceID(); ok {
-		_spec.SetField(manualtopupprojection.FieldResourceID, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.ResourceKind(); ok {
-		_spec.SetField(manualtopupprojection.FieldResourceKind, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.OperationID(); ok {
-		_spec.SetField(manualtopupprojection.FieldOperationID, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.Provider(); ok {
-		_spec.SetField(manualtopupprojection.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.ProviderResourceID(); ok {
-		_spec.SetField(manualtopupprojection.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.URL(); ok {
-		_spec.SetField(manualtopupprojection.FieldURL, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.HoldID(); ok {
-		_spec.SetField(manualtopupprojection.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.HoldReleaseID(); ok {
-		_spec.SetField(manualtopupprojection.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.LedgerEntryID(); ok {
-		_spec.SetField(manualtopupprojection.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.WalletTransactionID(); ok {
-		_spec.SetField(manualtopupprojection.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.SettlementID(); ok {
-		_spec.SetField(manualtopupprojection.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.PricingVersion(); ok {
-		_spec.SetField(manualtopupprojection.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.AmountCents(); ok {
-		_spec.SetField(manualtopupprojection.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpu.mutation.AddedAmountCents(); ok {
-		_spec.AddField(manualtopupprojection.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpu.mutation.BalanceCents(); ok {
-		_spec.SetField(manualtopupprojection.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpu.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(manualtopupprojection.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpu.mutation.FrozenCents(); ok {
-		_spec.SetField(manualtopupprojection.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpu.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(manualtopupprojection.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpu.mutation.AvailableCents(); ok {
-		_spec.SetField(manualtopupprojection.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpu.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(manualtopupprojection.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpu.mutation.TotalSpentCents(); ok {
-		_spec.SetField(manualtopupprojection.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpu.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(manualtopupprojection.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpu.mutation.Quantity(); ok {
-		_spec.SetField(manualtopupprojection.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := mtpu.mutation.AddedQuantity(); ok {
-		_spec.AddField(manualtopupprojection.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := mtpu.mutation.Unit(); ok {
-		_spec.SetField(manualtopupprojection.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.Reason(); ok {
-		_spec.SetField(manualtopupprojection.FieldReason, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.Result(); ok {
-		_spec.SetField(manualtopupprojection.FieldResult, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.Source(); ok {
-		_spec.SetField(manualtopupprojection.FieldSource, field.TypeString, value)
-	}
-	if value, ok := mtpu.mutation.Direction(); ok {
-		_spec.SetField(manualtopupprojection.FieldDirection, field.TypeString, value)
-	}
 	if value, ok := mtpu.mutation.CreatedAt(); ok {
 		_spec.SetField(manualtopupprojection.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := mtpu.mutation.UpdatedAt(); ok {
 		_spec.SetField(manualtopupprojection.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := mtpu.mutation.ArchivedAt(); ok {
-		_spec.SetField(manualtopupprojection.FieldArchivedAt, field.TypeTime, value)
+	if value, ok := mtpu.mutation.AccountID(); ok {
+		_spec.SetField(manualtopupprojection.FieldAccountID, field.TypeString, value)
 	}
-	if mtpu.mutation.ArchivedAtCleared() {
-		_spec.ClearField(manualtopupprojection.FieldArchivedAt, field.TypeTime)
+	if value, ok := mtpu.mutation.OperatorUserID(); ok {
+		_spec.SetField(manualtopupprojection.FieldOperatorUserID, field.TypeString, value)
+	}
+	if value, ok := mtpu.mutation.Currency(); ok {
+		_spec.SetField(manualtopupprojection.FieldCurrency, field.TypeString, value)
+	}
+	if value, ok := mtpu.mutation.Source(); ok {
+		_spec.SetField(manualtopupprojection.FieldSource, field.TypeString, value)
+	}
+	if value, ok := mtpu.mutation.Reason(); ok {
+		_spec.SetField(manualtopupprojection.FieldReason, field.TypeString, value)
+	}
+	if value, ok := mtpu.mutation.AmountCents(); ok {
+		_spec.SetField(manualtopupprojection.FieldAmountCents, field.TypeInt64, value)
+	}
+	if value, ok := mtpu.mutation.AddedAmountCents(); ok {
+		_spec.AddField(manualtopupprojection.FieldAmountCents, field.TypeInt64, value)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, mtpu.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -752,496 +247,6 @@ type ManualTopupProjectionUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *ManualTopupProjectionMutation
-}
-
-// SetAccountID sets the "account_id" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetAccountID(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetAccountID(s)
-	return mtpuo
-}
-
-// SetNillableAccountID sets the "account_id" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableAccountID(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetAccountID(*s)
-	}
-	return mtpuo
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetOwnerAccountID(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetOwnerAccountID(s)
-	return mtpuo
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableOwnerAccountID(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetOwnerAccountID(*s)
-	}
-	return mtpuo
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetOwnerUserID(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetOwnerUserID(s)
-	return mtpuo
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableOwnerUserID(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetOwnerUserID(*s)
-	}
-	return mtpuo
-}
-
-// SetUserID sets the "user_id" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetUserID(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetUserID(s)
-	return mtpuo
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableUserID(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetUserID(*s)
-	}
-	return mtpuo
-}
-
-// SetEmail sets the "email" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetEmail(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetEmail(s)
-	return mtpuo
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableEmail(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetEmail(*s)
-	}
-	return mtpuo
-}
-
-// SetRole sets the "role" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetRole(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetRole(s)
-	return mtpuo
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableRole(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetRole(*s)
-	}
-	return mtpuo
-}
-
-// SetStatus sets the "status" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetStatus(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetStatus(s)
-	return mtpuo
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableStatus(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetStatus(*s)
-	}
-	return mtpuo
-}
-
-// SetName sets the "name" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetName(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetName(s)
-	return mtpuo
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableName(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetName(*s)
-	}
-	return mtpuo
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetWorkspaceID(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetWorkspaceID(s)
-	return mtpuo
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableWorkspaceID(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetWorkspaceID(*s)
-	}
-	return mtpuo
-}
-
-// SetResourceID sets the "resource_id" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetResourceID(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetResourceID(s)
-	return mtpuo
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableResourceID(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetResourceID(*s)
-	}
-	return mtpuo
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetResourceKind(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetResourceKind(s)
-	return mtpuo
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableResourceKind(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetResourceKind(*s)
-	}
-	return mtpuo
-}
-
-// SetOperationID sets the "operation_id" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetOperationID(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetOperationID(s)
-	return mtpuo
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableOperationID(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetOperationID(*s)
-	}
-	return mtpuo
-}
-
-// SetProvider sets the "provider" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetProvider(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetProvider(s)
-	return mtpuo
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableProvider(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetProvider(*s)
-	}
-	return mtpuo
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetProviderResourceID(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetProviderResourceID(s)
-	return mtpuo
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableProviderResourceID(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetProviderResourceID(*s)
-	}
-	return mtpuo
-}
-
-// SetURL sets the "url" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetURL(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetURL(s)
-	return mtpuo
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableURL(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetURL(*s)
-	}
-	return mtpuo
-}
-
-// SetHoldID sets the "hold_id" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetHoldID(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetHoldID(s)
-	return mtpuo
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableHoldID(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetHoldID(*s)
-	}
-	return mtpuo
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetHoldReleaseID(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetHoldReleaseID(s)
-	return mtpuo
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableHoldReleaseID(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetHoldReleaseID(*s)
-	}
-	return mtpuo
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetLedgerEntryID(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetLedgerEntryID(s)
-	return mtpuo
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableLedgerEntryID(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetLedgerEntryID(*s)
-	}
-	return mtpuo
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetWalletTransactionID(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetWalletTransactionID(s)
-	return mtpuo
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableWalletTransactionID(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetWalletTransactionID(*s)
-	}
-	return mtpuo
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetSettlementID(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetSettlementID(s)
-	return mtpuo
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableSettlementID(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetSettlementID(*s)
-	}
-	return mtpuo
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetPricingVersion(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetPricingVersion(s)
-	return mtpuo
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillablePricingVersion(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetPricingVersion(*s)
-	}
-	return mtpuo
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetAmountCents(i int64) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.ResetAmountCents()
-	mtpuo.mutation.SetAmountCents(i)
-	return mtpuo
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableAmountCents(i *int64) *ManualTopupProjectionUpdateOne {
-	if i != nil {
-		mtpuo.SetAmountCents(*i)
-	}
-	return mtpuo
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) AddAmountCents(i int64) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.AddAmountCents(i)
-	return mtpuo
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetBalanceCents(i int64) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.ResetBalanceCents()
-	mtpuo.mutation.SetBalanceCents(i)
-	return mtpuo
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableBalanceCents(i *int64) *ManualTopupProjectionUpdateOne {
-	if i != nil {
-		mtpuo.SetBalanceCents(*i)
-	}
-	return mtpuo
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) AddBalanceCents(i int64) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.AddBalanceCents(i)
-	return mtpuo
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetFrozenCents(i int64) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.ResetFrozenCents()
-	mtpuo.mutation.SetFrozenCents(i)
-	return mtpuo
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableFrozenCents(i *int64) *ManualTopupProjectionUpdateOne {
-	if i != nil {
-		mtpuo.SetFrozenCents(*i)
-	}
-	return mtpuo
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) AddFrozenCents(i int64) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.AddFrozenCents(i)
-	return mtpuo
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetAvailableCents(i int64) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.ResetAvailableCents()
-	mtpuo.mutation.SetAvailableCents(i)
-	return mtpuo
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableAvailableCents(i *int64) *ManualTopupProjectionUpdateOne {
-	if i != nil {
-		mtpuo.SetAvailableCents(*i)
-	}
-	return mtpuo
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) AddAvailableCents(i int64) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.AddAvailableCents(i)
-	return mtpuo
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetTotalSpentCents(i int64) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.ResetTotalSpentCents()
-	mtpuo.mutation.SetTotalSpentCents(i)
-	return mtpuo
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableTotalSpentCents(i *int64) *ManualTopupProjectionUpdateOne {
-	if i != nil {
-		mtpuo.SetTotalSpentCents(*i)
-	}
-	return mtpuo
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) AddTotalSpentCents(i int64) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.AddTotalSpentCents(i)
-	return mtpuo
-}
-
-// SetQuantity sets the "quantity" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetQuantity(f float64) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.ResetQuantity()
-	mtpuo.mutation.SetQuantity(f)
-	return mtpuo
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableQuantity(f *float64) *ManualTopupProjectionUpdateOne {
-	if f != nil {
-		mtpuo.SetQuantity(*f)
-	}
-	return mtpuo
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) AddQuantity(f float64) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.AddQuantity(f)
-	return mtpuo
-}
-
-// SetUnit sets the "unit" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetUnit(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetUnit(s)
-	return mtpuo
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableUnit(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetUnit(*s)
-	}
-	return mtpuo
-}
-
-// SetReason sets the "reason" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetReason(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetReason(s)
-	return mtpuo
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableReason(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetReason(*s)
-	}
-	return mtpuo
-}
-
-// SetResult sets the "result" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetResult(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetResult(s)
-	return mtpuo
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableResult(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetResult(*s)
-	}
-	return mtpuo
-}
-
-// SetSource sets the "source" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetSource(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetSource(s)
-	return mtpuo
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableSource(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetSource(*s)
-	}
-	return mtpuo
-}
-
-// SetDirection sets the "direction" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetDirection(s string) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetDirection(s)
-	return mtpuo
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableDirection(s *string) *ManualTopupProjectionUpdateOne {
-	if s != nil {
-		mtpuo.SetDirection(*s)
-	}
-	return mtpuo
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -1264,23 +269,94 @@ func (mtpuo *ManualTopupProjectionUpdateOne) SetUpdatedAt(t time.Time) *ManualTo
 	return mtpuo
 }
 
-// SetArchivedAt sets the "archived_at" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetArchivedAt(t time.Time) *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.SetArchivedAt(t)
+// SetAccountID sets the "account_id" field.
+func (mtpuo *ManualTopupProjectionUpdateOne) SetAccountID(s string) *ManualTopupProjectionUpdateOne {
+	mtpuo.mutation.SetAccountID(s)
 	return mtpuo
 }
 
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableArchivedAt(t *time.Time) *ManualTopupProjectionUpdateOne {
-	if t != nil {
-		mtpuo.SetArchivedAt(*t)
+// SetNillableAccountID sets the "account_id" field if the given value is not nil.
+func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableAccountID(s *string) *ManualTopupProjectionUpdateOne {
+	if s != nil {
+		mtpuo.SetAccountID(*s)
 	}
 	return mtpuo
 }
 
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (mtpuo *ManualTopupProjectionUpdateOne) ClearArchivedAt() *ManualTopupProjectionUpdateOne {
-	mtpuo.mutation.ClearArchivedAt()
+// SetOperatorUserID sets the "operator_user_id" field.
+func (mtpuo *ManualTopupProjectionUpdateOne) SetOperatorUserID(s string) *ManualTopupProjectionUpdateOne {
+	mtpuo.mutation.SetOperatorUserID(s)
+	return mtpuo
+}
+
+// SetNillableOperatorUserID sets the "operator_user_id" field if the given value is not nil.
+func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableOperatorUserID(s *string) *ManualTopupProjectionUpdateOne {
+	if s != nil {
+		mtpuo.SetOperatorUserID(*s)
+	}
+	return mtpuo
+}
+
+// SetCurrency sets the "currency" field.
+func (mtpuo *ManualTopupProjectionUpdateOne) SetCurrency(s string) *ManualTopupProjectionUpdateOne {
+	mtpuo.mutation.SetCurrency(s)
+	return mtpuo
+}
+
+// SetNillableCurrency sets the "currency" field if the given value is not nil.
+func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableCurrency(s *string) *ManualTopupProjectionUpdateOne {
+	if s != nil {
+		mtpuo.SetCurrency(*s)
+	}
+	return mtpuo
+}
+
+// SetSource sets the "source" field.
+func (mtpuo *ManualTopupProjectionUpdateOne) SetSource(s string) *ManualTopupProjectionUpdateOne {
+	mtpuo.mutation.SetSource(s)
+	return mtpuo
+}
+
+// SetNillableSource sets the "source" field if the given value is not nil.
+func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableSource(s *string) *ManualTopupProjectionUpdateOne {
+	if s != nil {
+		mtpuo.SetSource(*s)
+	}
+	return mtpuo
+}
+
+// SetReason sets the "reason" field.
+func (mtpuo *ManualTopupProjectionUpdateOne) SetReason(s string) *ManualTopupProjectionUpdateOne {
+	mtpuo.mutation.SetReason(s)
+	return mtpuo
+}
+
+// SetNillableReason sets the "reason" field if the given value is not nil.
+func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableReason(s *string) *ManualTopupProjectionUpdateOne {
+	if s != nil {
+		mtpuo.SetReason(*s)
+	}
+	return mtpuo
+}
+
+// SetAmountCents sets the "amount_cents" field.
+func (mtpuo *ManualTopupProjectionUpdateOne) SetAmountCents(i int64) *ManualTopupProjectionUpdateOne {
+	mtpuo.mutation.ResetAmountCents()
+	mtpuo.mutation.SetAmountCents(i)
+	return mtpuo
+}
+
+// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
+func (mtpuo *ManualTopupProjectionUpdateOne) SetNillableAmountCents(i *int64) *ManualTopupProjectionUpdateOne {
+	if i != nil {
+		mtpuo.SetAmountCents(*i)
+	}
+	return mtpuo
+}
+
+// AddAmountCents adds i to the "amount_cents" field.
+func (mtpuo *ManualTopupProjectionUpdateOne) AddAmountCents(i int64) *ManualTopupProjectionUpdateOne {
+	mtpuo.mutation.AddAmountCents(i)
 	return mtpuo
 }
 
@@ -1338,7 +414,20 @@ func (mtpuo *ManualTopupProjectionUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (mtpuo *ManualTopupProjectionUpdateOne) check() error {
+	if v, ok := mtpuo.mutation.AccountID(); ok {
+		if err := manualtopupprojection.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "ManualTopupProjection.account_id": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (mtpuo *ManualTopupProjectionUpdateOne) sqlSave(ctx context.Context) (_node *ManualTopupProjection, err error) {
+	if err := mtpuo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(manualtopupprojection.Table, manualtopupprojection.Columns, sqlgraph.NewFieldSpec(manualtopupprojection.FieldID, field.TypeString))
 	id, ok := mtpuo.mutation.ID()
 	if !ok {
@@ -1364,131 +453,32 @@ func (mtpuo *ManualTopupProjectionUpdateOne) sqlSave(ctx context.Context) (_node
 			}
 		}
 	}
-	if value, ok := mtpuo.mutation.AccountID(); ok {
-		_spec.SetField(manualtopupprojection.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.OwnerAccountID(); ok {
-		_spec.SetField(manualtopupprojection.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.OwnerUserID(); ok {
-		_spec.SetField(manualtopupprojection.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.UserID(); ok {
-		_spec.SetField(manualtopupprojection.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.Email(); ok {
-		_spec.SetField(manualtopupprojection.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.Role(); ok {
-		_spec.SetField(manualtopupprojection.FieldRole, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.Status(); ok {
-		_spec.SetField(manualtopupprojection.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.Name(); ok {
-		_spec.SetField(manualtopupprojection.FieldName, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.WorkspaceID(); ok {
-		_spec.SetField(manualtopupprojection.FieldWorkspaceID, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.ResourceID(); ok {
-		_spec.SetField(manualtopupprojection.FieldResourceID, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.ResourceKind(); ok {
-		_spec.SetField(manualtopupprojection.FieldResourceKind, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.OperationID(); ok {
-		_spec.SetField(manualtopupprojection.FieldOperationID, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.Provider(); ok {
-		_spec.SetField(manualtopupprojection.FieldProvider, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.ProviderResourceID(); ok {
-		_spec.SetField(manualtopupprojection.FieldProviderResourceID, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.URL(); ok {
-		_spec.SetField(manualtopupprojection.FieldURL, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.HoldID(); ok {
-		_spec.SetField(manualtopupprojection.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.HoldReleaseID(); ok {
-		_spec.SetField(manualtopupprojection.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.LedgerEntryID(); ok {
-		_spec.SetField(manualtopupprojection.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.WalletTransactionID(); ok {
-		_spec.SetField(manualtopupprojection.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.SettlementID(); ok {
-		_spec.SetField(manualtopupprojection.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.PricingVersion(); ok {
-		_spec.SetField(manualtopupprojection.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.AmountCents(); ok {
-		_spec.SetField(manualtopupprojection.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpuo.mutation.AddedAmountCents(); ok {
-		_spec.AddField(manualtopupprojection.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpuo.mutation.BalanceCents(); ok {
-		_spec.SetField(manualtopupprojection.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpuo.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(manualtopupprojection.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpuo.mutation.FrozenCents(); ok {
-		_spec.SetField(manualtopupprojection.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpuo.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(manualtopupprojection.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpuo.mutation.AvailableCents(); ok {
-		_spec.SetField(manualtopupprojection.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpuo.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(manualtopupprojection.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpuo.mutation.TotalSpentCents(); ok {
-		_spec.SetField(manualtopupprojection.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpuo.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(manualtopupprojection.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := mtpuo.mutation.Quantity(); ok {
-		_spec.SetField(manualtopupprojection.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := mtpuo.mutation.AddedQuantity(); ok {
-		_spec.AddField(manualtopupprojection.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := mtpuo.mutation.Unit(); ok {
-		_spec.SetField(manualtopupprojection.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.Reason(); ok {
-		_spec.SetField(manualtopupprojection.FieldReason, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.Result(); ok {
-		_spec.SetField(manualtopupprojection.FieldResult, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.Source(); ok {
-		_spec.SetField(manualtopupprojection.FieldSource, field.TypeString, value)
-	}
-	if value, ok := mtpuo.mutation.Direction(); ok {
-		_spec.SetField(manualtopupprojection.FieldDirection, field.TypeString, value)
-	}
 	if value, ok := mtpuo.mutation.CreatedAt(); ok {
 		_spec.SetField(manualtopupprojection.FieldCreatedAt, field.TypeTime, value)
 	}
 	if value, ok := mtpuo.mutation.UpdatedAt(); ok {
 		_spec.SetField(manualtopupprojection.FieldUpdatedAt, field.TypeTime, value)
 	}
-	if value, ok := mtpuo.mutation.ArchivedAt(); ok {
-		_spec.SetField(manualtopupprojection.FieldArchivedAt, field.TypeTime, value)
+	if value, ok := mtpuo.mutation.AccountID(); ok {
+		_spec.SetField(manualtopupprojection.FieldAccountID, field.TypeString, value)
 	}
-	if mtpuo.mutation.ArchivedAtCleared() {
-		_spec.ClearField(manualtopupprojection.FieldArchivedAt, field.TypeTime)
+	if value, ok := mtpuo.mutation.OperatorUserID(); ok {
+		_spec.SetField(manualtopupprojection.FieldOperatorUserID, field.TypeString, value)
+	}
+	if value, ok := mtpuo.mutation.Currency(); ok {
+		_spec.SetField(manualtopupprojection.FieldCurrency, field.TypeString, value)
+	}
+	if value, ok := mtpuo.mutation.Source(); ok {
+		_spec.SetField(manualtopupprojection.FieldSource, field.TypeString, value)
+	}
+	if value, ok := mtpuo.mutation.Reason(); ok {
+		_spec.SetField(manualtopupprojection.FieldReason, field.TypeString, value)
+	}
+	if value, ok := mtpuo.mutation.AmountCents(); ok {
+		_spec.SetField(manualtopupprojection.FieldAmountCents, field.TypeInt64, value)
+	}
+	if value, ok := mtpuo.mutation.AddedAmountCents(); ok {
+		_spec.AddField(manualtopupprojection.FieldAmountCents, field.TypeInt64, value)
 	}
 	_node = &ManualTopupProjection{config: mtpuo.config}
 	_spec.Assign = _node.assignValues

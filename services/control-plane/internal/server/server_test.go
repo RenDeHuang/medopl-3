@@ -269,15 +269,15 @@ func TestWorkspaceRuntimeStatusPassesFabricChecks(t *testing.T) {
 }
 
 func TestPersistentFactsSurviveServerRestart(t *testing.T) {
-	path := t.TempDir() + "/control-plane-state.json"
+	path := t.TempDir() + "/control-plane-state.sqlite"
 	service := controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{})
-	server, err := NewPersistentServer(service, NewMemoryStateStore(path))
+	server, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
 	if err != nil {
 		t.Fatalf("create persistent server: %v", err)
 	}
 	createResource(t, server, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
 
-	restarted, err := NewPersistentServer(service, NewMemoryStateStore(path))
+	restarted, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
 	if err != nil {
 		t.Fatalf("restart persistent server: %v", err)
 	}
@@ -307,15 +307,15 @@ func TestPersistentFactsSurviveServerRestart(t *testing.T) {
 }
 
 func TestSessionFactSurvivesServerRestart(t *testing.T) {
-	path := t.TempDir() + "/control-plane-state.json"
+	path := t.TempDir() + "/control-plane-state.sqlite"
 	service := controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{})
-	server, err := NewPersistentServer(service, NewMemoryStateStore(path))
+	server, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
 	if err != nil {
 		t.Fatalf("create persistent server: %v", err)
 	}
 	session := operatorSessionForTest(t, server)
 
-	restarted, err := NewPersistentServer(service, NewMemoryStateStore(path))
+	restarted, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
 	if err != nil {
 		t.Fatalf("restart persistent server: %v", err)
 	}
@@ -329,9 +329,9 @@ func TestSessionFactSurvivesServerRestart(t *testing.T) {
 }
 
 func TestWorkspaceTokenStatePersistsAcrossRestart(t *testing.T) {
-	path := t.TempDir() + "/control-plane-state.json"
+	path := t.TempDir() + "/control-plane-state.sqlite"
 	service := controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{})
-	server, err := NewPersistentServer(service, NewMemoryStateStore(path))
+	server, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
 	if err != nil {
 		t.Fatalf("create persistent server: %v", err)
 	}
@@ -341,7 +341,7 @@ func TestWorkspaceTokenStatePersistsAcrossRestart(t *testing.T) {
 	workspace := createResource(t, server, http.MethodPost, "/api/workspaces", `{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
 	createResource(t, server, http.MethodPost, "/api/workspaces/delete-token", `{"workspaceId":"`+stringValue(workspace["id"])+`"}`)
 
-	restarted, err := NewPersistentServer(service, NewMemoryStateStore(path))
+	restarted, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
 	if err != nil {
 		t.Fatalf("restart persistent server: %v", err)
 	}
@@ -489,11 +489,11 @@ func (fakeLedgerClient) ManualTopUp(_ context.Context, input clients.ManualTopUp
 }
 
 func (fakeLedgerClient) CreateHold(_ context.Context, input clients.HoldInput, _ string) (clients.HoldResult, error) {
-	return clients.HoldResult{ID: "hold-from-ledger", AccountID: input.AccountID, ResourceType: input.ResourceType, ResourceID: input.ResourceID, AmountCents: input.AmountCents, Wallet: clients.Wallet{AccountID: input.AccountID, BalanceCents: 20000, FrozenCents: input.AmountCents, AvailableCents: 20000 - input.AmountCents, Currency: "CNY"}}, nil
+	return clients.HoldResult{ID: "hold-" + input.ResourceType + "-" + input.ResourceID, AccountID: input.AccountID, ResourceType: input.ResourceType, ResourceID: input.ResourceID, AmountCents: input.AmountCents, Wallet: clients.Wallet{AccountID: input.AccountID, BalanceCents: 20000, FrozenCents: input.AmountCents, AvailableCents: 20000 - input.AmountCents, Currency: "CNY"}}, nil
 }
 
 func (fakeLedgerClient) ReleaseHold(_ context.Context, input clients.HoldReleaseInput, _ string) (clients.HoldReleaseResult, error) {
-	return clients.HoldReleaseResult{ID: "release-from-ledger", AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: input.ResourceType, ResourceID: input.ResourceID, HoldID: input.HoldID, AmountCents: input.AmountCents, Status: "released", Wallet: clients.Wallet{AccountID: input.AccountID, BalanceCents: 8800, FrozenCents: 0, AvailableCents: 8800, Currency: "CNY"}}, nil
+	return clients.HoldReleaseResult{ID: "release-" + input.ResourceType + "-" + input.ResourceID, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: input.ResourceType, ResourceID: input.ResourceID, HoldID: input.HoldID, AmountCents: input.AmountCents, Status: "released", Wallet: clients.Wallet{AccountID: input.AccountID, BalanceCents: 8800, FrozenCents: 0, AvailableCents: 8800, Currency: "CNY"}}, nil
 }
 
 func (fakeLedgerClient) RecordEvidence(_ context.Context, input clients.EvidenceInput, _ string) (clients.EvidenceReceipt, error) {
@@ -896,7 +896,7 @@ func TestCreateComputeAllocationUsesFabricService(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if stringValue(body["id"]) == "" || body["providerRequestId"] != "compute-request-from-fabric" || body["holdId"] != "hold-from-ledger" {
+	if stringValue(body["id"]) == "" || body["providerRequestId"] != "compute-request-from-fabric" || body["holdId"] != "hold-compute-"+stringValue(body["id"]) {
 		t.Fatalf("compute allocation did not come from Fabric: %#v", body)
 	}
 	if body["provider"] != "tencent-tke" || body["billingStatus"] != "active" || body["nodeName"] != "node-from-fabric" || body["instanceId"] != "ins-from-fabric" {
@@ -927,7 +927,7 @@ func TestSyncComputeAllocationExternalDeleteStopsBillingAndSuspendsWorkspace(t *
 	if err := json.NewDecoder(syncRec.Body).Decode(&synced); err != nil {
 		t.Fatalf("decode sync: %v", err)
 	}
-	if synced["status"] != "external_deleted" || synced["billingStatus"] != "stopped" || synced["holdReleaseId"] != "release-from-ledger" {
+	if synced["status"] != "external_deleted" || synced["billingStatus"] != "stopped" || synced["holdReleaseId"] != "release-compute-"+stringValue(compute["id"]) {
 		t.Fatalf("sync must return stopped backend facts: %#v", synced)
 	}
 
@@ -961,7 +961,7 @@ func TestSyncStorageVolumeExternalDeleteStopsBillingAndDeletesWorkspaceData(t *t
 	if err := json.NewDecoder(syncRec.Body).Decode(&synced); err != nil {
 		t.Fatalf("decode sync: %v", err)
 	}
-	if synced["status"] != "external_deleted" || synced["billingStatus"] != "stopped" || synced["holdReleaseId"] != "release-from-ledger" {
+	if synced["status"] != "external_deleted" || synced["billingStatus"] != "stopped" || synced["holdReleaseId"] != "release-storage-"+stringValue(storage["id"]) {
 		t.Fatalf("sync must return stopped backend facts: %#v", synced)
 	}
 
@@ -1229,6 +1229,60 @@ func TestCleanupWorkspaceAccessDisablesInvalidActiveURL(t *testing.T) {
 	}
 	if len(result["cleaned"].([]any)) != 1 || nested(app.workspaces["ws-alpha"], "access", "tokenStatus") != "disabled" {
 		t.Fatalf("cleanup did not disable invalid URL: result=%#v workspace=%#v", result, app.workspaces["ws-alpha"])
+	}
+}
+
+func TestArchiveTerminalResourcesRemovesCurrentStateWithoutLedger(t *testing.T) {
+	app := newControlPlaneApp()
+	app.computes["compute-dead"] = map[string]any{"id": "compute-dead", "status": "destroyed"}
+	app.storages["storage-dead"] = map[string]any{"id": "storage-dead", "status": "destroyed"}
+	app.attachments["attach-dead"] = map[string]any{"id": "attach-dead", "status": "detached"}
+	app.workspaces["ws-dead"] = map[string]any{"id": "ws-dead", "state": "unrecoverable"}
+	app.ledger = []map[string]any{{"id": "ledger-kept"}}
+
+	result, err := app.archiveTerminalResources(context.Background(), map[string]any{"reason": "test"})
+	if err != nil {
+		t.Fatalf("archive terminal resources: %v", err)
+	}
+	if result["currentStateRemoved"] != 4 {
+		t.Fatalf("archive removed count = %#v, want 4", result)
+	}
+	if len(app.computes) != 0 || len(app.storages) != 0 || len(app.attachments) != 0 || len(app.workspaces) != 0 {
+		t.Fatalf("terminal resources still in current state: computes=%#v storages=%#v attachments=%#v workspaces=%#v", app.computes, app.storages, app.attachments, app.workspaces)
+	}
+	if len(app.ledger) != 1 {
+		t.Fatalf("archive must not remove ledger facts: %#v", app.ledger)
+	}
+}
+
+func TestArchiveStateEndpointReturnsBackendArchiveAndRetentionPolicy(t *testing.T) {
+	path := t.TempDir() + "/control-plane-state.sqlite"
+	store := NewTestEntStateStore(t, path)
+	if err := store.Save(context.Background(), controlPlaneState{
+		Computes: controlPlaneRecordSet{
+			"compute-dead": {"id": "compute-dead", "accountId": "acct-alpha", "status": "destroyed"},
+		},
+	}); err != nil {
+		t.Fatalf("seed terminal compute: %v", err)
+	}
+	service := controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{})
+	server, err := NewPersistentServer(service, store)
+	if err != nil {
+		t.Fatalf("server: %v", err)
+	}
+	admin := operatorSessionForTest(t, server)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/operator/archive-terminal-resources", `{"confirm":true,"reason":"test_archive_query"}`)
+
+	rec := requestWithSession(t, server, admin, http.MethodGet, "/api/operator/archive", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("archive state status = %d: %s", rec.Code, rec.Body.String())
+	}
+	var archive map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&archive); err != nil {
+		t.Fatalf("decode archive state: %v", err)
+	}
+	if len(archive["resources"].([]any)) == 0 || archive["retentionPolicy"].(map[string]any)["adminAuditDays"] == nil {
+		t.Fatalf("archive state must come from backend archive facts and policy: %#v", archive)
 	}
 }
 
@@ -1793,6 +1847,7 @@ func TestHighRiskMutationsRequireBackendConfirmation(t *testing.T) {
 		{http.MethodPost, "/api/compute-allocations/compute-alpha/destroy", `{}`},
 		{http.MethodPost, "/api/storage-volumes/destroy", `{"storageId":"storage-alpha"}`},
 		{http.MethodPost, "/api/operator/cleanup-workspace-access", `{"reason":"test"}`},
+		{http.MethodPost, "/api/operator/archive-terminal-resources", `{"reason":"test"}`},
 	} {
 		rec := requestWithSession(t, server, admin, tc.method, tc.path, tc.body)
 		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), "confirmation_required") {
@@ -2066,9 +2121,9 @@ func TestSupportTicketMappingRequiresExternalTicket(t *testing.T) {
 }
 
 func TestSupportTicketMappingPersistsExternalContext(t *testing.T) {
-	path := t.TempDir() + "/control-plane-state.json"
+	path := t.TempDir() + "/control-plane-state.sqlite"
 	service := controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{})
-	server, err := NewPersistentServer(service, NewMemoryStateStore(path))
+	server, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
 	if err != nil {
 		t.Fatalf("create persistent server: %v", err)
 	}
@@ -2078,7 +2133,7 @@ func TestSupportTicketMappingPersistsExternalContext(t *testing.T) {
 		t.Fatalf("support mapping did not keep external context: %#v", created)
 	}
 
-	restarted, err := NewPersistentServer(service, NewMemoryStateStore(path))
+	restarted, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
 	if err != nil {
 		t.Fatalf("restart persistent server: %v", err)
 	}
@@ -2139,6 +2194,7 @@ func TestActiveConsoleAPIRoutesReachControlPlane(t *testing.T) {
 		{http.MethodPost, "/api/workspaces/delete-token", `{"workspaceId":"ws-alpha"}`},
 		{http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"ws-alpha"}`},
 		{http.MethodPost, "/api/operator/cleanup-workspace-access", `{"reason":"test"}`},
+		{http.MethodPost, "/api/operator/archive-terminal-resources", `{"reason":"test"}`},
 	}
 
 	for _, tc := range cases {

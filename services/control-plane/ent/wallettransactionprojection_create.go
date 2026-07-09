@@ -20,454 +20,6 @@ type WalletTransactionProjectionCreate struct {
 	hooks    []Hook
 }
 
-// SetAccountID sets the "account_id" field.
-func (wtpc *WalletTransactionProjectionCreate) SetAccountID(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetAccountID(s)
-	return wtpc
-}
-
-// SetNillableAccountID sets the "account_id" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableAccountID(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetAccountID(*s)
-	}
-	return wtpc
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (wtpc *WalletTransactionProjectionCreate) SetOwnerAccountID(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetOwnerAccountID(s)
-	return wtpc
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableOwnerAccountID(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetOwnerAccountID(*s)
-	}
-	return wtpc
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (wtpc *WalletTransactionProjectionCreate) SetOwnerUserID(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetOwnerUserID(s)
-	return wtpc
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableOwnerUserID(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetOwnerUserID(*s)
-	}
-	return wtpc
-}
-
-// SetUserID sets the "user_id" field.
-func (wtpc *WalletTransactionProjectionCreate) SetUserID(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetUserID(s)
-	return wtpc
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableUserID(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetUserID(*s)
-	}
-	return wtpc
-}
-
-// SetEmail sets the "email" field.
-func (wtpc *WalletTransactionProjectionCreate) SetEmail(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetEmail(s)
-	return wtpc
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableEmail(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetEmail(*s)
-	}
-	return wtpc
-}
-
-// SetRole sets the "role" field.
-func (wtpc *WalletTransactionProjectionCreate) SetRole(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetRole(s)
-	return wtpc
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableRole(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetRole(*s)
-	}
-	return wtpc
-}
-
-// SetStatus sets the "status" field.
-func (wtpc *WalletTransactionProjectionCreate) SetStatus(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetStatus(s)
-	return wtpc
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableStatus(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetStatus(*s)
-	}
-	return wtpc
-}
-
-// SetName sets the "name" field.
-func (wtpc *WalletTransactionProjectionCreate) SetName(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetName(s)
-	return wtpc
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableName(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetName(*s)
-	}
-	return wtpc
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (wtpc *WalletTransactionProjectionCreate) SetWorkspaceID(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetWorkspaceID(s)
-	return wtpc
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableWorkspaceID(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetWorkspaceID(*s)
-	}
-	return wtpc
-}
-
-// SetResourceID sets the "resource_id" field.
-func (wtpc *WalletTransactionProjectionCreate) SetResourceID(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetResourceID(s)
-	return wtpc
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableResourceID(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetResourceID(*s)
-	}
-	return wtpc
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (wtpc *WalletTransactionProjectionCreate) SetResourceKind(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetResourceKind(s)
-	return wtpc
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableResourceKind(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetResourceKind(*s)
-	}
-	return wtpc
-}
-
-// SetOperationID sets the "operation_id" field.
-func (wtpc *WalletTransactionProjectionCreate) SetOperationID(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetOperationID(s)
-	return wtpc
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableOperationID(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetOperationID(*s)
-	}
-	return wtpc
-}
-
-// SetProvider sets the "provider" field.
-func (wtpc *WalletTransactionProjectionCreate) SetProvider(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetProvider(s)
-	return wtpc
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableProvider(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetProvider(*s)
-	}
-	return wtpc
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (wtpc *WalletTransactionProjectionCreate) SetProviderResourceID(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetProviderResourceID(s)
-	return wtpc
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableProviderResourceID(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetProviderResourceID(*s)
-	}
-	return wtpc
-}
-
-// SetURL sets the "url" field.
-func (wtpc *WalletTransactionProjectionCreate) SetURL(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetURL(s)
-	return wtpc
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableURL(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetURL(*s)
-	}
-	return wtpc
-}
-
-// SetHoldID sets the "hold_id" field.
-func (wtpc *WalletTransactionProjectionCreate) SetHoldID(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetHoldID(s)
-	return wtpc
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableHoldID(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetHoldID(*s)
-	}
-	return wtpc
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (wtpc *WalletTransactionProjectionCreate) SetHoldReleaseID(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetHoldReleaseID(s)
-	return wtpc
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableHoldReleaseID(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetHoldReleaseID(*s)
-	}
-	return wtpc
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (wtpc *WalletTransactionProjectionCreate) SetLedgerEntryID(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetLedgerEntryID(s)
-	return wtpc
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableLedgerEntryID(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetLedgerEntryID(*s)
-	}
-	return wtpc
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (wtpc *WalletTransactionProjectionCreate) SetWalletTransactionID(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetWalletTransactionID(s)
-	return wtpc
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableWalletTransactionID(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetWalletTransactionID(*s)
-	}
-	return wtpc
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (wtpc *WalletTransactionProjectionCreate) SetSettlementID(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetSettlementID(s)
-	return wtpc
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableSettlementID(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetSettlementID(*s)
-	}
-	return wtpc
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (wtpc *WalletTransactionProjectionCreate) SetPricingVersion(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetPricingVersion(s)
-	return wtpc
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillablePricingVersion(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetPricingVersion(*s)
-	}
-	return wtpc
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (wtpc *WalletTransactionProjectionCreate) SetAmountCents(i int64) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetAmountCents(i)
-	return wtpc
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableAmountCents(i *int64) *WalletTransactionProjectionCreate {
-	if i != nil {
-		wtpc.SetAmountCents(*i)
-	}
-	return wtpc
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (wtpc *WalletTransactionProjectionCreate) SetBalanceCents(i int64) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetBalanceCents(i)
-	return wtpc
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableBalanceCents(i *int64) *WalletTransactionProjectionCreate {
-	if i != nil {
-		wtpc.SetBalanceCents(*i)
-	}
-	return wtpc
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (wtpc *WalletTransactionProjectionCreate) SetFrozenCents(i int64) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetFrozenCents(i)
-	return wtpc
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableFrozenCents(i *int64) *WalletTransactionProjectionCreate {
-	if i != nil {
-		wtpc.SetFrozenCents(*i)
-	}
-	return wtpc
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (wtpc *WalletTransactionProjectionCreate) SetAvailableCents(i int64) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetAvailableCents(i)
-	return wtpc
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableAvailableCents(i *int64) *WalletTransactionProjectionCreate {
-	if i != nil {
-		wtpc.SetAvailableCents(*i)
-	}
-	return wtpc
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (wtpc *WalletTransactionProjectionCreate) SetTotalSpentCents(i int64) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetTotalSpentCents(i)
-	return wtpc
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableTotalSpentCents(i *int64) *WalletTransactionProjectionCreate {
-	if i != nil {
-		wtpc.SetTotalSpentCents(*i)
-	}
-	return wtpc
-}
-
-// SetQuantity sets the "quantity" field.
-func (wtpc *WalletTransactionProjectionCreate) SetQuantity(f float64) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetQuantity(f)
-	return wtpc
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableQuantity(f *float64) *WalletTransactionProjectionCreate {
-	if f != nil {
-		wtpc.SetQuantity(*f)
-	}
-	return wtpc
-}
-
-// SetUnit sets the "unit" field.
-func (wtpc *WalletTransactionProjectionCreate) SetUnit(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetUnit(s)
-	return wtpc
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableUnit(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetUnit(*s)
-	}
-	return wtpc
-}
-
-// SetReason sets the "reason" field.
-func (wtpc *WalletTransactionProjectionCreate) SetReason(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetReason(s)
-	return wtpc
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableReason(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetReason(*s)
-	}
-	return wtpc
-}
-
-// SetResult sets the "result" field.
-func (wtpc *WalletTransactionProjectionCreate) SetResult(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetResult(s)
-	return wtpc
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableResult(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetResult(*s)
-	}
-	return wtpc
-}
-
-// SetSource sets the "source" field.
-func (wtpc *WalletTransactionProjectionCreate) SetSource(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetSource(s)
-	return wtpc
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableSource(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetSource(*s)
-	}
-	return wtpc
-}
-
-// SetDirection sets the "direction" field.
-func (wtpc *WalletTransactionProjectionCreate) SetDirection(s string) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetDirection(s)
-	return wtpc
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableDirection(s *string) *WalletTransactionProjectionCreate {
-	if s != nil {
-		wtpc.SetDirection(*s)
-	}
-	return wtpc
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (wtpc *WalletTransactionProjectionCreate) SetCreatedAt(t time.Time) *WalletTransactionProjectionCreate {
 	wtpc.mutation.SetCreatedAt(t)
@@ -496,16 +48,218 @@ func (wtpc *WalletTransactionProjectionCreate) SetNillableUpdatedAt(t *time.Time
 	return wtpc
 }
 
-// SetArchivedAt sets the "archived_at" field.
-func (wtpc *WalletTransactionProjectionCreate) SetArchivedAt(t time.Time) *WalletTransactionProjectionCreate {
-	wtpc.mutation.SetArchivedAt(t)
+// SetAccountID sets the "account_id" field.
+func (wtpc *WalletTransactionProjectionCreate) SetAccountID(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetAccountID(s)
 	return wtpc
 }
 
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (wtpc *WalletTransactionProjectionCreate) SetNillableArchivedAt(t *time.Time) *WalletTransactionProjectionCreate {
-	if t != nil {
-		wtpc.SetArchivedAt(*t)
+// SetType sets the "type" field.
+func (wtpc *WalletTransactionProjectionCreate) SetType(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetType(s)
+	return wtpc
+}
+
+// SetNillableType sets the "type" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableType(s *string) *WalletTransactionProjectionCreate {
+	if s != nil {
+		wtpc.SetType(*s)
+	}
+	return wtpc
+}
+
+// SetLedgerEntryID sets the "ledger_entry_id" field.
+func (wtpc *WalletTransactionProjectionCreate) SetLedgerEntryID(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetLedgerEntryID(s)
+	return wtpc
+}
+
+// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableLedgerEntryID(s *string) *WalletTransactionProjectionCreate {
+	if s != nil {
+		wtpc.SetLedgerEntryID(*s)
+	}
+	return wtpc
+}
+
+// SetResourceID sets the "resource_id" field.
+func (wtpc *WalletTransactionProjectionCreate) SetResourceID(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetResourceID(s)
+	return wtpc
+}
+
+// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableResourceID(s *string) *WalletTransactionProjectionCreate {
+	if s != nil {
+		wtpc.SetResourceID(*s)
+	}
+	return wtpc
+}
+
+// SetWorkspaceID sets the "workspace_id" field.
+func (wtpc *WalletTransactionProjectionCreate) SetWorkspaceID(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetWorkspaceID(s)
+	return wtpc
+}
+
+// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableWorkspaceID(s *string) *WalletTransactionProjectionCreate {
+	if s != nil {
+		wtpc.SetWorkspaceID(*s)
+	}
+	return wtpc
+}
+
+// SetComputeAllocationID sets the "compute_allocation_id" field.
+func (wtpc *WalletTransactionProjectionCreate) SetComputeAllocationID(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetComputeAllocationID(s)
+	return wtpc
+}
+
+// SetNillableComputeAllocationID sets the "compute_allocation_id" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableComputeAllocationID(s *string) *WalletTransactionProjectionCreate {
+	if s != nil {
+		wtpc.SetComputeAllocationID(*s)
+	}
+	return wtpc
+}
+
+// SetStorageID sets the "storage_id" field.
+func (wtpc *WalletTransactionProjectionCreate) SetStorageID(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetStorageID(s)
+	return wtpc
+}
+
+// SetNillableStorageID sets the "storage_id" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableStorageID(s *string) *WalletTransactionProjectionCreate {
+	if s != nil {
+		wtpc.SetStorageID(*s)
+	}
+	return wtpc
+}
+
+// SetSettlementID sets the "settlement_id" field.
+func (wtpc *WalletTransactionProjectionCreate) SetSettlementID(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetSettlementID(s)
+	return wtpc
+}
+
+// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableSettlementID(s *string) *WalletTransactionProjectionCreate {
+	if s != nil {
+		wtpc.SetSettlementID(*s)
+	}
+	return wtpc
+}
+
+// SetCurrency sets the "currency" field.
+func (wtpc *WalletTransactionProjectionCreate) SetCurrency(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetCurrency(s)
+	return wtpc
+}
+
+// SetNillableCurrency sets the "currency" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableCurrency(s *string) *WalletTransactionProjectionCreate {
+	if s != nil {
+		wtpc.SetCurrency(*s)
+	}
+	return wtpc
+}
+
+// SetAmountCents sets the "amount_cents" field.
+func (wtpc *WalletTransactionProjectionCreate) SetAmountCents(i int64) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetAmountCents(i)
+	return wtpc
+}
+
+// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableAmountCents(i *int64) *WalletTransactionProjectionCreate {
+	if i != nil {
+		wtpc.SetAmountCents(*i)
+	}
+	return wtpc
+}
+
+// SetMetadataWorkspaceID sets the "metadata_workspace_id" field.
+func (wtpc *WalletTransactionProjectionCreate) SetMetadataWorkspaceID(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetMetadataWorkspaceID(s)
+	return wtpc
+}
+
+// SetNillableMetadataWorkspaceID sets the "metadata_workspace_id" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableMetadataWorkspaceID(s *string) *WalletTransactionProjectionCreate {
+	if s != nil {
+		wtpc.SetMetadataWorkspaceID(*s)
+	}
+	return wtpc
+}
+
+// SetMetadataResourceID sets the "metadata_resource_id" field.
+func (wtpc *WalletTransactionProjectionCreate) SetMetadataResourceID(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetMetadataResourceID(s)
+	return wtpc
+}
+
+// SetNillableMetadataResourceID sets the "metadata_resource_id" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableMetadataResourceID(s *string) *WalletTransactionProjectionCreate {
+	if s != nil {
+		wtpc.SetMetadataResourceID(*s)
+	}
+	return wtpc
+}
+
+// SetMetadataSettlementID sets the "metadata_settlement_id" field.
+func (wtpc *WalletTransactionProjectionCreate) SetMetadataSettlementID(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetMetadataSettlementID(s)
+	return wtpc
+}
+
+// SetNillableMetadataSettlementID sets the "metadata_settlement_id" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableMetadataSettlementID(s *string) *WalletTransactionProjectionCreate {
+	if s != nil {
+		wtpc.SetMetadataSettlementID(*s)
+	}
+	return wtpc
+}
+
+// SetMetadataLedgerEntryID sets the "metadata_ledger_entry_id" field.
+func (wtpc *WalletTransactionProjectionCreate) SetMetadataLedgerEntryID(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetMetadataLedgerEntryID(s)
+	return wtpc
+}
+
+// SetNillableMetadataLedgerEntryID sets the "metadata_ledger_entry_id" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableMetadataLedgerEntryID(s *string) *WalletTransactionProjectionCreate {
+	if s != nil {
+		wtpc.SetMetadataLedgerEntryID(*s)
+	}
+	return wtpc
+}
+
+// SetMetadataComputeAllocationID sets the "metadata_compute_allocation_id" field.
+func (wtpc *WalletTransactionProjectionCreate) SetMetadataComputeAllocationID(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetMetadataComputeAllocationID(s)
+	return wtpc
+}
+
+// SetNillableMetadataComputeAllocationID sets the "metadata_compute_allocation_id" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableMetadataComputeAllocationID(s *string) *WalletTransactionProjectionCreate {
+	if s != nil {
+		wtpc.SetMetadataComputeAllocationID(*s)
+	}
+	return wtpc
+}
+
+// SetMetadataStorageID sets the "metadata_storage_id" field.
+func (wtpc *WalletTransactionProjectionCreate) SetMetadataStorageID(s string) *WalletTransactionProjectionCreate {
+	wtpc.mutation.SetMetadataStorageID(s)
+	return wtpc
+}
+
+// SetNillableMetadataStorageID sets the "metadata_storage_id" field if the given value is not nil.
+func (wtpc *WalletTransactionProjectionCreate) SetNillableMetadataStorageID(s *string) *WalletTransactionProjectionCreate {
+	if s != nil {
+		wtpc.SetMetadataStorageID(*s)
 	}
 	return wtpc
 }
@@ -551,134 +305,6 @@ func (wtpc *WalletTransactionProjectionCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (wtpc *WalletTransactionProjectionCreate) defaults() {
-	if _, ok := wtpc.mutation.AccountID(); !ok {
-		v := wallettransactionprojection.DefaultAccountID
-		wtpc.mutation.SetAccountID(v)
-	}
-	if _, ok := wtpc.mutation.OwnerAccountID(); !ok {
-		v := wallettransactionprojection.DefaultOwnerAccountID
-		wtpc.mutation.SetOwnerAccountID(v)
-	}
-	if _, ok := wtpc.mutation.OwnerUserID(); !ok {
-		v := wallettransactionprojection.DefaultOwnerUserID
-		wtpc.mutation.SetOwnerUserID(v)
-	}
-	if _, ok := wtpc.mutation.UserID(); !ok {
-		v := wallettransactionprojection.DefaultUserID
-		wtpc.mutation.SetUserID(v)
-	}
-	if _, ok := wtpc.mutation.Email(); !ok {
-		v := wallettransactionprojection.DefaultEmail
-		wtpc.mutation.SetEmail(v)
-	}
-	if _, ok := wtpc.mutation.Role(); !ok {
-		v := wallettransactionprojection.DefaultRole
-		wtpc.mutation.SetRole(v)
-	}
-	if _, ok := wtpc.mutation.Status(); !ok {
-		v := wallettransactionprojection.DefaultStatus
-		wtpc.mutation.SetStatus(v)
-	}
-	if _, ok := wtpc.mutation.Name(); !ok {
-		v := wallettransactionprojection.DefaultName
-		wtpc.mutation.SetName(v)
-	}
-	if _, ok := wtpc.mutation.WorkspaceID(); !ok {
-		v := wallettransactionprojection.DefaultWorkspaceID
-		wtpc.mutation.SetWorkspaceID(v)
-	}
-	if _, ok := wtpc.mutation.ResourceID(); !ok {
-		v := wallettransactionprojection.DefaultResourceID
-		wtpc.mutation.SetResourceID(v)
-	}
-	if _, ok := wtpc.mutation.ResourceKind(); !ok {
-		v := wallettransactionprojection.DefaultResourceKind
-		wtpc.mutation.SetResourceKind(v)
-	}
-	if _, ok := wtpc.mutation.OperationID(); !ok {
-		v := wallettransactionprojection.DefaultOperationID
-		wtpc.mutation.SetOperationID(v)
-	}
-	if _, ok := wtpc.mutation.Provider(); !ok {
-		v := wallettransactionprojection.DefaultProvider
-		wtpc.mutation.SetProvider(v)
-	}
-	if _, ok := wtpc.mutation.ProviderResourceID(); !ok {
-		v := wallettransactionprojection.DefaultProviderResourceID
-		wtpc.mutation.SetProviderResourceID(v)
-	}
-	if _, ok := wtpc.mutation.URL(); !ok {
-		v := wallettransactionprojection.DefaultURL
-		wtpc.mutation.SetURL(v)
-	}
-	if _, ok := wtpc.mutation.HoldID(); !ok {
-		v := wallettransactionprojection.DefaultHoldID
-		wtpc.mutation.SetHoldID(v)
-	}
-	if _, ok := wtpc.mutation.HoldReleaseID(); !ok {
-		v := wallettransactionprojection.DefaultHoldReleaseID
-		wtpc.mutation.SetHoldReleaseID(v)
-	}
-	if _, ok := wtpc.mutation.LedgerEntryID(); !ok {
-		v := wallettransactionprojection.DefaultLedgerEntryID
-		wtpc.mutation.SetLedgerEntryID(v)
-	}
-	if _, ok := wtpc.mutation.WalletTransactionID(); !ok {
-		v := wallettransactionprojection.DefaultWalletTransactionID
-		wtpc.mutation.SetWalletTransactionID(v)
-	}
-	if _, ok := wtpc.mutation.SettlementID(); !ok {
-		v := wallettransactionprojection.DefaultSettlementID
-		wtpc.mutation.SetSettlementID(v)
-	}
-	if _, ok := wtpc.mutation.PricingVersion(); !ok {
-		v := wallettransactionprojection.DefaultPricingVersion
-		wtpc.mutation.SetPricingVersion(v)
-	}
-	if _, ok := wtpc.mutation.AmountCents(); !ok {
-		v := wallettransactionprojection.DefaultAmountCents
-		wtpc.mutation.SetAmountCents(v)
-	}
-	if _, ok := wtpc.mutation.BalanceCents(); !ok {
-		v := wallettransactionprojection.DefaultBalanceCents
-		wtpc.mutation.SetBalanceCents(v)
-	}
-	if _, ok := wtpc.mutation.FrozenCents(); !ok {
-		v := wallettransactionprojection.DefaultFrozenCents
-		wtpc.mutation.SetFrozenCents(v)
-	}
-	if _, ok := wtpc.mutation.AvailableCents(); !ok {
-		v := wallettransactionprojection.DefaultAvailableCents
-		wtpc.mutation.SetAvailableCents(v)
-	}
-	if _, ok := wtpc.mutation.TotalSpentCents(); !ok {
-		v := wallettransactionprojection.DefaultTotalSpentCents
-		wtpc.mutation.SetTotalSpentCents(v)
-	}
-	if _, ok := wtpc.mutation.Quantity(); !ok {
-		v := wallettransactionprojection.DefaultQuantity
-		wtpc.mutation.SetQuantity(v)
-	}
-	if _, ok := wtpc.mutation.Unit(); !ok {
-		v := wallettransactionprojection.DefaultUnit
-		wtpc.mutation.SetUnit(v)
-	}
-	if _, ok := wtpc.mutation.Reason(); !ok {
-		v := wallettransactionprojection.DefaultReason
-		wtpc.mutation.SetReason(v)
-	}
-	if _, ok := wtpc.mutation.Result(); !ok {
-		v := wallettransactionprojection.DefaultResult
-		wtpc.mutation.SetResult(v)
-	}
-	if _, ok := wtpc.mutation.Source(); !ok {
-		v := wallettransactionprojection.DefaultSource
-		wtpc.mutation.SetSource(v)
-	}
-	if _, ok := wtpc.mutation.Direction(); !ok {
-		v := wallettransactionprojection.DefaultDirection
-		wtpc.mutation.SetDirection(v)
-	}
 	if _, ok := wtpc.mutation.CreatedAt(); !ok {
 		v := wallettransactionprojection.DefaultCreatedAt()
 		wtpc.mutation.SetCreatedAt(v)
@@ -687,111 +313,128 @@ func (wtpc *WalletTransactionProjectionCreate) defaults() {
 		v := wallettransactionprojection.DefaultUpdatedAt()
 		wtpc.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := wtpc.mutation.GetType(); !ok {
+		v := wallettransactionprojection.DefaultType
+		wtpc.mutation.SetType(v)
+	}
+	if _, ok := wtpc.mutation.LedgerEntryID(); !ok {
+		v := wallettransactionprojection.DefaultLedgerEntryID
+		wtpc.mutation.SetLedgerEntryID(v)
+	}
+	if _, ok := wtpc.mutation.ResourceID(); !ok {
+		v := wallettransactionprojection.DefaultResourceID
+		wtpc.mutation.SetResourceID(v)
+	}
+	if _, ok := wtpc.mutation.WorkspaceID(); !ok {
+		v := wallettransactionprojection.DefaultWorkspaceID
+		wtpc.mutation.SetWorkspaceID(v)
+	}
+	if _, ok := wtpc.mutation.ComputeAllocationID(); !ok {
+		v := wallettransactionprojection.DefaultComputeAllocationID
+		wtpc.mutation.SetComputeAllocationID(v)
+	}
+	if _, ok := wtpc.mutation.StorageID(); !ok {
+		v := wallettransactionprojection.DefaultStorageID
+		wtpc.mutation.SetStorageID(v)
+	}
+	if _, ok := wtpc.mutation.SettlementID(); !ok {
+		v := wallettransactionprojection.DefaultSettlementID
+		wtpc.mutation.SetSettlementID(v)
+	}
+	if _, ok := wtpc.mutation.Currency(); !ok {
+		v := wallettransactionprojection.DefaultCurrency
+		wtpc.mutation.SetCurrency(v)
+	}
+	if _, ok := wtpc.mutation.AmountCents(); !ok {
+		v := wallettransactionprojection.DefaultAmountCents
+		wtpc.mutation.SetAmountCents(v)
+	}
+	if _, ok := wtpc.mutation.MetadataWorkspaceID(); !ok {
+		v := wallettransactionprojection.DefaultMetadataWorkspaceID
+		wtpc.mutation.SetMetadataWorkspaceID(v)
+	}
+	if _, ok := wtpc.mutation.MetadataResourceID(); !ok {
+		v := wallettransactionprojection.DefaultMetadataResourceID
+		wtpc.mutation.SetMetadataResourceID(v)
+	}
+	if _, ok := wtpc.mutation.MetadataSettlementID(); !ok {
+		v := wallettransactionprojection.DefaultMetadataSettlementID
+		wtpc.mutation.SetMetadataSettlementID(v)
+	}
+	if _, ok := wtpc.mutation.MetadataLedgerEntryID(); !ok {
+		v := wallettransactionprojection.DefaultMetadataLedgerEntryID
+		wtpc.mutation.SetMetadataLedgerEntryID(v)
+	}
+	if _, ok := wtpc.mutation.MetadataComputeAllocationID(); !ok {
+		v := wallettransactionprojection.DefaultMetadataComputeAllocationID
+		wtpc.mutation.SetMetadataComputeAllocationID(v)
+	}
+	if _, ok := wtpc.mutation.MetadataStorageID(); !ok {
+		v := wallettransactionprojection.DefaultMetadataStorageID
+		wtpc.mutation.SetMetadataStorageID(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (wtpc *WalletTransactionProjectionCreate) check() error {
-	if _, ok := wtpc.mutation.AccountID(); !ok {
-		return &ValidationError{Name: "account_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.account_id"`)}
-	}
-	if _, ok := wtpc.mutation.OwnerAccountID(); !ok {
-		return &ValidationError{Name: "owner_account_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.owner_account_id"`)}
-	}
-	if _, ok := wtpc.mutation.OwnerUserID(); !ok {
-		return &ValidationError{Name: "owner_user_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.owner_user_id"`)}
-	}
-	if _, ok := wtpc.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.user_id"`)}
-	}
-	if _, ok := wtpc.mutation.Email(); !ok {
-		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "WalletTransactionProjection.email"`)}
-	}
-	if _, ok := wtpc.mutation.Role(); !ok {
-		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "WalletTransactionProjection.role"`)}
-	}
-	if _, ok := wtpc.mutation.Status(); !ok {
-		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "WalletTransactionProjection.status"`)}
-	}
-	if _, ok := wtpc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "WalletTransactionProjection.name"`)}
-	}
-	if _, ok := wtpc.mutation.WorkspaceID(); !ok {
-		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.workspace_id"`)}
-	}
-	if _, ok := wtpc.mutation.ResourceID(); !ok {
-		return &ValidationError{Name: "resource_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.resource_id"`)}
-	}
-	if _, ok := wtpc.mutation.ResourceKind(); !ok {
-		return &ValidationError{Name: "resource_kind", err: errors.New(`ent: missing required field "WalletTransactionProjection.resource_kind"`)}
-	}
-	if _, ok := wtpc.mutation.OperationID(); !ok {
-		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.operation_id"`)}
-	}
-	if _, ok := wtpc.mutation.Provider(); !ok {
-		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "WalletTransactionProjection.provider"`)}
-	}
-	if _, ok := wtpc.mutation.ProviderResourceID(); !ok {
-		return &ValidationError{Name: "provider_resource_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.provider_resource_id"`)}
-	}
-	if _, ok := wtpc.mutation.URL(); !ok {
-		return &ValidationError{Name: "url", err: errors.New(`ent: missing required field "WalletTransactionProjection.url"`)}
-	}
-	if _, ok := wtpc.mutation.HoldID(); !ok {
-		return &ValidationError{Name: "hold_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.hold_id"`)}
-	}
-	if _, ok := wtpc.mutation.HoldReleaseID(); !ok {
-		return &ValidationError{Name: "hold_release_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.hold_release_id"`)}
-	}
-	if _, ok := wtpc.mutation.LedgerEntryID(); !ok {
-		return &ValidationError{Name: "ledger_entry_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.ledger_entry_id"`)}
-	}
-	if _, ok := wtpc.mutation.WalletTransactionID(); !ok {
-		return &ValidationError{Name: "wallet_transaction_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.wallet_transaction_id"`)}
-	}
-	if _, ok := wtpc.mutation.SettlementID(); !ok {
-		return &ValidationError{Name: "settlement_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.settlement_id"`)}
-	}
-	if _, ok := wtpc.mutation.PricingVersion(); !ok {
-		return &ValidationError{Name: "pricing_version", err: errors.New(`ent: missing required field "WalletTransactionProjection.pricing_version"`)}
-	}
-	if _, ok := wtpc.mutation.AmountCents(); !ok {
-		return &ValidationError{Name: "amount_cents", err: errors.New(`ent: missing required field "WalletTransactionProjection.amount_cents"`)}
-	}
-	if _, ok := wtpc.mutation.BalanceCents(); !ok {
-		return &ValidationError{Name: "balance_cents", err: errors.New(`ent: missing required field "WalletTransactionProjection.balance_cents"`)}
-	}
-	if _, ok := wtpc.mutation.FrozenCents(); !ok {
-		return &ValidationError{Name: "frozen_cents", err: errors.New(`ent: missing required field "WalletTransactionProjection.frozen_cents"`)}
-	}
-	if _, ok := wtpc.mutation.AvailableCents(); !ok {
-		return &ValidationError{Name: "available_cents", err: errors.New(`ent: missing required field "WalletTransactionProjection.available_cents"`)}
-	}
-	if _, ok := wtpc.mutation.TotalSpentCents(); !ok {
-		return &ValidationError{Name: "total_spent_cents", err: errors.New(`ent: missing required field "WalletTransactionProjection.total_spent_cents"`)}
-	}
-	if _, ok := wtpc.mutation.Quantity(); !ok {
-		return &ValidationError{Name: "quantity", err: errors.New(`ent: missing required field "WalletTransactionProjection.quantity"`)}
-	}
-	if _, ok := wtpc.mutation.Unit(); !ok {
-		return &ValidationError{Name: "unit", err: errors.New(`ent: missing required field "WalletTransactionProjection.unit"`)}
-	}
-	if _, ok := wtpc.mutation.Reason(); !ok {
-		return &ValidationError{Name: "reason", err: errors.New(`ent: missing required field "WalletTransactionProjection.reason"`)}
-	}
-	if _, ok := wtpc.mutation.Result(); !ok {
-		return &ValidationError{Name: "result", err: errors.New(`ent: missing required field "WalletTransactionProjection.result"`)}
-	}
-	if _, ok := wtpc.mutation.Source(); !ok {
-		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "WalletTransactionProjection.source"`)}
-	}
-	if _, ok := wtpc.mutation.Direction(); !ok {
-		return &ValidationError{Name: "direction", err: errors.New(`ent: missing required field "WalletTransactionProjection.direction"`)}
-	}
 	if _, ok := wtpc.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "WalletTransactionProjection.created_at"`)}
 	}
 	if _, ok := wtpc.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "WalletTransactionProjection.updated_at"`)}
+	}
+	if _, ok := wtpc.mutation.AccountID(); !ok {
+		return &ValidationError{Name: "account_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.account_id"`)}
+	}
+	if v, ok := wtpc.mutation.AccountID(); ok {
+		if err := wallettransactionprojection.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "WalletTransactionProjection.account_id": %w`, err)}
+		}
+	}
+	if _, ok := wtpc.mutation.GetType(); !ok {
+		return &ValidationError{Name: "type", err: errors.New(`ent: missing required field "WalletTransactionProjection.type"`)}
+	}
+	if _, ok := wtpc.mutation.LedgerEntryID(); !ok {
+		return &ValidationError{Name: "ledger_entry_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.ledger_entry_id"`)}
+	}
+	if _, ok := wtpc.mutation.ResourceID(); !ok {
+		return &ValidationError{Name: "resource_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.resource_id"`)}
+	}
+	if _, ok := wtpc.mutation.WorkspaceID(); !ok {
+		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.workspace_id"`)}
+	}
+	if _, ok := wtpc.mutation.ComputeAllocationID(); !ok {
+		return &ValidationError{Name: "compute_allocation_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.compute_allocation_id"`)}
+	}
+	if _, ok := wtpc.mutation.StorageID(); !ok {
+		return &ValidationError{Name: "storage_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.storage_id"`)}
+	}
+	if _, ok := wtpc.mutation.SettlementID(); !ok {
+		return &ValidationError{Name: "settlement_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.settlement_id"`)}
+	}
+	if _, ok := wtpc.mutation.Currency(); !ok {
+		return &ValidationError{Name: "currency", err: errors.New(`ent: missing required field "WalletTransactionProjection.currency"`)}
+	}
+	if _, ok := wtpc.mutation.AmountCents(); !ok {
+		return &ValidationError{Name: "amount_cents", err: errors.New(`ent: missing required field "WalletTransactionProjection.amount_cents"`)}
+	}
+	if _, ok := wtpc.mutation.MetadataWorkspaceID(); !ok {
+		return &ValidationError{Name: "metadata_workspace_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.metadata_workspace_id"`)}
+	}
+	if _, ok := wtpc.mutation.MetadataResourceID(); !ok {
+		return &ValidationError{Name: "metadata_resource_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.metadata_resource_id"`)}
+	}
+	if _, ok := wtpc.mutation.MetadataSettlementID(); !ok {
+		return &ValidationError{Name: "metadata_settlement_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.metadata_settlement_id"`)}
+	}
+	if _, ok := wtpc.mutation.MetadataLedgerEntryID(); !ok {
+		return &ValidationError{Name: "metadata_ledger_entry_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.metadata_ledger_entry_id"`)}
+	}
+	if _, ok := wtpc.mutation.MetadataComputeAllocationID(); !ok {
+		return &ValidationError{Name: "metadata_compute_allocation_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.metadata_compute_allocation_id"`)}
+	}
+	if _, ok := wtpc.mutation.MetadataStorageID(); !ok {
+		return &ValidationError{Name: "metadata_storage_id", err: errors.New(`ent: missing required field "WalletTransactionProjection.metadata_storage_id"`)}
 	}
 	if v, ok := wtpc.mutation.ID(); ok {
 		if err := wallettransactionprojection.IDValidator(v); err != nil {
@@ -833,134 +476,6 @@ func (wtpc *WalletTransactionProjectionCreate) createSpec() (*WalletTransactionP
 		_node.ID = id
 		_spec.ID.Value = id
 	}
-	if value, ok := wtpc.mutation.AccountID(); ok {
-		_spec.SetField(wallettransactionprojection.FieldAccountID, field.TypeString, value)
-		_node.AccountID = value
-	}
-	if value, ok := wtpc.mutation.OwnerAccountID(); ok {
-		_spec.SetField(wallettransactionprojection.FieldOwnerAccountID, field.TypeString, value)
-		_node.OwnerAccountID = value
-	}
-	if value, ok := wtpc.mutation.OwnerUserID(); ok {
-		_spec.SetField(wallettransactionprojection.FieldOwnerUserID, field.TypeString, value)
-		_node.OwnerUserID = value
-	}
-	if value, ok := wtpc.mutation.UserID(); ok {
-		_spec.SetField(wallettransactionprojection.FieldUserID, field.TypeString, value)
-		_node.UserID = value
-	}
-	if value, ok := wtpc.mutation.Email(); ok {
-		_spec.SetField(wallettransactionprojection.FieldEmail, field.TypeString, value)
-		_node.Email = value
-	}
-	if value, ok := wtpc.mutation.Role(); ok {
-		_spec.SetField(wallettransactionprojection.FieldRole, field.TypeString, value)
-		_node.Role = value
-	}
-	if value, ok := wtpc.mutation.Status(); ok {
-		_spec.SetField(wallettransactionprojection.FieldStatus, field.TypeString, value)
-		_node.Status = value
-	}
-	if value, ok := wtpc.mutation.Name(); ok {
-		_spec.SetField(wallettransactionprojection.FieldName, field.TypeString, value)
-		_node.Name = value
-	}
-	if value, ok := wtpc.mutation.WorkspaceID(); ok {
-		_spec.SetField(wallettransactionprojection.FieldWorkspaceID, field.TypeString, value)
-		_node.WorkspaceID = value
-	}
-	if value, ok := wtpc.mutation.ResourceID(); ok {
-		_spec.SetField(wallettransactionprojection.FieldResourceID, field.TypeString, value)
-		_node.ResourceID = value
-	}
-	if value, ok := wtpc.mutation.ResourceKind(); ok {
-		_spec.SetField(wallettransactionprojection.FieldResourceKind, field.TypeString, value)
-		_node.ResourceKind = value
-	}
-	if value, ok := wtpc.mutation.OperationID(); ok {
-		_spec.SetField(wallettransactionprojection.FieldOperationID, field.TypeString, value)
-		_node.OperationID = value
-	}
-	if value, ok := wtpc.mutation.Provider(); ok {
-		_spec.SetField(wallettransactionprojection.FieldProvider, field.TypeString, value)
-		_node.Provider = value
-	}
-	if value, ok := wtpc.mutation.ProviderResourceID(); ok {
-		_spec.SetField(wallettransactionprojection.FieldProviderResourceID, field.TypeString, value)
-		_node.ProviderResourceID = value
-	}
-	if value, ok := wtpc.mutation.URL(); ok {
-		_spec.SetField(wallettransactionprojection.FieldURL, field.TypeString, value)
-		_node.URL = value
-	}
-	if value, ok := wtpc.mutation.HoldID(); ok {
-		_spec.SetField(wallettransactionprojection.FieldHoldID, field.TypeString, value)
-		_node.HoldID = value
-	}
-	if value, ok := wtpc.mutation.HoldReleaseID(); ok {
-		_spec.SetField(wallettransactionprojection.FieldHoldReleaseID, field.TypeString, value)
-		_node.HoldReleaseID = value
-	}
-	if value, ok := wtpc.mutation.LedgerEntryID(); ok {
-		_spec.SetField(wallettransactionprojection.FieldLedgerEntryID, field.TypeString, value)
-		_node.LedgerEntryID = value
-	}
-	if value, ok := wtpc.mutation.WalletTransactionID(); ok {
-		_spec.SetField(wallettransactionprojection.FieldWalletTransactionID, field.TypeString, value)
-		_node.WalletTransactionID = value
-	}
-	if value, ok := wtpc.mutation.SettlementID(); ok {
-		_spec.SetField(wallettransactionprojection.FieldSettlementID, field.TypeString, value)
-		_node.SettlementID = value
-	}
-	if value, ok := wtpc.mutation.PricingVersion(); ok {
-		_spec.SetField(wallettransactionprojection.FieldPricingVersion, field.TypeString, value)
-		_node.PricingVersion = value
-	}
-	if value, ok := wtpc.mutation.AmountCents(); ok {
-		_spec.SetField(wallettransactionprojection.FieldAmountCents, field.TypeInt64, value)
-		_node.AmountCents = value
-	}
-	if value, ok := wtpc.mutation.BalanceCents(); ok {
-		_spec.SetField(wallettransactionprojection.FieldBalanceCents, field.TypeInt64, value)
-		_node.BalanceCents = value
-	}
-	if value, ok := wtpc.mutation.FrozenCents(); ok {
-		_spec.SetField(wallettransactionprojection.FieldFrozenCents, field.TypeInt64, value)
-		_node.FrozenCents = value
-	}
-	if value, ok := wtpc.mutation.AvailableCents(); ok {
-		_spec.SetField(wallettransactionprojection.FieldAvailableCents, field.TypeInt64, value)
-		_node.AvailableCents = value
-	}
-	if value, ok := wtpc.mutation.TotalSpentCents(); ok {
-		_spec.SetField(wallettransactionprojection.FieldTotalSpentCents, field.TypeInt64, value)
-		_node.TotalSpentCents = value
-	}
-	if value, ok := wtpc.mutation.Quantity(); ok {
-		_spec.SetField(wallettransactionprojection.FieldQuantity, field.TypeFloat64, value)
-		_node.Quantity = value
-	}
-	if value, ok := wtpc.mutation.Unit(); ok {
-		_spec.SetField(wallettransactionprojection.FieldUnit, field.TypeString, value)
-		_node.Unit = value
-	}
-	if value, ok := wtpc.mutation.Reason(); ok {
-		_spec.SetField(wallettransactionprojection.FieldReason, field.TypeString, value)
-		_node.Reason = value
-	}
-	if value, ok := wtpc.mutation.Result(); ok {
-		_spec.SetField(wallettransactionprojection.FieldResult, field.TypeString, value)
-		_node.Result = value
-	}
-	if value, ok := wtpc.mutation.Source(); ok {
-		_spec.SetField(wallettransactionprojection.FieldSource, field.TypeString, value)
-		_node.Source = value
-	}
-	if value, ok := wtpc.mutation.Direction(); ok {
-		_spec.SetField(wallettransactionprojection.FieldDirection, field.TypeString, value)
-		_node.Direction = value
-	}
 	if value, ok := wtpc.mutation.CreatedAt(); ok {
 		_spec.SetField(wallettransactionprojection.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -969,9 +484,69 @@ func (wtpc *WalletTransactionProjectionCreate) createSpec() (*WalletTransactionP
 		_spec.SetField(wallettransactionprojection.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := wtpc.mutation.ArchivedAt(); ok {
-		_spec.SetField(wallettransactionprojection.FieldArchivedAt, field.TypeTime, value)
-		_node.ArchivedAt = &value
+	if value, ok := wtpc.mutation.AccountID(); ok {
+		_spec.SetField(wallettransactionprojection.FieldAccountID, field.TypeString, value)
+		_node.AccountID = value
+	}
+	if value, ok := wtpc.mutation.GetType(); ok {
+		_spec.SetField(wallettransactionprojection.FieldType, field.TypeString, value)
+		_node.Type = value
+	}
+	if value, ok := wtpc.mutation.LedgerEntryID(); ok {
+		_spec.SetField(wallettransactionprojection.FieldLedgerEntryID, field.TypeString, value)
+		_node.LedgerEntryID = value
+	}
+	if value, ok := wtpc.mutation.ResourceID(); ok {
+		_spec.SetField(wallettransactionprojection.FieldResourceID, field.TypeString, value)
+		_node.ResourceID = value
+	}
+	if value, ok := wtpc.mutation.WorkspaceID(); ok {
+		_spec.SetField(wallettransactionprojection.FieldWorkspaceID, field.TypeString, value)
+		_node.WorkspaceID = value
+	}
+	if value, ok := wtpc.mutation.ComputeAllocationID(); ok {
+		_spec.SetField(wallettransactionprojection.FieldComputeAllocationID, field.TypeString, value)
+		_node.ComputeAllocationID = value
+	}
+	if value, ok := wtpc.mutation.StorageID(); ok {
+		_spec.SetField(wallettransactionprojection.FieldStorageID, field.TypeString, value)
+		_node.StorageID = value
+	}
+	if value, ok := wtpc.mutation.SettlementID(); ok {
+		_spec.SetField(wallettransactionprojection.FieldSettlementID, field.TypeString, value)
+		_node.SettlementID = value
+	}
+	if value, ok := wtpc.mutation.Currency(); ok {
+		_spec.SetField(wallettransactionprojection.FieldCurrency, field.TypeString, value)
+		_node.Currency = value
+	}
+	if value, ok := wtpc.mutation.AmountCents(); ok {
+		_spec.SetField(wallettransactionprojection.FieldAmountCents, field.TypeInt64, value)
+		_node.AmountCents = value
+	}
+	if value, ok := wtpc.mutation.MetadataWorkspaceID(); ok {
+		_spec.SetField(wallettransactionprojection.FieldMetadataWorkspaceID, field.TypeString, value)
+		_node.MetadataWorkspaceID = value
+	}
+	if value, ok := wtpc.mutation.MetadataResourceID(); ok {
+		_spec.SetField(wallettransactionprojection.FieldMetadataResourceID, field.TypeString, value)
+		_node.MetadataResourceID = value
+	}
+	if value, ok := wtpc.mutation.MetadataSettlementID(); ok {
+		_spec.SetField(wallettransactionprojection.FieldMetadataSettlementID, field.TypeString, value)
+		_node.MetadataSettlementID = value
+	}
+	if value, ok := wtpc.mutation.MetadataLedgerEntryID(); ok {
+		_spec.SetField(wallettransactionprojection.FieldMetadataLedgerEntryID, field.TypeString, value)
+		_node.MetadataLedgerEntryID = value
+	}
+	if value, ok := wtpc.mutation.MetadataComputeAllocationID(); ok {
+		_spec.SetField(wallettransactionprojection.FieldMetadataComputeAllocationID, field.TypeString, value)
+		_node.MetadataComputeAllocationID = value
+	}
+	if value, ok := wtpc.mutation.MetadataStorageID(); ok {
+		_spec.SetField(wallettransactionprojection.FieldMetadataStorageID, field.TypeString, value)
+		_node.MetadataStorageID = value
 	}
 	return _node, _spec
 }

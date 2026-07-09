@@ -20,454 +20,6 @@ type ProductionE2ERecordCreate struct {
 	hooks    []Hook
 }
 
-// SetAccountID sets the "account_id" field.
-func (perc *ProductionE2ERecordCreate) SetAccountID(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetAccountID(s)
-	return perc
-}
-
-// SetNillableAccountID sets the "account_id" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableAccountID(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetAccountID(*s)
-	}
-	return perc
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (perc *ProductionE2ERecordCreate) SetOwnerAccountID(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetOwnerAccountID(s)
-	return perc
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableOwnerAccountID(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetOwnerAccountID(*s)
-	}
-	return perc
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (perc *ProductionE2ERecordCreate) SetOwnerUserID(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetOwnerUserID(s)
-	return perc
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableOwnerUserID(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetOwnerUserID(*s)
-	}
-	return perc
-}
-
-// SetUserID sets the "user_id" field.
-func (perc *ProductionE2ERecordCreate) SetUserID(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetUserID(s)
-	return perc
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableUserID(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetUserID(*s)
-	}
-	return perc
-}
-
-// SetEmail sets the "email" field.
-func (perc *ProductionE2ERecordCreate) SetEmail(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetEmail(s)
-	return perc
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableEmail(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetEmail(*s)
-	}
-	return perc
-}
-
-// SetRole sets the "role" field.
-func (perc *ProductionE2ERecordCreate) SetRole(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetRole(s)
-	return perc
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableRole(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetRole(*s)
-	}
-	return perc
-}
-
-// SetStatus sets the "status" field.
-func (perc *ProductionE2ERecordCreate) SetStatus(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetStatus(s)
-	return perc
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableStatus(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetStatus(*s)
-	}
-	return perc
-}
-
-// SetName sets the "name" field.
-func (perc *ProductionE2ERecordCreate) SetName(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetName(s)
-	return perc
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableName(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetName(*s)
-	}
-	return perc
-}
-
-// SetWorkspaceID sets the "workspace_id" field.
-func (perc *ProductionE2ERecordCreate) SetWorkspaceID(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetWorkspaceID(s)
-	return perc
-}
-
-// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableWorkspaceID(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetWorkspaceID(*s)
-	}
-	return perc
-}
-
-// SetResourceID sets the "resource_id" field.
-func (perc *ProductionE2ERecordCreate) SetResourceID(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetResourceID(s)
-	return perc
-}
-
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableResourceID(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetResourceID(*s)
-	}
-	return perc
-}
-
-// SetResourceKind sets the "resource_kind" field.
-func (perc *ProductionE2ERecordCreate) SetResourceKind(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetResourceKind(s)
-	return perc
-}
-
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableResourceKind(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetResourceKind(*s)
-	}
-	return perc
-}
-
-// SetOperationID sets the "operation_id" field.
-func (perc *ProductionE2ERecordCreate) SetOperationID(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetOperationID(s)
-	return perc
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableOperationID(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetOperationID(*s)
-	}
-	return perc
-}
-
-// SetProvider sets the "provider" field.
-func (perc *ProductionE2ERecordCreate) SetProvider(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetProvider(s)
-	return perc
-}
-
-// SetNillableProvider sets the "provider" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableProvider(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetProvider(*s)
-	}
-	return perc
-}
-
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (perc *ProductionE2ERecordCreate) SetProviderResourceID(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetProviderResourceID(s)
-	return perc
-}
-
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableProviderResourceID(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetProviderResourceID(*s)
-	}
-	return perc
-}
-
-// SetURL sets the "url" field.
-func (perc *ProductionE2ERecordCreate) SetURL(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetURL(s)
-	return perc
-}
-
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableURL(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetURL(*s)
-	}
-	return perc
-}
-
-// SetHoldID sets the "hold_id" field.
-func (perc *ProductionE2ERecordCreate) SetHoldID(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetHoldID(s)
-	return perc
-}
-
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableHoldID(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetHoldID(*s)
-	}
-	return perc
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (perc *ProductionE2ERecordCreate) SetHoldReleaseID(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetHoldReleaseID(s)
-	return perc
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableHoldReleaseID(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetHoldReleaseID(*s)
-	}
-	return perc
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (perc *ProductionE2ERecordCreate) SetLedgerEntryID(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetLedgerEntryID(s)
-	return perc
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableLedgerEntryID(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetLedgerEntryID(*s)
-	}
-	return perc
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (perc *ProductionE2ERecordCreate) SetWalletTransactionID(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetWalletTransactionID(s)
-	return perc
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableWalletTransactionID(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetWalletTransactionID(*s)
-	}
-	return perc
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (perc *ProductionE2ERecordCreate) SetSettlementID(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetSettlementID(s)
-	return perc
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableSettlementID(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetSettlementID(*s)
-	}
-	return perc
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (perc *ProductionE2ERecordCreate) SetPricingVersion(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetPricingVersion(s)
-	return perc
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillablePricingVersion(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetPricingVersion(*s)
-	}
-	return perc
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (perc *ProductionE2ERecordCreate) SetAmountCents(i int64) *ProductionE2ERecordCreate {
-	perc.mutation.SetAmountCents(i)
-	return perc
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableAmountCents(i *int64) *ProductionE2ERecordCreate {
-	if i != nil {
-		perc.SetAmountCents(*i)
-	}
-	return perc
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (perc *ProductionE2ERecordCreate) SetBalanceCents(i int64) *ProductionE2ERecordCreate {
-	perc.mutation.SetBalanceCents(i)
-	return perc
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableBalanceCents(i *int64) *ProductionE2ERecordCreate {
-	if i != nil {
-		perc.SetBalanceCents(*i)
-	}
-	return perc
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (perc *ProductionE2ERecordCreate) SetFrozenCents(i int64) *ProductionE2ERecordCreate {
-	perc.mutation.SetFrozenCents(i)
-	return perc
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableFrozenCents(i *int64) *ProductionE2ERecordCreate {
-	if i != nil {
-		perc.SetFrozenCents(*i)
-	}
-	return perc
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (perc *ProductionE2ERecordCreate) SetAvailableCents(i int64) *ProductionE2ERecordCreate {
-	perc.mutation.SetAvailableCents(i)
-	return perc
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableAvailableCents(i *int64) *ProductionE2ERecordCreate {
-	if i != nil {
-		perc.SetAvailableCents(*i)
-	}
-	return perc
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (perc *ProductionE2ERecordCreate) SetTotalSpentCents(i int64) *ProductionE2ERecordCreate {
-	perc.mutation.SetTotalSpentCents(i)
-	return perc
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableTotalSpentCents(i *int64) *ProductionE2ERecordCreate {
-	if i != nil {
-		perc.SetTotalSpentCents(*i)
-	}
-	return perc
-}
-
-// SetQuantity sets the "quantity" field.
-func (perc *ProductionE2ERecordCreate) SetQuantity(f float64) *ProductionE2ERecordCreate {
-	perc.mutation.SetQuantity(f)
-	return perc
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableQuantity(f *float64) *ProductionE2ERecordCreate {
-	if f != nil {
-		perc.SetQuantity(*f)
-	}
-	return perc
-}
-
-// SetUnit sets the "unit" field.
-func (perc *ProductionE2ERecordCreate) SetUnit(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetUnit(s)
-	return perc
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableUnit(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetUnit(*s)
-	}
-	return perc
-}
-
-// SetReason sets the "reason" field.
-func (perc *ProductionE2ERecordCreate) SetReason(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetReason(s)
-	return perc
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableReason(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetReason(*s)
-	}
-	return perc
-}
-
-// SetResult sets the "result" field.
-func (perc *ProductionE2ERecordCreate) SetResult(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetResult(s)
-	return perc
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableResult(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetResult(*s)
-	}
-	return perc
-}
-
-// SetSource sets the "source" field.
-func (perc *ProductionE2ERecordCreate) SetSource(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetSource(s)
-	return perc
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableSource(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetSource(*s)
-	}
-	return perc
-}
-
-// SetDirection sets the "direction" field.
-func (perc *ProductionE2ERecordCreate) SetDirection(s string) *ProductionE2ERecordCreate {
-	perc.mutation.SetDirection(s)
-	return perc
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableDirection(s *string) *ProductionE2ERecordCreate {
-	if s != nil {
-		perc.SetDirection(*s)
-	}
-	return perc
-}
-
 // SetCreatedAt sets the "created_at" field.
 func (perc *ProductionE2ERecordCreate) SetCreatedAt(t time.Time) *ProductionE2ERecordCreate {
 	perc.mutation.SetCreatedAt(t)
@@ -496,16 +48,86 @@ func (perc *ProductionE2ERecordCreate) SetNillableUpdatedAt(t *time.Time) *Produ
 	return perc
 }
 
-// SetArchivedAt sets the "archived_at" field.
-func (perc *ProductionE2ERecordCreate) SetArchivedAt(t time.Time) *ProductionE2ERecordCreate {
-	perc.mutation.SetArchivedAt(t)
+// SetAccountID sets the "account_id" field.
+func (perc *ProductionE2ERecordCreate) SetAccountID(s string) *ProductionE2ERecordCreate {
+	perc.mutation.SetAccountID(s)
 	return perc
 }
 
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (perc *ProductionE2ERecordCreate) SetNillableArchivedAt(t *time.Time) *ProductionE2ERecordCreate {
-	if t != nil {
-		perc.SetArchivedAt(*t)
+// SetNillableAccountID sets the "account_id" field if the given value is not nil.
+func (perc *ProductionE2ERecordCreate) SetNillableAccountID(s *string) *ProductionE2ERecordCreate {
+	if s != nil {
+		perc.SetAccountID(*s)
+	}
+	return perc
+}
+
+// SetWorkspaceID sets the "workspace_id" field.
+func (perc *ProductionE2ERecordCreate) SetWorkspaceID(s string) *ProductionE2ERecordCreate {
+	perc.mutation.SetWorkspaceID(s)
+	return perc
+}
+
+// SetNillableWorkspaceID sets the "workspace_id" field if the given value is not nil.
+func (perc *ProductionE2ERecordCreate) SetNillableWorkspaceID(s *string) *ProductionE2ERecordCreate {
+	if s != nil {
+		perc.SetWorkspaceID(*s)
+	}
+	return perc
+}
+
+// SetStatus sets the "status" field.
+func (perc *ProductionE2ERecordCreate) SetStatus(s string) *ProductionE2ERecordCreate {
+	perc.mutation.SetStatus(s)
+	return perc
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (perc *ProductionE2ERecordCreate) SetNillableStatus(s *string) *ProductionE2ERecordCreate {
+	if s != nil {
+		perc.SetStatus(*s)
+	}
+	return perc
+}
+
+// SetResult sets the "result" field.
+func (perc *ProductionE2ERecordCreate) SetResult(s string) *ProductionE2ERecordCreate {
+	perc.mutation.SetResult(s)
+	return perc
+}
+
+// SetNillableResult sets the "result" field if the given value is not nil.
+func (perc *ProductionE2ERecordCreate) SetNillableResult(s *string) *ProductionE2ERecordCreate {
+	if s != nil {
+		perc.SetResult(*s)
+	}
+	return perc
+}
+
+// SetReason sets the "reason" field.
+func (perc *ProductionE2ERecordCreate) SetReason(s string) *ProductionE2ERecordCreate {
+	perc.mutation.SetReason(s)
+	return perc
+}
+
+// SetNillableReason sets the "reason" field if the given value is not nil.
+func (perc *ProductionE2ERecordCreate) SetNillableReason(s *string) *ProductionE2ERecordCreate {
+	if s != nil {
+		perc.SetReason(*s)
+	}
+	return perc
+}
+
+// SetURL sets the "url" field.
+func (perc *ProductionE2ERecordCreate) SetURL(s string) *ProductionE2ERecordCreate {
+	perc.mutation.SetURL(s)
+	return perc
+}
+
+// SetNillableURL sets the "url" field if the given value is not nil.
+func (perc *ProductionE2ERecordCreate) SetNillableURL(s *string) *ProductionE2ERecordCreate {
+	if s != nil {
+		perc.SetURL(*s)
 	}
 	return perc
 }
@@ -551,134 +173,6 @@ func (perc *ProductionE2ERecordCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (perc *ProductionE2ERecordCreate) defaults() {
-	if _, ok := perc.mutation.AccountID(); !ok {
-		v := productione2erecord.DefaultAccountID
-		perc.mutation.SetAccountID(v)
-	}
-	if _, ok := perc.mutation.OwnerAccountID(); !ok {
-		v := productione2erecord.DefaultOwnerAccountID
-		perc.mutation.SetOwnerAccountID(v)
-	}
-	if _, ok := perc.mutation.OwnerUserID(); !ok {
-		v := productione2erecord.DefaultOwnerUserID
-		perc.mutation.SetOwnerUserID(v)
-	}
-	if _, ok := perc.mutation.UserID(); !ok {
-		v := productione2erecord.DefaultUserID
-		perc.mutation.SetUserID(v)
-	}
-	if _, ok := perc.mutation.Email(); !ok {
-		v := productione2erecord.DefaultEmail
-		perc.mutation.SetEmail(v)
-	}
-	if _, ok := perc.mutation.Role(); !ok {
-		v := productione2erecord.DefaultRole
-		perc.mutation.SetRole(v)
-	}
-	if _, ok := perc.mutation.Status(); !ok {
-		v := productione2erecord.DefaultStatus
-		perc.mutation.SetStatus(v)
-	}
-	if _, ok := perc.mutation.Name(); !ok {
-		v := productione2erecord.DefaultName
-		perc.mutation.SetName(v)
-	}
-	if _, ok := perc.mutation.WorkspaceID(); !ok {
-		v := productione2erecord.DefaultWorkspaceID
-		perc.mutation.SetWorkspaceID(v)
-	}
-	if _, ok := perc.mutation.ResourceID(); !ok {
-		v := productione2erecord.DefaultResourceID
-		perc.mutation.SetResourceID(v)
-	}
-	if _, ok := perc.mutation.ResourceKind(); !ok {
-		v := productione2erecord.DefaultResourceKind
-		perc.mutation.SetResourceKind(v)
-	}
-	if _, ok := perc.mutation.OperationID(); !ok {
-		v := productione2erecord.DefaultOperationID
-		perc.mutation.SetOperationID(v)
-	}
-	if _, ok := perc.mutation.Provider(); !ok {
-		v := productione2erecord.DefaultProvider
-		perc.mutation.SetProvider(v)
-	}
-	if _, ok := perc.mutation.ProviderResourceID(); !ok {
-		v := productione2erecord.DefaultProviderResourceID
-		perc.mutation.SetProviderResourceID(v)
-	}
-	if _, ok := perc.mutation.URL(); !ok {
-		v := productione2erecord.DefaultURL
-		perc.mutation.SetURL(v)
-	}
-	if _, ok := perc.mutation.HoldID(); !ok {
-		v := productione2erecord.DefaultHoldID
-		perc.mutation.SetHoldID(v)
-	}
-	if _, ok := perc.mutation.HoldReleaseID(); !ok {
-		v := productione2erecord.DefaultHoldReleaseID
-		perc.mutation.SetHoldReleaseID(v)
-	}
-	if _, ok := perc.mutation.LedgerEntryID(); !ok {
-		v := productione2erecord.DefaultLedgerEntryID
-		perc.mutation.SetLedgerEntryID(v)
-	}
-	if _, ok := perc.mutation.WalletTransactionID(); !ok {
-		v := productione2erecord.DefaultWalletTransactionID
-		perc.mutation.SetWalletTransactionID(v)
-	}
-	if _, ok := perc.mutation.SettlementID(); !ok {
-		v := productione2erecord.DefaultSettlementID
-		perc.mutation.SetSettlementID(v)
-	}
-	if _, ok := perc.mutation.PricingVersion(); !ok {
-		v := productione2erecord.DefaultPricingVersion
-		perc.mutation.SetPricingVersion(v)
-	}
-	if _, ok := perc.mutation.AmountCents(); !ok {
-		v := productione2erecord.DefaultAmountCents
-		perc.mutation.SetAmountCents(v)
-	}
-	if _, ok := perc.mutation.BalanceCents(); !ok {
-		v := productione2erecord.DefaultBalanceCents
-		perc.mutation.SetBalanceCents(v)
-	}
-	if _, ok := perc.mutation.FrozenCents(); !ok {
-		v := productione2erecord.DefaultFrozenCents
-		perc.mutation.SetFrozenCents(v)
-	}
-	if _, ok := perc.mutation.AvailableCents(); !ok {
-		v := productione2erecord.DefaultAvailableCents
-		perc.mutation.SetAvailableCents(v)
-	}
-	if _, ok := perc.mutation.TotalSpentCents(); !ok {
-		v := productione2erecord.DefaultTotalSpentCents
-		perc.mutation.SetTotalSpentCents(v)
-	}
-	if _, ok := perc.mutation.Quantity(); !ok {
-		v := productione2erecord.DefaultQuantity
-		perc.mutation.SetQuantity(v)
-	}
-	if _, ok := perc.mutation.Unit(); !ok {
-		v := productione2erecord.DefaultUnit
-		perc.mutation.SetUnit(v)
-	}
-	if _, ok := perc.mutation.Reason(); !ok {
-		v := productione2erecord.DefaultReason
-		perc.mutation.SetReason(v)
-	}
-	if _, ok := perc.mutation.Result(); !ok {
-		v := productione2erecord.DefaultResult
-		perc.mutation.SetResult(v)
-	}
-	if _, ok := perc.mutation.Source(); !ok {
-		v := productione2erecord.DefaultSource
-		perc.mutation.SetSource(v)
-	}
-	if _, ok := perc.mutation.Direction(); !ok {
-		v := productione2erecord.DefaultDirection
-		perc.mutation.SetDirection(v)
-	}
 	if _, ok := perc.mutation.CreatedAt(); !ok {
 		v := productione2erecord.DefaultCreatedAt()
 		perc.mutation.SetCreatedAt(v)
@@ -687,111 +181,57 @@ func (perc *ProductionE2ERecordCreate) defaults() {
 		v := productione2erecord.DefaultUpdatedAt()
 		perc.mutation.SetUpdatedAt(v)
 	}
+	if _, ok := perc.mutation.AccountID(); !ok {
+		v := productione2erecord.DefaultAccountID
+		perc.mutation.SetAccountID(v)
+	}
+	if _, ok := perc.mutation.WorkspaceID(); !ok {
+		v := productione2erecord.DefaultWorkspaceID
+		perc.mutation.SetWorkspaceID(v)
+	}
+	if _, ok := perc.mutation.Status(); !ok {
+		v := productione2erecord.DefaultStatus
+		perc.mutation.SetStatus(v)
+	}
+	if _, ok := perc.mutation.Result(); !ok {
+		v := productione2erecord.DefaultResult
+		perc.mutation.SetResult(v)
+	}
+	if _, ok := perc.mutation.Reason(); !ok {
+		v := productione2erecord.DefaultReason
+		perc.mutation.SetReason(v)
+	}
+	if _, ok := perc.mutation.URL(); !ok {
+		v := productione2erecord.DefaultURL
+		perc.mutation.SetURL(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (perc *ProductionE2ERecordCreate) check() error {
-	if _, ok := perc.mutation.AccountID(); !ok {
-		return &ValidationError{Name: "account_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.account_id"`)}
-	}
-	if _, ok := perc.mutation.OwnerAccountID(); !ok {
-		return &ValidationError{Name: "owner_account_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.owner_account_id"`)}
-	}
-	if _, ok := perc.mutation.OwnerUserID(); !ok {
-		return &ValidationError{Name: "owner_user_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.owner_user_id"`)}
-	}
-	if _, ok := perc.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.user_id"`)}
-	}
-	if _, ok := perc.mutation.Email(); !ok {
-		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "ProductionE2ERecord.email"`)}
-	}
-	if _, ok := perc.mutation.Role(); !ok {
-		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "ProductionE2ERecord.role"`)}
-	}
-	if _, ok := perc.mutation.Status(); !ok {
-		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "ProductionE2ERecord.status"`)}
-	}
-	if _, ok := perc.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "ProductionE2ERecord.name"`)}
-	}
-	if _, ok := perc.mutation.WorkspaceID(); !ok {
-		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.workspace_id"`)}
-	}
-	if _, ok := perc.mutation.ResourceID(); !ok {
-		return &ValidationError{Name: "resource_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.resource_id"`)}
-	}
-	if _, ok := perc.mutation.ResourceKind(); !ok {
-		return &ValidationError{Name: "resource_kind", err: errors.New(`ent: missing required field "ProductionE2ERecord.resource_kind"`)}
-	}
-	if _, ok := perc.mutation.OperationID(); !ok {
-		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.operation_id"`)}
-	}
-	if _, ok := perc.mutation.Provider(); !ok {
-		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "ProductionE2ERecord.provider"`)}
-	}
-	if _, ok := perc.mutation.ProviderResourceID(); !ok {
-		return &ValidationError{Name: "provider_resource_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.provider_resource_id"`)}
-	}
-	if _, ok := perc.mutation.URL(); !ok {
-		return &ValidationError{Name: "url", err: errors.New(`ent: missing required field "ProductionE2ERecord.url"`)}
-	}
-	if _, ok := perc.mutation.HoldID(); !ok {
-		return &ValidationError{Name: "hold_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.hold_id"`)}
-	}
-	if _, ok := perc.mutation.HoldReleaseID(); !ok {
-		return &ValidationError{Name: "hold_release_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.hold_release_id"`)}
-	}
-	if _, ok := perc.mutation.LedgerEntryID(); !ok {
-		return &ValidationError{Name: "ledger_entry_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.ledger_entry_id"`)}
-	}
-	if _, ok := perc.mutation.WalletTransactionID(); !ok {
-		return &ValidationError{Name: "wallet_transaction_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.wallet_transaction_id"`)}
-	}
-	if _, ok := perc.mutation.SettlementID(); !ok {
-		return &ValidationError{Name: "settlement_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.settlement_id"`)}
-	}
-	if _, ok := perc.mutation.PricingVersion(); !ok {
-		return &ValidationError{Name: "pricing_version", err: errors.New(`ent: missing required field "ProductionE2ERecord.pricing_version"`)}
-	}
-	if _, ok := perc.mutation.AmountCents(); !ok {
-		return &ValidationError{Name: "amount_cents", err: errors.New(`ent: missing required field "ProductionE2ERecord.amount_cents"`)}
-	}
-	if _, ok := perc.mutation.BalanceCents(); !ok {
-		return &ValidationError{Name: "balance_cents", err: errors.New(`ent: missing required field "ProductionE2ERecord.balance_cents"`)}
-	}
-	if _, ok := perc.mutation.FrozenCents(); !ok {
-		return &ValidationError{Name: "frozen_cents", err: errors.New(`ent: missing required field "ProductionE2ERecord.frozen_cents"`)}
-	}
-	if _, ok := perc.mutation.AvailableCents(); !ok {
-		return &ValidationError{Name: "available_cents", err: errors.New(`ent: missing required field "ProductionE2ERecord.available_cents"`)}
-	}
-	if _, ok := perc.mutation.TotalSpentCents(); !ok {
-		return &ValidationError{Name: "total_spent_cents", err: errors.New(`ent: missing required field "ProductionE2ERecord.total_spent_cents"`)}
-	}
-	if _, ok := perc.mutation.Quantity(); !ok {
-		return &ValidationError{Name: "quantity", err: errors.New(`ent: missing required field "ProductionE2ERecord.quantity"`)}
-	}
-	if _, ok := perc.mutation.Unit(); !ok {
-		return &ValidationError{Name: "unit", err: errors.New(`ent: missing required field "ProductionE2ERecord.unit"`)}
-	}
-	if _, ok := perc.mutation.Reason(); !ok {
-		return &ValidationError{Name: "reason", err: errors.New(`ent: missing required field "ProductionE2ERecord.reason"`)}
-	}
-	if _, ok := perc.mutation.Result(); !ok {
-		return &ValidationError{Name: "result", err: errors.New(`ent: missing required field "ProductionE2ERecord.result"`)}
-	}
-	if _, ok := perc.mutation.Source(); !ok {
-		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "ProductionE2ERecord.source"`)}
-	}
-	if _, ok := perc.mutation.Direction(); !ok {
-		return &ValidationError{Name: "direction", err: errors.New(`ent: missing required field "ProductionE2ERecord.direction"`)}
-	}
 	if _, ok := perc.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ProductionE2ERecord.created_at"`)}
 	}
 	if _, ok := perc.mutation.UpdatedAt(); !ok {
 		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProductionE2ERecord.updated_at"`)}
+	}
+	if _, ok := perc.mutation.AccountID(); !ok {
+		return &ValidationError{Name: "account_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.account_id"`)}
+	}
+	if _, ok := perc.mutation.WorkspaceID(); !ok {
+		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "ProductionE2ERecord.workspace_id"`)}
+	}
+	if _, ok := perc.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "ProductionE2ERecord.status"`)}
+	}
+	if _, ok := perc.mutation.Result(); !ok {
+		return &ValidationError{Name: "result", err: errors.New(`ent: missing required field "ProductionE2ERecord.result"`)}
+	}
+	if _, ok := perc.mutation.Reason(); !ok {
+		return &ValidationError{Name: "reason", err: errors.New(`ent: missing required field "ProductionE2ERecord.reason"`)}
+	}
+	if _, ok := perc.mutation.URL(); !ok {
+		return &ValidationError{Name: "url", err: errors.New(`ent: missing required field "ProductionE2ERecord.url"`)}
 	}
 	if v, ok := perc.mutation.ID(); ok {
 		if err := productione2erecord.IDValidator(v); err != nil {
@@ -833,134 +273,6 @@ func (perc *ProductionE2ERecordCreate) createSpec() (*ProductionE2ERecord, *sqlg
 		_node.ID = id
 		_spec.ID.Value = id
 	}
-	if value, ok := perc.mutation.AccountID(); ok {
-		_spec.SetField(productione2erecord.FieldAccountID, field.TypeString, value)
-		_node.AccountID = value
-	}
-	if value, ok := perc.mutation.OwnerAccountID(); ok {
-		_spec.SetField(productione2erecord.FieldOwnerAccountID, field.TypeString, value)
-		_node.OwnerAccountID = value
-	}
-	if value, ok := perc.mutation.OwnerUserID(); ok {
-		_spec.SetField(productione2erecord.FieldOwnerUserID, field.TypeString, value)
-		_node.OwnerUserID = value
-	}
-	if value, ok := perc.mutation.UserID(); ok {
-		_spec.SetField(productione2erecord.FieldUserID, field.TypeString, value)
-		_node.UserID = value
-	}
-	if value, ok := perc.mutation.Email(); ok {
-		_spec.SetField(productione2erecord.FieldEmail, field.TypeString, value)
-		_node.Email = value
-	}
-	if value, ok := perc.mutation.Role(); ok {
-		_spec.SetField(productione2erecord.FieldRole, field.TypeString, value)
-		_node.Role = value
-	}
-	if value, ok := perc.mutation.Status(); ok {
-		_spec.SetField(productione2erecord.FieldStatus, field.TypeString, value)
-		_node.Status = value
-	}
-	if value, ok := perc.mutation.Name(); ok {
-		_spec.SetField(productione2erecord.FieldName, field.TypeString, value)
-		_node.Name = value
-	}
-	if value, ok := perc.mutation.WorkspaceID(); ok {
-		_spec.SetField(productione2erecord.FieldWorkspaceID, field.TypeString, value)
-		_node.WorkspaceID = value
-	}
-	if value, ok := perc.mutation.ResourceID(); ok {
-		_spec.SetField(productione2erecord.FieldResourceID, field.TypeString, value)
-		_node.ResourceID = value
-	}
-	if value, ok := perc.mutation.ResourceKind(); ok {
-		_spec.SetField(productione2erecord.FieldResourceKind, field.TypeString, value)
-		_node.ResourceKind = value
-	}
-	if value, ok := perc.mutation.OperationID(); ok {
-		_spec.SetField(productione2erecord.FieldOperationID, field.TypeString, value)
-		_node.OperationID = value
-	}
-	if value, ok := perc.mutation.Provider(); ok {
-		_spec.SetField(productione2erecord.FieldProvider, field.TypeString, value)
-		_node.Provider = value
-	}
-	if value, ok := perc.mutation.ProviderResourceID(); ok {
-		_spec.SetField(productione2erecord.FieldProviderResourceID, field.TypeString, value)
-		_node.ProviderResourceID = value
-	}
-	if value, ok := perc.mutation.URL(); ok {
-		_spec.SetField(productione2erecord.FieldURL, field.TypeString, value)
-		_node.URL = value
-	}
-	if value, ok := perc.mutation.HoldID(); ok {
-		_spec.SetField(productione2erecord.FieldHoldID, field.TypeString, value)
-		_node.HoldID = value
-	}
-	if value, ok := perc.mutation.HoldReleaseID(); ok {
-		_spec.SetField(productione2erecord.FieldHoldReleaseID, field.TypeString, value)
-		_node.HoldReleaseID = value
-	}
-	if value, ok := perc.mutation.LedgerEntryID(); ok {
-		_spec.SetField(productione2erecord.FieldLedgerEntryID, field.TypeString, value)
-		_node.LedgerEntryID = value
-	}
-	if value, ok := perc.mutation.WalletTransactionID(); ok {
-		_spec.SetField(productione2erecord.FieldWalletTransactionID, field.TypeString, value)
-		_node.WalletTransactionID = value
-	}
-	if value, ok := perc.mutation.SettlementID(); ok {
-		_spec.SetField(productione2erecord.FieldSettlementID, field.TypeString, value)
-		_node.SettlementID = value
-	}
-	if value, ok := perc.mutation.PricingVersion(); ok {
-		_spec.SetField(productione2erecord.FieldPricingVersion, field.TypeString, value)
-		_node.PricingVersion = value
-	}
-	if value, ok := perc.mutation.AmountCents(); ok {
-		_spec.SetField(productione2erecord.FieldAmountCents, field.TypeInt64, value)
-		_node.AmountCents = value
-	}
-	if value, ok := perc.mutation.BalanceCents(); ok {
-		_spec.SetField(productione2erecord.FieldBalanceCents, field.TypeInt64, value)
-		_node.BalanceCents = value
-	}
-	if value, ok := perc.mutation.FrozenCents(); ok {
-		_spec.SetField(productione2erecord.FieldFrozenCents, field.TypeInt64, value)
-		_node.FrozenCents = value
-	}
-	if value, ok := perc.mutation.AvailableCents(); ok {
-		_spec.SetField(productione2erecord.FieldAvailableCents, field.TypeInt64, value)
-		_node.AvailableCents = value
-	}
-	if value, ok := perc.mutation.TotalSpentCents(); ok {
-		_spec.SetField(productione2erecord.FieldTotalSpentCents, field.TypeInt64, value)
-		_node.TotalSpentCents = value
-	}
-	if value, ok := perc.mutation.Quantity(); ok {
-		_spec.SetField(productione2erecord.FieldQuantity, field.TypeFloat64, value)
-		_node.Quantity = value
-	}
-	if value, ok := perc.mutation.Unit(); ok {
-		_spec.SetField(productione2erecord.FieldUnit, field.TypeString, value)
-		_node.Unit = value
-	}
-	if value, ok := perc.mutation.Reason(); ok {
-		_spec.SetField(productione2erecord.FieldReason, field.TypeString, value)
-		_node.Reason = value
-	}
-	if value, ok := perc.mutation.Result(); ok {
-		_spec.SetField(productione2erecord.FieldResult, field.TypeString, value)
-		_node.Result = value
-	}
-	if value, ok := perc.mutation.Source(); ok {
-		_spec.SetField(productione2erecord.FieldSource, field.TypeString, value)
-		_node.Source = value
-	}
-	if value, ok := perc.mutation.Direction(); ok {
-		_spec.SetField(productione2erecord.FieldDirection, field.TypeString, value)
-		_node.Direction = value
-	}
 	if value, ok := perc.mutation.CreatedAt(); ok {
 		_spec.SetField(productione2erecord.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -969,9 +281,29 @@ func (perc *ProductionE2ERecordCreate) createSpec() (*ProductionE2ERecord, *sqlg
 		_spec.SetField(productione2erecord.FieldUpdatedAt, field.TypeTime, value)
 		_node.UpdatedAt = value
 	}
-	if value, ok := perc.mutation.ArchivedAt(); ok {
-		_spec.SetField(productione2erecord.FieldArchivedAt, field.TypeTime, value)
-		_node.ArchivedAt = &value
+	if value, ok := perc.mutation.AccountID(); ok {
+		_spec.SetField(productione2erecord.FieldAccountID, field.TypeString, value)
+		_node.AccountID = value
+	}
+	if value, ok := perc.mutation.WorkspaceID(); ok {
+		_spec.SetField(productione2erecord.FieldWorkspaceID, field.TypeString, value)
+		_node.WorkspaceID = value
+	}
+	if value, ok := perc.mutation.Status(); ok {
+		_spec.SetField(productione2erecord.FieldStatus, field.TypeString, value)
+		_node.Status = value
+	}
+	if value, ok := perc.mutation.Result(); ok {
+		_spec.SetField(productione2erecord.FieldResult, field.TypeString, value)
+		_node.Result = value
+	}
+	if value, ok := perc.mutation.Reason(); ok {
+		_spec.SetField(productione2erecord.FieldReason, field.TypeString, value)
+		_node.Reason = value
+	}
+	if value, ok := perc.mutation.URL(); ok {
+		_spec.SetField(productione2erecord.FieldURL, field.TypeString, value)
+		_node.URL = value
 	}
 	return _node, _spec
 }

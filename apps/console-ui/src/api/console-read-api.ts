@@ -11,6 +11,10 @@ export function getOperatorSummary() {
   return getJson("/api/operator/summary");
 }
 
+export function getArchiveState() {
+  return getJson("/api/operator/archive");
+}
+
 export function getRuntimeReadiness() {
   return getJson("/api/runtime/readiness");
 }
@@ -49,4 +53,8 @@ export function deleteUser(input, csrfToken) {
 
 export function cleanupWorkspaceAccess(input, csrfToken) {
   return postJson("/api/operator/cleanup-workspace-access", input, csrfToken);
+}
+
+export function archiveTerminalResources(input, csrfToken) {
+  return postJson("/api/operator/archive-terminal-resources", input, csrfToken);
 }

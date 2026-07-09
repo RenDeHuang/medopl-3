@@ -28,6 +28,26 @@ func (sau *StorageAttachmentUpdate) Where(ps ...predicate.StorageAttachment) *St
 	return sau
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (sau *StorageAttachmentUpdate) SetCreatedAt(t time.Time) *StorageAttachmentUpdate {
+	sau.mutation.SetCreatedAt(t)
+	return sau
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (sau *StorageAttachmentUpdate) SetNillableCreatedAt(t *time.Time) *StorageAttachmentUpdate {
+	if t != nil {
+		sau.SetCreatedAt(*t)
+	}
+	return sau
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (sau *StorageAttachmentUpdate) SetUpdatedAt(t time.Time) *StorageAttachmentUpdate {
+	sau.mutation.SetUpdatedAt(t)
+	return sau
+}
+
 // SetAccountID sets the "account_id" field.
 func (sau *StorageAttachmentUpdate) SetAccountID(s string) *StorageAttachmentUpdate {
 	sau.mutation.SetAccountID(s)
@@ -38,104 +58,6 @@ func (sau *StorageAttachmentUpdate) SetAccountID(s string) *StorageAttachmentUpd
 func (sau *StorageAttachmentUpdate) SetNillableAccountID(s *string) *StorageAttachmentUpdate {
 	if s != nil {
 		sau.SetAccountID(*s)
-	}
-	return sau
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (sau *StorageAttachmentUpdate) SetOwnerAccountID(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetOwnerAccountID(s)
-	return sau
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableOwnerAccountID(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetOwnerAccountID(*s)
-	}
-	return sau
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (sau *StorageAttachmentUpdate) SetOwnerUserID(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetOwnerUserID(s)
-	return sau
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableOwnerUserID(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetOwnerUserID(*s)
-	}
-	return sau
-}
-
-// SetUserID sets the "user_id" field.
-func (sau *StorageAttachmentUpdate) SetUserID(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetUserID(s)
-	return sau
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableUserID(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetUserID(*s)
-	}
-	return sau
-}
-
-// SetEmail sets the "email" field.
-func (sau *StorageAttachmentUpdate) SetEmail(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetEmail(s)
-	return sau
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableEmail(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetEmail(*s)
-	}
-	return sau
-}
-
-// SetRole sets the "role" field.
-func (sau *StorageAttachmentUpdate) SetRole(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetRole(s)
-	return sau
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableRole(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetRole(*s)
-	}
-	return sau
-}
-
-// SetStatus sets the "status" field.
-func (sau *StorageAttachmentUpdate) SetStatus(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetStatus(s)
-	return sau
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableStatus(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetStatus(*s)
-	}
-	return sau
-}
-
-// SetName sets the "name" field.
-func (sau *StorageAttachmentUpdate) SetName(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetName(s)
-	return sau
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableName(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetName(*s)
 	}
 	return sau
 }
@@ -154,30 +76,44 @@ func (sau *StorageAttachmentUpdate) SetNillableWorkspaceID(s *string) *StorageAt
 	return sau
 }
 
-// SetResourceID sets the "resource_id" field.
-func (sau *StorageAttachmentUpdate) SetResourceID(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetResourceID(s)
+// SetComputeAllocationID sets the "compute_allocation_id" field.
+func (sau *StorageAttachmentUpdate) SetComputeAllocationID(s string) *StorageAttachmentUpdate {
+	sau.mutation.SetComputeAllocationID(s)
 	return sau
 }
 
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableResourceID(s *string) *StorageAttachmentUpdate {
+// SetNillableComputeAllocationID sets the "compute_allocation_id" field if the given value is not nil.
+func (sau *StorageAttachmentUpdate) SetNillableComputeAllocationID(s *string) *StorageAttachmentUpdate {
 	if s != nil {
-		sau.SetResourceID(*s)
+		sau.SetComputeAllocationID(*s)
 	}
 	return sau
 }
 
-// SetResourceKind sets the "resource_kind" field.
-func (sau *StorageAttachmentUpdate) SetResourceKind(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetResourceKind(s)
+// SetStorageID sets the "storage_id" field.
+func (sau *StorageAttachmentUpdate) SetStorageID(s string) *StorageAttachmentUpdate {
+	sau.mutation.SetStorageID(s)
 	return sau
 }
 
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableResourceKind(s *string) *StorageAttachmentUpdate {
+// SetNillableStorageID sets the "storage_id" field if the given value is not nil.
+func (sau *StorageAttachmentUpdate) SetNillableStorageID(s *string) *StorageAttachmentUpdate {
 	if s != nil {
-		sau.SetResourceKind(*s)
+		sau.SetStorageID(*s)
+	}
+	return sau
+}
+
+// SetVolumeID sets the "volume_id" field.
+func (sau *StorageAttachmentUpdate) SetVolumeID(s string) *StorageAttachmentUpdate {
+	sau.mutation.SetVolumeID(s)
+	return sau
+}
+
+// SetNillableVolumeID sets the "volume_id" field if the given value is not nil.
+func (sau *StorageAttachmentUpdate) SetNillableVolumeID(s *string) *StorageAttachmentUpdate {
+	if s != nil {
+		sau.SetVolumeID(*s)
 	}
 	return sau
 }
@@ -210,351 +146,45 @@ func (sau *StorageAttachmentUpdate) SetNillableProvider(s *string) *StorageAttac
 	return sau
 }
 
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (sau *StorageAttachmentUpdate) SetProviderResourceID(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetProviderResourceID(s)
+// SetProviderRequestID sets the "provider_request_id" field.
+func (sau *StorageAttachmentUpdate) SetProviderRequestID(s string) *StorageAttachmentUpdate {
+	sau.mutation.SetProviderRequestID(s)
 	return sau
 }
 
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableProviderResourceID(s *string) *StorageAttachmentUpdate {
+// SetNillableProviderRequestID sets the "provider_request_id" field if the given value is not nil.
+func (sau *StorageAttachmentUpdate) SetNillableProviderRequestID(s *string) *StorageAttachmentUpdate {
 	if s != nil {
-		sau.SetProviderResourceID(*s)
+		sau.SetProviderRequestID(*s)
 	}
 	return sau
 }
 
-// SetURL sets the "url" field.
-func (sau *StorageAttachmentUpdate) SetURL(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetURL(s)
+// SetStatus sets the "status" field.
+func (sau *StorageAttachmentUpdate) SetStatus(s string) *StorageAttachmentUpdate {
+	sau.mutation.SetStatus(s)
 	return sau
 }
 
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableURL(s *string) *StorageAttachmentUpdate {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (sau *StorageAttachmentUpdate) SetNillableStatus(s *string) *StorageAttachmentUpdate {
 	if s != nil {
-		sau.SetURL(*s)
+		sau.SetStatus(*s)
 	}
 	return sau
 }
 
-// SetHoldID sets the "hold_id" field.
-func (sau *StorageAttachmentUpdate) SetHoldID(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetHoldID(s)
+// SetMountPath sets the "mount_path" field.
+func (sau *StorageAttachmentUpdate) SetMountPath(s string) *StorageAttachmentUpdate {
+	sau.mutation.SetMountPath(s)
 	return sau
 }
 
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableHoldID(s *string) *StorageAttachmentUpdate {
+// SetNillableMountPath sets the "mount_path" field if the given value is not nil.
+func (sau *StorageAttachmentUpdate) SetNillableMountPath(s *string) *StorageAttachmentUpdate {
 	if s != nil {
-		sau.SetHoldID(*s)
+		sau.SetMountPath(*s)
 	}
-	return sau
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (sau *StorageAttachmentUpdate) SetHoldReleaseID(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetHoldReleaseID(s)
-	return sau
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableHoldReleaseID(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetHoldReleaseID(*s)
-	}
-	return sau
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (sau *StorageAttachmentUpdate) SetLedgerEntryID(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetLedgerEntryID(s)
-	return sau
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableLedgerEntryID(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetLedgerEntryID(*s)
-	}
-	return sau
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (sau *StorageAttachmentUpdate) SetWalletTransactionID(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetWalletTransactionID(s)
-	return sau
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableWalletTransactionID(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetWalletTransactionID(*s)
-	}
-	return sau
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (sau *StorageAttachmentUpdate) SetSettlementID(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetSettlementID(s)
-	return sau
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableSettlementID(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetSettlementID(*s)
-	}
-	return sau
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (sau *StorageAttachmentUpdate) SetPricingVersion(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetPricingVersion(s)
-	return sau
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillablePricingVersion(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetPricingVersion(*s)
-	}
-	return sau
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (sau *StorageAttachmentUpdate) SetAmountCents(i int64) *StorageAttachmentUpdate {
-	sau.mutation.ResetAmountCents()
-	sau.mutation.SetAmountCents(i)
-	return sau
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableAmountCents(i *int64) *StorageAttachmentUpdate {
-	if i != nil {
-		sau.SetAmountCents(*i)
-	}
-	return sau
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (sau *StorageAttachmentUpdate) AddAmountCents(i int64) *StorageAttachmentUpdate {
-	sau.mutation.AddAmountCents(i)
-	return sau
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (sau *StorageAttachmentUpdate) SetBalanceCents(i int64) *StorageAttachmentUpdate {
-	sau.mutation.ResetBalanceCents()
-	sau.mutation.SetBalanceCents(i)
-	return sau
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableBalanceCents(i *int64) *StorageAttachmentUpdate {
-	if i != nil {
-		sau.SetBalanceCents(*i)
-	}
-	return sau
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (sau *StorageAttachmentUpdate) AddBalanceCents(i int64) *StorageAttachmentUpdate {
-	sau.mutation.AddBalanceCents(i)
-	return sau
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (sau *StorageAttachmentUpdate) SetFrozenCents(i int64) *StorageAttachmentUpdate {
-	sau.mutation.ResetFrozenCents()
-	sau.mutation.SetFrozenCents(i)
-	return sau
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableFrozenCents(i *int64) *StorageAttachmentUpdate {
-	if i != nil {
-		sau.SetFrozenCents(*i)
-	}
-	return sau
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (sau *StorageAttachmentUpdate) AddFrozenCents(i int64) *StorageAttachmentUpdate {
-	sau.mutation.AddFrozenCents(i)
-	return sau
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (sau *StorageAttachmentUpdate) SetAvailableCents(i int64) *StorageAttachmentUpdate {
-	sau.mutation.ResetAvailableCents()
-	sau.mutation.SetAvailableCents(i)
-	return sau
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableAvailableCents(i *int64) *StorageAttachmentUpdate {
-	if i != nil {
-		sau.SetAvailableCents(*i)
-	}
-	return sau
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (sau *StorageAttachmentUpdate) AddAvailableCents(i int64) *StorageAttachmentUpdate {
-	sau.mutation.AddAvailableCents(i)
-	return sau
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (sau *StorageAttachmentUpdate) SetTotalSpentCents(i int64) *StorageAttachmentUpdate {
-	sau.mutation.ResetTotalSpentCents()
-	sau.mutation.SetTotalSpentCents(i)
-	return sau
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableTotalSpentCents(i *int64) *StorageAttachmentUpdate {
-	if i != nil {
-		sau.SetTotalSpentCents(*i)
-	}
-	return sau
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (sau *StorageAttachmentUpdate) AddTotalSpentCents(i int64) *StorageAttachmentUpdate {
-	sau.mutation.AddTotalSpentCents(i)
-	return sau
-}
-
-// SetQuantity sets the "quantity" field.
-func (sau *StorageAttachmentUpdate) SetQuantity(f float64) *StorageAttachmentUpdate {
-	sau.mutation.ResetQuantity()
-	sau.mutation.SetQuantity(f)
-	return sau
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableQuantity(f *float64) *StorageAttachmentUpdate {
-	if f != nil {
-		sau.SetQuantity(*f)
-	}
-	return sau
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (sau *StorageAttachmentUpdate) AddQuantity(f float64) *StorageAttachmentUpdate {
-	sau.mutation.AddQuantity(f)
-	return sau
-}
-
-// SetUnit sets the "unit" field.
-func (sau *StorageAttachmentUpdate) SetUnit(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetUnit(s)
-	return sau
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableUnit(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetUnit(*s)
-	}
-	return sau
-}
-
-// SetReason sets the "reason" field.
-func (sau *StorageAttachmentUpdate) SetReason(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetReason(s)
-	return sau
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableReason(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetReason(*s)
-	}
-	return sau
-}
-
-// SetResult sets the "result" field.
-func (sau *StorageAttachmentUpdate) SetResult(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetResult(s)
-	return sau
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableResult(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetResult(*s)
-	}
-	return sau
-}
-
-// SetSource sets the "source" field.
-func (sau *StorageAttachmentUpdate) SetSource(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetSource(s)
-	return sau
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableSource(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetSource(*s)
-	}
-	return sau
-}
-
-// SetDirection sets the "direction" field.
-func (sau *StorageAttachmentUpdate) SetDirection(s string) *StorageAttachmentUpdate {
-	sau.mutation.SetDirection(s)
-	return sau
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableDirection(s *string) *StorageAttachmentUpdate {
-	if s != nil {
-		sau.SetDirection(*s)
-	}
-	return sau
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (sau *StorageAttachmentUpdate) SetCreatedAt(t time.Time) *StorageAttachmentUpdate {
-	sau.mutation.SetCreatedAt(t)
-	return sau
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableCreatedAt(t *time.Time) *StorageAttachmentUpdate {
-	if t != nil {
-		sau.SetCreatedAt(*t)
-	}
-	return sau
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (sau *StorageAttachmentUpdate) SetUpdatedAt(t time.Time) *StorageAttachmentUpdate {
-	sau.mutation.SetUpdatedAt(t)
-	return sau
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (sau *StorageAttachmentUpdate) SetArchivedAt(t time.Time) *StorageAttachmentUpdate {
-	sau.mutation.SetArchivedAt(t)
-	return sau
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (sau *StorageAttachmentUpdate) SetNillableArchivedAt(t *time.Time) *StorageAttachmentUpdate {
-	if t != nil {
-		sau.SetArchivedAt(*t)
-	}
-	return sau
-}
-
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (sau *StorageAttachmentUpdate) ClearArchivedAt() *StorageAttachmentUpdate {
-	sau.mutation.ClearArchivedAt()
 	return sau
 }
 
@@ -599,7 +229,20 @@ func (sau *StorageAttachmentUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (sau *StorageAttachmentUpdate) check() error {
+	if v, ok := sau.mutation.AccountID(); ok {
+		if err := storageattachment.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "StorageAttachment.account_id": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (sau *StorageAttachmentUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := sau.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(storageattachment.Table, storageattachment.Columns, sqlgraph.NewFieldSpec(storageattachment.FieldID, field.TypeString))
 	if ps := sau.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -608,38 +251,26 @@ func (sau *StorageAttachmentUpdate) sqlSave(ctx context.Context) (n int, err err
 			}
 		}
 	}
+	if value, ok := sau.mutation.CreatedAt(); ok {
+		_spec.SetField(storageattachment.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := sau.mutation.UpdatedAt(); ok {
+		_spec.SetField(storageattachment.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := sau.mutation.AccountID(); ok {
 		_spec.SetField(storageattachment.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.OwnerAccountID(); ok {
-		_spec.SetField(storageattachment.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.OwnerUserID(); ok {
-		_spec.SetField(storageattachment.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.UserID(); ok {
-		_spec.SetField(storageattachment.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.Email(); ok {
-		_spec.SetField(storageattachment.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.Role(); ok {
-		_spec.SetField(storageattachment.FieldRole, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.Status(); ok {
-		_spec.SetField(storageattachment.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.Name(); ok {
-		_spec.SetField(storageattachment.FieldName, field.TypeString, value)
 	}
 	if value, ok := sau.mutation.WorkspaceID(); ok {
 		_spec.SetField(storageattachment.FieldWorkspaceID, field.TypeString, value)
 	}
-	if value, ok := sau.mutation.ResourceID(); ok {
-		_spec.SetField(storageattachment.FieldResourceID, field.TypeString, value)
+	if value, ok := sau.mutation.ComputeAllocationID(); ok {
+		_spec.SetField(storageattachment.FieldComputeAllocationID, field.TypeString, value)
 	}
-	if value, ok := sau.mutation.ResourceKind(); ok {
-		_spec.SetField(storageattachment.FieldResourceKind, field.TypeString, value)
+	if value, ok := sau.mutation.StorageID(); ok {
+		_spec.SetField(storageattachment.FieldStorageID, field.TypeString, value)
+	}
+	if value, ok := sau.mutation.VolumeID(); ok {
+		_spec.SetField(storageattachment.FieldVolumeID, field.TypeString, value)
 	}
 	if value, ok := sau.mutation.OperationID(); ok {
 		_spec.SetField(storageattachment.FieldOperationID, field.TypeString, value)
@@ -647,92 +278,14 @@ func (sau *StorageAttachmentUpdate) sqlSave(ctx context.Context) (n int, err err
 	if value, ok := sau.mutation.Provider(); ok {
 		_spec.SetField(storageattachment.FieldProvider, field.TypeString, value)
 	}
-	if value, ok := sau.mutation.ProviderResourceID(); ok {
-		_spec.SetField(storageattachment.FieldProviderResourceID, field.TypeString, value)
+	if value, ok := sau.mutation.ProviderRequestID(); ok {
+		_spec.SetField(storageattachment.FieldProviderRequestID, field.TypeString, value)
 	}
-	if value, ok := sau.mutation.URL(); ok {
-		_spec.SetField(storageattachment.FieldURL, field.TypeString, value)
+	if value, ok := sau.mutation.Status(); ok {
+		_spec.SetField(storageattachment.FieldStatus, field.TypeString, value)
 	}
-	if value, ok := sau.mutation.HoldID(); ok {
-		_spec.SetField(storageattachment.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.HoldReleaseID(); ok {
-		_spec.SetField(storageattachment.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.LedgerEntryID(); ok {
-		_spec.SetField(storageattachment.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.WalletTransactionID(); ok {
-		_spec.SetField(storageattachment.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.SettlementID(); ok {
-		_spec.SetField(storageattachment.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.PricingVersion(); ok {
-		_spec.SetField(storageattachment.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.AmountCents(); ok {
-		_spec.SetField(storageattachment.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := sau.mutation.AddedAmountCents(); ok {
-		_spec.AddField(storageattachment.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := sau.mutation.BalanceCents(); ok {
-		_spec.SetField(storageattachment.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := sau.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(storageattachment.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := sau.mutation.FrozenCents(); ok {
-		_spec.SetField(storageattachment.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := sau.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(storageattachment.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := sau.mutation.AvailableCents(); ok {
-		_spec.SetField(storageattachment.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := sau.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(storageattachment.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := sau.mutation.TotalSpentCents(); ok {
-		_spec.SetField(storageattachment.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := sau.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(storageattachment.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := sau.mutation.Quantity(); ok {
-		_spec.SetField(storageattachment.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := sau.mutation.AddedQuantity(); ok {
-		_spec.AddField(storageattachment.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := sau.mutation.Unit(); ok {
-		_spec.SetField(storageattachment.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.Reason(); ok {
-		_spec.SetField(storageattachment.FieldReason, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.Result(); ok {
-		_spec.SetField(storageattachment.FieldResult, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.Source(); ok {
-		_spec.SetField(storageattachment.FieldSource, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.Direction(); ok {
-		_spec.SetField(storageattachment.FieldDirection, field.TypeString, value)
-	}
-	if value, ok := sau.mutation.CreatedAt(); ok {
-		_spec.SetField(storageattachment.FieldCreatedAt, field.TypeTime, value)
-	}
-	if value, ok := sau.mutation.UpdatedAt(); ok {
-		_spec.SetField(storageattachment.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := sau.mutation.ArchivedAt(); ok {
-		_spec.SetField(storageattachment.FieldArchivedAt, field.TypeTime, value)
-	}
-	if sau.mutation.ArchivedAtCleared() {
-		_spec.ClearField(storageattachment.FieldArchivedAt, field.TypeTime)
+	if value, ok := sau.mutation.MountPath(); ok {
+		_spec.SetField(storageattachment.FieldMountPath, field.TypeString, value)
 	}
 	if n, err = sqlgraph.UpdateNodes(ctx, sau.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -754,6 +307,26 @@ type StorageAttachmentUpdateOne struct {
 	mutation *StorageAttachmentMutation
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (sauo *StorageAttachmentUpdateOne) SetCreatedAt(t time.Time) *StorageAttachmentUpdateOne {
+	sauo.mutation.SetCreatedAt(t)
+	return sauo
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (sauo *StorageAttachmentUpdateOne) SetNillableCreatedAt(t *time.Time) *StorageAttachmentUpdateOne {
+	if t != nil {
+		sauo.SetCreatedAt(*t)
+	}
+	return sauo
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (sauo *StorageAttachmentUpdateOne) SetUpdatedAt(t time.Time) *StorageAttachmentUpdateOne {
+	sauo.mutation.SetUpdatedAt(t)
+	return sauo
+}
+
 // SetAccountID sets the "account_id" field.
 func (sauo *StorageAttachmentUpdateOne) SetAccountID(s string) *StorageAttachmentUpdateOne {
 	sauo.mutation.SetAccountID(s)
@@ -764,104 +337,6 @@ func (sauo *StorageAttachmentUpdateOne) SetAccountID(s string) *StorageAttachmen
 func (sauo *StorageAttachmentUpdateOne) SetNillableAccountID(s *string) *StorageAttachmentUpdateOne {
 	if s != nil {
 		sauo.SetAccountID(*s)
-	}
-	return sauo
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (sauo *StorageAttachmentUpdateOne) SetOwnerAccountID(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetOwnerAccountID(s)
-	return sauo
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableOwnerAccountID(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetOwnerAccountID(*s)
-	}
-	return sauo
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (sauo *StorageAttachmentUpdateOne) SetOwnerUserID(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetOwnerUserID(s)
-	return sauo
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableOwnerUserID(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetOwnerUserID(*s)
-	}
-	return sauo
-}
-
-// SetUserID sets the "user_id" field.
-func (sauo *StorageAttachmentUpdateOne) SetUserID(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetUserID(s)
-	return sauo
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableUserID(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetUserID(*s)
-	}
-	return sauo
-}
-
-// SetEmail sets the "email" field.
-func (sauo *StorageAttachmentUpdateOne) SetEmail(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetEmail(s)
-	return sauo
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableEmail(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetEmail(*s)
-	}
-	return sauo
-}
-
-// SetRole sets the "role" field.
-func (sauo *StorageAttachmentUpdateOne) SetRole(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetRole(s)
-	return sauo
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableRole(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetRole(*s)
-	}
-	return sauo
-}
-
-// SetStatus sets the "status" field.
-func (sauo *StorageAttachmentUpdateOne) SetStatus(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetStatus(s)
-	return sauo
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableStatus(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetStatus(*s)
-	}
-	return sauo
-}
-
-// SetName sets the "name" field.
-func (sauo *StorageAttachmentUpdateOne) SetName(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetName(s)
-	return sauo
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableName(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetName(*s)
 	}
 	return sauo
 }
@@ -880,30 +355,44 @@ func (sauo *StorageAttachmentUpdateOne) SetNillableWorkspaceID(s *string) *Stora
 	return sauo
 }
 
-// SetResourceID sets the "resource_id" field.
-func (sauo *StorageAttachmentUpdateOne) SetResourceID(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetResourceID(s)
+// SetComputeAllocationID sets the "compute_allocation_id" field.
+func (sauo *StorageAttachmentUpdateOne) SetComputeAllocationID(s string) *StorageAttachmentUpdateOne {
+	sauo.mutation.SetComputeAllocationID(s)
 	return sauo
 }
 
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableResourceID(s *string) *StorageAttachmentUpdateOne {
+// SetNillableComputeAllocationID sets the "compute_allocation_id" field if the given value is not nil.
+func (sauo *StorageAttachmentUpdateOne) SetNillableComputeAllocationID(s *string) *StorageAttachmentUpdateOne {
 	if s != nil {
-		sauo.SetResourceID(*s)
+		sauo.SetComputeAllocationID(*s)
 	}
 	return sauo
 }
 
-// SetResourceKind sets the "resource_kind" field.
-func (sauo *StorageAttachmentUpdateOne) SetResourceKind(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetResourceKind(s)
+// SetStorageID sets the "storage_id" field.
+func (sauo *StorageAttachmentUpdateOne) SetStorageID(s string) *StorageAttachmentUpdateOne {
+	sauo.mutation.SetStorageID(s)
 	return sauo
 }
 
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableResourceKind(s *string) *StorageAttachmentUpdateOne {
+// SetNillableStorageID sets the "storage_id" field if the given value is not nil.
+func (sauo *StorageAttachmentUpdateOne) SetNillableStorageID(s *string) *StorageAttachmentUpdateOne {
 	if s != nil {
-		sauo.SetResourceKind(*s)
+		sauo.SetStorageID(*s)
+	}
+	return sauo
+}
+
+// SetVolumeID sets the "volume_id" field.
+func (sauo *StorageAttachmentUpdateOne) SetVolumeID(s string) *StorageAttachmentUpdateOne {
+	sauo.mutation.SetVolumeID(s)
+	return sauo
+}
+
+// SetNillableVolumeID sets the "volume_id" field if the given value is not nil.
+func (sauo *StorageAttachmentUpdateOne) SetNillableVolumeID(s *string) *StorageAttachmentUpdateOne {
+	if s != nil {
+		sauo.SetVolumeID(*s)
 	}
 	return sauo
 }
@@ -936,351 +425,45 @@ func (sauo *StorageAttachmentUpdateOne) SetNillableProvider(s *string) *StorageA
 	return sauo
 }
 
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (sauo *StorageAttachmentUpdateOne) SetProviderResourceID(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetProviderResourceID(s)
+// SetProviderRequestID sets the "provider_request_id" field.
+func (sauo *StorageAttachmentUpdateOne) SetProviderRequestID(s string) *StorageAttachmentUpdateOne {
+	sauo.mutation.SetProviderRequestID(s)
 	return sauo
 }
 
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableProviderResourceID(s *string) *StorageAttachmentUpdateOne {
+// SetNillableProviderRequestID sets the "provider_request_id" field if the given value is not nil.
+func (sauo *StorageAttachmentUpdateOne) SetNillableProviderRequestID(s *string) *StorageAttachmentUpdateOne {
 	if s != nil {
-		sauo.SetProviderResourceID(*s)
+		sauo.SetProviderRequestID(*s)
 	}
 	return sauo
 }
 
-// SetURL sets the "url" field.
-func (sauo *StorageAttachmentUpdateOne) SetURL(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetURL(s)
+// SetStatus sets the "status" field.
+func (sauo *StorageAttachmentUpdateOne) SetStatus(s string) *StorageAttachmentUpdateOne {
+	sauo.mutation.SetStatus(s)
 	return sauo
 }
 
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableURL(s *string) *StorageAttachmentUpdateOne {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (sauo *StorageAttachmentUpdateOne) SetNillableStatus(s *string) *StorageAttachmentUpdateOne {
 	if s != nil {
-		sauo.SetURL(*s)
+		sauo.SetStatus(*s)
 	}
 	return sauo
 }
 
-// SetHoldID sets the "hold_id" field.
-func (sauo *StorageAttachmentUpdateOne) SetHoldID(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetHoldID(s)
+// SetMountPath sets the "mount_path" field.
+func (sauo *StorageAttachmentUpdateOne) SetMountPath(s string) *StorageAttachmentUpdateOne {
+	sauo.mutation.SetMountPath(s)
 	return sauo
 }
 
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableHoldID(s *string) *StorageAttachmentUpdateOne {
+// SetNillableMountPath sets the "mount_path" field if the given value is not nil.
+func (sauo *StorageAttachmentUpdateOne) SetNillableMountPath(s *string) *StorageAttachmentUpdateOne {
 	if s != nil {
-		sauo.SetHoldID(*s)
+		sauo.SetMountPath(*s)
 	}
-	return sauo
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (sauo *StorageAttachmentUpdateOne) SetHoldReleaseID(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetHoldReleaseID(s)
-	return sauo
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableHoldReleaseID(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetHoldReleaseID(*s)
-	}
-	return sauo
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (sauo *StorageAttachmentUpdateOne) SetLedgerEntryID(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetLedgerEntryID(s)
-	return sauo
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableLedgerEntryID(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetLedgerEntryID(*s)
-	}
-	return sauo
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (sauo *StorageAttachmentUpdateOne) SetWalletTransactionID(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetWalletTransactionID(s)
-	return sauo
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableWalletTransactionID(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetWalletTransactionID(*s)
-	}
-	return sauo
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (sauo *StorageAttachmentUpdateOne) SetSettlementID(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetSettlementID(s)
-	return sauo
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableSettlementID(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetSettlementID(*s)
-	}
-	return sauo
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (sauo *StorageAttachmentUpdateOne) SetPricingVersion(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetPricingVersion(s)
-	return sauo
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillablePricingVersion(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetPricingVersion(*s)
-	}
-	return sauo
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (sauo *StorageAttachmentUpdateOne) SetAmountCents(i int64) *StorageAttachmentUpdateOne {
-	sauo.mutation.ResetAmountCents()
-	sauo.mutation.SetAmountCents(i)
-	return sauo
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableAmountCents(i *int64) *StorageAttachmentUpdateOne {
-	if i != nil {
-		sauo.SetAmountCents(*i)
-	}
-	return sauo
-}
-
-// AddAmountCents adds i to the "amount_cents" field.
-func (sauo *StorageAttachmentUpdateOne) AddAmountCents(i int64) *StorageAttachmentUpdateOne {
-	sauo.mutation.AddAmountCents(i)
-	return sauo
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (sauo *StorageAttachmentUpdateOne) SetBalanceCents(i int64) *StorageAttachmentUpdateOne {
-	sauo.mutation.ResetBalanceCents()
-	sauo.mutation.SetBalanceCents(i)
-	return sauo
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableBalanceCents(i *int64) *StorageAttachmentUpdateOne {
-	if i != nil {
-		sauo.SetBalanceCents(*i)
-	}
-	return sauo
-}
-
-// AddBalanceCents adds i to the "balance_cents" field.
-func (sauo *StorageAttachmentUpdateOne) AddBalanceCents(i int64) *StorageAttachmentUpdateOne {
-	sauo.mutation.AddBalanceCents(i)
-	return sauo
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (sauo *StorageAttachmentUpdateOne) SetFrozenCents(i int64) *StorageAttachmentUpdateOne {
-	sauo.mutation.ResetFrozenCents()
-	sauo.mutation.SetFrozenCents(i)
-	return sauo
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableFrozenCents(i *int64) *StorageAttachmentUpdateOne {
-	if i != nil {
-		sauo.SetFrozenCents(*i)
-	}
-	return sauo
-}
-
-// AddFrozenCents adds i to the "frozen_cents" field.
-func (sauo *StorageAttachmentUpdateOne) AddFrozenCents(i int64) *StorageAttachmentUpdateOne {
-	sauo.mutation.AddFrozenCents(i)
-	return sauo
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (sauo *StorageAttachmentUpdateOne) SetAvailableCents(i int64) *StorageAttachmentUpdateOne {
-	sauo.mutation.ResetAvailableCents()
-	sauo.mutation.SetAvailableCents(i)
-	return sauo
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableAvailableCents(i *int64) *StorageAttachmentUpdateOne {
-	if i != nil {
-		sauo.SetAvailableCents(*i)
-	}
-	return sauo
-}
-
-// AddAvailableCents adds i to the "available_cents" field.
-func (sauo *StorageAttachmentUpdateOne) AddAvailableCents(i int64) *StorageAttachmentUpdateOne {
-	sauo.mutation.AddAvailableCents(i)
-	return sauo
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (sauo *StorageAttachmentUpdateOne) SetTotalSpentCents(i int64) *StorageAttachmentUpdateOne {
-	sauo.mutation.ResetTotalSpentCents()
-	sauo.mutation.SetTotalSpentCents(i)
-	return sauo
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableTotalSpentCents(i *int64) *StorageAttachmentUpdateOne {
-	if i != nil {
-		sauo.SetTotalSpentCents(*i)
-	}
-	return sauo
-}
-
-// AddTotalSpentCents adds i to the "total_spent_cents" field.
-func (sauo *StorageAttachmentUpdateOne) AddTotalSpentCents(i int64) *StorageAttachmentUpdateOne {
-	sauo.mutation.AddTotalSpentCents(i)
-	return sauo
-}
-
-// SetQuantity sets the "quantity" field.
-func (sauo *StorageAttachmentUpdateOne) SetQuantity(f float64) *StorageAttachmentUpdateOne {
-	sauo.mutation.ResetQuantity()
-	sauo.mutation.SetQuantity(f)
-	return sauo
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableQuantity(f *float64) *StorageAttachmentUpdateOne {
-	if f != nil {
-		sauo.SetQuantity(*f)
-	}
-	return sauo
-}
-
-// AddQuantity adds f to the "quantity" field.
-func (sauo *StorageAttachmentUpdateOne) AddQuantity(f float64) *StorageAttachmentUpdateOne {
-	sauo.mutation.AddQuantity(f)
-	return sauo
-}
-
-// SetUnit sets the "unit" field.
-func (sauo *StorageAttachmentUpdateOne) SetUnit(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetUnit(s)
-	return sauo
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableUnit(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetUnit(*s)
-	}
-	return sauo
-}
-
-// SetReason sets the "reason" field.
-func (sauo *StorageAttachmentUpdateOne) SetReason(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetReason(s)
-	return sauo
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableReason(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetReason(*s)
-	}
-	return sauo
-}
-
-// SetResult sets the "result" field.
-func (sauo *StorageAttachmentUpdateOne) SetResult(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetResult(s)
-	return sauo
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableResult(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetResult(*s)
-	}
-	return sauo
-}
-
-// SetSource sets the "source" field.
-func (sauo *StorageAttachmentUpdateOne) SetSource(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetSource(s)
-	return sauo
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableSource(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetSource(*s)
-	}
-	return sauo
-}
-
-// SetDirection sets the "direction" field.
-func (sauo *StorageAttachmentUpdateOne) SetDirection(s string) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetDirection(s)
-	return sauo
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableDirection(s *string) *StorageAttachmentUpdateOne {
-	if s != nil {
-		sauo.SetDirection(*s)
-	}
-	return sauo
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (sauo *StorageAttachmentUpdateOne) SetCreatedAt(t time.Time) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetCreatedAt(t)
-	return sauo
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableCreatedAt(t *time.Time) *StorageAttachmentUpdateOne {
-	if t != nil {
-		sauo.SetCreatedAt(*t)
-	}
-	return sauo
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (sauo *StorageAttachmentUpdateOne) SetUpdatedAt(t time.Time) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetUpdatedAt(t)
-	return sauo
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (sauo *StorageAttachmentUpdateOne) SetArchivedAt(t time.Time) *StorageAttachmentUpdateOne {
-	sauo.mutation.SetArchivedAt(t)
-	return sauo
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (sauo *StorageAttachmentUpdateOne) SetNillableArchivedAt(t *time.Time) *StorageAttachmentUpdateOne {
-	if t != nil {
-		sauo.SetArchivedAt(*t)
-	}
-	return sauo
-}
-
-// ClearArchivedAt clears the value of the "archived_at" field.
-func (sauo *StorageAttachmentUpdateOne) ClearArchivedAt() *StorageAttachmentUpdateOne {
-	sauo.mutation.ClearArchivedAt()
 	return sauo
 }
 
@@ -1338,7 +521,20 @@ func (sauo *StorageAttachmentUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (sauo *StorageAttachmentUpdateOne) check() error {
+	if v, ok := sauo.mutation.AccountID(); ok {
+		if err := storageattachment.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "StorageAttachment.account_id": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (sauo *StorageAttachmentUpdateOne) sqlSave(ctx context.Context) (_node *StorageAttachment, err error) {
+	if err := sauo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(storageattachment.Table, storageattachment.Columns, sqlgraph.NewFieldSpec(storageattachment.FieldID, field.TypeString))
 	id, ok := sauo.mutation.ID()
 	if !ok {
@@ -1364,38 +560,26 @@ func (sauo *StorageAttachmentUpdateOne) sqlSave(ctx context.Context) (_node *Sto
 			}
 		}
 	}
+	if value, ok := sauo.mutation.CreatedAt(); ok {
+		_spec.SetField(storageattachment.FieldCreatedAt, field.TypeTime, value)
+	}
+	if value, ok := sauo.mutation.UpdatedAt(); ok {
+		_spec.SetField(storageattachment.FieldUpdatedAt, field.TypeTime, value)
+	}
 	if value, ok := sauo.mutation.AccountID(); ok {
 		_spec.SetField(storageattachment.FieldAccountID, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.OwnerAccountID(); ok {
-		_spec.SetField(storageattachment.FieldOwnerAccountID, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.OwnerUserID(); ok {
-		_spec.SetField(storageattachment.FieldOwnerUserID, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.UserID(); ok {
-		_spec.SetField(storageattachment.FieldUserID, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.Email(); ok {
-		_spec.SetField(storageattachment.FieldEmail, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.Role(); ok {
-		_spec.SetField(storageattachment.FieldRole, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.Status(); ok {
-		_spec.SetField(storageattachment.FieldStatus, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.Name(); ok {
-		_spec.SetField(storageattachment.FieldName, field.TypeString, value)
 	}
 	if value, ok := sauo.mutation.WorkspaceID(); ok {
 		_spec.SetField(storageattachment.FieldWorkspaceID, field.TypeString, value)
 	}
-	if value, ok := sauo.mutation.ResourceID(); ok {
-		_spec.SetField(storageattachment.FieldResourceID, field.TypeString, value)
+	if value, ok := sauo.mutation.ComputeAllocationID(); ok {
+		_spec.SetField(storageattachment.FieldComputeAllocationID, field.TypeString, value)
 	}
-	if value, ok := sauo.mutation.ResourceKind(); ok {
-		_spec.SetField(storageattachment.FieldResourceKind, field.TypeString, value)
+	if value, ok := sauo.mutation.StorageID(); ok {
+		_spec.SetField(storageattachment.FieldStorageID, field.TypeString, value)
+	}
+	if value, ok := sauo.mutation.VolumeID(); ok {
+		_spec.SetField(storageattachment.FieldVolumeID, field.TypeString, value)
 	}
 	if value, ok := sauo.mutation.OperationID(); ok {
 		_spec.SetField(storageattachment.FieldOperationID, field.TypeString, value)
@@ -1403,92 +587,14 @@ func (sauo *StorageAttachmentUpdateOne) sqlSave(ctx context.Context) (_node *Sto
 	if value, ok := sauo.mutation.Provider(); ok {
 		_spec.SetField(storageattachment.FieldProvider, field.TypeString, value)
 	}
-	if value, ok := sauo.mutation.ProviderResourceID(); ok {
-		_spec.SetField(storageattachment.FieldProviderResourceID, field.TypeString, value)
+	if value, ok := sauo.mutation.ProviderRequestID(); ok {
+		_spec.SetField(storageattachment.FieldProviderRequestID, field.TypeString, value)
 	}
-	if value, ok := sauo.mutation.URL(); ok {
-		_spec.SetField(storageattachment.FieldURL, field.TypeString, value)
+	if value, ok := sauo.mutation.Status(); ok {
+		_spec.SetField(storageattachment.FieldStatus, field.TypeString, value)
 	}
-	if value, ok := sauo.mutation.HoldID(); ok {
-		_spec.SetField(storageattachment.FieldHoldID, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.HoldReleaseID(); ok {
-		_spec.SetField(storageattachment.FieldHoldReleaseID, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.LedgerEntryID(); ok {
-		_spec.SetField(storageattachment.FieldLedgerEntryID, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.WalletTransactionID(); ok {
-		_spec.SetField(storageattachment.FieldWalletTransactionID, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.SettlementID(); ok {
-		_spec.SetField(storageattachment.FieldSettlementID, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.PricingVersion(); ok {
-		_spec.SetField(storageattachment.FieldPricingVersion, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.AmountCents(); ok {
-		_spec.SetField(storageattachment.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := sauo.mutation.AddedAmountCents(); ok {
-		_spec.AddField(storageattachment.FieldAmountCents, field.TypeInt64, value)
-	}
-	if value, ok := sauo.mutation.BalanceCents(); ok {
-		_spec.SetField(storageattachment.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := sauo.mutation.AddedBalanceCents(); ok {
-		_spec.AddField(storageattachment.FieldBalanceCents, field.TypeInt64, value)
-	}
-	if value, ok := sauo.mutation.FrozenCents(); ok {
-		_spec.SetField(storageattachment.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := sauo.mutation.AddedFrozenCents(); ok {
-		_spec.AddField(storageattachment.FieldFrozenCents, field.TypeInt64, value)
-	}
-	if value, ok := sauo.mutation.AvailableCents(); ok {
-		_spec.SetField(storageattachment.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := sauo.mutation.AddedAvailableCents(); ok {
-		_spec.AddField(storageattachment.FieldAvailableCents, field.TypeInt64, value)
-	}
-	if value, ok := sauo.mutation.TotalSpentCents(); ok {
-		_spec.SetField(storageattachment.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := sauo.mutation.AddedTotalSpentCents(); ok {
-		_spec.AddField(storageattachment.FieldTotalSpentCents, field.TypeInt64, value)
-	}
-	if value, ok := sauo.mutation.Quantity(); ok {
-		_spec.SetField(storageattachment.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := sauo.mutation.AddedQuantity(); ok {
-		_spec.AddField(storageattachment.FieldQuantity, field.TypeFloat64, value)
-	}
-	if value, ok := sauo.mutation.Unit(); ok {
-		_spec.SetField(storageattachment.FieldUnit, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.Reason(); ok {
-		_spec.SetField(storageattachment.FieldReason, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.Result(); ok {
-		_spec.SetField(storageattachment.FieldResult, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.Source(); ok {
-		_spec.SetField(storageattachment.FieldSource, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.Direction(); ok {
-		_spec.SetField(storageattachment.FieldDirection, field.TypeString, value)
-	}
-	if value, ok := sauo.mutation.CreatedAt(); ok {
-		_spec.SetField(storageattachment.FieldCreatedAt, field.TypeTime, value)
-	}
-	if value, ok := sauo.mutation.UpdatedAt(); ok {
-		_spec.SetField(storageattachment.FieldUpdatedAt, field.TypeTime, value)
-	}
-	if value, ok := sauo.mutation.ArchivedAt(); ok {
-		_spec.SetField(storageattachment.FieldArchivedAt, field.TypeTime, value)
-	}
-	if sauo.mutation.ArchivedAtCleared() {
-		_spec.ClearField(storageattachment.FieldArchivedAt, field.TypeTime)
+	if value, ok := sauo.mutation.MountPath(); ok {
+		_spec.SetField(storageattachment.FieldMountPath, field.TypeString, value)
 	}
 	_node = &StorageAttachment{config: sauo.config}
 	_spec.Assign = _node.assignValues

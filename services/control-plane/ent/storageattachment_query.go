@@ -261,12 +261,12 @@ func (saq *StorageAttachmentQuery) Clone() *StorageAttachmentQuery {
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.StorageAttachment.Query().
-//		GroupBy(storageattachment.FieldAccountID).
+//		GroupBy(storageattachment.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (saq *StorageAttachmentQuery) GroupBy(field string, fields ...string) *StorageAttachmentGroupBy {
@@ -284,11 +284,11 @@ func (saq *StorageAttachmentQuery) GroupBy(field string, fields ...string) *Stor
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.StorageAttachment.Query().
-//		Select(storageattachment.FieldAccountID).
+//		Select(storageattachment.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (saq *StorageAttachmentQuery) Select(fields ...string) *StorageAttachmentSelect {
 	saq.ctx.Fields = append(saq.ctx.Fields, fields...)

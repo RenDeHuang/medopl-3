@@ -17,6 +17,10 @@ type Workspace struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID string `json:"id,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// UpdatedAt holds the value of the "updated_at" field.
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
 	// AccountID holds the value of the "account_id" field.
 	AccountID string `json:"account_id,omitempty"`
 	// OwnerAccountID holds the value of the "owner_account_id" field.
@@ -25,69 +29,45 @@ type Workspace struct {
 	OwnerUserID string `json:"owner_user_id,omitempty"`
 	// UserID holds the value of the "user_id" field.
 	UserID string `json:"user_id,omitempty"`
-	// Email holds the value of the "email" field.
-	Email string `json:"email,omitempty"`
-	// Role holds the value of the "role" field.
-	Role string `json:"role,omitempty"`
-	// Status holds the value of the "status" field.
-	Status string `json:"status,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
-	// WorkspaceID holds the value of the "workspace_id" field.
-	WorkspaceID string `json:"workspace_id,omitempty"`
-	// ResourceID holds the value of the "resource_id" field.
-	ResourceID string `json:"resource_id,omitempty"`
-	// ResourceKind holds the value of the "resource_kind" field.
-	ResourceKind string `json:"resource_kind,omitempty"`
-	// OperationID holds the value of the "operation_id" field.
-	OperationID string `json:"operation_id,omitempty"`
-	// Provider holds the value of the "provider" field.
-	Provider string `json:"provider,omitempty"`
-	// ProviderResourceID holds the value of the "provider_resource_id" field.
-	ProviderResourceID string `json:"provider_resource_id,omitempty"`
 	// URL holds the value of the "url" field.
 	URL string `json:"url,omitempty"`
-	// HoldID holds the value of the "hold_id" field.
-	HoldID string `json:"hold_id,omitempty"`
-	// HoldReleaseID holds the value of the "hold_release_id" field.
-	HoldReleaseID string `json:"hold_release_id,omitempty"`
-	// LedgerEntryID holds the value of the "ledger_entry_id" field.
-	LedgerEntryID string `json:"ledger_entry_id,omitempty"`
-	// WalletTransactionID holds the value of the "wallet_transaction_id" field.
-	WalletTransactionID string `json:"wallet_transaction_id,omitempty"`
-	// SettlementID holds the value of the "settlement_id" field.
-	SettlementID string `json:"settlement_id,omitempty"`
-	// PricingVersion holds the value of the "pricing_version" field.
-	PricingVersion string `json:"pricing_version,omitempty"`
-	// AmountCents holds the value of the "amount_cents" field.
-	AmountCents int64 `json:"amount_cents,omitempty"`
-	// BalanceCents holds the value of the "balance_cents" field.
-	BalanceCents int64 `json:"balance_cents,omitempty"`
-	// FrozenCents holds the value of the "frozen_cents" field.
-	FrozenCents int64 `json:"frozen_cents,omitempty"`
-	// AvailableCents holds the value of the "available_cents" field.
-	AvailableCents int64 `json:"available_cents,omitempty"`
-	// TotalSpentCents holds the value of the "total_spent_cents" field.
-	TotalSpentCents int64 `json:"total_spent_cents,omitempty"`
-	// Quantity holds the value of the "quantity" field.
-	Quantity float64 `json:"quantity,omitempty"`
-	// Unit holds the value of the "unit" field.
-	Unit string `json:"unit,omitempty"`
-	// Reason holds the value of the "reason" field.
-	Reason string `json:"reason,omitempty"`
-	// Result holds the value of the "result" field.
-	Result string `json:"result,omitempty"`
-	// Source holds the value of the "source" field.
-	Source string `json:"source,omitempty"`
-	// Direction holds the value of the "direction" field.
-	Direction string `json:"direction,omitempty"`
-	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	// UpdatedAt holds the value of the "updated_at" field.
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
-	// ArchivedAt holds the value of the "archived_at" field.
-	ArchivedAt   *time.Time `json:"archived_at,omitempty"`
-	selectValues sql.SelectValues
+	// State holds the value of the "state" field.
+	State string `json:"state,omitempty"`
+	// Status holds the value of the "status" field.
+	Status string `json:"status,omitempty"`
+	// StorageID holds the value of the "storage_id" field.
+	StorageID string `json:"storage_id,omitempty"`
+	// CurrentComputeAllocationID holds the value of the "current_compute_allocation_id" field.
+	CurrentComputeAllocationID string `json:"current_compute_allocation_id,omitempty"`
+	// CurrentAttachmentID holds the value of the "current_attachment_id" field.
+	CurrentAttachmentID string `json:"current_attachment_id,omitempty"`
+	// RuntimeID holds the value of the "runtime_id" field.
+	RuntimeID string `json:"runtime_id,omitempty"`
+	// RuntimeServiceName holds the value of the "runtime_service_name" field.
+	RuntimeServiceName string `json:"runtime_service_name,omitempty"`
+	// RuntimeServiceNameRoot holds the value of the "runtime_service_name_root" field.
+	RuntimeServiceNameRoot string `json:"runtime_service_name_root,omitempty"`
+	// ServiceName holds the value of the "service_name" field.
+	ServiceName string `json:"service_name,omitempty"`
+	// AccessTokenStatus holds the value of the "access_token_status" field.
+	AccessTokenStatus string `json:"access_token_status,omitempty"`
+	// AccessAccount holds the value of the "access_account" field.
+	AccessAccount string `json:"access_account,omitempty"`
+	// AccessUsername holds the value of the "access_username" field.
+	AccessUsername string `json:"access_username,omitempty"`
+	// AccessPassword holds the value of the "access_password" field.
+	AccessPassword string `json:"access_password,omitempty"`
+	// CredentialStatus holds the value of the "credential_status" field.
+	CredentialStatus string `json:"credential_status,omitempty"`
+	// CredentialVersion holds the value of the "credential_version" field.
+	CredentialVersion string `json:"credential_version,omitempty"`
+	// CredentialSecretRef holds the value of the "credential_secret_ref" field.
+	CredentialSecretRef string `json:"credential_secret_ref,omitempty"`
+	// AccessRequiresLogin holds the value of the "access_requires_login" field.
+	AccessRequiresLogin bool `json:"access_requires_login,omitempty"`
+	selectValues        sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -95,13 +75,11 @@ func (*Workspace) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case workspace.FieldQuantity:
-			values[i] = new(sql.NullFloat64)
-		case workspace.FieldAmountCents, workspace.FieldBalanceCents, workspace.FieldFrozenCents, workspace.FieldAvailableCents, workspace.FieldTotalSpentCents:
-			values[i] = new(sql.NullInt64)
-		case workspace.FieldID, workspace.FieldAccountID, workspace.FieldOwnerAccountID, workspace.FieldOwnerUserID, workspace.FieldUserID, workspace.FieldEmail, workspace.FieldRole, workspace.FieldStatus, workspace.FieldName, workspace.FieldWorkspaceID, workspace.FieldResourceID, workspace.FieldResourceKind, workspace.FieldOperationID, workspace.FieldProvider, workspace.FieldProviderResourceID, workspace.FieldURL, workspace.FieldHoldID, workspace.FieldHoldReleaseID, workspace.FieldLedgerEntryID, workspace.FieldWalletTransactionID, workspace.FieldSettlementID, workspace.FieldPricingVersion, workspace.FieldUnit, workspace.FieldReason, workspace.FieldResult, workspace.FieldSource, workspace.FieldDirection:
+		case workspace.FieldAccessRequiresLogin:
+			values[i] = new(sql.NullBool)
+		case workspace.FieldID, workspace.FieldAccountID, workspace.FieldOwnerAccountID, workspace.FieldOwnerUserID, workspace.FieldUserID, workspace.FieldName, workspace.FieldURL, workspace.FieldState, workspace.FieldStatus, workspace.FieldStorageID, workspace.FieldCurrentComputeAllocationID, workspace.FieldCurrentAttachmentID, workspace.FieldRuntimeID, workspace.FieldRuntimeServiceName, workspace.FieldRuntimeServiceNameRoot, workspace.FieldServiceName, workspace.FieldAccessTokenStatus, workspace.FieldAccessAccount, workspace.FieldAccessUsername, workspace.FieldAccessPassword, workspace.FieldCredentialStatus, workspace.FieldCredentialVersion, workspace.FieldCredentialSecretRef:
 			values[i] = new(sql.NullString)
-		case workspace.FieldCreatedAt, workspace.FieldUpdatedAt, workspace.FieldArchivedAt:
+		case workspace.FieldCreatedAt, workspace.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -123,6 +101,18 @@ func (w *Workspace) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value.Valid {
 				w.ID = value.String
+			}
+		case workspace.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				w.CreatedAt = value.Time
+			}
+		case workspace.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				w.UpdatedAt = value.Time
 			}
 		case workspace.FieldAccountID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -148,65 +138,11 @@ func (w *Workspace) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				w.UserID = value.String
 			}
-		case workspace.FieldEmail:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field email", values[i])
-			} else if value.Valid {
-				w.Email = value.String
-			}
-		case workspace.FieldRole:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field role", values[i])
-			} else if value.Valid {
-				w.Role = value.String
-			}
-		case workspace.FieldStatus:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field status", values[i])
-			} else if value.Valid {
-				w.Status = value.String
-			}
 		case workspace.FieldName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field name", values[i])
 			} else if value.Valid {
 				w.Name = value.String
-			}
-		case workspace.FieldWorkspaceID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field workspace_id", values[i])
-			} else if value.Valid {
-				w.WorkspaceID = value.String
-			}
-		case workspace.FieldResourceID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field resource_id", values[i])
-			} else if value.Valid {
-				w.ResourceID = value.String
-			}
-		case workspace.FieldResourceKind:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field resource_kind", values[i])
-			} else if value.Valid {
-				w.ResourceKind = value.String
-			}
-		case workspace.FieldOperationID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field operation_id", values[i])
-			} else if value.Valid {
-				w.OperationID = value.String
-			}
-		case workspace.FieldProvider:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider", values[i])
-			} else if value.Valid {
-				w.Provider = value.String
-			}
-		case workspace.FieldProviderResourceID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field provider_resource_id", values[i])
-			} else if value.Valid {
-				w.ProviderResourceID = value.String
 			}
 		case workspace.FieldURL:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -214,126 +150,107 @@ func (w *Workspace) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				w.URL = value.String
 			}
-		case workspace.FieldHoldID:
+		case workspace.FieldState:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field hold_id", values[i])
+				return fmt.Errorf("unexpected type %T for field state", values[i])
 			} else if value.Valid {
-				w.HoldID = value.String
+				w.State = value.String
 			}
-		case workspace.FieldHoldReleaseID:
+		case workspace.FieldStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field hold_release_id", values[i])
+				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
-				w.HoldReleaseID = value.String
+				w.Status = value.String
 			}
-		case workspace.FieldLedgerEntryID:
+		case workspace.FieldStorageID:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field ledger_entry_id", values[i])
+				return fmt.Errorf("unexpected type %T for field storage_id", values[i])
 			} else if value.Valid {
-				w.LedgerEntryID = value.String
+				w.StorageID = value.String
 			}
-		case workspace.FieldWalletTransactionID:
+		case workspace.FieldCurrentComputeAllocationID:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field wallet_transaction_id", values[i])
+				return fmt.Errorf("unexpected type %T for field current_compute_allocation_id", values[i])
 			} else if value.Valid {
-				w.WalletTransactionID = value.String
+				w.CurrentComputeAllocationID = value.String
 			}
-		case workspace.FieldSettlementID:
+		case workspace.FieldCurrentAttachmentID:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field settlement_id", values[i])
+				return fmt.Errorf("unexpected type %T for field current_attachment_id", values[i])
 			} else if value.Valid {
-				w.SettlementID = value.String
+				w.CurrentAttachmentID = value.String
 			}
-		case workspace.FieldPricingVersion:
+		case workspace.FieldRuntimeID:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field pricing_version", values[i])
+				return fmt.Errorf("unexpected type %T for field runtime_id", values[i])
 			} else if value.Valid {
-				w.PricingVersion = value.String
+				w.RuntimeID = value.String
 			}
-		case workspace.FieldAmountCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field amount_cents", values[i])
-			} else if value.Valid {
-				w.AmountCents = value.Int64
-			}
-		case workspace.FieldBalanceCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field balance_cents", values[i])
-			} else if value.Valid {
-				w.BalanceCents = value.Int64
-			}
-		case workspace.FieldFrozenCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field frozen_cents", values[i])
-			} else if value.Valid {
-				w.FrozenCents = value.Int64
-			}
-		case workspace.FieldAvailableCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field available_cents", values[i])
-			} else if value.Valid {
-				w.AvailableCents = value.Int64
-			}
-		case workspace.FieldTotalSpentCents:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field total_spent_cents", values[i])
-			} else if value.Valid {
-				w.TotalSpentCents = value.Int64
-			}
-		case workspace.FieldQuantity:
-			if value, ok := values[i].(*sql.NullFloat64); !ok {
-				return fmt.Errorf("unexpected type %T for field quantity", values[i])
-			} else if value.Valid {
-				w.Quantity = value.Float64
-			}
-		case workspace.FieldUnit:
+		case workspace.FieldRuntimeServiceName:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field unit", values[i])
+				return fmt.Errorf("unexpected type %T for field runtime_service_name", values[i])
 			} else if value.Valid {
-				w.Unit = value.String
+				w.RuntimeServiceName = value.String
 			}
-		case workspace.FieldReason:
+		case workspace.FieldRuntimeServiceNameRoot:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field reason", values[i])
+				return fmt.Errorf("unexpected type %T for field runtime_service_name_root", values[i])
 			} else if value.Valid {
-				w.Reason = value.String
+				w.RuntimeServiceNameRoot = value.String
 			}
-		case workspace.FieldResult:
+		case workspace.FieldServiceName:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field result", values[i])
+				return fmt.Errorf("unexpected type %T for field service_name", values[i])
 			} else if value.Valid {
-				w.Result = value.String
+				w.ServiceName = value.String
 			}
-		case workspace.FieldSource:
+		case workspace.FieldAccessTokenStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field source", values[i])
+				return fmt.Errorf("unexpected type %T for field access_token_status", values[i])
 			} else if value.Valid {
-				w.Source = value.String
+				w.AccessTokenStatus = value.String
 			}
-		case workspace.FieldDirection:
+		case workspace.FieldAccessAccount:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field direction", values[i])
+				return fmt.Errorf("unexpected type %T for field access_account", values[i])
 			} else if value.Valid {
-				w.Direction = value.String
+				w.AccessAccount = value.String
 			}
-		case workspace.FieldCreatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+		case workspace.FieldAccessUsername:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field access_username", values[i])
 			} else if value.Valid {
-				w.CreatedAt = value.Time
+				w.AccessUsername = value.String
 			}
-		case workspace.FieldUpdatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+		case workspace.FieldAccessPassword:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field access_password", values[i])
 			} else if value.Valid {
-				w.UpdatedAt = value.Time
+				w.AccessPassword = value.String
 			}
-		case workspace.FieldArchivedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field archived_at", values[i])
+		case workspace.FieldCredentialStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_status", values[i])
 			} else if value.Valid {
-				w.ArchivedAt = new(time.Time)
-				*w.ArchivedAt = value.Time
+				w.CredentialStatus = value.String
+			}
+		case workspace.FieldCredentialVersion:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_version", values[i])
+			} else if value.Valid {
+				w.CredentialVersion = value.String
+			}
+		case workspace.FieldCredentialSecretRef:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field credential_secret_ref", values[i])
+			} else if value.Valid {
+				w.CredentialSecretRef = value.String
+			}
+		case workspace.FieldAccessRequiresLogin:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field access_requires_login", values[i])
+			} else if value.Valid {
+				w.AccessRequiresLogin = value.Bool
 			}
 		default:
 			w.selectValues.Set(columns[i], values[i])
@@ -371,6 +288,12 @@ func (w *Workspace) String() string {
 	var builder strings.Builder
 	builder.WriteString("Workspace(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", w.ID))
+	builder.WriteString("created_at=")
+	builder.WriteString(w.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(w.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
 	builder.WriteString("account_id=")
 	builder.WriteString(w.AccountID)
 	builder.WriteString(", ")
@@ -383,100 +306,62 @@ func (w *Workspace) String() string {
 	builder.WriteString("user_id=")
 	builder.WriteString(w.UserID)
 	builder.WriteString(", ")
-	builder.WriteString("email=")
-	builder.WriteString(w.Email)
-	builder.WriteString(", ")
-	builder.WriteString("role=")
-	builder.WriteString(w.Role)
-	builder.WriteString(", ")
-	builder.WriteString("status=")
-	builder.WriteString(w.Status)
-	builder.WriteString(", ")
 	builder.WriteString("name=")
 	builder.WriteString(w.Name)
-	builder.WriteString(", ")
-	builder.WriteString("workspace_id=")
-	builder.WriteString(w.WorkspaceID)
-	builder.WriteString(", ")
-	builder.WriteString("resource_id=")
-	builder.WriteString(w.ResourceID)
-	builder.WriteString(", ")
-	builder.WriteString("resource_kind=")
-	builder.WriteString(w.ResourceKind)
-	builder.WriteString(", ")
-	builder.WriteString("operation_id=")
-	builder.WriteString(w.OperationID)
-	builder.WriteString(", ")
-	builder.WriteString("provider=")
-	builder.WriteString(w.Provider)
-	builder.WriteString(", ")
-	builder.WriteString("provider_resource_id=")
-	builder.WriteString(w.ProviderResourceID)
 	builder.WriteString(", ")
 	builder.WriteString("url=")
 	builder.WriteString(w.URL)
 	builder.WriteString(", ")
-	builder.WriteString("hold_id=")
-	builder.WriteString(w.HoldID)
+	builder.WriteString("state=")
+	builder.WriteString(w.State)
 	builder.WriteString(", ")
-	builder.WriteString("hold_release_id=")
-	builder.WriteString(w.HoldReleaseID)
+	builder.WriteString("status=")
+	builder.WriteString(w.Status)
 	builder.WriteString(", ")
-	builder.WriteString("ledger_entry_id=")
-	builder.WriteString(w.LedgerEntryID)
+	builder.WriteString("storage_id=")
+	builder.WriteString(w.StorageID)
 	builder.WriteString(", ")
-	builder.WriteString("wallet_transaction_id=")
-	builder.WriteString(w.WalletTransactionID)
+	builder.WriteString("current_compute_allocation_id=")
+	builder.WriteString(w.CurrentComputeAllocationID)
 	builder.WriteString(", ")
-	builder.WriteString("settlement_id=")
-	builder.WriteString(w.SettlementID)
+	builder.WriteString("current_attachment_id=")
+	builder.WriteString(w.CurrentAttachmentID)
 	builder.WriteString(", ")
-	builder.WriteString("pricing_version=")
-	builder.WriteString(w.PricingVersion)
+	builder.WriteString("runtime_id=")
+	builder.WriteString(w.RuntimeID)
 	builder.WriteString(", ")
-	builder.WriteString("amount_cents=")
-	builder.WriteString(fmt.Sprintf("%v", w.AmountCents))
+	builder.WriteString("runtime_service_name=")
+	builder.WriteString(w.RuntimeServiceName)
 	builder.WriteString(", ")
-	builder.WriteString("balance_cents=")
-	builder.WriteString(fmt.Sprintf("%v", w.BalanceCents))
+	builder.WriteString("runtime_service_name_root=")
+	builder.WriteString(w.RuntimeServiceNameRoot)
 	builder.WriteString(", ")
-	builder.WriteString("frozen_cents=")
-	builder.WriteString(fmt.Sprintf("%v", w.FrozenCents))
+	builder.WriteString("service_name=")
+	builder.WriteString(w.ServiceName)
 	builder.WriteString(", ")
-	builder.WriteString("available_cents=")
-	builder.WriteString(fmt.Sprintf("%v", w.AvailableCents))
+	builder.WriteString("access_token_status=")
+	builder.WriteString(w.AccessTokenStatus)
 	builder.WriteString(", ")
-	builder.WriteString("total_spent_cents=")
-	builder.WriteString(fmt.Sprintf("%v", w.TotalSpentCents))
+	builder.WriteString("access_account=")
+	builder.WriteString(w.AccessAccount)
 	builder.WriteString(", ")
-	builder.WriteString("quantity=")
-	builder.WriteString(fmt.Sprintf("%v", w.Quantity))
+	builder.WriteString("access_username=")
+	builder.WriteString(w.AccessUsername)
 	builder.WriteString(", ")
-	builder.WriteString("unit=")
-	builder.WriteString(w.Unit)
+	builder.WriteString("access_password=")
+	builder.WriteString(w.AccessPassword)
 	builder.WriteString(", ")
-	builder.WriteString("reason=")
-	builder.WriteString(w.Reason)
+	builder.WriteString("credential_status=")
+	builder.WriteString(w.CredentialStatus)
 	builder.WriteString(", ")
-	builder.WriteString("result=")
-	builder.WriteString(w.Result)
+	builder.WriteString("credential_version=")
+	builder.WriteString(w.CredentialVersion)
 	builder.WriteString(", ")
-	builder.WriteString("source=")
-	builder.WriteString(w.Source)
+	builder.WriteString("credential_secret_ref=")
+	builder.WriteString(w.CredentialSecretRef)
 	builder.WriteString(", ")
-	builder.WriteString("direction=")
-	builder.WriteString(w.Direction)
-	builder.WriteString(", ")
-	builder.WriteString("created_at=")
-	builder.WriteString(w.CreatedAt.Format(time.ANSIC))
-	builder.WriteString(", ")
-	builder.WriteString("updated_at=")
-	builder.WriteString(w.UpdatedAt.Format(time.ANSIC))
-	builder.WriteString(", ")
-	if v := w.ArchivedAt; v != nil {
-		builder.WriteString("archived_at=")
-		builder.WriteString(v.Format(time.ANSIC))
-	}
+	builder.WriteString("access_requires_login=")
+	builder.WriteString(fmt.Sprintf("%v", w.AccessRequiresLogin))
 	builder.WriteByte(')')
 	return builder.String()
 }

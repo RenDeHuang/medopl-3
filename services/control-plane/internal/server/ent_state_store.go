@@ -2,25 +2,33 @@ package server
 
 import (
 	"context"
-	"database/sql"
-	"embed"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
+	"reflect"
 	"strconv"
-	"strings"
+	"time"
 
+	"entgo.io/ent/dialect"
 	_ "github.com/lib/pq"
+
+	controlplaneent "opl-cloud/services/control-plane/ent"
+	"opl-cloud/services/control-plane/ent/adminauditevent"
+	"opl-cloud/services/control-plane/ent/computeallocation"
+	"opl-cloud/services/control-plane/ent/ledgerprojection"
+	"opl-cloud/services/control-plane/ent/manualtopupprojection"
+	"opl-cloud/services/control-plane/ent/productione2erecord"
+	"opl-cloud/services/control-plane/ent/runtimeoperation"
+	"opl-cloud/services/control-plane/ent/storageattachment"
+	"opl-cloud/services/control-plane/ent/storagevolume"
+	"opl-cloud/services/control-plane/ent/supportticketmapping"
+	"opl-cloud/services/control-plane/ent/wallettransactionprojection"
+	"opl-cloud/services/control-plane/ent/workspace"
 )
 
 const singletonFactID = "default"
 
-//go:embed ent_migrations/*.sql
-var controlPlaneMigrations embed.FS
-
-type stateRow = map[string]any
-type stateTable = map[string]stateRow
+type controlPlaneRecord = map[string]any
+type controlPlaneRecordSet = map[string]controlPlaneRecord
 
 type StateStore interface {
 	Load(ctx context.Context) (controlPlaneState, error)
@@ -28,518 +36,908 @@ type StateStore interface {
 }
 
 type controlPlaneState struct {
-	Version     int        `json:"version"`
-	Computes    stateTable `json:"computes,omitempty"`
-	Storages    stateTable `json:"storages,omitempty"`
-	Attachments stateTable `json:"attachments,omitempty"`
-	Workspaces  stateTable `json:"workspaces,omitempty"`
-	Users       stateTable `json:"users,omitempty"`
-	Sessions    stateTable `json:"sessions,omitempty"`
-	Orgs        stateTable `json:"orgs,omitempty"`
-	Memberships stateTable `json:"memberships,omitempty"`
-	Support     stateTable `json:"support,omitempty"`
-	Wallets     stateTable `json:"wallets,omitempty"`
-	Ledger      []stateRow `json:"ledger,omitempty"`
-	WalletTx    []stateRow `json:"walletTx,omitempty"`
-	Topups      []stateRow `json:"topups,omitempty"`
-	RuntimeOps  []stateRow `json:"runtimeOperations,omitempty"`
-	AuditEvents []stateRow `json:"auditEvents,omitempty"`
-	Reconcile   stateRow   `json:"billingReconciliation,omitempty"`
+	Version     int                   `json:"version"`
+	Computes    controlPlaneRecordSet `json:"computes,omitempty"`
+	Storages    controlPlaneRecordSet `json:"storages,omitempty"`
+	Attachments controlPlaneRecordSet `json:"attachments,omitempty"`
+	Workspaces  controlPlaneRecordSet `json:"workspaces,omitempty"`
+	Users       controlPlaneRecordSet `json:"users,omitempty"`
+	Sessions    controlPlaneRecordSet `json:"sessions,omitempty"`
+	Orgs        controlPlaneRecordSet `json:"orgs,omitempty"`
+	Memberships controlPlaneRecordSet `json:"memberships,omitempty"`
+	Support     controlPlaneRecordSet `json:"support,omitempty"`
+	Wallets     controlPlaneRecordSet `json:"wallets,omitempty"`
+	Ledger      []controlPlaneRecord  `json:"ledger,omitempty"`
+	WalletTx    []controlPlaneRecord  `json:"walletTx,omitempty"`
+	Topups      []controlPlaneRecord  `json:"topups,omitempty"`
+	RuntimeOps  []controlPlaneRecord  `json:"runtimeOperations,omitempty"`
+	AuditEvents []controlPlaneRecord  `json:"auditEvents,omitempty"`
+	Reconcile   controlPlaneRecord    `json:"billingReconciliation,omitempty"`
 }
 
 func StateStoreFromEnv() (StateStore, error) {
 	if databaseURL := os.Getenv("DATABASE_URL"); databaseURL != "" {
 		return NewPostgresEntStateStore(databaseURL)
 	}
-	return nil, nil
+	return nil, errors.New("DATABASE_URL is required for control-plane persistence")
 }
 
 type postgresEntStateStore struct {
-	db *sql.DB
+	client *controlplaneent.Client
 }
 
 func NewPostgresEntStateStore(databaseURL string) (StateStore, error) {
-	db, err := sql.Open("postgres", databaseURL)
+	client, err := controlplaneent.Open(dialect.Postgres, databaseURL)
 	if err != nil {
 		return nil, err
 	}
-	store := &postgresEntStateStore{db: db}
-	if err := store.install(context.Background()); err != nil {
-		_ = db.Close()
+	if err := client.Schema.Create(context.Background()); err != nil {
+		_ = client.Close()
 		return nil, err
 	}
-	return store, nil
+	return &postgresEntStateStore{client: client}, nil
 }
 
-var postgresFactTables = []string{
-	"control_plane_compute_allocations",
-	"control_plane_storage_volumes",
-	"control_plane_storage_attachments",
-	"control_plane_workspaces",
-	"control_plane_users",
-	"control_plane_sessions",
-	"control_plane_organizations",
-	"control_plane_memberships",
-	"control_plane_support_ticket_mappings",
-	"control_plane_wallet_projections",
+type entRecordField struct {
+	EntityField string
+	Setter      string
+	Path        []string
+	Kind        string
 }
 
-var postgresFactEventTables = []string{
-	"control_plane_ledger_projections",
-	"control_plane_wallet_transaction_projections",
-	"control_plane_manual_topup_projections",
-	"control_plane_runtime_operations",
-	"control_plane_admin_audit_events",
+func textField(entityField, setter string, path ...string) entRecordField {
+	return entRecordField{EntityField: entityField, Setter: setter, Path: path, Kind: "text"}
 }
 
-type stateColumn struct {
-	Name string
-	Path []string
-	Kind string
+func intField(entityField, setter string, path ...string) entRecordField {
+	return entRecordField{EntityField: entityField, Setter: setter, Path: path, Kind: "int"}
 }
 
-var postgresStateColumns = []stateColumn{
-	{Name: "owner_account_id", Path: []string{"ownerAccountId"}, Kind: "text"},
-	{Name: "owner_user_id", Path: []string{"ownerUserId"}, Kind: "text"},
-	{Name: "user_id", Path: []string{"userId"}, Kind: "text"},
-	{Name: "email", Path: []string{"email"}, Kind: "text"},
-	{Name: "role", Path: []string{"role"}, Kind: "text"},
-	{Name: "status", Path: []string{"status"}, Kind: "text"},
-	{Name: "password_hash", Path: []string{"passwordHash"}, Kind: "text"},
-	{Name: "disabled_at", Path: []string{"disabledAt"}, Kind: "text"},
-	{Name: "disabled_by", Path: []string{"disabledBy"}, Kind: "text"},
-	{Name: "disabled_reason", Path: []string{"disabledReason"}, Kind: "text"},
-	{Name: "deleted_at", Path: []string{"deletedAt"}, Kind: "text"},
-	{Name: "deleted_by", Path: []string{"deletedBy"}, Kind: "text"},
-	{Name: "delete_reason", Path: []string{"deleteReason"}, Kind: "text"},
-	{Name: "organization_id", Path: []string{"organizationId"}, Kind: "text"},
-	{Name: "billing_account_id", Path: []string{"billingAccountId"}, Kind: "text"},
-	{Name: "name", Path: []string{"name"}, Kind: "text"},
-	{Name: "package_id", Path: []string{"packageId"}, Kind: "text"},
-	{Name: "provider", Path: []string{"provider"}, Kind: "text"},
-	{Name: "provider_resource_id", Path: []string{"providerResourceId"}, Kind: "text"},
-	{Name: "provider_request_id", Path: []string{"providerRequestId"}, Kind: "text"},
-	{Name: "operation_id", Path: []string{"operationId"}, Kind: "text"},
-	{Name: "workspace_id", Path: []string{"workspaceId"}, Kind: "text"},
-	{Name: "compute_allocation_id", Path: []string{"computeAllocationId"}, Kind: "text"},
-	{Name: "current_compute_allocation_id", Path: []string{"currentComputeAllocationId"}, Kind: "text"},
-	{Name: "storage_id", Path: []string{"storageId"}, Kind: "text"},
-	{Name: "volume_id", Path: []string{"volumeId"}, Kind: "text"},
-	{Name: "attachment_id", Path: []string{"attachmentId"}, Kind: "text"},
-	{Name: "current_attachment_id", Path: []string{"currentAttachmentId"}, Kind: "text"},
-	{Name: "runtime_id", Path: []string{"runtimeId"}, Kind: "text"},
-	{Name: "runtime_service_name", Path: []string{"runtime", "serviceName"}, Kind: "text"},
-	{Name: "runtime_service_name_root", Path: []string{"runtimeServiceName"}, Kind: "text"},
-	{Name: "service_name", Path: []string{"serviceName"}, Kind: "text"},
-	{Name: "url", Path: []string{"url"}, Kind: "text"},
-	{Name: "state", Path: []string{"state"}, Kind: "text"},
-	{Name: "evidence_id", Path: []string{"evidenceId"}, Kind: "text"},
-	{Name: "cvm_instance_id", Path: []string{"cvmInstanceId"}, Kind: "text"},
-	{Name: "instance_id", Path: []string{"instanceId"}, Kind: "text"},
-	{Name: "node_name", Path: []string{"nodeName"}, Kind: "text"},
-	{Name: "machine_name", Path: []string{"machineName"}, Kind: "text"},
-	{Name: "mount_path", Path: []string{"mountPath"}, Kind: "text"},
-	{Name: "billing_status", Path: []string{"billingStatus"}, Kind: "text"},
-	{Name: "hold_id", Path: []string{"holdId"}, Kind: "text"},
-	{Name: "hold_release_id", Path: []string{"holdReleaseId"}, Kind: "text"},
-	{Name: "ledger_entry_id", Path: []string{"ledgerEntryId"}, Kind: "text"},
-	{Name: "wallet_transaction_id", Path: []string{"walletTransactionId"}, Kind: "text"},
-	{Name: "settlement_id", Path: []string{"settlementId"}, Kind: "text"},
-	{Name: "type", Path: []string{"type"}, Kind: "text"},
-	{Name: "resource_id", Path: []string{"resourceId"}, Kind: "text"},
-	{Name: "pricing_version", Path: []string{"pricingVersion"}, Kind: "text"},
-	{Name: "usage_period_start", Path: []string{"usagePeriodStart"}, Kind: "text"},
-	{Name: "usage_period_end", Path: []string{"usagePeriodEnd"}, Kind: "text"},
-	{Name: "unit", Path: []string{"unit"}, Kind: "text"},
-	{Name: "provider_cost_evidence_ref", Path: []string{"providerCostEvidenceRef"}, Kind: "text"},
-	{Name: "currency", Path: []string{"currency"}, Kind: "text"},
-	{Name: "source", Path: []string{"source"}, Kind: "text"},
-	{Name: "direction", Path: []string{"direction"}, Kind: "text"},
-	{Name: "reason", Path: []string{"reason"}, Kind: "text"},
-	{Name: "operator_user_id", Path: []string{"operatorUserId"}, Kind: "text"},
-	{Name: "actor_user_id", Path: []string{"actorUserId"}, Kind: "text"},
-	{Name: "actor_role", Path: []string{"actorRole"}, Kind: "text"},
-	{Name: "actor_account_id", Path: []string{"actorAccountId"}, Kind: "text"},
-	{Name: "target_account_id", Path: []string{"targetAccountId"}, Kind: "text"},
-	{Name: "action", Path: []string{"action"}, Kind: "text"},
-	{Name: "resource_kind", Path: []string{"resourceKind"}, Kind: "text"},
-	{Name: "ip_address", Path: []string{"ipAddress"}, Kind: "text"},
-	{Name: "user_agent", Path: []string{"userAgent"}, Kind: "text"},
-	{Name: "result", Path: []string{"result"}, Kind: "text"},
-	{Name: "created_at_text", Path: []string{"createdAt"}, Kind: "text"},
-	{Name: "csrf", Path: []string{"csrf"}, Kind: "text"},
-	{Name: "expires_at", Path: []string{"expiresAt"}, Kind: "text"},
-	{Name: "access_token_status", Path: []string{"access", "tokenStatus"}, Kind: "text"},
-	{Name: "access_account", Path: []string{"access", "account"}, Kind: "text"},
-	{Name: "access_username", Path: []string{"access", "username"}, Kind: "text"},
-	{Name: "access_password", Path: []string{"access", "password"}, Kind: "text"},
-	{Name: "credential_status", Path: []string{"access", "credentialStatus"}, Kind: "text"},
-	{Name: "credential_version", Path: []string{"access", "credentialVersion"}, Kind: "text"},
-	{Name: "credential_secret_ref", Path: []string{"access", "secretRef"}, Kind: "text"},
-	{Name: "metadata_workspace_id", Path: []string{"metadata", "workspaceId"}, Kind: "text"},
-	{Name: "metadata_resource_id", Path: []string{"metadata", "resourceId"}, Kind: "text"},
-	{Name: "metadata_settlement_id", Path: []string{"metadata", "settlementId"}, Kind: "text"},
-	{Name: "metadata_ledger_entry_id", Path: []string{"metadata", "ledgerEntryId"}, Kind: "text"},
-	{Name: "metadata_compute_allocation_id", Path: []string{"metadata", "computeAllocationId"}, Kind: "text"},
-	{Name: "metadata_storage_id", Path: []string{"metadata", "storageId"}, Kind: "text"},
-	{Name: "price_snapshot_package_id", Path: []string{"priceSnapshot", "packageId"}, Kind: "text"},
-	{Name: "price_snapshot_resource_type", Path: []string{"priceSnapshot", "resourceType"}, Kind: "text"},
-	{Name: "price_snapshot_currency", Path: []string{"priceSnapshot", "currency"}, Kind: "text"},
-	{Name: "price_snapshot_source", Path: []string{"priceSnapshot", "source"}, Kind: "text"},
-	{Name: "price_snapshot_sku", Path: []string{"priceSnapshot", "sku"}, Kind: "text"},
-	{Name: "guard_status", Path: []string{"guard", "status"}, Kind: "text"},
-	{Name: "guard_reason", Path: []string{"guard", "reason"}, Kind: "text"},
-	{Name: "message_author", Path: []string{"messageAuthor"}, Kind: "text"},
-	{Name: "message_text", Path: []string{"messageText"}, Kind: "text"},
-	{Name: "message_created_at", Path: []string{"messageCreatedAt"}, Kind: "text"},
-	{Name: "size_gb", Path: []string{"sizeGb"}, Kind: "double"},
-	{Name: "cpu", Path: []string{"cpu"}, Kind: "double"},
-	{Name: "memory_gb", Path: []string{"memoryGb"}, Kind: "double"},
-	{Name: "disk_gb", Path: []string{"diskGb"}, Kind: "double"},
-	{Name: "hold_amount_cents", Path: []string{"holdAmountCents"}, Kind: "bigint"},
-	{Name: "hold_amount", Path: []string{"holdAmount"}, Kind: "double"},
-	{Name: "amount_cents", Path: []string{"amountCents"}, Kind: "bigint"},
-	{Name: "balance_cents", Path: []string{"balanceCents"}, Kind: "bigint"},
-	{Name: "frozen_cents", Path: []string{"frozenCents"}, Kind: "bigint"},
-	{Name: "available_cents", Path: []string{"availableCents"}, Kind: "bigint"},
-	{Name: "total_spent_cents", Path: []string{"totalSpentCents"}, Kind: "bigint"},
-	{Name: "balance", Path: []string{"balance"}, Kind: "double"},
-	{Name: "frozen", Path: []string{"frozen"}, Kind: "double"},
-	{Name: "available", Path: []string{"available"}, Kind: "double"},
-	{Name: "total_spent", Path: []string{"totalSpent"}, Kind: "double"},
-	{Name: "total_recharged", Path: []string{"totalRecharged"}, Kind: "double"},
-	{Name: "quantity", Path: []string{"quantity"}, Kind: "double"},
-	{Name: "reports", Path: []string{"reports"}, Kind: "bigint"},
-	{Name: "price_snapshot_unit_price_cents", Path: []string{"priceSnapshot", "unitPriceCents"}, Kind: "bigint"},
-	{Name: "price_snapshot_compute_hourly", Path: []string{"priceSnapshot", "computeHourly"}, Kind: "double"},
-	{Name: "price_snapshot_storage_gb_month", Path: []string{"priceSnapshot", "storageGbMonth"}, Kind: "double"},
-	{Name: "price_snapshot_size_gb", Path: []string{"priceSnapshot", "sizeGb"}, Kind: "double"},
-	{Name: "access_requires_login", Path: []string{"access", "requiresLogin"}, Kind: "bool"},
-	{Name: "guard_block_new_workspaces", Path: []string{"guard", "blockNewWorkspaces"}, Kind: "bool"},
+func floatField(entityField, setter string, path ...string) entRecordField {
+	return entRecordField{EntityField: entityField, Setter: setter, Path: path, Kind: "float"}
 }
 
-func (s *postgresEntStateStore) install(ctx context.Context) error {
-	entries, err := controlPlaneMigrations.ReadDir("ent_migrations")
-	if err != nil {
-		return err
+func boolField(entityField, setter string, path ...string) entRecordField {
+	return entRecordField{EntityField: entityField, Setter: setter, Path: path, Kind: "bool"}
+}
+
+var (
+	accountEntFields = []entRecordField{
+		textField("OwnerUserID", "SetOwnerUserID", "ownerUserId"),
+		textField("Name", "SetName", "name"),
+		textField("Status", "SetStatus", "status"),
 	}
-	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
-			continue
-		}
-		sqlText, err := controlPlaneMigrations.ReadFile("ent_migrations/" + entry.Name())
-		if err != nil {
-			return err
-		}
-		if _, err := s.db.ExecContext(ctx, string(sqlText)); err != nil {
-			return err
-		}
+	organizationEntFields = []entRecordField{
+		textField("BillingAccountID", "SetBillingAccountID", "billingAccountId"),
+		textField("Name", "SetName", "name"),
+		textField("Status", "SetStatus", "status"),
 	}
-	return nil
-}
+	userEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("Email", "SetEmail", "email"),
+		textField("Role", "SetRole", "role"),
+		textField("Status", "SetStatus", "status"),
+		textField("PasswordHash", "SetPasswordHash", "passwordHash"),
+		textField("DisabledAt", "SetDisabledAt", "disabledAt"),
+		textField("DisabledBy", "SetDisabledBy", "disabledBy"),
+		textField("DisabledReason", "SetDisabledReason", "disabledReason"),
+		textField("DeletedAt", "SetDeletedAt", "deletedAt"),
+		textField("DeletedBy", "SetDeletedBy", "deletedBy"),
+		textField("DeleteReason", "SetDeleteReason", "deleteReason"),
+	}
+	sessionEntFields = []entRecordField{
+		textField("UserID", "SetUserID", "userId"),
+		textField("Csrf", "SetCsrf", "csrf"),
+		textField("ExpiresAt", "SetExpiresAt", "expiresAt"),
+	}
+	membershipEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("OrganizationID", "SetOrganizationID", "organizationId"),
+		textField("UserID", "SetUserID", "userId"),
+		textField("Role", "SetRole", "role"),
+		textField("Status", "SetStatus", "status"),
+	}
+	computeEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("OwnerUserID", "SetOwnerUserID", "ownerUserId"),
+		textField("WorkspaceID", "SetWorkspaceID", "workspaceId"),
+		textField("Name", "SetName", "name"),
+		textField("PackageID", "SetPackageID", "packageId"),
+		textField("Provider", "SetProvider", "provider"),
+		textField("ProviderResourceID", "SetProviderResourceID", "providerResourceId"),
+		textField("ProviderRequestID", "SetProviderRequestID", "providerRequestId"),
+		textField("OperationID", "SetOperationID", "operationId"),
+		textField("Status", "SetStatus", "status"),
+		textField("BillingStatus", "SetBillingStatus", "billingStatus"),
+		textField("HoldID", "SetHoldID", "holdId"),
+		textField("HoldReleaseID", "SetHoldReleaseID", "holdReleaseId"),
+		textField("SettlementID", "SetSettlementID", "settlementId"),
+		textField("LedgerEntryID", "SetLedgerEntryID", "ledgerEntryId"),
+		textField("WalletTransactionID", "SetWalletTransactionID", "walletTransactionId"),
+		textField("PricingVersion", "SetPricingVersion", "pricingVersion"),
+		textField("UsagePeriodEnd", "SetUsagePeriodEnd", "usagePeriodEnd"),
+		textField("EvidenceID", "SetEvidenceID", "evidenceId"),
+		textField("CvmInstanceID", "SetCvmInstanceID", "cvmInstanceId"),
+		textField("InstanceID", "SetInstanceID", "instanceId"),
+		textField("NodeName", "SetNodeName", "nodeName"),
+		textField("MachineName", "SetMachineName", "machineName"),
+		intField("HoldAmountCents", "SetHoldAmountCents", "holdAmountCents"),
+		floatField("HoldAmount", "SetHoldAmount", "holdAmount"),
+		floatField("CPU", "SetCPU", "cpu"),
+		floatField("MemoryGB", "SetMemoryGB", "memoryGb"),
+		floatField("DiskGB", "SetDiskGB", "diskGb"),
+		textField("PriceSnapshotPackageID", "SetPriceSnapshotPackageID", "priceSnapshot", "packageId"),
+		textField("PriceSnapshotResourceType", "SetPriceSnapshotResourceType", "priceSnapshot", "resourceType"),
+		textField("PriceSnapshotCurrency", "SetPriceSnapshotCurrency", "priceSnapshot", "currency"),
+		textField("PriceSnapshotSource", "SetPriceSnapshotSource", "priceSnapshot", "source"),
+		textField("PriceSnapshotSku", "SetPriceSnapshotSku", "priceSnapshot", "sku"),
+		intField("PriceSnapshotUnitPriceCents", "SetPriceSnapshotUnitPriceCents", "priceSnapshot", "unitPriceCents"),
+		floatField("PriceSnapshotComputeHourly", "SetPriceSnapshotComputeHourly", "priceSnapshot", "computeHourly"),
+	}
+	storageEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("OwnerUserID", "SetOwnerUserID", "ownerUserId"),
+		textField("WorkspaceID", "SetWorkspaceID", "workspaceId"),
+		textField("Name", "SetName", "name"),
+		textField("Provider", "SetProvider", "provider"),
+		textField("ProviderResourceID", "SetProviderResourceID", "providerResourceId"),
+		textField("ProviderRequestID", "SetProviderRequestID", "providerRequestId"),
+		textField("OperationID", "SetOperationID", "operationId"),
+		textField("Status", "SetStatus", "status"),
+		textField("BillingStatus", "SetBillingStatus", "billingStatus"),
+		textField("HoldID", "SetHoldID", "holdId"),
+		textField("HoldReleaseID", "SetHoldReleaseID", "holdReleaseId"),
+		textField("SettlementID", "SetSettlementID", "settlementId"),
+		textField("LedgerEntryID", "SetLedgerEntryID", "ledgerEntryId"),
+		textField("WalletTransactionID", "SetWalletTransactionID", "walletTransactionId"),
+		textField("PricingVersion", "SetPricingVersion", "pricingVersion"),
+		textField("UsagePeriodEnd", "SetUsagePeriodEnd", "usagePeriodEnd"),
+		textField("MountPath", "SetMountPath", "mountPath"),
+		intField("HoldAmountCents", "SetHoldAmountCents", "holdAmountCents"),
+		floatField("HoldAmount", "SetHoldAmount", "holdAmount"),
+		floatField("SizeGB", "SetSizeGB", "sizeGb"),
+		textField("PriceSnapshotResourceType", "SetPriceSnapshotResourceType", "priceSnapshot", "resourceType"),
+		textField("PriceSnapshotCurrency", "SetPriceSnapshotCurrency", "priceSnapshot", "currency"),
+		textField("PriceSnapshotSource", "SetPriceSnapshotSource", "priceSnapshot", "source"),
+		intField("PriceSnapshotUnitPriceCents", "SetPriceSnapshotUnitPriceCents", "priceSnapshot", "unitPriceCents"),
+		floatField("PriceSnapshotStorageGBMonth", "SetPriceSnapshotStorageGBMonth", "priceSnapshot", "storageGbMonth"),
+		floatField("PriceSnapshotSizeGB", "SetPriceSnapshotSizeGB", "priceSnapshot", "sizeGb"),
+	}
+	attachmentEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("WorkspaceID", "SetWorkspaceID", "workspaceId"),
+		textField("ComputeAllocationID", "SetComputeAllocationID", "computeAllocationId"),
+		textField("StorageID", "SetStorageID", "storageId"),
+		textField("VolumeID", "SetVolumeID", "volumeId"),
+		textField("OperationID", "SetOperationID", "operationId"),
+		textField("Provider", "SetProvider", "provider"),
+		textField("ProviderRequestID", "SetProviderRequestID", "providerRequestId"),
+		textField("Status", "SetStatus", "status"),
+		textField("MountPath", "SetMountPath", "mountPath"),
+	}
+	workspaceEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("OwnerAccountID", "SetOwnerAccountID", "ownerAccountId"),
+		textField("OwnerUserID", "SetOwnerUserID", "ownerUserId"),
+		textField("UserID", "SetUserID", "userId"),
+		textField("Name", "SetName", "name"),
+		textField("URL", "SetURL", "url"),
+		textField("State", "SetState", "state"),
+		textField("Status", "SetStatus", "status"),
+		textField("StorageID", "SetStorageID", "storageId"),
+		textField("CurrentComputeAllocationID", "SetCurrentComputeAllocationID", "currentComputeAllocationId"),
+		textField("CurrentAttachmentID", "SetCurrentAttachmentID", "currentAttachmentId"),
+		textField("RuntimeID", "SetRuntimeID", "runtimeId"),
+		textField("RuntimeServiceName", "SetRuntimeServiceName", "runtime", "serviceName"),
+		textField("RuntimeServiceNameRoot", "SetRuntimeServiceNameRoot", "runtimeServiceName"),
+		textField("ServiceName", "SetServiceName", "serviceName"),
+		textField("AccessTokenStatus", "SetAccessTokenStatus", "access", "tokenStatus"),
+		textField("AccessAccount", "SetAccessAccount", "access", "account"),
+		textField("AccessUsername", "SetAccessUsername", "access", "username"),
+		textField("AccessPassword", "SetAccessPassword", "access", "password"),
+		textField("CredentialStatus", "SetCredentialStatus", "access", "credentialStatus"),
+		textField("CredentialVersion", "SetCredentialVersion", "access", "credentialVersion"),
+		textField("CredentialSecretRef", "SetCredentialSecretRef", "access", "secretRef"),
+		boolField("AccessRequiresLogin", "SetAccessRequiresLogin", "access", "requiresLogin"),
+	}
+	walletEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("Currency", "SetCurrency", "currency"),
+		intField("BalanceCents", "SetBalanceCents", "balanceCents"),
+		intField("FrozenCents", "SetFrozenCents", "frozenCents"),
+		intField("AvailableCents", "SetAvailableCents", "availableCents"),
+		intField("TotalSpentCents", "SetTotalSpentCents", "totalSpentCents"),
+		floatField("Balance", "SetBalance", "balance"),
+		floatField("Frozen", "SetFrozen", "frozen"),
+		floatField("Available", "SetAvailable", "available"),
+		floatField("TotalSpent", "SetTotalSpent", "totalSpent"),
+		floatField("TotalRecharged", "SetTotalRecharged", "totalRecharged"),
+	}
+	ledgerEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("Type", "SetType", "type"),
+		textField("ResourceID", "SetResourceID", "resourceId"),
+		textField("ResourceKind", "SetResourceKind", "resourceKind"),
+		textField("WorkspaceID", "SetWorkspaceID", "workspaceId"),
+		textField("ComputeAllocationID", "SetComputeAllocationID", "computeAllocationId"),
+		textField("StorageID", "SetStorageID", "storageId"),
+		textField("SettlementID", "SetSettlementID", "settlementId"),
+		textField("PricingVersion", "SetPricingVersion", "pricingVersion"),
+		textField("UsagePeriodStart", "SetUsagePeriodStart", "usagePeriodStart"),
+		textField("UsagePeriodEnd", "SetUsagePeriodEnd", "usagePeriodEnd"),
+		textField("Unit", "SetUnit", "unit"),
+		textField("ProviderCostEvidenceRef", "SetProviderCostEvidenceRef", "providerCostEvidenceRef"),
+		textField("Currency", "SetCurrency", "currency"),
+		intField("AmountCents", "SetAmountCents", "amountCents"),
+		floatField("Quantity", "SetQuantity", "quantity"),
+		textField("Direction", "SetDirection", "direction"),
+		textField("PriceSnapshotPackageID", "SetPriceSnapshotPackageID", "priceSnapshot", "packageId"),
+		textField("PriceSnapshotResourceType", "SetPriceSnapshotResourceType", "priceSnapshot", "resourceType"),
+		textField("PriceSnapshotCurrency", "SetPriceSnapshotCurrency", "priceSnapshot", "currency"),
+		textField("PriceSnapshotSource", "SetPriceSnapshotSource", "priceSnapshot", "source"),
+		textField("PriceSnapshotSku", "SetPriceSnapshotSku", "priceSnapshot", "sku"),
+		intField("PriceSnapshotUnitPriceCents", "SetPriceSnapshotUnitPriceCents", "priceSnapshot", "unitPriceCents"),
+		floatField("PriceSnapshotComputeHourly", "SetPriceSnapshotComputeHourly", "priceSnapshot", "computeHourly"),
+		floatField("PriceSnapshotStorageGBMonth", "SetPriceSnapshotStorageGBMonth", "priceSnapshot", "storageGbMonth"),
+		floatField("PriceSnapshotSizeGB", "SetPriceSnapshotSizeGB", "priceSnapshot", "sizeGb"),
+	}
+	walletTxEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("Type", "SetType", "type"),
+		textField("LedgerEntryID", "SetLedgerEntryID", "ledgerEntryId"),
+		textField("ResourceID", "SetResourceID", "resourceId"),
+		textField("WorkspaceID", "SetWorkspaceID", "workspaceId"),
+		textField("ComputeAllocationID", "SetComputeAllocationID", "computeAllocationId"),
+		textField("StorageID", "SetStorageID", "storageId"),
+		textField("SettlementID", "SetSettlementID", "settlementId"),
+		textField("Currency", "SetCurrency", "currency"),
+		intField("AmountCents", "SetAmountCents", "amountCents"),
+		textField("MetadataWorkspaceID", "SetMetadataWorkspaceID", "metadata", "workspaceId"),
+		textField("MetadataResourceID", "SetMetadataResourceID", "metadata", "resourceId"),
+		textField("MetadataSettlementID", "SetMetadataSettlementID", "metadata", "settlementId"),
+		textField("MetadataLedgerEntryID", "SetMetadataLedgerEntryID", "metadata", "ledgerEntryId"),
+		textField("MetadataComputeAllocationID", "SetMetadataComputeAllocationID", "metadata", "computeAllocationId"),
+		textField("MetadataStorageID", "SetMetadataStorageID", "metadata", "storageId"),
+	}
+	topupEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("OperatorUserID", "SetOperatorUserID", "operatorUserId"),
+		textField("Currency", "SetCurrency", "currency"),
+		textField("Source", "SetSource", "source"),
+		textField("Reason", "SetReason", "reason"),
+		intField("AmountCents", "SetAmountCents", "amountCents"),
+	}
+	runtimeOpEntFields = []entRecordField{
+		textField("OperationID", "SetOperationID", "operationId"),
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("WorkspaceID", "SetWorkspaceID", "workspaceId"),
+		textField("ResourceID", "SetResourceID", "resourceId"),
+		textField("ResourceKind", "SetResourceKind", "resourceKind"),
+		textField("Action", "SetAction", "action"),
+		textField("Provider", "SetProvider", "provider"),
+		textField("ProviderRequestID", "SetProviderRequestID", "providerRequestId"),
+		textField("Status", "SetStatus", "status"),
+		textField("Result", "SetResult", "result"),
+		textField("ComputeAllocationID", "SetComputeAllocationID", "computeAllocationId"),
+		textField("StorageID", "SetStorageID", "storageId"),
+		textField("AttachmentID", "SetAttachmentID", "attachmentId"),
+		textField("RuntimeServiceName", "SetRuntimeServiceName", "runtimeServiceName"),
+		textField("CvmInstanceID", "SetCvmInstanceID", "cvmInstanceId"),
+		textField("InstanceID", "SetInstanceID", "instanceId"),
+		textField("NodeName", "SetNodeName", "nodeName"),
+		textField("MachineName", "SetMachineName", "machineName"),
+	}
+	auditEntFields = []entRecordField{
+		textField("ActorUserID", "SetActorUserID", "actorUserId"),
+		textField("ActorRole", "SetActorRole", "actorRole"),
+		textField("ActorAccountID", "SetActorAccountID", "actorAccountId"),
+		textField("TargetAccountID", "SetTargetAccountID", "targetAccountId"),
+		textField("Action", "SetAction", "action"),
+		textField("ResourceKind", "SetResourceKind", "resourceKind"),
+		textField("ResourceID", "SetResourceID", "resourceId"),
+		textField("IPAddress", "SetIPAddress", "ipAddress"),
+		textField("UserAgent", "SetUserAgent", "userAgent"),
+		textField("Result", "SetResult", "result"),
+	}
+	supportEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("UserID", "SetUserID", "userId"),
+		textField("WorkspaceID", "SetWorkspaceID", "workspaceId"),
+		textField("ExternalSystem", "SetExternalSystem", "externalSystem"),
+		textField("ExternalTicketID", "SetExternalTicketID", "externalTicketId"),
+		textField("ExternalURL", "SetExternalURL", "externalUrl"),
+		textField("OperationID", "SetOperationID", "operationId"),
+		textField("ResourceID", "SetResourceID", "resourceId"),
+		textField("ResourceKind", "SetResourceKind", "resourceKind"),
+		textField("Title", "SetTitle", "title"),
+		textField("Category", "SetCategory", "category"),
+		textField("Priority", "SetPriority", "priority"),
+		textField("Status", "SetStatus", "status"),
+		textField("Source", "SetSource", "source"),
+		textField("URL", "SetURL", "url"),
+		textField("Reason", "SetReason", "reason"),
+	}
+	productionE2EEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("WorkspaceID", "SetWorkspaceID", "workspaceId"),
+		textField("Status", "SetStatus", "status"),
+		textField("Result", "SetResult", "result"),
+		textField("Reason", "SetReason", "reason"),
+		textField("URL", "SetURL", "url"),
+	}
+	archiveJobEntFields = []entRecordField{
+		textField("ResourceKind", "SetResourceKind", "resourceKind"),
+		textField("Status", "SetStatus", "status"),
+		textField("Reason", "SetReason", "reason"),
+		intField("AmountCents", "SetAmountCents", "amountCents"),
+	}
+	archivedResourceEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("WorkspaceID", "SetWorkspaceID", "workspaceId"),
+		textField("ResourceID", "SetResourceID", "resourceId"),
+		textField("ResourceKind", "SetResourceKind", "resourceKind"),
+		textField("Name", "SetName", "name"),
+		textField("Status", "SetStatus", "status"),
+		textField("Reason", "SetReason", "reason"),
+	}
+	reconcileEntFields = []entRecordField{
+		textField("Status", "SetStatus", "status"),
+		textField("GuardStatus", "SetGuardStatus", "guard", "status"),
+		textField("GuardReason", "SetGuardReason", "guard", "reason"),
+		textField("MessageAuthor", "SetMessageAuthor", "messageAuthor"),
+		textField("MessageText", "SetMessageText", "messageText"),
+		textField("MessageCreatedAt", "SetMessageCreatedAt", "messageCreatedAt"),
+		boolField("GuardBlockNewWorkspaces", "SetGuardBlockNewWorkspaces", "guard", "blockNewWorkspaces"),
+		intField("Reports", "SetReports", "reports"),
+	}
+)
 
 func (s *postgresEntStateStore) Load(ctx context.Context) (controlPlaneState, error) {
 	var facts controlPlaneState
 	var err error
-	if facts.Computes, err = s.loadFactTable(ctx, "control_plane_compute_allocations"); err != nil {
+	if facts.Computes, err = loadRecordSet(ctx, s.client.ComputeAllocation.Query().All, computeEntFields); err != nil {
 		return facts, err
 	}
-	if facts.Storages, err = s.loadFactTable(ctx, "control_plane_storage_volumes"); err != nil {
+	if facts.Storages, err = loadRecordSet(ctx, s.client.StorageVolume.Query().All, storageEntFields); err != nil {
 		return facts, err
 	}
-	if facts.Attachments, err = s.loadFactTable(ctx, "control_plane_storage_attachments"); err != nil {
+	if facts.Attachments, err = loadRecordSet(ctx, s.client.StorageAttachment.Query().All, attachmentEntFields); err != nil {
 		return facts, err
 	}
-	if facts.Workspaces, err = s.loadFactTable(ctx, "control_plane_workspaces"); err != nil {
+	if facts.Workspaces, err = loadRecordSet(ctx, s.client.Workspace.Query().All, workspaceEntFields); err != nil {
 		return facts, err
 	}
-	if facts.Users, err = s.loadFactTable(ctx, "control_plane_users"); err != nil {
+	if facts.Users, err = loadRecordSet(ctx, s.client.User.Query().All, userEntFields); err != nil {
 		return facts, err
 	}
-	if facts.Sessions, err = s.loadFactTable(ctx, "control_plane_sessions"); err != nil {
+	if facts.Sessions, err = loadRecordSet(ctx, s.client.Session.Query().All, sessionEntFields); err != nil {
 		return facts, err
 	}
-	if facts.Orgs, err = s.loadFactTable(ctx, "control_plane_organizations"); err != nil {
+	if facts.Orgs, err = loadRecordSet(ctx, s.client.Organization.Query().All, organizationEntFields); err != nil {
 		return facts, err
 	}
-	if facts.Memberships, err = s.loadFactTable(ctx, "control_plane_memberships"); err != nil {
+	if facts.Memberships, err = loadRecordSet(ctx, s.client.Membership.Query().All, membershipEntFields); err != nil {
 		return facts, err
 	}
-	if facts.Support, err = s.loadFactTable(ctx, "control_plane_support_ticket_mappings"); err != nil {
+	if facts.Support, err = loadRecordSet(ctx, s.client.SupportTicketMapping.Query().All, supportEntFields); err != nil {
 		return facts, err
 	}
-	if facts.Wallets, err = s.loadFactTable(ctx, "control_plane_wallet_projections"); err != nil {
+	if facts.Wallets, err = loadRecordSet(ctx, s.client.WalletProjection.Query().All, walletEntFields); err != nil {
 		return facts, err
 	}
-	if facts.Ledger, err = s.loadFactEvents(ctx, "control_plane_ledger_projections"); err != nil {
+	if facts.Ledger, err = loadEventRows(ctx, s.client.LedgerProjection.Query().Order(controlplaneent.Asc(ledgerprojection.FieldCreatedAt, ledgerprojection.FieldID)).All, ledgerEntFields); err != nil {
 		return facts, err
 	}
-	if facts.WalletTx, err = s.loadFactEvents(ctx, "control_plane_wallet_transaction_projections"); err != nil {
+	if facts.WalletTx, err = loadEventRows(ctx, s.client.WalletTransactionProjection.Query().Order(controlplaneent.Asc(wallettransactionprojection.FieldCreatedAt, wallettransactionprojection.FieldID)).All, walletTxEntFields); err != nil {
 		return facts, err
 	}
-	if facts.Topups, err = s.loadFactEvents(ctx, "control_plane_manual_topup_projections"); err != nil {
+	if facts.Topups, err = loadEventRows(ctx, s.client.ManualTopupProjection.Query().Order(controlplaneent.Asc(manualtopupprojection.FieldCreatedAt, manualtopupprojection.FieldID)).All, topupEntFields); err != nil {
 		return facts, err
 	}
-	if facts.RuntimeOps, err = s.loadFactEvents(ctx, "control_plane_runtime_operations"); err != nil {
+	if facts.RuntimeOps, err = loadEventRows(ctx, s.client.RuntimeOperation.Query().Order(controlplaneent.Asc(runtimeoperation.FieldCreatedAt, runtimeoperation.FieldID)).All, runtimeOpEntFields); err != nil {
 		return facts, err
 	}
-	if facts.AuditEvents, err = s.loadFactEvents(ctx, "control_plane_admin_audit_events"); err != nil {
+	if facts.AuditEvents, err = loadEventRows(ctx, s.client.AdminAuditEvent.Query().Order(controlplaneent.Asc(adminauditevent.FieldCreatedAt, adminauditevent.FieldID)).All, auditEntFields); err != nil {
 		return facts, err
 	}
-	facts.Reconcile, err = s.loadSingleton(ctx, "control_plane_billing_reconciliation")
-	return facts, err
+	row, err := s.client.BillingReconciliation.Get(ctx, singletonFactID)
+	if controlplaneent.IsNotFound(err) {
+		return facts, nil
+	}
+	if err != nil {
+		return facts, err
+	}
+	facts.Reconcile = recordFromEnt(row, reconcileEntFields)
+	return facts, nil
+}
+
+func (s *postgresEntStateStore) SettlementResourceRows(ctx context.Context) (controlPlaneRecordSet, controlPlaneRecordSet, error) {
+	computes, err := loadRecordSet(ctx, s.client.ComputeAllocation.Query().All, computeEntFields)
+	if err != nil {
+		return nil, nil, err
+	}
+	storages, err := loadRecordSet(ctx, s.client.StorageVolume.Query().All, storageEntFields)
+	if err != nil {
+		return nil, nil, err
+	}
+	return computes, storages, nil
+}
+
+func (s *postgresEntStateStore) ArchiveTerminalResources(ctx context.Context, reason string) (map[string]any, error) {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	now := time.Now().UTC()
+	result := map[string]any{
+		"computeArchived":    0,
+		"storageArchived":    0,
+		"attachmentArchived": 0,
+		"workspaceArchived":  0,
+	}
+
+	computes, err := tx.ComputeAllocation.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range computes {
+		if !terminalComputeStatus(row.Status) {
+			continue
+		}
+		if err := saveArchivedResource(ctx, tx.ArchivedComputeAllocation.Create(), "compute", row.ID, row.AccountID, row.WorkspaceID, row.Name, row.Status, reason, now); err != nil {
+			return nil, err
+		}
+		if _, err := tx.ComputeAllocation.Delete().Where(computeallocation.ID(row.ID)).Exec(ctx); err != nil {
+			return nil, err
+		}
+		result["computeArchived"] = result["computeArchived"].(int) + 1
+	}
+
+	storages, err := tx.StorageVolume.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range storages {
+		if !terminalStorageStatus(row.Status) {
+			continue
+		}
+		if err := saveArchivedResource(ctx, tx.ArchivedStorageVolume.Create(), "storage", row.ID, row.AccountID, row.WorkspaceID, row.Name, row.Status, reason, now); err != nil {
+			return nil, err
+		}
+		if _, err := tx.StorageVolume.Delete().Where(storagevolume.ID(row.ID)).Exec(ctx); err != nil {
+			return nil, err
+		}
+		result["storageArchived"] = result["storageArchived"].(int) + 1
+	}
+
+	attachments, err := tx.StorageAttachment.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range attachments {
+		if !terminalAttachmentStatus(row.Status) {
+			continue
+		}
+		if err := saveArchivedResource(ctx, tx.ArchivedStorageAttachment.Create(), "attachment", row.ID, row.AccountID, row.WorkspaceID, row.ID, row.Status, reason, now); err != nil {
+			return nil, err
+		}
+		if _, err := tx.StorageAttachment.Delete().Where(storageattachment.ID(row.ID)).Exec(ctx); err != nil {
+			return nil, err
+		}
+		result["attachmentArchived"] = result["attachmentArchived"].(int) + 1
+	}
+
+	workspaces, err := tx.Workspace.Query().All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range workspaces {
+		if !terminalWorkspaceStatus(firstNonEmpty(row.State, row.Status)) {
+			continue
+		}
+		if err := saveArchivedResource(ctx, tx.ArchivedWorkspace.Create(), "workspace", row.ID, firstNonEmpty(row.OwnerAccountID, row.AccountID), row.ID, row.Name, firstNonEmpty(row.State, row.Status), reason, now); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Workspace.Delete().Where(workspace.ID(row.ID)).Exec(ctx); err != nil {
+			return nil, err
+		}
+		result["workspaceArchived"] = result["workspaceArchived"].(int) + 1
+	}
+
+	total := result["computeArchived"].(int) + result["storageArchived"].(int) + result["attachmentArchived"].(int) + result["workspaceArchived"].(int)
+	if total > 0 {
+		if err := tx.ArchiveJob.Create().
+			SetID("archive-job-" + stableID(now.Format(time.RFC3339Nano), reason)[:12]).
+			SetResourceKind("terminal_control_plane_resources").
+			SetStatus("succeeded").
+			SetReason(reason).
+			SetAmountCents(int64(total)).
+			SetCreatedAt(now).
+			SetUpdatedAt(now).
+			Exec(ctx); err != nil {
+			return nil, err
+		}
+	}
+	result["archived"] = total
+	result["reason"] = reason
+	return result, tx.Commit()
+}
+
+func (s *postgresEntStateStore) ArchiveState(ctx context.Context) (map[string]any, error) {
+	jobs, err := loadEventRows(ctx, s.client.ArchiveJob.Query().All, archiveJobEntFields)
+	if err != nil {
+		return nil, err
+	}
+	computes, err := loadEventRows(ctx, s.client.ArchivedComputeAllocation.Query().All, archivedResourceEntFields)
+	if err != nil {
+		return nil, err
+	}
+	storages, err := loadEventRows(ctx, s.client.ArchivedStorageVolume.Query().All, archivedResourceEntFields)
+	if err != nil {
+		return nil, err
+	}
+	attachments, err := loadEventRows(ctx, s.client.ArchivedStorageAttachment.Query().All, archivedResourceEntFields)
+	if err != nil {
+		return nil, err
+	}
+	workspaces, err := loadEventRows(ctx, s.client.ArchivedWorkspace.Query().All, archivedResourceEntFields)
+	if err != nil {
+		return nil, err
+	}
+	auditEvents, err := loadEventRows(ctx, s.client.ArchivedAdminAuditEvent.Query().All, auditEntFields)
+	if err != nil {
+		return nil, err
+	}
+	e2eRecords, err := loadEventRows(ctx, s.client.ProductionE2ERecord.Query().All, productionE2EEntFields)
+	if err != nil {
+		return nil, err
+	}
+	resources := make([]any, 0, len(computes)+len(storages)+len(attachments)+len(workspaces))
+	for _, rows := range [][]controlPlaneRecord{computes, storages, attachments, workspaces} {
+		for _, row := range rows {
+			resources = append(resources, row)
+		}
+	}
+	return map[string]any{
+		"jobs":             rowsAsAny(jobs),
+		"resources":        resources,
+		"adminAuditEvents": rowsAsAny(auditEvents),
+		"productionE2E":    productionE2ESummary(e2eRecords),
+		"retentionPolicy":  currentRetentionPolicy().dto(),
+	}, nil
+}
+
+func (s *postgresEntStateStore) ApplyRetention(ctx context.Context, policy retentionPolicy) (map[string]any, error) {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback() }()
+
+	result := map[string]any{"retentionPolicy": policy.dto()}
+	if cutoff := policy.cutoff(policy.AdminAuditDays); !cutoff.IsZero() {
+		rows, err := tx.AdminAuditEvent.Query().Where(adminauditevent.CreatedAtLT(cutoff)).All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, row := range rows {
+			record := recordFromEnt(row, auditEntFields)
+			if err := saveRecord(ctx, row.ID, record, tx.ArchivedAdminAuditEvent.Create(), auditEntFields); err != nil {
+				return nil, err
+			}
+		}
+		if len(rows) > 0 {
+			if _, err := tx.AdminAuditEvent.Delete().Where(adminauditevent.CreatedAtLT(cutoff)).Exec(ctx); err != nil {
+				return nil, err
+			}
+		}
+		result["adminAuditArchived"] = len(rows)
+	}
+	if cutoff := policy.cutoff(policy.SupportDays); !cutoff.IsZero() {
+		deleted, err := tx.SupportTicketMapping.Delete().Where(supportticketmapping.CreatedAtLT(cutoff)).Exec(ctx)
+		if err != nil {
+			return nil, err
+		}
+		result["supportDeleted"] = deleted
+	}
+	if cutoff := policy.cutoff(policy.ProductionE2EDays); !cutoff.IsZero() {
+		deleted, err := tx.ProductionE2ERecord.Delete().Where(productione2erecord.CreatedAtLT(cutoff)).Exec(ctx)
+		if err != nil {
+			return nil, err
+		}
+		result["productionE2EDeleted"] = deleted
+	}
+	if err := tx.ArchiveJob.Create().
+		SetID("archive-job-" + stableID(time.Now().UTC().Format(time.RFC3339Nano), "scheduled_retention")[:12]).
+		SetResourceKind("retention_policy").
+		SetStatus("succeeded").
+		SetReason("scheduled_retention").
+		SetCreatedAt(time.Now().UTC()).
+		SetUpdatedAt(time.Now().UTC()).
+		Exec(ctx); err != nil {
+		return nil, err
+	}
+	return result, tx.Commit()
 }
 
 func (s *postgresEntStateStore) Save(ctx context.Context, facts controlPlaneState) error {
-	tx, err := s.db.BeginTx(ctx, nil)
+	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return err
 	}
-	if err := replaceStateTable(ctx, tx, "control_plane_compute_allocations", facts.Computes); err != nil {
-		return rollback(tx, err)
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.ComputeAllocation.Delete().Exec(ctx); err != nil {
+		return err
 	}
-	if err := replaceStateTable(ctx, tx, "control_plane_storage_volumes", facts.Storages); err != nil {
-		return rollback(tx, err)
+	if err := saveRecordSet(ctx, facts.Computes, func() any { return tx.ComputeAllocation.Create() }, computeEntFields); err != nil {
+		return err
 	}
-	if err := replaceStateTable(ctx, tx, "control_plane_storage_attachments", facts.Attachments); err != nil {
-		return rollback(tx, err)
+	if _, err := tx.StorageVolume.Delete().Exec(ctx); err != nil {
+		return err
 	}
-	if err := replaceStateTable(ctx, tx, "control_plane_workspaces", facts.Workspaces); err != nil {
-		return rollback(tx, err)
+	if err := saveRecordSet(ctx, facts.Storages, func() any { return tx.StorageVolume.Create() }, storageEntFields); err != nil {
+		return err
 	}
-	if err := replaceStateTable(ctx, tx, "control_plane_users", facts.Users); err != nil {
-		return rollback(tx, err)
+	if _, err := tx.StorageAttachment.Delete().Exec(ctx); err != nil {
+		return err
 	}
-	if err := replaceStateTable(ctx, tx, "control_plane_sessions", facts.Sessions); err != nil {
-		return rollback(tx, err)
+	if err := saveRecordSet(ctx, facts.Attachments, func() any { return tx.StorageAttachment.Create() }, attachmentEntFields); err != nil {
+		return err
 	}
-	if err := replaceStateTable(ctx, tx, "control_plane_organizations", facts.Orgs); err != nil {
-		return rollback(tx, err)
+	if _, err := tx.Workspace.Delete().Exec(ctx); err != nil {
+		return err
 	}
-	if err := replaceStateTable(ctx, tx, "control_plane_memberships", facts.Memberships); err != nil {
-		return rollback(tx, err)
+	if err := saveRecordSet(ctx, facts.Workspaces, func() any { return tx.Workspace.Create() }, workspaceEntFields); err != nil {
+		return err
 	}
-	if err := replaceStateTable(ctx, tx, "control_plane_support_ticket_mappings", facts.Support); err != nil {
-		return rollback(tx, err)
+	if _, err := tx.User.Delete().Exec(ctx); err != nil {
+		return err
 	}
-	if err := replaceStateTable(ctx, tx, "control_plane_wallet_projections", facts.Wallets); err != nil {
-		return rollback(tx, err)
+	if err := saveRecordSet(ctx, facts.Users, func() any { return tx.User.Create() }, userEntFields); err != nil {
+		return err
 	}
-	if err := replaceStateEvents(ctx, tx, "control_plane_ledger_projections", facts.Ledger); err != nil {
-		return rollback(tx, err)
+	if _, err := tx.Session.Delete().Exec(ctx); err != nil {
+		return err
 	}
-	if err := replaceStateEvents(ctx, tx, "control_plane_wallet_transaction_projections", facts.WalletTx); err != nil {
-		return rollback(tx, err)
+	if err := saveRecordSet(ctx, facts.Sessions, func() any { return tx.Session.Create() }, sessionEntFields); err != nil {
+		return err
 	}
-	if err := replaceStateEvents(ctx, tx, "control_plane_manual_topup_projections", facts.Topups); err != nil {
-		return rollback(tx, err)
+	if _, err := tx.Organization.Delete().Exec(ctx); err != nil {
+		return err
 	}
-	if err := replaceStateEvents(ctx, tx, "control_plane_runtime_operations", facts.RuntimeOps); err != nil {
-		return rollback(tx, err)
+	if err := saveRecordSet(ctx, facts.Orgs, func() any { return tx.Organization.Create() }, organizationEntFields); err != nil {
+		return err
 	}
-	if err := replaceStateEvents(ctx, tx, "control_plane_admin_audit_events", facts.AuditEvents); err != nil {
-		return rollback(tx, err)
+	if _, err := tx.Membership.Delete().Exec(ctx); err != nil {
+		return err
 	}
-	if err := replaceSingleton(ctx, tx, "control_plane_billing_reconciliation", facts.Reconcile); err != nil {
-		return rollback(tx, err)
+	if err := saveRecordSet(ctx, facts.Memberships, func() any { return tx.Membership.Create() }, membershipEntFields); err != nil {
+		return err
+	}
+	if _, err := tx.SupportTicketMapping.Delete().Exec(ctx); err != nil {
+		return err
+	}
+	if err := saveRecordSet(ctx, facts.Support, func() any { return tx.SupportTicketMapping.Create() }, supportEntFields); err != nil {
+		return err
+	}
+	if _, err := tx.WalletProjection.Delete().Exec(ctx); err != nil {
+		return err
+	}
+	if err := saveRecordSet(ctx, facts.Wallets, func() any { return tx.WalletProjection.Create() }, walletEntFields); err != nil {
+		return err
+	}
+	if _, err := tx.LedgerProjection.Delete().Exec(ctx); err != nil {
+		return err
+	}
+	if err := saveEventRows(ctx, facts.Ledger, func() any { return tx.LedgerProjection.Create() }, ledgerEntFields, "ledger"); err != nil {
+		return err
+	}
+	if _, err := tx.WalletTransactionProjection.Delete().Exec(ctx); err != nil {
+		return err
+	}
+	if err := saveEventRows(ctx, facts.WalletTx, func() any { return tx.WalletTransactionProjection.Create() }, walletTxEntFields, "wallet_tx"); err != nil {
+		return err
+	}
+	if _, err := tx.ManualTopupProjection.Delete().Exec(ctx); err != nil {
+		return err
+	}
+	if err := saveEventRows(ctx, facts.Topups, func() any { return tx.ManualTopupProjection.Create() }, topupEntFields, "topup"); err != nil {
+		return err
+	}
+	if _, err := tx.RuntimeOperation.Delete().Exec(ctx); err != nil {
+		return err
+	}
+	if err := saveEventRows(ctx, facts.RuntimeOps, func() any { return tx.RuntimeOperation.Create() }, runtimeOpEntFields, "runtime_op"); err != nil {
+		return err
+	}
+	if _, err := tx.AdminAuditEvent.Delete().Exec(ctx); err != nil {
+		return err
+	}
+	if err := saveEventRows(ctx, facts.AuditEvents, func() any { return tx.AdminAuditEvent.Create() }, auditEntFields, "audit"); err != nil {
+		return err
+	}
+	if _, err := tx.BillingReconciliation.Delete().Exec(ctx); err != nil {
+		return err
+	}
+	if facts.Reconcile != nil {
+		if err := saveRecord(ctx, singletonFactID, facts.Reconcile, tx.BillingReconciliation.Create(), reconcileEntFields); err != nil {
+			return err
+		}
 	}
 	return tx.Commit()
 }
 
-func (s *postgresEntStateStore) loadFactTable(ctx context.Context, table string) (stateTable, error) {
-	rows, err := s.db.QueryContext(ctx, selectFactSQL(table, ""))
+func loadRecordSet[T any](ctx context.Context, all func(context.Context) ([]*T, error), fields []entRecordField) (controlPlaneRecordSet, error) {
+	rows, err := all(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	out := stateTable{}
-	for rows.Next() {
-		row, err := scanStateRow(rows)
-		if err != nil {
-			return nil, err
-		}
-		out[stringValue(row["id"])] = row
+	out := controlPlaneRecordSet{}
+	for _, row := range rows {
+		record := recordFromEnt(row, fields)
+		out[stringValue(record["id"])] = record
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
-func (s *postgresEntStateStore) loadFactEvents(ctx context.Context, table string) ([]stateRow, error) {
-	rows, err := s.db.QueryContext(ctx, selectFactSQL(table, " ORDER BY created_at, id"))
+func loadEventRows[T any](ctx context.Context, all func(context.Context) ([]*T, error), fields []entRecordField) ([]controlPlaneRecord, error) {
+	rows, err := all(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	var out []stateRow
-	for rows.Next() {
-		row, err := scanStateRow(rows)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, row)
+	out := make([]controlPlaneRecord, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, recordFromEnt(row, fields))
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
-func (s *postgresEntStateStore) loadSingleton(ctx context.Context, table string) (stateRow, error) {
-	rows, err := s.db.QueryContext(ctx, selectFactSQL(table, " WHERE id = $1"), singletonFactID)
-	if err != nil {
-		return nil, err
+func recordFromEnt(entity any, fields []entRecordField) controlPlaneRecord {
+	value := reflect.Indirect(reflect.ValueOf(entity))
+	row := controlPlaneRecord{"id": stringValue(fieldValue(value, "ID"))}
+	if createdAt, ok := fieldValue(value, "CreatedAt").(time.Time); ok && !createdAt.IsZero() {
+		row["createdAt"] = createdAt.UTC().Format(time.RFC3339Nano)
 	}
-	defer rows.Close()
-	if !rows.Next() {
-		if err := rows.Err(); err != nil {
-			return nil, err
+	for _, field := range fields {
+		raw := fieldValue(value, field.EntityField)
+		if isZero(raw) {
+			continue
 		}
-		return nil, nil
+		setPath(row, field.Path, raw)
 	}
-	row, err := scanStateRow(rows)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
-	}
-	return row, err
+	return row
 }
 
-func replaceStateTable(ctx context.Context, tx *sql.Tx, table string, rows stateTable) error {
-	if _, err := tx.ExecContext(ctx, `DELETE FROM `+table); err != nil {
-		return err
-	}
+func saveRecordSet(ctx context.Context, rows controlPlaneRecordSet, create func() any, fields []entRecordField) error {
 	for id, row := range rows {
-		if _, err := tx.ExecContext(ctx, insertFactSQL(table, "updated_at"), stateValues(id, row, stringValue(row["accountId"]))...); err != nil {
+		if err := saveRecord(ctx, firstNonEmpty(stringValue(row["id"]), id), row, create(), fields); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func replaceStateEvents(ctx context.Context, tx *sql.Tx, table string, rows []stateRow) error {
-	if _, err := tx.ExecContext(ctx, `DELETE FROM `+table); err != nil {
-		return err
-	}
+func saveEventRows(ctx context.Context, rows []controlPlaneRecord, create func() any, fields []entRecordField, prefix string) error {
 	for index, row := range rows {
-		id := firstNonEmpty(stringValue(row["id"]), stableID(table, stringValue(row["accountId"]), stringValue(row["createdAt"]), stringValue(row["type"]))[:12])
-		values := stateValues(id, row, stringValue(row["accountId"]))
-		values = append(values, index)
-		if _, err := tx.ExecContext(ctx, insertFactSQL(table, "created_at"), values...); err != nil {
+		id := firstNonEmpty(stringValue(row["id"]), prefix+"-"+stableID(stringValue(row["accountId"]), stringValue(row["createdAt"]), stringValue(row["type"]), strconv.Itoa(index))[:12])
+		if err := saveRecord(ctx, id, row, create(), fields); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func replaceSingleton(ctx context.Context, tx *sql.Tx, table string, row stateRow) error {
-	if _, err := tx.ExecContext(ctx, `DELETE FROM `+table); err != nil {
-		return err
+func saveRecord(ctx context.Context, id string, row controlPlaneRecord, builder any, fields []entRecordField) error {
+	callSetter(builder, "SetID", id)
+	if createdAt, ok := parseRecordTime(row); ok {
+		callSetter(builder, "SetCreatedAt", createdAt)
+		callSetter(builder, "SetUpdatedAt", createdAt)
 	}
-	if row == nil {
+	for _, field := range fields {
+		if field.Setter == "" {
+			continue
+		}
+		value, ok := valueAtPath(row, field.Path)
+		if !ok {
+			continue
+		}
+		switch field.Kind {
+		case "int":
+			callSetter(builder, field.Setter, int64(numberValue(value)))
+		case "float":
+			callSetter(builder, field.Setter, numberValue(value))
+		case "bool":
+			callSetter(builder, field.Setter, boolValue(value))
+		default:
+			text := stringValue(value)
+			if text != "" {
+				callSetter(builder, field.Setter, text)
+			}
+		}
+	}
+	return execCreate(ctx, builder)
+}
+
+func saveArchivedResource(ctx context.Context, builder any, kind string, id string, accountID string, workspaceID string, name string, status string, reason string, archivedAt time.Time) error {
+	callSetter(builder, "SetID", "archived-"+kind+"-"+id)
+	callSetter(builder, "SetAccountID", accountID)
+	callSetter(builder, "SetWorkspaceID", workspaceID)
+	callSetter(builder, "SetResourceID", id)
+	callSetter(builder, "SetResourceKind", kind)
+	callSetter(builder, "SetName", name)
+	callSetter(builder, "SetStatus", status)
+	callSetter(builder, "SetReason", reason)
+	callSetter(builder, "SetArchivedAt", archivedAt)
+	callSetter(builder, "SetCreatedAt", archivedAt)
+	callSetter(builder, "SetUpdatedAt", archivedAt)
+	err := execCreate(ctx, builder)
+	if controlplaneent.IsConstraintError(err) {
 		return nil
 	}
-	_, err := tx.ExecContext(ctx, insertFactSQL(table, "updated_at"), stateValues(singletonFactID, row, "")...)
 	return err
 }
 
-func selectFactSQL(table string, suffix string) string {
-	columns := []string{"id", "account_id"}
-	for _, column := range postgresStateColumns {
-		columns = append(columns, column.Name+"::text")
+func callSetter(builder any, name string, value any) {
+	method := reflect.ValueOf(builder).MethodByName(name)
+	if !method.IsValid() {
+		return
 	}
-	return `SELECT ` + strings.Join(columns, ", ") + ` FROM ` + table + suffix
+	method.Call([]reflect.Value{reflect.ValueOf(value)})
 }
 
-func scanStateRow(rows *sql.Rows) (stateRow, error) {
-	values := make([]sql.NullString, len(postgresStateColumns)+2)
-	dest := make([]any, len(values))
-	for index := range values {
-		dest[index] = &values[index]
-	}
-	if err := rows.Scan(dest...); err != nil {
-		return nil, err
-	}
-	row := stateRow{"id": values[0].String}
-	if values[1].Valid && values[1].String != "" {
-		row["accountId"] = values[1].String
-	}
-	for index, column := range postgresStateColumns {
-		value := values[index+2]
-		if !value.Valid || value.String == "" {
-			continue
-		}
-		parsed, ok := parseColumnValue(value.String, column.Kind)
-		if ok {
-			setPath(row, column.Path, parsed)
-		}
-	}
-	return row, nil
-}
-
-func parseColumnValue(value string, kind string) (any, bool) {
-	switch kind {
-	case "bigint":
-		parsed, err := strconv.ParseInt(value, 10, 64)
-		return parsed, err == nil
-	case "double":
-		parsed, err := strconv.ParseFloat(value, 64)
-		return parsed, err == nil
-	case "bool":
-		parsed, err := strconv.ParseBool(value)
-		return parsed, err == nil
-	default:
-		return value, true
-	}
-}
-
-func insertFactSQL(table string, timestampColumn string) string {
-	columns := []string{"id", "account_id"}
-	placeholders := []string{"$1", "$2"}
-	for index, column := range postgresStateColumns {
-		columns = append(columns, column.Name)
-		placeholders = append(placeholders, fmt.Sprintf("$%d", index+3))
-	}
-	timestampExpr := "now()"
-	if timestampColumn == "created_at" {
-		timestampExpr = fmt.Sprintf("now() + ($%d || ' microseconds')::interval", len(placeholders)+1)
-	}
-	columns = append(columns, timestampColumn)
-	placeholders = append(placeholders, timestampExpr)
-	return `INSERT INTO ` + table + ` (` + strings.Join(columns, ", ") + `) VALUES (` + strings.Join(placeholders, ", ") + `)`
-}
-
-func stateValues(id string, row stateRow, accountID string) []any {
-	values := []any{id, accountID}
-	for _, column := range postgresStateColumns {
-		values = append(values, columnValue(row, column))
-	}
-	return values
-}
-
-func columnValue(row stateRow, column stateColumn) any {
-	value, ok := valueAtPath(row, column.Path)
-	if !ok || value == nil {
+func execCreate(ctx context.Context, builder any) error {
+	results := reflect.ValueOf(builder).MethodByName("Exec").Call([]reflect.Value{reflect.ValueOf(ctx)})
+	if len(results) == 0 || results[0].IsNil() {
 		return nil
 	}
-	switch column.Kind {
-	case "bigint":
-		return int64(numberValue(value))
-	case "double":
-		return numberValue(value)
-	case "bool":
-		if parsed, ok := value.(bool); ok {
-			return parsed
-		}
-		parsed, err := strconv.ParseBool(stringValue(value))
-		if err != nil {
-			return nil
-		}
-		return parsed
+	return results[0].Interface().(error)
+}
+
+func fieldValue(value reflect.Value, name string) any {
+	field := value.FieldByName(name)
+	if !field.IsValid() || !field.CanInterface() {
+		return nil
+	}
+	return field.Interface()
+}
+
+func isZero(value any) bool {
+	switch typed := value.(type) {
+	case nil:
+		return true
+	case string:
+		return typed == ""
+	case int64:
+		return typed == 0
+	case float64:
+		return typed == 0
+	case bool:
+		return !typed
+	case time.Time:
+		return typed.IsZero()
 	default:
-		text := stringValue(value)
-		if text == "" {
-			return nil
-		}
-		return text
+		return reflect.ValueOf(value).IsZero()
 	}
 }
 
-func valueAtPath(row stateRow, path []string) (any, bool) {
+func parseRecordTime(row controlPlaneRecord) (time.Time, bool) {
+	text := stringValue(row["createdAt"])
+	if text == "" {
+		return time.Time{}, false
+	}
+	for _, layout := range []string{time.RFC3339Nano, time.RFC3339, "2006-01-02 15:04:05.999999999 -0700 MST"} {
+		parsed, err := time.Parse(layout, text)
+		if err == nil {
+			return parsed.UTC(), true
+		}
+	}
+	return time.Time{}, false
+}
+
+func valueAtPath(row controlPlaneRecord, path []string) (any, bool) {
 	var current any = row
 	for _, part := range path {
 		asMap, ok := current.(map[string]any)
@@ -554,7 +952,7 @@ func valueAtPath(row stateRow, path []string) (any, bool) {
 	return current, true
 }
 
-func setPath(row stateRow, path []string, value any) {
+func setPath(row controlPlaneRecord, path []string, value any) {
 	if len(path) == 0 {
 		return
 	}
@@ -580,16 +978,16 @@ func numberValue(value any) float64 {
 		return typed
 	case float32:
 		return float64(typed)
-	case json.Number:
-		parsed, _ := typed.Float64()
-		return parsed
 	default:
 		parsed, _ := strconv.ParseFloat(stringValue(value), 64)
 		return parsed
 	}
 }
 
-func rollback(tx *sql.Tx, err error) error {
-	_ = tx.Rollback()
-	return err
+func boolValue(value any) bool {
+	if parsed, ok := value.(bool); ok {
+		return parsed
+	}
+	parsed, _ := strconv.ParseBool(stringValue(value))
+	return parsed
 }

@@ -13,118 +13,67 @@ const (
 	Label = "support_ticket_mapping"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldAccountID holds the string denoting the account_id field in the database.
-	FieldAccountID = "account_id"
-	// FieldOwnerAccountID holds the string denoting the owner_account_id field in the database.
-	FieldOwnerAccountID = "owner_account_id"
-	// FieldOwnerUserID holds the string denoting the owner_user_id field in the database.
-	FieldOwnerUserID = "owner_user_id"
-	// FieldUserID holds the string denoting the user_id field in the database.
-	FieldUserID = "user_id"
-	// FieldEmail holds the string denoting the email field in the database.
-	FieldEmail = "email"
-	// FieldRole holds the string denoting the role field in the database.
-	FieldRole = "role"
-	// FieldStatus holds the string denoting the status field in the database.
-	FieldStatus = "status"
-	// FieldName holds the string denoting the name field in the database.
-	FieldName = "name"
-	// FieldWorkspaceID holds the string denoting the workspace_id field in the database.
-	FieldWorkspaceID = "workspace_id"
-	// FieldResourceID holds the string denoting the resource_id field in the database.
-	FieldResourceID = "resource_id"
-	// FieldResourceKind holds the string denoting the resource_kind field in the database.
-	FieldResourceKind = "resource_kind"
-	// FieldOperationID holds the string denoting the operation_id field in the database.
-	FieldOperationID = "operation_id"
-	// FieldProvider holds the string denoting the provider field in the database.
-	FieldProvider = "provider"
-	// FieldProviderResourceID holds the string denoting the provider_resource_id field in the database.
-	FieldProviderResourceID = "provider_resource_id"
-	// FieldURL holds the string denoting the url field in the database.
-	FieldURL = "url"
-	// FieldHoldID holds the string denoting the hold_id field in the database.
-	FieldHoldID = "hold_id"
-	// FieldHoldReleaseID holds the string denoting the hold_release_id field in the database.
-	FieldHoldReleaseID = "hold_release_id"
-	// FieldLedgerEntryID holds the string denoting the ledger_entry_id field in the database.
-	FieldLedgerEntryID = "ledger_entry_id"
-	// FieldWalletTransactionID holds the string denoting the wallet_transaction_id field in the database.
-	FieldWalletTransactionID = "wallet_transaction_id"
-	// FieldSettlementID holds the string denoting the settlement_id field in the database.
-	FieldSettlementID = "settlement_id"
-	// FieldPricingVersion holds the string denoting the pricing_version field in the database.
-	FieldPricingVersion = "pricing_version"
-	// FieldAmountCents holds the string denoting the amount_cents field in the database.
-	FieldAmountCents = "amount_cents"
-	// FieldBalanceCents holds the string denoting the balance_cents field in the database.
-	FieldBalanceCents = "balance_cents"
-	// FieldFrozenCents holds the string denoting the frozen_cents field in the database.
-	FieldFrozenCents = "frozen_cents"
-	// FieldAvailableCents holds the string denoting the available_cents field in the database.
-	FieldAvailableCents = "available_cents"
-	// FieldTotalSpentCents holds the string denoting the total_spent_cents field in the database.
-	FieldTotalSpentCents = "total_spent_cents"
-	// FieldQuantity holds the string denoting the quantity field in the database.
-	FieldQuantity = "quantity"
-	// FieldUnit holds the string denoting the unit field in the database.
-	FieldUnit = "unit"
-	// FieldReason holds the string denoting the reason field in the database.
-	FieldReason = "reason"
-	// FieldResult holds the string denoting the result field in the database.
-	FieldResult = "result"
-	// FieldSource holds the string denoting the source field in the database.
-	FieldSource = "source"
-	// FieldDirection holds the string denoting the direction field in the database.
-	FieldDirection = "direction"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
 	FieldUpdatedAt = "updated_at"
-	// FieldArchivedAt holds the string denoting the archived_at field in the database.
-	FieldArchivedAt = "archived_at"
+	// FieldAccountID holds the string denoting the account_id field in the database.
+	FieldAccountID = "account_id"
+	// FieldUserID holds the string denoting the user_id field in the database.
+	FieldUserID = "user_id"
+	// FieldWorkspaceID holds the string denoting the workspace_id field in the database.
+	FieldWorkspaceID = "workspace_id"
+	// FieldExternalSystem holds the string denoting the external_system field in the database.
+	FieldExternalSystem = "external_system"
+	// FieldExternalTicketID holds the string denoting the external_ticket_id field in the database.
+	FieldExternalTicketID = "external_ticket_id"
+	// FieldExternalURL holds the string denoting the external_url field in the database.
+	FieldExternalURL = "external_url"
+	// FieldOperationID holds the string denoting the operation_id field in the database.
+	FieldOperationID = "operation_id"
+	// FieldResourceID holds the string denoting the resource_id field in the database.
+	FieldResourceID = "resource_id"
+	// FieldResourceKind holds the string denoting the resource_kind field in the database.
+	FieldResourceKind = "resource_kind"
+	// FieldTitle holds the string denoting the title field in the database.
+	FieldTitle = "title"
+	// FieldCategory holds the string denoting the category field in the database.
+	FieldCategory = "category"
+	// FieldPriority holds the string denoting the priority field in the database.
+	FieldPriority = "priority"
+	// FieldStatus holds the string denoting the status field in the database.
+	FieldStatus = "status"
+	// FieldSource holds the string denoting the source field in the database.
+	FieldSource = "source"
+	// FieldURL holds the string denoting the url field in the database.
+	FieldURL = "url"
+	// FieldReason holds the string denoting the reason field in the database.
+	FieldReason = "reason"
 	// Table holds the table name of the supportticketmapping in the database.
-	Table = "support_ticket_mappings"
+	Table = "control_plane_support_ticket_mappings"
 )
 
 // Columns holds all SQL columns for supportticketmapping fields.
 var Columns = []string{
 	FieldID,
-	FieldAccountID,
-	FieldOwnerAccountID,
-	FieldOwnerUserID,
-	FieldUserID,
-	FieldEmail,
-	FieldRole,
-	FieldStatus,
-	FieldName,
-	FieldWorkspaceID,
-	FieldResourceID,
-	FieldResourceKind,
-	FieldOperationID,
-	FieldProvider,
-	FieldProviderResourceID,
-	FieldURL,
-	FieldHoldID,
-	FieldHoldReleaseID,
-	FieldLedgerEntryID,
-	FieldWalletTransactionID,
-	FieldSettlementID,
-	FieldPricingVersion,
-	FieldAmountCents,
-	FieldBalanceCents,
-	FieldFrozenCents,
-	FieldAvailableCents,
-	FieldTotalSpentCents,
-	FieldQuantity,
-	FieldUnit,
-	FieldReason,
-	FieldResult,
-	FieldSource,
-	FieldDirection,
 	FieldCreatedAt,
 	FieldUpdatedAt,
-	FieldArchivedAt,
+	FieldAccountID,
+	FieldUserID,
+	FieldWorkspaceID,
+	FieldExternalSystem,
+	FieldExternalTicketID,
+	FieldExternalURL,
+	FieldOperationID,
+	FieldResourceID,
+	FieldResourceKind,
+	FieldTitle,
+	FieldCategory,
+	FieldPriority,
+	FieldStatus,
+	FieldSource,
+	FieldURL,
+	FieldReason,
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -138,76 +87,44 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// DefaultAccountID holds the default value on creation for the "account_id" field.
-	DefaultAccountID string
-	// DefaultOwnerAccountID holds the default value on creation for the "owner_account_id" field.
-	DefaultOwnerAccountID string
-	// DefaultOwnerUserID holds the default value on creation for the "owner_user_id" field.
-	DefaultOwnerUserID string
-	// DefaultUserID holds the default value on creation for the "user_id" field.
-	DefaultUserID string
-	// DefaultEmail holds the default value on creation for the "email" field.
-	DefaultEmail string
-	// DefaultRole holds the default value on creation for the "role" field.
-	DefaultRole string
-	// DefaultStatus holds the default value on creation for the "status" field.
-	DefaultStatus string
-	// DefaultName holds the default value on creation for the "name" field.
-	DefaultName string
-	// DefaultWorkspaceID holds the default value on creation for the "workspace_id" field.
-	DefaultWorkspaceID string
-	// DefaultResourceID holds the default value on creation for the "resource_id" field.
-	DefaultResourceID string
-	// DefaultResourceKind holds the default value on creation for the "resource_kind" field.
-	DefaultResourceKind string
-	// DefaultOperationID holds the default value on creation for the "operation_id" field.
-	DefaultOperationID string
-	// DefaultProvider holds the default value on creation for the "provider" field.
-	DefaultProvider string
-	// DefaultProviderResourceID holds the default value on creation for the "provider_resource_id" field.
-	DefaultProviderResourceID string
-	// DefaultURL holds the default value on creation for the "url" field.
-	DefaultURL string
-	// DefaultHoldID holds the default value on creation for the "hold_id" field.
-	DefaultHoldID string
-	// DefaultHoldReleaseID holds the default value on creation for the "hold_release_id" field.
-	DefaultHoldReleaseID string
-	// DefaultLedgerEntryID holds the default value on creation for the "ledger_entry_id" field.
-	DefaultLedgerEntryID string
-	// DefaultWalletTransactionID holds the default value on creation for the "wallet_transaction_id" field.
-	DefaultWalletTransactionID string
-	// DefaultSettlementID holds the default value on creation for the "settlement_id" field.
-	DefaultSettlementID string
-	// DefaultPricingVersion holds the default value on creation for the "pricing_version" field.
-	DefaultPricingVersion string
-	// DefaultAmountCents holds the default value on creation for the "amount_cents" field.
-	DefaultAmountCents int64
-	// DefaultBalanceCents holds the default value on creation for the "balance_cents" field.
-	DefaultBalanceCents int64
-	// DefaultFrozenCents holds the default value on creation for the "frozen_cents" field.
-	DefaultFrozenCents int64
-	// DefaultAvailableCents holds the default value on creation for the "available_cents" field.
-	DefaultAvailableCents int64
-	// DefaultTotalSpentCents holds the default value on creation for the "total_spent_cents" field.
-	DefaultTotalSpentCents int64
-	// DefaultQuantity holds the default value on creation for the "quantity" field.
-	DefaultQuantity float64
-	// DefaultUnit holds the default value on creation for the "unit" field.
-	DefaultUnit string
-	// DefaultReason holds the default value on creation for the "reason" field.
-	DefaultReason string
-	// DefaultResult holds the default value on creation for the "result" field.
-	DefaultResult string
-	// DefaultSource holds the default value on creation for the "source" field.
-	DefaultSource string
-	// DefaultDirection holds the default value on creation for the "direction" field.
-	DefaultDirection string
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
+	// DefaultAccountID holds the default value on creation for the "account_id" field.
+	DefaultAccountID string
+	// DefaultUserID holds the default value on creation for the "user_id" field.
+	DefaultUserID string
+	// DefaultWorkspaceID holds the default value on creation for the "workspace_id" field.
+	DefaultWorkspaceID string
+	// DefaultExternalSystem holds the default value on creation for the "external_system" field.
+	DefaultExternalSystem string
+	// DefaultExternalTicketID holds the default value on creation for the "external_ticket_id" field.
+	DefaultExternalTicketID string
+	// DefaultExternalURL holds the default value on creation for the "external_url" field.
+	DefaultExternalURL string
+	// DefaultOperationID holds the default value on creation for the "operation_id" field.
+	DefaultOperationID string
+	// DefaultResourceID holds the default value on creation for the "resource_id" field.
+	DefaultResourceID string
+	// DefaultResourceKind holds the default value on creation for the "resource_kind" field.
+	DefaultResourceKind string
+	// DefaultTitle holds the default value on creation for the "title" field.
+	DefaultTitle string
+	// DefaultCategory holds the default value on creation for the "category" field.
+	DefaultCategory string
+	// DefaultPriority holds the default value on creation for the "priority" field.
+	DefaultPriority string
+	// DefaultStatus holds the default value on creation for the "status" field.
+	DefaultStatus string
+	// DefaultSource holds the default value on creation for the "source" field.
+	DefaultSource string
+	// DefaultURL holds the default value on creation for the "url" field.
+	DefaultURL string
+	// DefaultReason holds the default value on creation for the "reason" field.
+	DefaultReason string
 	// IDValidator is a validator for the "id" field. It is called by the builders before save.
 	IDValidator func(string) error
 )
@@ -220,19 +137,19 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
 }
 
+// ByCreatedAt orders the results by the created_at field.
+func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
+}
+
+// ByUpdatedAt orders the results by the updated_at field.
+func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
+}
+
 // ByAccountID orders the results by the account_id field.
 func ByAccountID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAccountID, opts...).ToFunc()
-}
-
-// ByOwnerAccountID orders the results by the owner_account_id field.
-func ByOwnerAccountID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldOwnerAccountID, opts...).ToFunc()
-}
-
-// ByOwnerUserID orders the results by the owner_user_id field.
-func ByOwnerUserID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldOwnerUserID, opts...).ToFunc()
 }
 
 // ByUserID orders the results by the user_id field.
@@ -240,29 +157,29 @@ func ByUserID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldUserID, opts...).ToFunc()
 }
 
-// ByEmail orders the results by the email field.
-func ByEmail(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldEmail, opts...).ToFunc()
-}
-
-// ByRole orders the results by the role field.
-func ByRole(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldRole, opts...).ToFunc()
-}
-
-// ByStatus orders the results by the status field.
-func ByStatus(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldStatus, opts...).ToFunc()
-}
-
-// ByName orders the results by the name field.
-func ByName(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldName, opts...).ToFunc()
-}
-
 // ByWorkspaceID orders the results by the workspace_id field.
 func ByWorkspaceID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWorkspaceID, opts...).ToFunc()
+}
+
+// ByExternalSystem orders the results by the external_system field.
+func ByExternalSystem(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldExternalSystem, opts...).ToFunc()
+}
+
+// ByExternalTicketID orders the results by the external_ticket_id field.
+func ByExternalTicketID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldExternalTicketID, opts...).ToFunc()
+}
+
+// ByExternalURL orders the results by the external_url field.
+func ByExternalURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldExternalURL, opts...).ToFunc()
+}
+
+// ByOperationID orders the results by the operation_id field.
+func ByOperationID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOperationID, opts...).ToFunc()
 }
 
 // ByResourceID orders the results by the resource_id field.
@@ -275,99 +192,24 @@ func ByResourceKind(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldResourceKind, opts...).ToFunc()
 }
 
-// ByOperationID orders the results by the operation_id field.
-func ByOperationID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldOperationID, opts...).ToFunc()
+// ByTitle orders the results by the title field.
+func ByTitle(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTitle, opts...).ToFunc()
 }
 
-// ByProvider orders the results by the provider field.
-func ByProvider(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldProvider, opts...).ToFunc()
+// ByCategory orders the results by the category field.
+func ByCategory(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldCategory, opts...).ToFunc()
 }
 
-// ByProviderResourceID orders the results by the provider_resource_id field.
-func ByProviderResourceID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldProviderResourceID, opts...).ToFunc()
+// ByPriority orders the results by the priority field.
+func ByPriority(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPriority, opts...).ToFunc()
 }
 
-// ByURL orders the results by the url field.
-func ByURL(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldURL, opts...).ToFunc()
-}
-
-// ByHoldID orders the results by the hold_id field.
-func ByHoldID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldHoldID, opts...).ToFunc()
-}
-
-// ByHoldReleaseID orders the results by the hold_release_id field.
-func ByHoldReleaseID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldHoldReleaseID, opts...).ToFunc()
-}
-
-// ByLedgerEntryID orders the results by the ledger_entry_id field.
-func ByLedgerEntryID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldLedgerEntryID, opts...).ToFunc()
-}
-
-// ByWalletTransactionID orders the results by the wallet_transaction_id field.
-func ByWalletTransactionID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldWalletTransactionID, opts...).ToFunc()
-}
-
-// BySettlementID orders the results by the settlement_id field.
-func BySettlementID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldSettlementID, opts...).ToFunc()
-}
-
-// ByPricingVersion orders the results by the pricing_version field.
-func ByPricingVersion(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldPricingVersion, opts...).ToFunc()
-}
-
-// ByAmountCents orders the results by the amount_cents field.
-func ByAmountCents(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAmountCents, opts...).ToFunc()
-}
-
-// ByBalanceCents orders the results by the balance_cents field.
-func ByBalanceCents(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldBalanceCents, opts...).ToFunc()
-}
-
-// ByFrozenCents orders the results by the frozen_cents field.
-func ByFrozenCents(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldFrozenCents, opts...).ToFunc()
-}
-
-// ByAvailableCents orders the results by the available_cents field.
-func ByAvailableCents(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAvailableCents, opts...).ToFunc()
-}
-
-// ByTotalSpentCents orders the results by the total_spent_cents field.
-func ByTotalSpentCents(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldTotalSpentCents, opts...).ToFunc()
-}
-
-// ByQuantity orders the results by the quantity field.
-func ByQuantity(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldQuantity, opts...).ToFunc()
-}
-
-// ByUnit orders the results by the unit field.
-func ByUnit(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldUnit, opts...).ToFunc()
-}
-
-// ByReason orders the results by the reason field.
-func ByReason(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldReason, opts...).ToFunc()
-}
-
-// ByResult orders the results by the result field.
-func ByResult(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldResult, opts...).ToFunc()
+// ByStatus orders the results by the status field.
+func ByStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStatus, opts...).ToFunc()
 }
 
 // BySource orders the results by the source field.
@@ -375,22 +217,12 @@ func BySource(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldSource, opts...).ToFunc()
 }
 
-// ByDirection orders the results by the direction field.
-func ByDirection(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldDirection, opts...).ToFunc()
+// ByURL orders the results by the url field.
+func ByURL(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldURL, opts...).ToFunc()
 }
 
-// ByCreatedAt orders the results by the created_at field.
-func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
-}
-
-// ByUpdatedAt orders the results by the updated_at field.
-func ByUpdatedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldUpdatedAt, opts...).ToFunc()
-}
-
-// ByArchivedAt orders the results by the archived_at field.
-func ByArchivedAt(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldArchivedAt, opts...).ToFunc()
+// ByReason orders the results by the reason field.
+func ByReason(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldReason, opts...).ToFunc()
 }

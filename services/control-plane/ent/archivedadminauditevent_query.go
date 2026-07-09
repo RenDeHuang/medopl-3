@@ -261,12 +261,12 @@ func (aaaeq *ArchivedAdminAuditEventQuery) Clone() *ArchivedAdminAuditEventQuery
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.ArchivedAdminAuditEvent.Query().
-//		GroupBy(archivedadminauditevent.FieldAccountID).
+//		GroupBy(archivedadminauditevent.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (aaaeq *ArchivedAdminAuditEventQuery) GroupBy(field string, fields ...string) *ArchivedAdminAuditEventGroupBy {
@@ -284,11 +284,11 @@ func (aaaeq *ArchivedAdminAuditEventQuery) GroupBy(field string, fields ...strin
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.ArchivedAdminAuditEvent.Query().
-//		Select(archivedadminauditevent.FieldAccountID).
+//		Select(archivedadminauditevent.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (aaaeq *ArchivedAdminAuditEventQuery) Select(fields ...string) *ArchivedAdminAuditEventSelect {
 	aaaeq.ctx.Fields = append(aaaeq.ctx.Fields, fields...)

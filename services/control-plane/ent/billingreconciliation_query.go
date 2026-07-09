@@ -261,12 +261,12 @@ func (brq *BillingReconciliationQuery) Clone() *BillingReconciliationQuery {
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.BillingReconciliation.Query().
-//		GroupBy(billingreconciliation.FieldAccountID).
+//		GroupBy(billingreconciliation.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (brq *BillingReconciliationQuery) GroupBy(field string, fields ...string) *BillingReconciliationGroupBy {
@@ -284,11 +284,11 @@ func (brq *BillingReconciliationQuery) GroupBy(field string, fields ...string) *
 // Example:
 //
 //	var v []struct {
-//		AccountID string `json:"account_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.BillingReconciliation.Query().
-//		Select(billingreconciliation.FieldAccountID).
+//		Select(billingreconciliation.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (brq *BillingReconciliationQuery) Select(fields ...string) *BillingReconciliationSelect {
 	brq.ctx.Fields = append(brq.ctx.Fields, fields...)

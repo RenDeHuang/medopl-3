@@ -64,14 +64,19 @@ func IDContainsFold(id string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldContainsFold(FieldID, id))
 }
 
+// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
+func CreatedAt(v time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
+func UpdatedAt(v time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldUpdatedAt, v))
+}
+
 // AccountID applies equality check predicate on the "account_id" field. It's identical to AccountIDEQ.
 func AccountID(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldAccountID, v))
-}
-
-// OwnerAccountID applies equality check predicate on the "owner_account_id" field. It's identical to OwnerAccountIDEQ.
-func OwnerAccountID(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldOwnerAccountID, v))
 }
 
 // OwnerUserID applies equality check predicate on the "owner_user_id" field. It's identical to OwnerUserIDEQ.
@@ -79,49 +84,14 @@ func OwnerUserID(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldOwnerUserID, v))
 }
 
-// UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
-func UserID(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldUserID, v))
-}
-
-// Email applies equality check predicate on the "email" field. It's identical to EmailEQ.
-func Email(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldEmail, v))
-}
-
-// Role applies equality check predicate on the "role" field. It's identical to RoleEQ.
-func Role(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldRole, v))
-}
-
-// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
-func Status(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldStatus, v))
-}
-
-// Name applies equality check predicate on the "name" field. It's identical to NameEQ.
-func Name(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldName, v))
-}
-
 // WorkspaceID applies equality check predicate on the "workspace_id" field. It's identical to WorkspaceIDEQ.
 func WorkspaceID(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldWorkspaceID, v))
 }
 
-// ResourceID applies equality check predicate on the "resource_id" field. It's identical to ResourceIDEQ.
-func ResourceID(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldResourceID, v))
-}
-
-// ResourceKind applies equality check predicate on the "resource_kind" field. It's identical to ResourceKindEQ.
-func ResourceKind(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldResourceKind, v))
-}
-
-// OperationID applies equality check predicate on the "operation_id" field. It's identical to OperationIDEQ.
-func OperationID(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldOperationID, v))
+// Name applies equality check predicate on the "name" field. It's identical to NameEQ.
+func Name(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldName, v))
 }
 
 // Provider applies equality check predicate on the "provider" field. It's identical to ProviderEQ.
@@ -134,9 +104,24 @@ func ProviderResourceID(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldProviderResourceID, v))
 }
 
-// URL applies equality check predicate on the "url" field. It's identical to URLEQ.
-func URL(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldURL, v))
+// ProviderRequestID applies equality check predicate on the "provider_request_id" field. It's identical to ProviderRequestIDEQ.
+func ProviderRequestID(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldProviderRequestID, v))
+}
+
+// OperationID applies equality check predicate on the "operation_id" field. It's identical to OperationIDEQ.
+func OperationID(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldOperationID, v))
+}
+
+// Status applies equality check predicate on the "status" field. It's identical to StatusEQ.
+func Status(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldStatus, v))
+}
+
+// BillingStatus applies equality check predicate on the "billing_status" field. It's identical to BillingStatusEQ.
+func BillingStatus(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldBillingStatus, v))
 }
 
 // HoldID applies equality check predicate on the "hold_id" field. It's identical to HoldIDEQ.
@@ -149,6 +134,11 @@ func HoldReleaseID(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldHoldReleaseID, v))
 }
 
+// SettlementID applies equality check predicate on the "settlement_id" field. It's identical to SettlementIDEQ.
+func SettlementID(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldSettlementID, v))
+}
+
 // LedgerEntryID applies equality check predicate on the "ledger_entry_id" field. It's identical to LedgerEntryIDEQ.
 func LedgerEntryID(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldLedgerEntryID, v))
@@ -159,84 +149,144 @@ func WalletTransactionID(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldWalletTransactionID, v))
 }
 
-// SettlementID applies equality check predicate on the "settlement_id" field. It's identical to SettlementIDEQ.
-func SettlementID(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldSettlementID, v))
-}
-
 // PricingVersion applies equality check predicate on the "pricing_version" field. It's identical to PricingVersionEQ.
 func PricingVersion(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldPricingVersion, v))
 }
 
-// AmountCents applies equality check predicate on the "amount_cents" field. It's identical to AmountCentsEQ.
-func AmountCents(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldAmountCents, v))
+// UsagePeriodEnd applies equality check predicate on the "usage_period_end" field. It's identical to UsagePeriodEndEQ.
+func UsagePeriodEnd(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCents applies equality check predicate on the "balance_cents" field. It's identical to BalanceCentsEQ.
-func BalanceCents(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldBalanceCents, v))
+// MountPath applies equality check predicate on the "mount_path" field. It's identical to MountPathEQ.
+func MountPath(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldMountPath, v))
 }
 
-// FrozenCents applies equality check predicate on the "frozen_cents" field. It's identical to FrozenCentsEQ.
-func FrozenCents(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldFrozenCents, v))
+// HoldAmountCents applies equality check predicate on the "hold_amount_cents" field. It's identical to HoldAmountCentsEQ.
+func HoldAmountCents(v int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldHoldAmountCents, v))
 }
 
-// AvailableCents applies equality check predicate on the "available_cents" field. It's identical to AvailableCentsEQ.
-func AvailableCents(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldAvailableCents, v))
+// HoldAmount applies equality check predicate on the "hold_amount" field. It's identical to HoldAmountEQ.
+func HoldAmount(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldHoldAmount, v))
 }
 
-// TotalSpentCents applies equality check predicate on the "total_spent_cents" field. It's identical to TotalSpentCentsEQ.
-func TotalSpentCents(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldTotalSpentCents, v))
+// SizeGB applies equality check predicate on the "size_gb" field. It's identical to SizeGBEQ.
+func SizeGB(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldSizeGB, v))
 }
 
-// Quantity applies equality check predicate on the "quantity" field. It's identical to QuantityEQ.
-func Quantity(v float64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldQuantity, v))
+// PriceSnapshotResourceType applies equality check predicate on the "price_snapshot_resource_type" field. It's identical to PriceSnapshotResourceTypeEQ.
+func PriceSnapshotResourceType(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldPriceSnapshotResourceType, v))
 }
 
-// Unit applies equality check predicate on the "unit" field. It's identical to UnitEQ.
-func Unit(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldUnit, v))
+// PriceSnapshotCurrency applies equality check predicate on the "price_snapshot_currency" field. It's identical to PriceSnapshotCurrencyEQ.
+func PriceSnapshotCurrency(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldPriceSnapshotCurrency, v))
 }
 
-// Reason applies equality check predicate on the "reason" field. It's identical to ReasonEQ.
-func Reason(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldReason, v))
+// PriceSnapshotSource applies equality check predicate on the "price_snapshot_source" field. It's identical to PriceSnapshotSourceEQ.
+func PriceSnapshotSource(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldPriceSnapshotSource, v))
 }
 
-// Result applies equality check predicate on the "result" field. It's identical to ResultEQ.
-func Result(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldResult, v))
+// PriceSnapshotUnitPriceCents applies equality check predicate on the "price_snapshot_unit_price_cents" field. It's identical to PriceSnapshotUnitPriceCentsEQ.
+func PriceSnapshotUnitPriceCents(v int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldPriceSnapshotUnitPriceCents, v))
 }
 
-// Source applies equality check predicate on the "source" field. It's identical to SourceEQ.
-func Source(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldSource, v))
+// PriceSnapshotStorageGBMonth applies equality check predicate on the "price_snapshot_storage_gb_month" field. It's identical to PriceSnapshotStorageGBMonthEQ.
+func PriceSnapshotStorageGBMonth(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldPriceSnapshotStorageGBMonth, v))
 }
 
-// Direction applies equality check predicate on the "direction" field. It's identical to DirectionEQ.
-func Direction(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldDirection, v))
+// PriceSnapshotSizeGB applies equality check predicate on the "price_snapshot_size_gb" field. It's identical to PriceSnapshotSizeGBEQ.
+func PriceSnapshotSizeGB(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldPriceSnapshotSizeGB, v))
 }
 
-// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
-func CreatedAt(v time.Time) predicate.StorageVolume {
+// CreatedAtEQ applies the EQ predicate on the "created_at" field.
+func CreatedAtEQ(v time.Time) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldCreatedAt, v))
 }
 
-// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
-func UpdatedAt(v time.Time) predicate.StorageVolume {
+// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
+func CreatedAtNEQ(v time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldCreatedAt, v))
+}
+
+// CreatedAtIn applies the In predicate on the "created_at" field.
+func CreatedAtIn(vs ...time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldCreatedAt, vs...))
+}
+
+// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
+func CreatedAtNotIn(vs ...time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldCreatedAt, vs...))
+}
+
+// CreatedAtGT applies the GT predicate on the "created_at" field.
+func CreatedAtGT(v time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldCreatedAt, v))
+}
+
+// CreatedAtGTE applies the GTE predicate on the "created_at" field.
+func CreatedAtGTE(v time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldCreatedAt, v))
+}
+
+// CreatedAtLT applies the LT predicate on the "created_at" field.
+func CreatedAtLT(v time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldCreatedAt, v))
+}
+
+// CreatedAtLTE applies the LTE predicate on the "created_at" field.
+func CreatedAtLTE(v time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
+func UpdatedAtEQ(v time.Time) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldUpdatedAt, v))
 }
 
-// ArchivedAt applies equality check predicate on the "archived_at" field. It's identical to ArchivedAtEQ.
-func ArchivedAt(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldArchivedAt, v))
+// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
+func UpdatedAtNEQ(v time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldUpdatedAt, v))
+}
+
+// UpdatedAtIn applies the In predicate on the "updated_at" field.
+func UpdatedAtIn(vs ...time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
+func UpdatedAtNotIn(vs ...time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtGT applies the GT predicate on the "updated_at" field.
+func UpdatedAtGT(v time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
+func UpdatedAtGTE(v time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLT applies the LT predicate on the "updated_at" field.
+func UpdatedAtLT(v time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
+func UpdatedAtLTE(v time.Time) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldUpdatedAt, v))
 }
 
 // AccountIDEQ applies the EQ predicate on the "account_id" field.
@@ -304,71 +354,6 @@ func AccountIDContainsFold(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldContainsFold(FieldAccountID, v))
 }
 
-// OwnerAccountIDEQ applies the EQ predicate on the "owner_account_id" field.
-func OwnerAccountIDEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDNEQ applies the NEQ predicate on the "owner_account_id" field.
-func OwnerAccountIDNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDIn applies the In predicate on the "owner_account_id" field.
-func OwnerAccountIDIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldOwnerAccountID, vs...))
-}
-
-// OwnerAccountIDNotIn applies the NotIn predicate on the "owner_account_id" field.
-func OwnerAccountIDNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldOwnerAccountID, vs...))
-}
-
-// OwnerAccountIDGT applies the GT predicate on the "owner_account_id" field.
-func OwnerAccountIDGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDGTE applies the GTE predicate on the "owner_account_id" field.
-func OwnerAccountIDGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDLT applies the LT predicate on the "owner_account_id" field.
-func OwnerAccountIDLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDLTE applies the LTE predicate on the "owner_account_id" field.
-func OwnerAccountIDLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDContains applies the Contains predicate on the "owner_account_id" field.
-func OwnerAccountIDContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDHasPrefix applies the HasPrefix predicate on the "owner_account_id" field.
-func OwnerAccountIDHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDHasSuffix applies the HasSuffix predicate on the "owner_account_id" field.
-func OwnerAccountIDHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDEqualFold applies the EqualFold predicate on the "owner_account_id" field.
-func OwnerAccountIDEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldOwnerAccountID, v))
-}
-
-// OwnerAccountIDContainsFold applies the ContainsFold predicate on the "owner_account_id" field.
-func OwnerAccountIDContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldOwnerAccountID, v))
-}
-
 // OwnerUserIDEQ applies the EQ predicate on the "owner_user_id" field.
 func OwnerUserIDEQ(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldOwnerUserID, v))
@@ -432,331 +417,6 @@ func OwnerUserIDEqualFold(v string) predicate.StorageVolume {
 // OwnerUserIDContainsFold applies the ContainsFold predicate on the "owner_user_id" field.
 func OwnerUserIDContainsFold(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldContainsFold(FieldOwnerUserID, v))
-}
-
-// UserIDEQ applies the EQ predicate on the "user_id" field.
-func UserIDEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldUserID, v))
-}
-
-// UserIDNEQ applies the NEQ predicate on the "user_id" field.
-func UserIDNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldUserID, v))
-}
-
-// UserIDIn applies the In predicate on the "user_id" field.
-func UserIDIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldUserID, vs...))
-}
-
-// UserIDNotIn applies the NotIn predicate on the "user_id" field.
-func UserIDNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldUserID, vs...))
-}
-
-// UserIDGT applies the GT predicate on the "user_id" field.
-func UserIDGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldUserID, v))
-}
-
-// UserIDGTE applies the GTE predicate on the "user_id" field.
-func UserIDGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldUserID, v))
-}
-
-// UserIDLT applies the LT predicate on the "user_id" field.
-func UserIDLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldUserID, v))
-}
-
-// UserIDLTE applies the LTE predicate on the "user_id" field.
-func UserIDLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldUserID, v))
-}
-
-// UserIDContains applies the Contains predicate on the "user_id" field.
-func UserIDContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldUserID, v))
-}
-
-// UserIDHasPrefix applies the HasPrefix predicate on the "user_id" field.
-func UserIDHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldUserID, v))
-}
-
-// UserIDHasSuffix applies the HasSuffix predicate on the "user_id" field.
-func UserIDHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldUserID, v))
-}
-
-// UserIDEqualFold applies the EqualFold predicate on the "user_id" field.
-func UserIDEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldUserID, v))
-}
-
-// UserIDContainsFold applies the ContainsFold predicate on the "user_id" field.
-func UserIDContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldUserID, v))
-}
-
-// EmailEQ applies the EQ predicate on the "email" field.
-func EmailEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldEmail, v))
-}
-
-// EmailNEQ applies the NEQ predicate on the "email" field.
-func EmailNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldEmail, v))
-}
-
-// EmailIn applies the In predicate on the "email" field.
-func EmailIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldEmail, vs...))
-}
-
-// EmailNotIn applies the NotIn predicate on the "email" field.
-func EmailNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldEmail, vs...))
-}
-
-// EmailGT applies the GT predicate on the "email" field.
-func EmailGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldEmail, v))
-}
-
-// EmailGTE applies the GTE predicate on the "email" field.
-func EmailGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldEmail, v))
-}
-
-// EmailLT applies the LT predicate on the "email" field.
-func EmailLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldEmail, v))
-}
-
-// EmailLTE applies the LTE predicate on the "email" field.
-func EmailLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldEmail, v))
-}
-
-// EmailContains applies the Contains predicate on the "email" field.
-func EmailContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldEmail, v))
-}
-
-// EmailHasPrefix applies the HasPrefix predicate on the "email" field.
-func EmailHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldEmail, v))
-}
-
-// EmailHasSuffix applies the HasSuffix predicate on the "email" field.
-func EmailHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldEmail, v))
-}
-
-// EmailEqualFold applies the EqualFold predicate on the "email" field.
-func EmailEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldEmail, v))
-}
-
-// EmailContainsFold applies the ContainsFold predicate on the "email" field.
-func EmailContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldEmail, v))
-}
-
-// RoleEQ applies the EQ predicate on the "role" field.
-func RoleEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldRole, v))
-}
-
-// RoleNEQ applies the NEQ predicate on the "role" field.
-func RoleNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldRole, v))
-}
-
-// RoleIn applies the In predicate on the "role" field.
-func RoleIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldRole, vs...))
-}
-
-// RoleNotIn applies the NotIn predicate on the "role" field.
-func RoleNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldRole, vs...))
-}
-
-// RoleGT applies the GT predicate on the "role" field.
-func RoleGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldRole, v))
-}
-
-// RoleGTE applies the GTE predicate on the "role" field.
-func RoleGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldRole, v))
-}
-
-// RoleLT applies the LT predicate on the "role" field.
-func RoleLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldRole, v))
-}
-
-// RoleLTE applies the LTE predicate on the "role" field.
-func RoleLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldRole, v))
-}
-
-// RoleContains applies the Contains predicate on the "role" field.
-func RoleContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldRole, v))
-}
-
-// RoleHasPrefix applies the HasPrefix predicate on the "role" field.
-func RoleHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldRole, v))
-}
-
-// RoleHasSuffix applies the HasSuffix predicate on the "role" field.
-func RoleHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldRole, v))
-}
-
-// RoleEqualFold applies the EqualFold predicate on the "role" field.
-func RoleEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldRole, v))
-}
-
-// RoleContainsFold applies the ContainsFold predicate on the "role" field.
-func RoleContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldRole, v))
-}
-
-// StatusEQ applies the EQ predicate on the "status" field.
-func StatusEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldStatus, v))
-}
-
-// StatusNEQ applies the NEQ predicate on the "status" field.
-func StatusNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldStatus, v))
-}
-
-// StatusIn applies the In predicate on the "status" field.
-func StatusIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldStatus, vs...))
-}
-
-// StatusNotIn applies the NotIn predicate on the "status" field.
-func StatusNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldStatus, vs...))
-}
-
-// StatusGT applies the GT predicate on the "status" field.
-func StatusGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldStatus, v))
-}
-
-// StatusGTE applies the GTE predicate on the "status" field.
-func StatusGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldStatus, v))
-}
-
-// StatusLT applies the LT predicate on the "status" field.
-func StatusLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldStatus, v))
-}
-
-// StatusLTE applies the LTE predicate on the "status" field.
-func StatusLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldStatus, v))
-}
-
-// StatusContains applies the Contains predicate on the "status" field.
-func StatusContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldStatus, v))
-}
-
-// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
-func StatusHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldStatus, v))
-}
-
-// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
-func StatusHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldStatus, v))
-}
-
-// StatusEqualFold applies the EqualFold predicate on the "status" field.
-func StatusEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldStatus, v))
-}
-
-// StatusContainsFold applies the ContainsFold predicate on the "status" field.
-func StatusContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldStatus, v))
-}
-
-// NameEQ applies the EQ predicate on the "name" field.
-func NameEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldName, v))
-}
-
-// NameNEQ applies the NEQ predicate on the "name" field.
-func NameNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldName, v))
-}
-
-// NameIn applies the In predicate on the "name" field.
-func NameIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldName, vs...))
-}
-
-// NameNotIn applies the NotIn predicate on the "name" field.
-func NameNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldName, vs...))
-}
-
-// NameGT applies the GT predicate on the "name" field.
-func NameGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldName, v))
-}
-
-// NameGTE applies the GTE predicate on the "name" field.
-func NameGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldName, v))
-}
-
-// NameLT applies the LT predicate on the "name" field.
-func NameLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldName, v))
-}
-
-// NameLTE applies the LTE predicate on the "name" field.
-func NameLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldName, v))
-}
-
-// NameContains applies the Contains predicate on the "name" field.
-func NameContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldName, v))
-}
-
-// NameHasPrefix applies the HasPrefix predicate on the "name" field.
-func NameHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldName, v))
-}
-
-// NameHasSuffix applies the HasSuffix predicate on the "name" field.
-func NameHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldName, v))
-}
-
-// NameEqualFold applies the EqualFold predicate on the "name" field.
-func NameEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldName, v))
-}
-
-// NameContainsFold applies the ContainsFold predicate on the "name" field.
-func NameContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldName, v))
 }
 
 // WorkspaceIDEQ applies the EQ predicate on the "workspace_id" field.
@@ -824,199 +484,69 @@ func WorkspaceIDContainsFold(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldContainsFold(FieldWorkspaceID, v))
 }
 
-// ResourceIDEQ applies the EQ predicate on the "resource_id" field.
-func ResourceIDEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldResourceID, v))
+// NameEQ applies the EQ predicate on the "name" field.
+func NameEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldName, v))
 }
 
-// ResourceIDNEQ applies the NEQ predicate on the "resource_id" field.
-func ResourceIDNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldResourceID, v))
+// NameNEQ applies the NEQ predicate on the "name" field.
+func NameNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldName, v))
 }
 
-// ResourceIDIn applies the In predicate on the "resource_id" field.
-func ResourceIDIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldResourceID, vs...))
+// NameIn applies the In predicate on the "name" field.
+func NameIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldName, vs...))
 }
 
-// ResourceIDNotIn applies the NotIn predicate on the "resource_id" field.
-func ResourceIDNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldResourceID, vs...))
+// NameNotIn applies the NotIn predicate on the "name" field.
+func NameNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldName, vs...))
 }
 
-// ResourceIDGT applies the GT predicate on the "resource_id" field.
-func ResourceIDGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldResourceID, v))
+// NameGT applies the GT predicate on the "name" field.
+func NameGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldName, v))
 }
 
-// ResourceIDGTE applies the GTE predicate on the "resource_id" field.
-func ResourceIDGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldResourceID, v))
+// NameGTE applies the GTE predicate on the "name" field.
+func NameGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldName, v))
 }
 
-// ResourceIDLT applies the LT predicate on the "resource_id" field.
-func ResourceIDLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldResourceID, v))
+// NameLT applies the LT predicate on the "name" field.
+func NameLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldName, v))
 }
 
-// ResourceIDLTE applies the LTE predicate on the "resource_id" field.
-func ResourceIDLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldResourceID, v))
+// NameLTE applies the LTE predicate on the "name" field.
+func NameLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldName, v))
 }
 
-// ResourceIDContains applies the Contains predicate on the "resource_id" field.
-func ResourceIDContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldResourceID, v))
+// NameContains applies the Contains predicate on the "name" field.
+func NameContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldName, v))
 }
 
-// ResourceIDHasPrefix applies the HasPrefix predicate on the "resource_id" field.
-func ResourceIDHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldResourceID, v))
+// NameHasPrefix applies the HasPrefix predicate on the "name" field.
+func NameHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldName, v))
 }
 
-// ResourceIDHasSuffix applies the HasSuffix predicate on the "resource_id" field.
-func ResourceIDHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldResourceID, v))
+// NameHasSuffix applies the HasSuffix predicate on the "name" field.
+func NameHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldName, v))
 }
 
-// ResourceIDEqualFold applies the EqualFold predicate on the "resource_id" field.
-func ResourceIDEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldResourceID, v))
+// NameEqualFold applies the EqualFold predicate on the "name" field.
+func NameEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldName, v))
 }
 
-// ResourceIDContainsFold applies the ContainsFold predicate on the "resource_id" field.
-func ResourceIDContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldResourceID, v))
-}
-
-// ResourceKindEQ applies the EQ predicate on the "resource_kind" field.
-func ResourceKindEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldResourceKind, v))
-}
-
-// ResourceKindNEQ applies the NEQ predicate on the "resource_kind" field.
-func ResourceKindNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldResourceKind, v))
-}
-
-// ResourceKindIn applies the In predicate on the "resource_kind" field.
-func ResourceKindIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldResourceKind, vs...))
-}
-
-// ResourceKindNotIn applies the NotIn predicate on the "resource_kind" field.
-func ResourceKindNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldResourceKind, vs...))
-}
-
-// ResourceKindGT applies the GT predicate on the "resource_kind" field.
-func ResourceKindGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldResourceKind, v))
-}
-
-// ResourceKindGTE applies the GTE predicate on the "resource_kind" field.
-func ResourceKindGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldResourceKind, v))
-}
-
-// ResourceKindLT applies the LT predicate on the "resource_kind" field.
-func ResourceKindLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldResourceKind, v))
-}
-
-// ResourceKindLTE applies the LTE predicate on the "resource_kind" field.
-func ResourceKindLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldResourceKind, v))
-}
-
-// ResourceKindContains applies the Contains predicate on the "resource_kind" field.
-func ResourceKindContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldResourceKind, v))
-}
-
-// ResourceKindHasPrefix applies the HasPrefix predicate on the "resource_kind" field.
-func ResourceKindHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldResourceKind, v))
-}
-
-// ResourceKindHasSuffix applies the HasSuffix predicate on the "resource_kind" field.
-func ResourceKindHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldResourceKind, v))
-}
-
-// ResourceKindEqualFold applies the EqualFold predicate on the "resource_kind" field.
-func ResourceKindEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldResourceKind, v))
-}
-
-// ResourceKindContainsFold applies the ContainsFold predicate on the "resource_kind" field.
-func ResourceKindContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldResourceKind, v))
-}
-
-// OperationIDEQ applies the EQ predicate on the "operation_id" field.
-func OperationIDEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldOperationID, v))
-}
-
-// OperationIDNEQ applies the NEQ predicate on the "operation_id" field.
-func OperationIDNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldOperationID, v))
-}
-
-// OperationIDIn applies the In predicate on the "operation_id" field.
-func OperationIDIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldOperationID, vs...))
-}
-
-// OperationIDNotIn applies the NotIn predicate on the "operation_id" field.
-func OperationIDNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldOperationID, vs...))
-}
-
-// OperationIDGT applies the GT predicate on the "operation_id" field.
-func OperationIDGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldOperationID, v))
-}
-
-// OperationIDGTE applies the GTE predicate on the "operation_id" field.
-func OperationIDGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldOperationID, v))
-}
-
-// OperationIDLT applies the LT predicate on the "operation_id" field.
-func OperationIDLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldOperationID, v))
-}
-
-// OperationIDLTE applies the LTE predicate on the "operation_id" field.
-func OperationIDLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldOperationID, v))
-}
-
-// OperationIDContains applies the Contains predicate on the "operation_id" field.
-func OperationIDContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldOperationID, v))
-}
-
-// OperationIDHasPrefix applies the HasPrefix predicate on the "operation_id" field.
-func OperationIDHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldOperationID, v))
-}
-
-// OperationIDHasSuffix applies the HasSuffix predicate on the "operation_id" field.
-func OperationIDHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldOperationID, v))
-}
-
-// OperationIDEqualFold applies the EqualFold predicate on the "operation_id" field.
-func OperationIDEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldOperationID, v))
-}
-
-// OperationIDContainsFold applies the ContainsFold predicate on the "operation_id" field.
-func OperationIDContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldOperationID, v))
+// NameContainsFold applies the ContainsFold predicate on the "name" field.
+func NameContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldName, v))
 }
 
 // ProviderEQ applies the EQ predicate on the "provider" field.
@@ -1149,69 +679,264 @@ func ProviderResourceIDContainsFold(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldContainsFold(FieldProviderResourceID, v))
 }
 
-// URLEQ applies the EQ predicate on the "url" field.
-func URLEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldURL, v))
+// ProviderRequestIDEQ applies the EQ predicate on the "provider_request_id" field.
+func ProviderRequestIDEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldProviderRequestID, v))
 }
 
-// URLNEQ applies the NEQ predicate on the "url" field.
-func URLNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldURL, v))
+// ProviderRequestIDNEQ applies the NEQ predicate on the "provider_request_id" field.
+func ProviderRequestIDNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldProviderRequestID, v))
 }
 
-// URLIn applies the In predicate on the "url" field.
-func URLIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldURL, vs...))
+// ProviderRequestIDIn applies the In predicate on the "provider_request_id" field.
+func ProviderRequestIDIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldProviderRequestID, vs...))
 }
 
-// URLNotIn applies the NotIn predicate on the "url" field.
-func URLNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldURL, vs...))
+// ProviderRequestIDNotIn applies the NotIn predicate on the "provider_request_id" field.
+func ProviderRequestIDNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldProviderRequestID, vs...))
 }
 
-// URLGT applies the GT predicate on the "url" field.
-func URLGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldURL, v))
+// ProviderRequestIDGT applies the GT predicate on the "provider_request_id" field.
+func ProviderRequestIDGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldProviderRequestID, v))
 }
 
-// URLGTE applies the GTE predicate on the "url" field.
-func URLGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldURL, v))
+// ProviderRequestIDGTE applies the GTE predicate on the "provider_request_id" field.
+func ProviderRequestIDGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldProviderRequestID, v))
 }
 
-// URLLT applies the LT predicate on the "url" field.
-func URLLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldURL, v))
+// ProviderRequestIDLT applies the LT predicate on the "provider_request_id" field.
+func ProviderRequestIDLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldProviderRequestID, v))
 }
 
-// URLLTE applies the LTE predicate on the "url" field.
-func URLLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldURL, v))
+// ProviderRequestIDLTE applies the LTE predicate on the "provider_request_id" field.
+func ProviderRequestIDLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldProviderRequestID, v))
 }
 
-// URLContains applies the Contains predicate on the "url" field.
-func URLContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldURL, v))
+// ProviderRequestIDContains applies the Contains predicate on the "provider_request_id" field.
+func ProviderRequestIDContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldProviderRequestID, v))
 }
 
-// URLHasPrefix applies the HasPrefix predicate on the "url" field.
-func URLHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldURL, v))
+// ProviderRequestIDHasPrefix applies the HasPrefix predicate on the "provider_request_id" field.
+func ProviderRequestIDHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldProviderRequestID, v))
 }
 
-// URLHasSuffix applies the HasSuffix predicate on the "url" field.
-func URLHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldURL, v))
+// ProviderRequestIDHasSuffix applies the HasSuffix predicate on the "provider_request_id" field.
+func ProviderRequestIDHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldProviderRequestID, v))
 }
 
-// URLEqualFold applies the EqualFold predicate on the "url" field.
-func URLEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldURL, v))
+// ProviderRequestIDEqualFold applies the EqualFold predicate on the "provider_request_id" field.
+func ProviderRequestIDEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldProviderRequestID, v))
 }
 
-// URLContainsFold applies the ContainsFold predicate on the "url" field.
-func URLContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldURL, v))
+// ProviderRequestIDContainsFold applies the ContainsFold predicate on the "provider_request_id" field.
+func ProviderRequestIDContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldProviderRequestID, v))
+}
+
+// OperationIDEQ applies the EQ predicate on the "operation_id" field.
+func OperationIDEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldOperationID, v))
+}
+
+// OperationIDNEQ applies the NEQ predicate on the "operation_id" field.
+func OperationIDNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldOperationID, v))
+}
+
+// OperationIDIn applies the In predicate on the "operation_id" field.
+func OperationIDIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldOperationID, vs...))
+}
+
+// OperationIDNotIn applies the NotIn predicate on the "operation_id" field.
+func OperationIDNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldOperationID, vs...))
+}
+
+// OperationIDGT applies the GT predicate on the "operation_id" field.
+func OperationIDGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldOperationID, v))
+}
+
+// OperationIDGTE applies the GTE predicate on the "operation_id" field.
+func OperationIDGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldOperationID, v))
+}
+
+// OperationIDLT applies the LT predicate on the "operation_id" field.
+func OperationIDLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldOperationID, v))
+}
+
+// OperationIDLTE applies the LTE predicate on the "operation_id" field.
+func OperationIDLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldOperationID, v))
+}
+
+// OperationIDContains applies the Contains predicate on the "operation_id" field.
+func OperationIDContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldOperationID, v))
+}
+
+// OperationIDHasPrefix applies the HasPrefix predicate on the "operation_id" field.
+func OperationIDHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldOperationID, v))
+}
+
+// OperationIDHasSuffix applies the HasSuffix predicate on the "operation_id" field.
+func OperationIDHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldOperationID, v))
+}
+
+// OperationIDEqualFold applies the EqualFold predicate on the "operation_id" field.
+func OperationIDEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldOperationID, v))
+}
+
+// OperationIDContainsFold applies the ContainsFold predicate on the "operation_id" field.
+func OperationIDContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldOperationID, v))
+}
+
+// StatusEQ applies the EQ predicate on the "status" field.
+func StatusEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldStatus, v))
+}
+
+// StatusNEQ applies the NEQ predicate on the "status" field.
+func StatusNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldStatus, v))
+}
+
+// StatusIn applies the In predicate on the "status" field.
+func StatusIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldStatus, vs...))
+}
+
+// StatusNotIn applies the NotIn predicate on the "status" field.
+func StatusNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldStatus, vs...))
+}
+
+// StatusGT applies the GT predicate on the "status" field.
+func StatusGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldStatus, v))
+}
+
+// StatusGTE applies the GTE predicate on the "status" field.
+func StatusGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldStatus, v))
+}
+
+// StatusLT applies the LT predicate on the "status" field.
+func StatusLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldStatus, v))
+}
+
+// StatusLTE applies the LTE predicate on the "status" field.
+func StatusLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldStatus, v))
+}
+
+// StatusContains applies the Contains predicate on the "status" field.
+func StatusContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldStatus, v))
+}
+
+// StatusHasPrefix applies the HasPrefix predicate on the "status" field.
+func StatusHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldStatus, v))
+}
+
+// StatusHasSuffix applies the HasSuffix predicate on the "status" field.
+func StatusHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldStatus, v))
+}
+
+// StatusEqualFold applies the EqualFold predicate on the "status" field.
+func StatusEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldStatus, v))
+}
+
+// StatusContainsFold applies the ContainsFold predicate on the "status" field.
+func StatusContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldStatus, v))
+}
+
+// BillingStatusEQ applies the EQ predicate on the "billing_status" field.
+func BillingStatusEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldBillingStatus, v))
+}
+
+// BillingStatusNEQ applies the NEQ predicate on the "billing_status" field.
+func BillingStatusNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldBillingStatus, v))
+}
+
+// BillingStatusIn applies the In predicate on the "billing_status" field.
+func BillingStatusIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldBillingStatus, vs...))
+}
+
+// BillingStatusNotIn applies the NotIn predicate on the "billing_status" field.
+func BillingStatusNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldBillingStatus, vs...))
+}
+
+// BillingStatusGT applies the GT predicate on the "billing_status" field.
+func BillingStatusGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldBillingStatus, v))
+}
+
+// BillingStatusGTE applies the GTE predicate on the "billing_status" field.
+func BillingStatusGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldBillingStatus, v))
+}
+
+// BillingStatusLT applies the LT predicate on the "billing_status" field.
+func BillingStatusLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldBillingStatus, v))
+}
+
+// BillingStatusLTE applies the LTE predicate on the "billing_status" field.
+func BillingStatusLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldBillingStatus, v))
+}
+
+// BillingStatusContains applies the Contains predicate on the "billing_status" field.
+func BillingStatusContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldBillingStatus, v))
+}
+
+// BillingStatusHasPrefix applies the HasPrefix predicate on the "billing_status" field.
+func BillingStatusHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldBillingStatus, v))
+}
+
+// BillingStatusHasSuffix applies the HasSuffix predicate on the "billing_status" field.
+func BillingStatusHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldBillingStatus, v))
+}
+
+// BillingStatusEqualFold applies the EqualFold predicate on the "billing_status" field.
+func BillingStatusEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldBillingStatus, v))
+}
+
+// BillingStatusContainsFold applies the ContainsFold predicate on the "billing_status" field.
+func BillingStatusContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldBillingStatus, v))
 }
 
 // HoldIDEQ applies the EQ predicate on the "hold_id" field.
@@ -1344,6 +1069,71 @@ func HoldReleaseIDContainsFold(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldContainsFold(FieldHoldReleaseID, v))
 }
 
+// SettlementIDEQ applies the EQ predicate on the "settlement_id" field.
+func SettlementIDEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldSettlementID, v))
+}
+
+// SettlementIDNEQ applies the NEQ predicate on the "settlement_id" field.
+func SettlementIDNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldSettlementID, v))
+}
+
+// SettlementIDIn applies the In predicate on the "settlement_id" field.
+func SettlementIDIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldSettlementID, vs...))
+}
+
+// SettlementIDNotIn applies the NotIn predicate on the "settlement_id" field.
+func SettlementIDNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldSettlementID, vs...))
+}
+
+// SettlementIDGT applies the GT predicate on the "settlement_id" field.
+func SettlementIDGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldSettlementID, v))
+}
+
+// SettlementIDGTE applies the GTE predicate on the "settlement_id" field.
+func SettlementIDGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldSettlementID, v))
+}
+
+// SettlementIDLT applies the LT predicate on the "settlement_id" field.
+func SettlementIDLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldSettlementID, v))
+}
+
+// SettlementIDLTE applies the LTE predicate on the "settlement_id" field.
+func SettlementIDLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldSettlementID, v))
+}
+
+// SettlementIDContains applies the Contains predicate on the "settlement_id" field.
+func SettlementIDContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldSettlementID, v))
+}
+
+// SettlementIDHasPrefix applies the HasPrefix predicate on the "settlement_id" field.
+func SettlementIDHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldSettlementID, v))
+}
+
+// SettlementIDHasSuffix applies the HasSuffix predicate on the "settlement_id" field.
+func SettlementIDHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldSettlementID, v))
+}
+
+// SettlementIDEqualFold applies the EqualFold predicate on the "settlement_id" field.
+func SettlementIDEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldSettlementID, v))
+}
+
+// SettlementIDContainsFold applies the ContainsFold predicate on the "settlement_id" field.
+func SettlementIDContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldSettlementID, v))
+}
+
 // LedgerEntryIDEQ applies the EQ predicate on the "ledger_entry_id" field.
 func LedgerEntryIDEQ(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldLedgerEntryID, v))
@@ -1474,71 +1264,6 @@ func WalletTransactionIDContainsFold(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldContainsFold(FieldWalletTransactionID, v))
 }
 
-// SettlementIDEQ applies the EQ predicate on the "settlement_id" field.
-func SettlementIDEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldSettlementID, v))
-}
-
-// SettlementIDNEQ applies the NEQ predicate on the "settlement_id" field.
-func SettlementIDNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldSettlementID, v))
-}
-
-// SettlementIDIn applies the In predicate on the "settlement_id" field.
-func SettlementIDIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldSettlementID, vs...))
-}
-
-// SettlementIDNotIn applies the NotIn predicate on the "settlement_id" field.
-func SettlementIDNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldSettlementID, vs...))
-}
-
-// SettlementIDGT applies the GT predicate on the "settlement_id" field.
-func SettlementIDGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldSettlementID, v))
-}
-
-// SettlementIDGTE applies the GTE predicate on the "settlement_id" field.
-func SettlementIDGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldSettlementID, v))
-}
-
-// SettlementIDLT applies the LT predicate on the "settlement_id" field.
-func SettlementIDLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldSettlementID, v))
-}
-
-// SettlementIDLTE applies the LTE predicate on the "settlement_id" field.
-func SettlementIDLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldSettlementID, v))
-}
-
-// SettlementIDContains applies the Contains predicate on the "settlement_id" field.
-func SettlementIDContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldSettlementID, v))
-}
-
-// SettlementIDHasPrefix applies the HasPrefix predicate on the "settlement_id" field.
-func SettlementIDHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldSettlementID, v))
-}
-
-// SettlementIDHasSuffix applies the HasSuffix predicate on the "settlement_id" field.
-func SettlementIDHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldSettlementID, v))
-}
-
-// SettlementIDEqualFold applies the EqualFold predicate on the "settlement_id" field.
-func SettlementIDEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldSettlementID, v))
-}
-
-// SettlementIDContainsFold applies the ContainsFold predicate on the "settlement_id" field.
-func SettlementIDContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldSettlementID, v))
-}
-
 // PricingVersionEQ applies the EQ predicate on the "pricing_version" field.
 func PricingVersionEQ(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldEQ(FieldPricingVersion, v))
@@ -1604,699 +1329,569 @@ func PricingVersionContainsFold(v string) predicate.StorageVolume {
 	return predicate.StorageVolume(sql.FieldContainsFold(FieldPricingVersion, v))
 }
 
-// AmountCentsEQ applies the EQ predicate on the "amount_cents" field.
-func AmountCentsEQ(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldAmountCents, v))
+// UsagePeriodEndEQ applies the EQ predicate on the "usage_period_end" field.
+func UsagePeriodEndEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldUsagePeriodEnd, v))
 }
 
-// AmountCentsNEQ applies the NEQ predicate on the "amount_cents" field.
-func AmountCentsNEQ(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldAmountCents, v))
+// UsagePeriodEndNEQ applies the NEQ predicate on the "usage_period_end" field.
+func UsagePeriodEndNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldUsagePeriodEnd, v))
 }
 
-// AmountCentsIn applies the In predicate on the "amount_cents" field.
-func AmountCentsIn(vs ...int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldAmountCents, vs...))
+// UsagePeriodEndIn applies the In predicate on the "usage_period_end" field.
+func UsagePeriodEndIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldUsagePeriodEnd, vs...))
 }
 
-// AmountCentsNotIn applies the NotIn predicate on the "amount_cents" field.
-func AmountCentsNotIn(vs ...int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldAmountCents, vs...))
+// UsagePeriodEndNotIn applies the NotIn predicate on the "usage_period_end" field.
+func UsagePeriodEndNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldUsagePeriodEnd, vs...))
 }
 
-// AmountCentsGT applies the GT predicate on the "amount_cents" field.
-func AmountCentsGT(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldAmountCents, v))
+// UsagePeriodEndGT applies the GT predicate on the "usage_period_end" field.
+func UsagePeriodEndGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldUsagePeriodEnd, v))
 }
 
-// AmountCentsGTE applies the GTE predicate on the "amount_cents" field.
-func AmountCentsGTE(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldAmountCents, v))
+// UsagePeriodEndGTE applies the GTE predicate on the "usage_period_end" field.
+func UsagePeriodEndGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldUsagePeriodEnd, v))
 }
 
-// AmountCentsLT applies the LT predicate on the "amount_cents" field.
-func AmountCentsLT(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldAmountCents, v))
+// UsagePeriodEndLT applies the LT predicate on the "usage_period_end" field.
+func UsagePeriodEndLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldUsagePeriodEnd, v))
 }
 
-// AmountCentsLTE applies the LTE predicate on the "amount_cents" field.
-func AmountCentsLTE(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldAmountCents, v))
+// UsagePeriodEndLTE applies the LTE predicate on the "usage_period_end" field.
+func UsagePeriodEndLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCentsEQ applies the EQ predicate on the "balance_cents" field.
-func BalanceCentsEQ(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldBalanceCents, v))
+// UsagePeriodEndContains applies the Contains predicate on the "usage_period_end" field.
+func UsagePeriodEndContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCentsNEQ applies the NEQ predicate on the "balance_cents" field.
-func BalanceCentsNEQ(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldBalanceCents, v))
+// UsagePeriodEndHasPrefix applies the HasPrefix predicate on the "usage_period_end" field.
+func UsagePeriodEndHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCentsIn applies the In predicate on the "balance_cents" field.
-func BalanceCentsIn(vs ...int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldBalanceCents, vs...))
+// UsagePeriodEndHasSuffix applies the HasSuffix predicate on the "usage_period_end" field.
+func UsagePeriodEndHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCentsNotIn applies the NotIn predicate on the "balance_cents" field.
-func BalanceCentsNotIn(vs ...int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldBalanceCents, vs...))
+// UsagePeriodEndEqualFold applies the EqualFold predicate on the "usage_period_end" field.
+func UsagePeriodEndEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCentsGT applies the GT predicate on the "balance_cents" field.
-func BalanceCentsGT(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldBalanceCents, v))
+// UsagePeriodEndContainsFold applies the ContainsFold predicate on the "usage_period_end" field.
+func UsagePeriodEndContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldUsagePeriodEnd, v))
 }
 
-// BalanceCentsGTE applies the GTE predicate on the "balance_cents" field.
-func BalanceCentsGTE(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldBalanceCents, v))
+// MountPathEQ applies the EQ predicate on the "mount_path" field.
+func MountPathEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldMountPath, v))
 }
 
-// BalanceCentsLT applies the LT predicate on the "balance_cents" field.
-func BalanceCentsLT(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldBalanceCents, v))
+// MountPathNEQ applies the NEQ predicate on the "mount_path" field.
+func MountPathNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldMountPath, v))
 }
 
-// BalanceCentsLTE applies the LTE predicate on the "balance_cents" field.
-func BalanceCentsLTE(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldBalanceCents, v))
+// MountPathIn applies the In predicate on the "mount_path" field.
+func MountPathIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldMountPath, vs...))
 }
 
-// FrozenCentsEQ applies the EQ predicate on the "frozen_cents" field.
-func FrozenCentsEQ(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldFrozenCents, v))
+// MountPathNotIn applies the NotIn predicate on the "mount_path" field.
+func MountPathNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldMountPath, vs...))
 }
 
-// FrozenCentsNEQ applies the NEQ predicate on the "frozen_cents" field.
-func FrozenCentsNEQ(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldFrozenCents, v))
+// MountPathGT applies the GT predicate on the "mount_path" field.
+func MountPathGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldMountPath, v))
 }
 
-// FrozenCentsIn applies the In predicate on the "frozen_cents" field.
-func FrozenCentsIn(vs ...int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldFrozenCents, vs...))
+// MountPathGTE applies the GTE predicate on the "mount_path" field.
+func MountPathGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldMountPath, v))
 }
 
-// FrozenCentsNotIn applies the NotIn predicate on the "frozen_cents" field.
-func FrozenCentsNotIn(vs ...int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldFrozenCents, vs...))
+// MountPathLT applies the LT predicate on the "mount_path" field.
+func MountPathLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldMountPath, v))
 }
 
-// FrozenCentsGT applies the GT predicate on the "frozen_cents" field.
-func FrozenCentsGT(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldFrozenCents, v))
+// MountPathLTE applies the LTE predicate on the "mount_path" field.
+func MountPathLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldMountPath, v))
 }
 
-// FrozenCentsGTE applies the GTE predicate on the "frozen_cents" field.
-func FrozenCentsGTE(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldFrozenCents, v))
+// MountPathContains applies the Contains predicate on the "mount_path" field.
+func MountPathContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldMountPath, v))
 }
 
-// FrozenCentsLT applies the LT predicate on the "frozen_cents" field.
-func FrozenCentsLT(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldFrozenCents, v))
+// MountPathHasPrefix applies the HasPrefix predicate on the "mount_path" field.
+func MountPathHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldMountPath, v))
 }
 
-// FrozenCentsLTE applies the LTE predicate on the "frozen_cents" field.
-func FrozenCentsLTE(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldFrozenCents, v))
+// MountPathHasSuffix applies the HasSuffix predicate on the "mount_path" field.
+func MountPathHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldMountPath, v))
 }
 
-// AvailableCentsEQ applies the EQ predicate on the "available_cents" field.
-func AvailableCentsEQ(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldAvailableCents, v))
+// MountPathEqualFold applies the EqualFold predicate on the "mount_path" field.
+func MountPathEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldMountPath, v))
 }
 
-// AvailableCentsNEQ applies the NEQ predicate on the "available_cents" field.
-func AvailableCentsNEQ(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldAvailableCents, v))
+// MountPathContainsFold applies the ContainsFold predicate on the "mount_path" field.
+func MountPathContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldMountPath, v))
 }
 
-// AvailableCentsIn applies the In predicate on the "available_cents" field.
-func AvailableCentsIn(vs ...int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldAvailableCents, vs...))
+// HoldAmountCentsEQ applies the EQ predicate on the "hold_amount_cents" field.
+func HoldAmountCentsEQ(v int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldHoldAmountCents, v))
 }
 
-// AvailableCentsNotIn applies the NotIn predicate on the "available_cents" field.
-func AvailableCentsNotIn(vs ...int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldAvailableCents, vs...))
+// HoldAmountCentsNEQ applies the NEQ predicate on the "hold_amount_cents" field.
+func HoldAmountCentsNEQ(v int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldHoldAmountCents, v))
 }
 
-// AvailableCentsGT applies the GT predicate on the "available_cents" field.
-func AvailableCentsGT(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldAvailableCents, v))
+// HoldAmountCentsIn applies the In predicate on the "hold_amount_cents" field.
+func HoldAmountCentsIn(vs ...int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldHoldAmountCents, vs...))
 }
 
-// AvailableCentsGTE applies the GTE predicate on the "available_cents" field.
-func AvailableCentsGTE(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldAvailableCents, v))
+// HoldAmountCentsNotIn applies the NotIn predicate on the "hold_amount_cents" field.
+func HoldAmountCentsNotIn(vs ...int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldHoldAmountCents, vs...))
 }
 
-// AvailableCentsLT applies the LT predicate on the "available_cents" field.
-func AvailableCentsLT(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldAvailableCents, v))
+// HoldAmountCentsGT applies the GT predicate on the "hold_amount_cents" field.
+func HoldAmountCentsGT(v int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldHoldAmountCents, v))
 }
 
-// AvailableCentsLTE applies the LTE predicate on the "available_cents" field.
-func AvailableCentsLTE(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldAvailableCents, v))
+// HoldAmountCentsGTE applies the GTE predicate on the "hold_amount_cents" field.
+func HoldAmountCentsGTE(v int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldHoldAmountCents, v))
 }
 
-// TotalSpentCentsEQ applies the EQ predicate on the "total_spent_cents" field.
-func TotalSpentCentsEQ(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldTotalSpentCents, v))
+// HoldAmountCentsLT applies the LT predicate on the "hold_amount_cents" field.
+func HoldAmountCentsLT(v int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldHoldAmountCents, v))
 }
 
-// TotalSpentCentsNEQ applies the NEQ predicate on the "total_spent_cents" field.
-func TotalSpentCentsNEQ(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldTotalSpentCents, v))
+// HoldAmountCentsLTE applies the LTE predicate on the "hold_amount_cents" field.
+func HoldAmountCentsLTE(v int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldHoldAmountCents, v))
 }
 
-// TotalSpentCentsIn applies the In predicate on the "total_spent_cents" field.
-func TotalSpentCentsIn(vs ...int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldTotalSpentCents, vs...))
+// HoldAmountEQ applies the EQ predicate on the "hold_amount" field.
+func HoldAmountEQ(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldHoldAmount, v))
 }
 
-// TotalSpentCentsNotIn applies the NotIn predicate on the "total_spent_cents" field.
-func TotalSpentCentsNotIn(vs ...int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldTotalSpentCents, vs...))
+// HoldAmountNEQ applies the NEQ predicate on the "hold_amount" field.
+func HoldAmountNEQ(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldHoldAmount, v))
 }
 
-// TotalSpentCentsGT applies the GT predicate on the "total_spent_cents" field.
-func TotalSpentCentsGT(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldTotalSpentCents, v))
+// HoldAmountIn applies the In predicate on the "hold_amount" field.
+func HoldAmountIn(vs ...float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldHoldAmount, vs...))
 }
 
-// TotalSpentCentsGTE applies the GTE predicate on the "total_spent_cents" field.
-func TotalSpentCentsGTE(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldTotalSpentCents, v))
+// HoldAmountNotIn applies the NotIn predicate on the "hold_amount" field.
+func HoldAmountNotIn(vs ...float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldHoldAmount, vs...))
 }
 
-// TotalSpentCentsLT applies the LT predicate on the "total_spent_cents" field.
-func TotalSpentCentsLT(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldTotalSpentCents, v))
+// HoldAmountGT applies the GT predicate on the "hold_amount" field.
+func HoldAmountGT(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldHoldAmount, v))
 }
 
-// TotalSpentCentsLTE applies the LTE predicate on the "total_spent_cents" field.
-func TotalSpentCentsLTE(v int64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldTotalSpentCents, v))
+// HoldAmountGTE applies the GTE predicate on the "hold_amount" field.
+func HoldAmountGTE(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldHoldAmount, v))
 }
 
-// QuantityEQ applies the EQ predicate on the "quantity" field.
-func QuantityEQ(v float64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldQuantity, v))
+// HoldAmountLT applies the LT predicate on the "hold_amount" field.
+func HoldAmountLT(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldHoldAmount, v))
 }
 
-// QuantityNEQ applies the NEQ predicate on the "quantity" field.
-func QuantityNEQ(v float64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldQuantity, v))
+// HoldAmountLTE applies the LTE predicate on the "hold_amount" field.
+func HoldAmountLTE(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldHoldAmount, v))
 }
 
-// QuantityIn applies the In predicate on the "quantity" field.
-func QuantityIn(vs ...float64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldQuantity, vs...))
+// SizeGBEQ applies the EQ predicate on the "size_gb" field.
+func SizeGBEQ(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldSizeGB, v))
 }
 
-// QuantityNotIn applies the NotIn predicate on the "quantity" field.
-func QuantityNotIn(vs ...float64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldQuantity, vs...))
+// SizeGBNEQ applies the NEQ predicate on the "size_gb" field.
+func SizeGBNEQ(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldSizeGB, v))
 }
 
-// QuantityGT applies the GT predicate on the "quantity" field.
-func QuantityGT(v float64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldQuantity, v))
+// SizeGBIn applies the In predicate on the "size_gb" field.
+func SizeGBIn(vs ...float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldSizeGB, vs...))
 }
 
-// QuantityGTE applies the GTE predicate on the "quantity" field.
-func QuantityGTE(v float64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldQuantity, v))
+// SizeGBNotIn applies the NotIn predicate on the "size_gb" field.
+func SizeGBNotIn(vs ...float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldSizeGB, vs...))
 }
 
-// QuantityLT applies the LT predicate on the "quantity" field.
-func QuantityLT(v float64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldQuantity, v))
+// SizeGBGT applies the GT predicate on the "size_gb" field.
+func SizeGBGT(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldSizeGB, v))
 }
 
-// QuantityLTE applies the LTE predicate on the "quantity" field.
-func QuantityLTE(v float64) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldQuantity, v))
+// SizeGBGTE applies the GTE predicate on the "size_gb" field.
+func SizeGBGTE(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldSizeGB, v))
 }
 
-// UnitEQ applies the EQ predicate on the "unit" field.
-func UnitEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldUnit, v))
+// SizeGBLT applies the LT predicate on the "size_gb" field.
+func SizeGBLT(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldSizeGB, v))
 }
 
-// UnitNEQ applies the NEQ predicate on the "unit" field.
-func UnitNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldUnit, v))
+// SizeGBLTE applies the LTE predicate on the "size_gb" field.
+func SizeGBLTE(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldSizeGB, v))
 }
 
-// UnitIn applies the In predicate on the "unit" field.
-func UnitIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldUnit, vs...))
+// PriceSnapshotResourceTypeEQ applies the EQ predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldPriceSnapshotResourceType, v))
 }
 
-// UnitNotIn applies the NotIn predicate on the "unit" field.
-func UnitNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldUnit, vs...))
+// PriceSnapshotResourceTypeNEQ applies the NEQ predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldPriceSnapshotResourceType, v))
 }
 
-// UnitGT applies the GT predicate on the "unit" field.
-func UnitGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldUnit, v))
+// PriceSnapshotResourceTypeIn applies the In predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldPriceSnapshotResourceType, vs...))
 }
 
-// UnitGTE applies the GTE predicate on the "unit" field.
-func UnitGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldUnit, v))
+// PriceSnapshotResourceTypeNotIn applies the NotIn predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldPriceSnapshotResourceType, vs...))
 }
 
-// UnitLT applies the LT predicate on the "unit" field.
-func UnitLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldUnit, v))
+// PriceSnapshotResourceTypeGT applies the GT predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldPriceSnapshotResourceType, v))
 }
 
-// UnitLTE applies the LTE predicate on the "unit" field.
-func UnitLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldUnit, v))
+// PriceSnapshotResourceTypeGTE applies the GTE predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldPriceSnapshotResourceType, v))
 }
 
-// UnitContains applies the Contains predicate on the "unit" field.
-func UnitContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldUnit, v))
+// PriceSnapshotResourceTypeLT applies the LT predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldPriceSnapshotResourceType, v))
 }
 
-// UnitHasPrefix applies the HasPrefix predicate on the "unit" field.
-func UnitHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldUnit, v))
+// PriceSnapshotResourceTypeLTE applies the LTE predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldPriceSnapshotResourceType, v))
 }
 
-// UnitHasSuffix applies the HasSuffix predicate on the "unit" field.
-func UnitHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldUnit, v))
+// PriceSnapshotResourceTypeContains applies the Contains predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldPriceSnapshotResourceType, v))
 }
 
-// UnitEqualFold applies the EqualFold predicate on the "unit" field.
-func UnitEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldUnit, v))
+// PriceSnapshotResourceTypeHasPrefix applies the HasPrefix predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldPriceSnapshotResourceType, v))
 }
 
-// UnitContainsFold applies the ContainsFold predicate on the "unit" field.
-func UnitContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldUnit, v))
+// PriceSnapshotResourceTypeHasSuffix applies the HasSuffix predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldPriceSnapshotResourceType, v))
 }
 
-// ReasonEQ applies the EQ predicate on the "reason" field.
-func ReasonEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldReason, v))
+// PriceSnapshotResourceTypeEqualFold applies the EqualFold predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldPriceSnapshotResourceType, v))
 }
 
-// ReasonNEQ applies the NEQ predicate on the "reason" field.
-func ReasonNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldReason, v))
+// PriceSnapshotResourceTypeContainsFold applies the ContainsFold predicate on the "price_snapshot_resource_type" field.
+func PriceSnapshotResourceTypeContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldPriceSnapshotResourceType, v))
 }
 
-// ReasonIn applies the In predicate on the "reason" field.
-func ReasonIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldReason, vs...))
+// PriceSnapshotCurrencyEQ applies the EQ predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldPriceSnapshotCurrency, v))
 }
 
-// ReasonNotIn applies the NotIn predicate on the "reason" field.
-func ReasonNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldReason, vs...))
+// PriceSnapshotCurrencyNEQ applies the NEQ predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldPriceSnapshotCurrency, v))
 }
 
-// ReasonGT applies the GT predicate on the "reason" field.
-func ReasonGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldReason, v))
+// PriceSnapshotCurrencyIn applies the In predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldPriceSnapshotCurrency, vs...))
 }
 
-// ReasonGTE applies the GTE predicate on the "reason" field.
-func ReasonGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldReason, v))
+// PriceSnapshotCurrencyNotIn applies the NotIn predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldPriceSnapshotCurrency, vs...))
 }
 
-// ReasonLT applies the LT predicate on the "reason" field.
-func ReasonLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldReason, v))
+// PriceSnapshotCurrencyGT applies the GT predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldPriceSnapshotCurrency, v))
 }
 
-// ReasonLTE applies the LTE predicate on the "reason" field.
-func ReasonLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldReason, v))
+// PriceSnapshotCurrencyGTE applies the GTE predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldPriceSnapshotCurrency, v))
 }
 
-// ReasonContains applies the Contains predicate on the "reason" field.
-func ReasonContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldReason, v))
+// PriceSnapshotCurrencyLT applies the LT predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldPriceSnapshotCurrency, v))
 }
 
-// ReasonHasPrefix applies the HasPrefix predicate on the "reason" field.
-func ReasonHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldReason, v))
+// PriceSnapshotCurrencyLTE applies the LTE predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldPriceSnapshotCurrency, v))
 }
 
-// ReasonHasSuffix applies the HasSuffix predicate on the "reason" field.
-func ReasonHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldReason, v))
+// PriceSnapshotCurrencyContains applies the Contains predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldPriceSnapshotCurrency, v))
 }
 
-// ReasonEqualFold applies the EqualFold predicate on the "reason" field.
-func ReasonEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldReason, v))
+// PriceSnapshotCurrencyHasPrefix applies the HasPrefix predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldPriceSnapshotCurrency, v))
 }
 
-// ReasonContainsFold applies the ContainsFold predicate on the "reason" field.
-func ReasonContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldReason, v))
+// PriceSnapshotCurrencyHasSuffix applies the HasSuffix predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldPriceSnapshotCurrency, v))
 }
 
-// ResultEQ applies the EQ predicate on the "result" field.
-func ResultEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldResult, v))
+// PriceSnapshotCurrencyEqualFold applies the EqualFold predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldPriceSnapshotCurrency, v))
 }
 
-// ResultNEQ applies the NEQ predicate on the "result" field.
-func ResultNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldResult, v))
+// PriceSnapshotCurrencyContainsFold applies the ContainsFold predicate on the "price_snapshot_currency" field.
+func PriceSnapshotCurrencyContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldPriceSnapshotCurrency, v))
 }
 
-// ResultIn applies the In predicate on the "result" field.
-func ResultIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldResult, vs...))
+// PriceSnapshotSourceEQ applies the EQ predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldPriceSnapshotSource, v))
 }
 
-// ResultNotIn applies the NotIn predicate on the "result" field.
-func ResultNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldResult, vs...))
+// PriceSnapshotSourceNEQ applies the NEQ predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceNEQ(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldPriceSnapshotSource, v))
 }
 
-// ResultGT applies the GT predicate on the "result" field.
-func ResultGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldResult, v))
+// PriceSnapshotSourceIn applies the In predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldPriceSnapshotSource, vs...))
 }
 
-// ResultGTE applies the GTE predicate on the "result" field.
-func ResultGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldResult, v))
+// PriceSnapshotSourceNotIn applies the NotIn predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceNotIn(vs ...string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldPriceSnapshotSource, vs...))
 }
 
-// ResultLT applies the LT predicate on the "result" field.
-func ResultLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldResult, v))
+// PriceSnapshotSourceGT applies the GT predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceGT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldPriceSnapshotSource, v))
 }
 
-// ResultLTE applies the LTE predicate on the "result" field.
-func ResultLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldResult, v))
+// PriceSnapshotSourceGTE applies the GTE predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceGTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldPriceSnapshotSource, v))
 }
 
-// ResultContains applies the Contains predicate on the "result" field.
-func ResultContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldResult, v))
+// PriceSnapshotSourceLT applies the LT predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceLT(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldPriceSnapshotSource, v))
 }
 
-// ResultHasPrefix applies the HasPrefix predicate on the "result" field.
-func ResultHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldResult, v))
+// PriceSnapshotSourceLTE applies the LTE predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceLTE(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldPriceSnapshotSource, v))
 }
 
-// ResultHasSuffix applies the HasSuffix predicate on the "result" field.
-func ResultHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldResult, v))
+// PriceSnapshotSourceContains applies the Contains predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceContains(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContains(FieldPriceSnapshotSource, v))
 }
 
-// ResultEqualFold applies the EqualFold predicate on the "result" field.
-func ResultEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldResult, v))
+// PriceSnapshotSourceHasPrefix applies the HasPrefix predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceHasPrefix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasPrefix(FieldPriceSnapshotSource, v))
 }
 
-// ResultContainsFold applies the ContainsFold predicate on the "result" field.
-func ResultContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldResult, v))
+// PriceSnapshotSourceHasSuffix applies the HasSuffix predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceHasSuffix(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldHasSuffix(FieldPriceSnapshotSource, v))
 }
 
-// SourceEQ applies the EQ predicate on the "source" field.
-func SourceEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldSource, v))
+// PriceSnapshotSourceEqualFold applies the EqualFold predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceEqualFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEqualFold(FieldPriceSnapshotSource, v))
 }
 
-// SourceNEQ applies the NEQ predicate on the "source" field.
-func SourceNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldSource, v))
+// PriceSnapshotSourceContainsFold applies the ContainsFold predicate on the "price_snapshot_source" field.
+func PriceSnapshotSourceContainsFold(v string) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldContainsFold(FieldPriceSnapshotSource, v))
 }
 
-// SourceIn applies the In predicate on the "source" field.
-func SourceIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldSource, vs...))
+// PriceSnapshotUnitPriceCentsEQ applies the EQ predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsEQ(v int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldPriceSnapshotUnitPriceCents, v))
 }
 
-// SourceNotIn applies the NotIn predicate on the "source" field.
-func SourceNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldSource, vs...))
+// PriceSnapshotUnitPriceCentsNEQ applies the NEQ predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsNEQ(v int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldPriceSnapshotUnitPriceCents, v))
 }
 
-// SourceGT applies the GT predicate on the "source" field.
-func SourceGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldSource, v))
+// PriceSnapshotUnitPriceCentsIn applies the In predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsIn(vs ...int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldPriceSnapshotUnitPriceCents, vs...))
 }
 
-// SourceGTE applies the GTE predicate on the "source" field.
-func SourceGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldSource, v))
+// PriceSnapshotUnitPriceCentsNotIn applies the NotIn predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsNotIn(vs ...int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldPriceSnapshotUnitPriceCents, vs...))
 }
 
-// SourceLT applies the LT predicate on the "source" field.
-func SourceLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldSource, v))
+// PriceSnapshotUnitPriceCentsGT applies the GT predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsGT(v int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldPriceSnapshotUnitPriceCents, v))
 }
 
-// SourceLTE applies the LTE predicate on the "source" field.
-func SourceLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldSource, v))
+// PriceSnapshotUnitPriceCentsGTE applies the GTE predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsGTE(v int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldPriceSnapshotUnitPriceCents, v))
 }
 
-// SourceContains applies the Contains predicate on the "source" field.
-func SourceContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldSource, v))
+// PriceSnapshotUnitPriceCentsLT applies the LT predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsLT(v int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldPriceSnapshotUnitPriceCents, v))
 }
 
-// SourceHasPrefix applies the HasPrefix predicate on the "source" field.
-func SourceHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldSource, v))
+// PriceSnapshotUnitPriceCentsLTE applies the LTE predicate on the "price_snapshot_unit_price_cents" field.
+func PriceSnapshotUnitPriceCentsLTE(v int64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldPriceSnapshotUnitPriceCents, v))
 }
 
-// SourceHasSuffix applies the HasSuffix predicate on the "source" field.
-func SourceHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldSource, v))
+// PriceSnapshotStorageGBMonthEQ applies the EQ predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthEQ(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldPriceSnapshotStorageGBMonth, v))
 }
 
-// SourceEqualFold applies the EqualFold predicate on the "source" field.
-func SourceEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldSource, v))
+// PriceSnapshotStorageGBMonthNEQ applies the NEQ predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthNEQ(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldPriceSnapshotStorageGBMonth, v))
 }
 
-// SourceContainsFold applies the ContainsFold predicate on the "source" field.
-func SourceContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldSource, v))
+// PriceSnapshotStorageGBMonthIn applies the In predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthIn(vs ...float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldPriceSnapshotStorageGBMonth, vs...))
 }
 
-// DirectionEQ applies the EQ predicate on the "direction" field.
-func DirectionEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldDirection, v))
+// PriceSnapshotStorageGBMonthNotIn applies the NotIn predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthNotIn(vs ...float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldPriceSnapshotStorageGBMonth, vs...))
 }
 
-// DirectionNEQ applies the NEQ predicate on the "direction" field.
-func DirectionNEQ(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldDirection, v))
+// PriceSnapshotStorageGBMonthGT applies the GT predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthGT(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldPriceSnapshotStorageGBMonth, v))
 }
 
-// DirectionIn applies the In predicate on the "direction" field.
-func DirectionIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldDirection, vs...))
+// PriceSnapshotStorageGBMonthGTE applies the GTE predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthGTE(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldPriceSnapshotStorageGBMonth, v))
 }
 
-// DirectionNotIn applies the NotIn predicate on the "direction" field.
-func DirectionNotIn(vs ...string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldDirection, vs...))
+// PriceSnapshotStorageGBMonthLT applies the LT predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthLT(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldPriceSnapshotStorageGBMonth, v))
 }
 
-// DirectionGT applies the GT predicate on the "direction" field.
-func DirectionGT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldDirection, v))
+// PriceSnapshotStorageGBMonthLTE applies the LTE predicate on the "price_snapshot_storage_gb_month" field.
+func PriceSnapshotStorageGBMonthLTE(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldPriceSnapshotStorageGBMonth, v))
 }
 
-// DirectionGTE applies the GTE predicate on the "direction" field.
-func DirectionGTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldDirection, v))
+// PriceSnapshotSizeGBEQ applies the EQ predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBEQ(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldEQ(FieldPriceSnapshotSizeGB, v))
 }
 
-// DirectionLT applies the LT predicate on the "direction" field.
-func DirectionLT(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldDirection, v))
+// PriceSnapshotSizeGBNEQ applies the NEQ predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBNEQ(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNEQ(FieldPriceSnapshotSizeGB, v))
 }
 
-// DirectionLTE applies the LTE predicate on the "direction" field.
-func DirectionLTE(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldDirection, v))
+// PriceSnapshotSizeGBIn applies the In predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBIn(vs ...float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldIn(FieldPriceSnapshotSizeGB, vs...))
 }
 
-// DirectionContains applies the Contains predicate on the "direction" field.
-func DirectionContains(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContains(FieldDirection, v))
+// PriceSnapshotSizeGBNotIn applies the NotIn predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBNotIn(vs ...float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldNotIn(FieldPriceSnapshotSizeGB, vs...))
 }
 
-// DirectionHasPrefix applies the HasPrefix predicate on the "direction" field.
-func DirectionHasPrefix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasPrefix(FieldDirection, v))
+// PriceSnapshotSizeGBGT applies the GT predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBGT(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGT(FieldPriceSnapshotSizeGB, v))
 }
 
-// DirectionHasSuffix applies the HasSuffix predicate on the "direction" field.
-func DirectionHasSuffix(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldHasSuffix(FieldDirection, v))
+// PriceSnapshotSizeGBGTE applies the GTE predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBGTE(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldGTE(FieldPriceSnapshotSizeGB, v))
 }
 
-// DirectionEqualFold applies the EqualFold predicate on the "direction" field.
-func DirectionEqualFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEqualFold(FieldDirection, v))
+// PriceSnapshotSizeGBLT applies the LT predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBLT(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLT(FieldPriceSnapshotSizeGB, v))
 }
 
-// DirectionContainsFold applies the ContainsFold predicate on the "direction" field.
-func DirectionContainsFold(v string) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldContainsFold(FieldDirection, v))
-}
-
-// CreatedAtEQ applies the EQ predicate on the "created_at" field.
-func CreatedAtEQ(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldCreatedAt, v))
-}
-
-// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
-func CreatedAtNEQ(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldCreatedAt, v))
-}
-
-// CreatedAtIn applies the In predicate on the "created_at" field.
-func CreatedAtIn(vs ...time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldCreatedAt, vs...))
-}
-
-// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
-func CreatedAtNotIn(vs ...time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldCreatedAt, vs...))
-}
-
-// CreatedAtGT applies the GT predicate on the "created_at" field.
-func CreatedAtGT(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldCreatedAt, v))
-}
-
-// CreatedAtGTE applies the GTE predicate on the "created_at" field.
-func CreatedAtGTE(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldCreatedAt, v))
-}
-
-// CreatedAtLT applies the LT predicate on the "created_at" field.
-func CreatedAtLT(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldCreatedAt, v))
-}
-
-// CreatedAtLTE applies the LTE predicate on the "created_at" field.
-func CreatedAtLTE(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldCreatedAt, v))
-}
-
-// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
-func UpdatedAtEQ(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldUpdatedAt, v))
-}
-
-// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
-func UpdatedAtNEQ(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldUpdatedAt, v))
-}
-
-// UpdatedAtIn applies the In predicate on the "updated_at" field.
-func UpdatedAtIn(vs ...time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldUpdatedAt, vs...))
-}
-
-// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
-func UpdatedAtNotIn(vs ...time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldUpdatedAt, vs...))
-}
-
-// UpdatedAtGT applies the GT predicate on the "updated_at" field.
-func UpdatedAtGT(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldUpdatedAt, v))
-}
-
-// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
-func UpdatedAtGTE(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldUpdatedAt, v))
-}
-
-// UpdatedAtLT applies the LT predicate on the "updated_at" field.
-func UpdatedAtLT(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldUpdatedAt, v))
-}
-
-// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
-func UpdatedAtLTE(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldUpdatedAt, v))
-}
-
-// ArchivedAtEQ applies the EQ predicate on the "archived_at" field.
-func ArchivedAtEQ(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldEQ(FieldArchivedAt, v))
-}
-
-// ArchivedAtNEQ applies the NEQ predicate on the "archived_at" field.
-func ArchivedAtNEQ(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNEQ(FieldArchivedAt, v))
-}
-
-// ArchivedAtIn applies the In predicate on the "archived_at" field.
-func ArchivedAtIn(vs ...time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIn(FieldArchivedAt, vs...))
-}
-
-// ArchivedAtNotIn applies the NotIn predicate on the "archived_at" field.
-func ArchivedAtNotIn(vs ...time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotIn(FieldArchivedAt, vs...))
-}
-
-// ArchivedAtGT applies the GT predicate on the "archived_at" field.
-func ArchivedAtGT(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGT(FieldArchivedAt, v))
-}
-
-// ArchivedAtGTE applies the GTE predicate on the "archived_at" field.
-func ArchivedAtGTE(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldGTE(FieldArchivedAt, v))
-}
-
-// ArchivedAtLT applies the LT predicate on the "archived_at" field.
-func ArchivedAtLT(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLT(FieldArchivedAt, v))
-}
-
-// ArchivedAtLTE applies the LTE predicate on the "archived_at" field.
-func ArchivedAtLTE(v time.Time) predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldLTE(FieldArchivedAt, v))
-}
-
-// ArchivedAtIsNil applies the IsNil predicate on the "archived_at" field.
-func ArchivedAtIsNil() predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldIsNull(FieldArchivedAt))
-}
-
-// ArchivedAtNotNil applies the NotNil predicate on the "archived_at" field.
-func ArchivedAtNotNil() predicate.StorageVolume {
-	return predicate.StorageVolume(sql.FieldNotNull(FieldArchivedAt))
+// PriceSnapshotSizeGBLTE applies the LTE predicate on the "price_snapshot_size_gb" field.
+func PriceSnapshotSizeGBLTE(v float64) predicate.StorageVolume {
+	return predicate.StorageVolume(sql.FieldLTE(FieldPriceSnapshotSizeGB, v))
 }
 
 // And groups predicates with the AND operator between them.

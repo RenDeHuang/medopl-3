@@ -20,115 +20,37 @@ type StorageAttachmentCreate struct {
 	hooks    []Hook
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (sac *StorageAttachmentCreate) SetCreatedAt(t time.Time) *StorageAttachmentCreate {
+	sac.mutation.SetCreatedAt(t)
+	return sac
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (sac *StorageAttachmentCreate) SetNillableCreatedAt(t *time.Time) *StorageAttachmentCreate {
+	if t != nil {
+		sac.SetCreatedAt(*t)
+	}
+	return sac
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (sac *StorageAttachmentCreate) SetUpdatedAt(t time.Time) *StorageAttachmentCreate {
+	sac.mutation.SetUpdatedAt(t)
+	return sac
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (sac *StorageAttachmentCreate) SetNillableUpdatedAt(t *time.Time) *StorageAttachmentCreate {
+	if t != nil {
+		sac.SetUpdatedAt(*t)
+	}
+	return sac
+}
+
 // SetAccountID sets the "account_id" field.
 func (sac *StorageAttachmentCreate) SetAccountID(s string) *StorageAttachmentCreate {
 	sac.mutation.SetAccountID(s)
-	return sac
-}
-
-// SetNillableAccountID sets the "account_id" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableAccountID(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetAccountID(*s)
-	}
-	return sac
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (sac *StorageAttachmentCreate) SetOwnerAccountID(s string) *StorageAttachmentCreate {
-	sac.mutation.SetOwnerAccountID(s)
-	return sac
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableOwnerAccountID(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetOwnerAccountID(*s)
-	}
-	return sac
-}
-
-// SetOwnerUserID sets the "owner_user_id" field.
-func (sac *StorageAttachmentCreate) SetOwnerUserID(s string) *StorageAttachmentCreate {
-	sac.mutation.SetOwnerUserID(s)
-	return sac
-}
-
-// SetNillableOwnerUserID sets the "owner_user_id" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableOwnerUserID(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetOwnerUserID(*s)
-	}
-	return sac
-}
-
-// SetUserID sets the "user_id" field.
-func (sac *StorageAttachmentCreate) SetUserID(s string) *StorageAttachmentCreate {
-	sac.mutation.SetUserID(s)
-	return sac
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableUserID(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetUserID(*s)
-	}
-	return sac
-}
-
-// SetEmail sets the "email" field.
-func (sac *StorageAttachmentCreate) SetEmail(s string) *StorageAttachmentCreate {
-	sac.mutation.SetEmail(s)
-	return sac
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableEmail(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetEmail(*s)
-	}
-	return sac
-}
-
-// SetRole sets the "role" field.
-func (sac *StorageAttachmentCreate) SetRole(s string) *StorageAttachmentCreate {
-	sac.mutation.SetRole(s)
-	return sac
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableRole(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetRole(*s)
-	}
-	return sac
-}
-
-// SetStatus sets the "status" field.
-func (sac *StorageAttachmentCreate) SetStatus(s string) *StorageAttachmentCreate {
-	sac.mutation.SetStatus(s)
-	return sac
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableStatus(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetStatus(*s)
-	}
-	return sac
-}
-
-// SetName sets the "name" field.
-func (sac *StorageAttachmentCreate) SetName(s string) *StorageAttachmentCreate {
-	sac.mutation.SetName(s)
-	return sac
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableName(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetName(*s)
-	}
 	return sac
 }
 
@@ -146,30 +68,44 @@ func (sac *StorageAttachmentCreate) SetNillableWorkspaceID(s *string) *StorageAt
 	return sac
 }
 
-// SetResourceID sets the "resource_id" field.
-func (sac *StorageAttachmentCreate) SetResourceID(s string) *StorageAttachmentCreate {
-	sac.mutation.SetResourceID(s)
+// SetComputeAllocationID sets the "compute_allocation_id" field.
+func (sac *StorageAttachmentCreate) SetComputeAllocationID(s string) *StorageAttachmentCreate {
+	sac.mutation.SetComputeAllocationID(s)
 	return sac
 }
 
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableResourceID(s *string) *StorageAttachmentCreate {
+// SetNillableComputeAllocationID sets the "compute_allocation_id" field if the given value is not nil.
+func (sac *StorageAttachmentCreate) SetNillableComputeAllocationID(s *string) *StorageAttachmentCreate {
 	if s != nil {
-		sac.SetResourceID(*s)
+		sac.SetComputeAllocationID(*s)
 	}
 	return sac
 }
 
-// SetResourceKind sets the "resource_kind" field.
-func (sac *StorageAttachmentCreate) SetResourceKind(s string) *StorageAttachmentCreate {
-	sac.mutation.SetResourceKind(s)
+// SetStorageID sets the "storage_id" field.
+func (sac *StorageAttachmentCreate) SetStorageID(s string) *StorageAttachmentCreate {
+	sac.mutation.SetStorageID(s)
 	return sac
 }
 
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableResourceKind(s *string) *StorageAttachmentCreate {
+// SetNillableStorageID sets the "storage_id" field if the given value is not nil.
+func (sac *StorageAttachmentCreate) SetNillableStorageID(s *string) *StorageAttachmentCreate {
 	if s != nil {
-		sac.SetResourceKind(*s)
+		sac.SetStorageID(*s)
+	}
+	return sac
+}
+
+// SetVolumeID sets the "volume_id" field.
+func (sac *StorageAttachmentCreate) SetVolumeID(s string) *StorageAttachmentCreate {
+	sac.mutation.SetVolumeID(s)
+	return sac
+}
+
+// SetNillableVolumeID sets the "volume_id" field if the given value is not nil.
+func (sac *StorageAttachmentCreate) SetNillableVolumeID(s *string) *StorageAttachmentCreate {
+	if s != nil {
+		sac.SetVolumeID(*s)
 	}
 	return sac
 }
@@ -202,310 +138,44 @@ func (sac *StorageAttachmentCreate) SetNillableProvider(s *string) *StorageAttac
 	return sac
 }
 
-// SetProviderResourceID sets the "provider_resource_id" field.
-func (sac *StorageAttachmentCreate) SetProviderResourceID(s string) *StorageAttachmentCreate {
-	sac.mutation.SetProviderResourceID(s)
+// SetProviderRequestID sets the "provider_request_id" field.
+func (sac *StorageAttachmentCreate) SetProviderRequestID(s string) *StorageAttachmentCreate {
+	sac.mutation.SetProviderRequestID(s)
 	return sac
 }
 
-// SetNillableProviderResourceID sets the "provider_resource_id" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableProviderResourceID(s *string) *StorageAttachmentCreate {
+// SetNillableProviderRequestID sets the "provider_request_id" field if the given value is not nil.
+func (sac *StorageAttachmentCreate) SetNillableProviderRequestID(s *string) *StorageAttachmentCreate {
 	if s != nil {
-		sac.SetProviderResourceID(*s)
+		sac.SetProviderRequestID(*s)
 	}
 	return sac
 }
 
-// SetURL sets the "url" field.
-func (sac *StorageAttachmentCreate) SetURL(s string) *StorageAttachmentCreate {
-	sac.mutation.SetURL(s)
+// SetStatus sets the "status" field.
+func (sac *StorageAttachmentCreate) SetStatus(s string) *StorageAttachmentCreate {
+	sac.mutation.SetStatus(s)
 	return sac
 }
 
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableURL(s *string) *StorageAttachmentCreate {
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (sac *StorageAttachmentCreate) SetNillableStatus(s *string) *StorageAttachmentCreate {
 	if s != nil {
-		sac.SetURL(*s)
+		sac.SetStatus(*s)
 	}
 	return sac
 }
 
-// SetHoldID sets the "hold_id" field.
-func (sac *StorageAttachmentCreate) SetHoldID(s string) *StorageAttachmentCreate {
-	sac.mutation.SetHoldID(s)
+// SetMountPath sets the "mount_path" field.
+func (sac *StorageAttachmentCreate) SetMountPath(s string) *StorageAttachmentCreate {
+	sac.mutation.SetMountPath(s)
 	return sac
 }
 
-// SetNillableHoldID sets the "hold_id" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableHoldID(s *string) *StorageAttachmentCreate {
+// SetNillableMountPath sets the "mount_path" field if the given value is not nil.
+func (sac *StorageAttachmentCreate) SetNillableMountPath(s *string) *StorageAttachmentCreate {
 	if s != nil {
-		sac.SetHoldID(*s)
-	}
-	return sac
-}
-
-// SetHoldReleaseID sets the "hold_release_id" field.
-func (sac *StorageAttachmentCreate) SetHoldReleaseID(s string) *StorageAttachmentCreate {
-	sac.mutation.SetHoldReleaseID(s)
-	return sac
-}
-
-// SetNillableHoldReleaseID sets the "hold_release_id" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableHoldReleaseID(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetHoldReleaseID(*s)
-	}
-	return sac
-}
-
-// SetLedgerEntryID sets the "ledger_entry_id" field.
-func (sac *StorageAttachmentCreate) SetLedgerEntryID(s string) *StorageAttachmentCreate {
-	sac.mutation.SetLedgerEntryID(s)
-	return sac
-}
-
-// SetNillableLedgerEntryID sets the "ledger_entry_id" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableLedgerEntryID(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetLedgerEntryID(*s)
-	}
-	return sac
-}
-
-// SetWalletTransactionID sets the "wallet_transaction_id" field.
-func (sac *StorageAttachmentCreate) SetWalletTransactionID(s string) *StorageAttachmentCreate {
-	sac.mutation.SetWalletTransactionID(s)
-	return sac
-}
-
-// SetNillableWalletTransactionID sets the "wallet_transaction_id" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableWalletTransactionID(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetWalletTransactionID(*s)
-	}
-	return sac
-}
-
-// SetSettlementID sets the "settlement_id" field.
-func (sac *StorageAttachmentCreate) SetSettlementID(s string) *StorageAttachmentCreate {
-	sac.mutation.SetSettlementID(s)
-	return sac
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableSettlementID(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetSettlementID(*s)
-	}
-	return sac
-}
-
-// SetPricingVersion sets the "pricing_version" field.
-func (sac *StorageAttachmentCreate) SetPricingVersion(s string) *StorageAttachmentCreate {
-	sac.mutation.SetPricingVersion(s)
-	return sac
-}
-
-// SetNillablePricingVersion sets the "pricing_version" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillablePricingVersion(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetPricingVersion(*s)
-	}
-	return sac
-}
-
-// SetAmountCents sets the "amount_cents" field.
-func (sac *StorageAttachmentCreate) SetAmountCents(i int64) *StorageAttachmentCreate {
-	sac.mutation.SetAmountCents(i)
-	return sac
-}
-
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableAmountCents(i *int64) *StorageAttachmentCreate {
-	if i != nil {
-		sac.SetAmountCents(*i)
-	}
-	return sac
-}
-
-// SetBalanceCents sets the "balance_cents" field.
-func (sac *StorageAttachmentCreate) SetBalanceCents(i int64) *StorageAttachmentCreate {
-	sac.mutation.SetBalanceCents(i)
-	return sac
-}
-
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableBalanceCents(i *int64) *StorageAttachmentCreate {
-	if i != nil {
-		sac.SetBalanceCents(*i)
-	}
-	return sac
-}
-
-// SetFrozenCents sets the "frozen_cents" field.
-func (sac *StorageAttachmentCreate) SetFrozenCents(i int64) *StorageAttachmentCreate {
-	sac.mutation.SetFrozenCents(i)
-	return sac
-}
-
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableFrozenCents(i *int64) *StorageAttachmentCreate {
-	if i != nil {
-		sac.SetFrozenCents(*i)
-	}
-	return sac
-}
-
-// SetAvailableCents sets the "available_cents" field.
-func (sac *StorageAttachmentCreate) SetAvailableCents(i int64) *StorageAttachmentCreate {
-	sac.mutation.SetAvailableCents(i)
-	return sac
-}
-
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableAvailableCents(i *int64) *StorageAttachmentCreate {
-	if i != nil {
-		sac.SetAvailableCents(*i)
-	}
-	return sac
-}
-
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (sac *StorageAttachmentCreate) SetTotalSpentCents(i int64) *StorageAttachmentCreate {
-	sac.mutation.SetTotalSpentCents(i)
-	return sac
-}
-
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableTotalSpentCents(i *int64) *StorageAttachmentCreate {
-	if i != nil {
-		sac.SetTotalSpentCents(*i)
-	}
-	return sac
-}
-
-// SetQuantity sets the "quantity" field.
-func (sac *StorageAttachmentCreate) SetQuantity(f float64) *StorageAttachmentCreate {
-	sac.mutation.SetQuantity(f)
-	return sac
-}
-
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableQuantity(f *float64) *StorageAttachmentCreate {
-	if f != nil {
-		sac.SetQuantity(*f)
-	}
-	return sac
-}
-
-// SetUnit sets the "unit" field.
-func (sac *StorageAttachmentCreate) SetUnit(s string) *StorageAttachmentCreate {
-	sac.mutation.SetUnit(s)
-	return sac
-}
-
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableUnit(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetUnit(*s)
-	}
-	return sac
-}
-
-// SetReason sets the "reason" field.
-func (sac *StorageAttachmentCreate) SetReason(s string) *StorageAttachmentCreate {
-	sac.mutation.SetReason(s)
-	return sac
-}
-
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableReason(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetReason(*s)
-	}
-	return sac
-}
-
-// SetResult sets the "result" field.
-func (sac *StorageAttachmentCreate) SetResult(s string) *StorageAttachmentCreate {
-	sac.mutation.SetResult(s)
-	return sac
-}
-
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableResult(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetResult(*s)
-	}
-	return sac
-}
-
-// SetSource sets the "source" field.
-func (sac *StorageAttachmentCreate) SetSource(s string) *StorageAttachmentCreate {
-	sac.mutation.SetSource(s)
-	return sac
-}
-
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableSource(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetSource(*s)
-	}
-	return sac
-}
-
-// SetDirection sets the "direction" field.
-func (sac *StorageAttachmentCreate) SetDirection(s string) *StorageAttachmentCreate {
-	sac.mutation.SetDirection(s)
-	return sac
-}
-
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableDirection(s *string) *StorageAttachmentCreate {
-	if s != nil {
-		sac.SetDirection(*s)
-	}
-	return sac
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (sac *StorageAttachmentCreate) SetCreatedAt(t time.Time) *StorageAttachmentCreate {
-	sac.mutation.SetCreatedAt(t)
-	return sac
-}
-
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableCreatedAt(t *time.Time) *StorageAttachmentCreate {
-	if t != nil {
-		sac.SetCreatedAt(*t)
-	}
-	return sac
-}
-
-// SetUpdatedAt sets the "updated_at" field.
-func (sac *StorageAttachmentCreate) SetUpdatedAt(t time.Time) *StorageAttachmentCreate {
-	sac.mutation.SetUpdatedAt(t)
-	return sac
-}
-
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableUpdatedAt(t *time.Time) *StorageAttachmentCreate {
-	if t != nil {
-		sac.SetUpdatedAt(*t)
-	}
-	return sac
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (sac *StorageAttachmentCreate) SetArchivedAt(t time.Time) *StorageAttachmentCreate {
-	sac.mutation.SetArchivedAt(t)
-	return sac
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (sac *StorageAttachmentCreate) SetNillableArchivedAt(t *time.Time) *StorageAttachmentCreate {
-	if t != nil {
-		sac.SetArchivedAt(*t)
+		sac.SetMountPath(*s)
 	}
 	return sac
 }
@@ -551,49 +221,29 @@ func (sac *StorageAttachmentCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (sac *StorageAttachmentCreate) defaults() {
-	if _, ok := sac.mutation.AccountID(); !ok {
-		v := storageattachment.DefaultAccountID
-		sac.mutation.SetAccountID(v)
+	if _, ok := sac.mutation.CreatedAt(); !ok {
+		v := storageattachment.DefaultCreatedAt()
+		sac.mutation.SetCreatedAt(v)
 	}
-	if _, ok := sac.mutation.OwnerAccountID(); !ok {
-		v := storageattachment.DefaultOwnerAccountID
-		sac.mutation.SetOwnerAccountID(v)
-	}
-	if _, ok := sac.mutation.OwnerUserID(); !ok {
-		v := storageattachment.DefaultOwnerUserID
-		sac.mutation.SetOwnerUserID(v)
-	}
-	if _, ok := sac.mutation.UserID(); !ok {
-		v := storageattachment.DefaultUserID
-		sac.mutation.SetUserID(v)
-	}
-	if _, ok := sac.mutation.Email(); !ok {
-		v := storageattachment.DefaultEmail
-		sac.mutation.SetEmail(v)
-	}
-	if _, ok := sac.mutation.Role(); !ok {
-		v := storageattachment.DefaultRole
-		sac.mutation.SetRole(v)
-	}
-	if _, ok := sac.mutation.Status(); !ok {
-		v := storageattachment.DefaultStatus
-		sac.mutation.SetStatus(v)
-	}
-	if _, ok := sac.mutation.Name(); !ok {
-		v := storageattachment.DefaultName
-		sac.mutation.SetName(v)
+	if _, ok := sac.mutation.UpdatedAt(); !ok {
+		v := storageattachment.DefaultUpdatedAt()
+		sac.mutation.SetUpdatedAt(v)
 	}
 	if _, ok := sac.mutation.WorkspaceID(); !ok {
 		v := storageattachment.DefaultWorkspaceID
 		sac.mutation.SetWorkspaceID(v)
 	}
-	if _, ok := sac.mutation.ResourceID(); !ok {
-		v := storageattachment.DefaultResourceID
-		sac.mutation.SetResourceID(v)
+	if _, ok := sac.mutation.ComputeAllocationID(); !ok {
+		v := storageattachment.DefaultComputeAllocationID
+		sac.mutation.SetComputeAllocationID(v)
 	}
-	if _, ok := sac.mutation.ResourceKind(); !ok {
-		v := storageattachment.DefaultResourceKind
-		sac.mutation.SetResourceKind(v)
+	if _, ok := sac.mutation.StorageID(); !ok {
+		v := storageattachment.DefaultStorageID
+		sac.mutation.SetStorageID(v)
+	}
+	if _, ok := sac.mutation.VolumeID(); !ok {
+		v := storageattachment.DefaultVolumeID
+		sac.mutation.SetVolumeID(v)
 	}
 	if _, ok := sac.mutation.OperationID(); !ok {
 		v := storageattachment.DefaultOperationID
@@ -603,126 +253,47 @@ func (sac *StorageAttachmentCreate) defaults() {
 		v := storageattachment.DefaultProvider
 		sac.mutation.SetProvider(v)
 	}
-	if _, ok := sac.mutation.ProviderResourceID(); !ok {
-		v := storageattachment.DefaultProviderResourceID
-		sac.mutation.SetProviderResourceID(v)
+	if _, ok := sac.mutation.ProviderRequestID(); !ok {
+		v := storageattachment.DefaultProviderRequestID
+		sac.mutation.SetProviderRequestID(v)
 	}
-	if _, ok := sac.mutation.URL(); !ok {
-		v := storageattachment.DefaultURL
-		sac.mutation.SetURL(v)
+	if _, ok := sac.mutation.Status(); !ok {
+		v := storageattachment.DefaultStatus
+		sac.mutation.SetStatus(v)
 	}
-	if _, ok := sac.mutation.HoldID(); !ok {
-		v := storageattachment.DefaultHoldID
-		sac.mutation.SetHoldID(v)
-	}
-	if _, ok := sac.mutation.HoldReleaseID(); !ok {
-		v := storageattachment.DefaultHoldReleaseID
-		sac.mutation.SetHoldReleaseID(v)
-	}
-	if _, ok := sac.mutation.LedgerEntryID(); !ok {
-		v := storageattachment.DefaultLedgerEntryID
-		sac.mutation.SetLedgerEntryID(v)
-	}
-	if _, ok := sac.mutation.WalletTransactionID(); !ok {
-		v := storageattachment.DefaultWalletTransactionID
-		sac.mutation.SetWalletTransactionID(v)
-	}
-	if _, ok := sac.mutation.SettlementID(); !ok {
-		v := storageattachment.DefaultSettlementID
-		sac.mutation.SetSettlementID(v)
-	}
-	if _, ok := sac.mutation.PricingVersion(); !ok {
-		v := storageattachment.DefaultPricingVersion
-		sac.mutation.SetPricingVersion(v)
-	}
-	if _, ok := sac.mutation.AmountCents(); !ok {
-		v := storageattachment.DefaultAmountCents
-		sac.mutation.SetAmountCents(v)
-	}
-	if _, ok := sac.mutation.BalanceCents(); !ok {
-		v := storageattachment.DefaultBalanceCents
-		sac.mutation.SetBalanceCents(v)
-	}
-	if _, ok := sac.mutation.FrozenCents(); !ok {
-		v := storageattachment.DefaultFrozenCents
-		sac.mutation.SetFrozenCents(v)
-	}
-	if _, ok := sac.mutation.AvailableCents(); !ok {
-		v := storageattachment.DefaultAvailableCents
-		sac.mutation.SetAvailableCents(v)
-	}
-	if _, ok := sac.mutation.TotalSpentCents(); !ok {
-		v := storageattachment.DefaultTotalSpentCents
-		sac.mutation.SetTotalSpentCents(v)
-	}
-	if _, ok := sac.mutation.Quantity(); !ok {
-		v := storageattachment.DefaultQuantity
-		sac.mutation.SetQuantity(v)
-	}
-	if _, ok := sac.mutation.Unit(); !ok {
-		v := storageattachment.DefaultUnit
-		sac.mutation.SetUnit(v)
-	}
-	if _, ok := sac.mutation.Reason(); !ok {
-		v := storageattachment.DefaultReason
-		sac.mutation.SetReason(v)
-	}
-	if _, ok := sac.mutation.Result(); !ok {
-		v := storageattachment.DefaultResult
-		sac.mutation.SetResult(v)
-	}
-	if _, ok := sac.mutation.Source(); !ok {
-		v := storageattachment.DefaultSource
-		sac.mutation.SetSource(v)
-	}
-	if _, ok := sac.mutation.Direction(); !ok {
-		v := storageattachment.DefaultDirection
-		sac.mutation.SetDirection(v)
-	}
-	if _, ok := sac.mutation.CreatedAt(); !ok {
-		v := storageattachment.DefaultCreatedAt()
-		sac.mutation.SetCreatedAt(v)
-	}
-	if _, ok := sac.mutation.UpdatedAt(); !ok {
-		v := storageattachment.DefaultUpdatedAt()
-		sac.mutation.SetUpdatedAt(v)
+	if _, ok := sac.mutation.MountPath(); !ok {
+		v := storageattachment.DefaultMountPath
+		sac.mutation.SetMountPath(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (sac *StorageAttachmentCreate) check() error {
+	if _, ok := sac.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "StorageAttachment.created_at"`)}
+	}
+	if _, ok := sac.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "StorageAttachment.updated_at"`)}
+	}
 	if _, ok := sac.mutation.AccountID(); !ok {
 		return &ValidationError{Name: "account_id", err: errors.New(`ent: missing required field "StorageAttachment.account_id"`)}
 	}
-	if _, ok := sac.mutation.OwnerAccountID(); !ok {
-		return &ValidationError{Name: "owner_account_id", err: errors.New(`ent: missing required field "StorageAttachment.owner_account_id"`)}
-	}
-	if _, ok := sac.mutation.OwnerUserID(); !ok {
-		return &ValidationError{Name: "owner_user_id", err: errors.New(`ent: missing required field "StorageAttachment.owner_user_id"`)}
-	}
-	if _, ok := sac.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "StorageAttachment.user_id"`)}
-	}
-	if _, ok := sac.mutation.Email(); !ok {
-		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "StorageAttachment.email"`)}
-	}
-	if _, ok := sac.mutation.Role(); !ok {
-		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "StorageAttachment.role"`)}
-	}
-	if _, ok := sac.mutation.Status(); !ok {
-		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "StorageAttachment.status"`)}
-	}
-	if _, ok := sac.mutation.Name(); !ok {
-		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "StorageAttachment.name"`)}
+	if v, ok := sac.mutation.AccountID(); ok {
+		if err := storageattachment.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "StorageAttachment.account_id": %w`, err)}
+		}
 	}
 	if _, ok := sac.mutation.WorkspaceID(); !ok {
 		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "StorageAttachment.workspace_id"`)}
 	}
-	if _, ok := sac.mutation.ResourceID(); !ok {
-		return &ValidationError{Name: "resource_id", err: errors.New(`ent: missing required field "StorageAttachment.resource_id"`)}
+	if _, ok := sac.mutation.ComputeAllocationID(); !ok {
+		return &ValidationError{Name: "compute_allocation_id", err: errors.New(`ent: missing required field "StorageAttachment.compute_allocation_id"`)}
 	}
-	if _, ok := sac.mutation.ResourceKind(); !ok {
-		return &ValidationError{Name: "resource_kind", err: errors.New(`ent: missing required field "StorageAttachment.resource_kind"`)}
+	if _, ok := sac.mutation.StorageID(); !ok {
+		return &ValidationError{Name: "storage_id", err: errors.New(`ent: missing required field "StorageAttachment.storage_id"`)}
+	}
+	if _, ok := sac.mutation.VolumeID(); !ok {
+		return &ValidationError{Name: "volume_id", err: errors.New(`ent: missing required field "StorageAttachment.volume_id"`)}
 	}
 	if _, ok := sac.mutation.OperationID(); !ok {
 		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "StorageAttachment.operation_id"`)}
@@ -730,68 +301,14 @@ func (sac *StorageAttachmentCreate) check() error {
 	if _, ok := sac.mutation.Provider(); !ok {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "StorageAttachment.provider"`)}
 	}
-	if _, ok := sac.mutation.ProviderResourceID(); !ok {
-		return &ValidationError{Name: "provider_resource_id", err: errors.New(`ent: missing required field "StorageAttachment.provider_resource_id"`)}
+	if _, ok := sac.mutation.ProviderRequestID(); !ok {
+		return &ValidationError{Name: "provider_request_id", err: errors.New(`ent: missing required field "StorageAttachment.provider_request_id"`)}
 	}
-	if _, ok := sac.mutation.URL(); !ok {
-		return &ValidationError{Name: "url", err: errors.New(`ent: missing required field "StorageAttachment.url"`)}
+	if _, ok := sac.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "StorageAttachment.status"`)}
 	}
-	if _, ok := sac.mutation.HoldID(); !ok {
-		return &ValidationError{Name: "hold_id", err: errors.New(`ent: missing required field "StorageAttachment.hold_id"`)}
-	}
-	if _, ok := sac.mutation.HoldReleaseID(); !ok {
-		return &ValidationError{Name: "hold_release_id", err: errors.New(`ent: missing required field "StorageAttachment.hold_release_id"`)}
-	}
-	if _, ok := sac.mutation.LedgerEntryID(); !ok {
-		return &ValidationError{Name: "ledger_entry_id", err: errors.New(`ent: missing required field "StorageAttachment.ledger_entry_id"`)}
-	}
-	if _, ok := sac.mutation.WalletTransactionID(); !ok {
-		return &ValidationError{Name: "wallet_transaction_id", err: errors.New(`ent: missing required field "StorageAttachment.wallet_transaction_id"`)}
-	}
-	if _, ok := sac.mutation.SettlementID(); !ok {
-		return &ValidationError{Name: "settlement_id", err: errors.New(`ent: missing required field "StorageAttachment.settlement_id"`)}
-	}
-	if _, ok := sac.mutation.PricingVersion(); !ok {
-		return &ValidationError{Name: "pricing_version", err: errors.New(`ent: missing required field "StorageAttachment.pricing_version"`)}
-	}
-	if _, ok := sac.mutation.AmountCents(); !ok {
-		return &ValidationError{Name: "amount_cents", err: errors.New(`ent: missing required field "StorageAttachment.amount_cents"`)}
-	}
-	if _, ok := sac.mutation.BalanceCents(); !ok {
-		return &ValidationError{Name: "balance_cents", err: errors.New(`ent: missing required field "StorageAttachment.balance_cents"`)}
-	}
-	if _, ok := sac.mutation.FrozenCents(); !ok {
-		return &ValidationError{Name: "frozen_cents", err: errors.New(`ent: missing required field "StorageAttachment.frozen_cents"`)}
-	}
-	if _, ok := sac.mutation.AvailableCents(); !ok {
-		return &ValidationError{Name: "available_cents", err: errors.New(`ent: missing required field "StorageAttachment.available_cents"`)}
-	}
-	if _, ok := sac.mutation.TotalSpentCents(); !ok {
-		return &ValidationError{Name: "total_spent_cents", err: errors.New(`ent: missing required field "StorageAttachment.total_spent_cents"`)}
-	}
-	if _, ok := sac.mutation.Quantity(); !ok {
-		return &ValidationError{Name: "quantity", err: errors.New(`ent: missing required field "StorageAttachment.quantity"`)}
-	}
-	if _, ok := sac.mutation.Unit(); !ok {
-		return &ValidationError{Name: "unit", err: errors.New(`ent: missing required field "StorageAttachment.unit"`)}
-	}
-	if _, ok := sac.mutation.Reason(); !ok {
-		return &ValidationError{Name: "reason", err: errors.New(`ent: missing required field "StorageAttachment.reason"`)}
-	}
-	if _, ok := sac.mutation.Result(); !ok {
-		return &ValidationError{Name: "result", err: errors.New(`ent: missing required field "StorageAttachment.result"`)}
-	}
-	if _, ok := sac.mutation.Source(); !ok {
-		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "StorageAttachment.source"`)}
-	}
-	if _, ok := sac.mutation.Direction(); !ok {
-		return &ValidationError{Name: "direction", err: errors.New(`ent: missing required field "StorageAttachment.direction"`)}
-	}
-	if _, ok := sac.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "StorageAttachment.created_at"`)}
-	}
-	if _, ok := sac.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "StorageAttachment.updated_at"`)}
+	if _, ok := sac.mutation.MountPath(); !ok {
+		return &ValidationError{Name: "mount_path", err: errors.New(`ent: missing required field "StorageAttachment.mount_path"`)}
 	}
 	if v, ok := sac.mutation.ID(); ok {
 		if err := storageattachment.IDValidator(v); err != nil {
@@ -833,49 +350,33 @@ func (sac *StorageAttachmentCreate) createSpec() (*StorageAttachment, *sqlgraph.
 		_node.ID = id
 		_spec.ID.Value = id
 	}
+	if value, ok := sac.mutation.CreatedAt(); ok {
+		_spec.SetField(storageattachment.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := sac.mutation.UpdatedAt(); ok {
+		_spec.SetField(storageattachment.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
 	if value, ok := sac.mutation.AccountID(); ok {
 		_spec.SetField(storageattachment.FieldAccountID, field.TypeString, value)
 		_node.AccountID = value
-	}
-	if value, ok := sac.mutation.OwnerAccountID(); ok {
-		_spec.SetField(storageattachment.FieldOwnerAccountID, field.TypeString, value)
-		_node.OwnerAccountID = value
-	}
-	if value, ok := sac.mutation.OwnerUserID(); ok {
-		_spec.SetField(storageattachment.FieldOwnerUserID, field.TypeString, value)
-		_node.OwnerUserID = value
-	}
-	if value, ok := sac.mutation.UserID(); ok {
-		_spec.SetField(storageattachment.FieldUserID, field.TypeString, value)
-		_node.UserID = value
-	}
-	if value, ok := sac.mutation.Email(); ok {
-		_spec.SetField(storageattachment.FieldEmail, field.TypeString, value)
-		_node.Email = value
-	}
-	if value, ok := sac.mutation.Role(); ok {
-		_spec.SetField(storageattachment.FieldRole, field.TypeString, value)
-		_node.Role = value
-	}
-	if value, ok := sac.mutation.Status(); ok {
-		_spec.SetField(storageattachment.FieldStatus, field.TypeString, value)
-		_node.Status = value
-	}
-	if value, ok := sac.mutation.Name(); ok {
-		_spec.SetField(storageattachment.FieldName, field.TypeString, value)
-		_node.Name = value
 	}
 	if value, ok := sac.mutation.WorkspaceID(); ok {
 		_spec.SetField(storageattachment.FieldWorkspaceID, field.TypeString, value)
 		_node.WorkspaceID = value
 	}
-	if value, ok := sac.mutation.ResourceID(); ok {
-		_spec.SetField(storageattachment.FieldResourceID, field.TypeString, value)
-		_node.ResourceID = value
+	if value, ok := sac.mutation.ComputeAllocationID(); ok {
+		_spec.SetField(storageattachment.FieldComputeAllocationID, field.TypeString, value)
+		_node.ComputeAllocationID = value
 	}
-	if value, ok := sac.mutation.ResourceKind(); ok {
-		_spec.SetField(storageattachment.FieldResourceKind, field.TypeString, value)
-		_node.ResourceKind = value
+	if value, ok := sac.mutation.StorageID(); ok {
+		_spec.SetField(storageattachment.FieldStorageID, field.TypeString, value)
+		_node.StorageID = value
+	}
+	if value, ok := sac.mutation.VolumeID(); ok {
+		_spec.SetField(storageattachment.FieldVolumeID, field.TypeString, value)
+		_node.VolumeID = value
 	}
 	if value, ok := sac.mutation.OperationID(); ok {
 		_spec.SetField(storageattachment.FieldOperationID, field.TypeString, value)
@@ -885,93 +386,17 @@ func (sac *StorageAttachmentCreate) createSpec() (*StorageAttachment, *sqlgraph.
 		_spec.SetField(storageattachment.FieldProvider, field.TypeString, value)
 		_node.Provider = value
 	}
-	if value, ok := sac.mutation.ProviderResourceID(); ok {
-		_spec.SetField(storageattachment.FieldProviderResourceID, field.TypeString, value)
-		_node.ProviderResourceID = value
+	if value, ok := sac.mutation.ProviderRequestID(); ok {
+		_spec.SetField(storageattachment.FieldProviderRequestID, field.TypeString, value)
+		_node.ProviderRequestID = value
 	}
-	if value, ok := sac.mutation.URL(); ok {
-		_spec.SetField(storageattachment.FieldURL, field.TypeString, value)
-		_node.URL = value
+	if value, ok := sac.mutation.Status(); ok {
+		_spec.SetField(storageattachment.FieldStatus, field.TypeString, value)
+		_node.Status = value
 	}
-	if value, ok := sac.mutation.HoldID(); ok {
-		_spec.SetField(storageattachment.FieldHoldID, field.TypeString, value)
-		_node.HoldID = value
-	}
-	if value, ok := sac.mutation.HoldReleaseID(); ok {
-		_spec.SetField(storageattachment.FieldHoldReleaseID, field.TypeString, value)
-		_node.HoldReleaseID = value
-	}
-	if value, ok := sac.mutation.LedgerEntryID(); ok {
-		_spec.SetField(storageattachment.FieldLedgerEntryID, field.TypeString, value)
-		_node.LedgerEntryID = value
-	}
-	if value, ok := sac.mutation.WalletTransactionID(); ok {
-		_spec.SetField(storageattachment.FieldWalletTransactionID, field.TypeString, value)
-		_node.WalletTransactionID = value
-	}
-	if value, ok := sac.mutation.SettlementID(); ok {
-		_spec.SetField(storageattachment.FieldSettlementID, field.TypeString, value)
-		_node.SettlementID = value
-	}
-	if value, ok := sac.mutation.PricingVersion(); ok {
-		_spec.SetField(storageattachment.FieldPricingVersion, field.TypeString, value)
-		_node.PricingVersion = value
-	}
-	if value, ok := sac.mutation.AmountCents(); ok {
-		_spec.SetField(storageattachment.FieldAmountCents, field.TypeInt64, value)
-		_node.AmountCents = value
-	}
-	if value, ok := sac.mutation.BalanceCents(); ok {
-		_spec.SetField(storageattachment.FieldBalanceCents, field.TypeInt64, value)
-		_node.BalanceCents = value
-	}
-	if value, ok := sac.mutation.FrozenCents(); ok {
-		_spec.SetField(storageattachment.FieldFrozenCents, field.TypeInt64, value)
-		_node.FrozenCents = value
-	}
-	if value, ok := sac.mutation.AvailableCents(); ok {
-		_spec.SetField(storageattachment.FieldAvailableCents, field.TypeInt64, value)
-		_node.AvailableCents = value
-	}
-	if value, ok := sac.mutation.TotalSpentCents(); ok {
-		_spec.SetField(storageattachment.FieldTotalSpentCents, field.TypeInt64, value)
-		_node.TotalSpentCents = value
-	}
-	if value, ok := sac.mutation.Quantity(); ok {
-		_spec.SetField(storageattachment.FieldQuantity, field.TypeFloat64, value)
-		_node.Quantity = value
-	}
-	if value, ok := sac.mutation.Unit(); ok {
-		_spec.SetField(storageattachment.FieldUnit, field.TypeString, value)
-		_node.Unit = value
-	}
-	if value, ok := sac.mutation.Reason(); ok {
-		_spec.SetField(storageattachment.FieldReason, field.TypeString, value)
-		_node.Reason = value
-	}
-	if value, ok := sac.mutation.Result(); ok {
-		_spec.SetField(storageattachment.FieldResult, field.TypeString, value)
-		_node.Result = value
-	}
-	if value, ok := sac.mutation.Source(); ok {
-		_spec.SetField(storageattachment.FieldSource, field.TypeString, value)
-		_node.Source = value
-	}
-	if value, ok := sac.mutation.Direction(); ok {
-		_spec.SetField(storageattachment.FieldDirection, field.TypeString, value)
-		_node.Direction = value
-	}
-	if value, ok := sac.mutation.CreatedAt(); ok {
-		_spec.SetField(storageattachment.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
-	}
-	if value, ok := sac.mutation.UpdatedAt(); ok {
-		_spec.SetField(storageattachment.FieldUpdatedAt, field.TypeTime, value)
-		_node.UpdatedAt = value
-	}
-	if value, ok := sac.mutation.ArchivedAt(); ok {
-		_spec.SetField(storageattachment.FieldArchivedAt, field.TypeTime, value)
-		_node.ArchivedAt = &value
+	if value, ok := sac.mutation.MountPath(); ok {
+		_spec.SetField(storageattachment.FieldMountPath, field.TypeString, value)
+		_node.MountPath = value
 	}
 	return _node, _spec
 }

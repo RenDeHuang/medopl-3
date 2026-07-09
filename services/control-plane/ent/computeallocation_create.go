@@ -20,31 +20,37 @@ type ComputeAllocationCreate struct {
 	hooks    []Hook
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (cac *ComputeAllocationCreate) SetCreatedAt(t time.Time) *ComputeAllocationCreate {
+	cac.mutation.SetCreatedAt(t)
+	return cac
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableCreatedAt(t *time.Time) *ComputeAllocationCreate {
+	if t != nil {
+		cac.SetCreatedAt(*t)
+	}
+	return cac
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (cac *ComputeAllocationCreate) SetUpdatedAt(t time.Time) *ComputeAllocationCreate {
+	cac.mutation.SetUpdatedAt(t)
+	return cac
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableUpdatedAt(t *time.Time) *ComputeAllocationCreate {
+	if t != nil {
+		cac.SetUpdatedAt(*t)
+	}
+	return cac
+}
+
 // SetAccountID sets the "account_id" field.
 func (cac *ComputeAllocationCreate) SetAccountID(s string) *ComputeAllocationCreate {
 	cac.mutation.SetAccountID(s)
-	return cac
-}
-
-// SetNillableAccountID sets the "account_id" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableAccountID(s *string) *ComputeAllocationCreate {
-	if s != nil {
-		cac.SetAccountID(*s)
-	}
-	return cac
-}
-
-// SetOwnerAccountID sets the "owner_account_id" field.
-func (cac *ComputeAllocationCreate) SetOwnerAccountID(s string) *ComputeAllocationCreate {
-	cac.mutation.SetOwnerAccountID(s)
-	return cac
-}
-
-// SetNillableOwnerAccountID sets the "owner_account_id" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableOwnerAccountID(s *string) *ComputeAllocationCreate {
-	if s != nil {
-		cac.SetOwnerAccountID(*s)
-	}
 	return cac
 }
 
@@ -58,76 +64,6 @@ func (cac *ComputeAllocationCreate) SetOwnerUserID(s string) *ComputeAllocationC
 func (cac *ComputeAllocationCreate) SetNillableOwnerUserID(s *string) *ComputeAllocationCreate {
 	if s != nil {
 		cac.SetOwnerUserID(*s)
-	}
-	return cac
-}
-
-// SetUserID sets the "user_id" field.
-func (cac *ComputeAllocationCreate) SetUserID(s string) *ComputeAllocationCreate {
-	cac.mutation.SetUserID(s)
-	return cac
-}
-
-// SetNillableUserID sets the "user_id" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableUserID(s *string) *ComputeAllocationCreate {
-	if s != nil {
-		cac.SetUserID(*s)
-	}
-	return cac
-}
-
-// SetEmail sets the "email" field.
-func (cac *ComputeAllocationCreate) SetEmail(s string) *ComputeAllocationCreate {
-	cac.mutation.SetEmail(s)
-	return cac
-}
-
-// SetNillableEmail sets the "email" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableEmail(s *string) *ComputeAllocationCreate {
-	if s != nil {
-		cac.SetEmail(*s)
-	}
-	return cac
-}
-
-// SetRole sets the "role" field.
-func (cac *ComputeAllocationCreate) SetRole(s string) *ComputeAllocationCreate {
-	cac.mutation.SetRole(s)
-	return cac
-}
-
-// SetNillableRole sets the "role" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableRole(s *string) *ComputeAllocationCreate {
-	if s != nil {
-		cac.SetRole(*s)
-	}
-	return cac
-}
-
-// SetStatus sets the "status" field.
-func (cac *ComputeAllocationCreate) SetStatus(s string) *ComputeAllocationCreate {
-	cac.mutation.SetStatus(s)
-	return cac
-}
-
-// SetNillableStatus sets the "status" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableStatus(s *string) *ComputeAllocationCreate {
-	if s != nil {
-		cac.SetStatus(*s)
-	}
-	return cac
-}
-
-// SetName sets the "name" field.
-func (cac *ComputeAllocationCreate) SetName(s string) *ComputeAllocationCreate {
-	cac.mutation.SetName(s)
-	return cac
-}
-
-// SetNillableName sets the "name" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableName(s *string) *ComputeAllocationCreate {
-	if s != nil {
-		cac.SetName(*s)
 	}
 	return cac
 }
@@ -146,44 +82,30 @@ func (cac *ComputeAllocationCreate) SetNillableWorkspaceID(s *string) *ComputeAl
 	return cac
 }
 
-// SetResourceID sets the "resource_id" field.
-func (cac *ComputeAllocationCreate) SetResourceID(s string) *ComputeAllocationCreate {
-	cac.mutation.SetResourceID(s)
+// SetName sets the "name" field.
+func (cac *ComputeAllocationCreate) SetName(s string) *ComputeAllocationCreate {
+	cac.mutation.SetName(s)
 	return cac
 }
 
-// SetNillableResourceID sets the "resource_id" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableResourceID(s *string) *ComputeAllocationCreate {
+// SetNillableName sets the "name" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableName(s *string) *ComputeAllocationCreate {
 	if s != nil {
-		cac.SetResourceID(*s)
+		cac.SetName(*s)
 	}
 	return cac
 }
 
-// SetResourceKind sets the "resource_kind" field.
-func (cac *ComputeAllocationCreate) SetResourceKind(s string) *ComputeAllocationCreate {
-	cac.mutation.SetResourceKind(s)
+// SetPackageID sets the "package_id" field.
+func (cac *ComputeAllocationCreate) SetPackageID(s string) *ComputeAllocationCreate {
+	cac.mutation.SetPackageID(s)
 	return cac
 }
 
-// SetNillableResourceKind sets the "resource_kind" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableResourceKind(s *string) *ComputeAllocationCreate {
+// SetNillablePackageID sets the "package_id" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillablePackageID(s *string) *ComputeAllocationCreate {
 	if s != nil {
-		cac.SetResourceKind(*s)
-	}
-	return cac
-}
-
-// SetOperationID sets the "operation_id" field.
-func (cac *ComputeAllocationCreate) SetOperationID(s string) *ComputeAllocationCreate {
-	cac.mutation.SetOperationID(s)
-	return cac
-}
-
-// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableOperationID(s *string) *ComputeAllocationCreate {
-	if s != nil {
-		cac.SetOperationID(*s)
+		cac.SetPackageID(*s)
 	}
 	return cac
 }
@@ -216,16 +138,58 @@ func (cac *ComputeAllocationCreate) SetNillableProviderResourceID(s *string) *Co
 	return cac
 }
 
-// SetURL sets the "url" field.
-func (cac *ComputeAllocationCreate) SetURL(s string) *ComputeAllocationCreate {
-	cac.mutation.SetURL(s)
+// SetProviderRequestID sets the "provider_request_id" field.
+func (cac *ComputeAllocationCreate) SetProviderRequestID(s string) *ComputeAllocationCreate {
+	cac.mutation.SetProviderRequestID(s)
 	return cac
 }
 
-// SetNillableURL sets the "url" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableURL(s *string) *ComputeAllocationCreate {
+// SetNillableProviderRequestID sets the "provider_request_id" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableProviderRequestID(s *string) *ComputeAllocationCreate {
 	if s != nil {
-		cac.SetURL(*s)
+		cac.SetProviderRequestID(*s)
+	}
+	return cac
+}
+
+// SetOperationID sets the "operation_id" field.
+func (cac *ComputeAllocationCreate) SetOperationID(s string) *ComputeAllocationCreate {
+	cac.mutation.SetOperationID(s)
+	return cac
+}
+
+// SetNillableOperationID sets the "operation_id" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableOperationID(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetOperationID(*s)
+	}
+	return cac
+}
+
+// SetStatus sets the "status" field.
+func (cac *ComputeAllocationCreate) SetStatus(s string) *ComputeAllocationCreate {
+	cac.mutation.SetStatus(s)
+	return cac
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableStatus(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetStatus(*s)
+	}
+	return cac
+}
+
+// SetBillingStatus sets the "billing_status" field.
+func (cac *ComputeAllocationCreate) SetBillingStatus(s string) *ComputeAllocationCreate {
+	cac.mutation.SetBillingStatus(s)
+	return cac
+}
+
+// SetNillableBillingStatus sets the "billing_status" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableBillingStatus(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetBillingStatus(*s)
 	}
 	return cac
 }
@@ -258,6 +222,20 @@ func (cac *ComputeAllocationCreate) SetNillableHoldReleaseID(s *string) *Compute
 	return cac
 }
 
+// SetSettlementID sets the "settlement_id" field.
+func (cac *ComputeAllocationCreate) SetSettlementID(s string) *ComputeAllocationCreate {
+	cac.mutation.SetSettlementID(s)
+	return cac
+}
+
+// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableSettlementID(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetSettlementID(*s)
+	}
+	return cac
+}
+
 // SetLedgerEntryID sets the "ledger_entry_id" field.
 func (cac *ComputeAllocationCreate) SetLedgerEntryID(s string) *ComputeAllocationCreate {
 	cac.mutation.SetLedgerEntryID(s)
@@ -286,20 +264,6 @@ func (cac *ComputeAllocationCreate) SetNillableWalletTransactionID(s *string) *C
 	return cac
 }
 
-// SetSettlementID sets the "settlement_id" field.
-func (cac *ComputeAllocationCreate) SetSettlementID(s string) *ComputeAllocationCreate {
-	cac.mutation.SetSettlementID(s)
-	return cac
-}
-
-// SetNillableSettlementID sets the "settlement_id" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableSettlementID(s *string) *ComputeAllocationCreate {
-	if s != nil {
-		cac.SetSettlementID(*s)
-	}
-	return cac
-}
-
 // SetPricingVersion sets the "pricing_version" field.
 func (cac *ComputeAllocationCreate) SetPricingVersion(s string) *ComputeAllocationCreate {
 	cac.mutation.SetPricingVersion(s)
@@ -314,198 +278,254 @@ func (cac *ComputeAllocationCreate) SetNillablePricingVersion(s *string) *Comput
 	return cac
 }
 
-// SetAmountCents sets the "amount_cents" field.
-func (cac *ComputeAllocationCreate) SetAmountCents(i int64) *ComputeAllocationCreate {
-	cac.mutation.SetAmountCents(i)
+// SetUsagePeriodEnd sets the "usage_period_end" field.
+func (cac *ComputeAllocationCreate) SetUsagePeriodEnd(s string) *ComputeAllocationCreate {
+	cac.mutation.SetUsagePeriodEnd(s)
 	return cac
 }
 
-// SetNillableAmountCents sets the "amount_cents" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableAmountCents(i *int64) *ComputeAllocationCreate {
-	if i != nil {
-		cac.SetAmountCents(*i)
+// SetNillableUsagePeriodEnd sets the "usage_period_end" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableUsagePeriodEnd(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetUsagePeriodEnd(*s)
 	}
 	return cac
 }
 
-// SetBalanceCents sets the "balance_cents" field.
-func (cac *ComputeAllocationCreate) SetBalanceCents(i int64) *ComputeAllocationCreate {
-	cac.mutation.SetBalanceCents(i)
+// SetEvidenceID sets the "evidence_id" field.
+func (cac *ComputeAllocationCreate) SetEvidenceID(s string) *ComputeAllocationCreate {
+	cac.mutation.SetEvidenceID(s)
 	return cac
 }
 
-// SetNillableBalanceCents sets the "balance_cents" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableBalanceCents(i *int64) *ComputeAllocationCreate {
-	if i != nil {
-		cac.SetBalanceCents(*i)
+// SetNillableEvidenceID sets the "evidence_id" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableEvidenceID(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetEvidenceID(*s)
 	}
 	return cac
 }
 
-// SetFrozenCents sets the "frozen_cents" field.
-func (cac *ComputeAllocationCreate) SetFrozenCents(i int64) *ComputeAllocationCreate {
-	cac.mutation.SetFrozenCents(i)
+// SetCvmInstanceID sets the "cvm_instance_id" field.
+func (cac *ComputeAllocationCreate) SetCvmInstanceID(s string) *ComputeAllocationCreate {
+	cac.mutation.SetCvmInstanceID(s)
 	return cac
 }
 
-// SetNillableFrozenCents sets the "frozen_cents" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableFrozenCents(i *int64) *ComputeAllocationCreate {
-	if i != nil {
-		cac.SetFrozenCents(*i)
+// SetNillableCvmInstanceID sets the "cvm_instance_id" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableCvmInstanceID(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetCvmInstanceID(*s)
 	}
 	return cac
 }
 
-// SetAvailableCents sets the "available_cents" field.
-func (cac *ComputeAllocationCreate) SetAvailableCents(i int64) *ComputeAllocationCreate {
-	cac.mutation.SetAvailableCents(i)
+// SetInstanceID sets the "instance_id" field.
+func (cac *ComputeAllocationCreate) SetInstanceID(s string) *ComputeAllocationCreate {
+	cac.mutation.SetInstanceID(s)
 	return cac
 }
 
-// SetNillableAvailableCents sets the "available_cents" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableAvailableCents(i *int64) *ComputeAllocationCreate {
-	if i != nil {
-		cac.SetAvailableCents(*i)
+// SetNillableInstanceID sets the "instance_id" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableInstanceID(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetInstanceID(*s)
 	}
 	return cac
 }
 
-// SetTotalSpentCents sets the "total_spent_cents" field.
-func (cac *ComputeAllocationCreate) SetTotalSpentCents(i int64) *ComputeAllocationCreate {
-	cac.mutation.SetTotalSpentCents(i)
+// SetNodeName sets the "node_name" field.
+func (cac *ComputeAllocationCreate) SetNodeName(s string) *ComputeAllocationCreate {
+	cac.mutation.SetNodeName(s)
 	return cac
 }
 
-// SetNillableTotalSpentCents sets the "total_spent_cents" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableTotalSpentCents(i *int64) *ComputeAllocationCreate {
-	if i != nil {
-		cac.SetTotalSpentCents(*i)
+// SetNillableNodeName sets the "node_name" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableNodeName(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetNodeName(*s)
 	}
 	return cac
 }
 
-// SetQuantity sets the "quantity" field.
-func (cac *ComputeAllocationCreate) SetQuantity(f float64) *ComputeAllocationCreate {
-	cac.mutation.SetQuantity(f)
+// SetMachineName sets the "machine_name" field.
+func (cac *ComputeAllocationCreate) SetMachineName(s string) *ComputeAllocationCreate {
+	cac.mutation.SetMachineName(s)
 	return cac
 }
 
-// SetNillableQuantity sets the "quantity" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableQuantity(f *float64) *ComputeAllocationCreate {
+// SetNillableMachineName sets the "machine_name" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableMachineName(s *string) *ComputeAllocationCreate {
+	if s != nil {
+		cac.SetMachineName(*s)
+	}
+	return cac
+}
+
+// SetHoldAmountCents sets the "hold_amount_cents" field.
+func (cac *ComputeAllocationCreate) SetHoldAmountCents(i int64) *ComputeAllocationCreate {
+	cac.mutation.SetHoldAmountCents(i)
+	return cac
+}
+
+// SetNillableHoldAmountCents sets the "hold_amount_cents" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableHoldAmountCents(i *int64) *ComputeAllocationCreate {
+	if i != nil {
+		cac.SetHoldAmountCents(*i)
+	}
+	return cac
+}
+
+// SetHoldAmount sets the "hold_amount" field.
+func (cac *ComputeAllocationCreate) SetHoldAmount(f float64) *ComputeAllocationCreate {
+	cac.mutation.SetHoldAmount(f)
+	return cac
+}
+
+// SetNillableHoldAmount sets the "hold_amount" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableHoldAmount(f *float64) *ComputeAllocationCreate {
 	if f != nil {
-		cac.SetQuantity(*f)
+		cac.SetHoldAmount(*f)
 	}
 	return cac
 }
 
-// SetUnit sets the "unit" field.
-func (cac *ComputeAllocationCreate) SetUnit(s string) *ComputeAllocationCreate {
-	cac.mutation.SetUnit(s)
+// SetCPU sets the "cpu" field.
+func (cac *ComputeAllocationCreate) SetCPU(f float64) *ComputeAllocationCreate {
+	cac.mutation.SetCPU(f)
 	return cac
 }
 
-// SetNillableUnit sets the "unit" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableUnit(s *string) *ComputeAllocationCreate {
+// SetNillableCPU sets the "cpu" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableCPU(f *float64) *ComputeAllocationCreate {
+	if f != nil {
+		cac.SetCPU(*f)
+	}
+	return cac
+}
+
+// SetMemoryGB sets the "memory_gb" field.
+func (cac *ComputeAllocationCreate) SetMemoryGB(f float64) *ComputeAllocationCreate {
+	cac.mutation.SetMemoryGB(f)
+	return cac
+}
+
+// SetNillableMemoryGB sets the "memory_gb" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableMemoryGB(f *float64) *ComputeAllocationCreate {
+	if f != nil {
+		cac.SetMemoryGB(*f)
+	}
+	return cac
+}
+
+// SetDiskGB sets the "disk_gb" field.
+func (cac *ComputeAllocationCreate) SetDiskGB(f float64) *ComputeAllocationCreate {
+	cac.mutation.SetDiskGB(f)
+	return cac
+}
+
+// SetNillableDiskGB sets the "disk_gb" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillableDiskGB(f *float64) *ComputeAllocationCreate {
+	if f != nil {
+		cac.SetDiskGB(*f)
+	}
+	return cac
+}
+
+// SetPriceSnapshotPackageID sets the "price_snapshot_package_id" field.
+func (cac *ComputeAllocationCreate) SetPriceSnapshotPackageID(s string) *ComputeAllocationCreate {
+	cac.mutation.SetPriceSnapshotPackageID(s)
+	return cac
+}
+
+// SetNillablePriceSnapshotPackageID sets the "price_snapshot_package_id" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillablePriceSnapshotPackageID(s *string) *ComputeAllocationCreate {
 	if s != nil {
-		cac.SetUnit(*s)
+		cac.SetPriceSnapshotPackageID(*s)
 	}
 	return cac
 }
 
-// SetReason sets the "reason" field.
-func (cac *ComputeAllocationCreate) SetReason(s string) *ComputeAllocationCreate {
-	cac.mutation.SetReason(s)
+// SetPriceSnapshotResourceType sets the "price_snapshot_resource_type" field.
+func (cac *ComputeAllocationCreate) SetPriceSnapshotResourceType(s string) *ComputeAllocationCreate {
+	cac.mutation.SetPriceSnapshotResourceType(s)
 	return cac
 }
 
-// SetNillableReason sets the "reason" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableReason(s *string) *ComputeAllocationCreate {
+// SetNillablePriceSnapshotResourceType sets the "price_snapshot_resource_type" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillablePriceSnapshotResourceType(s *string) *ComputeAllocationCreate {
 	if s != nil {
-		cac.SetReason(*s)
+		cac.SetPriceSnapshotResourceType(*s)
 	}
 	return cac
 }
 
-// SetResult sets the "result" field.
-func (cac *ComputeAllocationCreate) SetResult(s string) *ComputeAllocationCreate {
-	cac.mutation.SetResult(s)
+// SetPriceSnapshotCurrency sets the "price_snapshot_currency" field.
+func (cac *ComputeAllocationCreate) SetPriceSnapshotCurrency(s string) *ComputeAllocationCreate {
+	cac.mutation.SetPriceSnapshotCurrency(s)
 	return cac
 }
 
-// SetNillableResult sets the "result" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableResult(s *string) *ComputeAllocationCreate {
+// SetNillablePriceSnapshotCurrency sets the "price_snapshot_currency" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillablePriceSnapshotCurrency(s *string) *ComputeAllocationCreate {
 	if s != nil {
-		cac.SetResult(*s)
+		cac.SetPriceSnapshotCurrency(*s)
 	}
 	return cac
 }
 
-// SetSource sets the "source" field.
-func (cac *ComputeAllocationCreate) SetSource(s string) *ComputeAllocationCreate {
-	cac.mutation.SetSource(s)
+// SetPriceSnapshotSource sets the "price_snapshot_source" field.
+func (cac *ComputeAllocationCreate) SetPriceSnapshotSource(s string) *ComputeAllocationCreate {
+	cac.mutation.SetPriceSnapshotSource(s)
 	return cac
 }
 
-// SetNillableSource sets the "source" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableSource(s *string) *ComputeAllocationCreate {
+// SetNillablePriceSnapshotSource sets the "price_snapshot_source" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillablePriceSnapshotSource(s *string) *ComputeAllocationCreate {
 	if s != nil {
-		cac.SetSource(*s)
+		cac.SetPriceSnapshotSource(*s)
 	}
 	return cac
 }
 
-// SetDirection sets the "direction" field.
-func (cac *ComputeAllocationCreate) SetDirection(s string) *ComputeAllocationCreate {
-	cac.mutation.SetDirection(s)
+// SetPriceSnapshotSku sets the "price_snapshot_sku" field.
+func (cac *ComputeAllocationCreate) SetPriceSnapshotSku(s string) *ComputeAllocationCreate {
+	cac.mutation.SetPriceSnapshotSku(s)
 	return cac
 }
 
-// SetNillableDirection sets the "direction" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableDirection(s *string) *ComputeAllocationCreate {
+// SetNillablePriceSnapshotSku sets the "price_snapshot_sku" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillablePriceSnapshotSku(s *string) *ComputeAllocationCreate {
 	if s != nil {
-		cac.SetDirection(*s)
+		cac.SetPriceSnapshotSku(*s)
 	}
 	return cac
 }
 
-// SetCreatedAt sets the "created_at" field.
-func (cac *ComputeAllocationCreate) SetCreatedAt(t time.Time) *ComputeAllocationCreate {
-	cac.mutation.SetCreatedAt(t)
+// SetPriceSnapshotUnitPriceCents sets the "price_snapshot_unit_price_cents" field.
+func (cac *ComputeAllocationCreate) SetPriceSnapshotUnitPriceCents(i int64) *ComputeAllocationCreate {
+	cac.mutation.SetPriceSnapshotUnitPriceCents(i)
 	return cac
 }
 
-// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableCreatedAt(t *time.Time) *ComputeAllocationCreate {
-	if t != nil {
-		cac.SetCreatedAt(*t)
+// SetNillablePriceSnapshotUnitPriceCents sets the "price_snapshot_unit_price_cents" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillablePriceSnapshotUnitPriceCents(i *int64) *ComputeAllocationCreate {
+	if i != nil {
+		cac.SetPriceSnapshotUnitPriceCents(*i)
 	}
 	return cac
 }
 
-// SetUpdatedAt sets the "updated_at" field.
-func (cac *ComputeAllocationCreate) SetUpdatedAt(t time.Time) *ComputeAllocationCreate {
-	cac.mutation.SetUpdatedAt(t)
+// SetPriceSnapshotComputeHourly sets the "price_snapshot_compute_hourly" field.
+func (cac *ComputeAllocationCreate) SetPriceSnapshotComputeHourly(f float64) *ComputeAllocationCreate {
+	cac.mutation.SetPriceSnapshotComputeHourly(f)
 	return cac
 }
 
-// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableUpdatedAt(t *time.Time) *ComputeAllocationCreate {
-	if t != nil {
-		cac.SetUpdatedAt(*t)
-	}
-	return cac
-}
-
-// SetArchivedAt sets the "archived_at" field.
-func (cac *ComputeAllocationCreate) SetArchivedAt(t time.Time) *ComputeAllocationCreate {
-	cac.mutation.SetArchivedAt(t)
-	return cac
-}
-
-// SetNillableArchivedAt sets the "archived_at" field if the given value is not nil.
-func (cac *ComputeAllocationCreate) SetNillableArchivedAt(t *time.Time) *ComputeAllocationCreate {
-	if t != nil {
-		cac.SetArchivedAt(*t)
+// SetNillablePriceSnapshotComputeHourly sets the "price_snapshot_compute_hourly" field if the given value is not nil.
+func (cac *ComputeAllocationCreate) SetNillablePriceSnapshotComputeHourly(f *float64) *ComputeAllocationCreate {
+	if f != nil {
+		cac.SetPriceSnapshotComputeHourly(*f)
 	}
 	return cac
 }
@@ -551,53 +571,29 @@ func (cac *ComputeAllocationCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (cac *ComputeAllocationCreate) defaults() {
-	if _, ok := cac.mutation.AccountID(); !ok {
-		v := computeallocation.DefaultAccountID
-		cac.mutation.SetAccountID(v)
+	if _, ok := cac.mutation.CreatedAt(); !ok {
+		v := computeallocation.DefaultCreatedAt()
+		cac.mutation.SetCreatedAt(v)
 	}
-	if _, ok := cac.mutation.OwnerAccountID(); !ok {
-		v := computeallocation.DefaultOwnerAccountID
-		cac.mutation.SetOwnerAccountID(v)
+	if _, ok := cac.mutation.UpdatedAt(); !ok {
+		v := computeallocation.DefaultUpdatedAt()
+		cac.mutation.SetUpdatedAt(v)
 	}
 	if _, ok := cac.mutation.OwnerUserID(); !ok {
 		v := computeallocation.DefaultOwnerUserID
 		cac.mutation.SetOwnerUserID(v)
 	}
-	if _, ok := cac.mutation.UserID(); !ok {
-		v := computeallocation.DefaultUserID
-		cac.mutation.SetUserID(v)
-	}
-	if _, ok := cac.mutation.Email(); !ok {
-		v := computeallocation.DefaultEmail
-		cac.mutation.SetEmail(v)
-	}
-	if _, ok := cac.mutation.Role(); !ok {
-		v := computeallocation.DefaultRole
-		cac.mutation.SetRole(v)
-	}
-	if _, ok := cac.mutation.Status(); !ok {
-		v := computeallocation.DefaultStatus
-		cac.mutation.SetStatus(v)
+	if _, ok := cac.mutation.WorkspaceID(); !ok {
+		v := computeallocation.DefaultWorkspaceID
+		cac.mutation.SetWorkspaceID(v)
 	}
 	if _, ok := cac.mutation.Name(); !ok {
 		v := computeallocation.DefaultName
 		cac.mutation.SetName(v)
 	}
-	if _, ok := cac.mutation.WorkspaceID(); !ok {
-		v := computeallocation.DefaultWorkspaceID
-		cac.mutation.SetWorkspaceID(v)
-	}
-	if _, ok := cac.mutation.ResourceID(); !ok {
-		v := computeallocation.DefaultResourceID
-		cac.mutation.SetResourceID(v)
-	}
-	if _, ok := cac.mutation.ResourceKind(); !ok {
-		v := computeallocation.DefaultResourceKind
-		cac.mutation.SetResourceKind(v)
-	}
-	if _, ok := cac.mutation.OperationID(); !ok {
-		v := computeallocation.DefaultOperationID
-		cac.mutation.SetOperationID(v)
+	if _, ok := cac.mutation.PackageID(); !ok {
+		v := computeallocation.DefaultPackageID
+		cac.mutation.SetPackageID(v)
 	}
 	if _, ok := cac.mutation.Provider(); !ok {
 		v := computeallocation.DefaultProvider
@@ -607,9 +603,21 @@ func (cac *ComputeAllocationCreate) defaults() {
 		v := computeallocation.DefaultProviderResourceID
 		cac.mutation.SetProviderResourceID(v)
 	}
-	if _, ok := cac.mutation.URL(); !ok {
-		v := computeallocation.DefaultURL
-		cac.mutation.SetURL(v)
+	if _, ok := cac.mutation.ProviderRequestID(); !ok {
+		v := computeallocation.DefaultProviderRequestID
+		cac.mutation.SetProviderRequestID(v)
+	}
+	if _, ok := cac.mutation.OperationID(); !ok {
+		v := computeallocation.DefaultOperationID
+		cac.mutation.SetOperationID(v)
+	}
+	if _, ok := cac.mutation.Status(); !ok {
+		v := computeallocation.DefaultStatus
+		cac.mutation.SetStatus(v)
+	}
+	if _, ok := cac.mutation.BillingStatus(); !ok {
+		v := computeallocation.DefaultBillingStatus
+		cac.mutation.SetBillingStatus(v)
 	}
 	if _, ok := cac.mutation.HoldID(); !ok {
 		v := computeallocation.DefaultHoldID
@@ -619,6 +627,10 @@ func (cac *ComputeAllocationCreate) defaults() {
 		v := computeallocation.DefaultHoldReleaseID
 		cac.mutation.SetHoldReleaseID(v)
 	}
+	if _, ok := cac.mutation.SettlementID(); !ok {
+		v := computeallocation.DefaultSettlementID
+		cac.mutation.SetSettlementID(v)
+	}
 	if _, ok := cac.mutation.LedgerEntryID(); !ok {
 		v := computeallocation.DefaultLedgerEntryID
 		cac.mutation.SetLedgerEntryID(v)
@@ -627,105 +639,111 @@ func (cac *ComputeAllocationCreate) defaults() {
 		v := computeallocation.DefaultWalletTransactionID
 		cac.mutation.SetWalletTransactionID(v)
 	}
-	if _, ok := cac.mutation.SettlementID(); !ok {
-		v := computeallocation.DefaultSettlementID
-		cac.mutation.SetSettlementID(v)
-	}
 	if _, ok := cac.mutation.PricingVersion(); !ok {
 		v := computeallocation.DefaultPricingVersion
 		cac.mutation.SetPricingVersion(v)
 	}
-	if _, ok := cac.mutation.AmountCents(); !ok {
-		v := computeallocation.DefaultAmountCents
-		cac.mutation.SetAmountCents(v)
+	if _, ok := cac.mutation.UsagePeriodEnd(); !ok {
+		v := computeallocation.DefaultUsagePeriodEnd
+		cac.mutation.SetUsagePeriodEnd(v)
 	}
-	if _, ok := cac.mutation.BalanceCents(); !ok {
-		v := computeallocation.DefaultBalanceCents
-		cac.mutation.SetBalanceCents(v)
+	if _, ok := cac.mutation.EvidenceID(); !ok {
+		v := computeallocation.DefaultEvidenceID
+		cac.mutation.SetEvidenceID(v)
 	}
-	if _, ok := cac.mutation.FrozenCents(); !ok {
-		v := computeallocation.DefaultFrozenCents
-		cac.mutation.SetFrozenCents(v)
+	if _, ok := cac.mutation.CvmInstanceID(); !ok {
+		v := computeallocation.DefaultCvmInstanceID
+		cac.mutation.SetCvmInstanceID(v)
 	}
-	if _, ok := cac.mutation.AvailableCents(); !ok {
-		v := computeallocation.DefaultAvailableCents
-		cac.mutation.SetAvailableCents(v)
+	if _, ok := cac.mutation.InstanceID(); !ok {
+		v := computeallocation.DefaultInstanceID
+		cac.mutation.SetInstanceID(v)
 	}
-	if _, ok := cac.mutation.TotalSpentCents(); !ok {
-		v := computeallocation.DefaultTotalSpentCents
-		cac.mutation.SetTotalSpentCents(v)
+	if _, ok := cac.mutation.NodeName(); !ok {
+		v := computeallocation.DefaultNodeName
+		cac.mutation.SetNodeName(v)
 	}
-	if _, ok := cac.mutation.Quantity(); !ok {
-		v := computeallocation.DefaultQuantity
-		cac.mutation.SetQuantity(v)
+	if _, ok := cac.mutation.MachineName(); !ok {
+		v := computeallocation.DefaultMachineName
+		cac.mutation.SetMachineName(v)
 	}
-	if _, ok := cac.mutation.Unit(); !ok {
-		v := computeallocation.DefaultUnit
-		cac.mutation.SetUnit(v)
+	if _, ok := cac.mutation.HoldAmountCents(); !ok {
+		v := computeallocation.DefaultHoldAmountCents
+		cac.mutation.SetHoldAmountCents(v)
 	}
-	if _, ok := cac.mutation.Reason(); !ok {
-		v := computeallocation.DefaultReason
-		cac.mutation.SetReason(v)
+	if _, ok := cac.mutation.HoldAmount(); !ok {
+		v := computeallocation.DefaultHoldAmount
+		cac.mutation.SetHoldAmount(v)
 	}
-	if _, ok := cac.mutation.Result(); !ok {
-		v := computeallocation.DefaultResult
-		cac.mutation.SetResult(v)
+	if _, ok := cac.mutation.CPU(); !ok {
+		v := computeallocation.DefaultCPU
+		cac.mutation.SetCPU(v)
 	}
-	if _, ok := cac.mutation.Source(); !ok {
-		v := computeallocation.DefaultSource
-		cac.mutation.SetSource(v)
+	if _, ok := cac.mutation.MemoryGB(); !ok {
+		v := computeallocation.DefaultMemoryGB
+		cac.mutation.SetMemoryGB(v)
 	}
-	if _, ok := cac.mutation.Direction(); !ok {
-		v := computeallocation.DefaultDirection
-		cac.mutation.SetDirection(v)
+	if _, ok := cac.mutation.DiskGB(); !ok {
+		v := computeallocation.DefaultDiskGB
+		cac.mutation.SetDiskGB(v)
 	}
-	if _, ok := cac.mutation.CreatedAt(); !ok {
-		v := computeallocation.DefaultCreatedAt()
-		cac.mutation.SetCreatedAt(v)
+	if _, ok := cac.mutation.PriceSnapshotPackageID(); !ok {
+		v := computeallocation.DefaultPriceSnapshotPackageID
+		cac.mutation.SetPriceSnapshotPackageID(v)
 	}
-	if _, ok := cac.mutation.UpdatedAt(); !ok {
-		v := computeallocation.DefaultUpdatedAt()
-		cac.mutation.SetUpdatedAt(v)
+	if _, ok := cac.mutation.PriceSnapshotResourceType(); !ok {
+		v := computeallocation.DefaultPriceSnapshotResourceType
+		cac.mutation.SetPriceSnapshotResourceType(v)
+	}
+	if _, ok := cac.mutation.PriceSnapshotCurrency(); !ok {
+		v := computeallocation.DefaultPriceSnapshotCurrency
+		cac.mutation.SetPriceSnapshotCurrency(v)
+	}
+	if _, ok := cac.mutation.PriceSnapshotSource(); !ok {
+		v := computeallocation.DefaultPriceSnapshotSource
+		cac.mutation.SetPriceSnapshotSource(v)
+	}
+	if _, ok := cac.mutation.PriceSnapshotSku(); !ok {
+		v := computeallocation.DefaultPriceSnapshotSku
+		cac.mutation.SetPriceSnapshotSku(v)
+	}
+	if _, ok := cac.mutation.PriceSnapshotUnitPriceCents(); !ok {
+		v := computeallocation.DefaultPriceSnapshotUnitPriceCents
+		cac.mutation.SetPriceSnapshotUnitPriceCents(v)
+	}
+	if _, ok := cac.mutation.PriceSnapshotComputeHourly(); !ok {
+		v := computeallocation.DefaultPriceSnapshotComputeHourly
+		cac.mutation.SetPriceSnapshotComputeHourly(v)
 	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (cac *ComputeAllocationCreate) check() error {
+	if _, ok := cac.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ComputeAllocation.created_at"`)}
+	}
+	if _, ok := cac.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ComputeAllocation.updated_at"`)}
+	}
 	if _, ok := cac.mutation.AccountID(); !ok {
 		return &ValidationError{Name: "account_id", err: errors.New(`ent: missing required field "ComputeAllocation.account_id"`)}
 	}
-	if _, ok := cac.mutation.OwnerAccountID(); !ok {
-		return &ValidationError{Name: "owner_account_id", err: errors.New(`ent: missing required field "ComputeAllocation.owner_account_id"`)}
+	if v, ok := cac.mutation.AccountID(); ok {
+		if err := computeallocation.AccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "ComputeAllocation.account_id": %w`, err)}
+		}
 	}
 	if _, ok := cac.mutation.OwnerUserID(); !ok {
 		return &ValidationError{Name: "owner_user_id", err: errors.New(`ent: missing required field "ComputeAllocation.owner_user_id"`)}
 	}
-	if _, ok := cac.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "ComputeAllocation.user_id"`)}
-	}
-	if _, ok := cac.mutation.Email(); !ok {
-		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "ComputeAllocation.email"`)}
-	}
-	if _, ok := cac.mutation.Role(); !ok {
-		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "ComputeAllocation.role"`)}
-	}
-	if _, ok := cac.mutation.Status(); !ok {
-		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "ComputeAllocation.status"`)}
+	if _, ok := cac.mutation.WorkspaceID(); !ok {
+		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "ComputeAllocation.workspace_id"`)}
 	}
 	if _, ok := cac.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "ComputeAllocation.name"`)}
 	}
-	if _, ok := cac.mutation.WorkspaceID(); !ok {
-		return &ValidationError{Name: "workspace_id", err: errors.New(`ent: missing required field "ComputeAllocation.workspace_id"`)}
-	}
-	if _, ok := cac.mutation.ResourceID(); !ok {
-		return &ValidationError{Name: "resource_id", err: errors.New(`ent: missing required field "ComputeAllocation.resource_id"`)}
-	}
-	if _, ok := cac.mutation.ResourceKind(); !ok {
-		return &ValidationError{Name: "resource_kind", err: errors.New(`ent: missing required field "ComputeAllocation.resource_kind"`)}
-	}
-	if _, ok := cac.mutation.OperationID(); !ok {
-		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "ComputeAllocation.operation_id"`)}
+	if _, ok := cac.mutation.PackageID(); !ok {
+		return &ValidationError{Name: "package_id", err: errors.New(`ent: missing required field "ComputeAllocation.package_id"`)}
 	}
 	if _, ok := cac.mutation.Provider(); !ok {
 		return &ValidationError{Name: "provider", err: errors.New(`ent: missing required field "ComputeAllocation.provider"`)}
@@ -733,8 +751,17 @@ func (cac *ComputeAllocationCreate) check() error {
 	if _, ok := cac.mutation.ProviderResourceID(); !ok {
 		return &ValidationError{Name: "provider_resource_id", err: errors.New(`ent: missing required field "ComputeAllocation.provider_resource_id"`)}
 	}
-	if _, ok := cac.mutation.URL(); !ok {
-		return &ValidationError{Name: "url", err: errors.New(`ent: missing required field "ComputeAllocation.url"`)}
+	if _, ok := cac.mutation.ProviderRequestID(); !ok {
+		return &ValidationError{Name: "provider_request_id", err: errors.New(`ent: missing required field "ComputeAllocation.provider_request_id"`)}
+	}
+	if _, ok := cac.mutation.OperationID(); !ok {
+		return &ValidationError{Name: "operation_id", err: errors.New(`ent: missing required field "ComputeAllocation.operation_id"`)}
+	}
+	if _, ok := cac.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "ComputeAllocation.status"`)}
+	}
+	if _, ok := cac.mutation.BillingStatus(); !ok {
+		return &ValidationError{Name: "billing_status", err: errors.New(`ent: missing required field "ComputeAllocation.billing_status"`)}
 	}
 	if _, ok := cac.mutation.HoldID(); !ok {
 		return &ValidationError{Name: "hold_id", err: errors.New(`ent: missing required field "ComputeAllocation.hold_id"`)}
@@ -742,56 +769,71 @@ func (cac *ComputeAllocationCreate) check() error {
 	if _, ok := cac.mutation.HoldReleaseID(); !ok {
 		return &ValidationError{Name: "hold_release_id", err: errors.New(`ent: missing required field "ComputeAllocation.hold_release_id"`)}
 	}
+	if _, ok := cac.mutation.SettlementID(); !ok {
+		return &ValidationError{Name: "settlement_id", err: errors.New(`ent: missing required field "ComputeAllocation.settlement_id"`)}
+	}
 	if _, ok := cac.mutation.LedgerEntryID(); !ok {
 		return &ValidationError{Name: "ledger_entry_id", err: errors.New(`ent: missing required field "ComputeAllocation.ledger_entry_id"`)}
 	}
 	if _, ok := cac.mutation.WalletTransactionID(); !ok {
 		return &ValidationError{Name: "wallet_transaction_id", err: errors.New(`ent: missing required field "ComputeAllocation.wallet_transaction_id"`)}
 	}
-	if _, ok := cac.mutation.SettlementID(); !ok {
-		return &ValidationError{Name: "settlement_id", err: errors.New(`ent: missing required field "ComputeAllocation.settlement_id"`)}
-	}
 	if _, ok := cac.mutation.PricingVersion(); !ok {
 		return &ValidationError{Name: "pricing_version", err: errors.New(`ent: missing required field "ComputeAllocation.pricing_version"`)}
 	}
-	if _, ok := cac.mutation.AmountCents(); !ok {
-		return &ValidationError{Name: "amount_cents", err: errors.New(`ent: missing required field "ComputeAllocation.amount_cents"`)}
+	if _, ok := cac.mutation.UsagePeriodEnd(); !ok {
+		return &ValidationError{Name: "usage_period_end", err: errors.New(`ent: missing required field "ComputeAllocation.usage_period_end"`)}
 	}
-	if _, ok := cac.mutation.BalanceCents(); !ok {
-		return &ValidationError{Name: "balance_cents", err: errors.New(`ent: missing required field "ComputeAllocation.balance_cents"`)}
+	if _, ok := cac.mutation.EvidenceID(); !ok {
+		return &ValidationError{Name: "evidence_id", err: errors.New(`ent: missing required field "ComputeAllocation.evidence_id"`)}
 	}
-	if _, ok := cac.mutation.FrozenCents(); !ok {
-		return &ValidationError{Name: "frozen_cents", err: errors.New(`ent: missing required field "ComputeAllocation.frozen_cents"`)}
+	if _, ok := cac.mutation.CvmInstanceID(); !ok {
+		return &ValidationError{Name: "cvm_instance_id", err: errors.New(`ent: missing required field "ComputeAllocation.cvm_instance_id"`)}
 	}
-	if _, ok := cac.mutation.AvailableCents(); !ok {
-		return &ValidationError{Name: "available_cents", err: errors.New(`ent: missing required field "ComputeAllocation.available_cents"`)}
+	if _, ok := cac.mutation.InstanceID(); !ok {
+		return &ValidationError{Name: "instance_id", err: errors.New(`ent: missing required field "ComputeAllocation.instance_id"`)}
 	}
-	if _, ok := cac.mutation.TotalSpentCents(); !ok {
-		return &ValidationError{Name: "total_spent_cents", err: errors.New(`ent: missing required field "ComputeAllocation.total_spent_cents"`)}
+	if _, ok := cac.mutation.NodeName(); !ok {
+		return &ValidationError{Name: "node_name", err: errors.New(`ent: missing required field "ComputeAllocation.node_name"`)}
 	}
-	if _, ok := cac.mutation.Quantity(); !ok {
-		return &ValidationError{Name: "quantity", err: errors.New(`ent: missing required field "ComputeAllocation.quantity"`)}
+	if _, ok := cac.mutation.MachineName(); !ok {
+		return &ValidationError{Name: "machine_name", err: errors.New(`ent: missing required field "ComputeAllocation.machine_name"`)}
 	}
-	if _, ok := cac.mutation.Unit(); !ok {
-		return &ValidationError{Name: "unit", err: errors.New(`ent: missing required field "ComputeAllocation.unit"`)}
+	if _, ok := cac.mutation.HoldAmountCents(); !ok {
+		return &ValidationError{Name: "hold_amount_cents", err: errors.New(`ent: missing required field "ComputeAllocation.hold_amount_cents"`)}
 	}
-	if _, ok := cac.mutation.Reason(); !ok {
-		return &ValidationError{Name: "reason", err: errors.New(`ent: missing required field "ComputeAllocation.reason"`)}
+	if _, ok := cac.mutation.HoldAmount(); !ok {
+		return &ValidationError{Name: "hold_amount", err: errors.New(`ent: missing required field "ComputeAllocation.hold_amount"`)}
 	}
-	if _, ok := cac.mutation.Result(); !ok {
-		return &ValidationError{Name: "result", err: errors.New(`ent: missing required field "ComputeAllocation.result"`)}
+	if _, ok := cac.mutation.CPU(); !ok {
+		return &ValidationError{Name: "cpu", err: errors.New(`ent: missing required field "ComputeAllocation.cpu"`)}
 	}
-	if _, ok := cac.mutation.Source(); !ok {
-		return &ValidationError{Name: "source", err: errors.New(`ent: missing required field "ComputeAllocation.source"`)}
+	if _, ok := cac.mutation.MemoryGB(); !ok {
+		return &ValidationError{Name: "memory_gb", err: errors.New(`ent: missing required field "ComputeAllocation.memory_gb"`)}
 	}
-	if _, ok := cac.mutation.Direction(); !ok {
-		return &ValidationError{Name: "direction", err: errors.New(`ent: missing required field "ComputeAllocation.direction"`)}
+	if _, ok := cac.mutation.DiskGB(); !ok {
+		return &ValidationError{Name: "disk_gb", err: errors.New(`ent: missing required field "ComputeAllocation.disk_gb"`)}
 	}
-	if _, ok := cac.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ComputeAllocation.created_at"`)}
+	if _, ok := cac.mutation.PriceSnapshotPackageID(); !ok {
+		return &ValidationError{Name: "price_snapshot_package_id", err: errors.New(`ent: missing required field "ComputeAllocation.price_snapshot_package_id"`)}
 	}
-	if _, ok := cac.mutation.UpdatedAt(); !ok {
-		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ComputeAllocation.updated_at"`)}
+	if _, ok := cac.mutation.PriceSnapshotResourceType(); !ok {
+		return &ValidationError{Name: "price_snapshot_resource_type", err: errors.New(`ent: missing required field "ComputeAllocation.price_snapshot_resource_type"`)}
+	}
+	if _, ok := cac.mutation.PriceSnapshotCurrency(); !ok {
+		return &ValidationError{Name: "price_snapshot_currency", err: errors.New(`ent: missing required field "ComputeAllocation.price_snapshot_currency"`)}
+	}
+	if _, ok := cac.mutation.PriceSnapshotSource(); !ok {
+		return &ValidationError{Name: "price_snapshot_source", err: errors.New(`ent: missing required field "ComputeAllocation.price_snapshot_source"`)}
+	}
+	if _, ok := cac.mutation.PriceSnapshotSku(); !ok {
+		return &ValidationError{Name: "price_snapshot_sku", err: errors.New(`ent: missing required field "ComputeAllocation.price_snapshot_sku"`)}
+	}
+	if _, ok := cac.mutation.PriceSnapshotUnitPriceCents(); !ok {
+		return &ValidationError{Name: "price_snapshot_unit_price_cents", err: errors.New(`ent: missing required field "ComputeAllocation.price_snapshot_unit_price_cents"`)}
+	}
+	if _, ok := cac.mutation.PriceSnapshotComputeHourly(); !ok {
+		return &ValidationError{Name: "price_snapshot_compute_hourly", err: errors.New(`ent: missing required field "ComputeAllocation.price_snapshot_compute_hourly"`)}
 	}
 	if v, ok := cac.mutation.ID(); ok {
 		if err := computeallocation.IDValidator(v); err != nil {
@@ -833,53 +875,33 @@ func (cac *ComputeAllocationCreate) createSpec() (*ComputeAllocation, *sqlgraph.
 		_node.ID = id
 		_spec.ID.Value = id
 	}
+	if value, ok := cac.mutation.CreatedAt(); ok {
+		_spec.SetField(computeallocation.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := cac.mutation.UpdatedAt(); ok {
+		_spec.SetField(computeallocation.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
 	if value, ok := cac.mutation.AccountID(); ok {
 		_spec.SetField(computeallocation.FieldAccountID, field.TypeString, value)
 		_node.AccountID = value
-	}
-	if value, ok := cac.mutation.OwnerAccountID(); ok {
-		_spec.SetField(computeallocation.FieldOwnerAccountID, field.TypeString, value)
-		_node.OwnerAccountID = value
 	}
 	if value, ok := cac.mutation.OwnerUserID(); ok {
 		_spec.SetField(computeallocation.FieldOwnerUserID, field.TypeString, value)
 		_node.OwnerUserID = value
 	}
-	if value, ok := cac.mutation.UserID(); ok {
-		_spec.SetField(computeallocation.FieldUserID, field.TypeString, value)
-		_node.UserID = value
-	}
-	if value, ok := cac.mutation.Email(); ok {
-		_spec.SetField(computeallocation.FieldEmail, field.TypeString, value)
-		_node.Email = value
-	}
-	if value, ok := cac.mutation.Role(); ok {
-		_spec.SetField(computeallocation.FieldRole, field.TypeString, value)
-		_node.Role = value
-	}
-	if value, ok := cac.mutation.Status(); ok {
-		_spec.SetField(computeallocation.FieldStatus, field.TypeString, value)
-		_node.Status = value
+	if value, ok := cac.mutation.WorkspaceID(); ok {
+		_spec.SetField(computeallocation.FieldWorkspaceID, field.TypeString, value)
+		_node.WorkspaceID = value
 	}
 	if value, ok := cac.mutation.Name(); ok {
 		_spec.SetField(computeallocation.FieldName, field.TypeString, value)
 		_node.Name = value
 	}
-	if value, ok := cac.mutation.WorkspaceID(); ok {
-		_spec.SetField(computeallocation.FieldWorkspaceID, field.TypeString, value)
-		_node.WorkspaceID = value
-	}
-	if value, ok := cac.mutation.ResourceID(); ok {
-		_spec.SetField(computeallocation.FieldResourceID, field.TypeString, value)
-		_node.ResourceID = value
-	}
-	if value, ok := cac.mutation.ResourceKind(); ok {
-		_spec.SetField(computeallocation.FieldResourceKind, field.TypeString, value)
-		_node.ResourceKind = value
-	}
-	if value, ok := cac.mutation.OperationID(); ok {
-		_spec.SetField(computeallocation.FieldOperationID, field.TypeString, value)
-		_node.OperationID = value
+	if value, ok := cac.mutation.PackageID(); ok {
+		_spec.SetField(computeallocation.FieldPackageID, field.TypeString, value)
+		_node.PackageID = value
 	}
 	if value, ok := cac.mutation.Provider(); ok {
 		_spec.SetField(computeallocation.FieldProvider, field.TypeString, value)
@@ -889,9 +911,21 @@ func (cac *ComputeAllocationCreate) createSpec() (*ComputeAllocation, *sqlgraph.
 		_spec.SetField(computeallocation.FieldProviderResourceID, field.TypeString, value)
 		_node.ProviderResourceID = value
 	}
-	if value, ok := cac.mutation.URL(); ok {
-		_spec.SetField(computeallocation.FieldURL, field.TypeString, value)
-		_node.URL = value
+	if value, ok := cac.mutation.ProviderRequestID(); ok {
+		_spec.SetField(computeallocation.FieldProviderRequestID, field.TypeString, value)
+		_node.ProviderRequestID = value
+	}
+	if value, ok := cac.mutation.OperationID(); ok {
+		_spec.SetField(computeallocation.FieldOperationID, field.TypeString, value)
+		_node.OperationID = value
+	}
+	if value, ok := cac.mutation.Status(); ok {
+		_spec.SetField(computeallocation.FieldStatus, field.TypeString, value)
+		_node.Status = value
+	}
+	if value, ok := cac.mutation.BillingStatus(); ok {
+		_spec.SetField(computeallocation.FieldBillingStatus, field.TypeString, value)
+		_node.BillingStatus = value
 	}
 	if value, ok := cac.mutation.HoldID(); ok {
 		_spec.SetField(computeallocation.FieldHoldID, field.TypeString, value)
@@ -901,6 +935,10 @@ func (cac *ComputeAllocationCreate) createSpec() (*ComputeAllocation, *sqlgraph.
 		_spec.SetField(computeallocation.FieldHoldReleaseID, field.TypeString, value)
 		_node.HoldReleaseID = value
 	}
+	if value, ok := cac.mutation.SettlementID(); ok {
+		_spec.SetField(computeallocation.FieldSettlementID, field.TypeString, value)
+		_node.SettlementID = value
+	}
 	if value, ok := cac.mutation.LedgerEntryID(); ok {
 		_spec.SetField(computeallocation.FieldLedgerEntryID, field.TypeString, value)
 		_node.LedgerEntryID = value
@@ -909,69 +947,81 @@ func (cac *ComputeAllocationCreate) createSpec() (*ComputeAllocation, *sqlgraph.
 		_spec.SetField(computeallocation.FieldWalletTransactionID, field.TypeString, value)
 		_node.WalletTransactionID = value
 	}
-	if value, ok := cac.mutation.SettlementID(); ok {
-		_spec.SetField(computeallocation.FieldSettlementID, field.TypeString, value)
-		_node.SettlementID = value
-	}
 	if value, ok := cac.mutation.PricingVersion(); ok {
 		_spec.SetField(computeallocation.FieldPricingVersion, field.TypeString, value)
 		_node.PricingVersion = value
 	}
-	if value, ok := cac.mutation.AmountCents(); ok {
-		_spec.SetField(computeallocation.FieldAmountCents, field.TypeInt64, value)
-		_node.AmountCents = value
+	if value, ok := cac.mutation.UsagePeriodEnd(); ok {
+		_spec.SetField(computeallocation.FieldUsagePeriodEnd, field.TypeString, value)
+		_node.UsagePeriodEnd = value
 	}
-	if value, ok := cac.mutation.BalanceCents(); ok {
-		_spec.SetField(computeallocation.FieldBalanceCents, field.TypeInt64, value)
-		_node.BalanceCents = value
+	if value, ok := cac.mutation.EvidenceID(); ok {
+		_spec.SetField(computeallocation.FieldEvidenceID, field.TypeString, value)
+		_node.EvidenceID = value
 	}
-	if value, ok := cac.mutation.FrozenCents(); ok {
-		_spec.SetField(computeallocation.FieldFrozenCents, field.TypeInt64, value)
-		_node.FrozenCents = value
+	if value, ok := cac.mutation.CvmInstanceID(); ok {
+		_spec.SetField(computeallocation.FieldCvmInstanceID, field.TypeString, value)
+		_node.CvmInstanceID = value
 	}
-	if value, ok := cac.mutation.AvailableCents(); ok {
-		_spec.SetField(computeallocation.FieldAvailableCents, field.TypeInt64, value)
-		_node.AvailableCents = value
+	if value, ok := cac.mutation.InstanceID(); ok {
+		_spec.SetField(computeallocation.FieldInstanceID, field.TypeString, value)
+		_node.InstanceID = value
 	}
-	if value, ok := cac.mutation.TotalSpentCents(); ok {
-		_spec.SetField(computeallocation.FieldTotalSpentCents, field.TypeInt64, value)
-		_node.TotalSpentCents = value
+	if value, ok := cac.mutation.NodeName(); ok {
+		_spec.SetField(computeallocation.FieldNodeName, field.TypeString, value)
+		_node.NodeName = value
 	}
-	if value, ok := cac.mutation.Quantity(); ok {
-		_spec.SetField(computeallocation.FieldQuantity, field.TypeFloat64, value)
-		_node.Quantity = value
+	if value, ok := cac.mutation.MachineName(); ok {
+		_spec.SetField(computeallocation.FieldMachineName, field.TypeString, value)
+		_node.MachineName = value
 	}
-	if value, ok := cac.mutation.Unit(); ok {
-		_spec.SetField(computeallocation.FieldUnit, field.TypeString, value)
-		_node.Unit = value
+	if value, ok := cac.mutation.HoldAmountCents(); ok {
+		_spec.SetField(computeallocation.FieldHoldAmountCents, field.TypeInt64, value)
+		_node.HoldAmountCents = value
 	}
-	if value, ok := cac.mutation.Reason(); ok {
-		_spec.SetField(computeallocation.FieldReason, field.TypeString, value)
-		_node.Reason = value
+	if value, ok := cac.mutation.HoldAmount(); ok {
+		_spec.SetField(computeallocation.FieldHoldAmount, field.TypeFloat64, value)
+		_node.HoldAmount = value
 	}
-	if value, ok := cac.mutation.Result(); ok {
-		_spec.SetField(computeallocation.FieldResult, field.TypeString, value)
-		_node.Result = value
+	if value, ok := cac.mutation.CPU(); ok {
+		_spec.SetField(computeallocation.FieldCPU, field.TypeFloat64, value)
+		_node.CPU = value
 	}
-	if value, ok := cac.mutation.Source(); ok {
-		_spec.SetField(computeallocation.FieldSource, field.TypeString, value)
-		_node.Source = value
+	if value, ok := cac.mutation.MemoryGB(); ok {
+		_spec.SetField(computeallocation.FieldMemoryGB, field.TypeFloat64, value)
+		_node.MemoryGB = value
 	}
-	if value, ok := cac.mutation.Direction(); ok {
-		_spec.SetField(computeallocation.FieldDirection, field.TypeString, value)
-		_node.Direction = value
+	if value, ok := cac.mutation.DiskGB(); ok {
+		_spec.SetField(computeallocation.FieldDiskGB, field.TypeFloat64, value)
+		_node.DiskGB = value
 	}
-	if value, ok := cac.mutation.CreatedAt(); ok {
-		_spec.SetField(computeallocation.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
+	if value, ok := cac.mutation.PriceSnapshotPackageID(); ok {
+		_spec.SetField(computeallocation.FieldPriceSnapshotPackageID, field.TypeString, value)
+		_node.PriceSnapshotPackageID = value
 	}
-	if value, ok := cac.mutation.UpdatedAt(); ok {
-		_spec.SetField(computeallocation.FieldUpdatedAt, field.TypeTime, value)
-		_node.UpdatedAt = value
+	if value, ok := cac.mutation.PriceSnapshotResourceType(); ok {
+		_spec.SetField(computeallocation.FieldPriceSnapshotResourceType, field.TypeString, value)
+		_node.PriceSnapshotResourceType = value
 	}
-	if value, ok := cac.mutation.ArchivedAt(); ok {
-		_spec.SetField(computeallocation.FieldArchivedAt, field.TypeTime, value)
-		_node.ArchivedAt = &value
+	if value, ok := cac.mutation.PriceSnapshotCurrency(); ok {
+		_spec.SetField(computeallocation.FieldPriceSnapshotCurrency, field.TypeString, value)
+		_node.PriceSnapshotCurrency = value
+	}
+	if value, ok := cac.mutation.PriceSnapshotSource(); ok {
+		_spec.SetField(computeallocation.FieldPriceSnapshotSource, field.TypeString, value)
+		_node.PriceSnapshotSource = value
+	}
+	if value, ok := cac.mutation.PriceSnapshotSku(); ok {
+		_spec.SetField(computeallocation.FieldPriceSnapshotSku, field.TypeString, value)
+		_node.PriceSnapshotSku = value
+	}
+	if value, ok := cac.mutation.PriceSnapshotUnitPriceCents(); ok {
+		_spec.SetField(computeallocation.FieldPriceSnapshotUnitPriceCents, field.TypeInt64, value)
+		_node.PriceSnapshotUnitPriceCents = value
+	}
+	if value, ok := cac.mutation.PriceSnapshotComputeHourly(); ok {
+		_spec.SetField(computeallocation.FieldPriceSnapshotComputeHourly, field.TypeFloat64, value)
+		_node.PriceSnapshotComputeHourly = value
 	}
 	return _node, _spec
 }
