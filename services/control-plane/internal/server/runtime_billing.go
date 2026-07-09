@@ -174,6 +174,10 @@ func (app *controlPlaneApp) resourceLedgerEvidenceLocked() []any {
 		operation := app.operationEvidenceForResourceLocked(workspaceID, computeID, storageID, attachmentID)
 		ownerAccountID := firstNonEmpty(stringValue(workspace["ownerAccountId"]), stringValue(compute["ownerAccountId"]), stringValue(storage["ownerAccountId"]), stringValue(attachment["ownerAccountId"]))
 		ownerUserID := firstNonEmpty(stringValue(workspace["ownerUserId"]), stringValue(compute["ownerUserId"]), stringValue(storage["ownerUserId"]), stringValue(attachment["ownerUserId"]))
+		costTags := firstNonNil(operation["costTags"], compute["costTags"], storage["costTags"], attachment["costTags"])
+		if !hasProviderCostTags(costTags) {
+			costTags = providerCostTags(ownerAccountID, workspaceID, firstNonEmpty(stringValue(operation["resourceId"]), workspaceID, computeID, storageID, attachmentID), stringValue(operation["operationId"]))
+		}
 		rows = append(rows, map[string]any{
 			"id":                   firstNonEmpty(workspaceID, computeID, storageID, attachmentID),
 			"accountId":            ownerAccountID,
@@ -188,7 +192,7 @@ func (app *controlPlaneApp) resourceLedgerEvidenceLocked() []any {
 			"nodeName":             firstNonEmpty(stringValue(compute["nodeName"]), stringValue(compute["machineName"])),
 			"providerRequestId":    firstNonEmpty(stringValue(compute["providerRequestId"]), stringValue(storage["providerRequestId"]), stringValue(attachment["providerRequestId"])),
 			"operationId":          firstNonEmpty(stringValue(operation["operationId"]), stringValue(compute["operationId"]), stringValue(storage["operationId"]), stringValue(attachment["operationId"])),
-			"costTags":             firstNonNil(operation["costTags"], compute["costTags"], storage["costTags"], attachment["costTags"]),
+			"costTags":             costTags,
 			"ledgerEntryIds":       app.ledgerEntryIDsLocked(workspaceID, computeID, storageID, attachmentID),
 			"walletTransactionIds": app.walletTransactionIDsLocked(workspaceID, computeID, storageID, attachmentID),
 		})
@@ -196,12 +200,39 @@ func (app *controlPlaneApp) resourceLedgerEvidenceLocked() []any {
 	return rows
 }
 
+func hasProviderCostTags(tags any) bool {
+	return costTagValue(tags, "opl_account_id") != "" &&
+		costTagValue(tags, "opl_workspace_id") != "" &&
+		costTagValue(tags, "opl_resource_id") != "" &&
+		costTagValue(tags, "opl_operation_id") != ""
+}
+
+func costTagValue(tags any, key string) string {
+	switch typed := tags.(type) {
+	case map[string]any:
+		return stringValue(typed[key])
+	case map[string]string:
+		return typed[key]
+	default:
+		return ""
+	}
+}
+
+func providerCostTags(accountID string, workspaceID string, resourceID string, operationID string) map[string]any {
+	return map[string]any{
+		"opl_account_id":   accountID,
+		"opl_workspace_id": workspaceID,
+		"opl_resource_id":  resourceID,
+		"opl_operation_id": operationID,
+	}
+}
+
 func (app *controlPlaneApp) operationEvidenceForResourceLocked(ids ...string) map[string]any {
 	for index := len(app.runtimeOps) - 1; index >= 0; index-- {
 		operation := app.runtimeOps[index]
 		if mapContainsAnyID(operation, ids...) {
 			payload, _ := operation["redactedProviderPayload"].(map[string]any)
-			return map[string]any{"operationId": operation["operationId"], "costTags": firstNonNil(operation["costTags"], payload["costTags"])}
+			return map[string]any{"operationId": operation["operationId"], "resourceId": operation["resourceId"], "costTags": firstNonNil(operation["costTags"], payload["costTags"])}
 		}
 	}
 	return map[string]any{}

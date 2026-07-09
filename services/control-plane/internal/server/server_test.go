@@ -1105,6 +1105,35 @@ func TestConsoleStateIncludesResourceLedgerEvidenceChain(t *testing.T) {
 	}
 }
 
+func TestResourceLedgerEvidenceDerivesProviderCostTags(t *testing.T) {
+	app := newControlPlaneApp()
+	app.mu.Lock()
+	app.workspaces["ws-alpha"] = map[string]any{
+		"id":                         "ws-alpha",
+		"ownerAccountId":             "acct-alpha",
+		"currentComputeAllocationId": "compute-alpha",
+		"currentAttachmentId":        "attach-alpha",
+		"storageId":                  "storage-alpha",
+	}
+	app.computes["compute-alpha"] = map[string]any{"id": "compute-alpha", "ownerAccountId": "acct-alpha"}
+	app.storages["storage-alpha"] = map[string]any{"id": "storage-alpha", "ownerAccountId": "acct-alpha"}
+	app.attachments["attach-alpha"] = map[string]any{"id": "attach-alpha", "ownerAccountId": "acct-alpha"}
+	app.runtimeOps = []map[string]any{{
+		"operationId":  "op-runtime-alpha",
+		"resourceKind": "workspace_runtime",
+		"resourceId":   "ws-alpha",
+		"workspaceId":  "ws-alpha",
+		"status":       "succeeded",
+	}}
+	app.mu.Unlock()
+
+	row := app.state("acct-alpha", nil)["resourceLedgerEvidence"].([]any)[0].(map[string]any)
+	tags, _ := row["costTags"].(map[string]any)
+	if tags["opl_account_id"] != "acct-alpha" || tags["opl_workspace_id"] != "ws-alpha" || tags["opl_resource_id"] != "ws-alpha" || tags["opl_operation_id"] != "op-runtime-alpha" {
+		t.Fatalf("row missing derived provider cost tags: %#v", row)
+	}
+}
+
 func TestResourceDestroyAndDetachUpdateWorkspaceState(t *testing.T) {
 	app := newControlPlaneApp()
 	app.workspaces["ws-alpha"] = map[string]any{
