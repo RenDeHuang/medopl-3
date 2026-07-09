@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -181,7 +182,11 @@ func (app *controlPlaneApp) persistLocked() error {
 	if app.store == nil {
 		return nil
 	}
-	return app.store.Save(context.Background(), app.factsLocked())
+	if err := app.store.Save(context.Background(), app.factsLocked()); err != nil {
+		log.Printf("control-plane state persist failed: %v", err)
+		return err
+	}
+	return nil
 }
 
 func (app *controlPlaneApp) state(accountID string, computePools []any) map[string]any {

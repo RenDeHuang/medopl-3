@@ -1099,7 +1099,7 @@ func saveEventRows(ctx context.Context, rows []controlPlaneRecord, create func()
 		}
 		seen[id] = true
 		if err := saveRecord(ctx, id, row, create(), fields); err != nil {
-			return err
+			return fmt.Errorf("save %s projection %s: %w", prefix, id, err)
 		}
 	}
 	return nil
