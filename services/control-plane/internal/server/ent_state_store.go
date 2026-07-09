@@ -75,7 +75,7 @@ func NewPostgresEntStateStore(databaseURL string) (StateStore, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := backfillControlPlaneTimestamps(context.Background(), driver); err != nil {
+	if err := backfillControlPlaneMigrationNulls(context.Background(), driver); err != nil {
 		_ = driver.Close()
 		return nil, err
 	}
@@ -92,12 +92,14 @@ func NewPostgresEntStateStore(databaseURL string) (StateStore, error) {
 	return store, nil
 }
 
-func backfillControlPlaneTimestamps(ctx context.Context, driver dialect.Driver) error {
+func backfillControlPlaneMigrationNulls(ctx context.Context, driver dialect.Driver) error {
 	const query = `
 DO $$
 DECLARE
   target_schema text;
   target_table text;
+  target_column text;
+  target_type text;
 BEGIN
   FOR target_schema, target_table IN
     SELECT table_schema, table_name
@@ -114,9 +116,30 @@ BEGIN
       target_table
     );
   END LOOP;
+
+  FOR target_schema, target_table, target_column, target_type IN
+    SELECT c.table_schema, c.table_name, c.column_name, c.data_type
+    FROM information_schema.columns c
+    JOIN information_schema.tables t
+      ON t.table_schema = c.table_schema
+      AND t.table_name = c.table_name
+      AND t.table_type = 'BASE TABLE'
+    WHERE c.table_schema = 'public'
+      AND c.table_name LIKE 'control_plane_%'
+      AND c.column_name NOT IN ('id', 'created_at', 'updated_at')
+      AND c.data_type IN ('text', 'character varying', 'character', 'boolean', 'bigint', 'integer', 'double precision', 'numeric', 'real')
+  LOOP
+    IF target_type IN ('text', 'character varying', 'character') THEN
+      EXECUTE format('UPDATE %I.%I SET %I = '''' WHERE %I IS NULL', target_schema, target_table, target_column, target_column);
+    ELSIF target_type = 'boolean' THEN
+      EXECUTE format('UPDATE %I.%I SET %I = false WHERE %I IS NULL', target_schema, target_table, target_column, target_column);
+    ELSE
+      EXECUTE format('UPDATE %I.%I SET %I = 0 WHERE %I IS NULL', target_schema, target_table, target_column, target_column);
+    END IF;
+  END LOOP;
 END $$;`
 	if err := driver.Exec(ctx, query, []any{}, nil); err != nil {
-		return fmt.Errorf("backfill control-plane timestamps: %w", err)
+		return fmt.Errorf("backfill control-plane migration nulls: %w", err)
 	}
 	return nil
 }
