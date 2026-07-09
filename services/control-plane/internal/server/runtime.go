@@ -24,7 +24,6 @@ type controlPlaneApp struct {
 	storages    controlPlaneRecordSet
 	attachments controlPlaneRecordSet
 	workspaces  controlPlaneRecordSet
-	users       controlPlaneRecordSet
 	orgs        controlPlaneRecordSet
 	memberships controlPlaneRecordSet
 	support     controlPlaneRecordSet
@@ -35,14 +34,19 @@ type controlPlaneApp struct {
 	runtimeOps  []controlPlaneRecord
 	auditEvents []controlPlaneRecord
 	reconcile   controlPlaneRecord
-	sessions    map[string]sessionRecord
-	// ponytail: per-process limiter; move to Redis when login traffic spans multiple replicas.
-	loginFailures map[string]loginFailure
+	auth        runtimeAuthState
 }
 
 type loginFailure struct {
 	Count   int
 	FirstAt time.Time
+}
+
+type runtimeAuthState struct {
+	users    controlPlaneRecordSet
+	sessions map[string]sessionRecord
+	// ponytail: per-process limiter; move to Redis when login traffic spans multiple replicas.
+	failures map[string]loginFailure
 }
 
 var (
@@ -74,17 +78,19 @@ func newControlPlaneAppWithStore(store StateStore) (*controlPlaneApp, error) {
 
 func newControlPlaneAppEmpty() *controlPlaneApp {
 	return &controlPlaneApp{
-		computes:      controlPlaneRecordSet{},
-		storages:      controlPlaneRecordSet{},
-		attachments:   controlPlaneRecordSet{},
-		workspaces:    controlPlaneRecordSet{},
-		users:         controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}},
-		orgs:          controlPlaneRecordSet{},
-		memberships:   controlPlaneRecordSet{},
-		support:       controlPlaneRecordSet{},
-		wallets:       controlPlaneRecordSet{},
-		sessions:      map[string]sessionRecord{},
-		loginFailures: map[string]loginFailure{},
+		computes:    controlPlaneRecordSet{},
+		storages:    controlPlaneRecordSet{},
+		attachments: controlPlaneRecordSet{},
+		workspaces:  controlPlaneRecordSet{},
+		orgs:        controlPlaneRecordSet{},
+		memberships: controlPlaneRecordSet{},
+		support:     controlPlaneRecordSet{},
+		wallets:     controlPlaneRecordSet{},
+		auth: runtimeAuthState{
+			users:    controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}},
+			sessions: map[string]sessionRecord{},
+			failures: map[string]loginFailure{},
+		},
 	}
 }
 
@@ -95,7 +101,7 @@ func (app *controlPlaneApp) factsLocked() controlPlaneState {
 		Storages:    cloneStateTable(app.storages),
 		Attachments: app.attachmentFactsLocked(),
 		Workspaces:  cloneStateTable(app.workspaces),
-		Users:       cloneStateTable(app.users),
+		Users:       cloneStateTable(app.auth.users),
 		Sessions:    app.sessionFactsLocked(),
 		Orgs:        cloneStateTable(app.orgs),
 		Memberships: cloneStateTable(app.memberships),
@@ -124,13 +130,13 @@ func (app *controlPlaneApp) applyFacts(facts controlPlaneState) {
 		app.workspaces = cloneStateTable(facts.Workspaces)
 	}
 	if facts.Users != nil {
-		app.users = cloneStateTable(facts.Users)
+		app.auth.users = cloneStateTable(facts.Users)
 	}
-	if len(app.users) == 0 {
-		app.users = controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}}
+	if len(app.auth.users) == 0 {
+		app.auth.users = controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}}
 	}
 	if facts.Sessions != nil {
-		app.sessions = sessionsFromFacts(facts.Sessions)
+		app.auth.sessions = sessionsFromFacts(facts.Sessions)
 	}
 	if facts.Orgs != nil {
 		app.orgs = cloneStateTable(facts.Orgs)
@@ -189,6 +195,10 @@ func (app *controlPlaneApp) persistLocked() error {
 	return nil
 }
 
+func (app *controlPlaneApp) authUsersLocked() controlPlaneRecordSet {
+	return app.auth.users
+}
+
 func (app *controlPlaneApp) state(accountID string, computePools []any) map[string]any {
 	app.mu.Lock()
 	defer app.mu.Unlock()
@@ -221,7 +231,7 @@ func (app *controlPlaneApp) state(accountID string, computePools []any) map[stri
 }
 
 func (app *controlPlaneApp) currentUserLocked() map[string]any {
-	for _, user := range app.users {
+	for _, user := range app.auth.users {
 		if stringValue(user["role"]) == "admin" && stringValue(user["status"]) == "active" {
 			return sanitizeUser(user)
 		}

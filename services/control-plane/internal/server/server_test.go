@@ -378,7 +378,7 @@ func TestBootstrapImportsAdminSeedAndDoesNotExposeLegacyOwner(t *testing.T) {
 
 func TestLoginAcceptsLegacyScryptPasswordHash(t *testing.T) {
 	app := newControlPlaneApp()
-	app.users["usr-admin"]["passwordHash"] = "scrypt:00112233445566778899aabbccddeeff:4904ad313c8dcfe466e3babafef2471d2f5bcc7b0d4d893d5eb6c57666c8c5c1e9a26e8e1b9035f6625718daa983ae2798cbeb16b404e8418c901315147f642f"
+	app.auth.users["usr-admin"]["passwordHash"] = "scrypt:00112233445566778899aabbccddeeff:4904ad313c8dcfe466e3babafef2471d2f5bcc7b0d4d893d5eb6c57666c8c5c1e9a26e8e1b9035f6625718daa983ae2798cbeb16b404e8418c901315147f642f"
 	if _, _, err := app.login(map[string]any{"email": "admin@medopl.cn", "password": "legacy-secret"}); err != nil {
 		t.Fatalf("legacy scrypt password did not verify: %v", err)
 	}
@@ -1291,8 +1291,8 @@ func TestManagementStateUsesRealAccountsAndLedger(t *testing.T) {
 func TestOperatorAccountTotalsIgnoreDeletedUserWalletResiduals(t *testing.T) {
 	app := newControlPlaneApp()
 	app.mu.Lock()
-	app.users["usr-active"] = map[string]any{"id": "usr-active", "accountId": "acct-active", "status": "active", "email": "active@example.test"}
-	app.users["usr-deleted"] = map[string]any{"id": "usr-deleted", "accountId": "acct-deleted", "status": "deleted", "email": "deleted@example.test"}
+	app.auth.users["usr-active"] = map[string]any{"id": "usr-active", "accountId": "acct-active", "status": "active", "email": "active@example.test"}
+	app.auth.users["usr-deleted"] = map[string]any{"id": "usr-deleted", "accountId": "acct-deleted", "status": "deleted", "email": "deleted@example.test"}
 	app.wallets["acct-active"] = map[string]any{"accountId": "acct-active", "balance": 10.0, "frozen": 2.0, "totalSpent": 3.0}
 	app.wallets["acct-deleted"] = map[string]any{"accountId": "acct-deleted", "balance": 99.0, "frozen": 88.0, "totalSpent": 77.0}
 	app.wallets["acct-wallet-only"] = map[string]any{"accountId": "acct-wallet-only", "balance": 50.0, "frozen": 40.0, "totalSpent": 30.0}
