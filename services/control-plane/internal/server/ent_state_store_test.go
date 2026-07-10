@@ -137,6 +137,40 @@ func TestEntStateStorePersistsExecutionIdentityAndApproval(t *testing.T) {
 	}
 }
 
+func TestEntStateStoreUpdatesExecutionRequestWithoutRecreatingIt(t *testing.T) {
+	store := NewTestEntStateStore(t, t.TempDir()+"/execution-update.sqlite").(*postgresEntStateStore)
+	ctx := context.Background()
+	row := map[string]any{
+		"id":             "request-alpha",
+		"organizationId": "org-alpha",
+		"workspaceId":    "workspace-alpha",
+		"projectId":      "project-alpha",
+		"taskId":         "task-alpha",
+		"actorUserId":    "usr-alpha",
+		"status":         "awaiting_approval",
+		"idempotencyKey": "request-once",
+	}
+	if err := store.SaveExecutionRequest(ctx, row); err != nil {
+		t.Fatalf("save execution request: %v", err)
+	}
+	before, err := store.client.ExecutionRequest.Get(ctx, "request-alpha")
+	if err != nil {
+		t.Fatal(err)
+	}
+	row["status"] = "approved"
+	row["approvalStatus"] = "approved"
+	if err := store.SaveExecutionRequest(ctx, row); err != nil {
+		t.Fatalf("update execution request: %v", err)
+	}
+	after, err := store.client.ExecutionRequest.Get(ctx, "request-alpha")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !after.CreatedAt.Equal(before.CreatedAt) || after.Status != "approved" {
+		t.Fatalf("request was recreated instead of updated: before=%#v after=%#v", before, after)
+	}
+}
+
 func TestControlPlaneAdminFactsSurviveServerRestart(t *testing.T) {
 	store := NewTestEntStateStore(t, t.TempDir()+"/admin-facts.sqlite")
 	first, err := newControlPlaneAppWithStore(store)

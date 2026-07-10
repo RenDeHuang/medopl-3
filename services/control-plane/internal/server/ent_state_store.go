@@ -643,7 +643,12 @@ func (s *postgresEntStateStore) ListProjectTaskSyncHeads(ctx context.Context) ([
 }
 
 func (s *postgresEntStateStore) SaveProjectTaskSyncHead(ctx context.Context, row map[string]any) error {
-	return s.replaceRecord(ctx, row, func(id string) error { return s.client.ProjectTaskSyncHead.DeleteOneID(id).Exec(ctx) }, func() any { return s.client.ProjectTaskSyncHead.Create() }, projectTaskSyncHeadEntFields)
+	return s.upsertRecord(ctx, row,
+		func(id string) error { _, err := s.client.ProjectTaskSyncHead.Get(ctx, id); return err },
+		func() any { return s.client.ProjectTaskSyncHead.Create() },
+		func(id string) any { return s.client.ProjectTaskSyncHead.UpdateOneID(id) },
+		projectTaskSyncHeadEntFields,
+	)
 }
 
 func (s *postgresEntStateStore) ListExecutionRequests(ctx context.Context) ([]map[string]any, error) {
@@ -655,7 +660,12 @@ func (s *postgresEntStateStore) ListExecutionRequests(ctx context.Context) ([]ma
 }
 
 func (s *postgresEntStateStore) SaveExecutionRequest(ctx context.Context, row map[string]any) error {
-	return s.replaceRecord(ctx, row, func(id string) error { return s.client.ExecutionRequest.DeleteOneID(id).Exec(ctx) }, func() any { return s.client.ExecutionRequest.Create() }, executionRequestEntFields)
+	return s.upsertRecord(ctx, row,
+		func(id string) error { _, err := s.client.ExecutionRequest.Get(ctx, id); return err },
+		func() any { return s.client.ExecutionRequest.Create() },
+		func(id string) any { return s.client.ExecutionRequest.UpdateOneID(id) },
+		executionRequestEntFields,
+	)
 }
 
 func (s *postgresEntStateStore) ListComputes(ctx context.Context, accountID string) ([]map[string]any, error) {
@@ -1210,6 +1220,11 @@ func saveRecord(ctx context.Context, id string, row controlPlaneRecord, builder 
 		callSetter(builder, "SetCreatedAt", createdAt)
 		callSetter(builder, "SetUpdatedAt", createdAt)
 	}
+	setRecordFields(builder, row, fields)
+	return execCreate(ctx, builder)
+}
+
+func setRecordFields(builder any, row controlPlaneRecord, fields []entRecordField) {
 	for _, field := range fields {
 		if field.Setter == "" {
 			continue
@@ -1232,6 +1247,26 @@ func saveRecord(ctx context.Context, id string, row controlPlaneRecord, builder 
 			}
 		}
 	}
+}
+
+func (s *postgresEntStateStore) upsertRecord(ctx context.Context, row map[string]any, get func(string) error, create func() any, update func(string) any, fields []entRecordField) error {
+	id := stringValue(row["id"])
+	if id == "" {
+		return errors.New("missing_record_id")
+	}
+	if err := get(id); err == nil {
+		builder := update(id)
+		setRecordFields(builder, row, fields)
+		return execCreate(ctx, builder)
+	} else if !controlplaneent.IsNotFound(err) {
+		return err
+	}
+	if err := saveRecord(ctx, id, row, create(), fields); !controlplaneent.IsConstraintError(err) {
+		return err
+	}
+	// Another writer inserted the canonical ID between the read and create.
+	builder := update(id)
+	setRecordFields(builder, row, fields)
 	return execCreate(ctx, builder)
 }
 
