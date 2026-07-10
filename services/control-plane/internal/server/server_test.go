@@ -849,6 +849,25 @@ func (f *fabricClientWithResourceOperations) ListOperations(_ context.Context) (
 	}, nil
 }
 
+type fabricClientWithUnscopedHistoricOperation struct {
+	fakeFabricClient
+}
+
+func (f *fabricClientWithUnscopedHistoricOperation) ListOperations(_ context.Context) ([]clients.FabricOperation, error) {
+	return []clients.FabricOperation{{
+		ID:           "fop-historic-compute",
+		OperationID:  "op-historic-compute",
+		Action:       "create_compute_allocation",
+		ResourceKind: "compute_allocation",
+		ResourceID:   "compute-historic",
+		RedactedProviderPayload: map[string]any{"resource": map[string]any{
+			"id":     "compute-historic",
+			"status": "running",
+		}},
+		Status: "succeeded",
+	}}, nil
+}
+
 func createResource(t *testing.T, server http.Handler, method string, path string, body string) map[string]any {
 	t.Helper()
 	return createResourceWithSession(t, server, operatorSessionForTest(t, server), method, path, body)
@@ -1515,6 +1534,32 @@ func TestConsoleStateHydratesResourceListsFromFabricOperations(t *testing.T) {
 			attachment["status"] == "attached"
 	}) {
 		t.Fatalf("state did not hydrate attachment resource from Fabric operation: %#v", attachments)
+	}
+}
+
+func TestConsoleStateSkipsUnscopedHistoricFabricResourceProjection(t *testing.T) {
+	service := controlplane.NewService(fakeLedgerClient{}, &fabricClientWithUnscopedHistoricOperation{})
+	server, err := NewPersistentServer(service, NewTestEntStateStore(t, t.TempDir()+"/historic-fabric.sqlite"))
+	if err != nil {
+		t.Fatalf("create persistent server: %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/state?accountId=acct-alpha", nil)
+	addSessionCookies(req, operatorSessionForTest(t, server))
+	rec := httptest.NewRecorder()
+
+	server.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("state status = %d: %s", rec.Code, rec.Body.String())
+	}
+	var state map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&state); err != nil {
+		t.Fatalf("decode state: %v", err)
+	}
+	for _, row := range state["computeAllocations"].([]any) {
+		if row.(map[string]any)["id"] == "compute-historic" {
+			t.Fatalf("unscoped historic resource must not become a compute projection: %#v", state["computeAllocations"])
+		}
 	}
 }
 

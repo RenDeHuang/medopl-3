@@ -136,26 +136,47 @@ func (app *controlPlaneServer) rememberRuntimeOperationResource(operation map[st
 	switch stringValue(operation["resourceKind"]) {
 	case "compute_allocation":
 		row := computeResponse(cloneMap(resource))
+		row["id"] = firstNonEmpty(stringValue(row["id"]), stringValue(operation["resourceId"]))
 		row["ownerAccountId"] = firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]), stringValue(operation["accountId"]))
 		row["accountId"] = firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"]))
 		row["workspaceId"] = firstNonEmpty(stringValue(row["workspaceId"]), stringValue(operation["workspaceId"]))
 		if id := stringValue(row["id"]); id != "" {
+			if existing, ok := app.getCompute(id); ok {
+				row["accountId"] = firstNonEmpty(stringValue(row["accountId"]), stringValue(existing["accountId"]), stringValue(existing["ownerAccountId"]))
+				row["workspaceId"] = firstNonEmpty(stringValue(row["workspaceId"]), stringValue(existing["workspaceId"]))
+			}
+			if stringValue(row["accountId"]) == "" {
+				return nil
+			}
 			return app.tables.SaveCompute(context.Background(), row)
 		}
 	case "storage_volume":
 		row := storageResponse(cloneMap(resource))
+		row["id"] = firstNonEmpty(stringValue(row["id"]), stringValue(operation["resourceId"]))
 		row["ownerAccountId"] = firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]), stringValue(operation["accountId"]))
 		row["accountId"] = firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"]))
 		row["workspaceId"] = firstNonEmpty(stringValue(row["workspaceId"]), stringValue(operation["workspaceId"]))
 		if id := stringValue(row["id"]); id != "" {
+			if existing, ok := app.getStorage(id); ok {
+				row["accountId"] = firstNonEmpty(stringValue(row["accountId"]), stringValue(existing["accountId"]), stringValue(existing["ownerAccountId"]))
+				row["workspaceId"] = firstNonEmpty(stringValue(row["workspaceId"]), stringValue(existing["workspaceId"]))
+			}
+			if stringValue(row["accountId"]) == "" {
+				return nil
+			}
 			return app.tables.SaveStorage(context.Background(), row)
 		}
 	case "storage_attachment":
 		row := attachmentResponse(cloneMap(resource), nil)
+		row["id"] = firstNonEmpty(stringValue(row["id"]), stringValue(operation["resourceId"]))
 		row["ownerAccountId"] = firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]), stringValue(operation["accountId"]))
 		row["accountId"] = firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"]))
 		row["workspaceId"] = firstNonEmpty(stringValue(row["workspaceId"]), stringValue(operation["workspaceId"]))
 		if id := stringValue(row["id"]); id != "" {
+			row["accountId"] = firstNonEmpty(stringValue(row["accountId"]), app.attachmentAccountID(row))
+			if stringValue(row["accountId"]) == "" {
+				return nil
+			}
 			return app.tables.SaveAttachment(context.Background(), row)
 		}
 	}
