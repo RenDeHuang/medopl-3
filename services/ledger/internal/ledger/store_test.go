@@ -75,6 +75,57 @@ func TestReceiptRejectsMissingIdentityAndSecretContent(t *testing.T) {
 	}
 }
 
+func TestContinuationResolvesFromReceipt(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	receipt, err := store.RecordReceipt(ctx, ReceiptInput{
+		Type:           "execution.receipt.v1",
+		Status:         "completed",
+		Surface:        "workspace",
+		WorkspaceID:    "workspace-alpha",
+		ProjectID:      "project-alpha",
+		TaskID:         "task-alpha",
+		IdempotencyKey: "receipt-continuation",
+		Continuation: map[string]any{
+			"continuationId":          "continuation-alpha",
+			"taskVersion":             float64(3),
+			"requiredArtifactDigests": []any{"sha256:alpha"},
+			"environmentRef":          "environment-alpha",
+		},
+	})
+	if err != nil {
+		t.Fatalf("record receipt: %v", err)
+	}
+
+	continuation, err := store.Continuation(ctx, receipt.ReceiptID)
+	if err != nil {
+		t.Fatalf("resolve continuation: %v", err)
+	}
+	if continuation["continuationId"] != "continuation-alpha" || continuation["receiptId"] != receipt.ReceiptID || continuation["projectId"] != "project-alpha" || continuation["taskId"] != "task-alpha" {
+		t.Fatalf("unexpected continuation: %#v", continuation)
+	}
+}
+
+func TestReceiptGeneratesContinuationIdentity(t *testing.T) {
+	store := NewMemoryStore()
+	receipt, err := store.RecordReceipt(context.Background(), ReceiptInput{
+		Type:           "execution.receipt.v1",
+		Status:         "running",
+		Surface:        "workspace",
+		WorkspaceID:    "workspace-alpha",
+		ProjectID:      "project-alpha",
+		TaskID:         "task-alpha",
+		IdempotencyKey: "generated-continuation",
+		Continuation:   map[string]any{"taskVersion": float64(1)},
+	})
+	if err != nil {
+		t.Fatalf("record receipt: %v", err)
+	}
+	if receipt.ContinuationID == "" || receipt.Continuation["continuationId"] != receipt.ContinuationID {
+		t.Fatalf("ledger must own continuation identity: %#v", receipt)
+	}
+}
+
 func TestReleaseHoldReducesFrozenWithoutDebitingBalance(t *testing.T) {
 	store := NewMemoryStore()
 	ctx := context.Background()

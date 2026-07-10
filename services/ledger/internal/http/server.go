@@ -138,6 +138,18 @@ func NewServer(store ledger.Store) http.Handler {
 		}
 		writeJSON(w, http.StatusOK, result)
 	})
+	mux.HandleFunc("GET /ledger/receipts/{id}/continuation", func(w http.ResponseWriter, r *http.Request) {
+		result, err := store.Continuation(r.Context(), r.PathValue("id"))
+		if errors.Is(err, ledger.ErrReceiptNotFound) || errors.Is(err, ledger.ErrContinuationNotFound) {
+			writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "continuation query failed")
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
+	})
 	mux.HandleFunc("POST /ledger/resource-settlements", func(w http.ResponseWriter, r *http.Request) {
 		idempotencyKey := r.Header.Get("Idempotency-Key")
 		if idempotencyKey == "" {

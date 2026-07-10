@@ -107,6 +107,54 @@ func TestHoldAndReceiptHTTP(t *testing.T) {
 	}
 }
 
+func TestContinuationHTTP(t *testing.T) {
+	server := NewServer(ledger.NewMemoryStore())
+	receipt := httptest.NewRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(`{"type":"execution.receipt.v1","status":"completed","surface":"workspace","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","continuation":{"continuationId":"continuation-alpha","taskVersion":2}}`))
+	receipt.Header.Set("Idempotency-Key", "http-continuation-receipt")
+	receiptRec := httptest.NewRecorder()
+	server.ServeHTTP(receiptRec, receipt)
+	if receiptRec.Code != http.StatusCreated {
+		t.Fatalf("receipt status = %d, want %d: %s", receiptRec.Code, http.StatusCreated, receiptRec.Body.String())
+	}
+	var receiptBody map[string]any
+	if err := json.NewDecoder(receiptRec.Body).Decode(&receiptBody); err != nil {
+		t.Fatalf("decode receipt: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/ledger/receipts/"+receiptBody["receiptId"].(string)+"/continuation", nil)
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("continuation status = %d, want %d: %s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var body map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode continuation: %v", err)
+	}
+	if body["continuationId"] != "continuation-alpha" || body["receiptId"] != receiptBody["receiptId"] || body["projectId"] != "project-alpha" || body["taskId"] != "task-alpha" {
+		t.Fatalf("unexpected continuation: %#v", body)
+	}
+}
+
+func TestContinuationHTTPReturnsNotFoundWhenReceiptHasNone(t *testing.T) {
+	server := NewServer(ledger.NewMemoryStore())
+	receipt := httptest.NewRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(`{"type":"execution.receipt.v1","status":"completed","surface":"workspace","workspaceId":"workspace-alpha"}`))
+	receipt.Header.Set("Idempotency-Key", "http-no-continuation-receipt")
+	receiptRec := httptest.NewRecorder()
+	server.ServeHTTP(receiptRec, receipt)
+	var receiptBody map[string]any
+	if err := json.NewDecoder(receiptRec.Body).Decode(&receiptBody); err != nil {
+		t.Fatalf("decode receipt: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/ledger/receipts/"+receiptBody["receiptId"].(string)+"/continuation", nil)
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("continuation status = %d, want %d: %s", rec.Code, http.StatusNotFound, rec.Body.String())
+	}
+}
+
 func TestReleaseHoldHTTP(t *testing.T) {
 	server := NewServer(ledger.NewMemoryStore())
 	topup := httptest.NewRequest(http.MethodPost, "/ledger/topups", bytes.NewBufferString(`{"accountId":"acct-alpha","amountCents":2000,"currency":"CNY","operatorUserId":"usr-admin","reason":"operator_credit"}`))

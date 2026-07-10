@@ -287,6 +287,7 @@ func (s *MemoryStore) RecordReceipt(_ context.Context, input ReceiptInput) (Rece
 
 	receipt := Receipt{ReceiptInput: input, ReceiptID: s.newID("receipt"), CreatedAt: time.Now().UTC()}
 	receipt.IdempotencyKey = ""
+	finalizeReceiptContinuation(&receipt)
 	s.receipts[receipt.ReceiptID] = receipt
 	s.idempotency[input.IdempotencyKey] = idempotencyRecord{payloadHash: payloadHash, result: receipt}
 	return receipt, nil
@@ -300,6 +301,14 @@ func (s *MemoryStore) Receipt(_ context.Context, receiptID string) (Receipt, err
 		return Receipt{}, ErrReceiptNotFound
 	}
 	return receipt, nil
+}
+
+func (s *MemoryStore) Continuation(ctx context.Context, receiptID string) (map[string]any, error) {
+	receipt, err := s.Receipt(ctx, receiptID)
+	if err != nil {
+		return nil, err
+	}
+	return continuationFromReceipt(receipt)
 }
 
 func (s *MemoryStore) SettleResource(_ context.Context, input ResourceSettlementInput) (ResourceSettlementResult, error) {
