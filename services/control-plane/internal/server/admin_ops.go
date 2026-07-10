@@ -136,11 +136,17 @@ func (app *controlPlaneServer) rememberRuntimeOperationResource(operation map[st
 	switch stringValue(operation["resourceKind"]) {
 	case "compute_allocation":
 		row := computeResponse(cloneMap(resource))
+		row["ownerAccountId"] = firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]), stringValue(operation["accountId"]))
+		row["accountId"] = firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"]))
+		row["workspaceId"] = firstNonEmpty(stringValue(row["workspaceId"]), stringValue(operation["workspaceId"]))
 		if id := stringValue(row["id"]); id != "" {
 			return app.tables.SaveCompute(context.Background(), row)
 		}
 	case "storage_volume":
 		row := storageResponse(cloneMap(resource))
+		row["ownerAccountId"] = firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]), stringValue(operation["accountId"]))
+		row["accountId"] = firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"]))
+		row["workspaceId"] = firstNonEmpty(stringValue(row["workspaceId"]), stringValue(operation["workspaceId"]))
 		if id := stringValue(row["id"]); id != "" {
 			return app.tables.SaveStorage(context.Background(), row)
 		}

@@ -782,8 +782,6 @@ func (f *fabricClientWithResourceOperations) ListOperations(_ context.Context) (
 			RequestHash:       "request-hash-alpha",
 			RedactedProviderPayload: map[string]any{"resource": map[string]any{
 				"id":                 "compute-alpha",
-				"accountId":          "acct-alpha",
-				"workspaceId":        "ws-alpha",
 				"packageId":          "basic",
 				"status":             "running",
 				"provider":           "tencent-tke",
@@ -810,8 +808,6 @@ func (f *fabricClientWithResourceOperations) ListOperations(_ context.Context) (
 			RequestHash:       "request-hash-storage-alpha",
 			RedactedProviderPayload: map[string]any{"resource": map[string]any{
 				"id":                 "storage-alpha",
-				"accountId":          "acct-alpha",
-				"workspaceId":        "ws-alpha",
 				"status":             "ready",
 				"provider":           "tencent-tke",
 				"providerResourceId": "pvc/storage-alpha-data",
@@ -1498,14 +1494,14 @@ func TestConsoleStateHydratesResourceListsFromFabricOperations(t *testing.T) {
 	computes := state["computeAllocations"].([]any)
 	if !slices.ContainsFunc(computes, func(row any) bool {
 		compute := row.(map[string]any)
-		return compute["id"] == "compute-alpha" && compute["status"] == "running" && compute["nodeName"] == "node-from-fabric"
+		return compute["id"] == "compute-alpha" && compute["accountId"] == "acct-alpha" && compute["workspaceId"] == "ws-alpha" && compute["status"] == "running" && compute["nodeName"] == "node-from-fabric"
 	}) {
 		t.Fatalf("state did not hydrate compute resource from Fabric operation: %#v", computes)
 	}
 	storageVolumes := state["storageVolumes"].([]any)
 	if !slices.ContainsFunc(storageVolumes, func(row any) bool {
 		storage := row.(map[string]any)
-		return storage["id"] == "storage-alpha" && storage["status"] == "available" && storage["providerResourceId"] == "pvc/storage-alpha-data"
+		return storage["id"] == "storage-alpha" && storage["accountId"] == "acct-alpha" && storage["workspaceId"] == "ws-alpha" && storage["status"] == "available" && storage["providerResourceId"] == "pvc/storage-alpha-data"
 	}) {
 		t.Fatalf("state did not hydrate storage resource from Fabric operation: %#v", storageVolumes)
 	}
