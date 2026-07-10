@@ -17,6 +17,31 @@ import (
 	"opl-cloud/services/control-plane/internal/controlplane"
 )
 
+func mustStore(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatalf("store setup failed: %v", err)
+	}
+}
+
+func storedWorkspace(t *testing.T, app *controlPlaneServer, id string) map[string]any {
+	t.Helper()
+	workspace, ok := app.getWorkspace(id)
+	if !ok {
+		t.Fatalf("workspace %s not found", id)
+	}
+	return workspace
+}
+
+func storedAttachment(t *testing.T, app *controlPlaneServer, id string) map[string]any {
+	t.Helper()
+	attachment, ok := app.getAttachment(id)
+	if !ok {
+		t.Fatalf("attachment %s not found", id)
+	}
+	return attachment
+}
+
 func TestCreateWorkspaceHTTPUsesMutationKeyWhenHeaderIsAbsent(t *testing.T) {
 	calls := []string{}
 	ledger := &fakeLedgerClientWithKeys{fakeLedgerClient{}, []string{}}
@@ -378,7 +403,7 @@ func TestBootstrapImportsAdminSeedAndDoesNotExposeLegacyOwner(t *testing.T) {
 
 func TestLoginAcceptsLegacyScryptPasswordHash(t *testing.T) {
 	app := newControlPlaneApp()
-	app.users["usr-admin"]["passwordHash"] = "scrypt:00112233445566778899aabbccddeeff:4904ad313c8dcfe466e3babafef2471d2f5bcc7b0d4d893d5eb6c57666c8c5c1e9a26e8e1b9035f6625718daa983ae2798cbeb16b404e8418c901315147f642f"
+	mustStore(t, app.tables.SaveUser(context.Background(), map[string]any{"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active", "passwordHash": "scrypt:00112233445566778899aabbccddeeff:4904ad313c8dcfe466e3babafef2471d2f5bcc7b0d4d893d5eb6c57666c8c5c1e9a26e8e1b9035f6625718daa983ae2798cbeb16b404e8418c901315147f642f"}))
 	if _, _, err := app.login(map[string]any{"email": "admin@medopl.cn", "password": "legacy-secret"}); err != nil {
 		t.Fatalf("legacy scrypt password did not verify: %v", err)
 	}
@@ -995,30 +1020,30 @@ func TestSyncStorageVolumeExternalDeleteStopsBillingAndDeletesWorkspaceData(t *t
 
 func TestManagementStateIncludesResourceLedgerEvidenceChain(t *testing.T) {
 	app := newControlPlaneApp()
-	app.mu.Lock()
-	app.workspaces["ws-alpha"] = map[string]any{
+	mustStore(t, app.tables.SaveWorkspace(context.Background(), map[string]any{
 		"id":                         "ws-alpha",
 		"ownerAccountId":             "acct-alpha",
 		"ownerUserId":                "usr-alpha",
 		"currentComputeAllocationId": "compute-alpha",
 		"currentAttachmentId":        "attach-alpha",
 		"storageId":                  "storage-alpha",
-	}
-	app.computes["compute-alpha"] = map[string]any{
+	}))
+	mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{
 		"id":             "compute-alpha",
 		"ownerAccountId": "acct-alpha",
 		"ownerUserId":    "usr-alpha",
 		"cvmInstanceId":  "ins-alpha",
 		"nodeName":       "node-alpha",
-	}
-	app.storages["storage-alpha"] = map[string]any{
+	}))
+	mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{
 		"id":             "storage-alpha",
 		"ownerAccountId": "acct-alpha",
-	}
+	}))
 	ledger := app.addLedgerLocked("acct-alpha", "compute_debit", map[string]any{"workspaceId": "ws-alpha", "computeAllocationId": "compute-alpha"})
 	app.addWalletTxLocked("acct-alpha", "compute_debit", map[string]any{"workspaceId": "ws-alpha", "computeAllocationId": "compute-alpha"})
-	wallet := app.walletTx[len(app.walletTx)-1]
-	app.mu.Unlock()
+	wallets, err := app.tables.ListWalletTransactions(context.Background(), "acct-alpha")
+	mustStore(t, err)
+	wallet := wallets[len(wallets)-1]
 
 	state := app.managementState(true, nil)
 	rows := state["resourceLedgerEvidence"].([]any)
@@ -1042,17 +1067,17 @@ func TestManagementStateIncludesResourceLedgerEvidenceChain(t *testing.T) {
 
 func TestConsoleStateIncludesResourceLedgerEvidenceChain(t *testing.T) {
 	app := newControlPlaneApp()
-	app.mu.Lock()
-	app.workspaces["ws-replacement"] = map[string]any{
+	mustStore(t, app.tables.SaveWorkspace(context.Background(), map[string]any{
 		"id":                         "ws-replacement",
 		"ownerAccountId":             "acct-alpha",
 		"currentComputeAllocationId": "compute-replacement",
 		"currentAttachmentId":        "attach-replacement",
 		"storageId":                  "storage-alpha",
-	}
-	app.computes["compute-replacement"] = map[string]any{"id": "compute-replacement", "ownerAccountId": "acct-alpha", "status": "running", "billingStatus": "active", "hourlyPrice": 1.25}
-	app.storages["storage-alpha"] = map[string]any{"id": "storage-alpha", "ownerAccountId": "acct-alpha", "status": "available", "billingStatus": "active", "hourlyEstimate": 0.25}
-	app.attachments["attach-replacement"] = map[string]any{"id": "attach-replacement", "ownerAccountId": "acct-alpha"}
+	}))
+	mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{"id": "compute-replacement", "ownerAccountId": "acct-alpha", "status": "running", "billingStatus": "active", "hourlyPrice": 1.25}))
+	mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{"id": "storage-alpha", "ownerAccountId": "acct-alpha", "status": "available", "billingStatus": "active", "hourlyEstimate": 0.25}))
+	mustStore(t, app.tables.SaveAttachment(context.Background(), map[string]any{"id": "attach-replacement", "ownerAccountId": "acct-alpha"}))
+	app.mu.Lock()
 	app.runtimeOps = []map[string]any{{
 		"operationId":  "op-runtime-replacement",
 		"resourceKind": "workspace_runtime",
@@ -1107,17 +1132,17 @@ func TestConsoleStateIncludesResourceLedgerEvidenceChain(t *testing.T) {
 
 func TestResourceLedgerEvidenceDerivesProviderCostTags(t *testing.T) {
 	app := newControlPlaneApp()
-	app.mu.Lock()
-	app.workspaces["ws-alpha"] = map[string]any{
+	mustStore(t, app.tables.SaveWorkspace(context.Background(), map[string]any{
 		"id":                         "ws-alpha",
 		"ownerAccountId":             "acct-alpha",
 		"currentComputeAllocationId": "compute-alpha",
 		"currentAttachmentId":        "attach-alpha",
 		"storageId":                  "storage-alpha",
-	}
-	app.computes["compute-alpha"] = map[string]any{"id": "compute-alpha", "ownerAccountId": "acct-alpha"}
-	app.storages["storage-alpha"] = map[string]any{"id": "storage-alpha", "ownerAccountId": "acct-alpha"}
-	app.attachments["attach-alpha"] = map[string]any{"id": "attach-alpha", "ownerAccountId": "acct-alpha"}
+	}))
+	mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{"id": "compute-alpha", "ownerAccountId": "acct-alpha"}))
+	mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{"id": "storage-alpha", "ownerAccountId": "acct-alpha"}))
+	mustStore(t, app.tables.SaveAttachment(context.Background(), map[string]any{"id": "attach-alpha", "ownerAccountId": "acct-alpha"}))
+	app.mu.Lock()
 	app.runtimeOps = []map[string]any{{
 		"operationId":  "op-runtime-alpha",
 		"resourceKind": "workspace_runtime",
@@ -1136,7 +1161,7 @@ func TestResourceLedgerEvidenceDerivesProviderCostTags(t *testing.T) {
 
 func TestResourceDestroyAndDetachUpdateWorkspaceState(t *testing.T) {
 	app := newControlPlaneApp()
-	app.workspaces["ws-alpha"] = map[string]any{
+	mustStore(t, app.tables.SaveWorkspace(context.Background(), map[string]any{
 		"id":                         "ws-alpha",
 		"ownerAccountId":             "acct-alpha",
 		"state":                      "running",
@@ -1148,9 +1173,9 @@ func TestResourceDestroyAndDetachUpdateWorkspaceState(t *testing.T) {
 		"attachmentId":               "attach-alpha",
 		"runtime":                    map[string]any{"serviceName": "runtime-alpha"},
 		"access":                     map[string]any{"tokenStatus": "active"},
-	}
+	}))
 
-	app.rememberCompute(map[string]any{
+	mustStore(t, app.saveComputeFact(map[string]any{
 		"id":              "compute-alpha",
 		"accountId":       "acct-alpha",
 		"status":          "destroyed",
@@ -1158,18 +1183,19 @@ func TestResourceDestroyAndDetachUpdateWorkspaceState(t *testing.T) {
 		"holdReleaseId":   "release-compute",
 		"holdAmountCents": 7862,
 		"wallet":          map[string]any{"accountId": "acct-alpha", "balanceCents": 20000, "frozenCents": 0, "availableCents": 20000, "currency": "CNY"},
-	})
-	workspace := app.workspaces["ws-alpha"]
+	}))
+	workspace := storedWorkspace(t, app, "ws-alpha")
 	if workspace["state"] != "suspended" || workspace["currentComputeAllocationId"] != "" {
 		t.Fatalf("compute destroy did not suspend and clear compute pointer: %#v", workspace)
 	}
 
-	app.rememberAttachment(map[string]any{"id": "attach-alpha", "status": "detached"}, map[string]any{})
+	mustStore(t, app.saveAttachmentFact(map[string]any{"id": "attach-alpha", "status": "detached"}, map[string]any{}))
+	workspace = storedWorkspace(t, app, "ws-alpha")
 	if workspace["currentAttachmentId"] != "" || workspace["attachmentId"] != "" {
 		t.Fatalf("attachment detach did not clear workspace pointer: %#v", workspace)
 	}
 
-	app.rememberStorage(map[string]any{
+	mustStore(t, app.saveStorageFact(map[string]any{
 		"id":              "storage-alpha",
 		"accountId":       "acct-alpha",
 		"status":          "destroyed",
@@ -1177,13 +1203,16 @@ func TestResourceDestroyAndDetachUpdateWorkspaceState(t *testing.T) {
 		"holdReleaseId":   "release-storage",
 		"holdAmountCents": 101,
 		"wallet":          map[string]any{"accountId": "acct-alpha", "balanceCents": 20000, "frozenCents": 0, "availableCents": 20000, "currency": "CNY"},
-	})
+	}))
+	workspace = storedWorkspace(t, app, "ws-alpha")
 	access, ok := workspace["access"].(map[string]any)
 	if workspace["state"] != "data_deleted" || workspace["status"] != "unrecoverable" || !ok || access["tokenStatus"] != "disabled" {
 		t.Fatalf("storage destroy did not mark workspace unrecoverable: %#v", workspace)
 	}
-	if len(app.ledger) != 2 || app.ledger[0]["type"] != "compute_hold_released" || app.ledger[1]["type"] != "storage_hold_released" {
-		t.Fatalf("missing hold release ledger projection: %#v", app.ledger)
+	ledger, err := app.tables.ListLedger(context.Background(), "acct-alpha")
+	mustStore(t, err)
+	if len(ledger) != 2 || ledger[0]["type"] != "compute_hold_released" || ledger[1]["type"] != "storage_hold_released" {
+		t.Fatalf("missing hold release ledger projection: %#v", ledger)
 	}
 }
 
@@ -1203,9 +1232,9 @@ func TestDetachStorageAttachmentPreservesOwnershipFacts(t *testing.T) {
 
 func TestRememberAttachmentDerivesAccountFromLinkedResources(t *testing.T) {
 	app := newControlPlaneApp()
-	app.computes["compute-alpha"] = map[string]any{"id": "compute-alpha", "accountId": "acct-alpha"}
-	app.storages["storage-alpha"] = map[string]any{"id": "storage-alpha", "accountId": "acct-alpha"}
-	if err := app.rememberAttachment(map[string]any{
+	mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{"id": "compute-alpha", "accountId": "acct-alpha"}))
+	mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{"id": "storage-alpha", "accountId": "acct-alpha"}))
+	if err := app.saveAttachmentFact(map[string]any{
 		"id":                  "attach-alpha",
 		"computeAllocationId": "compute-alpha",
 		"storageId":           "storage-alpha",
@@ -1213,7 +1242,7 @@ func TestRememberAttachmentDerivesAccountFromLinkedResources(t *testing.T) {
 	}, map[string]any{}); err != nil {
 		t.Fatal(err)
 	}
-	if got := stringValue(app.attachments["attach-alpha"]["accountId"]); got != "acct-alpha" {
+	if got := stringValue(storedAttachment(t, app, "attach-alpha")["accountId"]); got != "acct-alpha" {
 		t.Fatalf("attachment accountId = %q, want acct-alpha", got)
 	}
 }
@@ -1221,22 +1250,18 @@ func TestRememberAttachmentDerivesAccountFromLinkedResources(t *testing.T) {
 func TestPersistDerivesAttachmentAccountFromExistingFacts(t *testing.T) {
 	app := newControlPlaneApp()
 	app.store = NewTestEntStateStore(t, t.TempDir()+"/attachment-account.sqlite")
-	app.computes["compute-alpha"] = map[string]any{"id": "compute-alpha", "accountId": "acct-alpha"}
-	app.storages["storage-alpha"] = map[string]any{"id": "storage-alpha", "accountId": "acct-alpha"}
-	app.attachments["attach-alpha"] = map[string]any{
+	app.tables = app.store.(controlPlaneTableStore)
+	mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{"id": "compute-alpha", "accountId": "acct-alpha"}))
+	mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{"id": "storage-alpha", "accountId": "acct-alpha"}))
+	mustStore(t, app.saveAttachmentFact(map[string]any{
 		"id":                  "attach-alpha",
 		"computeAllocationId": "compute-alpha",
 		"storageId":           "storage-alpha",
 		"status":              "attached",
-	}
-	if err := app.persistLocked(); err != nil {
-		t.Fatalf("persist should derive attachment accountId: %v", err)
-	}
-	facts, err := app.store.Load(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got := stringValue(facts.Attachments["attach-alpha"]["accountId"]); got != "acct-alpha" {
+	}, map[string]any{}))
+	attachments, err := app.tables.ListAttachments(context.Background(), "")
+	mustStore(t, err)
+	if got := stringValue(attachments[0]["accountId"]); got != "acct-alpha" {
 		t.Fatalf("persisted attachment accountId = %q, want acct-alpha", got)
 	}
 }
@@ -1290,13 +1315,11 @@ func TestManagementStateUsesRealAccountsAndLedger(t *testing.T) {
 
 func TestOperatorAccountTotalsIgnoreDeletedUserWalletResiduals(t *testing.T) {
 	app := newControlPlaneApp()
-	app.mu.Lock()
-	app.users["usr-active"] = map[string]any{"id": "usr-active", "accountId": "acct-active", "status": "active", "email": "active@example.test"}
-	app.users["usr-deleted"] = map[string]any{"id": "usr-deleted", "accountId": "acct-deleted", "status": "deleted", "email": "deleted@example.test"}
-	app.wallets["acct-active"] = map[string]any{"accountId": "acct-active", "balance": 10.0, "frozen": 2.0, "totalSpent": 3.0}
-	app.wallets["acct-deleted"] = map[string]any{"accountId": "acct-deleted", "balance": 99.0, "frozen": 88.0, "totalSpent": 77.0}
-	app.wallets["acct-wallet-only"] = map[string]any{"accountId": "acct-wallet-only", "balance": 50.0, "frozen": 40.0, "totalSpent": 30.0}
-	app.mu.Unlock()
+	mustStore(t, app.tables.SaveUser(context.Background(), map[string]any{"id": "usr-active", "accountId": "acct-active", "status": "active", "email": "active@example.test"}))
+	mustStore(t, app.tables.SaveUser(context.Background(), map[string]any{"id": "usr-deleted", "accountId": "acct-deleted", "status": "deleted", "email": "deleted@example.test"}))
+	mustStore(t, app.tables.SaveWallet(context.Background(), map[string]any{"id": "acct-active", "accountId": "acct-active", "balance": 10.0, "frozen": 2.0, "totalSpent": 3.0}))
+	mustStore(t, app.tables.SaveWallet(context.Background(), map[string]any{"id": "acct-deleted", "accountId": "acct-deleted", "balance": 99.0, "frozen": 88.0, "totalSpent": 77.0}))
+	mustStore(t, app.tables.SaveWallet(context.Background(), map[string]any{"id": "acct-wallet-only", "accountId": "acct-wallet-only", "balance": 50.0, "frozen": 40.0, "totalSpent": 30.0}))
 	summary := app.operatorSummary()
 
 	accounts := summary["accounts"].(map[string]any)
@@ -1313,29 +1336,30 @@ func TestOperatorAccountTotalsIgnoreDeletedUserWalletResiduals(t *testing.T) {
 
 func TestCleanupWorkspaceAccessDisablesInvalidActiveURL(t *testing.T) {
 	app := newControlPlaneApp()
-	app.workspaces["ws-alpha"] = map[string]any{
+	mustStore(t, app.tables.SaveWorkspace(context.Background(), map[string]any{
 		"id":             "ws-alpha",
 		"ownerAccountId": "acct-alpha",
 		"storageId":      "missing-storage",
 		"access":         map[string]any{"tokenStatus": "active"},
-	}
+	}))
 
 	result, err := app.cleanupWorkspaceAccess(map[string]any{"reason": "test"})
 	if err != nil {
 		t.Fatalf("cleanup workspace access: %v", err)
 	}
-	if len(result["cleaned"].([]any)) != 1 || nested(app.workspaces["ws-alpha"], "access", "tokenStatus") != "disabled" {
-		t.Fatalf("cleanup did not disable invalid URL: result=%#v workspace=%#v", result, app.workspaces["ws-alpha"])
+	workspace := storedWorkspace(t, app, "ws-alpha")
+	if len(result["cleaned"].([]any)) != 1 || nested(workspace, "access", "tokenStatus") != "disabled" {
+		t.Fatalf("cleanup did not disable invalid URL: result=%#v workspace=%#v", result, workspace)
 	}
 }
 
 func TestArchiveTerminalResourcesRemovesCurrentStateWithoutLedger(t *testing.T) {
 	app := newControlPlaneApp()
-	app.computes["compute-dead"] = map[string]any{"id": "compute-dead", "status": "destroyed"}
-	app.storages["storage-dead"] = map[string]any{"id": "storage-dead", "status": "destroyed"}
-	app.attachments["attach-dead"] = map[string]any{"id": "attach-dead", "status": "detached"}
-	app.workspaces["ws-dead"] = map[string]any{"id": "ws-dead", "state": "unrecoverable"}
-	app.ledger = []map[string]any{{"id": "ledger-kept"}}
+	mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{"id": "compute-dead", "status": "destroyed"}))
+	mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{"id": "storage-dead", "status": "destroyed"}))
+	mustStore(t, app.tables.SaveAttachment(context.Background(), map[string]any{"id": "attach-dead", "status": "detached"}))
+	mustStore(t, app.tables.SaveWorkspace(context.Background(), map[string]any{"id": "ws-dead", "state": "unrecoverable"}))
+	mustStore(t, app.tables.SaveLedgerEntry(context.Background(), map[string]any{"id": "ledger-kept"}))
 
 	result, err := app.archiveTerminalResources(context.Background(), map[string]any{"reason": "test"})
 	if err != nil {
@@ -1344,22 +1368,20 @@ func TestArchiveTerminalResourcesRemovesCurrentStateWithoutLedger(t *testing.T) 
 	if result["currentStateRemoved"] != 4 {
 		t.Fatalf("archive removed count = %#v, want 4", result)
 	}
-	if len(app.computes) != 0 || len(app.storages) != 0 || len(app.attachments) != 0 || len(app.workspaces) != 0 {
-		t.Fatalf("terminal resources still in current state: computes=%#v storages=%#v attachments=%#v workspaces=%#v", app.computes, app.storages, app.attachments, app.workspaces)
+	if len(app.listComputes("")) != 0 || len(app.listStorages("")) != 0 || len(app.listAttachments("")) != 0 || len(app.listWorkspaces("")) != 0 {
+		t.Fatalf("terminal resources still in current state")
 	}
-	if len(app.ledger) != 1 {
-		t.Fatalf("archive must not remove ledger facts: %#v", app.ledger)
+	ledger, err := app.tables.ListLedger(context.Background(), "")
+	mustStore(t, err)
+	if len(ledger) != 1 {
+		t.Fatalf("archive must not remove ledger facts: %#v", ledger)
 	}
 }
 
 func TestArchiveStateEndpointReturnsBackendArchiveAndRetentionPolicy(t *testing.T) {
 	path := t.TempDir() + "/control-plane-state.sqlite"
 	store := NewTestEntStateStore(t, path)
-	if err := store.Save(context.Background(), controlPlaneState{
-		Computes: controlPlaneRecordSet{
-			"compute-dead": {"id": "compute-dead", "accountId": "acct-alpha", "status": "destroyed"},
-		},
-	}); err != nil {
+	if err := store.SaveCompute(context.Background(), map[string]any{"id": "compute-dead", "accountId": "acct-alpha", "status": "destroyed"}); err != nil {
 		t.Fatalf("seed terminal compute: %v", err)
 	}
 	service := controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{})
@@ -1385,12 +1407,12 @@ func TestArchiveStateEndpointReturnsBackendArchiveAndRetentionPolicy(t *testing.
 
 func TestManagementStateIncludesBackendCleanupAndAnomalySummary(t *testing.T) {
 	app := newControlPlaneApp()
-	app.workspaces["ws-missing-storage"] = map[string]any{
+	mustStore(t, app.tables.SaveWorkspace(context.Background(), map[string]any{
 		"id":             "ws-missing-storage",
 		"ownerAccountId": "acct-alpha",
 		"storageId":      "missing-storage",
 		"access":         map[string]any{"tokenStatus": "active"},
-	}
+	}))
 
 	management := app.managementState(false, nil)
 	cleanup := management["workspaceAccessCleanup"].(map[string]any)
@@ -1657,9 +1679,9 @@ func TestWorkspaceGatewayRoutesRootRuntimeApiByReferer(t *testing.T) {
 	}))
 	defer backend.Close()
 	app := newControlPlaneApp()
-	app.workspaces["ws-alpha"] = map[string]any{
+	mustStore(t, app.tables.SaveWorkspace(context.Background(), map[string]any{"id": "ws-alpha",
 		"runtime": map[string]any{"serviceName": strings.TrimPrefix(backend.URL, "http://")},
-	}
+	}))
 	req := httptest.NewRequest(http.MethodPost, "https://workspace.medopl.cn/login", bytes.NewBufferString(`{"username":"admin"}`))
 	req.Header.Set("Referer", "https://workspace.medopl.cn/w/ws-alpha/")
 	rec := httptest.NewRecorder()
@@ -1683,9 +1705,9 @@ func TestWorkspaceGatewaySetsActiveCookieForRootRuntimeApi(t *testing.T) {
 	}))
 	defer backend.Close()
 	app := newControlPlaneApp()
-	app.workspaces["ws-alpha"] = map[string]any{
+	mustStore(t, app.tables.SaveWorkspace(context.Background(), map[string]any{"id": "ws-alpha",
 		"runtime": map[string]any{"serviceName": strings.TrimPrefix(backend.URL, "http://")},
-	}
+	}))
 	entryReq := httptest.NewRequest(http.MethodGet, "https://workspace.medopl.cn/w/ws-alpha/?token=share_alpha", nil)
 	entryRec := httptest.NewRecorder()
 
@@ -1741,7 +1763,8 @@ func TestWorkspaceGatewayBlocksInactiveWorkspace(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			app := newControlPlaneApp()
-			app.workspaces["ws-alpha"] = tc.row
+			tc.row["id"] = "ws-alpha"
+			mustStore(t, app.tables.SaveWorkspace(context.Background(), tc.row))
 			req := httptest.NewRequest(http.MethodGet, "https://workspace.medopl.cn/w/ws-alpha/", nil)
 			rec := httptest.NewRecorder()
 

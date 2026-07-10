@@ -5,7 +5,6 @@ import (
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -17,27 +16,17 @@ import (
 	"opl-cloud/services/control-plane/internal/clients"
 )
 
-type controlPlaneApp struct {
+type controlPlaneServer struct {
 	mu          sync.Mutex
 	store       StateStore
-	computes    controlPlaneRecordSet
-	storages    controlPlaneRecordSet
-	attachments controlPlaneRecordSet
-	workspaces  controlPlaneRecordSet
-	users       controlPlaneRecordSet
+	tables      controlPlaneTableStore
 	orgs        controlPlaneRecordSet
 	memberships controlPlaneRecordSet
 	support     controlPlaneRecordSet
-	wallets     controlPlaneRecordSet
-	ledger      []controlPlaneRecord
-	walletTx    []controlPlaneRecord
-	topups      []controlPlaneRecord
 	runtimeOps  []controlPlaneRecord
-	auditEvents []controlPlaneRecord
 	reconcile   controlPlaneRecord
-	sessions    map[string]sessionRecord
 	// ponytail: per-process limiter; move to Redis when login traffic spans multiple replicas.
-	loginFailures map[string]loginFailure
+	loginRateLimits map[string]loginFailure
 }
 
 type loginFailure struct {
@@ -52,19 +41,21 @@ var (
 	errUserDeleted     = errors.New("user_deleted")
 )
 
-func newControlPlaneApp() *controlPlaneApp {
+func newControlPlaneApp() *controlPlaneServer {
 	return newControlPlaneAppEmpty()
 }
 
-func newControlPlaneAppWithStore(store StateStore) (*controlPlaneApp, error) {
+func newControlPlaneAppWithStore(store StateStore) (*controlPlaneServer, error) {
 	app := newControlPlaneAppEmpty()
 	app.store = store
-	if store != nil {
-		facts, err := store.Load(context.Background())
-		if err != nil {
-			return nil, err
-		}
-		app.applyFacts(facts)
+	if tableStore, ok := store.(controlPlaneTableStore); ok {
+		app.tables = tableStore
+	}
+	if app.tables == nil {
+		app.tables = newMemoryTableStore()
+	}
+	if err := app.ensureBootstrapAdmin(); err != nil {
+		return nil, err
 	}
 	if err := app.importBootstrapUsers(); err != nil {
 		return nil, err
@@ -72,124 +63,33 @@ func newControlPlaneAppWithStore(store StateStore) (*controlPlaneApp, error) {
 	return app, nil
 }
 
-func newControlPlaneAppEmpty() *controlPlaneApp {
-	return &controlPlaneApp{
-		computes:      controlPlaneRecordSet{},
-		storages:      controlPlaneRecordSet{},
-		attachments:   controlPlaneRecordSet{},
-		workspaces:    controlPlaneRecordSet{},
-		users:         controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}},
-		orgs:          controlPlaneRecordSet{},
-		memberships:   controlPlaneRecordSet{},
-		support:       controlPlaneRecordSet{},
-		wallets:       controlPlaneRecordSet{},
-		sessions:      map[string]sessionRecord{},
-		loginFailures: map[string]loginFailure{},
-	}
-}
-
-func (app *controlPlaneApp) factsLocked() controlPlaneState {
-	return controlPlaneState{
-		Version:     1,
-		Computes:    cloneStateTable(app.computes),
-		Storages:    cloneStateTable(app.storages),
-		Attachments: app.attachmentFactsLocked(),
-		Workspaces:  cloneStateTable(app.workspaces),
-		Users:       cloneStateTable(app.users),
-		Sessions:    app.sessionFactsLocked(),
-		Orgs:        cloneStateTable(app.orgs),
-		Memberships: cloneStateTable(app.memberships),
-		Support:     cloneStateTable(app.support),
-		Wallets:     cloneStateTable(app.wallets),
-		Ledger:      cloneStateRows(app.ledger),
-		WalletTx:    cloneStateRows(app.walletTx),
-		Topups:      cloneStateRows(app.topups),
-		RuntimeOps:  cloneStateRows(app.runtimeOps),
-		AuditEvents: cloneStateRows(app.auditEvents),
-		Reconcile:   cloneMap(app.reconcile),
-	}
-}
-
-func (app *controlPlaneApp) applyFacts(facts controlPlaneState) {
-	if facts.Computes != nil {
-		app.computes = cloneStateTable(facts.Computes)
-	}
-	if facts.Storages != nil {
-		app.storages = cloneStateTable(facts.Storages)
-	}
-	if facts.Attachments != nil {
-		app.attachments = cloneStateTable(facts.Attachments)
-	}
-	if facts.Workspaces != nil {
-		app.workspaces = cloneStateTable(facts.Workspaces)
-	}
-	if facts.Users != nil {
-		app.users = cloneStateTable(facts.Users)
-	}
-	if len(app.users) == 0 {
-		app.users = controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}}
-	}
-	if facts.Sessions != nil {
-		app.sessions = sessionsFromFacts(facts.Sessions)
-	}
-	if facts.Orgs != nil {
-		app.orgs = cloneStateTable(facts.Orgs)
-	}
-	if facts.Memberships != nil {
-		app.memberships = cloneStateTable(facts.Memberships)
-	}
-	if facts.Support != nil {
-		app.support = cloneStateTable(facts.Support)
-	}
-	if facts.Wallets != nil {
-		app.wallets = cloneStateTable(facts.Wallets)
-	}
-	if facts.Ledger != nil {
-		app.ledger = cloneStateRows(facts.Ledger)
-	}
-	if facts.WalletTx != nil {
-		app.walletTx = cloneStateRows(facts.WalletTx)
-	}
-	if facts.Topups != nil {
-		app.topups = cloneStateRows(facts.Topups)
-	}
-	if facts.RuntimeOps != nil {
-		app.runtimeOps = cloneStateRows(facts.RuntimeOps)
-	}
-	if facts.AuditEvents != nil {
-		app.auditEvents = cloneStateRows(facts.AuditEvents)
-	}
-	if facts.Reconcile != nil {
-		app.reconcile = cloneMap(facts.Reconcile)
-	}
-}
-
-func (app *controlPlaneApp) refreshFactsFromStore(ctx context.Context) error {
-	if app.store == nil {
-		return nil
-	}
-	facts, err := app.store.Load(ctx)
+func (app *controlPlaneServer) ensureBootstrapAdmin() error {
+	users, err := app.tables.ListUsers(context.Background(), true)
 	if err != nil {
 		return err
 	}
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	app.applyFacts(facts)
-	return nil
-}
-
-func (app *controlPlaneApp) persistLocked() error {
-	if app.store == nil {
+	if len(users) > 0 {
 		return nil
 	}
-	if err := app.store.Save(context.Background(), app.factsLocked()); err != nil {
-		log.Printf("control-plane state persist failed: %v", err)
-		return err
-	}
-	return nil
+	return app.tables.SaveUser(context.Background(), map[string]any{"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"})
 }
 
-func (app *controlPlaneApp) state(accountID string, computePools []any) map[string]any {
+func newControlPlaneAppEmpty() *controlPlaneServer {
+	tables := newMemoryTableStore()
+	return &controlPlaneServer{
+		tables:          tables,
+		orgs:            controlPlaneRecordSet{},
+		memberships:     controlPlaneRecordSet{},
+		support:         controlPlaneRecordSet{},
+		loginRateLimits: map[string]loginFailure{},
+	}
+}
+
+func (app *controlPlaneServer) userFacts() controlPlaneRecordSet {
+	return app.userRecordSet(true)
+}
+
+func (app *controlPlaneServer) state(accountID string, computePools []any) map[string]any {
 	app.mu.Lock()
 	defer app.mu.Unlock()
 	workspaces := app.workspaceStateRowsLocked(accountID)
@@ -202,16 +102,16 @@ func (app *controlPlaneApp) state(accountID string, computePools []any) map[stri
 		"account":                app.wallet(accountID),
 		"user":                   app.currentUserLocked(),
 		"workspaces":             workspaces,
-		"computeAllocations":     accountValues(app.computes, accountID),
-		"storageVolumes":         accountValues(app.storages, accountID),
-		"storageAttachments":     accountValues(app.attachments, accountID),
+		"computeAllocations":     rowsAsAnyFromMaps(app.listComputes(accountID)),
+		"storageVolumes":         rowsAsAnyFromMaps(app.listStorages(accountID)),
+		"storageAttachments":     rowsAsAnyFromMaps(app.listAttachments(accountID)),
 		"accounts":               app.accountsLocked(),
-		"billingSummary":         app.billingSummaryLocked(accountID),
-		"billingLedger":          copySlice(app.ledger),
-		"walletTransactions":     copySlice(app.walletTx),
-		"manualTopups":           copySlice(app.topups),
-		"supportTickets":         values(app.support),
-		"auditEvents":            auditEventsForAccount(app.auditEvents, accountID),
+		"billingSummary":         app.accountBillingSummary(accountID),
+		"billingLedger":          rowsAsAnyFromMaps(app.listLedger(accountID)),
+		"walletTransactions":     rowsAsAnyFromMaps(app.listWalletTransactions(accountID)),
+		"manualTopups":           rowsAsAnyFromMaps(app.listManualTopups(accountID)),
+		"supportTickets":         rowsAsAnyFromMaps(app.listSupportMappings(accountID)),
+		"auditEvents":            rowsAsAnyFromMaps(app.listAuditEvents(accountID)),
 		"resourceLedgerEvidence": app.resourceLedgerEvidenceLocked(),
 		"billingReconciliation":  app.reconciliationProjectionLocked(),
 		"notifications":          []any{},
@@ -220,13 +120,154 @@ func (app *controlPlaneApp) state(accountID string, computePools []any) map[stri
 	}
 }
 
-func (app *controlPlaneApp) currentUserLocked() map[string]any {
-	for _, user := range app.users {
+func (app *controlPlaneServer) currentUserLocked() map[string]any {
+	for _, user := range app.userRecordSet(false) {
 		if stringValue(user["role"]) == "admin" && stringValue(user["status"]) == "active" {
 			return sanitizeUser(user)
 		}
 	}
 	return nil
+}
+
+func (app *controlPlaneServer) userRecordSet(includeDeleted bool) controlPlaneRecordSet {
+	users, err := app.tables.ListUsers(context.Background(), includeDeleted)
+	if err != nil {
+		return controlPlaneRecordSet{}
+	}
+	out := controlPlaneRecordSet{}
+	for _, user := range users {
+		out[stringValue(user["id"])] = cloneMap(user)
+	}
+	return out
+}
+
+func (app *controlPlaneServer) listComputes(accountID string) []map[string]any {
+	rows, err := app.tables.ListComputes(context.Background(), accountID)
+	if err != nil {
+		return nil
+	}
+	return rows
+}
+
+func (app *controlPlaneServer) computeRecordSet(accountID string) controlPlaneRecordSet {
+	return recordSetFromRows(app.listComputes(accountID))
+}
+
+func (app *controlPlaneServer) listStorages(accountID string) []map[string]any {
+	rows, err := app.tables.ListStorages(context.Background(), accountID)
+	if err != nil {
+		return nil
+	}
+	return rows
+}
+
+func (app *controlPlaneServer) storageRecordSet(accountID string) controlPlaneRecordSet {
+	return recordSetFromRows(app.listStorages(accountID))
+}
+
+func (app *controlPlaneServer) listAttachments(accountID string) []map[string]any {
+	rows, err := app.tables.ListAttachments(context.Background(), accountID)
+	if err != nil {
+		return nil
+	}
+	return rows
+}
+
+func (app *controlPlaneServer) attachmentRecordSet(accountID string) controlPlaneRecordSet {
+	return recordSetFromRows(app.listAttachments(accountID))
+}
+
+func (app *controlPlaneServer) listWorkspaces(accountID string) []map[string]any {
+	rows, err := app.tables.ListWorkspaces(context.Background(), accountID)
+	if err != nil {
+		return nil
+	}
+	return rows
+}
+
+func (app *controlPlaneServer) workspaceRecordSet(accountID string) controlPlaneRecordSet {
+	return recordSetFromRows(app.listWorkspaces(accountID))
+}
+
+func recordSetFromRows(rows []map[string]any) controlPlaneRecordSet {
+	out := controlPlaneRecordSet{}
+	for _, row := range rows {
+		out[stringValue(row["id"])] = cloneMap(row)
+	}
+	return out
+}
+
+func rowsAsAnyFromMaps(rows []map[string]any) []any {
+	out := make([]any, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, cloneMap(row))
+	}
+	return out
+}
+
+func rowsToRecords(rows []map[string]any) []controlPlaneRecord {
+	out := make([]controlPlaneRecord, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, cloneMap(row))
+	}
+	return out
+}
+
+func (app *controlPlaneServer) listWallets(accountID string) []map[string]any {
+	rows, err := app.tables.ListWallets(context.Background(), accountID)
+	if err != nil {
+		return nil
+	}
+	return rows
+}
+
+func (app *controlPlaneServer) walletRecordSet(accountID string) controlPlaneRecordSet {
+	rows := app.listWallets(accountID)
+	out := controlPlaneRecordSet{}
+	for _, row := range rows {
+		out[firstNonEmpty(stringValue(row["id"]), stringValue(row["accountId"]))] = cloneMap(row)
+	}
+	return out
+}
+
+func (app *controlPlaneServer) listLedger(accountID string) []map[string]any {
+	rows, err := app.tables.ListLedger(context.Background(), accountID)
+	if err != nil {
+		return nil
+	}
+	return rows
+}
+
+func (app *controlPlaneServer) listWalletTransactions(accountID string) []map[string]any {
+	rows, err := app.tables.ListWalletTransactions(context.Background(), accountID)
+	if err != nil {
+		return nil
+	}
+	return rows
+}
+
+func (app *controlPlaneServer) listManualTopups(accountID string) []map[string]any {
+	rows, err := app.tables.ListManualTopups(context.Background(), accountID)
+	if err != nil {
+		return nil
+	}
+	return rows
+}
+
+func (app *controlPlaneServer) listAuditEvents(accountID string) []map[string]any {
+	rows, err := app.tables.ListAuditEvents(context.Background(), accountID)
+	if err != nil {
+		return nil
+	}
+	return rows
+}
+
+func (app *controlPlaneServer) listSupportMappings(accountID string) []map[string]any {
+	rows, err := app.tables.ListSupportMappings(context.Background(), accountID)
+	if err != nil {
+		return nil
+	}
+	return rows
 }
 
 func failedRuntimeOperations(operations []map[string]any) []any {

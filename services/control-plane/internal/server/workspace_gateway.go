@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"net/http/httputil"
 	"strings"
@@ -8,11 +9,10 @@ import (
 	"opl-cloud/services/control-plane/internal/domain"
 )
 
-func (app *controlPlaneApp) workspaceStateRowsLocked(accountID string) []any {
-	rows := accountValues(app.workspaces, accountID)
+func (app *controlPlaneServer) workspaceStateRowsLocked(accountID string) []any {
+	rows := app.listWorkspaces(accountID)
 	output := make([]any, 0, len(rows))
-	for _, raw := range rows {
-		row, _ := raw.(map[string]any)
+	for _, row := range rows {
 		workspace := workspaceResponse(cloneMap(row))
 		workspace["billing"] = app.workspaceBillingLocked(workspace)
 		output = append(output, workspace)
@@ -20,21 +20,19 @@ func (app *controlPlaneApp) workspaceStateRowsLocked(accountID string) []any {
 	return output
 }
 
-func (app *controlPlaneApp) workspaceBillingLocked(workspace map[string]any) map[string]any {
+func (app *controlPlaneServer) workspaceBillingLocked(workspace map[string]any) map[string]any {
 	workspaceID := stringValue(workspace["id"])
-	compute := app.computes[stringValue(workspace["currentComputeAllocationId"])]
-	storage := app.storages[stringValue(workspace["storageId"])]
+	compute, _ := app.getCompute(stringValue(workspace["currentComputeAllocationId"]))
+	storage, _ := app.getStorage(stringValue(workspace["storageId"]))
 	return map[string]any{
 		"activeHourlyEstimate": activeHourlyForResource(compute) + activeHourlyForResource(storage),
-		"currentChargeTotal":   resourceDebitTotal(app.ledger, firstNonEmpty(stringValue(workspace["accountId"]), stringValue(workspace["ownerAccountId"])), workspaceID),
+		"currentChargeTotal":   resourceDebitTotal(rowsToRecords(app.listLedger(firstNonEmpty(stringValue(workspace["accountId"]), stringValue(workspace["ownerAccountId"])))), firstNonEmpty(stringValue(workspace["accountId"]), stringValue(workspace["ownerAccountId"])), workspaceID),
 	}
 }
 
-func (app *controlPlaneApp) setWorkspaceAccess(workspaceID string, tokenStatus string) (map[string]any, bool, error) {
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	workspace := app.workspaces[workspaceID]
-	if workspace == nil {
+func (app *controlPlaneServer) setWorkspaceAccess(workspaceID string, tokenStatus string) (map[string]any, bool, error) {
+	workspace, ok := app.getWorkspace(workspaceID)
+	if !ok {
 		return nil, false, nil
 	}
 	access, _ := workspace["access"].(map[string]any)
@@ -42,13 +40,10 @@ func (app *controlPlaneApp) setWorkspaceAccess(workspaceID string, tokenStatus s
 	access["tokenStatus"] = tokenStatus
 	access["requiresLogin"] = false
 	workspace["access"] = access
-	return cloneMap(workspace), true, app.persistLocked()
+	return cloneMap(workspace), true, app.tables.SaveWorkspace(context.Background(), workspace)
 }
 
-func (app *controlPlaneApp) rememberWorkspaceProjection(workspace domain.WorkspaceProjection) error {
-	app.mu.Lock()
-	defer app.mu.Unlock()
-
+func (app *controlPlaneServer) saveWorkspaceProjection(workspace domain.WorkspaceProjection) error {
 	access := map[string]any{"tokenStatus": "active", "requiresLogin": false}
 	if workspace.RuntimeUsername != "" {
 		access["account"] = workspace.RuntimeUsername
@@ -66,7 +61,7 @@ func (app *controlPlaneApp) rememberWorkspaceProjection(workspace domain.Workspa
 	if workspace.CredentialSecretRef != "" {
 		access["secretRef"] = workspace.CredentialSecretRef
 	}
-	app.workspaces[workspace.ID] = map[string]any{
+	row := map[string]any{
 		"id":                         workspace.ID,
 		"ownerAccountId":             workspace.AccountID,
 		"ownerUserId":                workspace.OwnerID,
@@ -87,11 +82,11 @@ func (app *controlPlaneApp) rememberWorkspaceProjection(workspace domain.Workspa
 		"evidenceId":                 workspace.EvidenceID,
 		"access":                     access,
 	}
-	return app.persistLocked()
+	return app.tables.SaveWorkspace(context.Background(), row)
 }
 
-func (app *controlPlaneApp) suspendWorkspacesForComputeLocked(computeID string) {
-	for _, workspace := range app.workspaces {
+func (app *controlPlaneServer) suspendWorkspacesForCompute(computeID string) error {
+	for _, workspace := range app.listWorkspaces("") {
 		if stringValue(workspace["currentComputeAllocationId"]) == computeID || stringValue(workspace["computeAllocationId"]) == computeID {
 			workspace["currentComputeAllocationId"] = ""
 			workspace["computeAllocationId"] = ""
@@ -102,12 +97,16 @@ func (app *controlPlaneApp) suspendWorkspacesForComputeLocked(computeID string) 
 			access["tokenStatus"] = "suspended"
 			access["requiresLogin"] = false
 			workspace["access"] = access
+			if err := app.tables.SaveWorkspace(context.Background(), workspace); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
-func (app *controlPlaneApp) clearWorkspacesForAttachmentLocked(attachmentID string) {
-	for _, workspace := range app.workspaces {
+func (app *controlPlaneServer) clearWorkspacesForAttachment(attachmentID string) error {
+	for _, workspace := range app.listWorkspaces("") {
 		if stringValue(workspace["currentAttachmentId"]) == attachmentID || stringValue(workspace["attachmentId"]) == attachmentID {
 			workspace["currentAttachmentId"] = ""
 			workspace["attachmentId"] = ""
@@ -115,12 +114,16 @@ func (app *controlPlaneApp) clearWorkspacesForAttachmentLocked(attachmentID stri
 				workspace["state"] = "suspended"
 				workspace["status"] = "suspended"
 			}
+			if err := app.tables.SaveWorkspace(context.Background(), workspace); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
-func (app *controlPlaneApp) markWorkspacesStorageDestroyedLocked(storageID string) {
-	for _, workspace := range app.workspaces {
+func (app *controlPlaneServer) markWorkspacesStorageDestroyed(storageID string) error {
+	for _, workspace := range app.listWorkspaces("") {
 		if stringValue(workspace["storageId"]) == storageID {
 			workspace["state"] = "data_deleted"
 			workspace["status"] = "unrecoverable"
@@ -133,18 +136,24 @@ func (app *controlPlaneApp) markWorkspacesStorageDestroyedLocked(storageID strin
 			access["tokenStatus"] = "disabled"
 			access["requiresLogin"] = false
 			workspace["access"] = access
+			if err := app.tables.SaveWorkspace(context.Background(), workspace); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
-func (app *controlPlaneApp) getWorkspace(id string) (map[string]any, bool) {
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	workspace, ok := app.workspaces[id]
-	return cloneMap(workspace), ok
+func (app *controlPlaneServer) getWorkspace(id string) (map[string]any, bool) {
+	for _, workspace := range app.listWorkspaces("") {
+		if stringValue(workspace["id"]) == id {
+			return cloneMap(workspace), true
+		}
+	}
+	return nil, false
 }
 
-func (app *controlPlaneApp) proxyWorkspace(w http.ResponseWriter, r *http.Request) {
+func (app *controlPlaneServer) proxyWorkspace(w http.ResponseWriter, r *http.Request) {
 	workspaceID := workspaceIDFromPath(r.URL.Path)
 	if workspaceID == "" {
 		http.NotFound(w, r)
@@ -163,7 +172,7 @@ func (app *controlPlaneApp) proxyWorkspace(w http.ResponseWriter, r *http.Reques
 	app.proxyWorkspaceTo(w, r, workspaceID, suffix)
 }
 
-func (app *controlPlaneApp) proxyWorkspaceRoot(w http.ResponseWriter, r *http.Request) {
+func (app *controlPlaneServer) proxyWorkspaceRoot(w http.ResponseWriter, r *http.Request) {
 	if !isWorkspaceRequest(r) {
 		http.NotFound(w, r)
 		return
@@ -176,10 +185,8 @@ func (app *controlPlaneApp) proxyWorkspaceRoot(w http.ResponseWriter, r *http.Re
 	app.proxyWorkspaceTo(w, r, workspaceID, r.URL.Path)
 }
 
-func (app *controlPlaneApp) proxyWorkspaceTo(w http.ResponseWriter, r *http.Request, workspaceID string, proxyPath string) {
-	app.mu.Lock()
-	workspace := cloneMap(app.workspaces[workspaceID])
-	app.mu.Unlock()
+func (app *controlPlaneServer) proxyWorkspaceTo(w http.ResponseWriter, r *http.Request, workspaceID string, proxyPath string) {
+	workspace, _ := app.getWorkspace(workspaceID)
 	if stringValue(workspace["state"]) == "data_deleted" || stringValue(nested(workspace, "access", "tokenStatus")) == "disabled" {
 		writeError(w, http.StatusGone, "workspace_storage_destroyed")
 		return

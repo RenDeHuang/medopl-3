@@ -7,19 +7,21 @@ import (
 
 func TestArchiveRetentionWorkerArchivesTerminalCurrentStateOnly(t *testing.T) {
 	app := newControlPlaneAppEmpty()
-	app.computes["compute-dead"] = map[string]any{"id": "compute-dead", "status": "destroyed"}
-	app.storages["storage-dead"] = map[string]any{"id": "storage-dead", "status": "destroyed"}
-	app.attachments["attach-dead"] = map[string]any{"id": "attach-dead", "status": "detached"}
-	app.workspaces["ws-dead"] = map[string]any{"id": "ws-dead", "state": "unrecoverable"}
-	app.ledger = []map[string]any{{"id": "ledger-kept"}}
+	mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{"id": "compute-dead", "status": "destroyed"}))
+	mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{"id": "storage-dead", "status": "destroyed"}))
+	mustStore(t, app.tables.SaveAttachment(context.Background(), map[string]any{"id": "attach-dead", "status": "detached"}))
+	mustStore(t, app.tables.SaveWorkspace(context.Background(), map[string]any{"id": "ws-dead", "state": "unrecoverable"}))
+	mustStore(t, app.tables.SaveLedgerEntry(context.Background(), map[string]any{"id": "ledger-kept"}))
 
 	if err := app.runArchiveRetentionOnce(context.Background()); err != nil {
 		t.Fatalf("run archive retention: %v", err)
 	}
-	if len(app.computes) != 0 || len(app.storages) != 0 || len(app.attachments) != 0 || len(app.workspaces) != 0 {
-		t.Fatalf("terminal current state remains: computes=%#v storages=%#v attachments=%#v workspaces=%#v", app.computes, app.storages, app.attachments, app.workspaces)
+	if len(app.listComputes("")) != 0 || len(app.listStorages("")) != 0 || len(app.listAttachments("")) != 0 || len(app.listWorkspaces("")) != 0 {
+		t.Fatalf("terminal current state remains")
 	}
-	if len(app.ledger) != 1 {
-		t.Fatalf("ledger accounting facts must be retained: %#v", app.ledger)
+	ledger, err := app.tables.ListLedger(context.Background(), "")
+	mustStore(t, err)
+	if len(ledger) != 1 {
+		t.Fatalf("ledger accounting facts must be retained: %#v", ledger)
 	}
 }

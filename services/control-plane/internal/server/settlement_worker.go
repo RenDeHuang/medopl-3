@@ -31,7 +31,7 @@ func settlementWorkerInterval() time.Duration {
 	return time.Duration(ms) * time.Millisecond
 }
 
-func (app *controlPlaneApp) startPeriodicSettlementWorker(ctx context.Context, service *controlplane.Service, interval time.Duration) {
+func (app *controlPlaneServer) startPeriodicSettlementWorker(ctx context.Context, service *controlplane.Service, interval time.Duration) {
 	if interval <= 0 {
 		interval = defaultSettlementInterval
 	}
@@ -54,7 +54,7 @@ func (app *controlPlaneApp) startPeriodicSettlementWorker(ctx context.Context, s
 	}()
 }
 
-func (app *controlPlaneApp) runPeriodicSettlementOnce(ctx context.Context, service *controlplane.Service, now time.Time) error {
+func (app *controlPlaneServer) runPeriodicSettlementOnce(ctx context.Context, service *controlplane.Service, now time.Time) error {
 	periodEnd := now.UTC().Truncate(time.Hour)
 	if periodEnd.IsZero() {
 		periodEnd = now.UTC()
@@ -71,7 +71,7 @@ func (app *controlPlaneApp) runPeriodicSettlementOnce(ctx context.Context, servi
 			return err
 		}
 		result = completeSettlementResult(result, input)
-		if err := app.rememberResourceSettlement(result); err != nil {
+		if err := app.saveResourceSettlementProjection(result); err != nil {
 			return err
 		}
 		if err := app.markResourceSettlement(result); err != nil {
@@ -85,7 +85,7 @@ type settlementResourceStore interface {
 	SettlementResourceRows(ctx context.Context) (controlPlaneRecordSet, controlPlaneRecordSet, error)
 }
 
-func (app *controlPlaneApp) periodicSettlementInputs(ctx context.Context, periodStart time.Time, periodEnd time.Time) ([]controlplane.ResourceSettlementInput, error) {
+func (app *controlPlaneServer) periodicSettlementInputs(ctx context.Context, periodStart time.Time, periodEnd time.Time) ([]controlplane.ResourceSettlementInput, error) {
 	computes, storages, err := app.settlementResourceRows(ctx)
 	if err != nil {
 		return nil, err
@@ -106,13 +106,11 @@ func (app *controlPlaneApp) periodicSettlementInputs(ctx context.Context, period
 	return inputs, nil
 }
 
-func (app *controlPlaneApp) settlementResourceRows(ctx context.Context) (controlPlaneRecordSet, controlPlaneRecordSet, error) {
+func (app *controlPlaneServer) settlementResourceRows(ctx context.Context) (controlPlaneRecordSet, controlPlaneRecordSet, error) {
 	if store, ok := app.store.(settlementResourceStore); ok {
 		return store.SettlementResourceRows(ctx)
 	}
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	return cloneStateTable(app.computes), cloneStateTable(app.storages), nil
+	return app.computeRecordSet(""), app.storageRecordSet(""), nil
 }
 
 func billableCompute(row map[string]any) bool {
@@ -213,17 +211,14 @@ func periodicSettlementKey(input controlplane.ResourceSettlementInput) string {
 	return strings.Join([]string{"periodic-settlement", input.AccountID, input.ResourceType, input.ResourceID, input.UsagePeriodEnd}, ":")
 }
 
-func (app *controlPlaneApp) markResourceSettlement(result clients.ResourceSettlementResult) error {
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	var table controlPlaneRecordSet
+func (app *controlPlaneServer) markResourceSettlement(result clients.ResourceSettlementResult) error {
+	var row map[string]any
 	switch result.ResourceType {
 	case "storage":
-		table = app.storages
+		row, _ = app.getStorage(result.ResourceID)
 	default:
-		table = app.computes
+		row, _ = app.getCompute(result.ResourceID)
 	}
-	row := table[result.ResourceID]
 	if row == nil {
 		return nil
 	}
@@ -231,5 +226,8 @@ func (app *controlPlaneApp) markResourceSettlement(result clients.ResourceSettle
 	row["ledgerEntryId"] = result.LedgerEntryID
 	row["walletTransactionId"] = result.WalletTransactionID
 	row["usagePeriodEnd"] = result.UsagePeriodEnd
-	return app.persistLocked()
+	if result.ResourceType == "storage" {
+		return app.tables.SaveStorage(context.Background(), row)
+	}
+	return app.tables.SaveCompute(context.Background(), row)
 }
