@@ -436,11 +436,11 @@ func workspaceManifest(workspaceID string, workspaceName string, token string, s
 	pvcName := resourceName(storage.ProviderResourceID)
 	plan := packagePlan(compute.PackageID)
 	password := deriveAionUIAdminPassword(os.Getenv("OPL_AIONUI_ADMIN_PASSWORD_SEED"), workspaceID, token)
-	secretData := map[string]any{"webui_password": b64(password), "webui_session_secret": b64(deriveWebUISessionSecret(os.Getenv("OPL_AIONUI_ADMIN_PASSWORD_SEED"), workspaceID, token)), "gateway_api_key": b64(os.Getenv("OPL_CODEX_API_KEY"))}
-	for key, value := range secretData {
-		if value == "" {
-			delete(secretData, key)
-		}
+	secretData := map[string]any{"webui_password": b64(password), "webui_session_secret": b64(deriveWebUISessionSecret(os.Getenv("OPL_AIONUI_ADMIN_PASSWORD_SEED"), workspaceID, token))}
+	secretItems := []any{map[string]any{"key": "webui_password", "path": "webui_password"}, map[string]any{"key": "webui_session_secret", "path": "webui_session_secret"}}
+	if gatewayAPIKey := os.Getenv("OPL_CODEX_API_KEY"); gatewayAPIKey != "" {
+		secretData["gateway_api_key"] = b64(gatewayAPIKey)
+		secretItems = append(secretItems, map[string]any{"key": "gateway_api_key", "path": "gateway_api_key"})
 	}
 	workspaceEnv := []any{
 		map[string]any{"name": "OPL_WEBUI_DEPLOYMENT_MODE", "value": "cloud"},
@@ -448,7 +448,6 @@ func workspaceManifest(workspaceID string, workspaceName string, token string, s
 		map[string]any{"name": "OPL_WEBUI_USERNAME", "value": "admin"},
 		map[string]any{"name": "OPL_WEBUI_PASSWORD_FILE", "value": "/run/secrets/webui_password"},
 		map[string]any{"name": "OPL_WEBUI_SESSION_SECRET_FILE", "value": "/run/secrets/webui_session_secret"},
-		map[string]any{"name": "OPL_GATEWAY_API_KEY_FILE", "value": "/run/secrets/gateway_api_key"},
 		map[string]any{"name": "OPL_CODEX_MODEL", "value": os.Getenv("OPL_CODEX_MODEL")},
 		map[string]any{"name": "OPL_CODEX_REASONING_EFFORT", "value": os.Getenv("OPL_CODEX_REASONING_EFFORT")},
 		map[string]any{"name": "OPL_CODEX_BASE_URL", "value": os.Getenv("OPL_CODEX_BASE_URL")},
@@ -468,10 +467,13 @@ func workspaceManifest(workspaceID string, workspaceName string, token string, s
 		map[string]any{"name": "OPL_WORKSPACE_ROOT", "value": "/projects"},
 		map[string]any{"name": "CODEX_HOME", "value": "/data/codex"},
 	}
+	if os.Getenv("OPL_CODEX_API_KEY") != "" {
+		workspaceEnv = append(workspaceEnv, map[string]any{"name": "OPL_GATEWAY_API_KEY_FILE", "value": "/run/secrets/gateway_api_key"})
+	}
 	workspaceContainer := map[string]any{"name": "workspace", "image": os.Getenv("OPL_WORKSPACE_IMAGE"), "imagePullPolicy": "IfNotPresent", "ports": []any{map[string]any{"name": "http", "containerPort": 3000}}, "env": workspaceEnv, "volumeMounts": []any{map[string]any{"name": "workspace-data", "mountPath": "/data", "subPath": "data"}, map[string]any{"name": "workspace-data", "mountPath": "/projects", "subPath": "projects"}, map[string]any{"name": "workspace-secrets", "mountPath": "/run/secrets", "readOnly": true}}, "resources": workspaceResources(plan), "readinessProbe": map[string]any{"httpGet": map[string]any{"path": "/healthz", "port": 3000}, "initialDelaySeconds": 10, "periodSeconds": 10}}
 	secretLabels := stringAnyMap(mergeStringMaps(map[string]string{"app.kubernetes.io/name": "opl-workspace-entry", "app.kubernetes.io/instance": serviceName, "oplcloud.cn/workspace-id": workspaceID}, k8sCostLabels(tags)))
 	secret := map[string]any{"apiVersion": "v1", "kind": "Secret", "metadata": map[string]any{"name": serviceName + "-env", "labels": secretLabels, "annotations": tags}, "type": "Opaque", "data": secretData}
-	secretVolume := map[string]any{"name": "workspace-secrets", "secret": map[string]any{"secretName": serviceName + "-env", "items": []any{map[string]any{"key": "webui_password", "path": "webui_password"}, map[string]any{"key": "webui_session_secret", "path": "webui_session_secret"}, map[string]any{"key": "gateway_api_key", "path": "gateway_api_key"}}}}
+	secretVolume := map[string]any{"name": "workspace-secrets", "secret": map[string]any{"secretName": serviceName + "-env", "items": secretItems}}
 	deployment := map[string]any{"apiVersion": "apps/v1", "kind": "Deployment", "metadata": map[string]any{"name": serviceName, "labels": labels, "annotations": tags}, "spec": map[string]any{"replicas": 1, "selector": map[string]any{"matchLabels": selectorLabels}, "template": map[string]any{"metadata": map[string]any{"labels": labels, "annotations": tags}, "spec": map[string]any{"automountServiceAccountToken": false, "hostNetwork": true, "dnsPolicy": "ClusterFirstWithHostNet", "imagePullSecrets": []any{map[string]any{"name": os.Getenv("OPL_IMAGE_PULL_SECRET_NAME")}}, "nodeSelector": compute.NodeSelector, "tolerations": []any{map[string]any{"key": "tke.cloud.tencent.com/eni-ip-unavailable", "operator": "Exists", "effect": "NoSchedule"}}, "containers": []any{workspaceContainer}, "volumes": []any{map[string]any{"name": "workspace-data", "persistentVolumeClaim": map[string]any{"claimName": pvcName}}, secretVolume}}}}}
 	service := map[string]any{"apiVersion": "v1", "kind": "Service", "metadata": map[string]any{"name": serviceName, "labels": labels, "annotations": tags}, "spec": map[string]any{"type": "ClusterIP", "selector": selectorLabels, "ports": []any{map[string]any{"name": "http", "port": 3000, "targetPort": "http"}}}}
 	return mustJSON(map[string]any{"apiVersion": "v1", "kind": "List", "items": []any{secret, deployment, service}})

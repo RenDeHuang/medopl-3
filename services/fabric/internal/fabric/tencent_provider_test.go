@@ -136,6 +136,42 @@ func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 	}
 }
 
+func TestWorkspaceManifestSkipsGatewaySecretWhenCodexKeyMissing(t *testing.T) {
+	t.Setenv("OPL_WORKSPACE_IMAGE", "workspace-image:test")
+	t.Setenv("OPL_IMAGE_PULL_SECRET_NAME", "pull-secret")
+	t.Setenv("OPL_AIONUI_ADMIN_PASSWORD_SEED", "workspace-secret-2026-very-long")
+	compute := ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", PackageID: "basic", NodeSelector: map[string]any{"cloud.tencent.com/node-instance-id": "np-basic-2"}}
+	storage := StorageVolume{ProviderResourceID: "pvc/opl-storage-alpha-data"}
+	var manifest map[string]any
+	if err := json.Unmarshal(workspaceManifest("ws-alpha", "Alpha", "token", "opl-compute-alpha", compute, storage, nil), &manifest); err != nil {
+		t.Fatalf("decode workspace manifest: %v", err)
+	}
+	var deployment map[string]any
+	var secret map[string]any
+	for _, item := range manifest["items"].([]any) {
+		candidate := item.(map[string]any)
+		if candidate["kind"] == "Deployment" {
+			deployment = candidate
+		}
+		if candidate["kind"] == "Secret" {
+			secret = candidate
+		}
+	}
+	if _, ok := secret["data"].(map[string]any)["gateway_api_key"]; ok {
+		t.Fatalf("workspace secret must not contain empty gateway key: %#v", secret["data"])
+	}
+	container := nested(deployment, "spec", "template", "spec", "containers").([]any)[0].(map[string]any)
+	if _, ok := envMap(container["env"].([]any))["OPL_GATEWAY_API_KEY_FILE"]; ok {
+		t.Fatalf("workspace must not point at a missing gateway key file: %#v", container["env"])
+	}
+	secretVolume := findVolume(nested(deployment, "spec", "template", "spec", "volumes").([]any), "workspace-secrets")
+	for _, item := range nested(secretVolume, "secret", "items").([]any) {
+		if item.(map[string]any)["key"] == "gateway_api_key" {
+			t.Fatalf("workspace volume must not reference a missing gateway key: %#v", secretVolume)
+		}
+	}
+}
+
 func TestRuntimeStatusRecoversWorkspaceResourcesFromKubernetesLabels(t *testing.T) {
 	t.Setenv("OPL_WORKSPACE_IMAGE", "workspace-image:test")
 	provider := NewTencentProvider()
