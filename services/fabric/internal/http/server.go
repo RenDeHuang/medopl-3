@@ -54,6 +54,47 @@ func NewServer(service *fabric.Service) http.Handler {
 		job, err := service.CancelJob(r.Context(), strings.TrimSpace(r.PathValue("id")), idempotencyKey)
 		writeJobResult(w, http.StatusAccepted, job, err)
 	})
+	mux.HandleFunc("POST /fabric/jobs/{id}/claim", func(w http.ResponseWriter, r *http.Request) {
+		var input fabric.JobClaimInput
+		if !decodeWrite(w, r, &input.IdempotencyKey, &input) {
+			return
+		}
+		job, err := service.ClaimJob(r.Context(), strings.TrimSpace(r.PathValue("id")), input)
+		writeJobResult(w, http.StatusAccepted, job, err)
+	})
+	mux.HandleFunc("POST /fabric/jobs/{id}/heartbeat", func(w http.ResponseWriter, r *http.Request) {
+		var input fabric.JobHeartbeatInput
+		if !decodeWrite(w, r, &input.IdempotencyKey, &input) {
+			return
+		}
+		job, err := service.HeartbeatJob(r.Context(), strings.TrimSpace(r.PathValue("id")), input)
+		writeJobResult(w, http.StatusAccepted, job, err)
+	})
+	mux.HandleFunc("POST /fabric/jobs/{id}/complete", func(w http.ResponseWriter, r *http.Request) {
+		var input fabric.JobCompleteInput
+		if !decodeWrite(w, r, &input.IdempotencyKey, &input) {
+			return
+		}
+		job, err := service.CompleteJob(r.Context(), strings.TrimSpace(r.PathValue("id")), input)
+		writeJobResult(w, http.StatusAccepted, job, err)
+	})
+	mux.HandleFunc("POST /fabric/jobs/{id}/fail", func(w http.ResponseWriter, r *http.Request) {
+		var input fabric.JobFailInput
+		if !decodeWrite(w, r, &input.IdempotencyKey, &input) {
+			return
+		}
+		job, err := service.FailJob(r.Context(), strings.TrimSpace(r.PathValue("id")), input)
+		writeJobResult(w, http.StatusAccepted, job, err)
+	})
+	mux.HandleFunc("POST /fabric/jobs/{id}/retry", func(w http.ResponseWriter, r *http.Request) {
+		idempotencyKey := r.Header.Get("Idempotency-Key")
+		if idempotencyKey == "" {
+			writeError(w, http.StatusBadRequest, "missing Idempotency-Key")
+			return
+		}
+		job, err := service.RetryJob(r.Context(), strings.TrimSpace(r.PathValue("id")), idempotencyKey)
+		writeJobResult(w, http.StatusAccepted, job, err)
+	})
 	mux.HandleFunc("POST /fabric/compute-allocations", func(w http.ResponseWriter, r *http.Request) {
 		var input fabric.ComputeAllocationInput
 		if !decodeWrite(w, r, &input.IdempotencyKey, &input) {
@@ -161,6 +202,8 @@ func writeJobResult(w http.ResponseWriter, status int, body fabric.Job, err erro
 	case errors.Is(err, fabric.ErrJobNotFound):
 		writeError(w, http.StatusNotFound, err.Error())
 	case errors.Is(err, fabric.ErrJobIdempotencyConflict):
+		writeError(w, http.StatusConflict, err.Error())
+	case errors.Is(err, fabric.ErrJobStateConflict), errors.Is(err, fabric.ErrJobLeaseMismatch):
 		writeError(w, http.StatusConflict, err.Error())
 	case err != nil:
 		writeError(w, http.StatusInternalServerError, err.Error())

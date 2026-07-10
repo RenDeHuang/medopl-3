@@ -2,7 +2,9 @@ package fabric
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -28,12 +30,14 @@ type Provider interface {
 type Service struct {
 	provider    Provider
 	mu          sync.Mutex
+	jobMu       sync.Mutex
 	computes    map[string]ComputeAllocation
 	volumes     map[string]StorageVolume
 	attachments map[string]StorageAttachment
 	runtimes    map[string]WorkspaceRuntime
 	operations  OperationStore
 	access      RuntimeAccessStore
+	now         func() time.Time
 }
 
 func NewService(provider Provider) *Service {
@@ -46,7 +50,7 @@ func NewServiceWithOperationStore(provider Provider, operations OperationStore) 
 	}
 	computes, volumes, attachments, runtimes := replayResourceState(context.Background(), operations)
 	accessStore, _ := operations.(RuntimeAccessStore)
-	return &Service{provider: provider, computes: computes, volumes: volumes, attachments: attachments, runtimes: runtimes, operations: operations, access: accessStore}
+	return &Service{provider: provider, computes: computes, volumes: volumes, attachments: attachments, runtimes: runtimes, operations: operations, access: accessStore, now: func() time.Time { return time.Now().UTC() }}
 }
 
 func (s *Service) Catalog(_ context.Context) Catalog {
@@ -406,6 +410,8 @@ func (s *Service) ListOperations(ctx context.Context) ([]FabricOperation, error)
 }
 
 func (s *Service) CreateJob(ctx context.Context, input JobInput) (Job, error) {
+	s.jobMu.Lock()
+	defer s.jobMu.Unlock()
 	if input.OrganizationID == "" || input.WorkspaceID == "" || input.ProjectID == "" || input.TaskID == "" || input.RequestID == "" || input.ApprovalID == "" || input.IdempotencyKey == "" {
 		return Job{}, ErrInvalidJobInput
 	}
@@ -428,7 +434,7 @@ func (s *Service) CreateJob(ctx context.Context, input JobInput) (Job, error) {
 			return job, nil
 		}
 	}
-	now := time.Now().UTC()
+	now := s.now()
 	job := Job{
 		JobID:          "job-" + stableSuffix(input.IdempotencyKey, input.RequestID, input.TaskID)[:16],
 		OrganizationID: input.OrganizationID,
@@ -439,6 +445,7 @@ func (s *Service) CreateJob(ctx context.Context, input JobInput) (Job, error) {
 		ApprovalID:     input.ApprovalID,
 		EnvironmentRef: input.EnvironmentRef,
 		Status:         "queued",
+		Attempt:        1,
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}
@@ -451,25 +458,51 @@ func (s *Service) CreateJob(ctx context.Context, input JobInput) (Job, error) {
 }
 
 func (s *Service) Job(ctx context.Context, jobID string) (Job, error) {
+	s.jobMu.Lock()
+	defer s.jobMu.Unlock()
+	return s.jobLocked(ctx, jobID, true)
+}
+
+func (s *Service) jobLocked(ctx context.Context, jobID string, expire bool) (Job, error) {
 	operations, err := s.operations.List(ctx)
 	if err != nil {
 		return Job{}, err
 	}
 	var job Job
+	leaseTokenHash := ""
 	found := false
 	for _, operation := range operations {
 		if operation.ResourceKind == "job" && operation.ResourceID == jobID && decodeOperationResource(operation, &job) {
 			found = true
+			leaseTokenHash, _ = operation.RedactedProviderPayload["leaseTokenHash"].(string)
 		}
 	}
 	if !found {
 		return Job{}, ErrJobNotFound
 	}
+	job.leaseTokenHash = leaseTokenHash
+	if expire && job.Status == "running" && job.LeaseExpiresAt != nil && !s.now().Before(*job.LeaseExpiresAt) {
+		job.Status = "timed_out"
+		job.ErrorCode = "lease_expired"
+		job.UpdatedAt = s.now()
+		if err := s.appendJobTransition(ctx, "timeout_job", "timeout-"+job.JobID+fmt.Sprintf("-%d", job.Attempt), hashInput(map[string]any{"jobId": job.JobID, "attempt": job.Attempt}), job, "runner"); err != nil {
+			return Job{}, err
+		}
+	}
 	return job, nil
 }
 
 func (s *Service) CancelJob(ctx context.Context, jobID string, idempotencyKey string) (Job, error) {
-	job, err := s.Job(ctx, jobID)
+	s.jobMu.Lock()
+	defer s.jobMu.Unlock()
+	if idempotencyKey == "" {
+		return Job{}, ErrInvalidJobInput
+	}
+	requestHash := hashInput(map[string]string{"jobId": jobID})
+	if replayed, ok, err := s.replayedJobTransition(ctx, "cancel_job", jobID, idempotencyKey, requestHash); ok || err != nil {
+		return replayed, err
+	}
+	job, err := s.jobLocked(ctx, jobID, true)
 	if err != nil {
 		return Job{}, err
 	}
@@ -477,15 +510,209 @@ func (s *Service) CancelJob(ctx context.Context, jobID string, idempotencyKey st
 		job.Replayed = true
 		return job, nil
 	}
-	now := time.Now().UTC()
+	if job.Status != "queued" && job.Status != "running" {
+		return Job{}, ErrJobStateConflict
+	}
+	now := s.now()
 	job.Status = "cancelled"
 	job.UpdatedAt = now
-	operation := newOperation("cancel_job", "job", jobID, "", job.WorkspaceID, idempotencyKey, hashInput(map[string]string{"jobId": jobID}), now)
-	operation.ProviderRequestID = jobID
-	if err := s.recordOperation(ctx, operation, job.Status, job, nil); err != nil {
+	if err := s.appendJobTransition(ctx, "cancel_job", idempotencyKey, requestHash, job, "control-plane"); err != nil {
 		return Job{}, err
 	}
 	return job, nil
+}
+
+func (s *Service) ClaimJob(ctx context.Context, jobID string, input JobClaimInput) (Job, error) {
+	s.jobMu.Lock()
+	defer s.jobMu.Unlock()
+	if jobID == "" || input.RunnerID == "" || input.IdempotencyKey == "" {
+		return Job{}, ErrInvalidJobInput
+	}
+	requestHash := hashInput(map[string]string{"jobId": jobID, "runnerId": input.RunnerID})
+	if replayed, ok, err := s.replayedJobTransition(ctx, "claim_job", jobID, input.IdempotencyKey, requestHash); ok || err != nil {
+		return replayed, err
+	}
+	job, err := s.jobLocked(ctx, jobID, true)
+	if err != nil {
+		return Job{}, err
+	}
+	if job.Status != "queued" {
+		return Job{}, ErrJobStateConflict
+	}
+	now := s.now()
+	token, err := newLeaseToken()
+	if err != nil {
+		return Job{}, err
+	}
+	expiresAt := now.Add(30 * time.Second)
+	job.Status = "running"
+	job.LeaseOwner = input.RunnerID
+	job.LeaseExpiresAt = &expiresAt
+	job.LeaseToken = token
+	job.leaseTokenHash = stableSuffix(token)
+	job.UpdatedAt = now
+	if err := s.appendJobTransition(ctx, "claim_job", input.IdempotencyKey, requestHash, job, "runner"); err != nil {
+		return Job{}, err
+	}
+	return job, nil
+}
+
+func (s *Service) HeartbeatJob(ctx context.Context, jobID string, input JobHeartbeatInput) (Job, error) {
+	s.jobMu.Lock()
+	defer s.jobMu.Unlock()
+	if jobID == "" || input.RunnerID == "" || input.LeaseToken == "" || input.IdempotencyKey == "" {
+		return Job{}, ErrInvalidJobInput
+	}
+	requestHash := hashInput(map[string]string{"jobId": jobID, "runnerId": input.RunnerID, "leaseTokenHash": stableSuffix(input.LeaseToken)})
+	if replayed, ok, err := s.replayedJobTransition(ctx, "heartbeat_job", jobID, input.IdempotencyKey, requestHash); ok || err != nil {
+		return replayed, err
+	}
+	job, err := s.activeLeasedJob(ctx, jobID, input.RunnerID, input.LeaseToken)
+	if err != nil {
+		return Job{}, err
+	}
+	now := s.now()
+	expiresAt := now.Add(30 * time.Second)
+	job.LeaseExpiresAt = &expiresAt
+	job.UpdatedAt = now
+	if err := s.appendJobTransition(ctx, "heartbeat_job", input.IdempotencyKey, requestHash, job, "runner"); err != nil {
+		return Job{}, err
+	}
+	return job, nil
+}
+
+func (s *Service) CompleteJob(ctx context.Context, jobID string, input JobCompleteInput) (Job, error) {
+	s.jobMu.Lock()
+	defer s.jobMu.Unlock()
+	if jobID == "" || input.RunnerID == "" || input.LeaseToken == "" || len(input.ArtifactIDs) == 0 || len(input.ReviewIDs) == 0 || input.IdempotencyKey == "" {
+		return Job{}, ErrInvalidJobInput
+	}
+	requestHash := hashInput(struct {
+		JobID, RunnerID, LeaseTokenHash string
+		ArtifactIDs, ReviewIDs          []string
+	}{jobID, input.RunnerID, stableSuffix(input.LeaseToken), input.ArtifactIDs, input.ReviewIDs})
+	if replayed, ok, err := s.replayedJobTransition(ctx, "complete_job", jobID, input.IdempotencyKey, requestHash); ok || err != nil {
+		return replayed, err
+	}
+	job, err := s.activeLeasedJob(ctx, jobID, input.RunnerID, input.LeaseToken)
+	if err != nil {
+		return Job{}, err
+	}
+	job.Status = "succeeded"
+	job.ArtifactIDs = append([]string(nil), input.ArtifactIDs...)
+	job.ReviewIDs = append([]string(nil), input.ReviewIDs...)
+	job.ErrorCode = ""
+	job.UpdatedAt = s.now()
+	if err := s.appendJobTransition(ctx, "complete_job", input.IdempotencyKey, requestHash, job, "runner"); err != nil {
+		return Job{}, err
+	}
+	return job, nil
+}
+
+func (s *Service) FailJob(ctx context.Context, jobID string, input JobFailInput) (Job, error) {
+	s.jobMu.Lock()
+	defer s.jobMu.Unlock()
+	if jobID == "" || input.RunnerID == "" || input.LeaseToken == "" || input.ErrorCode == "" || input.IdempotencyKey == "" {
+		return Job{}, ErrInvalidJobInput
+	}
+	requestHash := hashInput(map[string]string{"jobId": jobID, "runnerId": input.RunnerID, "leaseTokenHash": stableSuffix(input.LeaseToken), "errorCode": input.ErrorCode})
+	if replayed, ok, err := s.replayedJobTransition(ctx, "fail_job", jobID, input.IdempotencyKey, requestHash); ok || err != nil {
+		return replayed, err
+	}
+	job, err := s.activeLeasedJob(ctx, jobID, input.RunnerID, input.LeaseToken)
+	if err != nil {
+		return Job{}, err
+	}
+	job.Status = "failed"
+	job.ErrorCode = input.ErrorCode
+	job.UpdatedAt = s.now()
+	if err := s.appendJobTransition(ctx, "fail_job", input.IdempotencyKey, requestHash, job, "runner"); err != nil {
+		return Job{}, err
+	}
+	return job, nil
+}
+
+func (s *Service) RetryJob(ctx context.Context, jobID, idempotencyKey string) (Job, error) {
+	s.jobMu.Lock()
+	defer s.jobMu.Unlock()
+	if jobID == "" || idempotencyKey == "" {
+		return Job{}, ErrInvalidJobInput
+	}
+	requestHash := hashInput(map[string]string{"jobId": jobID})
+	if replayed, ok, err := s.replayedJobTransition(ctx, "retry_job", jobID, idempotencyKey, requestHash); ok || err != nil {
+		return replayed, err
+	}
+	job, err := s.jobLocked(ctx, jobID, true)
+	if err != nil {
+		return Job{}, err
+	}
+	if job.Status != "failed" && job.Status != "timed_out" {
+		return Job{}, ErrJobStateConflict
+	}
+	job.Status = "queued"
+	job.Attempt++
+	job.LeaseOwner = ""
+	job.LeaseExpiresAt = nil
+	job.LeaseToken = ""
+	job.leaseTokenHash = ""
+	job.ArtifactIDs = nil
+	job.ReviewIDs = nil
+	job.ErrorCode = ""
+	job.UpdatedAt = s.now()
+	if err := s.appendJobTransition(ctx, "retry_job", idempotencyKey, requestHash, job, "control-plane"); err != nil {
+		return Job{}, err
+	}
+	return job, nil
+}
+
+func (s *Service) activeLeasedJob(ctx context.Context, jobID, runnerID, leaseToken string) (Job, error) {
+	job, err := s.jobLocked(ctx, jobID, true)
+	if err != nil {
+		return Job{}, err
+	}
+	if job.Status != "running" {
+		return Job{}, ErrJobStateConflict
+	}
+	if job.LeaseOwner != runnerID || subtle.ConstantTimeCompare([]byte(job.leaseTokenHash), []byte(stableSuffix(leaseToken))) != 1 {
+		return Job{}, ErrJobLeaseMismatch
+	}
+	return job, nil
+}
+
+func (s *Service) replayedJobTransition(ctx context.Context, action, jobID, idempotencyKey, requestHash string) (Job, bool, error) {
+	operations, err := s.operations.List(ctx)
+	if err != nil {
+		return Job{}, false, err
+	}
+	for _, operation := range operations {
+		if operation.ResourceKind != "job" || operation.ResourceID != jobID || operation.Action != action || operation.IdempotencyKey != idempotencyKey {
+			continue
+		}
+		if operation.RequestHash != requestHash {
+			return Job{}, false, ErrJobIdempotencyConflict
+		}
+		var job Job
+		if decodeOperationResource(operation, &job) {
+			job.Replayed = true
+			return job, true, nil
+		}
+	}
+	return Job{}, false, nil
+}
+
+func (s *Service) appendJobTransition(ctx context.Context, action, idempotencyKey, requestHash string, job Job, caller string) error {
+	operation := newOperation(action, "job", job.JobID, "", job.WorkspaceID, idempotencyKey, requestHash, s.now())
+	operation.ProviderRequestID = job.JobID
+	operation.CallerService = caller
+	return s.recordOperation(ctx, operation, job.Status, job, nil)
+}
+
+func newLeaseToken() (string, error) {
+	data := make([]byte, 32)
+	if _, err := rand.Read(data); err != nil {
+		return "", err
+	}
+	return "lease-" + hex.EncodeToString(data), nil
 }
 
 func (s *Service) saveRuntimeAccess(ctx context.Context, runtime *WorkspaceRuntime) error {
@@ -591,9 +818,9 @@ func newOperation(action string, resourceKind string, resourceID string, account
 }
 
 func (s *Service) recordOperation(ctx context.Context, base FabricOperation, status string, resource any, operationErr error) error {
-	now := time.Now().UTC()
+	now := s.now()
 	operation := base
-	operation.ID = fabricID("fop", firstNonEmpty(base.ResourceID, base.OperationID), now)
+	operation.ID = fabricID("fop", firstNonEmpty(base.OperationID, base.ResourceID)+"_"+status, now)
 	operation.Status = status
 	operation.CreatedAt = now
 	if status != "started" {
@@ -639,10 +866,13 @@ func fillOperationResource(operation *FabricOperation, resource any) {
 		operation.ProviderRequestID = firstNonEmpty(value.ProviderRequestID, operation.ProviderRequestID)
 		operation.RedactedProviderPayload = map[string]any{"resource": redacted, "serviceName": value.ServiceName, "ready": value.Ready, "credentialConfigured": value.Access.Password != "", "credentialVersion": value.Access.CredentialVersion, "secretRef": value.Access.SecretRef, "costTags": value.CostTags}
 	case Job:
+		redacted := value
+		redacted.LeaseToken = ""
+		redacted.leaseTokenHash = ""
 		operation.ResourceID = value.JobID
 		operation.WorkspaceID = value.WorkspaceID
 		operation.ProviderRequestID = firstNonEmpty(operation.ProviderRequestID, value.JobID)
-		operation.RedactedProviderPayload = map[string]any{"resource": value}
+		operation.RedactedProviderPayload = map[string]any{"resource": redacted, "leaseTokenHash": value.leaseTokenHash}
 	}
 }
 

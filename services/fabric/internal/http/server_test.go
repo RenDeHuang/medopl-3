@@ -192,6 +192,94 @@ func TestJobHTTPRequiresCanonicalIdentity(t *testing.T) {
 	}
 }
 
+func TestRunnerJobHTTPCompletionLifecycle(t *testing.T) {
+	server := NewServer(fabric.NewService(testProvider{}))
+	create := httptest.NewRequest(http.MethodPost, "/fabric/jobs", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","requestId":"request-alpha","approvalId":"approval-alpha"}`))
+	create.Header.Set("Idempotency-Key", "http-runner-job")
+	createRec := httptest.NewRecorder()
+	server.ServeHTTP(createRec, create)
+	var job fabric.Job
+	if err := json.NewDecoder(createRec.Body).Decode(&job); err != nil {
+		t.Fatalf("decode job: %v", err)
+	}
+
+	claim := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/claim", bytes.NewBufferString(`{"runnerId":"runner-alpha"}`))
+	claim.Header.Set("Idempotency-Key", "http-claim")
+	claimRec := httptest.NewRecorder()
+	server.ServeHTTP(claimRec, claim)
+	if claimRec.Code != http.StatusAccepted {
+		t.Fatalf("claim status = %d: %s", claimRec.Code, claimRec.Body.String())
+	}
+	var claimed fabric.Job
+	if err := json.NewDecoder(claimRec.Body).Decode(&claimed); err != nil || claimed.LeaseToken == "" {
+		t.Fatalf("decode claim: %#v, %v", claimed, err)
+	}
+
+	heartbeat := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/heartbeat", bytes.NewBufferString(`{"runnerId":"runner-alpha","leaseToken":"`+claimed.LeaseToken+`"}`))
+	heartbeat.Header.Set("Idempotency-Key", "http-heartbeat")
+	heartbeatRec := httptest.NewRecorder()
+	server.ServeHTTP(heartbeatRec, heartbeat)
+	if heartbeatRec.Code != http.StatusAccepted {
+		t.Fatalf("heartbeat status = %d: %s", heartbeatRec.Code, heartbeatRec.Body.String())
+	}
+
+	complete := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/complete", bytes.NewBufferString(`{"runnerId":"runner-alpha","leaseToken":"`+claimed.LeaseToken+`","artifactIds":["artifact-alpha"],"reviewIds":["review-alpha"]}`))
+	complete.Header.Set("Idempotency-Key", "http-complete")
+	completeRec := httptest.NewRecorder()
+	server.ServeHTTP(completeRec, complete)
+	if completeRec.Code != http.StatusAccepted {
+		t.Fatalf("complete status = %d: %s", completeRec.Code, completeRec.Body.String())
+	}
+	var completed fabric.Job
+	if err := json.NewDecoder(completeRec.Body).Decode(&completed); err != nil || completed.Status != "succeeded" {
+		t.Fatalf("decode complete: %#v, %v", completed, err)
+	}
+}
+
+func TestRunnerJobHTTPFailRetryAndConflict(t *testing.T) {
+	server := NewServer(fabric.NewService(testProvider{}))
+	create := httptest.NewRequest(http.MethodPost, "/fabric/jobs", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","requestId":"request-alpha","approvalId":"approval-alpha"}`))
+	create.Header.Set("Idempotency-Key", "http-fail-job")
+	createRec := httptest.NewRecorder()
+	server.ServeHTTP(createRec, create)
+	var job fabric.Job
+	_ = json.NewDecoder(createRec.Body).Decode(&job)
+	claim := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/claim", bytes.NewBufferString(`{"runnerId":"runner-alpha"}`))
+	claim.Header.Set("Idempotency-Key", "http-fail-claim")
+	claimRec := httptest.NewRecorder()
+	server.ServeHTTP(claimRec, claim)
+	var claimed fabric.Job
+	_ = json.NewDecoder(claimRec.Body).Decode(&claimed)
+
+	conflict := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/heartbeat", bytes.NewBufferString(`{"runnerId":"runner-beta","leaseToken":"`+claimed.LeaseToken+`"}`))
+	conflict.Header.Set("Idempotency-Key", "http-wrong-runner")
+	conflictRec := httptest.NewRecorder()
+	server.ServeHTTP(conflictRec, conflict)
+	if conflictRec.Code != http.StatusConflict {
+		t.Fatalf("lease conflict status = %d, want %d: %s", conflictRec.Code, http.StatusConflict, conflictRec.Body.String())
+	}
+
+	fail := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/fail", bytes.NewBufferString(`{"runnerId":"runner-alpha","leaseToken":"`+claimed.LeaseToken+`","errorCode":"runner_failed"}`))
+	fail.Header.Set("Idempotency-Key", "http-fail")
+	failRec := httptest.NewRecorder()
+	server.ServeHTTP(failRec, fail)
+	if failRec.Code != http.StatusAccepted {
+		t.Fatalf("fail status = %d: %s", failRec.Code, failRec.Body.String())
+	}
+
+	retry := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/retry", nil)
+	retry.Header.Set("Idempotency-Key", "http-retry")
+	retryRec := httptest.NewRecorder()
+	server.ServeHTTP(retryRec, retry)
+	if retryRec.Code != http.StatusAccepted {
+		t.Fatalf("retry status = %d: %s", retryRec.Code, retryRec.Body.String())
+	}
+	var retried fabric.Job
+	if err := json.NewDecoder(retryRec.Body).Decode(&retried); err != nil || retried.Status != "queued" || retried.Attempt != 2 {
+		t.Fatalf("decode retry: %#v, %v", retried, err)
+	}
+}
+
 type testProvider struct{}
 
 func (testProvider) CreateComputeAllocation(_ context.Context, input fabric.ComputeAllocationInput) (fabric.ComputeAllocation, error) {

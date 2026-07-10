@@ -2,6 +2,7 @@ package fabric
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -56,6 +57,97 @@ func TestJobLifecycleUsesDurableOperationStore(t *testing.T) {
 	input.EnvironmentRef = "environment-beta"
 	if _, err := restarted.CreateJob(ctx, input); !errors.Is(err, ErrJobIdempotencyConflict) {
 		t.Fatalf("idempotency conflict = %v, want ErrJobIdempotencyConflict", err)
+	}
+}
+
+func TestRunnerCompletesJobAcrossServiceRestart(t *testing.T) {
+	store := NewMemoryOperationStore()
+	now := time.Date(2026, 7, 10, 8, 0, 0, 0, time.UTC)
+	service := NewServiceWithOperationStore(testProvider{}, store)
+	service.now = func() time.Time { return now }
+	created, err := service.CreateJob(context.Background(), JobInput{OrganizationID: "org-alpha", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", RequestID: "request-alpha", ApprovalID: "approval-alpha", IdempotencyKey: "runner-job"})
+	if err != nil || created.Attempt != 1 {
+		t.Fatalf("create job: %#v, %v", created, err)
+	}
+	claimed, err := service.ClaimJob(context.Background(), created.JobID, JobClaimInput{RunnerID: "runner-alpha", IdempotencyKey: "claim-once"})
+	if err != nil || claimed.Status != "running" || claimed.LeaseToken == "" || claimed.LeaseOwner != "runner-alpha" || claimed.LeaseExpiresAt == nil {
+		t.Fatalf("claim job: %#v, %v", claimed, err)
+	}
+
+	restarted := NewServiceWithOperationStore(testProvider{}, store)
+	restarted.now = func() time.Time { return now.Add(10 * time.Second) }
+	heartbeat, err := restarted.HeartbeatJob(context.Background(), created.JobID, JobHeartbeatInput{RunnerID: "runner-alpha", LeaseToken: claimed.LeaseToken, IdempotencyKey: "heartbeat-once"})
+	if err != nil || heartbeat.Status != "running" || !heartbeat.LeaseExpiresAt.After(*claimed.LeaseExpiresAt) {
+		t.Fatalf("heartbeat job: %#v, %v", heartbeat, err)
+	}
+	completed, err := restarted.CompleteJob(context.Background(), created.JobID, JobCompleteInput{RunnerID: "runner-alpha", LeaseToken: claimed.LeaseToken, ArtifactIDs: []string{"artifact-alpha"}, ReviewIDs: []string{"review-alpha"}, IdempotencyKey: "complete-once"})
+	if err != nil || completed.Status != "succeeded" || len(completed.ArtifactIDs) != 1 || len(completed.ReviewIDs) != 1 {
+		t.Fatalf("complete job: %#v, %v", completed, err)
+	}
+	loaded, err := NewServiceWithOperationStore(testProvider{}, store).Job(context.Background(), created.JobID)
+	if err != nil || loaded.Status != "succeeded" {
+		t.Fatalf("load completed job: %#v, %v", loaded, err)
+	}
+	operations, _ := store.List(context.Background())
+	payload, _ := json.Marshal(operations)
+	if strings.Contains(string(payload), claimed.LeaseToken) {
+		t.Fatalf("operation log leaked lease token")
+	}
+	operationIDs := map[string]bool{}
+	for _, operation := range operations {
+		if operationIDs[operation.ID] {
+			t.Fatalf("duplicate operation id %q", operation.ID)
+		}
+		operationIDs[operation.ID] = true
+	}
+}
+
+func TestRunnerLeaseMismatchAndEvidenceValidation(t *testing.T) {
+	service := NewService(testProvider{})
+	created, err := service.CreateJob(context.Background(), JobInput{OrganizationID: "org-alpha", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", RequestID: "request-alpha", ApprovalID: "approval-alpha", IdempotencyKey: "lease-job"})
+	if err != nil {
+		t.Fatalf("create job: %v", err)
+	}
+	claimed, err := service.ClaimJob(context.Background(), created.JobID, JobClaimInput{RunnerID: "runner-alpha", IdempotencyKey: "lease-claim"})
+	if err != nil {
+		t.Fatalf("claim job: %v", err)
+	}
+	if _, err := service.HeartbeatJob(context.Background(), created.JobID, JobHeartbeatInput{RunnerID: "runner-beta", LeaseToken: claimed.LeaseToken, IdempotencyKey: "wrong-owner"}); !errors.Is(err, ErrJobLeaseMismatch) {
+		t.Fatalf("owner mismatch = %v, want ErrJobLeaseMismatch", err)
+	}
+	if _, err := service.CompleteJob(context.Background(), created.JobID, JobCompleteInput{RunnerID: "runner-alpha", LeaseToken: "wrong-token", ArtifactIDs: []string{"artifact-alpha"}, ReviewIDs: []string{"review-alpha"}, IdempotencyKey: "wrong-token"}); !errors.Is(err, ErrJobLeaseMismatch) {
+		t.Fatalf("token mismatch = %v, want ErrJobLeaseMismatch", err)
+	}
+	if _, err := service.CompleteJob(context.Background(), created.JobID, JobCompleteInput{RunnerID: "runner-alpha", LeaseToken: claimed.LeaseToken, IdempotencyKey: "missing-evidence"}); !errors.Is(err, ErrInvalidJobInput) {
+		t.Fatalf("missing evidence = %v, want ErrInvalidJobInput", err)
+	}
+}
+
+func TestExpiredJobCanRetryAndFail(t *testing.T) {
+	now := time.Date(2026, 7, 10, 8, 0, 0, 0, time.UTC)
+	service := NewService(testProvider{})
+	service.now = func() time.Time { return now }
+	created, _ := service.CreateJob(context.Background(), JobInput{OrganizationID: "org-alpha", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", RequestID: "request-alpha", ApprovalID: "approval-alpha", IdempotencyKey: "retry-job"})
+	claimed, err := service.ClaimJob(context.Background(), created.JobID, JobClaimInput{RunnerID: "runner-alpha", IdempotencyKey: "retry-claim"})
+	if err != nil {
+		t.Fatalf("claim job: %v", err)
+	}
+	service.now = func() time.Time { return now.Add(31 * time.Second) }
+	timedOut, err := service.Job(context.Background(), created.JobID)
+	if err != nil || timedOut.Status != "timed_out" {
+		t.Fatalf("timeout job: %#v, %v", timedOut, err)
+	}
+	retried, err := service.RetryJob(context.Background(), created.JobID, "retry-once")
+	if err != nil || retried.Status != "queued" || retried.Attempt != 2 || retried.LeaseOwner != "" {
+		t.Fatalf("retry job: %#v, %v", retried, err)
+	}
+	claimed, err = service.ClaimJob(context.Background(), created.JobID, JobClaimInput{RunnerID: "runner-alpha", IdempotencyKey: "retry-claim-2"})
+	if err != nil {
+		t.Fatalf("claim retry: %v", err)
+	}
+	failed, err := service.FailJob(context.Background(), created.JobID, JobFailInput{RunnerID: "runner-alpha", LeaseToken: claimed.LeaseToken, ErrorCode: "runner_failed", IdempotencyKey: "fail-once"})
+	if err != nil || failed.Status != "failed" || failed.ErrorCode != "runner_failed" {
+		t.Fatalf("fail job: %#v, %v", failed, err)
 	}
 }
 

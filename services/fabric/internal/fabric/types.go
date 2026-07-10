@@ -8,6 +8,8 @@ import (
 var ErrJobNotFound = errors.New("job_not_found")
 var ErrJobIdempotencyConflict = errors.New("job_idempotency_conflict")
 var ErrInvalidJobInput = errors.New("invalid_job_input")
+var ErrJobStateConflict = errors.New("job_state_conflict")
+var ErrJobLeaseMismatch = errors.New("job_lease_mismatch")
 
 type Catalog struct {
 	SchemaVersion     int                `json:"schemaVersion"`
@@ -169,19 +171,53 @@ type JobInput struct {
 	IdempotencyKey string `json:"-"`
 }
 
+type JobClaimInput struct {
+	RunnerID       string `json:"runnerId"`
+	IdempotencyKey string `json:"-"`
+}
+
+type JobHeartbeatInput struct {
+	RunnerID       string `json:"runnerId"`
+	LeaseToken     string `json:"leaseToken"`
+	IdempotencyKey string `json:"-"`
+}
+
+type JobCompleteInput struct {
+	RunnerID       string   `json:"runnerId"`
+	LeaseToken     string   `json:"leaseToken"`
+	ArtifactIDs    []string `json:"artifactIds"`
+	ReviewIDs      []string `json:"reviewIds"`
+	IdempotencyKey string   `json:"-"`
+}
+
+type JobFailInput struct {
+	RunnerID       string `json:"runnerId"`
+	LeaseToken     string `json:"leaseToken"`
+	ErrorCode      string `json:"errorCode"`
+	IdempotencyKey string `json:"-"`
+}
+
 type Job struct {
-	JobID          string    `json:"jobId"`
-	OrganizationID string    `json:"organizationId"`
-	WorkspaceID    string    `json:"workspaceId"`
-	ProjectID      string    `json:"projectId"`
-	TaskID         string    `json:"taskId"`
-	RequestID      string    `json:"requestId"`
-	ApprovalID     string    `json:"approvalId"`
-	EnvironmentRef string    `json:"environmentRef,omitempty"`
-	Status         string    `json:"status"`
-	CreatedAt      time.Time `json:"createdAt"`
-	UpdatedAt      time.Time `json:"updatedAt"`
-	Replayed       bool      `json:"replayed,omitempty"`
+	JobID          string     `json:"jobId"`
+	OrganizationID string     `json:"organizationId"`
+	WorkspaceID    string     `json:"workspaceId"`
+	ProjectID      string     `json:"projectId"`
+	TaskID         string     `json:"taskId"`
+	RequestID      string     `json:"requestId"`
+	ApprovalID     string     `json:"approvalId"`
+	EnvironmentRef string     `json:"environmentRef,omitempty"`
+	Status         string     `json:"status"`
+	Attempt        int        `json:"attempt"`
+	LeaseOwner     string     `json:"leaseOwner,omitempty"`
+	LeaseExpiresAt *time.Time `json:"leaseExpiresAt,omitempty"`
+	LeaseToken     string     `json:"leaseToken,omitempty"`
+	ArtifactIDs    []string   `json:"artifactIds,omitempty"`
+	ReviewIDs      []string   `json:"reviewIds,omitempty"`
+	ErrorCode      string     `json:"errorCode,omitempty"`
+	CreatedAt      time.Time  `json:"createdAt"`
+	UpdatedAt      time.Time  `json:"updatedAt"`
+	Replayed       bool       `json:"replayed,omitempty"`
+	leaseTokenHash string
 }
 
 type FabricOperation struct {
