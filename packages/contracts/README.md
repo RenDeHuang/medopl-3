@@ -26,3 +26,4 @@ Each contract should declare:
 4. Tests should read contracts where possible instead of scanning source prose.
 5. Deployment workflow and image checks belong in `opl-cloud-deployment-contract.json`.
 6. Package import and service boundary checks belong in `opl-cloud-package-boundary-contract.json`.
+7. Shared execution identities, states, write semantics, ownership, and errors belong in `opl-cloud-shared-execution-contract.json`.

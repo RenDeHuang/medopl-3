@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "owner": "OPL Platform Architecture",
-  "purpose": "Target service ownership contract for splitting Console UI, Control Plane, Ledger, and Fabric.",
+  "purpose": "Target ownership contract for Console UI, Control Plane, Ledger, Fabric, and the external Gateway boundary.",
   "state": "current",
-  "machineBoundary": "Service ownership, persistence, cloud SDK ownership, migration, runtime marker, and evidence secret rules for Console UI, Control Plane, Ledger, and Fabric.",
+  "machineBoundary": "Service ownership, persistence, cloud SDK ownership, external Gateway evidence handoff, migration, runtime marker, and evidence secret rules.",
   "lifecycle": {
     "type": "long_term_contract",
     "removalCondition": "Replace only with a newer current service-boundary contract after all callers and deployments move to the new boundary."
@@ -27,6 +27,9 @@
         "organizations",
         "memberships",
         "workspaces",
+        "projectTaskSyncHeads",
+        "executionRequests",
+        "approvals",
         "supportTicketMappings",
         "operationRequests"
       ],
@@ -46,6 +49,9 @@
         "ledgerEntries",
         "walletTransactions",
         "evidenceReceipts",
+        "artifactManifests",
+        "reviewResults",
+        "continuations",
         "auditEvents",
         "idempotencyKeys",
         "reconciliationReports"
@@ -62,6 +68,7 @@
         "storageVolumes",
         "storageAttachments",
         "workspaceRuntimes",
+        "jobs",
         "providerRequests"
       ],
       "cloudSdkOwner": true,
@@ -69,6 +76,21 @@
         "tencentcloud-sdk-go",
         "kubernetes-client-go"
       ]
+    }
+  },
+  "externalServices": {
+    "gateway": {
+      "repository": "opl-gateway",
+      "owns": [
+        "gatewayKeys",
+        "routePolicies",
+        "modelPolicies",
+        "usageEvents"
+      ],
+      "calls": {
+        "ledger": "evidence_api"
+      },
+      "evidenceSink": "ledger"
     }
   },
   "migration": {
@@ -118,6 +140,16 @@
     ],
     "allowedEvidenceReferences": [
       "workspaceId",
+      "organizationId",
+      "projectId",
+      "taskId",
+      "requestId",
+      "approvalId",
+      "jobId",
+      "artifactId",
+      "reviewId",
+      "receiptId",
+      "continuationId",
       "tokenVersion",
       "redactedUrl",
       "providerRequestId",

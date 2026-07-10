@@ -1,0 +1,58 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const contractsDir = new URL("../../packages/contracts/", import.meta.url);
+
+async function readContract(file) {
+  return JSON.parse(await readFile(new URL(file, contractsDir), "utf8"));
+}
+
+test("shared execution contract fixes canonical identities, states, writes, and errors", async () => {
+  const contract = await readContract("opl-cloud-shared-execution-contract.json");
+  const objects = Object.fromEntries(contract.canonicalObjects.map((object) => [object.kind, object]));
+
+  assert.deepEqual(Object.keys(objects), ["Project", "Task", "ExecutionRequest", "Approval", "Job", "Artifact", "Review", "Receipt", "Continuation"]);
+  assert.deepEqual(contract.identity.canonicalIdFields, ["projectId", "taskId", "requestId", "approvalId", "jobId", "artifactId", "reviewId", "receiptId", "continuationId"]);
+  assert.deepEqual(contract.stateMachines.task, ["draft", "planned", "awaiting_approval", "queued", "running", "review_required", "review_blocked", "completed", "failed", "cancelled", "archived"]);
+  assert.deepEqual(contract.stateMachines.job, ["queued", "provisioning", "running", "collecting", "succeeded", "failed", "cancelled", "timed_out"]);
+  assert.deepEqual(contract.stateMachines.receipt, ["planned", "approved", "running", "completed", "failed", "cancelled", "review_required", "review_blocked"]);
+  assert.deepEqual(contract.writeEnvelope.requiredFields, ["operationId", "idempotencyKey", "actor", "organizationId", "workspaceId", "caller", "occurredAt"]);
+  assert.deepEqual(Object.fromEntries(Object.entries(contract.errorSemantics).map(([code, value]) => [code, value.httpStatus])), {
+    invalid_request: 400,
+    unauthenticated: 401,
+    forbidden: 403,
+    not_found: 404,
+    conflict: 409,
+    unavailable_dependency: 422,
+    quota_exceeded: 429,
+    retryable_dependency_failure: 503
+  });
+  assert.equal(contract.canonicalExample.projectId, contract.canonicalExample.receipt.projectId);
+  assert.equal(contract.canonicalExample.taskId, contract.canonicalExample.receipt.taskId);
+  assert.equal(contract.canonicalExample.jobId, contract.canonicalExample.receipt.jobId);
+  assert.equal(contract.canonicalExample.receipt.receiptId, contract.canonicalExample.continuation.receiptId);
+});
+
+test("Ledger general receipt uses the shared execution identity and states", async () => {
+  const shared = await readContract("opl-cloud-shared-execution-contract.json");
+  const ledger = await readContract("opl-cloud-evidence-ledger-contract.json");
+
+  assert.deepEqual(ledger.generalReceiptV1.statuses, shared.stateMachines.receipt);
+  assert.deepEqual(ledger.generalReceiptV1.identityFields, ["organizationId", "workspaceId", ...shared.identity.canonicalIdFields]);
+  assert.deepEqual(ledger.generalReceiptV1.evidenceChain, ["request", "plan", "approval", "execution", "environment", "inputRefs", "outputRefs", "reviewerChecks", "cost", "receipt", "continuation"]);
+  assert.equal(ledger.generalReceiptV1.writeProtocol, "append_first_with_idempotency");
+  assert.ok(ledger.generalReceiptV1.forbiddenContent.includes("rawCredential"));
+  assert.ok(ledger.receiptTypes.includes("execution.receipt.v1"));
+});
+
+test("service owners match the shared execution contract", async () => {
+  const shared = await readContract("opl-cloud-shared-execution-contract.json");
+  const boundary = await readContract("opl-cloud-service-boundary-contract.json");
+
+  for (const object of shared.canonicalObjects) {
+    assert.ok(boundary.services[object.service].owns.includes(object.ownershipKey), `${object.kind} ownership must stay with ${object.service}`);
+  }
+  assert.deepEqual(boundary.externalServices.gateway.owns, ["gatewayKeys", "routePolicies", "modelPolicies", "usageEvents"]);
+  assert.equal(boundary.externalServices.gateway.evidenceSink, "ledger");
+});

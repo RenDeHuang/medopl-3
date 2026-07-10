@@ -1,0 +1,297 @@
+{
+  "schemaVersion": 1,
+  "owner": "OPL Platform Architecture",
+  "purpose": "Canonical cross-surface execution identity, state, write, ownership, and error contract.",
+  "state": "current",
+  "machineBoundary": "Canonical Project-to-Continuation identities, execution states, mutation envelope, logical service operations, error semantics, and one cross-repository example.",
+  "lifecycle": {
+    "type": "long_term_contract",
+    "removalCondition": "Replace only with a newer current shared execution contract after App, Gateway, Control Plane, Fabric, and Ledger callers move together."
+  },
+  "repositoryBoundaries": [
+    "one-person-lab-app",
+    "opl-console",
+    "opl-fabric",
+    "opl-ledger",
+    "opl-gateway"
+  ],
+  "canonicalObjects": [
+    {
+      "kind": "Project",
+      "service": "controlPlane",
+      "ownershipKey": "projectTaskSyncHeads",
+      "idField": "projectId",
+      "idPrefix": "project-"
+    },
+    {
+      "kind": "Task",
+      "service": "controlPlane",
+      "ownershipKey": "projectTaskSyncHeads",
+      "idField": "taskId",
+      "idPrefix": "task-"
+    },
+    {
+      "kind": "ExecutionRequest",
+      "service": "controlPlane",
+      "ownershipKey": "executionRequests",
+      "idField": "requestId",
+      "idPrefix": "request-"
+    },
+    {
+      "kind": "Approval",
+      "service": "controlPlane",
+      "ownershipKey": "approvals",
+      "idField": "approvalId",
+      "idPrefix": "approval-"
+    },
+    {
+      "kind": "Job",
+      "service": "fabric",
+      "ownershipKey": "jobs",
+      "idField": "jobId",
+      "idPrefix": "job-"
+    },
+    {
+      "kind": "Artifact",
+      "service": "ledger",
+      "ownershipKey": "artifactManifests",
+      "idField": "artifactId",
+      "idPrefix": "artifact-"
+    },
+    {
+      "kind": "Review",
+      "service": "ledger",
+      "ownershipKey": "reviewResults",
+      "idField": "reviewId",
+      "idPrefix": "review-"
+    },
+    {
+      "kind": "Receipt",
+      "service": "ledger",
+      "ownershipKey": "evidenceReceipts",
+      "idField": "receiptId",
+      "idPrefix": "receipt-"
+    },
+    {
+      "kind": "Continuation",
+      "service": "ledger",
+      "ownershipKey": "continuations",
+      "idField": "continuationId",
+      "idPrefix": "continuation-"
+    }
+  ],
+  "identity": {
+    "canonicalIdFields": [
+      "projectId",
+      "taskId",
+      "requestId",
+      "approvalId",
+      "jobId",
+      "artifactId",
+      "reviewId",
+      "receiptId",
+      "continuationId"
+    ],
+    "rules": [
+      "Canonical ids are opaque globally unique strings created by the owning service.",
+      "Canonical projectId and taskId do not change when execution moves between local App and cloud Workspace.",
+      "Provider ids, Kubernetes names, object keys, database row ids, and local paths are references, not business identity.",
+      "A retry reuses the original operationId and idempotencyKey."
+    ],
+    "temporaryLocalIds": {
+      "allowedKinds": [
+        "Project",
+        "Task"
+      ],
+      "idPrefix": "local-",
+      "promotion": "Create one canonical id transactionally and retain the temporary id only as a lookup alias.",
+      "duplicateCloudIdentity": "forbidden"
+    },
+    "providerReferenceFields": [
+      "providerResourceId",
+      "providerRequestId",
+      "storageRef",
+      "environmentDigest",
+      "modelRef",
+      "connectorRef",
+      "agentRef"
+    ]
+  },
+  "executionFlow": [
+    "request",
+    "plan",
+    "approve",
+    "execute",
+    "monitor",
+    "collect",
+    "review",
+    "settle",
+    "receipt",
+    "continue"
+  ],
+  "stateMachines": {
+    "task": [
+      "draft",
+      "planned",
+      "awaiting_approval",
+      "queued",
+      "running",
+      "review_required",
+      "review_blocked",
+      "completed",
+      "failed",
+      "cancelled",
+      "archived"
+    ],
+    "job": [
+      "queued",
+      "provisioning",
+      "running",
+      "collecting",
+      "succeeded",
+      "failed",
+      "cancelled",
+      "timed_out"
+    ],
+    "receipt": [
+      "planned",
+      "approved",
+      "running",
+      "completed",
+      "failed",
+      "cancelled",
+      "review_required",
+      "review_blocked"
+    ]
+  },
+  "writeEnvelope": {
+    "requiredFields": [
+      "operationId",
+      "idempotencyKey",
+      "actor",
+      "organizationId",
+      "workspaceId",
+      "caller",
+      "occurredAt"
+    ],
+    "optionalReferenceFields": [
+      "projectId",
+      "taskId",
+      "requestId",
+      "approvalId",
+      "jobId",
+      "artifactId",
+      "reviewId",
+      "receiptId",
+      "continuationId"
+    ],
+    "concurrency": {
+      "field": "baseVersion",
+      "conflictError": "conflict",
+      "serverVersion": "monotonic_per_mutable_object"
+    },
+    "idempotency": {
+      "sameKeySameFingerprint": "replay_original_result",
+      "sameKeyDifferentFingerprint": "conflict"
+    },
+    "retry": {
+      "timeoutRule": "Query the durable operation before issuing a new operation.",
+      "retryableErrors": [
+        "retryable_dependency_failure"
+      ]
+    }
+  },
+  "errorSemantics": {
+    "invalid_request": {
+      "httpStatus": 400,
+      "retryable": false
+    },
+    "unauthenticated": {
+      "httpStatus": 401,
+      "retryable": false
+    },
+    "forbidden": {
+      "httpStatus": 403,
+      "retryable": false
+    },
+    "not_found": {
+      "httpStatus": 404,
+      "retryable": false
+    },
+    "conflict": {
+      "httpStatus": 409,
+      "retryable": false
+    },
+    "unavailable_dependency": {
+      "httpStatus": 422,
+      "retryable": false
+    },
+    "quota_exceeded": {
+      "httpStatus": 429,
+      "retryable": true
+    },
+    "retryable_dependency_failure": {
+      "httpStatus": 503,
+      "retryable": true
+    }
+  },
+  "logicalServiceOperations": {
+    "controlPlane": [
+      "create_project_identity",
+      "create_task_identity",
+      "sync_mutation",
+      "request_execution",
+      "record_approval"
+    ],
+    "fabric": [
+      "create_job",
+      "query_job",
+      "cancel_job",
+      "collect_outputs"
+    ],
+    "ledger": [
+      "record_artifact_manifest",
+      "record_review",
+      "record_receipt",
+      "query_receipt",
+      "resolve_continuation"
+    ],
+    "gateway": [
+      "authorize_route",
+      "record_usage"
+    ]
+  },
+  "canonicalExample": {
+    "organizationId": "org-lab-01",
+    "workspaceId": "workspace-lab-01",
+    "projectId": "project-research-01",
+    "taskId": "task-analysis-01",
+    "requestId": "request-run-01",
+    "approvalId": "approval-run-01",
+    "jobId": "job-run-01",
+    "artifactId": "artifact-result-01",
+    "reviewId": "review-result-01",
+    "receipt": {
+      "receiptId": "receipt-run-01",
+      "status": "completed",
+      "projectId": "project-research-01",
+      "taskId": "task-analysis-01",
+      "requestId": "request-run-01",
+      "approvalId": "approval-run-01",
+      "jobId": "job-run-01",
+      "artifactIds": [
+        "artifact-result-01"
+      ],
+      "reviewIds": [
+        "review-result-01"
+      ],
+      "continuationId": "continuation-run-01"
+    },
+    "continuation": {
+      "continuationId": "continuation-run-01",
+      "receiptId": "receipt-run-01",
+      "projectId": "project-research-01",
+      "taskId": "task-analysis-01"
+    }
+  }
+}

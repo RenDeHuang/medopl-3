@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "owner": "OPL Ledger",
-  "purpose": "Control-plane evidence receipts and task evidence receipt baseline.",
+  "purpose": "General execution evidence receipts and current control-plane lifecycle receipts.",
   "state": "current",
-  "machineBoundary": "Evidence receipt types, required provenance fields, and query/record API shape.",
+  "machineBoundary": "General receipt states, identity, provenance, artifact, review, continuation, idempotency, and current receipt API shape.",
   "lifecycle": {
     "type": "long_term_contract",
     "removalCondition": "Replace only with a newer current contract for the same boundary."
   },
-  "currentScope": "control-plane evidence receipts and task evidence receipt v1 baseline",
+  "currentScope": "general execution receipt v1 plus current Workspace lifecycle and task evidence receipts",
   "receiptTypes": [
     "workspace.created",
     "workspace.compute_stopped",
@@ -20,6 +20,7 @@
     "workspace.storage_destroyed",
     "workspace.access_token_reset",
     "workspace.access_token_deleted",
+    "execution.receipt.v1",
     "task.evidence.v1"
   ],
   "requiredFields": [
@@ -39,6 +40,81 @@
     "reviewResults",
     "createdAt"
   ],
+  "generalReceiptV1": {
+    "statuses": [
+      "planned",
+      "approved",
+      "running",
+      "completed",
+      "failed",
+      "cancelled",
+      "review_required",
+      "review_blocked"
+    ],
+    "identityFields": [
+      "organizationId",
+      "workspaceId",
+      "projectId",
+      "taskId",
+      "requestId",
+      "approvalId",
+      "jobId",
+      "artifactId",
+      "reviewId",
+      "receiptId",
+      "continuationId"
+    ],
+    "evidenceChain": [
+      "request",
+      "plan",
+      "approval",
+      "execution",
+      "environment",
+      "inputRefs",
+      "outputRefs",
+      "reviewerChecks",
+      "cost",
+      "receipt",
+      "continuation"
+    ],
+    "artifactManifestFields": [
+      "artifactId",
+      "digest",
+      "mediaType",
+      "sizeBytes",
+      "storageRef",
+      "createdAt"
+    ],
+    "reviewResultFields": [
+      "reviewId",
+      "reviewerRef",
+      "reviewerVersion",
+      "inputArtifactDigests",
+      "checks",
+      "decision",
+      "createdAt"
+    ],
+    "continuationFields": [
+      "continuationId",
+      "receiptId",
+      "projectId",
+      "taskId",
+      "taskVersion",
+      "requiredArtifactDigests",
+      "environmentRef"
+    ],
+    "writeProtocol": "append_first_with_idempotency",
+    "correctionProtocol": "append_superseding_receipt",
+    "forbiddenContent": [
+      "rawCredential",
+      "token",
+      "secret",
+      "signedUrl",
+      "presignedUrl",
+      "objectKey",
+      "kubeconfig"
+    ]
+  },
   "workspaceCreateReceipt": {
     "plan": [
       "workspaceName",
@@ -118,9 +194,9 @@
     "appendOnlyState": "evidenceLedger"
   },
   "nonGoals": [
-    "full research task provenance",
-    "domain reviewer authority",
-    "artifact storage ownership",
-    "agent run registry"
+    "artifact byte storage ownership",
+    "domain reviewer implementation logic",
+    "agent package execution",
+    "connector credential storage"
   ]
 }
