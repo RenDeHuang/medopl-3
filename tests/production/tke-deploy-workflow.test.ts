@@ -542,7 +542,8 @@ test("Console residual cleanup workflow is API-scoped and gated by exact resourc
   assert.match(runs, /\/api\/storage-volumes\/destroy/);
   assert.match(runs, /\/api\/storage-attachments\/detach/);
   assert.match(runs, /\^ca_\[A-Za-z0-9_-]\+\$/);
-  assert.match(runs, /\^vol__\[A-Za-z0-9_-]\+\$/);
+  assert.match(runs, /\^vol_\[A-Za-z0-9_-]\+\$/);
+  assert.doesNotMatch(runs, /\^vol__\[A-Za-z0-9_-]\+\$/, "cleanup must use the canonical storage id prefix");
   assert.match(runs, /\^att__\[A-Za-z0-9_-]\+\$/);
   assert.match(runs, /confirm:\s*true/);
   assert.equal(workflow.on.workflow_dispatch.inputs.legacy_compute_allocation_id, undefined);

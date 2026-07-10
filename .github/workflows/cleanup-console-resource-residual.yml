@@ -93,8 +93,8 @@ jobs:
           fi
           if [ -n "$STORAGE_ID" ]; then
             targets=$((targets + 1))
-            if ! printf '%s' "$STORAGE_ID" | grep -Eq '^vol__[A-Za-z0-9_-]+$'; then
-              echo "storage_id must match ^vol__[A-Za-z0-9_-]+$" >&2
+            if ! printf '%s' "$STORAGE_ID" | grep -Eq '^vol_[A-Za-z0-9_-]+$'; then
+              echo "storage_id must match ^vol_[A-Za-z0-9_-]+$" >&2
               exit 1
             fi
           fi
