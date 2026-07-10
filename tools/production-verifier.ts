@@ -251,20 +251,17 @@ async function requestWorkspaceJson({ fetchImpl, workspaceUrl, path, method = "G
   return payload;
 }
 
-async function requestWorkspaceWebuiLogin({ fetchImpl, workspaceAuth, username = DEFAULT_AIONUI_ADMIN_USERNAME, password = "" }) {
-  if (!password) return workspaceAuth;
+async function requestWorkspaceWebuiSession({ fetchImpl, workspaceAuth }) {
   let lastError = null;
   for (const apiBaseUrl of workspaceApiBaseCandidates(workspaceAuth.url)) {
     let response;
     let payload;
     try {
-      response = await fetchImpl(workspaceApiEndpoint(apiBaseUrl, "/login"), {
-        method: "POST",
+      response = await fetchImpl(workspaceApiEndpoint(apiBaseUrl, "/api/auth/user"), {
+        method: "GET",
         headers: {
-          "content-type": "application/json",
           ...(workspaceAuth.cookie ? { cookie: workspaceAuth.cookie } : {})
-        },
-        body: JSON.stringify({ username, password, remember: false })
+        }
       });
       payload = await readResponse(response);
     } catch (error) {
@@ -273,22 +270,18 @@ async function requestWorkspaceWebuiLogin({ fetchImpl, workspaceAuth, username =
     }
     if (!response.ok) {
       const message = typeof payload === "string" ? payload : payload.error || JSON.stringify(payload);
-      lastError = new Error(`workspace_webui_login_failed:${response.status}:${message}`);
+      lastError = new Error(`workspace_webui_session_failed:${response.status}:${message}`);
       continue;
     }
     const webuiCookie = cookieHeaderFromSetCookie(setCookieHeader(response.headers)) ||
       (typeof payload?.token === "string" ? `aionui-session=${payload.token}` : "");
-    if (!webuiCookie) {
-      lastError = new Error("workspace_webui_login_cookie_missing");
-      continue;
-    }
     return {
       ...workspaceAuth,
       apiBaseUrl,
       cookie: mergeCookieHeaders(workspaceAuth.cookie, webuiCookie)
     };
   }
-  throw lastError || new Error("workspace_webui_login_failed");
+  throw lastError || new Error("workspace_webui_session_failed");
 }
 
 function runtimePayloadData(payload) {
@@ -1469,21 +1462,16 @@ export async function verifyProductionChain({
     addCheck(checks, "workspace_url", true, { url: workspace.url, attempts: workspaceUrlResult.attempts });
     assertWorkspaceUrlTokenScrubbed(checks, workspaceUrlResult);
     const webuiUsername = workspace.access?.account || workspace.access?.username || DEFAULT_AIONUI_ADMIN_USERNAME;
-    const webuiPassword = workspace.access?.password || "";
-    if (!webuiPassword) throw new Error("workspace_access_password_missing");
-    const workspaceApiAuth = await requestWorkspaceWebuiLogin({
+    const workspaceApiAuth = await requestWorkspaceWebuiSession({
       fetchImpl,
-      workspaceAuth: workspaceUrlResult,
-      username: webuiUsername,
-      password: webuiPassword
+      workspaceAuth: workspaceUrlResult
     });
     if (browserE2E) {
       await verifyWorkspaceBrowserUi({
         workspaceUrl: workspace.url,
         workspaceAuth: {
           ...workspaceApiAuth,
-          webuiUsername,
-          webuiPassword
+          webuiUsername
         },
         runId,
         checks,
@@ -1589,14 +1577,9 @@ export async function verifyProductionChain({
       attempts: replacementWorkspaceUrlResult.attempts
     });
     assertWorkspaceUrlTokenScrubbed(checks, replacementWorkspaceUrlResult, "replacement_workspace_url_token_scrubbed");
-    const replacementWebuiUsername = replacementWorkspace.access?.account || replacementWorkspace.access?.username || DEFAULT_AIONUI_ADMIN_USERNAME;
-    const replacementWebuiPassword = replacementWorkspace.access?.password || "";
-    if (!replacementWebuiPassword) throw new Error("replacement_workspace_access_password_missing");
-    const replacementWorkspaceApiAuth = await requestWorkspaceWebuiLogin({
+    const replacementWorkspaceApiAuth = await requestWorkspaceWebuiSession({
       fetchImpl,
-      workspaceAuth: replacementWorkspaceUrlResult,
-      username: replacementWebuiUsername,
-      password: replacementWebuiPassword
+      workspaceAuth: replacementWorkspaceUrlResult
     });
     await verifyWorkspacePersistedFile({
       fetchImpl,

@@ -162,10 +162,6 @@ function chainResponses(chain) {
     "POST /api/workspaces/runtime-status": readyRuntimeStatus(chain.workspace),
     "POST /api/workspaces/runtime-status#2": readyRuntimeStatus(chain.replacementWorkspace),
     [`GET ${chain.workspace.url}`]: "<html>one-person-lab-app</html>",
-    [`POST ${workspaceUrl(chain.workspace.url, "/login")}`]: {
-      success: true,
-      user: { id: "opl-webui-admin", username: "admin" }
-    },
     [`GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}`]: {
       success: true,
       user: { id: "opl-webui-admin", username: "admin" }
@@ -173,10 +169,6 @@ function chainResponses(chain) {
     [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/write")}`]: { success: true, data: true },
     [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}`]: { success: true, data: persistenceText },
     [`GET ${chain.workspace.url}#2`]: "<html>one-person-lab-app</html>",
-    [`POST ${workspaceUrl(chain.workspace.url, "/login")}#2`]: {
-      success: true,
-      user: { id: "opl-webui-admin", username: "admin" }
-    },
     [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`]: { success: true, data: persistenceText },
     "POST /api/billing/resource-settlements": { entries: [
       { accountId: "pi-prod", computeAllocationId: chain.replacementCompute.id, type: "compute_debit", pricingVersion, priceSnapshot: computePriceSnapshot, providerCostEvidenceRef: "fabric:op-runtime-prod002", quantity: 1, unit: "verification" }
@@ -277,12 +269,6 @@ function keyedFetch({ responses, requests = [], responseHeaders = null, statusBy
     if (typeof payload === "string") return htmlResponse(payload);
     if (payload) {
       if (key === "POST /api/auth/operator-login" && responseHeaders) return jsonResponse(payload, 200, responseHeaders);
-      if (String(key).includes("/login")) {
-        return jsonResponse(payload, 200, new Headers({
-          "content-type": "application/json",
-          "set-cookie": "aionui-session=api-session; Path=/; HttpOnly"
-        }));
-      }
       if (String(key).includes("/api/auth/user")) {
         return jsonResponse(payload, 200, new Headers({
           "content-type": "application/json",
@@ -330,12 +316,6 @@ function workspaceCookieGatewayFetch({ responses, requests = [] }) {
     requests.push({ key, cookie: requestCookie, redirect: options.redirect || "" });
     const payload = responses[key] ?? responses[key.replace(/#\d+$/, "")];
     if (typeof payload === "string") return htmlResponse(payload);
-    if (payload && String(key).includes("/login")) {
-      return jsonResponse(payload, 200, new Headers({
-        "content-type": "application/json",
-        "set-cookie": "aionui-session=api-session; Path=/; HttpOnly"
-      }));
-    }
     if (payload && String(key).includes("/api/auth/user")) {
       return jsonResponse(payload, 200, new Headers({
         "content-type": "application/json",
@@ -359,10 +339,6 @@ function scrubbedWorkspaceUrl(baseUrl) {
   const parsed = new URL(baseUrl);
   parsed.searchParams.delete("token");
   return parsed.toString();
-}
-
-function expectedAionUiPassword(workspace) {
-  return workspace.access.password;
 }
 
 function fakeBrowserFactory(actions = [], { failWaitAt = 0 } = {}) {
@@ -1028,8 +1004,8 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "POST /api/workspaces/runtime-status",
     `GET ${chain.workspace.url}`,
     `GET ${scrubbedWorkspaceUrl(chain.workspace.url)}`,
-    `POST ${workspaceUrl(chain.workspace.url, "/login")}`,
     `GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}`,
+    `GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}#2`,
     `POST ${workspaceUrl(chain.workspace.url, "/api/fs/write")}`,
     `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}`,
     "POST /api/storage-attachments/detach",
@@ -1040,7 +1016,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "POST /api/workspaces/runtime-status#2",
     `GET ${chain.workspace.url}#2`,
     `GET ${scrubbedWorkspaceUrl(chain.workspace.url)}#2`,
-    `POST ${workspaceUrl(chain.workspace.url, "/login")}#2`,
+    `GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}#3`,
     `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`,
     "POST /api/billing/resource-settlements",
     "POST /api/billing/resource-settlements#2",
@@ -1077,13 +1053,11 @@ test("production verifier exercises the public TKE resource provisioning chain",
     path: "/data/opl-e2e-prod-run.txt",
     workspace: "/data"
   });
-  const loginBodies = requests
-    .filter((request) => request.key.startsWith(`POST ${workspaceUrl(chain.workspace.url, "/login")}`))
-    .map((request) => request.body);
-  assert.deepEqual(loginBodies, [
-    { username: "admin", password: expectedAionUiPassword(chain.workspace), remember: false },
-    { username: "admin", password: expectedAionUiPassword(chain.replacementWorkspace), remember: false }
-  ]);
+  assert.ok(!requests.some((request) => request.key.includes("/login")));
+  assert.ok(requests.some((request) =>
+    request.key === `GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}` &&
+    request.cookie.includes("opl_ws_active=ws-tke-prod001")
+  ));
   const computeSettlementBody = requests.find((request) => request.key === "POST /api/billing/resource-settlements").body;
   const storageSettlementBody = requests.find((request) => request.key === "POST /api/billing/resource-settlements#2").body;
   assert.equal(computeSettlementBody.pricingVersion, "opl-tencent-v1");
@@ -1145,7 +1119,7 @@ test("production verifier preserves Workspace gateway cookies after token cleanu
     request.redirect === "manual"
   ));
   assert.ok(requests.some((request) =>
-    request.key === `POST ${workspaceUrl(chain.workspace.url, "/login")}` &&
+    request.key === `GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}` &&
     request.cookie.includes("opl_ws_active=ws-tke-prod001") &&
     request.cookie.includes("opl_ws_ws-tke-prod001=share_tke_prod")
   ));
@@ -1167,27 +1141,10 @@ test("production verifier accepts Workspace URLs that are already token-free", a
   assert.ok(result.checks.some((check) => check.name === "workspace_url_token_scrubbed" && check.ok === true));
 });
 
-test("production verifier uses AionUI login token when Set-Cookie is unavailable", async () => {
+test("production verifier uses AionUI auto-login session cookie from auth user", async () => {
   const requests = [];
   const actions = [];
   const chain = tkeChain();
-  const baseFetch = keyedFetch({ responses: chainResponses(chain), requests });
-  const fetchImpl = async (url, options = {}) => {
-    const method = options.method || "GET";
-    if (method === "POST" && String(url).includes("/login")) {
-      requests.push({
-        key: `POST ${String(url)}`,
-        cookie: options.headers?.cookie || "",
-        body: options.body ? JSON.parse(options.body) : null
-      });
-      return jsonResponse({
-        success: true,
-        user: { id: "opl-webui-admin", username: "admin" },
-        token: "body-session-token"
-      });
-    }
-    return baseFetch(url, options);
-  };
 
   const result = await verifyProductionChain({
     origin: "https://console.oplcloud.cn",
@@ -1197,12 +1154,13 @@ test("production verifier uses AionUI login token when Set-Cookie is unavailable
     packageId: "basic",
     browserE2E: true,
     browserFactory: fakeBrowserFactory(actions),
-    fetchImpl
+    fetchImpl: keyedFetch({ responses: chainResponses(chain), requests })
   });
 
   assert.ok(result.ok);
+  assert.ok(!requests.some((request) => request.key.includes("/login")));
   assert.ok(actions.find((action) => action[0] === "addCookies")?.[1].some((cookie) => (
-    cookie.name === "aionui-session" && cookie.value === "body-session-token"
+    cookie.name === "aionui-session" && cookie.value === "api-session"
   )));
 });
 
@@ -1216,21 +1174,16 @@ test("production verifier keeps workspace API calls on the discovered prefixed b
   const fetchImpl = async (url, options = {}) => {
     const parsed = new URL(String(url));
     const method = options.method || "GET";
-    if (parsed.origin === "https://workspace.medopl.cn" && method === "POST" && parsed.pathname === "/login") {
-      requests.push({ key: `POST ${String(url)}`, body: options.body ? JSON.parse(options.body) : null });
-      return jsonResponse({ error: "404 page not found" }, 404);
-    }
     if (parsed.origin === "https://workspace.medopl.cn" && parsed.pathname.startsWith("/api/")) {
       requests.push({ key: `${method} ${String(url)}`, body: options.body ? JSON.parse(options.body) : null });
       return jsonResponse({ error: "root api unavailable" }, 404);
     }
-    if (String(url) === prefixedEndpoint("/login")) {
-      requests.push({ key: `POST ${String(url)}`, body: options.body ? JSON.parse(options.body) : null });
-      return jsonResponse({ success: true, token: "prefixed-session-token" });
-    }
     if (String(url) === prefixedEndpoint("/api/auth/user")) {
       requests.push({ key: `GET ${String(url)}` });
-      return jsonResponse({ success: true, user: { id: "opl-webui-admin", username: "admin" } });
+      return jsonResponse({ success: true, user: { id: "opl-webui-admin", username: "admin" } }, 200, new Headers({
+        "content-type": "application/json",
+        "set-cookie": "aionui-session=prefixed-session-token; Path=/; HttpOnly"
+      }));
     }
     if (String(url) === prefixedEndpoint("/api/fs/write")) {
       requests.push({ key: `POST ${String(url)}`, body: options.body ? JSON.parse(options.body) : null });
@@ -1253,12 +1206,11 @@ test("production verifier keeps workspace API calls on the discovered prefixed b
   });
 
   assert.equal(result.ok, true);
-  assert.ok(requests.some((request) => request.key === "POST https://workspace.medopl.cn/login"));
-  assert.ok(requests.some((request) => request.key === `POST ${prefixedEndpoint("/login")}`));
+  assert.ok(!requests.some((request) => request.key.includes("/login")));
+  assert.ok(requests.some((request) => request.key === "GET https://workspace.medopl.cn/api/auth/user"));
   assert.ok(requests.some((request) => request.key === `GET ${prefixedEndpoint("/api/auth/user")}`));
   assert.ok(requests.some((request) => request.key === `POST ${prefixedEndpoint("/api/fs/write")}`));
   assert.ok(requests.some((request) => request.key === `POST ${prefixedEndpoint("/api/fs/read")}`));
-  assert.ok(!requests.some((request) => request.key === "GET https://workspace.medopl.cn/api/auth/user"));
 });
 
 test("production verifier waits for async compute provisioning before mounting storage", async () => {
@@ -1526,7 +1478,6 @@ test("production verifier runs optional browser UI checks after Workspace URL is
     .map((check) => `${check.name}:${check.ok}`);
   assert.deepEqual(browserChecks, [
     "workspace_browser_opened:true",
-    "workspace_browser_webui_login:true",
     "workspace_browser_file_uploaded:true",
     "workspace_browser_file_read:true",
     "workspace_browser_message_sent:true",
@@ -1580,7 +1531,6 @@ test("production verifier reports browser failure stage with resources, checks, 
     "workspace_url:true",
     "workspace_url_token_scrubbed:true",
     "workspace_browser_opened:true",
-    "workspace_browser_webui_login:true",
     "workspace_browser_file_uploaded:true",
     "workspace_browser_file_read:true",
     "workspace_browser_message_sent:true",
