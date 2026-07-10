@@ -42,7 +42,8 @@
   "generalReceiptV1": {
     "api": {
       "record": "POST /ledger/receipts",
-      "query": "GET /ledger/receipts/<receiptId>"
+      "query": "GET /ledger/receipts/<receiptId>",
+      "resolveContinuation": "GET /ledger/receipts/<receiptId>/continuation"
     },
     "statuses": [
       "planned",

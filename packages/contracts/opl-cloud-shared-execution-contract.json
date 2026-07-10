@@ -261,6 +261,26 @@
       "record_usage"
     ]
   },
+  "httpApis": {
+    "controlPlane": {
+      "createProject": "POST /api/projects",
+      "createTask": "POST /api/projects/<projectId>/tasks",
+      "requestExecution": "POST /api/execution-requests",
+      "approveExecution": "POST /api/execution-requests/<requestId>/approve",
+      "executeRequest": "POST /api/execution-requests/<requestId>/execute",
+      "queryExecution": "GET /api/execution-requests/<requestId>"
+    },
+    "fabric": {
+      "createJob": "POST /fabric/jobs",
+      "queryJob": "GET /fabric/jobs/<jobId>",
+      "cancelJob": "POST /fabric/jobs/<jobId>/cancel"
+    },
+    "ledger": {
+      "recordReceipt": "POST /ledger/receipts",
+      "queryReceipt": "GET /ledger/receipts/<receiptId>",
+      "resolveContinuation": "GET /ledger/receipts/<receiptId>/continuation"
+    }
+  },
   "canonicalExample": {
     "organizationId": "org-lab-01",
     "workspaceId": "workspace-lab-01",

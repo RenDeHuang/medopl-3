@@ -56,3 +56,28 @@ test("service owners match the shared execution contract", async () => {
   assert.deepEqual(boundary.externalServices.gateway.owns, ["gatewayKeys", "routePolicies", "modelPolicies", "usageEvents"]);
   assert.equal(boundary.externalServices.gateway.evidenceSink, "ledger");
 });
+
+test("Train 2 HTTP APIs preserve service ownership without compatibility routes", async () => {
+  const shared = await readContract("opl-cloud-shared-execution-contract.json");
+  const ledger = await readContract("opl-cloud-evidence-ledger-contract.json");
+
+  assert.deepEqual(shared.httpApis.controlPlane, {
+    createProject: "POST /api/projects",
+    createTask: "POST /api/projects/<projectId>/tasks",
+    requestExecution: "POST /api/execution-requests",
+    approveExecution: "POST /api/execution-requests/<requestId>/approve",
+    executeRequest: "POST /api/execution-requests/<requestId>/execute",
+    queryExecution: "GET /api/execution-requests/<requestId>"
+  });
+  assert.deepEqual(shared.httpApis.fabric, {
+    createJob: "POST /fabric/jobs",
+    queryJob: "GET /fabric/jobs/<jobId>",
+    cancelJob: "POST /fabric/jobs/<jobId>/cancel"
+  });
+  assert.deepEqual(shared.httpApis.ledger, {
+    recordReceipt: "POST /ledger/receipts",
+    queryReceipt: "GET /ledger/receipts/<receiptId>",
+    resolveContinuation: "GET /ledger/receipts/<receiptId>/continuation"
+  });
+  assert.equal(ledger.generalReceiptV1.api.resolveContinuation, shared.httpApis.ledger.resolveContinuation);
+});
