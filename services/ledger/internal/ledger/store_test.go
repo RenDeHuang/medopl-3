@@ -126,6 +126,14 @@ func TestReceiptGeneratesContinuationIdentity(t *testing.T) {
 	}
 }
 
+func TestReceiptAcceptsTimedOutExecutionStatus(t *testing.T) {
+	store := NewMemoryStore()
+	receipt, err := store.RecordReceipt(context.Background(), ReceiptInput{Type: "execution.receipt.v1", Status: "timed_out", Surface: "workspace", WorkspaceID: "workspace-alpha", IdempotencyKey: "timed-out-receipt"})
+	if err != nil || receipt.Status != "timed_out" {
+		t.Fatalf("timed out receipt: %#v, %v", receipt, err)
+	}
+}
+
 func TestArtifactManifestRecordsAndQueriesEvidence(t *testing.T) {
 	store := NewMemoryStore()
 	ctx := context.Background()

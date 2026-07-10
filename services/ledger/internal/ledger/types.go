@@ -368,7 +368,7 @@ func validateReceiptInput(input ReceiptInput) error {
 	if input.Type == "" || input.Status == "" || input.Surface == "" || input.WorkspaceID == "" || input.IdempotencyKey == "" {
 		return ErrInvalidReceiptInput
 	}
-	allowedStatus := map[string]bool{"planned": true, "approved": true, "running": true, "completed": true, "failed": true, "cancelled": true, "review_required": true, "review_blocked": true}
+	allowedStatus := map[string]bool{"planned": true, "approved": true, "running": true, "completed": true, "failed": true, "timed_out": true, "cancelled": true, "review_required": true, "review_blocked": true}
 	if !allowedStatus[input.Status] || containsForbiddenReceiptKey(input) {
 		return ErrInvalidReceiptInput
 	}
