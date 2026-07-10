@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"sort"
 	"sync"
 )
 
@@ -23,6 +24,7 @@ type memoryTableStore struct {
 	support        controlPlaneRecordSet
 	runtimeOps     []map[string]any
 	projectTasks   controlPlaneRecordSet
+	syncEvents     []map[string]any
 	executionReqs  controlPlaneRecordSet
 	reconciliation map[string]any
 }
@@ -127,6 +129,39 @@ func (s *memoryTableStore) SaveProjectTaskSyncHead(_ context.Context, row map[st
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.projectTasks[stringValue(row["id"])] = cloneMap(row)
+	return nil
+}
+
+func (s *memoryTableStore) ListWorkspaceSyncEvents(_ context.Context, workspaceID string, after int64, limit int) ([]map[string]any, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	rows := make([]map[string]any, 0, len(s.syncEvents))
+	for _, row := range s.syncEvents {
+		if stringValue(row["workspaceId"]) == workspaceID && int64(numberField(row, "cursor", 0)) > after {
+			rows = append(rows, cloneMap(row))
+		}
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		return numberField(rows[i], "cursor", 0) < numberField(rows[j], "cursor", 0)
+	})
+	if limit > 0 && len(rows) > limit {
+		rows = rows[:limit]
+	}
+	return rows, nil
+}
+
+func (s *memoryTableStore) SaveWorkspaceSyncEvent(_ context.Context, row map[string]any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, existing := range s.syncEvents {
+		if stringValue(existing["id"]) == stringValue(row["id"]) || stringValue(existing["idempotencyKey"]) == stringValue(row["idempotencyKey"]) || (stringValue(existing["workspaceId"]) == stringValue(row["workspaceId"]) && stringValue(existing["operationId"]) == stringValue(row["operationId"])) {
+			if stringValue(existing["requestHash"]) == stringValue(row["requestHash"]) {
+				return nil
+			}
+			return errIdempotencyConflict
+		}
+	}
+	s.syncEvents = append(s.syncEvents, cloneMap(row))
 	return nil
 }
 

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -28,6 +29,7 @@ import (
 	"opl-cloud/services/control-plane/ent/supportticketmapping"
 	"opl-cloud/services/control-plane/ent/wallettransactionprojection"
 	"opl-cloud/services/control-plane/ent/workspace"
+	"opl-cloud/services/control-plane/ent/workspacesyncevent"
 )
 
 const singletonFactID = "default"
@@ -660,6 +662,101 @@ func (s *postgresEntStateStore) SaveProjectTaskSyncHead(ctx context.Context, row
 		func(id string) any { return s.client.ProjectTaskSyncHead.UpdateOneID(id) },
 		projectTaskSyncHeadEntFields,
 	)
+}
+
+func (s *postgresEntStateStore) ListWorkspaceSyncEvents(ctx context.Context, workspaceID string, after int64, limit int) ([]map[string]any, error) {
+	query := s.client.WorkspaceSyncEvent.Query().
+		Where(workspacesyncevent.WorkspaceID(workspaceID), workspacesyncevent.CursorGT(after)).
+		Order(controlplaneent.Asc(workspacesyncevent.FieldCursor))
+	if limit > 0 {
+		query.Limit(limit)
+	}
+	rows, err := query.All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]map[string]any, 0, len(rows))
+	for _, row := range rows {
+		payload := map[string]any{}
+		if err := json.Unmarshal([]byte(row.PayloadJSON), &payload); err != nil {
+			return nil, err
+		}
+		result = append(result, map[string]any{
+			"id":             row.ID,
+			"operationId":    row.OperationID,
+			"workspaceId":    row.WorkspaceID,
+			"cursor":         row.Cursor,
+			"entityKind":     row.EntityKind,
+			"projectId":      row.ProjectID,
+			"taskId":         row.TaskID,
+			"clientId":       row.ClientID,
+			"actorUserId":    row.ActorUserID,
+			"baseVersion":    row.BaseVersion,
+			"serverVersion":  row.ServerVersion,
+			"operation":      row.Operation,
+			"status":         row.Status,
+			"payload":        payload,
+			"contentDigest":  row.ContentDigest,
+			"idempotencyKey": row.IdempotencyKey,
+			"requestHash":    row.RequestHash,
+			"conflictId":     row.ConflictID,
+			"createdAt":      row.CreatedAt.UTC().Format(time.RFC3339Nano),
+			"occurredAt":     row.OccurredAt.UTC().Format(time.RFC3339),
+		})
+	}
+	return result, nil
+}
+
+func (s *postgresEntStateStore) SaveWorkspaceSyncEvent(ctx context.Context, row map[string]any) error {
+	id := stringValue(row["id"])
+	idempotencyKey := stringValue(row["idempotencyKey"])
+	requestHash := stringValue(row["requestHash"])
+	existing, err := s.client.WorkspaceSyncEvent.Query().
+		Where(workspacesyncevent.Or(
+			workspacesyncevent.ID(id),
+			workspacesyncevent.IdempotencyKey(idempotencyKey),
+			workspacesyncevent.And(workspacesyncevent.WorkspaceID(stringValue(row["workspaceId"])), workspacesyncevent.OperationID(stringValue(row["operationId"]))),
+		)).
+		Only(ctx)
+	if err == nil {
+		if existing.ID == id && existing.IdempotencyKey == idempotencyKey && existing.RequestHash == requestHash {
+			return nil
+		}
+		return errIdempotencyConflict
+	}
+	if !controlplaneent.IsNotFound(err) {
+		return err
+	}
+	payload, err := json.Marshal(row["payload"])
+	if err != nil {
+		return err
+	}
+	occurredAt, err := time.Parse(time.RFC3339, stringValue(row["occurredAt"]))
+	if err != nil {
+		return err
+	}
+	_, err = s.client.WorkspaceSyncEvent.Create().
+		SetID(id).
+		SetOperationID(stringValue(row["operationId"])).
+		SetWorkspaceID(stringValue(row["workspaceId"])).
+		SetCursor(int64(numberField(row, "cursor", 0))).
+		SetEntityKind(stringValue(row["entityKind"])).
+		SetProjectID(stringValue(row["projectId"])).
+		SetTaskID(stringValue(row["taskId"])).
+		SetClientID(stringValue(row["clientId"])).
+		SetActorUserID(stringValue(row["actorUserId"])).
+		SetBaseVersion(int64(numberField(row, "baseVersion", 0))).
+		SetServerVersion(int64(numberField(row, "serverVersion", 0))).
+		SetOperation(stringValue(row["operation"])).
+		SetStatus(stringValue(row["status"])).
+		SetPayloadJSON(string(payload)).
+		SetContentDigest(stringValue(row["contentDigest"])).
+		SetIdempotencyKey(idempotencyKey).
+		SetRequestHash(requestHash).
+		SetConflictID(stringValue(row["conflictId"])).
+		SetOccurredAt(occurredAt).
+		Save(ctx)
+	return err
 }
 
 func (s *postgresEntStateStore) ListExecutionRequests(ctx context.Context) ([]map[string]any, error) {

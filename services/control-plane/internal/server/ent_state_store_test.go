@@ -154,6 +154,73 @@ func TestEntStateStorePersistsExecutionIdentityAndApproval(t *testing.T) {
 	}
 }
 
+func TestEntStateStorePersistsWorkspaceSyncEvents(t *testing.T) {
+	path := t.TempDir() + "/workspace-sync.sqlite"
+	store := NewTestEntStateStore(t, path).(*postgresEntStateStore)
+	ctx := context.Background()
+	events := []map[string]any{
+		{
+			"id":             "mutation-alpha",
+			"operationId":    "operation-alpha",
+			"workspaceId":    "workspace-alpha",
+			"cursor":         int64(1001),
+			"entityKind":     "project",
+			"projectId":      "project-alpha",
+			"clientId":       "client-alpha",
+			"actorUserId":    "user-alpha",
+			"baseVersion":    int64(1),
+			"serverVersion":  int64(2),
+			"operation":      "replace",
+			"status":         "accepted",
+			"payload":        map[string]any{"title": "Cloud title"},
+			"contentDigest":  "sha256:alpha",
+			"idempotencyKey": "mutation-once",
+			"requestHash":    "hash-alpha",
+			"occurredAt":     "2026-07-11T00:00:00Z",
+		},
+		{
+			"id":             "mutation-conflict",
+			"operationId":    "operation-conflict",
+			"workspaceId":    "workspace-alpha",
+			"cursor":         int64(1002),
+			"entityKind":     "project",
+			"projectId":      "project-alpha",
+			"clientId":       "client-beta",
+			"actorUserId":    "user-beta",
+			"baseVersion":    int64(1),
+			"serverVersion":  int64(2),
+			"operation":      "replace",
+			"status":         "conflict",
+			"payload":        map[string]any{"current": map[string]any{"title": "Cloud title"}, "incoming": map[string]any{"title": "Offline title"}},
+			"idempotencyKey": "mutation-conflict-once",
+			"requestHash":    "hash-conflict",
+			"conflictId":     "conflict-alpha",
+			"occurredAt":     "2026-07-11T00:01:00Z",
+		},
+	}
+	for _, event := range events {
+		if err := store.SaveWorkspaceSyncEvent(ctx, event); err != nil {
+			t.Fatalf("save sync event: %v", err)
+		}
+	}
+	if err := store.client.Close(); err != nil {
+		t.Fatalf("close sync event store: %v", err)
+	}
+	store = NewTestEntStateStore(t, path).(*postgresEntStateStore)
+
+	stored, err := store.ListWorkspaceSyncEvents(ctx, "workspace-alpha", 0, 10)
+	if err != nil {
+		t.Fatalf("list sync events: %v", err)
+	}
+	if len(stored) != 2 || stored[0]["id"] != "mutation-alpha" || stored[1]["conflictId"] != "conflict-alpha" {
+		t.Fatalf("unexpected sync events: %#v", stored)
+	}
+	payload, ok := stored[1]["payload"].(map[string]any)
+	if !ok || payload["current"] == nil || payload["incoming"] == nil || stored[0]["cursor"] != int64(1001) || stored[0]["requestHash"] != "hash-alpha" || stored[0]["operationId"] != "operation-alpha" || stored[0]["actorUserId"] != "user-alpha" || stored[0]["occurredAt"] != "2026-07-11T00:00:00Z" {
+		t.Fatalf("sync event fields were not preserved: %#v", stored)
+	}
+}
+
 func TestEntStateStoreUpdatesExecutionRequestWithoutRecreatingIt(t *testing.T) {
 	store := NewTestEntStateStore(t, t.TempDir()+"/execution-update.sqlite").(*postgresEntStateStore)
 	ctx := context.Background()

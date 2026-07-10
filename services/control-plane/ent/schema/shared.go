@@ -365,6 +365,29 @@ func projectTaskSyncHeadFields() []ent.Field {
 	)
 }
 
+func workspaceSyncEventFields() []ent.Field {
+	return append(baseFields(),
+		field.String("operation_id").NotEmpty(),
+		field.String("workspace_id").NotEmpty(),
+		field.Int64("cursor"),
+		field.String("entity_kind").NotEmpty(),
+		field.String("project_id").NotEmpty(),
+		field.String("task_id").Default(""),
+		field.String("client_id").NotEmpty(),
+		field.String("actor_user_id").NotEmpty(),
+		field.Int64("base_version"),
+		field.Int64("server_version"),
+		field.String("operation").NotEmpty(),
+		field.String("status").NotEmpty(),
+		field.String("payload_json").Default("{}"),
+		field.String("content_digest").Default(""),
+		field.String("idempotency_key").NotEmpty().Unique(),
+		field.String("request_hash").NotEmpty(),
+		field.String("conflict_id").Default(""),
+		field.Time("occurred_at"),
+	)
+}
+
 func executionRequestFields() []ent.Field {
 	return append(baseFields(),
 		field.String("organization_id").NotEmpty(),
@@ -493,6 +516,9 @@ func (RuntimeOperation) Annotations() []schema.Annotation {
 }
 func (ProjectTaskSyncHead) Annotations() []schema.Annotation {
 	return table("control_plane_project_task_sync_heads")
+}
+func (WorkspaceSyncEvent) Annotations() []schema.Annotation {
+	return table("control_plane_workspace_sync_events")
 }
 func (ExecutionRequest) Annotations() []schema.Annotation {
 	return table("control_plane_execution_requests")

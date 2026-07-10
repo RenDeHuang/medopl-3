@@ -40,6 +40,7 @@ import (
 	"opl-cloud/services/control-plane/ent/walletprojection"
 	"opl-cloud/services/control-plane/ent/wallettransactionprojection"
 	"opl-cloud/services/control-plane/ent/workspace"
+	"opl-cloud/services/control-plane/ent/workspacesyncevent"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
@@ -109,6 +110,8 @@ type Client struct {
 	WalletTransactionProjection *WalletTransactionProjectionClient
 	// Workspace is the client for interacting with the Workspace builders.
 	Workspace *WorkspaceClient
+	// WorkspaceSyncEvent is the client for interacting with the WorkspaceSyncEvent builders.
+	WorkspaceSyncEvent *WorkspaceSyncEventClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -149,6 +152,7 @@ func (c *Client) init() {
 	c.WalletProjection = NewWalletProjectionClient(c.config)
 	c.WalletTransactionProjection = NewWalletTransactionProjectionClient(c.config)
 	c.Workspace = NewWorkspaceClient(c.config)
+	c.WorkspaceSyncEvent = NewWorkspaceSyncEventClient(c.config)
 }
 
 type (
@@ -270,6 +274,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		WalletProjection:            NewWalletProjectionClient(cfg),
 		WalletTransactionProjection: NewWalletTransactionProjectionClient(cfg),
 		Workspace:                   NewWorkspaceClient(cfg),
+		WorkspaceSyncEvent:          NewWorkspaceSyncEventClient(cfg),
 	}, nil
 }
 
@@ -318,6 +323,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		WalletProjection:            NewWalletProjectionClient(cfg),
 		WalletTransactionProjection: NewWalletTransactionProjectionClient(cfg),
 		Workspace:                   NewWorkspaceClient(cfg),
+		WorkspaceSyncEvent:          NewWorkspaceSyncEventClient(cfg),
 	}, nil
 }
 
@@ -355,7 +361,7 @@ func (c *Client) Use(hooks ...Hook) {
 		c.PricingCatalog, c.PricingItem, c.ProductionE2ERecord, c.ProjectTaskSyncHead,
 		c.RuntimeOperation, c.Session, c.StorageAttachment, c.StorageVolume,
 		c.SupportTicketMapping, c.User, c.WalletProjection,
-		c.WalletTransactionProjection, c.Workspace,
+		c.WalletTransactionProjection, c.Workspace, c.WorkspaceSyncEvent,
 	} {
 		n.Use(hooks...)
 	}
@@ -373,7 +379,7 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 		c.PricingCatalog, c.PricingItem, c.ProductionE2ERecord, c.ProjectTaskSyncHead,
 		c.RuntimeOperation, c.Session, c.StorageAttachment, c.StorageVolume,
 		c.SupportTicketMapping, c.User, c.WalletProjection,
-		c.WalletTransactionProjection, c.Workspace,
+		c.WalletTransactionProjection, c.Workspace, c.WorkspaceSyncEvent,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -440,6 +446,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.WalletTransactionProjection.mutate(ctx, m)
 	case *WorkspaceMutation:
 		return c.Workspace.mutate(ctx, m)
+	case *WorkspaceSyncEventMutation:
+		return c.WorkspaceSyncEvent.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
@@ -4302,6 +4310,139 @@ func (c *WorkspaceClient) mutate(ctx context.Context, m *WorkspaceMutation) (Val
 	}
 }
 
+// WorkspaceSyncEventClient is a client for the WorkspaceSyncEvent schema.
+type WorkspaceSyncEventClient struct {
+	config
+}
+
+// NewWorkspaceSyncEventClient returns a client for the WorkspaceSyncEvent from the given config.
+func NewWorkspaceSyncEventClient(c config) *WorkspaceSyncEventClient {
+	return &WorkspaceSyncEventClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `workspacesyncevent.Hooks(f(g(h())))`.
+func (c *WorkspaceSyncEventClient) Use(hooks ...Hook) {
+	c.hooks.WorkspaceSyncEvent = append(c.hooks.WorkspaceSyncEvent, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `workspacesyncevent.Intercept(f(g(h())))`.
+func (c *WorkspaceSyncEventClient) Intercept(interceptors ...Interceptor) {
+	c.inters.WorkspaceSyncEvent = append(c.inters.WorkspaceSyncEvent, interceptors...)
+}
+
+// Create returns a builder for creating a WorkspaceSyncEvent entity.
+func (c *WorkspaceSyncEventClient) Create() *WorkspaceSyncEventCreate {
+	mutation := newWorkspaceSyncEventMutation(c.config, OpCreate)
+	return &WorkspaceSyncEventCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of WorkspaceSyncEvent entities.
+func (c *WorkspaceSyncEventClient) CreateBulk(builders ...*WorkspaceSyncEventCreate) *WorkspaceSyncEventCreateBulk {
+	return &WorkspaceSyncEventCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *WorkspaceSyncEventClient) MapCreateBulk(slice any, setFunc func(*WorkspaceSyncEventCreate, int)) *WorkspaceSyncEventCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &WorkspaceSyncEventCreateBulk{err: fmt.Errorf("calling to WorkspaceSyncEventClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*WorkspaceSyncEventCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &WorkspaceSyncEventCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for WorkspaceSyncEvent.
+func (c *WorkspaceSyncEventClient) Update() *WorkspaceSyncEventUpdate {
+	mutation := newWorkspaceSyncEventMutation(c.config, OpUpdate)
+	return &WorkspaceSyncEventUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *WorkspaceSyncEventClient) UpdateOne(wse *WorkspaceSyncEvent) *WorkspaceSyncEventUpdateOne {
+	mutation := newWorkspaceSyncEventMutation(c.config, OpUpdateOne, withWorkspaceSyncEvent(wse))
+	return &WorkspaceSyncEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *WorkspaceSyncEventClient) UpdateOneID(id string) *WorkspaceSyncEventUpdateOne {
+	mutation := newWorkspaceSyncEventMutation(c.config, OpUpdateOne, withWorkspaceSyncEventID(id))
+	return &WorkspaceSyncEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for WorkspaceSyncEvent.
+func (c *WorkspaceSyncEventClient) Delete() *WorkspaceSyncEventDelete {
+	mutation := newWorkspaceSyncEventMutation(c.config, OpDelete)
+	return &WorkspaceSyncEventDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *WorkspaceSyncEventClient) DeleteOne(wse *WorkspaceSyncEvent) *WorkspaceSyncEventDeleteOne {
+	return c.DeleteOneID(wse.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *WorkspaceSyncEventClient) DeleteOneID(id string) *WorkspaceSyncEventDeleteOne {
+	builder := c.Delete().Where(workspacesyncevent.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &WorkspaceSyncEventDeleteOne{builder}
+}
+
+// Query returns a query builder for WorkspaceSyncEvent.
+func (c *WorkspaceSyncEventClient) Query() *WorkspaceSyncEventQuery {
+	return &WorkspaceSyncEventQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeWorkspaceSyncEvent},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a WorkspaceSyncEvent entity by its id.
+func (c *WorkspaceSyncEventClient) Get(ctx context.Context, id string) (*WorkspaceSyncEvent, error) {
+	return c.Query().Where(workspacesyncevent.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *WorkspaceSyncEventClient) GetX(ctx context.Context, id string) *WorkspaceSyncEvent {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *WorkspaceSyncEventClient) Hooks() []Hook {
+	return c.hooks.WorkspaceSyncEvent
+}
+
+// Interceptors returns the client interceptors.
+func (c *WorkspaceSyncEventClient) Interceptors() []Interceptor {
+	return c.inters.WorkspaceSyncEvent
+}
+
+func (c *WorkspaceSyncEventClient) mutate(ctx context.Context, m *WorkspaceSyncEventMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&WorkspaceSyncEventCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&WorkspaceSyncEventUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&WorkspaceSyncEventUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&WorkspaceSyncEventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown WorkspaceSyncEvent mutation op: %q", m.Op())
+	}
+}
+
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
@@ -4312,7 +4453,7 @@ type (
 		Organization, PricingCatalog, PricingItem, ProductionE2ERecord,
 		ProjectTaskSyncHead, RuntimeOperation, Session, StorageAttachment,
 		StorageVolume, SupportTicketMapping, User, WalletProjection,
-		WalletTransactionProjection, Workspace []ent.Hook
+		WalletTransactionProjection, Workspace, WorkspaceSyncEvent []ent.Hook
 	}
 	inters struct {
 		Account, AdminAuditEvent, ArchiveJob, ArchivedAdminAuditEvent,
@@ -4322,6 +4463,6 @@ type (
 		Organization, PricingCatalog, PricingItem, ProductionE2ERecord,
 		ProjectTaskSyncHead, RuntimeOperation, Session, StorageAttachment,
 		StorageVolume, SupportTicketMapping, User, WalletProjection,
-		WalletTransactionProjection, Workspace []ent.Interceptor
+		WalletTransactionProjection, Workspace, WorkspaceSyncEvent []ent.Interceptor
 	}
 )
