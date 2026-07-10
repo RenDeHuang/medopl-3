@@ -39,7 +39,7 @@ func TestCreateWorkspaceOrchestratesLedgerAndFabric(t *testing.T) {
 	if workspace.RuntimeUsername != "admin" || workspace.RuntimePassword != "runtime-password-alpha" {
 		t.Fatalf("workspace must carry runtime credentials from Fabric: %#v", workspace)
 	}
-	wantCalls := []string{"fabric.runtime", "ledger.evidence"}
+	wantCalls := []string{"fabric.runtime", "ledger.receipt"}
 	if !reflect.DeepEqual(calls, wantCalls) {
 		t.Fatalf("calls = %#v, want %#v", calls, wantCalls)
 	}
@@ -168,9 +168,9 @@ func (f *fakeLedgerClient) ReleaseHold(ctx context.Context, input clients.HoldRe
 	return clients.HoldReleaseResult{ID: "release-alpha", AccountID: input.AccountID, AmountCents: input.AmountCents, Status: "released", Wallet: clients.Wallet{AccountID: input.AccountID, BalanceCents: 20000, AvailableCents: 20000}}, nil
 }
 
-func (f *fakeLedgerClient) RecordEvidence(ctx context.Context, input clients.EvidenceInput, idempotencyKey string) (clients.EvidenceReceipt, error) {
-	*f.calls = append(*f.calls, "ledger.evidence")
-	return clients.EvidenceReceipt{ID: "ev-alpha", WorkspaceID: input.WorkspaceID}, nil
+func (f *fakeLedgerClient) RecordReceipt(ctx context.Context, input clients.ReceiptInput, idempotencyKey string) (clients.Receipt, error) {
+	*f.calls = append(*f.calls, "ledger.receipt")
+	return clients.Receipt{ReceiptID: "receipt-alpha", WorkspaceID: input.WorkspaceID}, nil
 }
 
 func (f *fakeLedgerClient) SettleResource(ctx context.Context, input clients.ResourceSettlementInput, idempotencyKey string) (clients.ResourceSettlementResult, error) {

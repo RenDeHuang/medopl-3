@@ -6,31 +6,37 @@ import (
 )
 
 type memoryTableStore struct {
-	mu          sync.Mutex
-	users       controlPlaneRecordSet
-	sessions    controlPlaneRecordSet
-	computes    controlPlaneRecordSet
-	storages    controlPlaneRecordSet
-	attachments controlPlaneRecordSet
-	workspaces  controlPlaneRecordSet
-	wallets     controlPlaneRecordSet
-	ledger      []map[string]any
-	walletTx    []map[string]any
-	topups      []map[string]any
-	auditEvents []map[string]any
-	support     controlPlaneRecordSet
+	mu             sync.Mutex
+	users          controlPlaneRecordSet
+	sessions       controlPlaneRecordSet
+	organizations  controlPlaneRecordSet
+	memberships    controlPlaneRecordSet
+	computes       controlPlaneRecordSet
+	storages       controlPlaneRecordSet
+	attachments    controlPlaneRecordSet
+	workspaces     controlPlaneRecordSet
+	wallets        controlPlaneRecordSet
+	ledger         []map[string]any
+	walletTx       []map[string]any
+	topups         []map[string]any
+	auditEvents    []map[string]any
+	support        controlPlaneRecordSet
+	runtimeOps     []map[string]any
+	reconciliation map[string]any
 }
 
 func newMemoryTableStore() *memoryTableStore {
 	return &memoryTableStore{
-		users:       controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}},
-		sessions:    controlPlaneRecordSet{},
-		computes:    controlPlaneRecordSet{},
-		storages:    controlPlaneRecordSet{},
-		attachments: controlPlaneRecordSet{},
-		workspaces:  controlPlaneRecordSet{},
-		wallets:     controlPlaneRecordSet{},
-		support:     controlPlaneRecordSet{},
+		users:         controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}},
+		sessions:      controlPlaneRecordSet{},
+		organizations: controlPlaneRecordSet{},
+		memberships:   controlPlaneRecordSet{},
+		computes:      controlPlaneRecordSet{},
+		storages:      controlPlaneRecordSet{},
+		attachments:   controlPlaneRecordSet{},
+		workspaces:    controlPlaneRecordSet{},
+		wallets:       controlPlaneRecordSet{},
+		support:       controlPlaneRecordSet{},
 	}
 }
 
@@ -78,6 +84,32 @@ func (s *memoryTableStore) DeleteSession(_ context.Context, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	delete(s.sessions, id)
+	return nil
+}
+
+func (s *memoryTableStore) ListOrganizations(_ context.Context) ([]map[string]any, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return filteredRecords(s.organizations, "")
+}
+
+func (s *memoryTableStore) SaveOrganization(_ context.Context, row map[string]any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.organizations[stringValue(row["id"])] = cloneMap(row)
+	return nil
+}
+
+func (s *memoryTableStore) ListMemberships(_ context.Context) ([]map[string]any, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return filteredRecords(s.memberships, "")
+}
+
+func (s *memoryTableStore) SaveMembership(_ context.Context, row map[string]any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.memberships[stringValue(row["id"])] = cloneMap(row)
 	return nil
 }
 
@@ -236,5 +268,34 @@ func (s *memoryTableStore) SaveSupportMapping(_ context.Context, row map[string]
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.support[stringValue(row["id"])] = cloneMap(row)
+	return nil
+}
+
+func (s *memoryTableStore) ListRuntimeOperations(_ context.Context) ([]map[string]any, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return filteredEvents(s.runtimeOps, ""), nil
+}
+
+func (s *memoryTableStore) SaveRuntimeOperation(_ context.Context, row map[string]any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.runtimeOps = upsertProjectionByID(s.runtimeOps, cloneMap(row))
+	return nil
+}
+
+func (s *memoryTableStore) BillingReconciliation(_ context.Context) (map[string]any, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.reconciliation == nil {
+		return nil, false, nil
+	}
+	return cloneMap(s.reconciliation), true, nil
+}
+
+func (s *memoryTableStore) SaveBillingReconciliation(_ context.Context, row map[string]any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.reconciliation = cloneMap(row)
 	return nil
 }

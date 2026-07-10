@@ -300,7 +300,7 @@ func (s *Service) CreateWorkspace(ctx context.Context, input CreateWorkspaceInpu
 	if err != nil {
 		return domain.WorkspaceProjection{}, err
 	}
-	evidence, err := s.ledger.RecordEvidence(ctx, clients.EvidenceInput{WorkspaceID: workspaceID, ProviderRequestID: runtime.ID, RedactedURL: runtime.URL, TokenVersion: "v1"}, idempotencyKey+":evidence")
+	receipt, err := s.ledger.RecordReceipt(ctx, clients.ReceiptInput{Type: "workspace.created", Status: "completed", Surface: "workspace", WorkspaceID: workspaceID, JobID: runtime.ID, Execution: map[string]any{"providerRequestId": runtime.ID}, OutputRefs: map[string]any{"redactedUrl": runtime.URL}, Continuation: map[string]any{"action": "open_workspace_url", "tokenVersion": "v1", "redactedUrl": runtime.URL}}, idempotencyKey+":receipt")
 	if err != nil {
 		return domain.WorkspaceProjection{}, err
 	}
@@ -324,7 +324,7 @@ func (s *Service) CreateWorkspace(ctx context.Context, input CreateWorkspaceInpu
 		CredentialStatus:    runtime.Access.CredentialStatus,
 		CredentialVersion:   runtime.Access.CredentialVersion,
 		CredentialSecretRef: runtime.Access.SecretRef,
-		EvidenceID:          evidence.ID,
+		ReceiptID:           receipt.ReceiptID,
 	}, nil
 }
 

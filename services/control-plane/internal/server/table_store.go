@@ -9,6 +9,10 @@ type controlPlaneTableStore interface {
 	ListSessions(ctx context.Context) (controlPlaneRecordSet, error)
 	SaveSession(ctx context.Context, row map[string]any) error
 	DeleteSession(ctx context.Context, id string) error
+	ListOrganizations(ctx context.Context) ([]map[string]any, error)
+	SaveOrganization(ctx context.Context, row map[string]any) error
+	ListMemberships(ctx context.Context) ([]map[string]any, error)
+	SaveMembership(ctx context.Context, row map[string]any) error
 
 	ListComputes(ctx context.Context, accountID string) ([]map[string]any, error)
 	SaveCompute(ctx context.Context, row map[string]any) error
@@ -35,4 +39,8 @@ type controlPlaneTableStore interface {
 	SaveAuditEvent(ctx context.Context, row map[string]any) error
 	ListSupportMappings(ctx context.Context, accountID string) ([]map[string]any, error)
 	SaveSupportMapping(ctx context.Context, row map[string]any) error
+	ListRuntimeOperations(ctx context.Context) ([]map[string]any, error)
+	SaveRuntimeOperation(ctx context.Context, row map[string]any) error
+	BillingReconciliation(ctx context.Context) (map[string]any, bool, error)
+	SaveBillingReconciliation(ctx context.Context, row map[string]any) error
 }

@@ -3,9 +3,6 @@ package server
 import "net/http"
 
 func registerAdminRoutes(mux *http.ServeMux, app *controlPlaneServer) {
-	mux.HandleFunc("GET /api/ledger/task-receipts", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]any{"receipts": []any{}})
-	}))
 	mux.HandleFunc("POST /api/organizations", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		body, err := app.createOrganization(decodeJSON(r))
 		if err != nil {

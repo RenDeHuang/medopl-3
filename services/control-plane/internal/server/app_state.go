@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
@@ -17,14 +18,9 @@ import (
 )
 
 type controlPlaneServer struct {
-	mu          sync.Mutex
-	store       StateStore
-	tables      controlPlaneTableStore
-	orgs        controlPlaneRecordSet
-	memberships controlPlaneRecordSet
-	support     controlPlaneRecordSet
-	runtimeOps  []controlPlaneRecord
-	reconcile   controlPlaneRecord
+	mu     sync.Mutex
+	store  StateStore
+	tables controlPlaneTableStore
 	// ponytail: per-process limiter; move to Redis when login traffic spans multiple replicas.
 	loginRateLimits map[string]loginFailure
 }
@@ -78,9 +74,6 @@ func newControlPlaneAppEmpty() *controlPlaneServer {
 	tables := newMemoryTableStore()
 	return &controlPlaneServer{
 		tables:          tables,
-		orgs:            controlPlaneRecordSet{},
-		memberships:     controlPlaneRecordSet{},
-		support:         controlPlaneRecordSet{},
 		loginRateLimits: map[string]loginFailure{},
 	}
 }
@@ -115,7 +108,7 @@ func (app *controlPlaneServer) state(accountID string, computePools []any) map[s
 		"resourceLedgerEvidence": app.resourceLedgerEvidenceLocked(),
 		"billingReconciliation":  app.reconciliationProjectionLocked(),
 		"notifications":          []any{},
-		"runtimeOperations":      copySlice(app.runtimeOps),
+		"runtimeOperations":      rowsAsAnyFromMaps(app.listRuntimeOperations()),
 		"generatedAt":            time.Now().UTC().Format(time.RFC3339),
 	}
 }
@@ -266,6 +259,38 @@ func (app *controlPlaneServer) listSupportMappings(accountID string) []map[strin
 	rows, err := app.tables.ListSupportMappings(context.Background(), accountID)
 	if err != nil {
 		return nil
+	}
+	return rows
+}
+
+func (app *controlPlaneServer) listOrganizations() []map[string]any {
+	rows, err := app.tables.ListOrganizations(context.Background())
+	if err != nil {
+		return nil
+	}
+	return rows
+}
+
+func (app *controlPlaneServer) listMemberships() []map[string]any {
+	rows, err := app.tables.ListMemberships(context.Background())
+	if err != nil {
+		return nil
+	}
+	return rows
+}
+
+func (app *controlPlaneServer) listRuntimeOperations() []map[string]any {
+	rows, err := app.tables.ListRuntimeOperations(context.Background())
+	if err != nil {
+		return nil
+	}
+	for _, row := range rows {
+		if result := stringValue(row["result"]); result != "" {
+			var payload map[string]any
+			if json.Unmarshal([]byte(result), &payload) == nil {
+				row["redactedProviderPayload"] = payload
+			}
+		}
 	}
 	return rows
 }

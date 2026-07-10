@@ -13,7 +13,7 @@ type LedgerClient interface {
 	ManualTopUp(ctx context.Context, input ManualTopUpInput, idempotencyKey string) (ManualTopUpResult, error)
 	CreateHold(ctx context.Context, input HoldInput, idempotencyKey string) (HoldResult, error)
 	ReleaseHold(ctx context.Context, input HoldReleaseInput, idempotencyKey string) (HoldReleaseResult, error)
-	RecordEvidence(ctx context.Context, input EvidenceInput, idempotencyKey string) (EvidenceReceipt, error)
+	RecordReceipt(ctx context.Context, input ReceiptInput, idempotencyKey string) (Receipt, error)
 	SettleResource(ctx context.Context, input ResourceSettlementInput, idempotencyKey string) (ResourceSettlementResult, error)
 	RecordReconciliation(ctx context.Context, input ReconciliationInput, idempotencyKey string) (ReconciliationResult, error)
 	Wallet(ctx context.Context, accountID string) (Wallet, error)
@@ -183,15 +183,24 @@ type HoldReleaseResult struct {
 	Replayed            bool   `json:"replayed"`
 }
 
-type EvidenceInput struct {
-	WorkspaceID       string `json:"workspaceId"`
-	ProviderRequestID string `json:"providerRequestId"`
-	RedactedURL       string `json:"redactedUrl"`
-	TokenVersion      string `json:"tokenVersion"`
+type ReceiptInput struct {
+	Type           string         `json:"type"`
+	Status         string         `json:"status"`
+	Surface        string         `json:"surface"`
+	OrganizationID string         `json:"organizationId,omitempty"`
+	WorkspaceID    string         `json:"workspaceId"`
+	ProjectID      string         `json:"projectId,omitempty"`
+	TaskID         string         `json:"taskId,omitempty"`
+	RequestID      string         `json:"requestId,omitempty"`
+	ApprovalID     string         `json:"approvalId,omitempty"`
+	JobID          string         `json:"jobId,omitempty"`
+	Execution      map[string]any `json:"execution,omitempty"`
+	OutputRefs     map[string]any `json:"outputRefs,omitempty"`
+	Continuation   map[string]any `json:"continuation,omitempty"`
 }
 
-type EvidenceReceipt struct {
-	ID          string `json:"id"`
+type Receipt struct {
+	ReceiptID   string `json:"receiptId"`
 	WorkspaceID string `json:"workspaceId"`
 }
 
@@ -225,9 +234,9 @@ func (c *ledgerHTTPClient) ReleaseHold(ctx context.Context, input HoldReleaseInp
 	return result, err
 }
 
-func (c *ledgerHTTPClient) RecordEvidence(ctx context.Context, input EvidenceInput, idempotencyKey string) (EvidenceReceipt, error) {
-	var result EvidenceReceipt
-	err := c.post(ctx, "/ledger/evidence", input, idempotencyKey, &result)
+func (c *ledgerHTTPClient) RecordReceipt(ctx context.Context, input ReceiptInput, idempotencyKey string) (Receipt, error) {
+	var result Receipt
+	err := c.post(ctx, "/ledger/receipts", input, idempotencyKey, &result)
 	return result, err
 }
 

@@ -1220,10 +1220,9 @@
       "routeKind": "read_model",
       "objectKind": "LedgerEntry",
       "pageModule": "apps/console-ui/src/pages/admin/AdminOverviewPage.tsx",
-      "apiClient": "apps/console-ui/src/api/ledger-api.ts",
+      "apiClient": "apps/console-ui/src/api/console-read-api.ts",
       "apiRoutes": [
-        "GET /api/state",
-        "GET /api/ledger/task-receipts"
+        "GET /api/state"
       ],
       "serviceBoundary": "LedgerEvidenceService",
       "requiresAdmin": true,

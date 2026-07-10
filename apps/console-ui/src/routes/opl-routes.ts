@@ -716,8 +716,8 @@ export const oplRoutes = Object.freeze([
     routeKind: "read_model",
     objectKind: "LedgerEntry",
     pageModule: "apps/console-ui/src/pages/admin/AdminOverviewPage.tsx",
-    apiClient: "apps/console-ui/src/api/ledger-api.ts",
-    apiRoutes: ["GET /api/state", "GET /api/ledger/task-receipts"],
+    apiClient: "apps/console-ui/src/api/console-read-api.ts",
+    apiRoutes: ["GET /api/state"],
     serviceBoundary: "LedgerEvidenceService",
     capabilities: ["read", "list", "evidence", "audit"]
   }),

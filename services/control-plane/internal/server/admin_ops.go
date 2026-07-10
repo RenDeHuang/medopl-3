@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"sort"
 	"time"
@@ -10,23 +11,23 @@ import (
 )
 
 func (app *controlPlaneServer) createOrganization(input map[string]any) (map[string]any, error) {
-	app.mu.Lock()
-	defer app.mu.Unlock()
 	name := stringField(input, "name", "Organization")
 	id := "org-" + compactID(name+"-"+time.Now().UTC().Format("20060102150405.000000000"))
 	org := map[string]any{"id": id, "name": name, "billingAccountId": stringField(input, "billingAccountId", "acct-admin"), "status": "active"}
-	app.orgs[id] = org
+	if err := app.tables.SaveOrganization(context.Background(), org); err != nil {
+		return nil, err
+	}
 	return cloneMap(org), nil
 }
 
 func (app *controlPlaneServer) createMembership(input map[string]any) (map[string]any, error) {
-	app.mu.Lock()
-	defer app.mu.Unlock()
 	orgID := stringField(input, "organizationId", "")
 	userID := stringField(input, "userId", "")
 	id := "mem-" + stableID(orgID, userID, time.Now().UTC().String())[:12]
-	membership := map[string]any{"id": id, "organizationId": orgID, "userId": userID, "role": stringField(input, "role", "member"), "status": "active"}
-	app.memberships[id] = membership
+	membership := map[string]any{"id": id, "accountId": stringField(input, "accountId", "acct-admin"), "organizationId": orgID, "userId": userID, "role": stringField(input, "role", "member"), "status": "active"}
+	if err := app.tables.SaveMembership(context.Background(), membership); err != nil {
+		return nil, err
+	}
 	return cloneMap(membership), nil
 }
 
@@ -35,9 +36,9 @@ func (app *controlPlaneServer) managementState(includeDeleted bool, computePools
 	defer app.mu.Unlock()
 	return map[string]any{
 		"organization":           nil,
-		"organizations":          values(app.orgs),
+		"organizations":          rowsAsAnyFromMaps(app.listOrganizations()),
 		"users":                  sanitizedUserValues(app.userRecordSet(includeDeleted), includeDeleted),
-		"memberships":            values(app.memberships),
+		"memberships":            rowsAsAnyFromMaps(app.listMemberships()),
 		"supportTickets":         rowsAsAnyFromMaps(app.listSupportMappings("")),
 		"accounts":               app.accountsLocked(),
 		"packages":               packageList(),
@@ -50,7 +51,7 @@ func (app *controlPlaneServer) managementState(includeDeleted bool, computePools
 		"billingLedger":          rowsAsAnyFromMaps(app.listLedger("")),
 		"walletTransactions":     rowsAsAnyFromMaps(app.listWalletTransactions("")),
 		"manualTopups":           rowsAsAnyFromMaps(app.listManualTopups("")),
-		"runtimeOperations":      copySlice(app.runtimeOps),
+		"runtimeOperations":      rowsAsAnyFromMaps(app.listRuntimeOperations()),
 		"auditEvents":            rowsAsAnyFromMaps(app.listAuditEvents("")),
 		"billingReconciliation":  app.reconciliationProjectionLocked(),
 		"workspaceAccessCleanup": app.workspaceAccessCleanupSummaryLocked(),
@@ -65,6 +66,7 @@ func (app *controlPlaneServer) operatorSummary() map[string]any {
 	computes := app.computeRecordSet("")
 	workspaces := app.workspaceRecordSet("")
 	ledger := rowsAsAnyFromMaps(app.listLedger(""))
+	runtimeOperations := app.listRuntimeOperations()
 	running := countStatus(computes, "running")
 	accounts := app.accountsLocked()
 	return map[string]any{
@@ -75,8 +77,8 @@ func (app *controlPlaneServer) operatorSummary() map[string]any {
 		"workspaces":             map[string]any{"total": len(workspaces), "running": countStatus(workspaces, "running"), "urlActive": countActiveURLs(workspaces), "destroyed": countStatus(workspaces, "destroyed"), "needsAttention": 0},
 		"computeAllocations":     map[string]any{"total": len(computes), "running": running, "failed": countStatus(computes, "failed")},
 		"notifications":          map[string]any{"total": 0, "error": 0, "warning": 0, "recent": []any{}},
-		"runtimeOperations":      app.runtimeOperationSummaryLocked(),
-		"failedOperations":       failedRuntimeOperations(app.runtimeOps),
+		"runtimeOperations":      runtimeOperationSummary(runtimeOperations),
+		"failedOperations":       failedRuntimeOperations(runtimeOperations),
 		"resourceAnomalies":      app.resourceAnomaliesLocked(),
 		"resourceLedgerEvidence": map[string]any{"total": len(ledger), "recent": ledger},
 		"productionE2E":          productionE2ESummary(nil),
@@ -108,18 +110,20 @@ func (app *controlPlaneServer) appendAuditEvent(r *http.Request, action string, 
 }
 
 func (app *controlPlaneServer) rememberRuntimeOperations(operations []clients.FabricOperation) error {
-	app.mu.Lock()
-	defer app.mu.Unlock()
-
-	rows := make([]map[string]any, 0, len(operations))
 	for _, operation := range operations {
 		row := structToMap(operation)
-		rows = append(rows, row)
+		payload, err := json.Marshal(operation.RedactedProviderPayload)
+		if err != nil {
+			return err
+		}
+		row["result"] = string(payload)
+		if err := app.tables.SaveRuntimeOperation(context.Background(), row); err != nil {
+			return err
+		}
 		if err := app.rememberRuntimeOperationResource(row); err != nil {
 			return err
 		}
 	}
-	app.runtimeOps = rows
 	return nil
 }
 
@@ -183,9 +187,9 @@ func (app *controlPlaneServer) rememberRuntimeOperationResource(operation map[st
 	return nil
 }
 
-func (app *controlPlaneServer) runtimeOperationSummaryLocked() map[string]any {
-	failed := failedRuntimeOperations(app.runtimeOps)
-	return map[string]any{"total": len(app.runtimeOps), "failed": len(failed), "recentFailed": failed}
+func runtimeOperationSummary(operations []map[string]any) map[string]any {
+	failed := failedRuntimeOperations(operations)
+	return map[string]any{"total": len(operations), "failed": len(failed), "recentFailed": failed}
 }
 
 func (app *controlPlaneServer) accountsLocked() []any {

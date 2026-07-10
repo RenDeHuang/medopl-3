@@ -15,12 +15,14 @@ import (
 
 	controlplaneent "opl-cloud/services/control-plane/ent"
 	"opl-cloud/services/control-plane/ent/adminauditevent"
+	"opl-cloud/services/control-plane/ent/billingreconciliation"
 	"opl-cloud/services/control-plane/ent/computeallocation"
 	"opl-cloud/services/control-plane/ent/ledgerprojection"
 	"opl-cloud/services/control-plane/ent/manualtopupprojection"
 	"opl-cloud/services/control-plane/ent/pricingcatalog"
 	"opl-cloud/services/control-plane/ent/pricingitem"
 	"opl-cloud/services/control-plane/ent/productione2erecord"
+	"opl-cloud/services/control-plane/ent/runtimeoperation"
 	"opl-cloud/services/control-plane/ent/storageattachment"
 	"opl-cloud/services/control-plane/ent/storagevolume"
 	"opl-cloud/services/control-plane/ent/supportticketmapping"
@@ -581,6 +583,30 @@ func (s *postgresEntStateStore) DeleteSession(ctx context.Context, id string) er
 	return err
 }
 
+func (s *postgresEntStateStore) ListOrganizations(ctx context.Context) ([]map[string]any, error) {
+	rows, err := loadRecordSet(ctx, s.client.Organization.Query().All, organizationEntFields)
+	if err != nil {
+		return nil, err
+	}
+	return filteredRecords(rows, "")
+}
+
+func (s *postgresEntStateStore) SaveOrganization(ctx context.Context, row map[string]any) error {
+	return s.replaceRecord(ctx, row, func(id string) error { return s.client.Organization.DeleteOneID(id).Exec(ctx) }, func() any { return s.client.Organization.Create() }, organizationEntFields)
+}
+
+func (s *postgresEntStateStore) ListMemberships(ctx context.Context) ([]map[string]any, error) {
+	rows, err := loadRecordSet(ctx, s.client.Membership.Query().All, membershipEntFields)
+	if err != nil {
+		return nil, err
+	}
+	return filteredRecords(rows, "")
+}
+
+func (s *postgresEntStateStore) SaveMembership(ctx context.Context, row map[string]any) error {
+	return s.replaceRecord(ctx, row, func(id string) error { return s.client.Membership.DeleteOneID(id).Exec(ctx) }, func() any { return s.client.Membership.Create() }, membershipEntFields)
+}
+
 func (s *postgresEntStateStore) ListComputes(ctx context.Context, accountID string) ([]map[string]any, error) {
 	rows, err := loadRecordSet(ctx, s.client.ComputeAllocation.Query().All, computeEntFields)
 	if err != nil {
@@ -719,6 +745,30 @@ func (s *postgresEntStateStore) ListSupportMappings(ctx context.Context, account
 
 func (s *postgresEntStateStore) SaveSupportMapping(ctx context.Context, row map[string]any) error {
 	return s.replaceRecord(ctx, row, func(id string) error { return s.client.SupportTicketMapping.DeleteOneID(id).Exec(ctx) }, func() any { return s.client.SupportTicketMapping.Create() }, supportEntFields)
+}
+
+func (s *postgresEntStateStore) ListRuntimeOperations(ctx context.Context) ([]map[string]any, error) {
+	rows, err := loadEventRows(ctx, s.client.RuntimeOperation.Query().Order(controlplaneent.Asc(runtimeoperation.FieldCreatedAt, runtimeoperation.FieldID)).All, runtimeOpEntFields)
+	return rows, err
+}
+
+func (s *postgresEntStateStore) SaveRuntimeOperation(ctx context.Context, row map[string]any) error {
+	return s.replaceRecord(ctx, row, func(id string) error { return s.client.RuntimeOperation.DeleteOneID(id).Exec(ctx) }, func() any { return s.client.RuntimeOperation.Create() }, runtimeOpEntFields)
+}
+
+func (s *postgresEntStateStore) BillingReconciliation(ctx context.Context) (map[string]any, bool, error) {
+	row, err := s.client.BillingReconciliation.Query().Order(controlplaneent.Desc(billingreconciliation.FieldCreatedAt, billingreconciliation.FieldID)).First(ctx)
+	if controlplaneent.IsNotFound(err) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	return recordFromEnt(row, reconcileEntFields), true, nil
+}
+
+func (s *postgresEntStateStore) SaveBillingReconciliation(ctx context.Context, row map[string]any) error {
+	return s.replaceRecord(ctx, row, func(id string) error { return s.client.BillingReconciliation.DeleteOneID(id).Exec(ctx) }, func() any { return s.client.BillingReconciliation.Create() }, reconcileEntFields)
 }
 
 func (s *postgresEntStateStore) SettlementResourceRows(ctx context.Context) (controlPlaneRecordSet, controlPlaneRecordSet, error) {
