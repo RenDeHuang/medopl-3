@@ -70,6 +70,8 @@ type Tx struct {
 	WalletTransactionProjection *WalletTransactionProjectionClient
 	// Workspace is the client for interacting with the Workspace builders.
 	Workspace *WorkspaceClient
+	// WorkspaceSyncEvent is the client for interacting with the WorkspaceSyncEvent builders.
+	WorkspaceSyncEvent *WorkspaceSyncEventClient
 
 	// lazily loaded.
 	client     *Client
@@ -230,6 +232,7 @@ func (tx *Tx) init() {
 	tx.WalletProjection = NewWalletProjectionClient(tx.config)
 	tx.WalletTransactionProjection = NewWalletTransactionProjectionClient(tx.config)
 	tx.Workspace = NewWorkspaceClient(tx.config)
+	tx.WorkspaceSyncEvent = NewWorkspaceSyncEventClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

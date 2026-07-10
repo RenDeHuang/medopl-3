@@ -356,6 +356,18 @@ func (f WorkspaceFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, e
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.WorkspaceMutation", m)
 }
 
+// The WorkspaceSyncEventFunc type is an adapter to allow the use of ordinary
+// function as WorkspaceSyncEvent mutator.
+type WorkspaceSyncEventFunc func(context.Context, *ent.WorkspaceSyncEventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f WorkspaceSyncEventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.WorkspaceSyncEventMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.WorkspaceSyncEventMutation", m)
+}
+
 // Condition is a hook condition function.
 type Condition func(context.Context, ent.Mutation) bool
 

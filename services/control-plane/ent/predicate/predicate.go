@@ -92,3 +92,6 @@ type WalletTransactionProjection func(*sql.Selector)
 
 // Workspace is the predicate function for workspace builders.
 type Workspace func(*sql.Selector)
+
+// WorkspaceSyncEvent is the predicate function for workspacesyncevent builders.
+type WorkspaceSyncEvent func(*sql.Selector)

@@ -43,6 +43,8 @@ type controlPlaneTableStore interface {
 	SaveRuntimeOperation(ctx context.Context, row map[string]any) error
 	ListProjectTaskSyncHeads(ctx context.Context) ([]map[string]any, error)
 	SaveProjectTaskSyncHead(ctx context.Context, row map[string]any) error
+	ListWorkspaceSyncEvents(ctx context.Context, workspaceID string, after int64, limit int) ([]map[string]any, error)
+	SaveWorkspaceSyncEvent(ctx context.Context, row map[string]any) error
 	ListExecutionRequests(ctx context.Context) ([]map[string]any, error)
 	SaveExecutionRequest(ctx context.Context, row map[string]any) error
 	BillingReconciliation(ctx context.Context) (map[string]any, bool, error)

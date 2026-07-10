@@ -700,6 +700,50 @@ var (
 		Columns:    ControlPlaneWorkspacesColumns,
 		PrimaryKey: []*schema.Column{ControlPlaneWorkspacesColumns[0]},
 	}
+	// ControlPlaneWorkspaceSyncEventsColumns holds the columns for the "control_plane_workspace_sync_events" table.
+	ControlPlaneWorkspaceSyncEventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "updated_at", Type: field.TypeTime},
+		{Name: "workspace_id", Type: field.TypeString},
+		{Name: "cursor", Type: field.TypeInt64},
+		{Name: "entity_kind", Type: field.TypeString},
+		{Name: "project_id", Type: field.TypeString},
+		{Name: "task_id", Type: field.TypeString, Default: ""},
+		{Name: "client_id", Type: field.TypeString},
+		{Name: "base_version", Type: field.TypeInt64},
+		{Name: "server_version", Type: field.TypeInt64},
+		{Name: "operation", Type: field.TypeString},
+		{Name: "status", Type: field.TypeString},
+		{Name: "payload_json", Type: field.TypeString, Default: "{}"},
+		{Name: "content_digest", Type: field.TypeString, Default: ""},
+		{Name: "idempotency_key", Type: field.TypeString, Unique: true},
+		{Name: "request_hash", Type: field.TypeString},
+		{Name: "conflict_id", Type: field.TypeString, Default: ""},
+	}
+	// ControlPlaneWorkspaceSyncEventsTable holds the schema information for the "control_plane_workspace_sync_events" table.
+	ControlPlaneWorkspaceSyncEventsTable = &schema.Table{
+		Name:       "control_plane_workspace_sync_events",
+		Columns:    ControlPlaneWorkspaceSyncEventsColumns,
+		PrimaryKey: []*schema.Column{ControlPlaneWorkspaceSyncEventsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "workspacesyncevent_workspace_id_cursor",
+				Unique:  true,
+				Columns: []*schema.Column{ControlPlaneWorkspaceSyncEventsColumns[3], ControlPlaneWorkspaceSyncEventsColumns[4]},
+			},
+			{
+				Name:    "workspacesyncevent_workspace_id_entity_kind_project_id_task_id_cursor",
+				Unique:  false,
+				Columns: []*schema.Column{ControlPlaneWorkspaceSyncEventsColumns[3], ControlPlaneWorkspaceSyncEventsColumns[5], ControlPlaneWorkspaceSyncEventsColumns[6], ControlPlaneWorkspaceSyncEventsColumns[7], ControlPlaneWorkspaceSyncEventsColumns[4]},
+			},
+			{
+				Name:    "workspacesyncevent_workspace_id_conflict_id",
+				Unique:  false,
+				Columns: []*schema.Column{ControlPlaneWorkspaceSyncEventsColumns[3], ControlPlaneWorkspaceSyncEventsColumns[17]},
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		ControlPlaneAccountsTable,
@@ -731,6 +775,7 @@ var (
 		ControlPlaneWalletProjectionsTable,
 		ControlPlaneWalletTransactionProjectionsTable,
 		ControlPlaneWorkspacesTable,
+		ControlPlaneWorkspaceSyncEventsTable,
 	}
 )
 
@@ -821,5 +866,8 @@ func init() {
 	}
 	ControlPlaneWorkspacesTable.Annotation = &entsql.Annotation{
 		Table: "control_plane_workspaces",
+	}
+	ControlPlaneWorkspaceSyncEventsTable.Annotation = &entsql.Annotation{
+		Table: "control_plane_workspace_sync_events",
 	}
 }

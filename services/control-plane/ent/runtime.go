@@ -33,6 +33,7 @@ import (
 	"opl-cloud/services/control-plane/ent/walletprojection"
 	"opl-cloud/services/control-plane/ent/wallettransactionprojection"
 	"opl-cloud/services/control-plane/ent/workspace"
+	"opl-cloud/services/control-plane/ent/workspacesyncevent"
 	"time"
 )
 
@@ -1860,4 +1861,68 @@ func init() {
 	workspaceDescID := workspaceFields[0].Descriptor()
 	// workspace.IDValidator is a validator for the "id" field. It is called by the builders before save.
 	workspace.IDValidator = workspaceDescID.Validators[0].(func(string) error)
+	workspacesynceventFields := schema.WorkspaceSyncEvent{}.Fields()
+	_ = workspacesynceventFields
+	// workspacesynceventDescCreatedAt is the schema descriptor for created_at field.
+	workspacesynceventDescCreatedAt := workspacesynceventFields[1].Descriptor()
+	// workspacesyncevent.DefaultCreatedAt holds the default value on creation for the created_at field.
+	workspacesyncevent.DefaultCreatedAt = workspacesynceventDescCreatedAt.Default.(func() time.Time)
+	// workspacesynceventDescUpdatedAt is the schema descriptor for updated_at field.
+	workspacesynceventDescUpdatedAt := workspacesynceventFields[2].Descriptor()
+	// workspacesyncevent.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	workspacesyncevent.DefaultUpdatedAt = workspacesynceventDescUpdatedAt.Default.(func() time.Time)
+	// workspacesyncevent.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	workspacesyncevent.UpdateDefaultUpdatedAt = workspacesynceventDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// workspacesynceventDescWorkspaceID is the schema descriptor for workspace_id field.
+	workspacesynceventDescWorkspaceID := workspacesynceventFields[3].Descriptor()
+	// workspacesyncevent.WorkspaceIDValidator is a validator for the "workspace_id" field. It is called by the builders before save.
+	workspacesyncevent.WorkspaceIDValidator = workspacesynceventDescWorkspaceID.Validators[0].(func(string) error)
+	// workspacesynceventDescEntityKind is the schema descriptor for entity_kind field.
+	workspacesynceventDescEntityKind := workspacesynceventFields[5].Descriptor()
+	// workspacesyncevent.EntityKindValidator is a validator for the "entity_kind" field. It is called by the builders before save.
+	workspacesyncevent.EntityKindValidator = workspacesynceventDescEntityKind.Validators[0].(func(string) error)
+	// workspacesynceventDescProjectID is the schema descriptor for project_id field.
+	workspacesynceventDescProjectID := workspacesynceventFields[6].Descriptor()
+	// workspacesyncevent.ProjectIDValidator is a validator for the "project_id" field. It is called by the builders before save.
+	workspacesyncevent.ProjectIDValidator = workspacesynceventDescProjectID.Validators[0].(func(string) error)
+	// workspacesynceventDescTaskID is the schema descriptor for task_id field.
+	workspacesynceventDescTaskID := workspacesynceventFields[7].Descriptor()
+	// workspacesyncevent.DefaultTaskID holds the default value on creation for the task_id field.
+	workspacesyncevent.DefaultTaskID = workspacesynceventDescTaskID.Default.(string)
+	// workspacesynceventDescClientID is the schema descriptor for client_id field.
+	workspacesynceventDescClientID := workspacesynceventFields[8].Descriptor()
+	// workspacesyncevent.ClientIDValidator is a validator for the "client_id" field. It is called by the builders before save.
+	workspacesyncevent.ClientIDValidator = workspacesynceventDescClientID.Validators[0].(func(string) error)
+	// workspacesynceventDescOperation is the schema descriptor for operation field.
+	workspacesynceventDescOperation := workspacesynceventFields[11].Descriptor()
+	// workspacesyncevent.OperationValidator is a validator for the "operation" field. It is called by the builders before save.
+	workspacesyncevent.OperationValidator = workspacesynceventDescOperation.Validators[0].(func(string) error)
+	// workspacesynceventDescStatus is the schema descriptor for status field.
+	workspacesynceventDescStatus := workspacesynceventFields[12].Descriptor()
+	// workspacesyncevent.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	workspacesyncevent.StatusValidator = workspacesynceventDescStatus.Validators[0].(func(string) error)
+	// workspacesynceventDescPayloadJSON is the schema descriptor for payload_json field.
+	workspacesynceventDescPayloadJSON := workspacesynceventFields[13].Descriptor()
+	// workspacesyncevent.DefaultPayloadJSON holds the default value on creation for the payload_json field.
+	workspacesyncevent.DefaultPayloadJSON = workspacesynceventDescPayloadJSON.Default.(string)
+	// workspacesynceventDescContentDigest is the schema descriptor for content_digest field.
+	workspacesynceventDescContentDigest := workspacesynceventFields[14].Descriptor()
+	// workspacesyncevent.DefaultContentDigest holds the default value on creation for the content_digest field.
+	workspacesyncevent.DefaultContentDigest = workspacesynceventDescContentDigest.Default.(string)
+	// workspacesynceventDescIdempotencyKey is the schema descriptor for idempotency_key field.
+	workspacesynceventDescIdempotencyKey := workspacesynceventFields[15].Descriptor()
+	// workspacesyncevent.IdempotencyKeyValidator is a validator for the "idempotency_key" field. It is called by the builders before save.
+	workspacesyncevent.IdempotencyKeyValidator = workspacesynceventDescIdempotencyKey.Validators[0].(func(string) error)
+	// workspacesynceventDescRequestHash is the schema descriptor for request_hash field.
+	workspacesynceventDescRequestHash := workspacesynceventFields[16].Descriptor()
+	// workspacesyncevent.RequestHashValidator is a validator for the "request_hash" field. It is called by the builders before save.
+	workspacesyncevent.RequestHashValidator = workspacesynceventDescRequestHash.Validators[0].(func(string) error)
+	// workspacesynceventDescConflictID is the schema descriptor for conflict_id field.
+	workspacesynceventDescConflictID := workspacesynceventFields[17].Descriptor()
+	// workspacesyncevent.DefaultConflictID holds the default value on creation for the conflict_id field.
+	workspacesyncevent.DefaultConflictID = workspacesynceventDescConflictID.Default.(string)
+	// workspacesynceventDescID is the schema descriptor for id field.
+	workspacesynceventDescID := workspacesynceventFields[0].Descriptor()
+	// workspacesyncevent.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	workspacesyncevent.IDValidator = workspacesynceventDescID.Validators[0].(func(string) error)
 }
