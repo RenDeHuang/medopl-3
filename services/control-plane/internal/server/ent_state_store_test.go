@@ -9,6 +9,7 @@ import (
 
 	controlplaneenttest "opl-cloud/services/control-plane/ent/enttest"
 	"opl-cloud/services/control-plane/ent/pricingitem"
+	"opl-cloud/services/control-plane/internal/clients"
 )
 
 func NewTestEntStateStore(t *testing.T, path string) StateStore {
@@ -91,5 +92,45 @@ func TestEntStateStorePersistsWalletTransactionWalletAfter(t *testing.T) {
 		if got := int64(numberField(tx, key, 0)); got != want {
 			t.Fatalf("%s = %d, want %d in %#v", key, got, want, tx)
 		}
+	}
+}
+
+func TestControlPlaneAdminFactsSurviveServerRestart(t *testing.T) {
+	store := NewTestEntStateStore(t, t.TempDir()+"/admin-facts.sqlite")
+	first, err := newControlPlaneAppWithStore(store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	organization, err := first.createOrganization(map[string]any{"name": "Research Lab", "billingAccountId": "acct-alpha"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := first.createMembership(map[string]any{"organizationId": organization["id"], "userId": "usr-admin", "accountId": "acct-alpha", "role": "owner"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := first.rememberRuntimeOperations([]clients.FabricOperation{{ID: "fabric-op-alpha", OperationID: "operation-alpha", WorkspaceID: "ws-alpha", ResourceID: "compute-alpha", ResourceKind: "compute_allocation", Status: "succeeded", RedactedProviderPayload: map[string]any{"costTags": map[string]any{"opl_operation_id": "operation-alpha"}}}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := first.rememberReconciliation(clients.ReconciliationResult{ID: "reconcile-alpha", Status: "mismatch", BlockNewWorkspaces: true, Reason: "provider_cost_gap"}); err != nil {
+		t.Fatal(err)
+	}
+
+	restarted, err := newControlPlaneAppWithStore(store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	state := restarted.managementState(true, nil)
+	if len(state["organizations"].([]any)) != 1 || len(state["memberships"].([]any)) != 1 || len(state["runtimeOperations"].([]any)) != 1 {
+		t.Fatalf("admin facts did not survive restart: %#v", state)
+	}
+	operation := state["runtimeOperations"].([]any)[0].(map[string]any)
+	payload := operation["redactedProviderPayload"].(map[string]any)
+	if payload["costTags"].(map[string]any)["opl_operation_id"] != "operation-alpha" {
+		t.Fatalf("runtime evidence did not survive restart: %#v", operation)
+	}
+	reconciliation := state["billingReconciliation"].(map[string]any)
+	guard := reconciliation["guard"].(map[string]any)
+	if guard["blockNewWorkspaces"] != true {
+		t.Fatalf("reconciliation did not survive restart: %#v", reconciliation)
 	}
 }

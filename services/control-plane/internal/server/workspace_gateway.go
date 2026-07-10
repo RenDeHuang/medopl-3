@@ -79,7 +79,7 @@ func (app *controlPlaneServer) saveWorkspaceProjection(workspace domain.Workspac
 		"currentAttachmentId":        workspace.AttachmentID,
 		"runtimeId":                  workspace.RuntimeID,
 		"runtime":                    map[string]any{"serviceName": workspace.RuntimeServiceName},
-		"evidenceId":                 workspace.EvidenceID,
+		"receiptId":                  workspace.ReceiptID,
 		"access":                     access,
 	}
 	return app.tables.SaveWorkspace(context.Background(), row)

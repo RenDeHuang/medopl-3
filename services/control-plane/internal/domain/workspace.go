@@ -19,5 +19,5 @@ type WorkspaceProjection struct {
 	CredentialStatus    string `json:"credentialStatus,omitempty"`
 	CredentialVersion   string `json:"credentialVersion,omitempty"`
 	CredentialSecretRef string `json:"credentialSecretRef,omitempty"`
-	EvidenceID          string `json:"evidenceId"`
+	ReceiptID           string `json:"receiptId"`
 }

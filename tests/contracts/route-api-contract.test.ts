@@ -67,7 +67,6 @@ test("active route contract excludes future, reserved, prune, and retired route 
     "GET /api/compute-allocations",
     "GET /api/compute-allocations/:id",
     "GET /api/compute-pools",
-    "GET /api/ledger/task-receipts",
     "GET /api/management/state",
     "GET /api/operator/archive",
     "GET /api/operator/summary",

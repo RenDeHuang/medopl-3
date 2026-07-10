@@ -32,17 +32,15 @@ func (app *controlPlaneServer) activeHourlyEstimate(accountID string) float64 {
 }
 
 func (app *controlPlaneServer) reconciliationProjectionLocked() map[string]any {
-	if app.reconcile == nil {
+	row, ok, err := app.tables.BillingReconciliation(context.Background())
+	if err != nil || !ok {
 		return map[string]any{"reports": 0, "guard": map[string]any{"status": "not_required", "blockNewWorkspaces": false, "reason": "billing_reconciliation_not_required"}}
 	}
-	row := cloneMap(app.reconcile)
 	row["reports"] = 1
 	return row
 }
 
 func (app *controlPlaneServer) reconciliationBlocksNewWorkspaces() (map[string]any, bool) {
-	app.mu.Lock()
-	defer app.mu.Unlock()
 	projection := app.reconciliationProjectionLocked()
 	guard, _ := projection["guard"].(map[string]any)
 	if guard == nil {
@@ -53,10 +51,7 @@ func (app *controlPlaneServer) reconciliationBlocksNewWorkspaces() (map[string]a
 }
 
 func (app *controlPlaneServer) rememberReconciliation(result clients.ReconciliationResult) error {
-	app.mu.Lock()
-	defer app.mu.Unlock()
-	app.reconcile = reconciliationResponse(result)
-	return nil
+	return app.tables.SaveBillingReconciliation(context.Background(), reconciliationResponse(result))
 }
 
 func (app *controlPlaneServer) addLedgerLocked(accountID string, entryType string, ids map[string]any) map[string]any {
@@ -251,8 +246,9 @@ func providerCostTags(accountID string, workspaceID string, resourceID string, o
 }
 
 func (app *controlPlaneServer) operationEvidenceForResourceLocked(ids ...string) map[string]any {
-	for index := len(app.runtimeOps) - 1; index >= 0; index-- {
-		operation := app.runtimeOps[index]
+	operations := app.listRuntimeOperations()
+	for index := len(operations) - 1; index >= 0; index-- {
+		operation := operations[index]
 		if mapContainsAnyID(operation, ids...) {
 			payload, _ := operation["redactedProviderPayload"].(map[string]any)
 			return map[string]any{"operationId": operation["operationId"], "resourceId": operation["resourceId"], "costTags": firstNonNil(operation["costTags"], payload["costTags"])}

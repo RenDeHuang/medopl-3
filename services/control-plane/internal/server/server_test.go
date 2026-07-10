@@ -127,7 +127,7 @@ func TestCreateWorkspaceHTTPUsesControlPlaneService(t *testing.T) {
 	if workspace["accountId"] != "acct-alpha" || workspace["ownerId"] != "usr-owner" || workspace["url"] != "https://workspace.medopl.cn/w/ws-from-fabric/" {
 		t.Fatalf("workspace did not come from service boundary: %#v", workspace)
 	}
-	if workspace["computeAllocationId"] != "compute-from-fabric" || workspace["storageId"] != "volume-from-fabric" || workspace["attachmentId"] != "attachment-from-fabric" || workspace["evidenceId"] != "evidence-from-ledger" {
+	if workspace["computeAllocationId"] != "compute-from-fabric" || workspace["storageId"] != "volume-from-fabric" || workspace["attachmentId"] != "attachment-from-fabric" || workspace["receiptId"] != "receipt-from-ledger" {
 		t.Fatalf("workspace missing ledger/fabric evidence: %#v", workspace)
 	}
 	if access, ok := workspace["access"].(map[string]any); !ok || access["tokenStatus"] != "active" {
@@ -524,8 +524,8 @@ func (fakeLedgerClient) ReleaseHold(_ context.Context, input clients.HoldRelease
 	return clients.HoldReleaseResult{ID: "release-" + input.ResourceType + "-" + input.ResourceID, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: input.ResourceType, ResourceID: input.ResourceID, HoldID: input.HoldID, AmountCents: input.AmountCents, Status: "released", Wallet: clients.Wallet{AccountID: input.AccountID, BalanceCents: 8800, FrozenCents: 0, AvailableCents: 8800, Currency: "CNY"}}, nil
 }
 
-func (fakeLedgerClient) RecordEvidence(_ context.Context, input clients.EvidenceInput, _ string) (clients.EvidenceReceipt, error) {
-	return clients.EvidenceReceipt{ID: "evidence-from-ledger", WorkspaceID: input.WorkspaceID}, nil
+func (fakeLedgerClient) RecordReceipt(_ context.Context, input clients.ReceiptInput, _ string) (clients.Receipt, error) {
+	return clients.Receipt{ReceiptID: "receipt-from-ledger", WorkspaceID: input.WorkspaceID}, nil
 }
 
 func (fakeLedgerClient) SettleResource(_ context.Context, input clients.ResourceSettlementInput, _ string) (clients.ResourceSettlementResult, error) {
@@ -1095,8 +1095,8 @@ func TestConsoleStateIncludesResourceLedgerEvidenceChain(t *testing.T) {
 	mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{"id": "compute-replacement", "ownerAccountId": "acct-alpha", "status": "running", "billingStatus": "active", "hourlyPrice": 1.25}))
 	mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{"id": "storage-alpha", "ownerAccountId": "acct-alpha", "status": "available", "billingStatus": "active", "hourlyEstimate": 0.25}))
 	mustStore(t, app.tables.SaveAttachment(context.Background(), map[string]any{"id": "attach-replacement", "ownerAccountId": "acct-alpha"}))
-	app.mu.Lock()
-	app.runtimeOps = []map[string]any{{
+	mustStore(t, app.tables.SaveRuntimeOperation(context.Background(), map[string]any{
+		"id":           "fabric-op-runtime-replacement",
 		"operationId":  "op-runtime-replacement",
 		"resourceKind": "workspace_runtime",
 		"resourceId":   "ws-replacement",
@@ -1110,7 +1110,8 @@ func TestConsoleStateIncludesResourceLedgerEvidenceChain(t *testing.T) {
 				"opl_operation_id": "op-runtime-replacement",
 			},
 		},
-	}}
+	}))
+	app.mu.Lock()
 	computeLedger := app.addLedgerLocked("acct-alpha", "compute_debit", map[string]any{"workspaceId": "ws-replacement", "computeAllocationId": "compute-replacement", "amountCents": -250})
 	storageLedger := app.addLedgerLocked("acct-alpha", "storage_debit", map[string]any{"workspaceId": "ws-replacement", "storageId": "storage-alpha", "amountCents": -125})
 	app.addWalletTxLocked("acct-alpha", "compute_debit", map[string]any{"workspaceId": "ws-replacement", "computeAllocationId": "compute-replacement", "amountCents": -250})
@@ -1160,15 +1161,14 @@ func TestResourceLedgerEvidenceDerivesProviderCostTags(t *testing.T) {
 	mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{"id": "compute-alpha", "ownerAccountId": "acct-alpha"}))
 	mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{"id": "storage-alpha", "ownerAccountId": "acct-alpha"}))
 	mustStore(t, app.tables.SaveAttachment(context.Background(), map[string]any{"id": "attach-alpha", "ownerAccountId": "acct-alpha"}))
-	app.mu.Lock()
-	app.runtimeOps = []map[string]any{{
+	mustStore(t, app.tables.SaveRuntimeOperation(context.Background(), map[string]any{
+		"id":           "fabric-op-runtime-alpha",
 		"operationId":  "op-runtime-alpha",
 		"resourceKind": "workspace_runtime",
 		"resourceId":   "ws-alpha",
 		"workspaceId":  "ws-alpha",
 		"status":       "succeeded",
-	}}
-	app.mu.Unlock()
+	}))
 
 	row := app.state("acct-alpha", nil)["resourceLedgerEvidence"].([]any)[0].(map[string]any)
 	tags, _ := row["costTags"].(map[string]any)
@@ -2381,7 +2381,6 @@ func TestActiveConsoleAPIRoutesReachControlPlane(t *testing.T) {
 		{http.MethodGet, "/api/compute-allocations", ""},
 		{http.MethodGet, "/api/compute-allocations/compute-alpha", ""},
 		{http.MethodGet, "/api/support/tickets", ""},
-		{http.MethodGet, "/api/ledger/task-receipts", ""},
 		{http.MethodPost, "/api/auth/logout", `{}`},
 		{http.MethodPost, "/api/organizations", `{"name":"Lab","billingAccountId":"acct-lab"}`},
 		{http.MethodPost, "/api/organizations/members", `{"organizationId":"org-lab","userId":"usr-owner","role":"member"}`},
