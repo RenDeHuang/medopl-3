@@ -293,12 +293,13 @@ func (s *PostgresStore) RecordReceipt(ctx context.Context, input ReceiptInput) (
 	} else if !ledgerent.IsNotFound(err) {
 		return Receipt{}, err
 	}
-	payload, err := json.Marshal(hashInput)
+	now := s.now()
+	receipt := Receipt{ReceiptInput: hashInput, ReceiptID: postgresID("receipt", now), CreatedAt: now}
+	finalizeReceiptContinuation(&receipt)
+	payload, err := json.Marshal(receipt.ReceiptInput)
 	if err != nil {
 		return Receipt{}, err
 	}
-	now := s.now()
-	receipt := Receipt{ReceiptInput: hashInput, ReceiptID: postgresID("receipt", now), CreatedAt: now}
 	if err := s.client.EvidenceReceipt.Create().
 		SetID(receipt.ReceiptID).
 		SetReceiptType(receipt.Type).
@@ -324,6 +325,14 @@ func (s *PostgresStore) Receipt(ctx context.Context, receiptID string) (Receipt,
 		return Receipt{}, err
 	}
 	return receiptFromEnt(row), nil
+}
+
+func (s *PostgresStore) Continuation(ctx context.Context, receiptID string) (map[string]any, error) {
+	receipt, err := s.Receipt(ctx, receiptID)
+	if err != nil {
+		return nil, err
+	}
+	return continuationFromReceipt(receipt)
 }
 
 func (s *PostgresStore) SettleResource(ctx context.Context, input ResourceSettlementInput) (ResourceSettlementResult, error) {

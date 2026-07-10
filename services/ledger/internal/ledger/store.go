@@ -8,6 +8,7 @@ type Store interface {
 	ReleaseHold(ctx context.Context, input HoldReleaseInput) (HoldReleaseResult, error)
 	RecordReceipt(ctx context.Context, input ReceiptInput) (Receipt, error)
 	Receipt(ctx context.Context, receiptID string) (Receipt, error)
+	Continuation(ctx context.Context, receiptID string) (map[string]any, error)
 	SettleResource(ctx context.Context, input ResourceSettlementInput) (ResourceSettlementResult, error)
 	RecordReconciliation(ctx context.Context, input ReconciliationInput) (ReconciliationResult, error)
 	Wallet(ctx context.Context, accountID string) (Wallet, error)

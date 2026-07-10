@@ -11,6 +11,7 @@ var ErrInsufficientBalance = errors.New("insufficient available balance")
 var ErrInsufficientFrozen = errors.New("insufficient frozen balance")
 var ErrInvalidHoldInput = errors.New("hold resource identity required")
 var ErrReceiptNotFound = errors.New("receipt not found")
+var ErrContinuationNotFound = errors.New("continuation not found")
 var ErrInvalidReceiptInput = errors.New("invalid receipt input")
 
 type ManualTopUpInput struct {
@@ -164,6 +165,45 @@ type Receipt struct {
 	ReceiptID string    `json:"receiptId"`
 	CreatedAt time.Time `json:"createdAt"`
 	Replayed  bool      `json:"replayed"`
+}
+
+func finalizeReceiptContinuation(receipt *Receipt) {
+	if receipt.ContinuationID == "" && len(receipt.Continuation) == 0 {
+		return
+	}
+	continuation := make(map[string]any, len(receipt.Continuation)+1)
+	for key, value := range receipt.Continuation {
+		continuation[key] = value
+	}
+	continuationID, _ := continuation["continuationId"].(string)
+	if continuationID == "" {
+		continuationID = receipt.ContinuationID
+	}
+	if continuationID == "" {
+		continuationID = "continuation-" + receipt.ReceiptID
+	}
+	receipt.ContinuationID = continuationID
+	continuation["continuationId"] = continuationID
+	receipt.Continuation = continuation
+}
+
+func continuationFromReceipt(receipt Receipt) (map[string]any, error) {
+	continuation := make(map[string]any, len(receipt.Continuation)+4)
+	for key, value := range receipt.Continuation {
+		continuation[key] = value
+	}
+	continuationID, _ := continuation["continuationId"].(string)
+	if continuationID == "" {
+		continuationID = receipt.ContinuationID
+	}
+	if continuationID == "" {
+		return nil, ErrContinuationNotFound
+	}
+	continuation["continuationId"] = continuationID
+	continuation["receiptId"] = receipt.ReceiptID
+	continuation["projectId"] = receipt.ProjectID
+	continuation["taskId"] = receipt.TaskID
+	return continuation, nil
 }
 
 func validateReceiptInput(input ReceiptInput) error {
