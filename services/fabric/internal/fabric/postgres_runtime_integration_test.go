@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
-	"fmt"
 	"net/url"
 	"os"
 	"testing"
@@ -29,11 +28,30 @@ func TestPostgresRuntimeClaimAcrossServiceInstances(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open postgres admin: %v", err)
 	}
-	defer admin.Close()
+	var firstStore, secondStore *PostgresOperationStore
+	t.Cleanup(func() {
+		if secondStore != nil {
+			if err := secondStore.client.Close(); err != nil {
+				t.Errorf("close second operation store: %v", err)
+			}
+		}
+		if firstStore != nil {
+			if err := firstStore.client.Close(); err != nil {
+				t.Errorf("close first operation store: %v", err)
+			}
+		}
+		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cleanupCancel()
+		if _, err := admin.ExecContext(cleanupCtx, "DROP SCHEMA IF EXISTS "+schema+" CASCADE"); err != nil {
+			t.Errorf("drop test schema: %v", err)
+		}
+		if err := admin.Close(); err != nil {
+			t.Errorf("close postgres admin: %v", err)
+		}
+	})
 	if _, err := admin.ExecContext(ctx, "CREATE SCHEMA "+schema); err != nil {
 		t.Fatalf("create test schema: %v", err)
 	}
-	defer admin.ExecContext(context.Background(), "DROP SCHEMA IF EXISTS "+schema+" CASCADE")
 
 	testURL, err := url.Parse(databaseURL)
 	if err != nil {
@@ -45,16 +63,14 @@ func TestPostgresRuntimeClaimAcrossServiceInstances(t *testing.T) {
 	query.Set("statement_timeout", "10000")
 	testURL.RawQuery = query.Encode()
 
-	firstStore, err := NewPostgresOperationStore(testURL.String())
+	firstStore, err = NewPostgresOperationStore(testURL.String())
 	if err != nil {
 		t.Fatalf("open first operation store: %v", err)
 	}
-	defer firstStore.client.Close()
-	secondStore, err := NewPostgresOperationStore(testURL.String())
+	secondStore, err = NewPostgresOperationStore(testURL.String())
 	if err != nil {
 		t.Fatalf("open second operation store: %v", err)
 	}
-	defer secondStore.client.Close()
 
 	provider := &blockingRuntimeProvider{entered: make(chan struct{}), release: make(chan struct{})}
 	firstService := runtimeTestService(provider, firstStore)
@@ -83,6 +99,6 @@ func TestPostgresRuntimeClaimAcrossServiceInstances(t *testing.T) {
 
 	replayed, err := NewServiceWithOperationStore(provider, secondStore).CreateWorkspaceRuntime(ctx, input)
 	if err != nil || replayed.ID != "runtime-alpha" || provider.calls.Load() != 1 {
-		t.Fatalf("postgres restart replay = %s err=%v providerCalls=%d", fmt.Sprintf("%#v", replayed), err, provider.calls.Load())
+		t.Fatalf("postgres restart replay = %#v err=%v providerCalls=%d", replayed, err, provider.calls.Load())
 	}
 }
