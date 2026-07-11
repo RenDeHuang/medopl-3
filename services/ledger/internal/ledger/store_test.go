@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 )
 
 func TestManualTopUpReplayReturnsExistingReceipt(t *testing.T) {
@@ -400,5 +401,40 @@ func TestWalletTransactionsCarryAfterSnapshot(t *testing.T) {
 	}
 	if settlement.Wallet.BalanceCents != 3800 || settlement.Wallet.FrozenCents != 800 || settlement.Wallet.AvailableCents != 3000 || settlement.Wallet.TotalSpentCents != 1200 {
 		t.Fatalf("settlement wallet missing after snapshot: %#v", settlement.Wallet)
+	}
+}
+
+func TestListReceiptsFiltersAndPaginatesNewestFirst(t *testing.T) {
+	store := NewMemoryStore()
+	createdAt := time.Date(2026, 7, 11, 10, 0, 0, 0, time.UTC)
+	store.receipts = map[string]Receipt{
+		"receipt-a":     {ReceiptInput: ReceiptInput{Type: "execution.receipt.v1", Status: "completed", OrganizationID: "org-alpha", WorkspaceID: "ws-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha"}, ReceiptID: "receipt-a", CreatedAt: createdAt.Add(-time.Minute)},
+		"receipt-b":     {ReceiptInput: ReceiptInput{Type: "execution.receipt.v1", Status: "completed", OrganizationID: "org-alpha", WorkspaceID: "ws-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha"}, ReceiptID: "receipt-b", CreatedAt: createdAt},
+		"receipt-c":     {ReceiptInput: ReceiptInput{Type: "review.result.v1", Status: "review_blocked", OrganizationID: "org-alpha", WorkspaceID: "ws-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha"}, ReceiptID: "receipt-c", CreatedAt: createdAt},
+		"receipt-other": {ReceiptInput: ReceiptInput{Type: "execution.receipt.v1", Status: "completed", OrganizationID: "org-other", WorkspaceID: "ws-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha"}, ReceiptID: "receipt-other", CreatedAt: createdAt.Add(time.Minute)},
+	}
+
+	first, err := store.ListReceipts(context.Background(), ReceiptQuery{OrganizationID: "org-alpha", WorkspaceID: "ws-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha", Type: "execution.receipt.v1", Status: "completed", Limit: 1})
+	if err != nil {
+		t.Fatalf("first page: %v", err)
+	}
+	if len(first.Receipts) != 1 || first.Receipts[0].ReceiptID != "receipt-b" || !first.HasMore || first.NextCursor == "" {
+		t.Fatalf("first page = %#v", first)
+	}
+	second, err := store.ListReceipts(context.Background(), ReceiptQuery{OrganizationID: "org-alpha", WorkspaceID: "ws-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha", Type: "execution.receipt.v1", Status: "completed", Limit: 1, Cursor: first.NextCursor})
+	if err != nil {
+		t.Fatalf("second page: %v", err)
+	}
+	if len(second.Receipts) != 1 || second.Receipts[0].ReceiptID != "receipt-a" || second.HasMore || second.NextCursor != "" {
+		t.Fatalf("second page = %#v", second)
+	}
+}
+
+func TestListReceiptsRejectsInvalidBoundsAndCursor(t *testing.T) {
+	store := NewMemoryStore()
+	for _, query := range []ReceiptQuery{{Limit: -1}, {Limit: 101}, {Cursor: "not-a-cursor"}} {
+		if _, err := store.ListReceipts(context.Background(), query); !errors.Is(err, ErrInvalidReceiptQuery) {
+			t.Fatalf("query %#v error = %v, want ErrInvalidReceiptQuery", query, err)
+		}
 	}
 }

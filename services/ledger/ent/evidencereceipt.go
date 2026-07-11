@@ -21,8 +21,16 @@ type EvidenceReceipt struct {
 	ReceiptType string `json:"receipt_type,omitempty"`
 	// Status holds the value of the "status" field.
 	Status string `json:"status,omitempty"`
+	// OrganizationID holds the value of the "organization_id" field.
+	OrganizationID string `json:"organization_id,omitempty"`
 	// WorkspaceID holds the value of the "workspace_id" field.
 	WorkspaceID string `json:"workspace_id,omitempty"`
+	// ProjectID holds the value of the "project_id" field.
+	ProjectID string `json:"project_id,omitempty"`
+	// TaskID holds the value of the "task_id" field.
+	TaskID string `json:"task_id,omitempty"`
+	// JobID holds the value of the "job_id" field.
+	JobID string `json:"job_id,omitempty"`
 	// PayloadJSON holds the value of the "payload_json" field.
 	PayloadJSON string `json:"payload_json,omitempty"`
 	// SupersedesReceiptID holds the value of the "supersedes_receipt_id" field.
@@ -47,7 +55,7 @@ func (*EvidenceReceipt) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case evidencereceipt.FieldID, evidencereceipt.FieldReceiptType, evidencereceipt.FieldStatus, evidencereceipt.FieldWorkspaceID, evidencereceipt.FieldPayloadJSON, evidencereceipt.FieldSupersedesReceiptID, evidencereceipt.FieldProviderRequestID, evidencereceipt.FieldRedactedURL, evidencereceipt.FieldTokenVersion, evidencereceipt.FieldIdempotencyKey, evidencereceipt.FieldRequestHash:
+		case evidencereceipt.FieldID, evidencereceipt.FieldReceiptType, evidencereceipt.FieldStatus, evidencereceipt.FieldOrganizationID, evidencereceipt.FieldWorkspaceID, evidencereceipt.FieldProjectID, evidencereceipt.FieldTaskID, evidencereceipt.FieldJobID, evidencereceipt.FieldPayloadJSON, evidencereceipt.FieldSupersedesReceiptID, evidencereceipt.FieldProviderRequestID, evidencereceipt.FieldRedactedURL, evidencereceipt.FieldTokenVersion, evidencereceipt.FieldIdempotencyKey, evidencereceipt.FieldRequestHash:
 			values[i] = new(sql.NullString)
 		case evidencereceipt.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -84,11 +92,35 @@ func (er *EvidenceReceipt) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				er.Status = value.String
 			}
+		case evidencereceipt.FieldOrganizationID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field organization_id", values[i])
+			} else if value.Valid {
+				er.OrganizationID = value.String
+			}
 		case evidencereceipt.FieldWorkspaceID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field workspace_id", values[i])
 			} else if value.Valid {
 				er.WorkspaceID = value.String
+			}
+		case evidencereceipt.FieldProjectID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field project_id", values[i])
+			} else if value.Valid {
+				er.ProjectID = value.String
+			}
+		case evidencereceipt.FieldTaskID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field task_id", values[i])
+			} else if value.Valid {
+				er.TaskID = value.String
+			}
+		case evidencereceipt.FieldJobID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field job_id", values[i])
+			} else if value.Valid {
+				er.JobID = value.String
 			}
 		case evidencereceipt.FieldPayloadJSON:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -180,8 +212,20 @@ func (er *EvidenceReceipt) String() string {
 	builder.WriteString("status=")
 	builder.WriteString(er.Status)
 	builder.WriteString(", ")
+	builder.WriteString("organization_id=")
+	builder.WriteString(er.OrganizationID)
+	builder.WriteString(", ")
 	builder.WriteString("workspace_id=")
 	builder.WriteString(er.WorkspaceID)
+	builder.WriteString(", ")
+	builder.WriteString("project_id=")
+	builder.WriteString(er.ProjectID)
+	builder.WriteString(", ")
+	builder.WriteString("task_id=")
+	builder.WriteString(er.TaskID)
+	builder.WriteString(", ")
+	builder.WriteString("job_id=")
+	builder.WriteString(er.JobID)
 	builder.WriteString(", ")
 	builder.WriteString("payload_json=")
 	builder.WriteString(er.PayloadJSON)

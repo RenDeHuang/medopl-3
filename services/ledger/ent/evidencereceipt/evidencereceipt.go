@@ -17,8 +17,16 @@ const (
 	FieldReceiptType = "receipt_type"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldOrganizationID holds the string denoting the organization_id field in the database.
+	FieldOrganizationID = "organization_id"
 	// FieldWorkspaceID holds the string denoting the workspace_id field in the database.
 	FieldWorkspaceID = "workspace_id"
+	// FieldProjectID holds the string denoting the project_id field in the database.
+	FieldProjectID = "project_id"
+	// FieldTaskID holds the string denoting the task_id field in the database.
+	FieldTaskID = "task_id"
+	// FieldJobID holds the string denoting the job_id field in the database.
+	FieldJobID = "job_id"
 	// FieldPayloadJSON holds the string denoting the payload_json field in the database.
 	FieldPayloadJSON = "payload_json"
 	// FieldSupersedesReceiptID holds the string denoting the supersedes_receipt_id field in the database.
@@ -44,7 +52,11 @@ var Columns = []string{
 	FieldID,
 	FieldReceiptType,
 	FieldStatus,
+	FieldOrganizationID,
 	FieldWorkspaceID,
+	FieldProjectID,
+	FieldTaskID,
+	FieldJobID,
 	FieldPayloadJSON,
 	FieldSupersedesReceiptID,
 	FieldProviderRequestID,
@@ -70,8 +82,16 @@ var (
 	DefaultReceiptType string
 	// DefaultStatus holds the default value on creation for the "status" field.
 	DefaultStatus string
+	// DefaultOrganizationID holds the default value on creation for the "organization_id" field.
+	DefaultOrganizationID string
 	// DefaultWorkspaceID holds the default value on creation for the "workspace_id" field.
 	DefaultWorkspaceID string
+	// DefaultProjectID holds the default value on creation for the "project_id" field.
+	DefaultProjectID string
+	// DefaultTaskID holds the default value on creation for the "task_id" field.
+	DefaultTaskID string
+	// DefaultJobID holds the default value on creation for the "job_id" field.
+	DefaultJobID string
 	// DefaultPayloadJSON holds the default value on creation for the "payload_json" field.
 	DefaultPayloadJSON string
 	// DefaultSupersedesReceiptID holds the default value on creation for the "supersedes_receipt_id" field.
@@ -110,9 +130,29 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
 }
 
+// ByOrganizationID orders the results by the organization_id field.
+func ByOrganizationID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldOrganizationID, opts...).ToFunc()
+}
+
 // ByWorkspaceID orders the results by the workspace_id field.
 func ByWorkspaceID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldWorkspaceID, opts...).ToFunc()
+}
+
+// ByProjectID orders the results by the project_id field.
+func ByProjectID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldProjectID, opts...).ToFunc()
+}
+
+// ByTaskID orders the results by the task_id field.
+func ByTaskID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldTaskID, opts...).ToFunc()
+}
+
+// ByJobID orders the results by the job_id field.
+func ByJobID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldJobID, opts...).ToFunc()
 }
 
 // ByPayloadJSON orders the results by the payload_json field.

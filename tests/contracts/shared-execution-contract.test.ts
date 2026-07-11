@@ -44,6 +44,12 @@ test("Ledger general receipt uses the shared execution identity and states", asy
   assert.deepEqual(ledger.generalReceiptV1.identityFields, ["organizationId", "workspaceId", ...shared.identity.canonicalIdFields]);
   assert.deepEqual(ledger.generalReceiptV1.evidenceChain, ["request", "plan", "approval", "execution", "environment", "inputRefs", "outputRefs", "reviewerChecks", "cost", "receipt", "continuation"]);
   assert.equal(ledger.generalReceiptV1.writeProtocol, "append_first_with_idempotency");
+  assert.deepEqual(ledger.generalReceiptV1.query, {
+    endpoint: "GET /ledger/receipts",
+    exactFilters: ["organizationId", "workspaceId", "projectId", "taskId", "jobId", "type", "status"],
+    order: ["createdAt desc", "receiptId desc"],
+    pagination: { cursor: "opaque_createdAt_receiptId", defaultLimit: 50, maxLimit: 100 }
+  });
   assert.ok(ledger.generalReceiptV1.forbiddenContent.includes("rawCredential"));
   assert.ok(ledger.receiptTypes.includes("execution.receipt.v1"));
 });

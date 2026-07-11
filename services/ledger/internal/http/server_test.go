@@ -3,9 +3,11 @@ package http
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -170,6 +172,63 @@ func TestContinuationHTTP(t *testing.T) {
 	}
 	if body["continuationId"] != "continuation-alpha" || body["receiptId"] != receiptBody["receiptId"] || body["projectId"] != "project-alpha" || body["taskId"] != "task-alpha" {
 		t.Fatalf("unexpected continuation: %#v", body)
+	}
+}
+
+func TestReceiptListHTTPIsAuthenticatedFilteredAndPaginated(t *testing.T) {
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	for i, body := range []string{
+		`{"type":"execution.receipt.v1","status":"completed","surface":"workspace","organizationId":"org-alpha","workspaceId":"ws-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha"}`,
+		`{"type":"execution.receipt.v1","status":"completed","surface":"workspace","organizationId":"org-alpha","workspaceId":"ws-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha"}`,
+		`{"type":"execution.receipt.v1","status":"failed","surface":"workspace","organizationId":"org-other","workspaceId":"ws-alpha"}`,
+	} {
+		req := testRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(body))
+		req.Header.Set("Idempotency-Key", fmt.Sprintf("list-receipt-%d", i))
+		rec := httptest.NewRecorder()
+		server.ServeHTTP(rec, req)
+		if rec.Code != http.StatusCreated {
+			t.Fatalf("create %d status = %d: %s", i, rec.Code, rec.Body.String())
+		}
+	}
+
+	path := "/ledger/receipts?organizationId=org-alpha&workspaceId=ws-alpha&projectId=project-alpha&taskId=task-alpha&jobId=job-alpha&type=execution.receipt.v1&status=completed&limit=1"
+	firstRec := httptest.NewRecorder()
+	server.ServeHTTP(firstRec, testRequest(http.MethodGet, path, nil))
+	if firstRec.Code != http.StatusOK {
+		t.Fatalf("first status = %d: %s", firstRec.Code, firstRec.Body.String())
+	}
+	var first ledger.ReceiptPage
+	if err := json.NewDecoder(firstRec.Body).Decode(&first); err != nil {
+		t.Fatalf("decode first page: %v", err)
+	}
+	if len(first.Receipts) != 1 || !first.HasMore || first.NextCursor == "" {
+		t.Fatalf("first page = %#v", first)
+	}
+	secondRec := httptest.NewRecorder()
+	server.ServeHTTP(secondRec, testRequest(http.MethodGet, path+"&cursor="+url.QueryEscape(first.NextCursor), nil))
+	var second ledger.ReceiptPage
+	if err := json.NewDecoder(secondRec.Body).Decode(&second); err != nil {
+		t.Fatalf("decode second page: %v", err)
+	}
+	if secondRec.Code != http.StatusOK || len(second.Receipts) != 1 || second.HasMore || second.Receipts[0].ReceiptID == first.Receipts[0].ReceiptID {
+		t.Fatalf("second status/page = %d %#v", secondRec.Code, second)
+	}
+
+	anonymous := httptest.NewRecorder()
+	server.ServeHTTP(anonymous, httptest.NewRequest(http.MethodGet, "/ledger/receipts", nil))
+	if anonymous.Code != http.StatusUnauthorized {
+		t.Fatalf("anonymous status = %d", anonymous.Code)
+	}
+}
+
+func TestReceiptListHTTPRejectsInvalidPagination(t *testing.T) {
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	for _, path := range []string{"/ledger/receipts?limit=0", "/ledger/receipts?limit=101", "/ledger/receipts?cursor=invalid"} {
+		rec := httptest.NewRecorder()
+		server.ServeHTTP(rec, testRequest(http.MethodGet, path, nil))
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("%s status = %d, want 400: %s", path, rec.Code, rec.Body.String())
+		}
 	}
 }
 

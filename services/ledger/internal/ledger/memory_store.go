@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 )
@@ -301,6 +302,44 @@ func (s *MemoryStore) Receipt(_ context.Context, receiptID string) (Receipt, err
 		return Receipt{}, ErrReceiptNotFound
 	}
 	return receipt, nil
+}
+
+func (s *MemoryStore) ListReceipts(_ context.Context, query ReceiptQuery) (ReceiptPage, error) {
+	query, cursor, err := normalizeReceiptQuery(query)
+	if err != nil {
+		return ReceiptPage{}, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	receipts := make([]Receipt, 0, query.Limit+1)
+	for _, receipt := range s.receipts {
+		if (query.OrganizationID != "" && receipt.OrganizationID != query.OrganizationID) ||
+			(query.WorkspaceID != "" && receipt.WorkspaceID != query.WorkspaceID) ||
+			(query.ProjectID != "" && receipt.ProjectID != query.ProjectID) ||
+			(query.TaskID != "" && receipt.TaskID != query.TaskID) ||
+			(query.JobID != "" && receipt.JobID != query.JobID) ||
+			(query.Type != "" && receipt.Type != query.Type) ||
+			(query.Status != "" && receipt.Status != query.Status) ||
+			(!cursor.CreatedAt.IsZero() && (receipt.CreatedAt.After(cursor.CreatedAt) || (receipt.CreatedAt.Equal(cursor.CreatedAt) && receipt.ReceiptID >= cursor.ReceiptID))) {
+			continue
+		}
+		receipts = append(receipts, receipt)
+	}
+	sort.Slice(receipts, func(i, j int) bool {
+		if receipts[i].CreatedAt.Equal(receipts[j].CreatedAt) {
+			return receipts[i].ReceiptID > receipts[j].ReceiptID
+		}
+		return receipts[i].CreatedAt.After(receipts[j].CreatedAt)
+	})
+	hasMore := len(receipts) > query.Limit
+	if hasMore {
+		receipts = receipts[:query.Limit]
+	}
+	page := ReceiptPage{Receipts: receipts, HasMore: hasMore}
+	if hasMore {
+		page.NextCursor = encodeReceiptCursor(receipts[len(receipts)-1])
+	}
+	return page, nil
 }
 
 func (s *MemoryStore) Continuation(ctx context.Context, receiptID string) (map[string]any, error) {

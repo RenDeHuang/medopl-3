@@ -13,7 +13,11 @@ var (
 		{Name: "id", Type: field.TypeString, Unique: true},
 		{Name: "receipt_type", Type: field.TypeString, Default: ""},
 		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "organization_id", Type: field.TypeString, Default: ""},
 		{Name: "workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "project_id", Type: field.TypeString, Default: ""},
+		{Name: "task_id", Type: field.TypeString, Default: ""},
+		{Name: "job_id", Type: field.TypeString, Default: ""},
 		{Name: "payload_json", Type: field.TypeString, Default: "{}"},
 		{Name: "supersedes_receipt_id", Type: field.TypeString, Default: ""},
 		{Name: "provider_request_id", Type: field.TypeString, Default: ""},
@@ -28,6 +32,43 @@ var (
 		Name:       "evidence_receipts",
 		Columns:    EvidenceReceiptsColumns,
 		PrimaryKey: []*schema.Column{EvidenceReceiptsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "evidencereceipt_organization_id_created_at_id",
+				Unique:  false,
+				Columns: []*schema.Column{EvidenceReceiptsColumns[3], EvidenceReceiptsColumns[15], EvidenceReceiptsColumns[0]},
+			},
+			{
+				Name:    "evidencereceipt_workspace_id_created_at_id",
+				Unique:  false,
+				Columns: []*schema.Column{EvidenceReceiptsColumns[4], EvidenceReceiptsColumns[15], EvidenceReceiptsColumns[0]},
+			},
+			{
+				Name:    "evidencereceipt_project_id_created_at_id",
+				Unique:  false,
+				Columns: []*schema.Column{EvidenceReceiptsColumns[5], EvidenceReceiptsColumns[15], EvidenceReceiptsColumns[0]},
+			},
+			{
+				Name:    "evidencereceipt_task_id_created_at_id",
+				Unique:  false,
+				Columns: []*schema.Column{EvidenceReceiptsColumns[6], EvidenceReceiptsColumns[15], EvidenceReceiptsColumns[0]},
+			},
+			{
+				Name:    "evidencereceipt_job_id_created_at_id",
+				Unique:  false,
+				Columns: []*schema.Column{EvidenceReceiptsColumns[7], EvidenceReceiptsColumns[15], EvidenceReceiptsColumns[0]},
+			},
+			{
+				Name:    "evidencereceipt_receipt_type_created_at_id",
+				Unique:  false,
+				Columns: []*schema.Column{EvidenceReceiptsColumns[1], EvidenceReceiptsColumns[15], EvidenceReceiptsColumns[0]},
+			},
+			{
+				Name:    "evidencereceipt_status_created_at_id",
+				Unique:  false,
+				Columns: []*schema.Column{EvidenceReceiptsColumns[2], EvidenceReceiptsColumns[15], EvidenceReceiptsColumns[0]},
+			},
+		},
 	}
 	// HoldsColumns holds the columns for the "holds" table.
 	HoldsColumns = []*schema.Column{

@@ -304,7 +304,11 @@ func (s *PostgresStore) RecordReceipt(ctx context.Context, input ReceiptInput) (
 		SetID(receipt.ReceiptID).
 		SetReceiptType(receipt.Type).
 		SetStatus(receipt.Status).
+		SetOrganizationID(receipt.OrganizationID).
 		SetWorkspaceID(receipt.WorkspaceID).
+		SetProjectID(receipt.ProjectID).
+		SetTaskID(receipt.TaskID).
+		SetJobID(receipt.JobID).
 		SetPayloadJSON(string(payload)).
 		SetSupersedesReceiptID(receipt.SupersedesReceiptID).
 		SetIdempotencyKey(input.IdempotencyKey).
@@ -314,6 +318,58 @@ func (s *PostgresStore) RecordReceipt(ctx context.Context, input ReceiptInput) (
 		return Receipt{}, err
 	}
 	return receipt, nil
+}
+
+func (s *PostgresStore) ListReceipts(ctx context.Context, query ReceiptQuery) (ReceiptPage, error) {
+	query, cursor, err := normalizeReceiptQuery(query)
+	if err != nil {
+		return ReceiptPage{}, err
+	}
+	q := s.client.EvidenceReceipt.Query()
+	if query.OrganizationID != "" {
+		q = q.Where(evidencereceipt.OrganizationID(query.OrganizationID))
+	}
+	if query.WorkspaceID != "" {
+		q = q.Where(evidencereceipt.WorkspaceID(query.WorkspaceID))
+	}
+	if query.ProjectID != "" {
+		q = q.Where(evidencereceipt.ProjectID(query.ProjectID))
+	}
+	if query.TaskID != "" {
+		q = q.Where(evidencereceipt.TaskID(query.TaskID))
+	}
+	if query.JobID != "" {
+		q = q.Where(evidencereceipt.JobID(query.JobID))
+	}
+	if query.Type != "" {
+		q = q.Where(evidencereceipt.ReceiptType(query.Type))
+	}
+	if query.Status != "" {
+		q = q.Where(evidencereceipt.Status(query.Status))
+	}
+	if !cursor.CreatedAt.IsZero() {
+		q = q.Where(evidencereceipt.Or(
+			evidencereceipt.CreatedAtLT(cursor.CreatedAt),
+			evidencereceipt.And(evidencereceipt.CreatedAtEQ(cursor.CreatedAt), evidencereceipt.IDLT(cursor.ReceiptID)),
+		))
+	}
+	rows, err := q.Order(ledgerent.Desc(evidencereceipt.FieldCreatedAt, evidencereceipt.FieldID)).Limit(query.Limit + 1).All(ctx)
+	if err != nil {
+		return ReceiptPage{}, err
+	}
+	hasMore := len(rows) > query.Limit
+	if hasMore {
+		rows = rows[:query.Limit]
+	}
+	receipts := make([]Receipt, 0, len(rows))
+	for _, row := range rows {
+		receipts = append(receipts, receiptFromEnt(row))
+	}
+	page := ReceiptPage{Receipts: receipts, HasMore: hasMore}
+	if hasMore {
+		page.NextCursor = encodeReceiptCursor(receipts[len(receipts)-1])
+	}
+	return page, nil
 }
 
 func (s *PostgresStore) Receipt(ctx context.Context, receiptID string) (Receipt, error) {
@@ -717,7 +773,11 @@ func receiptFromEnt(row *ledgerent.EvidenceReceipt) Receipt {
 	_ = json.Unmarshal([]byte(row.PayloadJSON), &input)
 	input.Type = row.ReceiptType
 	input.Status = row.Status
+	input.OrganizationID = row.OrganizationID
 	input.WorkspaceID = row.WorkspaceID
+	input.ProjectID = row.ProjectID
+	input.TaskID = row.TaskID
+	input.JobID = row.JobID
 	input.SupersedesReceiptID = row.SupersedesReceiptID
 	return Receipt{ReceiptInput: input, ReceiptID: row.ID, CreatedAt: row.CreatedAt}
 }

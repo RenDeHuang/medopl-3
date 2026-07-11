@@ -7,6 +7,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"opl-cloud/services/ledger/internal/ledger"
@@ -127,6 +128,37 @@ func NewServer(store ledger.Store, token string) http.Handler {
 			return
 		}
 		writeJSON(w, http.StatusCreated, result)
+	})
+	mux.HandleFunc("GET /ledger/receipts", func(w http.ResponseWriter, r *http.Request) {
+		values := r.URL.Query()
+		query := ledger.ReceiptQuery{
+			OrganizationID: values.Get("organizationId"),
+			WorkspaceID:    values.Get("workspaceId"),
+			ProjectID:      values.Get("projectId"),
+			TaskID:         values.Get("taskId"),
+			JobID:          values.Get("jobId"),
+			Type:           values.Get("type"),
+			Status:         values.Get("status"),
+			Cursor:         values.Get("cursor"),
+		}
+		if rawLimit := values.Get("limit"); rawLimit != "" {
+			limit, err := strconv.Atoi(rawLimit)
+			if err != nil || limit < 1 || limit > ledger.MaxReceiptPageSize {
+				writeError(w, http.StatusBadRequest, ledger.ErrInvalidReceiptQuery.Error())
+				return
+			}
+			query.Limit = limit
+		}
+		result, err := store.ListReceipts(r.Context(), query)
+		if errors.Is(err, ledger.ErrInvalidReceiptQuery) {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "receipt list failed")
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
 	})
 	mux.HandleFunc("GET /ledger/receipts/{id}", func(w http.ResponseWriter, r *http.Request) {
 		result, err := store.Receipt(r.Context(), r.PathValue("id"))

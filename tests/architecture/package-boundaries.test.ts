@@ -111,6 +111,7 @@ test("target service boundaries assign persistence, cloud SDKs, and UI responsib
   assert.equal(boundary.services.fabric.cloudSdkOwner, true);
   assert.equal(boundary.services.controlPlane.calls.ledger, "http");
   assert.equal(boundary.services.controlPlane.calls.fabric, "http");
+  assert.ok(boundary.services.ledger.readApis.includes("receiptQuery"));
   assert.equal(boundary.migration.compatibilityLayer, "forbidden");
   assert.ok(boundary.forbiddenRuntimeMarkers.consoleUi.includes("pg"));
   assert.ok(boundary.forbiddenRuntimeMarkers.controlPlane.includes("tencentcloud"));

@@ -2,7 +2,9 @@ package ledger
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -15,6 +17,7 @@ var ErrInvalidHoldInput = errors.New("hold resource identity required")
 var ErrReceiptNotFound = errors.New("receipt not found")
 var ErrContinuationNotFound = errors.New("continuation not found")
 var ErrInvalidReceiptInput = errors.New("invalid receipt input")
+var ErrInvalidReceiptQuery = errors.New("invalid receipt query")
 var ErrArtifactNotFound = errors.New("artifact not found")
 var ErrInvalidArtifactInput = errors.New("invalid artifact input")
 var ErrReviewNotFound = errors.New("review not found")
@@ -174,6 +177,60 @@ type Receipt struct {
 	ReceiptID string    `json:"receiptId"`
 	CreatedAt time.Time `json:"createdAt"`
 	Replayed  bool      `json:"replayed"`
+}
+
+const (
+	DefaultReceiptPageSize = 50
+	MaxReceiptPageSize     = 100
+)
+
+type ReceiptQuery struct {
+	OrganizationID string
+	WorkspaceID    string
+	ProjectID      string
+	TaskID         string
+	JobID          string
+	Type           string
+	Status         string
+	Cursor         string
+	Limit          int
+}
+
+type ReceiptPage struct {
+	Receipts   []Receipt `json:"receipts"`
+	NextCursor string    `json:"nextCursor"`
+	HasMore    bool      `json:"hasMore"`
+}
+
+type receiptCursor struct {
+	CreatedAt time.Time `json:"createdAt"`
+	ReceiptID string    `json:"receiptId"`
+}
+
+func normalizeReceiptQuery(query ReceiptQuery) (ReceiptQuery, receiptCursor, error) {
+	if query.Limit == 0 {
+		query.Limit = DefaultReceiptPageSize
+	}
+	if query.Limit < 1 || query.Limit > MaxReceiptPageSize {
+		return ReceiptQuery{}, receiptCursor{}, ErrInvalidReceiptQuery
+	}
+	if query.Cursor == "" {
+		return query, receiptCursor{}, nil
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(query.Cursor)
+	if err != nil {
+		return ReceiptQuery{}, receiptCursor{}, ErrInvalidReceiptQuery
+	}
+	var cursor receiptCursor
+	if err := json.Unmarshal(payload, &cursor); err != nil || cursor.CreatedAt.IsZero() || cursor.ReceiptID == "" {
+		return ReceiptQuery{}, receiptCursor{}, ErrInvalidReceiptQuery
+	}
+	return query, cursor, nil
+}
+
+func encodeReceiptCursor(receipt Receipt) string {
+	payload, _ := json.Marshal(receiptCursor{CreatedAt: receipt.CreatedAt, ReceiptID: receipt.ReceiptID})
+	return base64.RawURLEncoding.EncodeToString(payload)
 }
 
 type ArtifactInput struct {

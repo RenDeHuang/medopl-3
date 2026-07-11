@@ -74,9 +74,29 @@ func Status(v string) predicate.EvidenceReceipt {
 	return predicate.EvidenceReceipt(sql.FieldEQ(FieldStatus, v))
 }
 
+// OrganizationID applies equality check predicate on the "organization_id" field. It's identical to OrganizationIDEQ.
+func OrganizationID(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldEQ(FieldOrganizationID, v))
+}
+
 // WorkspaceID applies equality check predicate on the "workspace_id" field. It's identical to WorkspaceIDEQ.
 func WorkspaceID(v string) predicate.EvidenceReceipt {
 	return predicate.EvidenceReceipt(sql.FieldEQ(FieldWorkspaceID, v))
+}
+
+// ProjectID applies equality check predicate on the "project_id" field. It's identical to ProjectIDEQ.
+func ProjectID(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldEQ(FieldProjectID, v))
+}
+
+// TaskID applies equality check predicate on the "task_id" field. It's identical to TaskIDEQ.
+func TaskID(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldEQ(FieldTaskID, v))
+}
+
+// JobID applies equality check predicate on the "job_id" field. It's identical to JobIDEQ.
+func JobID(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldEQ(FieldJobID, v))
 }
 
 // PayloadJSON applies equality check predicate on the "payload_json" field. It's identical to PayloadJSONEQ.
@@ -249,6 +269,71 @@ func StatusContainsFold(v string) predicate.EvidenceReceipt {
 	return predicate.EvidenceReceipt(sql.FieldContainsFold(FieldStatus, v))
 }
 
+// OrganizationIDEQ applies the EQ predicate on the "organization_id" field.
+func OrganizationIDEQ(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldEQ(FieldOrganizationID, v))
+}
+
+// OrganizationIDNEQ applies the NEQ predicate on the "organization_id" field.
+func OrganizationIDNEQ(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldNEQ(FieldOrganizationID, v))
+}
+
+// OrganizationIDIn applies the In predicate on the "organization_id" field.
+func OrganizationIDIn(vs ...string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldIn(FieldOrganizationID, vs...))
+}
+
+// OrganizationIDNotIn applies the NotIn predicate on the "organization_id" field.
+func OrganizationIDNotIn(vs ...string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldNotIn(FieldOrganizationID, vs...))
+}
+
+// OrganizationIDGT applies the GT predicate on the "organization_id" field.
+func OrganizationIDGT(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldGT(FieldOrganizationID, v))
+}
+
+// OrganizationIDGTE applies the GTE predicate on the "organization_id" field.
+func OrganizationIDGTE(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldGTE(FieldOrganizationID, v))
+}
+
+// OrganizationIDLT applies the LT predicate on the "organization_id" field.
+func OrganizationIDLT(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldLT(FieldOrganizationID, v))
+}
+
+// OrganizationIDLTE applies the LTE predicate on the "organization_id" field.
+func OrganizationIDLTE(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldLTE(FieldOrganizationID, v))
+}
+
+// OrganizationIDContains applies the Contains predicate on the "organization_id" field.
+func OrganizationIDContains(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldContains(FieldOrganizationID, v))
+}
+
+// OrganizationIDHasPrefix applies the HasPrefix predicate on the "organization_id" field.
+func OrganizationIDHasPrefix(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldHasPrefix(FieldOrganizationID, v))
+}
+
+// OrganizationIDHasSuffix applies the HasSuffix predicate on the "organization_id" field.
+func OrganizationIDHasSuffix(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldHasSuffix(FieldOrganizationID, v))
+}
+
+// OrganizationIDEqualFold applies the EqualFold predicate on the "organization_id" field.
+func OrganizationIDEqualFold(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldEqualFold(FieldOrganizationID, v))
+}
+
+// OrganizationIDContainsFold applies the ContainsFold predicate on the "organization_id" field.
+func OrganizationIDContainsFold(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldContainsFold(FieldOrganizationID, v))
+}
+
 // WorkspaceIDEQ applies the EQ predicate on the "workspace_id" field.
 func WorkspaceIDEQ(v string) predicate.EvidenceReceipt {
 	return predicate.EvidenceReceipt(sql.FieldEQ(FieldWorkspaceID, v))
@@ -312,6 +397,201 @@ func WorkspaceIDEqualFold(v string) predicate.EvidenceReceipt {
 // WorkspaceIDContainsFold applies the ContainsFold predicate on the "workspace_id" field.
 func WorkspaceIDContainsFold(v string) predicate.EvidenceReceipt {
 	return predicate.EvidenceReceipt(sql.FieldContainsFold(FieldWorkspaceID, v))
+}
+
+// ProjectIDEQ applies the EQ predicate on the "project_id" field.
+func ProjectIDEQ(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldEQ(FieldProjectID, v))
+}
+
+// ProjectIDNEQ applies the NEQ predicate on the "project_id" field.
+func ProjectIDNEQ(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldNEQ(FieldProjectID, v))
+}
+
+// ProjectIDIn applies the In predicate on the "project_id" field.
+func ProjectIDIn(vs ...string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldIn(FieldProjectID, vs...))
+}
+
+// ProjectIDNotIn applies the NotIn predicate on the "project_id" field.
+func ProjectIDNotIn(vs ...string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldNotIn(FieldProjectID, vs...))
+}
+
+// ProjectIDGT applies the GT predicate on the "project_id" field.
+func ProjectIDGT(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldGT(FieldProjectID, v))
+}
+
+// ProjectIDGTE applies the GTE predicate on the "project_id" field.
+func ProjectIDGTE(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldGTE(FieldProjectID, v))
+}
+
+// ProjectIDLT applies the LT predicate on the "project_id" field.
+func ProjectIDLT(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldLT(FieldProjectID, v))
+}
+
+// ProjectIDLTE applies the LTE predicate on the "project_id" field.
+func ProjectIDLTE(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldLTE(FieldProjectID, v))
+}
+
+// ProjectIDContains applies the Contains predicate on the "project_id" field.
+func ProjectIDContains(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldContains(FieldProjectID, v))
+}
+
+// ProjectIDHasPrefix applies the HasPrefix predicate on the "project_id" field.
+func ProjectIDHasPrefix(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldHasPrefix(FieldProjectID, v))
+}
+
+// ProjectIDHasSuffix applies the HasSuffix predicate on the "project_id" field.
+func ProjectIDHasSuffix(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldHasSuffix(FieldProjectID, v))
+}
+
+// ProjectIDEqualFold applies the EqualFold predicate on the "project_id" field.
+func ProjectIDEqualFold(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldEqualFold(FieldProjectID, v))
+}
+
+// ProjectIDContainsFold applies the ContainsFold predicate on the "project_id" field.
+func ProjectIDContainsFold(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldContainsFold(FieldProjectID, v))
+}
+
+// TaskIDEQ applies the EQ predicate on the "task_id" field.
+func TaskIDEQ(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldEQ(FieldTaskID, v))
+}
+
+// TaskIDNEQ applies the NEQ predicate on the "task_id" field.
+func TaskIDNEQ(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldNEQ(FieldTaskID, v))
+}
+
+// TaskIDIn applies the In predicate on the "task_id" field.
+func TaskIDIn(vs ...string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldIn(FieldTaskID, vs...))
+}
+
+// TaskIDNotIn applies the NotIn predicate on the "task_id" field.
+func TaskIDNotIn(vs ...string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldNotIn(FieldTaskID, vs...))
+}
+
+// TaskIDGT applies the GT predicate on the "task_id" field.
+func TaskIDGT(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldGT(FieldTaskID, v))
+}
+
+// TaskIDGTE applies the GTE predicate on the "task_id" field.
+func TaskIDGTE(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldGTE(FieldTaskID, v))
+}
+
+// TaskIDLT applies the LT predicate on the "task_id" field.
+func TaskIDLT(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldLT(FieldTaskID, v))
+}
+
+// TaskIDLTE applies the LTE predicate on the "task_id" field.
+func TaskIDLTE(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldLTE(FieldTaskID, v))
+}
+
+// TaskIDContains applies the Contains predicate on the "task_id" field.
+func TaskIDContains(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldContains(FieldTaskID, v))
+}
+
+// TaskIDHasPrefix applies the HasPrefix predicate on the "task_id" field.
+func TaskIDHasPrefix(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldHasPrefix(FieldTaskID, v))
+}
+
+// TaskIDHasSuffix applies the HasSuffix predicate on the "task_id" field.
+func TaskIDHasSuffix(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldHasSuffix(FieldTaskID, v))
+}
+
+// TaskIDEqualFold applies the EqualFold predicate on the "task_id" field.
+func TaskIDEqualFold(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldEqualFold(FieldTaskID, v))
+}
+
+// TaskIDContainsFold applies the ContainsFold predicate on the "task_id" field.
+func TaskIDContainsFold(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldContainsFold(FieldTaskID, v))
+}
+
+// JobIDEQ applies the EQ predicate on the "job_id" field.
+func JobIDEQ(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldEQ(FieldJobID, v))
+}
+
+// JobIDNEQ applies the NEQ predicate on the "job_id" field.
+func JobIDNEQ(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldNEQ(FieldJobID, v))
+}
+
+// JobIDIn applies the In predicate on the "job_id" field.
+func JobIDIn(vs ...string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldIn(FieldJobID, vs...))
+}
+
+// JobIDNotIn applies the NotIn predicate on the "job_id" field.
+func JobIDNotIn(vs ...string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldNotIn(FieldJobID, vs...))
+}
+
+// JobIDGT applies the GT predicate on the "job_id" field.
+func JobIDGT(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldGT(FieldJobID, v))
+}
+
+// JobIDGTE applies the GTE predicate on the "job_id" field.
+func JobIDGTE(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldGTE(FieldJobID, v))
+}
+
+// JobIDLT applies the LT predicate on the "job_id" field.
+func JobIDLT(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldLT(FieldJobID, v))
+}
+
+// JobIDLTE applies the LTE predicate on the "job_id" field.
+func JobIDLTE(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldLTE(FieldJobID, v))
+}
+
+// JobIDContains applies the Contains predicate on the "job_id" field.
+func JobIDContains(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldContains(FieldJobID, v))
+}
+
+// JobIDHasPrefix applies the HasPrefix predicate on the "job_id" field.
+func JobIDHasPrefix(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldHasPrefix(FieldJobID, v))
+}
+
+// JobIDHasSuffix applies the HasSuffix predicate on the "job_id" field.
+func JobIDHasSuffix(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldHasSuffix(FieldJobID, v))
+}
+
+// JobIDEqualFold applies the EqualFold predicate on the "job_id" field.
+func JobIDEqualFold(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldEqualFold(FieldJobID, v))
+}
+
+// JobIDContainsFold applies the ContainsFold predicate on the "job_id" field.
+func JobIDContainsFold(v string) predicate.EvidenceReceipt {
+	return predicate.EvidenceReceipt(sql.FieldContainsFold(FieldJobID, v))
 }
 
 // PayloadJSONEQ applies the EQ predicate on the "payload_json" field.
