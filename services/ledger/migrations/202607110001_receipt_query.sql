@@ -6,6 +6,9 @@ ALTER TABLE evidence_receipts ADD COLUMN IF NOT EXISTS organization_id TEXT NOT 
 ALTER TABLE evidence_receipts ADD COLUMN IF NOT EXISTS project_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE evidence_receipts ADD COLUMN IF NOT EXISTS task_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE evidence_receipts ADD COLUMN IF NOT EXISTS job_id TEXT NOT NULL DEFAULT '';
+ALTER TABLE evidence_receipts ALTER COLUMN provider_request_id SET DEFAULT '';
+ALTER TABLE evidence_receipts ALTER COLUMN redacted_url SET DEFAULT '';
+ALTER TABLE evidence_receipts ALTER COLUMN token_version SET DEFAULT '';
 
 UPDATE evidence_receipts
 SET organization_id = COALESCE(payload_json::jsonb ->> 'organizationId', ''),

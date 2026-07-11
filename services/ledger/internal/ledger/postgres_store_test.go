@@ -1,6 +1,7 @@
 package ledger
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -28,6 +29,9 @@ func TestPostgresSchemaUsesEntMigrationLedgerTables(t *testing.T) {
 		"CREATE TABLE IF NOT EXISTS holds",
 		"CREATE TABLE IF NOT EXISTS hold_releases",
 		"CREATE TABLE IF NOT EXISTS evidence_receipts",
+		"ALTER TABLE evidence_receipts ALTER COLUMN provider_request_id SET DEFAULT ''",
+		"ALTER TABLE evidence_receipts ALTER COLUMN redacted_url SET DEFAULT ''",
+		"ALTER TABLE evidence_receipts ALTER COLUMN token_version SET DEFAULT ''",
 		"organization_id TEXT NOT NULL DEFAULT ''",
 		"project_id TEXT NOT NULL DEFAULT ''",
 		"task_id TEXT NOT NULL DEFAULT ''",
@@ -97,6 +101,36 @@ func TestFormalMigrationsDeclareReceiptColumnsBeforeQueryBackfill(t *testing.T) 
 	}
 }
 
+func TestFormalAndEmbeddedMigrationTreesMatch(t *testing.T) {
+	formal, err := os.ReadDir("../../migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	embedded, err := os.ReadDir("ent_migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(formal) != len(embedded) {
+		t.Fatalf("migration file count differs: formal=%d embedded=%d", len(formal), len(embedded))
+	}
+	for i := range formal {
+		if formal[i].Name() != embedded[i].Name() {
+			t.Fatalf("migration names differ: %q != %q", formal[i].Name(), embedded[i].Name())
+		}
+		formalSQL, err := os.ReadFile(filepath.Join("../../migrations", formal[i].Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		embeddedSQL, err := os.ReadFile(filepath.Join("ent_migrations", embedded[i].Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(formalSQL, embeddedSQL) {
+			t.Fatalf("migration %s differs", formal[i].Name())
+		}
+	}
+}
+
 func TestPostgresStoreImplementsLedgerStore(t *testing.T) {
 	var db *sql.DB
 	var _ Store = NewPostgresStore(db)
@@ -105,49 +139,107 @@ func TestPostgresStoreImplementsLedgerStore(t *testing.T) {
 func TestPostgresConcurrentReviewPolicyIdempotency(t *testing.T) {
 	db := openLedgerTestPostgres(t)
 	store := NewPostgresStore(db)
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	if err := store.Install(ctx); err != nil {
 		t.Fatalf("install ledger schema: %v", err)
 	}
-	input := ReviewPolicyInput{
-		ExecutionIdentity: ExecutionIdentity{OrganizationID: "org-concurrent", WorkspaceID: "workspace-concurrent", ProjectID: "project-concurrent", TaskID: "task-concurrent", JobID: "job-concurrent"},
-		Version:           "1", RequiredReviewers: []RequiredReviewer{{ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0"}}, IdempotencyKey: "policy-concurrent",
+	if _, err := db.ExecContext(ctx, `
+		CREATE FUNCTION delay_review_policy_insert() RETURNS trigger LANGUAGE plpgsql AS $$
+		BEGIN
+			PERFORM pg_sleep(0.05);
+			RETURN NEW;
+		END;
+		$$;
+		CREATE TRIGGER delay_review_policy_insert BEFORE INSERT ON review_policies FOR EACH ROW EXECUTE FUNCTION delay_review_policy_insert();
+	`); err != nil {
+		t.Fatalf("install review policy race trigger: %v", err)
 	}
 	type outcome struct {
 		policy ReviewPolicy
 		err    error
 	}
-	start := make(chan struct{})
-	outcomes := make(chan outcome, 2)
-	var wg sync.WaitGroup
-	for range 2 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			<-start
-			policy, err := store.CreateReviewPolicy(ctx, input)
-			outcomes <- outcome{policy: policy, err: err}
-		}()
-	}
-	close(start)
-	wg.Wait()
-	close(outcomes)
-	results := make([]ReviewPolicy, 0, 2)
-	for result := range outcomes {
-		if result.err != nil {
-			t.Fatalf("concurrent create: %v", result.err)
+	run := func(inputs []ReviewPolicyInput) []outcome {
+		start := make(chan struct{})
+		outcomes := make(chan outcome, len(inputs))
+		var wg sync.WaitGroup
+		for _, input := range inputs {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-start
+				policy, err := store.CreateReviewPolicy(ctx, input)
+				outcomes <- outcome{policy: policy, err: err}
+			}()
 		}
-		results = append(results, result.policy)
+		close(start)
+		wg.Wait()
+		close(outcomes)
+		results := make([]outcome, 0, len(inputs))
+		for result := range outcomes {
+			results = append(results, result)
+		}
+		return results
 	}
-	if results[0].PolicyID != results[1].PolicyID || results[0].Replayed == results[1].Replayed {
-		t.Fatalf("concurrent results must contain one create and one replay: %#v", results)
+	input := ReviewPolicyInput{
+		ExecutionIdentity: ExecutionIdentity{OrganizationID: "org-concurrent", WorkspaceID: "workspace-concurrent", ProjectID: "project-concurrent", TaskID: "task-concurrent", JobID: "job-concurrent"},
+		Version:           "1", RequiredReviewers: []RequiredReviewer{{ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0"}}, IdempotencyKey: "policy-concurrent",
+	}
+	results := run([]ReviewPolicyInput{input, input, input, input})
+	created, replayed := 0, 0
+	for _, result := range results {
+		if result.err != nil {
+			t.Fatalf("same-key concurrent create: %v", result.err)
+		}
+		if result.policy.Replayed {
+			replayed++
+		} else {
+			created++
+		}
+	}
+	if created != 1 || replayed != 3 {
+		t.Fatalf("same-key outcomes = %#v", results)
 	}
 
-	conflict := input
-	conflict.Version = "2"
-	if _, err := store.CreateReviewPolicy(ctx, conflict); !errors.Is(err, ErrIdempotencyConflict) {
-		t.Fatalf("different fingerprint error = %v, want ErrIdempotencyConflict", err)
+	differentPayload := input
+	differentPayload.ExecutionIdentity.JobID = "job-different-payload"
+	differentPayload.IdempotencyKey = "policy-different-payload"
+	versionTwo := differentPayload
+	versionTwo.Version = "2"
+	results = run([]ReviewPolicyInput{differentPayload, versionTwo, differentPayload, versionTwo})
+	conflicts := 0
+	for _, result := range results {
+		if errors.Is(result.err, ErrIdempotencyConflict) {
+			conflicts++
+		} else if result.err != nil {
+			t.Fatalf("different-payload raw error: %v", result.err)
+		}
+	}
+	if conflicts != 2 {
+		t.Fatalf("different-payload outcomes = %#v", results)
+	}
+
+	differentKey := input
+	differentKey.ExecutionIdentity.JobID = "job-different-key"
+	inputs := make([]ReviewPolicyInput, 4)
+	for i := range inputs {
+		inputs[i] = differentKey
+		inputs[i].IdempotencyKey = fmt.Sprintf("policy-different-key-%d", i)
+	}
+	results = run(inputs)
+	created, conflicts = 0, 0
+	for _, result := range results {
+		switch {
+		case result.err == nil:
+			created++
+		case errors.Is(result.err, ErrInvalidReviewPolicyInput):
+			conflicts++
+		default:
+			t.Fatalf("different-key raw error: %v", result.err)
+		}
+	}
+	if created != 1 || conflicts != 3 {
+		t.Fatalf("different-key outcomes = %#v", results)
 	}
 }
 

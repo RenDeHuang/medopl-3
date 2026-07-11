@@ -76,7 +76,7 @@ func TestReceiptRejectsMissingIdentityAndSecretContent(t *testing.T) {
 	}
 }
 
-func TestContinuationResolvesFromReceipt(t *testing.T) {
+func TestExecutionContinuationRequiresFullIdentity(t *testing.T) {
 	store := NewMemoryStore()
 	ctx := context.Background()
 	receipt, err := store.RecordReceipt(ctx, ReceiptInput{
@@ -94,16 +94,41 @@ func TestContinuationResolvesFromReceipt(t *testing.T) {
 			"environmentRef":          "environment-alpha",
 		},
 	})
-	if err != nil {
-		t.Fatalf("record receipt: %v", err)
+	if !errors.Is(err, ErrInvalidReceiptInput) || receipt.ReceiptID != "" {
+		t.Fatalf("incomplete execution continuation = %#v, %v", receipt, err)
 	}
+}
 
-	continuation, err := store.Continuation(ctx, receipt.ReceiptID)
+func TestLegacyReceiptWithoutContinuationRemainsReadable(t *testing.T) {
+	store := NewMemoryStore()
+	receipt, err := store.RecordReceipt(context.Background(), ReceiptInput{Type: "workspace.created", Status: "completed", Surface: "workspace", WorkspaceID: "workspace-alpha", IdempotencyKey: "legacy-no-continuation"})
 	if err != nil {
-		t.Fatalf("resolve continuation: %v", err)
+		t.Fatal(err)
 	}
-	if continuation["continuationId"] != "continuation-alpha" || continuation["receiptId"] != receipt.ReceiptID || continuation["projectId"] != "project-alpha" || continuation["taskId"] != "task-alpha" {
-		t.Fatalf("unexpected continuation: %#v", continuation)
+	loaded, err := store.Receipt(context.Background(), receipt.ReceiptID)
+	if err != nil || loaded.ReceiptID != receipt.ReceiptID || loaded.Continuation != nil || loaded.ContinuationID != "" {
+		t.Fatalf("legacy receipt = %#v, %v", loaded, err)
+	}
+}
+
+func TestPersistedIncompleteExecutionReceiptNeverExposesContinuation(t *testing.T) {
+	store := NewMemoryStore()
+	receipt := Receipt{
+		ReceiptInput: ReceiptInput{Type: "execution.receipt.v1", Status: "completed", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", ContinuationID: "continuation-old", Continuation: map[string]any{"continuationId": "continuation-old"}},
+		ReceiptID:    "receipt-old",
+		CreatedAt:    time.Now().UTC(),
+	}
+	store.receipts[receipt.ReceiptID] = receipt
+	loaded, err := store.Receipt(context.Background(), receipt.ReceiptID)
+	if err != nil || loaded.ContinuationID != "" || loaded.Continuation != nil {
+		t.Fatalf("receipt detail leaked continuation: %#v, %v", loaded, err)
+	}
+	page, err := store.ListReceipts(context.Background(), ReceiptQuery{})
+	if err != nil || len(page.Receipts) != 1 || page.Receipts[0].ContinuationID != "" || page.Receipts[0].Continuation != nil {
+		t.Fatalf("receipt list leaked continuation: %#v, %v", page, err)
+	}
+	if _, err := store.Continuation(context.Background(), receipt.ReceiptID); !errors.Is(err, ErrContinuationIneligible) {
+		t.Fatalf("continuation error = %v", err)
 	}
 }
 
@@ -113,9 +138,11 @@ func TestReceiptGeneratesContinuationIdentity(t *testing.T) {
 		Type:           "execution.receipt.v1",
 		Status:         "running",
 		Surface:        "workspace",
+		OrganizationID: "org-alpha",
 		WorkspaceID:    "workspace-alpha",
 		ProjectID:      "project-alpha",
 		TaskID:         "task-alpha",
+		JobID:          "job-alpha",
 		IdempotencyKey: "generated-continuation",
 		Continuation:   map[string]any{"taskVersion": float64(1)},
 	})
@@ -433,6 +460,17 @@ func TestReviewPolicyRequiresOrganizationAndUsesOperationScopedIdempotency(t *te
 	}
 	if _, err := store.CreateReviewPolicy(ctx, ReviewPolicyInput{ExecutionIdentity: ExecutionIdentity{OrganizationID: "org-alpha", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha"}, Version: "1", RequiredReviewers: []RequiredReviewer{{ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0"}}, IdempotencyKey: sharedKey}); err != nil {
 		t.Fatalf("policy idempotency must be operation scoped: %v", err)
+	}
+}
+
+func TestArtifactAndReviewRequireOrganization(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	if _, err := store.RecordArtifact(ctx, ArtifactInput{WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha", Digest: "sha256:abc", MediaType: "application/json", StorageRef: "artifact-ref", IdempotencyKey: "artifact-missing-org"}); !errors.Is(err, ErrInvalidArtifactInput) {
+		t.Fatalf("artifact error = %v", err)
+	}
+	if _, err := store.RecordReview(ctx, ReviewInput{WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha", ReviewerRef: "reviewer", ReviewerVersion: "1", InputArtifactDigests: []string{"sha256:abc"}, Checks: map[string]any{"ok": true}, Decision: "accepted", IdempotencyKey: "review-missing-org"}); !errors.Is(err, ErrInvalidReviewInput) {
+		t.Fatalf("review error = %v", err)
 	}
 }
 

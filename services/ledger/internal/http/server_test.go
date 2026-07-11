@@ -148,7 +148,7 @@ func TestHoldAndReceiptHTTP(t *testing.T) {
 
 func TestContinuationHTTP(t *testing.T) {
 	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
-	receipt := testRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(`{"type":"execution.receipt.v1","status":"completed","surface":"workspace","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","continuation":{"continuationId":"continuation-alpha","taskVersion":2}}`))
+	receipt := testRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(`{"type":"execution.receipt.v1","status":"completed","surface":"workspace","organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha","continuation":{"continuationId":"continuation-alpha","taskVersion":2}}`))
 	receipt.Header.Set("Idempotency-Key", "http-continuation-receipt")
 	receiptRec := httptest.NewRecorder()
 	server.ServeHTTP(receiptRec, receipt)
@@ -163,15 +163,8 @@ func TestContinuationHTTP(t *testing.T) {
 	req := testRequest(http.MethodGet, "/ledger/receipts/"+receiptBody["receiptId"].(string)+"/continuation", nil)
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("continuation status = %d, want %d: %s", rec.Code, http.StatusOK, rec.Body.String())
-	}
-	var body map[string]any
-	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
-		t.Fatalf("decode continuation: %v", err)
-	}
-	if body["continuationId"] != "continuation-alpha" || body["receiptId"] != receiptBody["receiptId"] || body["projectId"] != "project-alpha" || body["taskId"] != "task-alpha" {
-		t.Fatalf("unexpected continuation: %#v", body)
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("continuation status = %d, want %d: %s", rec.Code, http.StatusConflict, rec.Body.String())
 	}
 }
 
@@ -331,7 +324,7 @@ func TestEvidenceHTTPMapsInputNotFoundAndConflict(t *testing.T) {
 		t.Fatalf("missing review status = %d, want %d", notFoundRec.Code, http.StatusNotFound)
 	}
 
-	body := `{"workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha","digest":"sha256:abc123","mediaType":"application/json","sizeBytes":42,"storageRef":"storage-artifact-alpha"}`
+	body := `{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha","digest":"sha256:abc123","mediaType":"application/json","sizeBytes":42,"storageRef":"storage-artifact-alpha"}`
 	first := testRequest(http.MethodPost, "/ledger/artifacts", bytes.NewBufferString(body))
 	first.Header.Set("Idempotency-Key", "conflicting-artifact")
 	server.ServeHTTP(httptest.NewRecorder(), first)

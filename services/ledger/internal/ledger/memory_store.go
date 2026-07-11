@@ -362,7 +362,7 @@ func (s *MemoryStore) Continuation(ctx context.Context, receiptID string) (map[s
 	}
 	identity := executionIdentityFromReceipt(receipt)
 	if !validExecutionIdentity(identity) {
-		return continuation, nil
+		return nil, ErrContinuationIneligible
 	}
 	gate, err := s.evaluateReviewGateLocked(ReviewGateInput{ExecutionIdentity: identity, ReviewIDs: stringSlice(continuation["reviewIds"])})
 	if errors.Is(err, ErrReviewPolicyNotFound) {

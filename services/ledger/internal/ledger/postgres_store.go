@@ -404,7 +404,7 @@ func (s *PostgresStore) Continuation(ctx context.Context, receiptID string) (map
 	}
 	identity := executionIdentityFromReceipt(receipt)
 	if !validExecutionIdentity(identity) {
-		return continuation, nil
+		return nil, ErrContinuationIneligible
 	}
 	gate, err := s.EvaluateReviewGate(ctx, ReviewGateInput{ExecutionIdentity: identity, ReviewIDs: stringSlice(continuation["reviewIds"])})
 	if errors.Is(err, ErrReviewPolicyNotFound) {
@@ -420,9 +420,6 @@ func (s *PostgresStore) Continuation(ctx context.Context, receiptID string) (map
 }
 
 func (s *PostgresStore) receiptForRead(ctx context.Context, receipt Receipt) Receipt {
-	if !validExecutionIdentity(executionIdentityFromReceipt(receipt)) {
-		return receipt
-	}
 	gate, err := s.EvaluateReviewGate(ctx, ReviewGateInput{ExecutionIdentity: executionIdentityFromReceipt(receipt), ReviewIDs: stringSlice(receipt.Continuation["reviewIds"])})
 	return receiptForRead(receipt, gate, err)
 }
@@ -529,7 +526,7 @@ func (s *PostgresStore) CreateReviewPolicy(ctx context.Context, input ReviewPoli
 		}
 		if exists {
 			_ = tx.Rollback()
-			return s.replayReviewPolicy(ctx, input.IdempotencyKey, requestHash, ErrInvalidReviewPolicyInput)
+			return s.replayReviewPolicy(ctx, input.IdempotencyKey, requestHash)
 		}
 	} else {
 		previous, err := tx.ReviewPolicy.Get(ctx, input.SupersedesPolicyID)
@@ -545,7 +542,7 @@ func (s *PostgresStore) CreateReviewPolicy(ctx context.Context, input ReviewPoli
 		}
 		if previousPolicy.Status != "active" || !sameExecutionIdentity(previousPolicy.ExecutionIdentity, input.ExecutionIdentity) || previousPolicy.Version == input.Version {
 			_ = tx.Rollback()
-			return s.replayReviewPolicy(ctx, input.IdempotencyKey, requestHash, ErrInvalidReviewPolicyInput)
+			return s.replayReviewPolicy(ctx, input.IdempotencyKey, requestHash)
 		}
 		if err := tx.ReviewPolicy.UpdateOneID(previous.ID).SetStatus("superseded").Exec(ctx); err != nil {
 			return ReviewPolicy{}, err
@@ -575,7 +572,7 @@ func (s *PostgresStore) CreateReviewPolicy(ctx context.Context, input ReviewPoli
 	if err != nil {
 		if ledgerent.IsConstraintError(err) {
 			_ = tx.Rollback()
-			return s.replayReviewPolicy(ctx, input.IdempotencyKey, requestHash, err)
+			return s.replayReviewPolicy(ctx, input.IdempotencyKey, requestHash)
 		}
 		return ReviewPolicy{}, err
 	}
@@ -586,10 +583,10 @@ func (s *PostgresStore) CreateReviewPolicy(ctx context.Context, input ReviewPoli
 	return policy, tx.Commit()
 }
 
-func (s *PostgresStore) replayReviewPolicy(ctx context.Context, idempotencyKey, requestHash string, constraintErr error) (ReviewPolicy, error) {
+func (s *PostgresStore) replayReviewPolicy(ctx context.Context, idempotencyKey, requestHash string) (ReviewPolicy, error) {
 	row, err := s.client.ReviewPolicy.Query().Where(reviewpolicy.IdempotencyKey(idempotencyKey)).Only(ctx)
 	if ledgerent.IsNotFound(err) {
-		return ReviewPolicy{}, constraintErr
+		return ReviewPolicy{}, ErrInvalidReviewPolicyInput
 	}
 	if err != nil {
 		return ReviewPolicy{}, err

@@ -338,14 +338,14 @@ type ReviewGateResult struct {
 }
 
 func validateArtifactInput(input ArtifactInput) error {
-	if input.WorkspaceID == "" || input.ProjectID == "" || input.TaskID == "" || input.JobID == "" || input.Digest == "" || input.MediaType == "" || input.SizeBytes < 0 || input.IdempotencyKey == "" || !isOpaqueReference(input.StorageRef) {
+	if input.OrganizationID == "" || input.WorkspaceID == "" || input.ProjectID == "" || input.TaskID == "" || input.JobID == "" || input.Digest == "" || input.MediaType == "" || input.SizeBytes < 0 || input.IdempotencyKey == "" || !isOpaqueReference(input.StorageRef) {
 		return ErrInvalidArtifactInput
 	}
 	return nil
 }
 
 func validateReviewInput(input ReviewInput) error {
-	if input.WorkspaceID == "" || input.ProjectID == "" || input.TaskID == "" || input.JobID == "" || !isOpaqueReference(input.ReviewerRef) || !isOpaqueReference(input.ReviewerVersion) || len(input.InputArtifactDigests) == 0 || len(input.Checks) == 0 || input.IdempotencyKey == "" || (input.Decision != "accepted" && input.Decision != "pending" && input.Decision != "rejected") || containsForbiddenReceiptKey(input.Checks) {
+	if input.OrganizationID == "" || input.WorkspaceID == "" || input.ProjectID == "" || input.TaskID == "" || input.JobID == "" || !isOpaqueReference(input.ReviewerRef) || !isOpaqueReference(input.ReviewerVersion) || len(input.InputArtifactDigests) == 0 || len(input.Checks) == 0 || input.IdempotencyKey == "" || (input.Decision != "accepted" && input.Decision != "pending" && input.Decision != "rejected") || containsForbiddenReceiptKey(input.Checks) {
 		return ErrInvalidReviewInput
 	}
 	return nil
@@ -459,7 +459,10 @@ func executionIdentityFromReceipt(receipt Receipt) ExecutionIdentity {
 }
 
 func receiptForRead(receipt Receipt, gate ReviewGateResult, gateErr error) Receipt {
-	if !validExecutionIdentity(executionIdentityFromReceipt(receipt)) || (gateErr == nil && gate.ContinuationEligible) {
+	if receipt.Continuation == nil && receipt.ContinuationID == "" {
+		return receipt
+	}
+	if validExecutionIdentity(executionIdentityFromReceipt(receipt)) && gateErr == nil && gate.ContinuationEligible {
 		return receipt
 	}
 	receipt.ContinuationID = ""
@@ -600,6 +603,9 @@ func continuationFromReceipt(receipt Receipt) (map[string]any, error) {
 
 func validateReceiptInput(input ReceiptInput) error {
 	if input.Type == "" || input.Status == "" || input.Surface == "" || input.WorkspaceID == "" || input.IdempotencyKey == "" {
+		return ErrInvalidReceiptInput
+	}
+	if input.Type == "execution.receipt.v1" && (input.ContinuationID != "" || len(input.Continuation) > 0) && !validExecutionIdentity(executionIdentityFromReceipt(Receipt{ReceiptInput: input})) {
 		return ErrInvalidReceiptInput
 	}
 	allowedStatus := map[string]bool{"planned": true, "approved": true, "running": true, "completed": true, "failed": true, "timed_out": true, "cancelled": true, "review_required": true, "review_blocked": true}
