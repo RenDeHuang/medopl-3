@@ -114,6 +114,17 @@ func (app *controlPlaneServer) protected(requiresAdmin bool, next http.HandlerFu
 			writeError(w, http.StatusForbidden, "admin_required")
 			return
 		}
+		if !requiresAdmin {
+			active, err := app.hasActiveCustomerMembership(r.Context(), user)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "state_read_failed")
+				return
+			}
+			if !active {
+				writeError(w, http.StatusForbidden, "organization_membership_required")
+				return
+			}
+		}
 		next(w, r)
 	}
 }

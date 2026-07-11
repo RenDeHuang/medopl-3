@@ -306,7 +306,40 @@ func (app *controlPlaneServer) session(r *http.Request) (map[string]any, bool) {
 	if user == nil || stringValue(user["status"]) != "active" || !validRole(stringValue(user["role"])) {
 		return nil, false
 	}
+	if stringValue(user["role"]) != "admin" {
+		active, err := app.hasActiveCustomerMembership(r.Context(), user)
+		if err != nil || !active {
+			return nil, false
+		}
+	}
 	return map[string]any{"user": sanitizeUser(user), "csrfToken": stringValue(session["csrf"]), "expiresAt": expiresAt.Format(time.RFC3339)}, true
+}
+
+func (app *controlPlaneServer) hasActiveCustomerMembership(ctx context.Context, user map[string]any) (bool, error) {
+	accountID := stringValue(user["accountId"])
+	accounts, err := app.tables.ListAccounts(ctx)
+	if err != nil {
+		return false, err
+	}
+	account := findRecord(accounts, accountID)
+	if account == nil || stringValue(account["status"]) != "active" {
+		return false, nil
+	}
+	organizations, err := app.tables.ListOrganizations(ctx)
+	if err != nil {
+		return false, err
+	}
+	memberships, err := app.tables.ListMemberships(ctx)
+	if err != nil {
+		return false, err
+	}
+	for _, membership := range memberships {
+		organization := findRecord(organizations, stringValue(membership["organizationId"]))
+		if stringValue(membership["userId"]) == stringValue(user["id"]) && stringValue(membership["accountId"]) == accountID && stringValue(membership["status"]) == "active" && validRole(stringValue(membership["role"])) && organization != nil && stringValue(organization["status"]) == "active" && stringValue(organization["billingAccountId"]) == accountID {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (app *controlPlaneServer) sessionUserID(r *http.Request) string {

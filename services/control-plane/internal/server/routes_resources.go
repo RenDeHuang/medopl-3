@@ -164,8 +164,12 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneServer, service
 			return
 		}
 		id := strings.TrimSpace(r.PathValue("id"))
-		existing, _ := app.getCompute(id)
-		if existing["id"] != nil && !app.canAccessResource(r, existing) {
+		existing, ok := app.getCompute(id)
+		if !ok {
+			writeError(w, http.StatusNotFound, "compute_allocation_not_found")
+			return
+		}
+		if !app.canAccessResource(r, existing) {
 			writeError(w, http.StatusForbidden, "account_scope_forbidden")
 			return
 		}
@@ -261,8 +265,12 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneServer, service
 			return
 		}
 		id := stringField(input, "storageId", "")
-		existing, _ := app.getStorage(id)
-		if existing["id"] != nil && !app.canAccessResource(r, existing) {
+		existing, ok := app.getStorage(id)
+		if !ok {
+			writeError(w, http.StatusNotFound, "storage_volume_not_found")
+			return
+		}
+		if !app.canAccessResource(r, existing) {
 			writeError(w, http.StatusForbidden, "account_scope_forbidden")
 			return
 		}
@@ -325,8 +333,17 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneServer, service
 		}
 		compute, computeOK := app.getCompute(stringField(input, "computeAllocationId", ""))
 		storage, storageOK := app.getStorage(stringField(input, "storageId", ""))
-		if (computeOK && !app.canAccessResource(r, compute)) || (storageOK && !app.canAccessResource(r, storage)) {
+		if !computeOK || !storageOK {
+			writeError(w, http.StatusBadRequest, "compute_storage_not_found")
+			return
+		}
+		if !app.resourceBelongsToAccount(compute, accountID) || !app.resourceBelongsToAccount(storage, accountID) || !app.canAccessResource(r, compute) || !app.canAccessResource(r, storage) {
 			writeError(w, http.StatusForbidden, "account_scope_forbidden")
+			return
+		}
+		workspaceID := stringField(input, "workspaceId", "")
+		if (stringValue(compute["workspaceId"]) != "" && stringValue(compute["workspaceId"]) != workspaceID) || (stringValue(storage["workspaceId"]) != "" && stringValue(storage["workspaceId"]) != workspaceID) {
+			writeError(w, http.StatusForbidden, "workspace_scope_forbidden")
 			return
 		}
 		accountID = firstNonEmpty(stringValue(compute["accountId"]), stringValue(compute["ownerAccountId"]), stringValue(storage["accountId"]), stringValue(storage["ownerAccountId"]), accountID)
@@ -354,8 +371,12 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneServer, service
 	mux.HandleFunc("POST /api/storage-attachments/detach", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		attachmentID := stringField(input, "attachmentId", "")
-		existing, _ := app.getAttachment(attachmentID)
-		if existing["id"] != nil && !app.canAccessResource(r, existing) {
+		existing, ok := app.getAttachment(attachmentID)
+		if !ok {
+			writeError(w, http.StatusNotFound, "storage_attachment_not_found")
+			return
+		}
+		if !app.canAccessResource(r, existing) {
 			writeError(w, http.StatusForbidden, "account_scope_forbidden")
 			return
 		}

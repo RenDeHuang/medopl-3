@@ -37,8 +37,8 @@ func newMemoryTableStore() *memoryTableStore {
 		accounts:      controlPlaneRecordSet{"acct-admin": {"id": "acct-admin", "status": "active"}, "acct-alpha": {"id": "acct-alpha", "status": "active"}},
 		users:         controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-alpha", "role": "admin", "status": "active"}},
 		sessions:      controlPlaneRecordSet{},
-		organizations: controlPlaneRecordSet{},
-		memberships:   controlPlaneRecordSet{},
+		organizations: controlPlaneRecordSet{"org-alpha": {"id": "org-alpha", "billingAccountId": "acct-alpha", "status": "active"}},
+		memberships:   controlPlaneRecordSet{"mem-admin-alpha": {"id": "mem-admin-alpha", "organizationId": "org-alpha", "userId": "usr-admin", "accountId": "acct-alpha", "role": "admin", "status": "active"}},
 		computes:      controlPlaneRecordSet{},
 		storages:      controlPlaneRecordSet{},
 		attachments:   controlPlaneRecordSet{},
@@ -153,6 +153,9 @@ func (s *memoryTableStore) ListOrganizations(_ context.Context) ([]map[string]an
 func (s *memoryTableStore) SaveOrganization(_ context.Context, row map[string]any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.accounts[stringValue(row["billingAccountId"])] == nil {
+		return errAccountNotFound
+	}
 	s.organizations[stringValue(row["id"])] = cloneMap(row)
 	return nil
 }
@@ -169,6 +172,21 @@ func (s *memoryTableStore) SaveMembership(_ context.Context, row map[string]any)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	accountID := stringValue(row["accountId"])
+	organization := s.organizations[stringValue(row["organizationId"])]
+	user := s.users[stringValue(row["userId"])]
+	if s.accounts[accountID] == nil {
+		return errAccountNotFound
+	}
+	if organization == nil {
+		return errOrganizationNotFound
+	}
+	if user == nil {
+		return errMembershipUserNotFound
+	}
+	if stringValue(organization["billingAccountId"]) != accountID || stringValue(user["accountId"]) != accountID {
+		return errMembershipAccountMismatch
+	}
 	s.memberships[stringValue(row["id"])] = cloneMap(row)
 	return nil
 }

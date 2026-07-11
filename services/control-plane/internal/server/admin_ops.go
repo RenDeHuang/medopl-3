@@ -80,6 +80,22 @@ func findRecord(rows []map[string]any, id string) map[string]any {
 
 func recordExists(rows []map[string]any, id string) bool { return findRecord(rows, id) != nil }
 
+func (app *controlPlaneServer) revokeMembership(ctx context.Context, id string) (map[string]any, error) {
+	memberships, err := app.tables.ListMemberships(ctx)
+	if err != nil {
+		return nil, err
+	}
+	membership := findRecord(memberships, id)
+	if membership == nil {
+		return nil, errMembershipNotFound
+	}
+	membership["status"] = "revoked"
+	if err := app.tables.SaveMembership(ctx, membership); err != nil {
+		return nil, err
+	}
+	return membership, nil
+}
+
 func (app *controlPlaneServer) managementState(includeDeleted bool, computePools []any) map[string]any {
 	app.mu.Lock()
 	defer app.mu.Unlock()

@@ -84,9 +84,9 @@ func TestCreateWorkspaceHTTPUsesMutationKeyWhenHeaderIsAbsent(t *testing.T) {
 	ledger := &fakeLedgerClientWithKeys{fakeLedgerClient{}, []string{}}
 	server := NewServer(controlplane.NewService(ledger, &fakeFabricClient{calls: &calls}))
 
-	createResource(t, server, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
-	createResource(t, server, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
-	createResource(t, server, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"compute-from-fabric","storageId":"volume-from-fabric","mountPath":"/data"}`)
+	compute := createResource(t, server, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+	storage := createResource(t, server, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
+	createResource(t, server, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"`+stringValue(compute["id"])+`","storageId":"`+stringValue(storage["id"])+`","mountPath":"/data"}`)
 
 	body := bytes.NewBufferString(`{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/workspaces", body)
@@ -137,9 +137,9 @@ func TestCreateWorkspaceHTTPUsesControlPlaneService(t *testing.T) {
 	calls := []string{}
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{calls: &calls}))
 
-	createResource(t, server, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
-	createResource(t, server, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
-	createResource(t, server, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"compute-from-fabric","storageId":"volume-from-fabric","mountPath":"/data"}`)
+	compute := createResource(t, server, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+	storage := createResource(t, server, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
+	createResource(t, server, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"`+stringValue(compute["id"])+`","storageId":"`+stringValue(storage["id"])+`","mountPath":"/data"}`)
 
 	body := bytes.NewBufferString(`{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/workspaces", body)
@@ -161,7 +161,7 @@ func TestCreateWorkspaceHTTPUsesControlPlaneService(t *testing.T) {
 	if workspace["accountId"] != "acct-alpha" || workspace["ownerId"] != "usr-owner" || workspace["url"] != "https://workspace.medopl.cn/w/ws-from-fabric/" {
 		t.Fatalf("workspace did not come from service boundary: %#v", workspace)
 	}
-	if workspace["computeAllocationId"] != "compute-from-fabric" || workspace["storageId"] != "volume-from-fabric" || workspace["attachmentId"] != "attachment-from-fabric" || workspace["receiptId"] != "receipt-from-ledger" {
+	if workspace["computeAllocationId"] != compute["id"] || workspace["storageId"] != storage["id"] || workspace["attachmentId"] != "attachment-from-fabric" || workspace["receiptId"] != "receipt-from-ledger" {
 		t.Fatalf("workspace missing ledger/fabric evidence: %#v", workspace)
 	}
 	if access, ok := workspace["access"].(map[string]any); !ok || access["tokenStatus"] != "active" {
@@ -202,7 +202,8 @@ func TestResumeWorkspaceValidatesRetainedResourcesBeforeFabric(t *testing.T) {
 		t.Fatalf("create resume server: %v", err)
 	}
 	admin := operatorSessionForTest(t, server)
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"owner-resume@lab.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
+	ownerUser := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"owner-resume@lab.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/organizations/members", `{"organizationId":"org-alpha","userId":"`+stringValue(ownerUser["id"])+`","accountId":"acct-alpha","role":"member"}`)
 	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside-resume@lab.example","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	owner := loginForTest(t, server, "owner-resume@lab.example", "CorrectHorseBatteryStaple!")
 	outsider := loginForTest(t, server, "outside-resume@lab.example", "CorrectHorseBatteryStaple!")
@@ -218,7 +219,7 @@ func TestResumeWorkspaceValidatesRetainedResourcesBeforeFabric(t *testing.T) {
 
 	before := len(calls)
 	forbidden := requestWithSession(t, server, outsider, http.MethodPost, "/api/workspaces/workspace-alpha/resume", body)
-	if forbidden.Code != http.StatusForbidden || len(calls) != before {
+	if forbidden.Code != http.StatusUnauthorized || len(calls) != before {
 		t.Fatalf("cross-account resume = %d calls=%#v body=%s", forbidden.Code, calls[before:], forbidden.Body.String())
 	}
 
@@ -536,9 +537,9 @@ func TestWorkspaceRuntimeStatusPassesFabricChecks(t *testing.T) {
 	calls := []string{}
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{calls: &calls}))
 	session := operatorSessionForTest(t, server)
-	createResourceWithSession(t, server, session, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
-	createResourceWithSession(t, server, session, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
-	createResourceWithSession(t, server, session, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"compute-from-fabric","storageId":"volume-from-fabric","mountPath":"/data"}`)
+	compute := createResourceWithSession(t, server, session, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+	storage := createResourceWithSession(t, server, session, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
+	createResourceWithSession(t, server, session, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"`+stringValue(compute["id"])+`","storageId":"`+stringValue(storage["id"])+`","mountPath":"/data"}`)
 	workspace := createResourceWithSession(t, server, session, http.MethodPost, "/api/workspaces", `{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/workspaces/runtime-status", bytes.NewBufferString(`{"workspaceId":"`+stringValue(workspace["id"])+`"}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -577,7 +578,7 @@ func TestWorkspaceRuntimeStatusDoesNotReadSecretForUnknownProjection(t *testing.
 
 	before := len(calls)
 	response := requestWithSession(t, server, outsider, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"ws-unknown"}`)
-	if response.Code != http.StatusNotFound || !strings.Contains(response.Body.String(), "workspace_not_found") {
+	if response.Code != http.StatusUnauthorized || !strings.Contains(response.Body.String(), "not_authenticated") {
 		t.Fatalf("unknown runtime status = %d: %s", response.Code, response.Body.String())
 	}
 	if len(calls) != before || strings.Contains(response.Body.String(), "runtime-password-alpha") {
@@ -592,14 +593,14 @@ func TestWorkspaceRuntimeStatusForbidsCrossAccountSecretRead(t *testing.T) {
 	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside@lab.example","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	outsider := loginForTest(t, server, "outside@lab.example", "CorrectHorseBatteryStaple!")
 
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"compute-from-fabric","storageId":"volume-from-fabric","mountPath":"/data"}`)
+	compute := createResourceWithSession(t, server, admin, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+	storage := createResourceWithSession(t, server, admin, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"`+stringValue(compute["id"])+`","storageId":"`+stringValue(storage["id"])+`","mountPath":"/data"}`)
 	workspace := createResourceWithSession(t, server, admin, http.MethodPost, "/api/workspaces", `{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
 
 	before := len(calls)
 	response := requestWithSession(t, server, outsider, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"`+stringValue(workspace["id"])+`"}`)
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "account_scope_forbidden") {
+	if response.Code != http.StatusUnauthorized || !strings.Contains(response.Body.String(), "not_authenticated") {
 		t.Fatalf("cross-account runtime status = %d: %s", response.Code, response.Body.String())
 	}
 	if len(calls) != before {
@@ -634,7 +635,9 @@ func TestPersistentFactsSurviveServerRestart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create persistent server: %v", err)
 	}
-	createResource(t, server, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+	session := operatorSessionForTest(t, server)
+	ensureCustomerMembershipForTest(t, server, session, "acct-alpha", "usr-admin")
+	createResourceWithSession(t, server, session, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
 
 	restarted, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
 	if err != nil {
@@ -673,6 +676,7 @@ func TestSessionFactSurvivesServerRestart(t *testing.T) {
 		t.Fatalf("create persistent server: %v", err)
 	}
 	session := operatorSessionForTest(t, server)
+	ensureCustomerMembershipForTest(t, server, session, "acct-admin", "usr-admin")
 
 	restarted, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
 	if err != nil {
@@ -695,11 +699,13 @@ func TestWorkspaceTokenStatePersistsAcrossRestart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create persistent server: %v", err)
 	}
-	createResource(t, server, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
-	createResource(t, server, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
-	createResource(t, server, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"compute-from-fabric","storageId":"volume-from-fabric","mountPath":"/data"}`)
-	workspace := createResource(t, server, http.MethodPost, "/api/workspaces", `{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
-	createResource(t, server, http.MethodPost, "/api/workspaces/delete-token", `{"workspaceId":"`+stringValue(workspace["id"])+`"}`)
+	session := operatorSessionForTest(t, server)
+	ensureCustomerMembershipForTest(t, server, session, "acct-alpha", "usr-admin")
+	compute := createResourceWithSession(t, server, session, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+	storage := createResourceWithSession(t, server, session, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
+	createResourceWithSession(t, server, session, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"`+stringValue(compute["id"])+`","storageId":"`+stringValue(storage["id"])+`","mountPath":"/data"}`)
+	workspace := createResourceWithSession(t, server, session, http.MethodPost, "/api/workspaces", `{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
+	createResourceWithSession(t, server, session, http.MethodPost, "/api/workspaces/delete-token", `{"workspaceId":"`+stringValue(workspace["id"])+`"}`)
 
 	restarted, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
 	if err != nil {
@@ -747,7 +753,8 @@ func TestLoginAcceptsLegacyScryptPasswordHash(t *testing.T) {
 func TestNonAdminRequestsCannotSelectAnotherAccount(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"alpha@lab.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
+	alphaUser := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"alpha@lab.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/organizations/members", `{"organizationId":"org-alpha","userId":"`+stringValue(alphaUser["id"])+`","accountId":"acct-alpha","role":"member"}`)
 	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"beta@lab.example","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	alpha := loginForTest(t, server, "alpha@lab.example", "CorrectHorseBatteryStaple!")
 
@@ -1261,6 +1268,10 @@ func TestProjectCreationReportsMissingIdentity(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			store := newMemoryTableStore()
+			if tc.organization == nil {
+				delete(store.organizations, "org-alpha")
+				delete(store.memberships, "mem-admin-alpha")
+			}
 			if tc.organization != nil {
 				mustStore(t, store.SaveOrganization(context.Background(), tc.organization))
 				mustStore(t, store.SaveMembership(context.Background(), map[string]any{"id": "mem-admin-alpha", "organizationId": "org-alpha", "userId": "usr-admin", "accountId": "acct-alpha", "role": "admin", "status": "active"}))
@@ -1348,8 +1359,8 @@ func TestOrganizationMemberSyncsExecutionAndReadsContinuation(t *testing.T) {
 	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside-continuation@example.com","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	outsider := loginForTest(t, server, "outside-continuation@example.com", "CorrectHorseBatteryStaple!")
 	forbidden := requestWithSession(t, server, outsider, http.MethodGet, "/api/execution-requests/"+requestID+"/continuation", "")
-	if forbidden.Code != http.StatusForbidden {
-		t.Fatalf("outsider continuation status = %d, want %d: %s", forbidden.Code, http.StatusForbidden, forbidden.Body.String())
+	if forbidden.Code != http.StatusUnauthorized {
+		t.Fatalf("outsider continuation status = %d, want %d: %s", forbidden.Code, http.StatusUnauthorized, forbidden.Body.String())
 	}
 }
 
@@ -1399,8 +1410,8 @@ func TestExecutionRoutesAuthorizeActiveOrganizationMembers(t *testing.T) {
 	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outsider@execution.example","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	outsider := loginForTest(t, server, "outsider@execution.example", "CorrectHorseBatteryStaple!")
 	forbidden := requestWithSession(t, server, outsider, http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha"}`)
-	if forbidden.Code != http.StatusForbidden || !strings.Contains(forbidden.Body.String(), "organization_membership_required") {
-		t.Fatalf("outsider status = %d body=%s, want organization_membership_required", forbidden.Code, forbidden.Body.String())
+	if forbidden.Code != http.StatusUnauthorized || !strings.Contains(forbidden.Body.String(), "not_authenticated") {
+		t.Fatalf("outsider status = %d body=%s, want not_authenticated", forbidden.Code, forbidden.Body.String())
 	}
 }
 
@@ -2188,7 +2199,9 @@ func TestConsoleStateSkipsUnscopedHistoricFabricResourceProjection(t *testing.T)
 		t.Fatalf("create persistent server: %v", err)
 	}
 	req := httptest.NewRequest(http.MethodGet, "/api/state?accountId=acct-alpha", nil)
-	addSessionCookies(req, operatorSessionForTest(t, server))
+	session := operatorSessionForTest(t, server)
+	ensureCustomerMembershipForTest(t, server, session, "acct-alpha", "usr-admin")
+	addSessionCookies(req, session)
 	rec := httptest.NewRecorder()
 
 	server.ServeHTTP(rec, req)
@@ -2664,7 +2677,8 @@ func TestProtectedAPIRoutesRequireSessionCSRFAndAdminRole(t *testing.T) {
 		t.Fatalf("write without csrf status = %d, want 403: %s", postWithoutCSRFRec.Code, postWithoutCSRFRec.Body.String())
 	}
 
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"owner@lab.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
+	ownerUser := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"owner@lab.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/organizations/members", `{"organizationId":"org-alpha","userId":"`+stringValue(ownerUser["id"])+`","accountId":"acct-alpha","role":"member"}`)
 	owner := loginForTest(t, server, "owner@lab.example", "CorrectHorseBatteryStaple!")
 	adminReq := httptest.NewRequest(http.MethodPost, "/api/billing/topups", bytes.NewBufferString(`{"accountId":"acct-alpha","amount":100,"idempotencyKey":"topup-nonadmin"}`))
 	adminReq.Header.Set("Content-Type", "application/json")
@@ -2711,7 +2725,9 @@ func TestHighRiskMutationsRequireBackendConfirmation(t *testing.T) {
 
 func TestLoginSessionMeAndLogoutUseStoredPasswordHash(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
-	createResource(t, server, http.MethodPost, "/api/users", `{"email":"owner@lab.example","accountId":"acct-alpha","role":"admin","password":"CorrectHorseBatteryStaple!"}`)
+	admin := operatorSessionForTest(t, server)
+	ownerUser := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"owner@lab.example","accountId":"acct-alpha","role":"admin","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/organizations/members", `{"organizationId":"org-alpha","userId":"`+stringValue(ownerUser["id"])+`","accountId":"acct-alpha","role":"admin"}`)
 
 	loginReq := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewBufferString(`{"email":"owner@lab.example","password":"CorrectHorseBatteryStaple!"}`))
 	loginReq.Header.Set("Content-Type", "application/json")
@@ -2982,7 +2998,9 @@ func TestSupportTicketMappingPersistsExternalContext(t *testing.T) {
 		t.Fatalf("create persistent server: %v", err)
 	}
 	body := `{"accountId":"acct-alpha","userId":"usr-alpha","workspaceId":"ws-alpha","externalSystem":"zammad","externalTicketId":"ZAM-42","externalUrl":"https://support.example/tickets/42","resourceIds":["compute-alpha"],"operationId":"op-alpha","title":"Workspace failed","description":"provider timeout"}`
-	created := createResource(t, server, http.MethodPost, "/api/support/tickets", body)
+	session := operatorSessionForTest(t, server)
+	ensureCustomerMembershipForTest(t, server, session, "acct-alpha", "usr-admin")
+	created := createResourceWithSession(t, server, session, http.MethodPost, "/api/support/tickets", body)
 	if !strings.HasPrefix(stringValue(created["id"]), "support-") || created["externalTicketId"] != "ZAM-42" || created["accountId"] != "acct-alpha" {
 		t.Fatalf("support mapping did not keep external context: %#v", created)
 	}
@@ -3011,6 +3029,12 @@ func TestSupportTicketMappingPersistsExternalContext(t *testing.T) {
 func setTestOperatorAccount(t *testing.T, accountID string) {
 	t.Helper()
 	t.Setenv("OPL_CONSOLE_USERS_JSON", `[{"id":"usr-admin","email":"admin@medopl.cn","password":"StableAdminPass2026!","role":"admin","accountId":"`+accountID+`"}]`)
+}
+
+func ensureCustomerMembershipForTest(t *testing.T, server http.Handler, admin *httptest.ResponseRecorder, accountID, userID string) {
+	t.Helper()
+	organization := createResourceWithSession(t, server, admin, http.MethodPost, "/api/organizations", `{"name":"Test tenant","billingAccountId":"`+accountID+`"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/organizations/members", `{"organizationId":"`+stringValue(organization["id"])+`","userId":"`+userID+`","accountId":"`+accountID+`","role":"admin"}`)
 }
 
 func TestActiveConsoleAPIRoutesReachControlPlane(t *testing.T) {

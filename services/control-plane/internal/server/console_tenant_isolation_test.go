@@ -99,6 +99,88 @@ func TestFreshComputeReadRejectsCrossTenantProjection(t *testing.T) {
 	}
 }
 
+func TestCustomerStateContainsOnlySessionTenant(t *testing.T) {
+	store := newMemoryTableStore()
+	seedTenantMember(t, store, "acct-alpha", "org-alpha", "usr-alpha", "alpha@example.com")
+	mustStore(t, store.SaveAccount(context.Background(), map[string]any{"id": "acct-beta", "status": "active"}))
+	mustStore(t, store.SaveUser(context.Background(), map[string]any{"id": "usr-beta", "email": "beta-secret@example.com", "accountId": "acct-beta", "role": "member", "status": "active"}))
+	mustStore(t, store.SaveWorkspace(context.Background(), map[string]any{"id": "workspace-beta", "accountId": "acct-beta", "ownerAccountId": "acct-beta", "status": "running"}))
+	mustStore(t, store.SaveCompute(context.Background(), map[string]any{"id": "compute-beta", "accountId": "acct-beta", "status": "running"}))
+	mustStore(t, store.SaveStorage(context.Background(), map[string]any{"id": "storage-beta", "accountId": "acct-beta", "status": "available"}))
+	mustStore(t, store.SaveRuntimeOperation(context.Background(), map[string]any{"id": "operation-beta", "operationId": "operation-beta", "accountId": "acct-beta", "workspaceId": "workspace-beta", "status": "succeeded"}))
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	member := loginForTest(t, server, "alpha@example.com", "CorrectHorseBatteryStaple!")
+	rec := requestWithSession(t, server, member, http.MethodGet, "/api/state", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("state status = %d: %s", rec.Code, rec.Body.String())
+	}
+	for _, secret := range []string{"acct-beta", "beta-secret@example.com", "workspace-beta", "compute-beta", "storage-beta", "operation-beta"} {
+		if strings.Contains(rec.Body.String(), secret) {
+			t.Fatalf("state leaked %q: %s", secret, rec.Body.String())
+		}
+	}
+	if !strings.Contains(rec.Body.String(), "alpha@example.com") {
+		t.Fatalf("state omitted current user: %s", rec.Body.String())
+	}
+}
+
+func TestUnknownCustomerResourceMutationsNeverReachFabric(t *testing.T) {
+	store := newMemoryTableStore()
+	seedTenantMember(t, store, "acct-alpha", "org-alpha", "usr-alpha", "alpha@example.com")
+	calls := []string{}
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{calls: &calls}), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	member := loginForTest(t, server, "alpha@example.com", "CorrectHorseBatteryStaple!")
+	for _, tc := range []struct{ path, body string }{
+		{"/api/compute-allocations/compute-missing/destroy", `{"confirm":true}`},
+		{"/api/storage-volumes/destroy", `{"storageId":"storage-missing","confirmDataLoss":true}`},
+		{"/api/storage-attachments/detach", `{"attachmentId":"attachment-missing"}`},
+		{"/api/storage-attachments", `{"computeAllocationId":"compute-missing","storageId":"storage-missing","workspaceId":"workspace-alpha"}`},
+	} {
+		before := len(calls)
+		rec := requestWithSession(t, server, member, http.MethodPost, tc.path, tc.body)
+		if rec.Code != http.StatusNotFound && rec.Code != http.StatusBadRequest {
+			t.Fatalf("unknown mutation %s status = %d: %s", tc.path, rec.Code, rec.Body.String())
+		}
+		if len(calls) != before {
+			t.Fatalf("unknown mutation %s reached Fabric: %#v", tc.path, calls[before:])
+		}
+	}
+}
+
+func TestCustomerSupportScopeAllRemainsTenantScoped(t *testing.T) {
+	store := newMemoryTableStore()
+	seedTenantMember(t, store, "acct-alpha", "org-alpha", "usr-alpha", "alpha@example.com")
+	mustStore(t, store.SaveSupportMapping(context.Background(), map[string]any{"id": "support-alpha", "accountId": "acct-alpha", "externalTicketId": "ALPHA-1"}))
+	mustStore(t, store.SaveSupportMapping(context.Background(), map[string]any{"id": "support-beta", "accountId": "acct-beta", "externalTicketId": "BETA-1"}))
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	member := loginForTest(t, server, "alpha@example.com", "CorrectHorseBatteryStaple!")
+	rec := requestWithSession(t, server, member, http.MethodGet, "/api/support/tickets?scope=all", "")
+	if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "ALPHA-1") || strings.Contains(rec.Body.String(), "BETA-1") {
+		t.Fatalf("tenant support scope status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func seedTenantMember(t *testing.T, store controlPlaneTableStore, accountID, organizationID, userID, email string) {
+	t.Helper()
+	mustStore(t, store.SaveAccount(context.Background(), map[string]any{"id": accountID, "status": "active"}))
+	mustStore(t, store.SaveOrganization(context.Background(), map[string]any{"id": organizationID, "billingAccountId": accountID, "status": "active"}))
+	hash, err := hashPassword("CorrectHorseBatteryStaple!")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustStore(t, store.SaveUser(context.Background(), map[string]any{"id": userID, "email": email, "accountId": accountID, "role": "member", "status": "active", "passwordHash": hash}))
+	mustStore(t, store.SaveMembership(context.Background(), map[string]any{"id": "mem-" + userID, "organizationId": organizationID, "userId": userID, "accountId": accountID, "role": "member", "status": "active"}))
+}
+
 func TestMembershipRevocationAndUserDisableTakeEffectImmediately(t *testing.T) {
 	app := newControlPlaneApp()
 	user := map[string]any{"id": "usr-member", "email": "member@example.com", "accountId": "acct-alpha", "role": "member", "status": "active"}
@@ -114,14 +196,119 @@ func TestMembershipRevocationAndUserDisableTakeEffectImmediately(t *testing.T) {
 	membership["status"] = "revoked"
 	mustStore(t, app.tables.SaveMembership(context.Background(), membership))
 	rec := httptest.NewRecorder()
-	if app.authorizeOrganization(rec, req, "org-alpha") || rec.Code != http.StatusForbidden {
-		t.Fatalf("revoked membership status=%d, want 403", rec.Code)
+	if app.authorizeOrganization(rec, req, "org-alpha") || rec.Code != http.StatusUnauthorized {
+		t.Fatalf("revoked membership status=%d, want 401", rec.Code)
 	}
 
 	user["status"] = "disabled"
 	mustStore(t, app.tables.SaveUser(context.Background(), user))
 	if _, ok := app.session(req); ok {
 		t.Fatal("disabled user retained an active session")
+	}
+}
+
+func TestRevokeMembershipImmediatelyDeniesCustomerEndpoints(t *testing.T) {
+	store := newMemoryTableStore()
+	mustStore(t, store.SaveOrganization(context.Background(), map[string]any{"id": "org-alpha", "billingAccountId": "acct-alpha", "status": "active"}))
+	mustStore(t, store.SaveMembership(context.Background(), map[string]any{"id": "mem-admin", "organizationId": "org-alpha", "userId": "usr-admin", "accountId": "acct-alpha", "role": "admin", "status": "active"}))
+	hash, err := hashPassword("CorrectHorseBatteryStaple!")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustStore(t, store.SaveUser(context.Background(), map[string]any{"id": "usr-member", "email": "member@alpha.example", "accountId": "acct-alpha", "role": "member", "status": "active", "passwordHash": hash}))
+	mustStore(t, store.SaveMembership(context.Background(), map[string]any{"id": "mem-member", "organizationId": "org-alpha", "userId": "usr-member", "accountId": "acct-alpha", "role": "member", "status": "active"}))
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	member := loginForTest(t, server, "member@alpha.example", "CorrectHorseBatteryStaple!")
+	if rec := requestWithSession(t, server, member, http.MethodGet, "/api/workspaces", ""); rec.Code != http.StatusOK {
+		t.Fatalf("active member workspace status = %d: %s", rec.Code, rec.Body.String())
+	}
+
+	revoked := requestWithSession(t, server, operatorSessionForTest(t, server), http.MethodPost, "/api/organizations/members/mem-member/revoke", `{}`)
+	if revoked.Code != http.StatusOK {
+		t.Fatalf("revoke status = %d: %s", revoked.Code, revoked.Body.String())
+	}
+	for _, membership := range mustListMemberships(t, store) {
+		if stringValue(membership["id"]) == "mem-member" && stringValue(membership["status"]) != "revoked" {
+			t.Fatalf("membership status = %q, want revoked", membership["status"])
+		}
+	}
+	for _, tc := range []struct{ method, path, body string }{
+		{http.MethodGet, "/api/state", ""},
+		{http.MethodGet, "/api/billing/summary", ""},
+		{http.MethodGet, "/api/workspaces", ""},
+		{http.MethodGet, "/api/compute-allocations", ""},
+		{http.MethodPost, "/api/storage-volumes", `{"sizeGb":10}`},
+	} {
+		rec := requestWithSession(t, server, member, tc.method, tc.path, tc.body)
+		if rec.Code != http.StatusUnauthorized {
+			t.Fatalf("revoked member %s %s status = %d, want 401: %s", tc.method, tc.path, rec.Code, rec.Body.String())
+		}
+	}
+	audits, err := store.ListAuditEvents(context.Background(), "acct-alpha")
+	if err != nil || len(audits) == 0 || stringValue(audits[len(audits)-1]["action"]) != "organization.member_revoke" {
+		t.Fatalf("revoke audit = %#v err=%v", audits, err)
+	}
+}
+
+func TestRevokeMembershipRequiresGlobalAdminAndExistingMembership(t *testing.T) {
+	store := newMemoryTableStore()
+	mustStore(t, store.SaveOrganization(context.Background(), map[string]any{"id": "org-alpha", "billingAccountId": "acct-alpha", "status": "active"}))
+	mustStore(t, store.SaveMembership(context.Background(), map[string]any{"id": "mem-admin", "organizationId": "org-alpha", "userId": "usr-admin", "accountId": "acct-alpha", "role": "admin", "status": "active"}))
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	missing := requestWithSession(t, server, operatorSessionForTest(t, server), http.MethodPost, "/api/organizations/members/missing/revoke", `{}`)
+	if missing.Code != http.StatusNotFound {
+		t.Fatalf("missing membership status = %d, want 404: %s", missing.Code, missing.Body.String())
+	}
+
+	hash, _ := hashPassword("CorrectHorseBatteryStaple!")
+	mustStore(t, store.SaveUser(context.Background(), map[string]any{"id": "usr-member", "email": "member@example.com", "accountId": "acct-alpha", "role": "member", "status": "active", "passwordHash": hash}))
+	mustStore(t, store.SaveMembership(context.Background(), map[string]any{"id": "mem-member", "organizationId": "org-alpha", "userId": "usr-member", "accountId": "acct-alpha", "role": "member", "status": "active"}))
+	member := loginForTest(t, server, "member@example.com", "CorrectHorseBatteryStaple!")
+	forbidden := requestWithSession(t, server, member, http.MethodPost, "/api/organizations/members/mem-admin/revoke", `{}`)
+	if forbidden.Code != http.StatusForbidden {
+		t.Fatalf("member revoke status = %d, want 403: %s", forbidden.Code, forbidden.Body.String())
+	}
+}
+
+func mustListMemberships(t *testing.T, store controlPlaneTableStore) []map[string]any {
+	t.Helper()
+	rows, err := store.ListMemberships(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return rows
+}
+
+func TestStoresRejectOrphanOrganizationAndMembershipWrites(t *testing.T) {
+	stores := []struct {
+		name  string
+		store controlPlaneTableStore
+	}{
+		{"memory", newMemoryTableStore()},
+		{"ent", NewTestEntStateStore(t, t.TempDir()+"/tenant-truth.sqlite")},
+	}
+	for _, tc := range stores {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			if err := tc.store.SaveOrganization(ctx, map[string]any{"id": "org-orphan", "billingAccountId": "acct-missing", "status": "active"}); err == nil {
+				t.Fatal("orphan organization write succeeded")
+			}
+			mustStore(t, tc.store.SaveAccount(ctx, map[string]any{"id": "acct-alpha", "status": "active"}))
+			mustStore(t, tc.store.SaveOrganization(ctx, map[string]any{"id": "org-alpha", "billingAccountId": "acct-alpha", "status": "active"}))
+			mustStore(t, tc.store.SaveUser(ctx, map[string]any{"id": "usr-alpha", "email": "alpha@example.com", "accountId": "acct-alpha", "role": "member", "status": "active"}))
+			if err := tc.store.SaveMembership(ctx, map[string]any{"id": "mem-orphan", "organizationId": "org-missing", "userId": "usr-alpha", "accountId": "acct-alpha", "role": "member", "status": "active"}); err == nil {
+				t.Fatal("membership with missing organization succeeded")
+			}
+			if err := tc.store.SaveMembership(ctx, map[string]any{"id": "mem-mismatch", "organizationId": "org-alpha", "userId": "usr-alpha", "accountId": "acct-other", "role": "member", "status": "active"}); err == nil {
+				t.Fatal("membership with mismatched account succeeded")
+			}
+		})
 	}
 }
 
@@ -172,6 +359,16 @@ func TestPostgresLegacyMembershipMigrationIsLosslessAndFailClosed(t *testing.T) 
 		t.Fatalf("normalize valid legacy memberships: %v", err)
 	}
 	assertMembershipRoles(t, db, []string{"admin", "owner"})
+	if _, err := db.Exec(`ALTER TABLE control_plane_memberships ALTER COLUMN role DROP NOT NULL; INSERT INTO control_plane_memberships VALUES ('mem-null', 'acct-alpha', 'org-alpha', 'usr-owner', NULL, 'active')`); err != nil {
+		t.Fatal(err)
+	}
+	if err := validateAndNormalizeLegacyMemberships(context.Background(), driver); err == nil {
+		t.Fatal("migration accepted NULL role")
+	}
+	var nullRole sql.NullString
+	if err := db.QueryRow(`SELECT role FROM control_plane_memberships WHERE id = 'mem-null'`).Scan(&nullRole); err != nil || nullRole.Valid {
+		t.Fatalf("NULL legacy role was not preserved: role=%v err=%v", nullRole, err)
+	}
 }
 
 func TestPostgresStoreStartsFromFreshDatabase(t *testing.T) {
