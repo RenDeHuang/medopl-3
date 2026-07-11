@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -329,6 +330,80 @@ async function verifyWorkspaceRuntimeFile({ fetchImpl, checks, workspaceUrl, run
   });
   addCheck(checks, "workspace_file_read", runtimePayloadData(read) === content, { path: filePath });
   return { filePath, content };
+}
+
+async function verifyWorkspaceContentTransfer({ fetchImpl, checks, origin, workspace, runId, auth, workspaceAuth }) {
+  const organizationId = "org-production-verifier";
+  const content = `${"x".repeat(4 << 20)}opl transfer ${runId}`;
+  const digest = createHash("sha256").update(content).digest("hex");
+  const path = `production-verifier/opl-transfer-${runId}.txt`;
+  const project = await requestJson({
+    fetchImpl,
+    origin,
+    path: "/api/projects",
+    method: "POST",
+    auth,
+    idempotencyKey: `production-verification:${runId}:project`,
+    body: { organizationId, workspaceId: workspace.id, localAliasId: `local-project-${runId}` }
+  });
+  const transfer = await requestJson({
+    fetchImpl,
+    origin,
+    path: `/api/workspaces/${encodeURIComponent(workspace.id)}/transfers`,
+    method: "POST",
+    auth,
+    idempotencyKey: `production-verification:${runId}:transfer`,
+    body: { organizationId, projectId: project.projectId, path, digest, size: Buffer.byteLength(content) }
+  });
+  const body = Buffer.from(content);
+  const chunks = Array.from({ length: transfer.chunkCount }, (_, index) => body.subarray(index * transfer.chunkSize, (index + 1) * transfer.chunkSize));
+  const upload = async (index) => {
+    const chunk = chunks[index];
+    const response = await fetchImpl(endpoint(origin, `/api/workspaces/${encodeURIComponent(workspace.id)}/transfers/${encodeURIComponent(transfer.transferId)}/chunks/${index}`), {
+      method: "PUT",
+      headers: { ...authHeaderValues(auth), "x-chunk-sha256": createHash("sha256").update(chunk).digest("hex") },
+      body: chunk
+    });
+    const payload = await readResponse(response);
+    if (!response.ok) throw new Error(`workspace_transfer_chunk_failed:${index}:${response.status}:${payload?.error || payload}`);
+  };
+
+  await upload(0);
+  const resumed = await requestJson({
+    fetchImpl,
+    origin,
+    path: `/api/workspaces/${encodeURIComponent(workspace.id)}/transfers/${encodeURIComponent(transfer.transferId)}`,
+    auth
+  });
+  addCheck(checks, "workspace_content_transfer_interrupted", resumed.status === "uploading" && resumed.receivedChunks?.length === 1 && resumed.receivedChunks[0] === 0);
+  const received = new Set(resumed.receivedChunks || []);
+  for (let index = 0; index < chunks.length; index += 1) {
+    if (!received.has(index)) await upload(index);
+  }
+
+  const completed = await requestJson({
+    fetchImpl,
+    origin,
+    path: `/api/workspaces/${encodeURIComponent(workspace.id)}/transfers/${encodeURIComponent(transfer.transferId)}/complete`,
+    method: "POST",
+    auth,
+    body: {}
+  });
+  addCheck(checks, "workspace_content_transfer_completed", completed.status === "completed" && completed.receivedChunks?.length === chunks.length);
+
+  const downloaded = await fetchImpl(endpoint(origin, `/api/workspaces/${encodeURIComponent(workspace.id)}/contents/${digest}`), { headers: authHeaderValues(auth) });
+  const downloadedBody = await downloaded.text();
+  addCheck(checks, "workspace_content_transfer_downloaded", downloaded.ok && downloaded.headers.get("x-content-sha256") === digest && downloadedBody === content);
+
+  const volumeRead = await requestWorkspaceJson({
+    fetchImpl,
+    workspaceUrl: workspaceAuth.apiBaseUrl || workspaceAuth.url || workspace.url,
+    path: "/api/fs/read",
+    method: "POST",
+    body: { path: `/projects/${path}`, workspace: "/projects" },
+    cookie: workspaceAuth.cookie || ""
+  });
+  addCheck(checks, "workspace_content_transfer_volume_read", runtimePayloadData(volumeRead) === content, { path: `/projects/${path}` });
 }
 
 async function verifyWorkspacePersistedFile({ fetchImpl, checks, workspaceUrl, fileProof, workspaceAuth = null }) {
@@ -1485,6 +1560,15 @@ export async function verifyProductionChain({
       checks,
       workspaceUrl: workspace.url,
       runId,
+      workspaceAuth: workspaceApiAuth
+    });
+    await verifyWorkspaceContentTransfer({
+      fetchImpl,
+      checks,
+      origin: normalizedOrigin,
+      workspace,
+      runId,
+      auth,
       workspaceAuth: workspaceApiAuth
     });
 

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { basename } from "node:path";
 import test from "node:test";
 
@@ -26,6 +27,21 @@ function htmlResponse(html, status = 200) {
     json: async () => JSON.parse(html),
     text: async () => html
   };
+}
+
+function binaryResponse(body, headers = {}) {
+  return {
+    status: 200,
+    ok: true,
+    headers: new Headers({ "content-type": "application/octet-stream", ...headers }),
+    json: async () => JSON.parse(body),
+    text: async () => body
+  };
+}
+
+function capturedBody(body) {
+  if (!body || typeof body !== "string") return body || null;
+  return JSON.parse(body);
 }
 
 function redirectResponse(location, setCookie) {
@@ -137,6 +153,21 @@ function readyRuntimeStatus(workspace) {
 
 function chainResponses(chain) {
   const persistenceText = "opl persistence prod-run";
+  const transferText = `${"x".repeat(4 << 20)}opl transfer prod-run`;
+  const transferDigest = createHash("sha256").update(transferText).digest("hex");
+  const transfer = {
+    transferId: "transfer-prod-run",
+    organizationId: "org-production-verifier",
+    workspaceId: chain.workspace.id,
+    projectId: "project-prod-run",
+    path: "production-verifier/opl-transfer-prod-run.txt",
+    digest: transferDigest,
+    size: Buffer.byteLength(transferText),
+    chunkSize: 4 << 20,
+    chunkCount: 2,
+    receivedChunks: [],
+    status: "uploading"
+  };
   const pricingVersion = "opl-tencent-v1";
   const computePriceSnapshot = { packageId: "basic", unitPriceCents: 100, currency: "CNY" };
   const storagePriceSnapshot = { packageId: "basic", unitPriceCents: 100, currency: "CNY" };
@@ -168,8 +199,16 @@ function chainResponses(chain) {
     },
     [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/write")}`]: { success: true, data: true },
     [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}`]: { success: true, data: persistenceText },
+    "POST /api/projects": { projectId: transfer.projectId, organizationId: transfer.organizationId, workspaceId: transfer.workspaceId },
+    [`POST /api/workspaces/${chain.workspace.id}/transfers`]: transfer,
+    [`PUT /api/workspaces/${chain.workspace.id}/transfers/${transfer.transferId}/chunks/0`]: { ...transfer, receivedChunks: [0] },
+    [`GET /api/workspaces/${chain.workspace.id}/transfers/${transfer.transferId}`]: { ...transfer, receivedChunks: [0] },
+    [`PUT /api/workspaces/${chain.workspace.id}/transfers/${transfer.transferId}/chunks/1`]: { ...transfer, receivedChunks: [0, 1] },
+    [`POST /api/workspaces/${chain.workspace.id}/transfers/${transfer.transferId}/complete`]: { ...transfer, receivedChunks: [0, 1], status: "completed" },
+    [`GET /api/workspaces/${chain.workspace.id}/contents/${transferDigest}`]: { binaryBody: transferText, digest: transferDigest, path: transfer.path },
+    [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`]: { success: true, data: transferText },
     [`GET ${chain.workspace.url}#2`]: "<html>one-person-lab-app</html>",
-    [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`]: { success: true, data: persistenceText },
+    [`POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#3`]: { success: true, data: persistenceText },
     "POST /api/billing/resource-settlements": { entries: [
       { accountId: "pi-prod", computeAllocationId: chain.replacementCompute.id, type: "compute_debit", pricingVersion, priceSnapshot: computePriceSnapshot, providerCostEvidenceRef: "fabric:op-runtime-prod002", quantity: 1, unit: "verification" }
     ] },
@@ -219,7 +258,7 @@ function keyedFetch({ responses, requests = [], responseHeaders = null, statusBy
         csrf: options.headers?.["x-opl-csrf"] || "",
         operatorToken: options.headers?.["x-opl-operator-token"] || "",
         idempotencyKey: options.headers?.["Idempotency-Key"] || "",
-        body: options.body ? JSON.parse(options.body) : null,
+        body: capturedBody(options.body),
         redirect: options.redirect || ""
       });
       const workspaceId = parsed.pathname.split("/").filter(Boolean).pop() || "workspace";
@@ -250,7 +289,7 @@ function keyedFetch({ responses, requests = [], responseHeaders = null, statusBy
       csrf: options.headers?.["x-opl-csrf"] || "",
       operatorToken: options.headers?.["x-opl-operator-token"] || "",
       idempotencyKey: options.headers?.["Idempotency-Key"] || "",
-      body: options.body ? JSON.parse(options.body) : null
+      body: capturedBody(options.body)
     });
     let responseKey = key;
     if (parsed.origin !== consoleOrigin && method === "GET" && parsed.pathname.startsWith("/w/") && !parsed.searchParams.has("token")) {
@@ -268,6 +307,12 @@ function keyedFetch({ responses, requests = [], responseHeaders = null, statusBy
     const payload = responses[responseKey] ?? responses[responseKey.replace(/#\d+$/, "")] ?? responses[key] ?? responses[key.replace(/#\d+$/, "")];
     if (typeof payload === "string") return htmlResponse(payload);
     if (payload) {
+      if (typeof payload.binaryBody === "string") {
+        return binaryResponse(payload.binaryBody, {
+          "x-content-sha256": payload.digest,
+          "x-workspace-path": payload.path
+        });
+      }
       if (key === "POST /api/auth/operator-login" && responseHeaders) return jsonResponse(payload, 200, responseHeaders);
       if (String(key).includes("/api/auth/user")) {
         return jsonResponse(payload, 200, new Headers({
@@ -1008,6 +1053,14 @@ test("production verifier exercises the public TKE resource provisioning chain",
     `GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}#2`,
     `POST ${workspaceUrl(chain.workspace.url, "/api/fs/write")}`,
     `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}`,
+    "POST /api/projects",
+    `POST /api/workspaces/${chain.workspace.id}/transfers`,
+    `PUT /api/workspaces/${chain.workspace.id}/transfers/transfer-prod-run/chunks/0`,
+    `GET /api/workspaces/${chain.workspace.id}/transfers/transfer-prod-run`,
+    `PUT /api/workspaces/${chain.workspace.id}/transfers/transfer-prod-run/chunks/1`,
+    `POST /api/workspaces/${chain.workspace.id}/transfers/transfer-prod-run/complete`,
+    `GET /api/workspaces/${chain.workspace.id}/contents/${createHash("sha256").update(`${"x".repeat(4 << 20)}opl transfer prod-run`).digest("hex")}`,
+    `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`,
     "POST /api/storage-attachments/detach",
     `POST /api/compute-allocations/${chain.compute.id}/destroy`,
     "POST /api/compute-allocations#2",
@@ -1017,7 +1070,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
     `GET ${chain.workspace.url}#2`,
     `GET ${scrubbedWorkspaceUrl(chain.workspace.url)}#2`,
     `GET ${workspaceUrl(chain.workspace.url, "/api/auth/user")}#3`,
-    `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`,
+    `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#3`,
     "POST /api/billing/resource-settlements",
     "POST /api/billing/resource-settlements#2",
     "GET /api/state?accountId=pi-prod",
@@ -1041,6 +1094,10 @@ test("production verifier exercises the public TKE resource provisioning chain",
     path: "/data/opl-e2e-prod-run.txt",
     workspace: "/data"
   });
+  assert.deepEqual(requests.find((request) => request.key === `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`).body, {
+    path: "/projects/production-verifier/opl-transfer-prod-run.txt",
+    workspace: "/projects"
+  });
   assert.equal(requests.find((request) => request.key === "POST /api/storage-attachments#2").body.storageId, chain.storage.id);
   assert.deepEqual(requests.find((request) => request.key === "POST /api/workspaces#2").body, {
     accountId: "pi-prod",
@@ -1049,7 +1106,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
   });
   assert.equal(chain.replacementWorkspace.id, chain.workspace.id);
   assert.equal(chain.replacementWorkspace.url, chain.workspace.url);
-  assert.deepEqual(requests.find((request) => request.key === `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#2`).body, {
+  assert.deepEqual(requests.find((request) => request.key === `POST ${workspaceUrl(chain.workspace.url, "/api/fs/read")}#3`).body, {
     path: "/data/opl-e2e-prod-run.txt",
     workspace: "/data"
   });
@@ -1081,6 +1138,10 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "workspace_runtime_auth:true",
     "workspace_file_written:true",
     "workspace_file_read:true",
+    "workspace_content_transfer_interrupted:true",
+    "workspace_content_transfer_completed:true",
+    "workspace_content_transfer_downloaded:true",
+    "workspace_content_transfer_volume_read:true",
     "verification_storage_detached:true",
     "verification_compute_destroyed:true",
     "replacement_compute_created:true",
@@ -1190,8 +1251,9 @@ test("production verifier keeps workspace API calls on the discovered prefixed b
       return jsonResponse({ success: true, data: true });
     }
     if (String(url) === prefixedEndpoint("/api/fs/read")) {
-      requests.push({ key: `POST ${String(url)}`, body: options.body ? JSON.parse(options.body) : null });
-      return jsonResponse({ success: true, data: "opl persistence prod-run" });
+      const body = options.body ? JSON.parse(options.body) : null;
+      requests.push({ key: `POST ${String(url)}`, body });
+      return jsonResponse({ success: true, data: body?.workspace === "/projects" ? `${"x".repeat(4 << 20)}opl transfer prod-run` : "opl persistence prod-run" });
     }
     return baseFetch(url, options);
   };
