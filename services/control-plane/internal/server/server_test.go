@@ -180,6 +180,86 @@ func TestCreateWorkspaceHTTPUsesControlPlaneService(t *testing.T) {
 	}
 }
 
+func TestResumeWorkspaceValidatesRetainedResourcesBeforeFabric(t *testing.T) {
+	calls := []string{}
+	store := newMemoryTableStore()
+	workspace := map[string]any{
+		"id": "workspace-alpha", "accountId": "acct-alpha", "ownerAccountId": "acct-alpha", "ownerUserId": "usr-owner",
+		"name": "Alpha Lab", "packageId": "basic", "url": "https://workspace.medopl.cn/w/workspace-alpha/",
+		"state": "suspended", "status": "suspended", "storageId": "storage-alpha",
+		"currentComputeAllocationId": "", "currentAttachmentId": "", "runtimeId": "runtime-old",
+		"runtime": map[string]any{"serviceName": "opl-compute-old"}, "access": map[string]any{"tokenStatus": "suspended"},
+	}
+	mustStore(t, store.SaveWorkspace(context.Background(), workspace))
+	mustStore(t, store.SaveStorage(context.Background(), map[string]any{"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "workspace-alpha", "status": "available"}))
+	mustStore(t, store.SaveCompute(context.Background(), map[string]any{"id": "compute-replacement", "accountId": "acct-alpha", "workspaceId": "workspace-alpha", "status": "running"}))
+	mustStore(t, store.SaveAttachment(context.Background(), map[string]any{"id": "attachment-replacement", "accountId": "acct-alpha", "workspaceId": "workspace-alpha", "computeAllocationId": "compute-replacement", "storageId": "storage-alpha", "status": "attached"}))
+	mustStore(t, store.SaveProjectTaskSyncHead(context.Background(), map[string]any{"id": "project-alpha", "workspaceId": "workspace-alpha", "projectId": "project-alpha", "taskId": "task-alpha", "version": int64(7)}))
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{calls: &calls}), store)
+	if err != nil {
+		t.Fatalf("create resume server: %v", err)
+	}
+	admin := operatorSessionForTest(t, server)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"owner-resume@lab.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside-resume@lab.example","accountId":"acct-beta","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	owner := loginForTest(t, server, "owner-resume@lab.example", "CorrectHorseBatteryStaple!")
+	outsider := loginForTest(t, server, "outside-resume@lab.example", "CorrectHorseBatteryStaple!")
+	body := `{"computeAllocationId":"compute-replacement","attachmentId":"attachment-replacement"}`
+
+	before := len(calls)
+	forbidden := requestWithSession(t, server, outsider, http.MethodPost, "/api/workspaces/workspace-alpha/resume", body)
+	if forbidden.Code != http.StatusForbidden || len(calls) != before {
+		t.Fatalf("cross-account resume = %d calls=%#v body=%s", forbidden.Code, calls[before:], forbidden.Body.String())
+	}
+
+	workspace["state"], workspace["status"] = "running", "running"
+	mustStore(t, store.SaveWorkspace(context.Background(), workspace))
+	wrongState := requestWithSession(t, server, owner, http.MethodPost, "/api/workspaces/workspace-alpha/resume", body)
+	if wrongState.Code != http.StatusConflict || len(calls) != before {
+		t.Fatalf("running resume = %d calls=%#v body=%s", wrongState.Code, calls[before:], wrongState.Body.String())
+	}
+
+	workspace["state"], workspace["status"] = "suspended", "suspended"
+	mustStore(t, store.SaveWorkspace(context.Background(), workspace))
+	computes, _ := store.ListComputes(context.Background(), "")
+	computes[0]["accountId"] = "acct-beta"
+	mustStore(t, store.SaveCompute(context.Background(), computes[0]))
+	wrongResourceAccount := requestWithSession(t, server, owner, http.MethodPost, "/api/workspaces/workspace-alpha/resume", body)
+	if wrongResourceAccount.Code != http.StatusConflict || len(calls) != before {
+		t.Fatalf("wrong-account resource resume = %d calls=%#v body=%s", wrongResourceAccount.Code, calls[before:], wrongResourceAccount.Body.String())
+	}
+	computes[0]["accountId"] = "acct-alpha"
+	mustStore(t, store.SaveCompute(context.Background(), computes[0]))
+	attachment, _ := store.ListAttachments(context.Background(), "")
+	attachment[0]["storageId"] = "storage-other"
+	mustStore(t, store.SaveAttachment(context.Background(), attachment[0]))
+	wrongStorage := requestWithSession(t, server, owner, http.MethodPost, "/api/workspaces/workspace-alpha/resume", body)
+	if wrongStorage.Code != http.StatusConflict || len(calls) != before {
+		t.Fatalf("wrong-storage resume = %d calls=%#v body=%s", wrongStorage.Code, calls[before:], wrongStorage.Body.String())
+	}
+
+	attachment[0]["storageId"] = "storage-alpha"
+	mustStore(t, store.SaveAttachment(context.Background(), attachment[0]))
+	resumed := requestWithSession(t, server, owner, http.MethodPost, "/api/workspaces/workspace-alpha/resume", body)
+	if resumed.Code != http.StatusOK {
+		t.Fatalf("resume status = %d: %s", resumed.Code, resumed.Body.String())
+	}
+	var result map[string]any
+	if err := json.NewDecoder(resumed.Body).Decode(&result); err != nil {
+		t.Fatalf("decode resume: %v", err)
+	}
+	if result["id"] != "workspace-alpha" || result["url"] != "https://workspace.medopl.cn/w/workspace-alpha/" || result["storageId"] != "storage-alpha" || result["currentComputeAllocationId"] != "compute-replacement" || result["currentAttachmentId"] != "attachment-replacement" {
+		t.Fatalf("resume changed stable identity or missed replacement resources: %#v", result)
+	}
+	if got := calls[before:]; !slices.Equal(got, []string{"fabric.runtime"}) {
+		t.Fatalf("resume Fabric calls = %#v", got)
+	}
+	heads, err := store.ListProjectTaskSyncHeads(context.Background())
+	if err != nil || len(heads) != 1 || numberField(heads[0], "version", 0) != 7 {
+		t.Fatalf("resume changed project/task sync heads: %#v err=%v", heads, err)
+	}
+}
+
 func TestPricingPreviewMatchesResourceHoldAmount(t *testing.T) {
 	ledger := &capturingHoldLedgerClient{}
 	server := NewServer(controlplane.NewService(ledger, &fakeFabricClient{}))

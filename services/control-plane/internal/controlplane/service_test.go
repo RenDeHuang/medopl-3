@@ -51,6 +51,41 @@ func TestCreateWorkspaceOrchestratesLedgerAndFabric(t *testing.T) {
 	}
 }
 
+func TestResumeWorkspaceReusesIdentityStorageAndRecordsReceipt(t *testing.T) {
+	calls := []string{}
+	ledger := &fakeLedgerClient{calls: &calls}
+	service := NewService(ledger, &fakeFabricClient{calls: &calls})
+
+	workspace, err := service.ResumeWorkspace(context.Background(), ResumeWorkspaceInput{
+		WorkspaceID:  "workspace-alpha",
+		AccountID:    "acct-alpha",
+		OwnerID:      "usr-owner",
+		Name:         "Alpha Lab",
+		PackageID:    "basic",
+		URL:          "https://workspace.medopl.cn/w/workspace-alpha/",
+		AttachmentID: "attachment-replacement",
+		ComputeID:    "compute-replacement",
+		VolumeID:     "volume-alpha",
+	}, "resume-once")
+	if err != nil {
+		t.Fatalf("resume workspace: %v", err)
+	}
+
+	if workspace.ID != "workspace-alpha" || workspace.URL != "https://workspace.medopl.cn/w/workspace-alpha/" || workspace.VolumeID != "volume-alpha" {
+		t.Fatalf("resume changed stable workspace identity or storage: %#v", workspace)
+	}
+	if workspace.ComputeID != "compute-replacement" || workspace.AttachmentID != "attachment-replacement" || workspace.Status != "running" {
+		t.Fatalf("resume did not project replacement runtime resources: %#v", workspace)
+	}
+	if len(ledger.receipts) != 1 || ledger.receipts[0].Type != "workspace.compute_restarted" || ledger.receipts[0].WorkspaceID != "workspace-alpha" || ledger.receipts[0].JobID != "runtime-alpha" {
+		t.Fatalf("unexpected resume receipt: %#v", ledger.receipts)
+	}
+	wantCalls := []string{"fabric.runtime", "ledger.receipt"}
+	if !reflect.DeepEqual(calls, wantCalls) {
+		t.Fatalf("calls = %#v, want %#v", calls, wantCalls)
+	}
+}
+
 func TestExecuteApprovedRequestCreatesJobAndReceipt(t *testing.T) {
 	calls := []string{}
 	service := NewService(&fakeLedgerClient{calls: &calls}, &fakeFabricClient{calls: &calls})

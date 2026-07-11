@@ -79,6 +79,76 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 		}
 		writeJSON(w, http.StatusOK, workspaceRuntimeStatusResponse(runtime))
 	}))
+	mux.HandleFunc("POST /api/workspaces/{workspaceId}/resume", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
+		input := decodeJSON(r)
+		workspaceID := r.PathValue("workspaceId")
+		workspace, ok := app.getWorkspace(workspaceID)
+		if !ok {
+			writeError(w, http.StatusNotFound, "workspace_not_found")
+			return
+		}
+		if !app.canAccessResource(r, workspace) {
+			writeError(w, http.StatusForbidden, "account_scope_forbidden")
+			return
+		}
+		state := firstNonEmpty(stringValue(workspace["state"]), stringValue(workspace["status"]))
+		if state != "suspended" && state != "stopped" {
+			writeError(w, http.StatusConflict, "workspace_not_suspended")
+			return
+		}
+		accountID := firstNonEmpty(stringValue(workspace["accountId"]), stringValue(workspace["ownerAccountId"]))
+		storageID := stringValue(workspace["storageId"])
+		computeID := stringField(input, "computeAllocationId", "")
+		attachmentID := stringField(input, "attachmentId", "")
+		storage, storageOK := app.getStorage(storageID)
+		compute, computeOK := app.getCompute(computeID)
+		attachment, attachmentOK := app.getAttachment(attachmentID)
+		if !storageOK || !computeOK || !attachmentOK {
+			writeError(w, http.StatusConflict, "resume_resources_not_ready")
+			return
+		}
+		storageStatus := stringValue(storage["status"])
+		computeStatus := stringValue(compute["status"])
+		attachmentStatus := stringValue(attachment["status"])
+		if !app.resourceBelongsToAccount(storage, accountID) || !app.resourceBelongsToAccount(compute, accountID) || !app.resourceBelongsToAccount(attachment, accountID) ||
+			stringValue(storage["workspaceId"]) != workspaceID || stringValue(compute["workspaceId"]) != workspaceID || stringValue(attachment["workspaceId"]) != workspaceID ||
+			firstNonEmpty(stringValue(attachment["computeAllocationId"]), stringValue(attachment["computeId"])) != computeID || firstNonEmpty(stringValue(attachment["storageId"]), stringValue(attachment["volumeId"])) != storageID {
+			writeError(w, http.StatusConflict, "resume_resource_mismatch")
+			return
+		}
+		if (storageStatus != "ready" && storageStatus != "available") || (computeStatus != "running" && computeStatus != "ready" && computeStatus != "available" && computeStatus != "active") || (attachmentStatus != "attached" && attachmentStatus != "ready") {
+			writeError(w, http.StatusConflict, "resume_resources_not_ready")
+			return
+		}
+		resumed, err := service.ResumeWorkspace(r.Context(), controlplane.ResumeWorkspaceInput{WorkspaceID: workspaceID, AccountID: accountID, OwnerID: stringValue(workspace["ownerUserId"]), Name: stringValue(workspace["name"]), PackageID: stringValue(workspace["packageId"]), URL: stringValue(workspace["url"]), AttachmentID: attachmentID, ComputeID: computeID, VolumeID: storageID}, mutationKey(r, input))
+		if err != nil {
+			writeUpstreamError(w, err)
+			return
+		}
+		before := cloneMap(workspace)
+		workspace["state"], workspace["status"] = "running", "running"
+		workspace["computeAllocationId"], workspace["currentComputeAllocationId"] = resumed.ComputeID, resumed.ComputeID
+		workspace["attachmentId"], workspace["currentAttachmentId"] = resumed.AttachmentID, resumed.AttachmentID
+		workspace["runtimeId"] = resumed.RuntimeID
+		workspace["runtime"] = map[string]any{"serviceName": resumed.RuntimeServiceName}
+		workspace["receiptId"] = resumed.ReceiptID
+		workspace["url"] = resumed.URL
+		access := cloneMap(mapField(workspace, "access"))
+		access["tokenStatus"], access["requiresLogin"] = "active", false
+		access["account"], access["username"] = resumed.RuntimeUsername, resumed.RuntimeUsername
+		access["credentialStatus"], access["credentialVersion"], access["secretRef"] = resumed.CredentialStatus, resumed.CredentialVersion, resumed.CredentialSecretRef
+		workspace["access"] = access
+		if err := app.tables.SaveWorkspace(r.Context(), workspace); err != nil {
+			writeError(w, http.StatusInternalServerError, "state_persist_failed")
+			return
+		}
+		body := workspaceResponse(cloneMap(workspace))
+		if err := app.appendAuditEvent(r, "workspace.resume", "workspace", workspaceID, accountID, before, body, "succeeded"); err != nil {
+			writeError(w, http.StatusInternalServerError, "state_persist_failed")
+			return
+		}
+		writeJSON(w, http.StatusOK, body)
+	}))
 	mux.HandleFunc("POST /api/workspaces", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		accountID, ok := app.scopedAccountID(w, r, input)

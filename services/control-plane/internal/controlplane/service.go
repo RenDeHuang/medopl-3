@@ -113,6 +113,18 @@ type CreateWorkspaceInput struct {
 	VolumeID     string `json:"storageId"`
 }
 
+type ResumeWorkspaceInput struct {
+	WorkspaceID  string `json:"workspaceId"`
+	AccountID    string `json:"accountId"`
+	OwnerID      string `json:"ownerId"`
+	Name         string `json:"name"`
+	PackageID    string `json:"packageId"`
+	URL          string `json:"url"`
+	AttachmentID string `json:"attachmentId"`
+	ComputeID    string `json:"computeAllocationId"`
+	VolumeID     string `json:"storageId"`
+}
+
 type ManualTopUpInput struct {
 	AccountID      string `json:"accountId"`
 	AmountCents    int64  `json:"amountCents"`
@@ -621,6 +633,22 @@ func (s *Service) CreateWorkspace(ctx context.Context, input CreateWorkspaceInpu
 		CredentialSecretRef: runtime.Access.SecretRef,
 		ReceiptID:           receipt.ReceiptID,
 	}, nil
+}
+
+func (s *Service) ResumeWorkspace(ctx context.Context, input ResumeWorkspaceInput, idempotencyKey string) (domain.WorkspaceProjection, error) {
+	runtime, err := s.fabric.CreateWorkspaceRuntime(ctx, clients.WorkspaceRuntimeInput{WorkspaceID: input.WorkspaceID, ComputeID: input.ComputeID, VolumeID: input.VolumeID, ImageID: "one-person-lab-app"}, idempotencyKey+":runtime")
+	if err != nil {
+		return domain.WorkspaceProjection{}, err
+	}
+	url := input.URL
+	if url == "" {
+		url = runtime.URL
+	}
+	receipt, err := s.ledger.RecordReceipt(ctx, clients.ReceiptInput{Type: "workspace.compute_restarted", Status: "completed", Surface: "workspace", WorkspaceID: input.WorkspaceID, JobID: runtime.ID, Execution: map[string]any{"providerRequestId": runtime.ID, "computeAllocationId": input.ComputeID, "storageAttachmentId": input.AttachmentID}, OutputRefs: map[string]any{"redactedUrl": url}, Continuation: map[string]any{"action": "open_workspace_url", "tokenVersion": "v1", "redactedUrl": url}}, idempotencyKey+":receipt")
+	if err != nil {
+		return domain.WorkspaceProjection{}, err
+	}
+	return domain.WorkspaceProjection{ID: input.WorkspaceID, AccountID: input.AccountID, OwnerID: input.OwnerID, Name: input.Name, PackageID: input.PackageID, Provider: "tencent-tke", URL: url, Status: "running", ComputeID: input.ComputeID, VolumeID: input.VolumeID, AttachmentID: input.AttachmentID, RuntimeID: runtime.ID, RuntimeServiceName: runtime.ServiceName, RuntimeUsername: runtime.Access.Username, CredentialStatus: runtime.Access.CredentialStatus, CredentialVersion: runtime.Access.CredentialVersion, CredentialSecretRef: runtime.Access.SecretRef, ReceiptID: receipt.ReceiptID}, nil
 }
 
 func resourceID(prefix string) string {
