@@ -20,6 +20,10 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	token, err := internalServiceToken(os.Getenv)
+	if err != nil {
+		log.Fatal(err)
+	}
 	operationStore := fabric.OperationStore(fabric.NewMemoryOperationStore())
 	if databaseURL != "" {
 		store, err := fabric.NewPostgresOperationStore(databaseURL)
@@ -28,11 +32,19 @@ func main() {
 		}
 		operationStore = store
 	}
-	server := fabrichttp.NewServer(fabric.NewServiceWithOperationStore(fabric.NewTencentProvider(), operationStore))
+	server := fabrichttp.NewServer(fabric.NewServiceWithOperationStore(fabric.NewTencentProvider(), operationStore), token)
 	log.Printf("fabric listening on %s", addr)
 	if err := http.ListenAndServe(addr, server); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func internalServiceToken(getenv func(string) string) (string, error) {
+	token := getenv("OPL_INTERNAL_SERVICE_TOKEN")
+	if getenv("NODE_ENV") == "production" && token == "" {
+		return "", errors.New("OPL_INTERNAL_SERVICE_TOKEN is required in production")
+	}
+	return token, nil
 }
 
 func operationStoreDatabaseURL(getenv func(string) string) (string, error) {

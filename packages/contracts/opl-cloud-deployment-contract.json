@@ -59,12 +59,14 @@
       "TENCENT_TCR_REGION",
       "TENCENT_DEPLOY_KUBECONFIG_REF",
       "DATABASE_URL",
+      "OPL_INTERNAL_SERVICE_TOKEN",
       "OPL_CONSOLE_USERS_JSON",
       "TCR_USERNAME",
       "TCR_PASSWORD"
     ],
     "secretEnv": [
       "DATABASE_URL",
+      "OPL_INTERNAL_SERVICE_TOKEN",
       "OPL_CONSOLE_USERS_JSON",
       "OPL_OPERATOR_SUMMARY_TOKEN",
       "OPL_CODEX_API_KEY",
@@ -109,6 +111,7 @@
       ],
       "Install Kubernetes secrets": [
         "--from-file=DATABASE_URL=\"$secret_dir/database-url\"",
+        "--from-file=OPL_INTERNAL_SERVICE_TOKEN=\"$secret_dir/internal-service-token\"",
         "--from-file=OPL_CONSOLE_USERS_JSON=\"$secret_dir/auth-users-json\"",
         "--from-file=OPL_CODEX_API_KEY=\"$secret_dir/codex-api-key\"",
         "--from-file=TENCENTCLOUD_SECRET_ID=\"$secret_dir/tencentcloud-secret-id\"",
@@ -132,6 +135,7 @@
     },
     "forbiddenRunTokens": [
       "--from-literal=DATABASE_URL",
+      "--from-literal=OPL_INTERNAL_SERVICE_TOKEN",
       "--from-literal=OPL_CONSOLE_USERS_JSON",
       "--from-literal=OPL_OPERATOR_SUMMARY_TOKEN",
       "--docker-password",
@@ -192,6 +196,8 @@
         "port-forward service/opl-cloud-control-plane 18787:8787",
         "port-forward service/opl-cloud-ledger 18081:8081",
         "port-forward service/opl-cloud-fabric 18082:8082",
+        "get secret opl-cloud-internal-service",
+        "OPL_EXECUTION_INTERNAL_SERVICE_TOKEN",
         "node tools/production-execution-verifier.ts"
       ]
     },

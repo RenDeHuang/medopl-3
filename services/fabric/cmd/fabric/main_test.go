@@ -20,3 +20,15 @@ func TestOperationStoreDatabaseURLAllowsMemoryOutsideProduction(t *testing.T) {
 		t.Fatalf("development store config = %q, %v", url, err)
 	}
 }
+
+func TestInternalServiceTokenRequiredInProduction(t *testing.T) {
+	getenv := func(key string) string {
+		if key == "NODE_ENV" {
+			return "production"
+		}
+		return ""
+	}
+	if _, err := internalServiceToken(getenv); err == nil {
+		t.Fatal("production Fabric must reject missing OPL_INTERNAL_SERVICE_TOKEN")
+	}
+}

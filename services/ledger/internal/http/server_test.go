@@ -3,6 +3,7 @@ package http
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,10 +12,45 @@ import (
 	"opl-cloud/services/ledger/internal/ledger"
 )
 
+func TestServerAuthenticatesEverythingExceptGetHealthz(t *testing.T) {
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	tests := []struct {
+		name          string
+		method        string
+		path          string
+		authorization string
+		want          int
+	}{
+		{name: "health", method: http.MethodGet, path: "/healthz", want: http.StatusOK},
+		{name: "health wrong method", method: http.MethodPost, path: "/healthz", want: http.StatusUnauthorized},
+		{name: "business anonymous", method: http.MethodGet, path: "/ledger/entries", want: http.StatusUnauthorized},
+		{name: "unknown anonymous", method: http.MethodGet, path: "/missing", want: http.StatusUnauthorized},
+		{name: "wrong token", method: http.MethodGet, path: "/ledger/entries", authorization: "Bearer wrong", want: http.StatusUnauthorized},
+		{name: "authenticated", method: http.MethodGet, path: "/ledger/entries", authorization: "Bearer internal-secret", want: http.StatusOK},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, tt.path, nil)
+			req.Header.Set("Authorization", tt.authorization)
+			rec := httptest.NewRecorder()
+			server.ServeHTTP(rec, req)
+			if rec.Code != tt.want {
+				t.Fatalf("status = %d, want %d", rec.Code, tt.want)
+			}
+		})
+	}
+}
+
+func testRequest(method, path string, body io.Reader) *http.Request {
+	req := httptest.NewRequest(method, path, body)
+	req.Header.Set("Authorization", "Bearer internal-secret")
+	return req
+}
+
 func TestTopUpRequiresIdempotencyKey(t *testing.T) {
-	server := NewServer(ledger.NewMemoryStore())
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
 	body := bytes.NewBufferString(`{"accountId":"acct-alpha","amountCents":1000,"currency":"CNY","operatorUserId":"usr-admin"}`)
-	req := httptest.NewRequest(http.MethodPost, "/ledger/topups", body)
+	req := testRequest(http.MethodPost, "/ledger/topups", body)
 	rec := httptest.NewRecorder()
 
 	server.ServeHTTP(rec, req)
@@ -25,9 +61,9 @@ func TestTopUpRequiresIdempotencyKey(t *testing.T) {
 }
 
 func TestTopUpAndWalletHTTP(t *testing.T) {
-	server := NewServer(ledger.NewMemoryStore())
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
 	body := bytes.NewBufferString(`{"accountId":"acct-alpha","amountCents":1000,"currency":"CNY","operatorUserId":"usr-admin","reason":"operator_credit"}`)
-	req := httptest.NewRequest(http.MethodPost, "/ledger/topups", body)
+	req := testRequest(http.MethodPost, "/ledger/topups", body)
 	req.Header.Set("Idempotency-Key", "http-topup-once")
 	rec := httptest.NewRecorder()
 
@@ -37,7 +73,7 @@ func TestTopUpAndWalletHTTP(t *testing.T) {
 		t.Fatalf("topup status = %d, want %d", rec.Code, http.StatusCreated)
 	}
 
-	walletReq := httptest.NewRequest(http.MethodGet, "/ledger/accounts/acct-alpha/wallet", nil)
+	walletReq := testRequest(http.MethodGet, "/ledger/accounts/acct-alpha/wallet", nil)
 	walletRec := httptest.NewRecorder()
 	server.ServeHTTP(walletRec, walletReq)
 
@@ -54,8 +90,8 @@ func TestTopUpAndWalletHTTP(t *testing.T) {
 }
 
 func TestHoldAndReceiptHTTP(t *testing.T) {
-	server := NewServer(ledger.NewMemoryStore())
-	topup := httptest.NewRequest(http.MethodPost, "/ledger/topups", bytes.NewBufferString(`{"accountId":"acct-alpha","amountCents":2000,"currency":"CNY","operatorUserId":"usr-admin","reason":"operator_credit"}`))
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	topup := testRequest(http.MethodPost, "/ledger/topups", bytes.NewBufferString(`{"accountId":"acct-alpha","amountCents":2000,"currency":"CNY","operatorUserId":"usr-admin","reason":"operator_credit"}`))
 	topup.Header.Set("Idempotency-Key", "http-hold-topup")
 	topupRec := httptest.NewRecorder()
 	server.ServeHTTP(topupRec, topup)
@@ -63,7 +99,7 @@ func TestHoldAndReceiptHTTP(t *testing.T) {
 		t.Fatalf("topup status = %d, want %d: %s", topupRec.Code, http.StatusCreated, topupRec.Body.String())
 	}
 
-	hold := httptest.NewRequest(http.MethodPost, "/ledger/holds", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":1000,"currency":"CNY"}`))
+	hold := testRequest(http.MethodPost, "/ledger/holds", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":1000,"currency":"CNY"}`))
 	hold.Header.Set("Idempotency-Key", "http-hold-once")
 	holdRec := httptest.NewRecorder()
 	server.ServeHTTP(holdRec, hold)
@@ -78,7 +114,7 @@ func TestHoldAndReceiptHTTP(t *testing.T) {
 		t.Fatalf("unexpected hold body: %#v", holdBody)
 	}
 
-	receipt := httptest.NewRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(`{"type":"workspace.created","status":"completed","surface":"workspace","organizationId":"org-alpha","workspaceId":"ws-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha","execution":{"providerRequestId":"runtime-req-alpha"},"outputRefs":{"redactedUrl":"https://workspace.medopl.cn/w/ws-alpha/"},"continuation":{"continuationId":"continuation-alpha"}}`))
+	receipt := testRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(`{"type":"workspace.created","status":"completed","surface":"workspace","organizationId":"org-alpha","workspaceId":"ws-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha","execution":{"providerRequestId":"runtime-req-alpha"},"outputRefs":{"redactedUrl":"https://workspace.medopl.cn/w/ws-alpha/"},"continuation":{"continuationId":"continuation-alpha"}}`))
 	receipt.Header.Set("Idempotency-Key", "http-receipt-once")
 	receiptRec := httptest.NewRecorder()
 	server.ServeHTTP(receiptRec, receipt)
@@ -93,14 +129,14 @@ func TestHoldAndReceiptHTTP(t *testing.T) {
 		t.Fatalf("unexpected receipt body: %#v", receiptBody)
 	}
 
-	getReceipt := httptest.NewRequest(http.MethodGet, "/ledger/receipts/"+receiptBody["receiptId"].(string), nil)
+	getReceipt := testRequest(http.MethodGet, "/ledger/receipts/"+receiptBody["receiptId"].(string), nil)
 	getReceiptRec := httptest.NewRecorder()
 	server.ServeHTTP(getReceiptRec, getReceipt)
 	if getReceiptRec.Code != http.StatusOK {
 		t.Fatalf("get receipt status = %d, want %d: %s", getReceiptRec.Code, http.StatusOK, getReceiptRec.Body.String())
 	}
 
-	legacy := httptest.NewRequest(http.MethodPost, "/ledger/evidence", bytes.NewBufferString(`{}`))
+	legacy := testRequest(http.MethodPost, "/ledger/evidence", bytes.NewBufferString(`{}`))
 	legacyRec := httptest.NewRecorder()
 	server.ServeHTTP(legacyRec, legacy)
 	if legacyRec.Code != http.StatusNotFound {
@@ -109,8 +145,8 @@ func TestHoldAndReceiptHTTP(t *testing.T) {
 }
 
 func TestContinuationHTTP(t *testing.T) {
-	server := NewServer(ledger.NewMemoryStore())
-	receipt := httptest.NewRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(`{"type":"execution.receipt.v1","status":"completed","surface":"workspace","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","continuation":{"continuationId":"continuation-alpha","taskVersion":2}}`))
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	receipt := testRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(`{"type":"execution.receipt.v1","status":"completed","surface":"workspace","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","continuation":{"continuationId":"continuation-alpha","taskVersion":2}}`))
 	receipt.Header.Set("Idempotency-Key", "http-continuation-receipt")
 	receiptRec := httptest.NewRecorder()
 	server.ServeHTTP(receiptRec, receipt)
@@ -122,7 +158,7 @@ func TestContinuationHTTP(t *testing.T) {
 		t.Fatalf("decode receipt: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/ledger/receipts/"+receiptBody["receiptId"].(string)+"/continuation", nil)
+	req := testRequest(http.MethodGet, "/ledger/receipts/"+receiptBody["receiptId"].(string)+"/continuation", nil)
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -138,8 +174,8 @@ func TestContinuationHTTP(t *testing.T) {
 }
 
 func TestContinuationHTTPReturnsNotFoundWhenReceiptHasNone(t *testing.T) {
-	server := NewServer(ledger.NewMemoryStore())
-	receipt := httptest.NewRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(`{"type":"execution.receipt.v1","status":"completed","surface":"workspace","workspaceId":"workspace-alpha"}`))
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	receipt := testRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(`{"type":"execution.receipt.v1","status":"completed","surface":"workspace","workspaceId":"workspace-alpha"}`))
 	receipt.Header.Set("Idempotency-Key", "http-no-continuation-receipt")
 	receiptRec := httptest.NewRecorder()
 	server.ServeHTTP(receiptRec, receipt)
@@ -148,7 +184,7 @@ func TestContinuationHTTPReturnsNotFoundWhenReceiptHasNone(t *testing.T) {
 		t.Fatalf("decode receipt: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/ledger/receipts/"+receiptBody["receiptId"].(string)+"/continuation", nil)
+	req := testRequest(http.MethodGet, "/ledger/receipts/"+receiptBody["receiptId"].(string)+"/continuation", nil)
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNotFound {
@@ -157,8 +193,8 @@ func TestContinuationHTTPReturnsNotFoundWhenReceiptHasNone(t *testing.T) {
 }
 
 func TestArtifactAndReviewHTTP(t *testing.T) {
-	server := NewServer(ledger.NewMemoryStore())
-	artifactReq := httptest.NewRequest(http.MethodPost, "/ledger/artifacts", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha","digest":"sha256:abc123","mediaType":"application/json","sizeBytes":42,"storageRef":"storage-artifact-alpha"}`))
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	artifactReq := testRequest(http.MethodPost, "/ledger/artifacts", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha","digest":"sha256:abc123","mediaType":"application/json","sizeBytes":42,"storageRef":"storage-artifact-alpha"}`))
 	artifactReq.Header.Set("Idempotency-Key", "http-artifact-once")
 	artifactRec := httptest.NewRecorder()
 	server.ServeHTTP(artifactRec, artifactReq)
@@ -170,12 +206,12 @@ func TestArtifactAndReviewHTTP(t *testing.T) {
 		t.Fatalf("decode artifact: %v", err)
 	}
 	getArtifactRec := httptest.NewRecorder()
-	server.ServeHTTP(getArtifactRec, httptest.NewRequest(http.MethodGet, "/ledger/artifacts/"+artifact.ArtifactID, nil))
+	server.ServeHTTP(getArtifactRec, testRequest(http.MethodGet, "/ledger/artifacts/"+artifact.ArtifactID, nil))
 	if getArtifactRec.Code != http.StatusOK {
 		t.Fatalf("get artifact status = %d: %s", getArtifactRec.Code, getArtifactRec.Body.String())
 	}
 
-	reviewReq := httptest.NewRequest(http.MethodPost, "/ledger/reviews", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha","reviewerRef":"reviewer-rca","reviewerVersion":"1.0.0","inputArtifactDigests":["sha256:abc123"],"checks":{"schema":"passed"},"decision":"accepted"}`))
+	reviewReq := testRequest(http.MethodPost, "/ledger/reviews", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha","reviewerRef":"reviewer-rca","reviewerVersion":"1.0.0","inputArtifactDigests":["sha256:abc123"],"checks":{"schema":"passed"},"decision":"accepted"}`))
 	reviewReq.Header.Set("Idempotency-Key", "http-review-once")
 	reviewRec := httptest.NewRecorder()
 	server.ServeHTTP(reviewRec, reviewReq)
@@ -187,15 +223,15 @@ func TestArtifactAndReviewHTTP(t *testing.T) {
 		t.Fatalf("decode review: %v", err)
 	}
 	getReviewRec := httptest.NewRecorder()
-	server.ServeHTTP(getReviewRec, httptest.NewRequest(http.MethodGet, "/ledger/reviews/"+review.ReviewID, nil))
+	server.ServeHTTP(getReviewRec, testRequest(http.MethodGet, "/ledger/reviews/"+review.ReviewID, nil))
 	if getReviewRec.Code != http.StatusOK {
 		t.Fatalf("get review status = %d: %s", getReviewRec.Code, getReviewRec.Body.String())
 	}
 }
 
 func TestEvidenceHTTPMapsInputNotFoundAndConflict(t *testing.T) {
-	server := NewServer(ledger.NewMemoryStore())
-	invalidReq := httptest.NewRequest(http.MethodPost, "/ledger/artifacts", bytes.NewBufferString(`{"workspaceId":"workspace-alpha","storageRef":"https://example.test/result?token=secret"}`))
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	invalidReq := testRequest(http.MethodPost, "/ledger/artifacts", bytes.NewBufferString(`{"workspaceId":"workspace-alpha","storageRef":"https://example.test/result?token=secret"}`))
 	invalidReq.Header.Set("Idempotency-Key", "invalid-artifact")
 	invalidRec := httptest.NewRecorder()
 	server.ServeHTTP(invalidRec, invalidReq)
@@ -204,16 +240,16 @@ func TestEvidenceHTTPMapsInputNotFoundAndConflict(t *testing.T) {
 	}
 
 	notFoundRec := httptest.NewRecorder()
-	server.ServeHTTP(notFoundRec, httptest.NewRequest(http.MethodGet, "/ledger/reviews/missing", nil))
+	server.ServeHTTP(notFoundRec, testRequest(http.MethodGet, "/ledger/reviews/missing", nil))
 	if notFoundRec.Code != http.StatusNotFound {
 		t.Fatalf("missing review status = %d, want %d", notFoundRec.Code, http.StatusNotFound)
 	}
 
 	body := `{"workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha","digest":"sha256:abc123","mediaType":"application/json","sizeBytes":42,"storageRef":"storage-artifact-alpha"}`
-	first := httptest.NewRequest(http.MethodPost, "/ledger/artifacts", bytes.NewBufferString(body))
+	first := testRequest(http.MethodPost, "/ledger/artifacts", bytes.NewBufferString(body))
 	first.Header.Set("Idempotency-Key", "conflicting-artifact")
 	server.ServeHTTP(httptest.NewRecorder(), first)
-	second := httptest.NewRequest(http.MethodPost, "/ledger/artifacts", bytes.NewBufferString(strings.Replace(body, "abc123", "different", 1)))
+	second := testRequest(http.MethodPost, "/ledger/artifacts", bytes.NewBufferString(strings.Replace(body, "abc123", "different", 1)))
 	second.Header.Set("Idempotency-Key", "conflicting-artifact")
 	conflictRec := httptest.NewRecorder()
 	server.ServeHTTP(conflictRec, second)
@@ -223,8 +259,8 @@ func TestEvidenceHTTPMapsInputNotFoundAndConflict(t *testing.T) {
 }
 
 func TestReleaseHoldHTTP(t *testing.T) {
-	server := NewServer(ledger.NewMemoryStore())
-	topup := httptest.NewRequest(http.MethodPost, "/ledger/topups", bytes.NewBufferString(`{"accountId":"acct-alpha","amountCents":2000,"currency":"CNY","operatorUserId":"usr-admin","reason":"operator_credit"}`))
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	topup := testRequest(http.MethodPost, "/ledger/topups", bytes.NewBufferString(`{"accountId":"acct-alpha","amountCents":2000,"currency":"CNY","operatorUserId":"usr-admin","reason":"operator_credit"}`))
 	topup.Header.Set("Idempotency-Key", "http-release-topup")
 	topupRec := httptest.NewRecorder()
 	server.ServeHTTP(topupRec, topup)
@@ -232,7 +268,7 @@ func TestReleaseHoldHTTP(t *testing.T) {
 		t.Fatalf("topup status = %d, want %d: %s", topupRec.Code, http.StatusCreated, topupRec.Body.String())
 	}
 
-	hold := httptest.NewRequest(http.MethodPost, "/ledger/holds", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":1000,"currency":"CNY"}`))
+	hold := testRequest(http.MethodPost, "/ledger/holds", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":1000,"currency":"CNY"}`))
 	hold.Header.Set("Idempotency-Key", "http-release-hold")
 	holdRec := httptest.NewRecorder()
 	server.ServeHTTP(holdRec, hold)
@@ -244,7 +280,7 @@ func TestReleaseHoldHTTP(t *testing.T) {
 		t.Fatalf("decode hold: %v", err)
 	}
 
-	release := httptest.NewRequest(http.MethodPost, "/ledger/holds/release", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","holdId":"`+holdBody.ID+`","amountCents":600,"currency":"CNY","reason":"destroy_compute"}`))
+	release := testRequest(http.MethodPost, "/ledger/holds/release", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","holdId":"`+holdBody.ID+`","amountCents":600,"currency":"CNY","reason":"destroy_compute"}`))
 	release.Header.Set("Idempotency-Key", "http-release-once")
 	releaseRec := httptest.NewRecorder()
 	server.ServeHTTP(releaseRec, release)
@@ -259,7 +295,7 @@ func TestReleaseHoldHTTP(t *testing.T) {
 		t.Fatalf("unexpected release body: %#v", releaseBody)
 	}
 
-	walletReq := httptest.NewRequest(http.MethodGet, "/ledger/accounts/acct-alpha/wallet", nil)
+	walletReq := testRequest(http.MethodGet, "/ledger/accounts/acct-alpha/wallet", nil)
 	walletRec := httptest.NewRecorder()
 	server.ServeHTTP(walletRec, walletReq)
 	var wallet ledger.Wallet
@@ -272,8 +308,8 @@ func TestReleaseHoldHTTP(t *testing.T) {
 }
 
 func TestSettlementAndReconciliationHTTP(t *testing.T) {
-	server := NewServer(ledger.NewMemoryStore())
-	topup := httptest.NewRequest(http.MethodPost, "/ledger/topups", bytes.NewBufferString(`{"accountId":"acct-alpha","amountCents":5000,"currency":"CNY","operatorUserId":"usr-admin"}`))
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	topup := testRequest(http.MethodPost, "/ledger/topups", bytes.NewBufferString(`{"accountId":"acct-alpha","amountCents":5000,"currency":"CNY","operatorUserId":"usr-admin"}`))
 	topup.Header.Set("Idempotency-Key", "http-settlement-topup")
 	topupRec := httptest.NewRecorder()
 	server.ServeHTTP(topupRec, topup)
@@ -281,7 +317,7 @@ func TestSettlementAndReconciliationHTTP(t *testing.T) {
 		t.Fatalf("topup status = %d, want %d: %s", topupRec.Code, http.StatusCreated, topupRec.Body.String())
 	}
 
-	settlement := httptest.NewRequest(http.MethodPost, "/ledger/resource-settlements", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","amountCents":1200,"currency":"CNY","resourceType":"compute","resourceId":"compute-alpha"}`))
+	settlement := testRequest(http.MethodPost, "/ledger/resource-settlements", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","amountCents":1200,"currency":"CNY","resourceType":"compute","resourceId":"compute-alpha"}`))
 	settlement.Header.Set("Idempotency-Key", "http-settlement-once")
 	settlementRec := httptest.NewRecorder()
 	server.ServeHTTP(settlementRec, settlement)
@@ -296,7 +332,7 @@ func TestSettlementAndReconciliationHTTP(t *testing.T) {
 		t.Fatalf("unexpected settlement body: %#v", settlementBody)
 	}
 
-	reconciliation := httptest.NewRequest(http.MethodPost, "/ledger/reconciliation", bytes.NewBufferString(`{"report":{"id":"recon-alpha","status":"ok"}}`))
+	reconciliation := testRequest(http.MethodPost, "/ledger/reconciliation", bytes.NewBufferString(`{"report":{"id":"recon-alpha","status":"ok"}}`))
 	reconciliation.Header.Set("Idempotency-Key", "http-reconciliation-once")
 	reconciliationRec := httptest.NewRecorder()
 	server.ServeHTTP(reconciliationRec, reconciliation)

@@ -19,3 +19,15 @@ func TestControlPlaneAddrMatchesProductionPortContract(t *testing.T) {
 		t.Fatalf("controlPlaneAddr() with CONTROL_PLANE_ADDR = %q, want :9000", got)
 	}
 }
+
+func TestInternalServiceTokenRequiredInProduction(t *testing.T) {
+	getenv := func(key string) string {
+		if key == "NODE_ENV" {
+			return "production"
+		}
+		return ""
+	}
+	if _, err := internalServiceToken(getenv); err == nil {
+		t.Fatal("production Control Plane must reject missing OPL_INTERNAL_SERVICE_TOKEN")
+	}
+}

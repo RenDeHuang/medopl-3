@@ -1,6 +1,8 @@
 package http
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"log"
@@ -10,7 +12,7 @@ import (
 	"opl-cloud/services/ledger/internal/ledger"
 )
 
-func NewServer(store ledger.Store) http.Handler {
+func NewServer(store ledger.Store, token string) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -324,7 +326,23 @@ func NewServer(store ledger.Store) http.Handler {
 		rows, err := store.ListResourceSettlements(r.Context(), strings.TrimSpace(r.PathValue("accountId")))
 		writeReadResult(w, rows, err)
 	})
-	return mux
+	return authenticate(mux, token)
+}
+
+func authenticate(next http.Handler, token string) http.Handler {
+	want := sha256.Sum256([]byte("Bearer " + token))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/healthz" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		got := sha256.Sum256([]byte(r.Header.Get("Authorization")))
+		if token == "" || subtle.ConstantTimeCompare(got[:], want[:]) != 1 {
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func writeReadResult(w http.ResponseWriter, body any, err error) {

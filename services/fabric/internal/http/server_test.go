@@ -18,6 +18,42 @@ import (
 	"opl-cloud/services/fabric/internal/fabric"
 )
 
+func TestServerAuthenticatesEverythingExceptGetHealthz(t *testing.T) {
+	server := NewServer(fabric.NewService(testProvider{}), "internal-secret")
+	tests := []struct {
+		name          string
+		method        string
+		path          string
+		authorization string
+		want          int
+	}{
+		{name: "health", method: http.MethodGet, path: "/healthz", want: http.StatusOK},
+		{name: "health wrong method", method: http.MethodPost, path: "/healthz", want: http.StatusUnauthorized},
+		{name: "readiness anonymous", method: http.MethodGet, path: "/fabric/readiness", want: http.StatusUnauthorized},
+		{name: "unknown anonymous", method: http.MethodGet, path: "/missing", want: http.StatusUnauthorized},
+		{name: "wrong scheme", method: http.MethodGet, path: "/fabric/catalog", authorization: "Basic internal-secret", want: http.StatusUnauthorized},
+		{name: "wrong token", method: http.MethodGet, path: "/fabric/catalog", authorization: "Bearer wrong", want: http.StatusUnauthorized},
+		{name: "authenticated", method: http.MethodGet, path: "/fabric/catalog", authorization: "Bearer internal-secret", want: http.StatusOK},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(tt.method, tt.path, nil)
+			req.Header.Set("Authorization", tt.authorization)
+			rec := httptest.NewRecorder()
+			server.ServeHTTP(rec, req)
+			if rec.Code != tt.want {
+				t.Fatalf("status = %d, want %d", rec.Code, tt.want)
+			}
+		})
+	}
+}
+
+func testRequest(method, path string, body io.Reader) *http.Request {
+	req := httptest.NewRequest(method, path, body)
+	req.Header.Set("Authorization", "Bearer internal-secret")
+	return req
+}
+
 func TestTransferServiceFailureIsLogged(t *testing.T) {
 	var output bytes.Buffer
 	previous := log.Writer()
@@ -38,10 +74,10 @@ func TestTransferServiceFailureIsLogged(t *testing.T) {
 }
 
 func TestContentTransferHTTPResumesAndDownloads(t *testing.T) {
-	server := NewServer(fabric.NewService(testProvider{}))
+	server := NewServer(fabric.NewService(testProvider{}), "internal-secret")
 	body := []byte("workspace bytes")
 	digest := fmt.Sprintf("%x", sha256.Sum256(body))
-	create := httptest.NewRequest(http.MethodPost, "/fabric/transfers", bytes.NewBufferString(fmt.Sprintf(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","path":"inputs/a.txt","digest":"%s","size":%d,"chunkSize":%d}`, digest, len(body), len(body))))
+	create := testRequest(http.MethodPost, "/fabric/transfers", bytes.NewBufferString(fmt.Sprintf(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","path":"inputs/a.txt","digest":"%s","size":%d,"chunkSize":%d}`, digest, len(body), len(body))))
 	create.Header.Set("Idempotency-Key", "transfer-http")
 	createdRec := httptest.NewRecorder()
 	server.ServeHTTP(createdRec, create)
@@ -53,20 +89,20 @@ func TestContentTransferHTTPResumesAndDownloads(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	put := httptest.NewRequest(http.MethodPut, "/fabric/transfers/"+transfer.TransferID+"/chunks/0", bytes.NewReader(body))
+	put := testRequest(http.MethodPut, "/fabric/transfers/"+transfer.TransferID+"/chunks/0", bytes.NewReader(body))
 	put.Header.Set("X-Chunk-SHA256", digest)
 	putRec := httptest.NewRecorder()
 	server.ServeHTTP(putRec, put)
 	if putRec.Code != http.StatusOK {
 		t.Fatalf("put status=%d body=%s", putRec.Code, putRec.Body.String())
 	}
-	complete := httptest.NewRequest(http.MethodPost, "/fabric/transfers/"+transfer.TransferID+"/complete", nil)
+	complete := testRequest(http.MethodPost, "/fabric/transfers/"+transfer.TransferID+"/complete", nil)
 	completeRec := httptest.NewRecorder()
 	server.ServeHTTP(completeRec, complete)
 	if completeRec.Code != http.StatusOK {
 		t.Fatalf("complete status=%d body=%s", completeRec.Code, completeRec.Body.String())
 	}
-	download := httptest.NewRequest(http.MethodGet, "/fabric/contents/"+digest, nil)
+	download := testRequest(http.MethodGet, "/fabric/contents/"+digest, nil)
 	download.Header.Set("X-Workspace-ID", "workspace-alpha")
 	downloadRec := httptest.NewRecorder()
 	server.ServeHTTP(downloadRec, download)
@@ -77,8 +113,8 @@ func TestContentTransferHTTPResumesAndDownloads(t *testing.T) {
 }
 
 func TestCatalogHTTP(t *testing.T) {
-	server := NewServer(fabric.NewService(testProvider{}))
-	req := httptest.NewRequest(http.MethodGet, "/fabric/catalog", nil)
+	server := NewServer(fabric.NewService(testProvider{}), "internal-secret")
+	req := testRequest(http.MethodGet, "/fabric/catalog", nil)
 	rec := httptest.NewRecorder()
 
 	server.ServeHTTP(rec, req)
@@ -97,13 +133,13 @@ func TestCatalogHTTP(t *testing.T) {
 
 func TestStorageSnapshotHTTPCreateRestoreAndDestroy(t *testing.T) {
 	service := fabric.NewService(testProvider{})
-	server := NewServer(service)
-	createVolume := httptest.NewRequest(http.MethodPost, "/fabric/storage-volumes", bytes.NewBufferString(`{"id":"vol-source","accountId":"acct-alpha","workspaceId":"ws-alpha","sizeGb":10}`))
+	server := NewServer(service, "internal-secret")
+	createVolume := testRequest(http.MethodPost, "/fabric/storage-volumes", bytes.NewBufferString(`{"id":"vol-source","accountId":"acct-alpha","workspaceId":"ws-alpha","sizeGb":10}`))
 	createVolume.Header.Set("Idempotency-Key", "volume-once")
 	volumeRec := httptest.NewRecorder()
 	server.ServeHTTP(volumeRec, createVolume)
 
-	create := httptest.NewRequest(http.MethodPost, "/fabric/storage-snapshots", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","volumeId":"vol-source"}`))
+	create := testRequest(http.MethodPost, "/fabric/storage-snapshots", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","volumeId":"vol-source"}`))
 	create.Header.Set("Idempotency-Key", "snapshot-once")
 	createdRec := httptest.NewRecorder()
 	server.ServeHTTP(createdRec, create)
@@ -115,18 +151,18 @@ func TestStorageSnapshotHTTPCreateRestoreAndDestroy(t *testing.T) {
 		t.Fatal(err)
 	}
 	getRec := httptest.NewRecorder()
-	server.ServeHTTP(getRec, httptest.NewRequest(http.MethodGet, "/fabric/storage-snapshots/"+snapshot.ID, nil))
+	server.ServeHTTP(getRec, testRequest(http.MethodGet, "/fabric/storage-snapshots/"+snapshot.ID, nil))
 	if getRec.Code != http.StatusOK {
 		t.Fatalf("get status=%d body=%s", getRec.Code, getRec.Body.String())
 	}
-	restore := httptest.NewRequest(http.MethodPost, "/fabric/storage-snapshots/"+snapshot.ID+"/restore", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-restored","targetVolumeId":"vol-restored"}`))
+	restore := testRequest(http.MethodPost, "/fabric/storage-snapshots/"+snapshot.ID+"/restore", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-restored","targetVolumeId":"vol-restored"}`))
 	restore.Header.Set("Idempotency-Key", "restore-once")
 	restoreRec := httptest.NewRecorder()
 	server.ServeHTTP(restoreRec, restore)
 	if restoreRec.Code != http.StatusAccepted {
 		t.Fatalf("restore status=%d body=%s", restoreRec.Code, restoreRec.Body.String())
 	}
-	destroy := httptest.NewRequest(http.MethodPost, "/fabric/storage-snapshots/"+snapshot.ID+"/destroy", nil)
+	destroy := testRequest(http.MethodPost, "/fabric/storage-snapshots/"+snapshot.ID+"/destroy", nil)
 	destroy.Header.Set("Idempotency-Key", "destroy-once")
 	destroyRec := httptest.NewRecorder()
 	server.ServeHTTP(destroyRec, destroy)
@@ -136,9 +172,9 @@ func TestStorageSnapshotHTTPCreateRestoreAndDestroy(t *testing.T) {
 }
 
 func TestCreateComputeAllocationHTTPRequiresIdempotencyKey(t *testing.T) {
-	server := NewServer(fabric.NewService(testProvider{}))
+	server := NewServer(fabric.NewService(testProvider{}), "internal-secret")
 	body := bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","packageId":"basic","dryRun":true}`)
-	req := httptest.NewRequest(http.MethodPost, "/fabric/compute-allocations", body)
+	req := testRequest(http.MethodPost, "/fabric/compute-allocations", body)
 	rec := httptest.NewRecorder()
 
 	server.ServeHTTP(rec, req)
@@ -150,8 +186,8 @@ func TestCreateComputeAllocationHTTPRequiresIdempotencyKey(t *testing.T) {
 
 func TestSyncComputeAllocationHTTPRefreshesProviderState(t *testing.T) {
 	service := fabric.NewService(testProvider{})
-	server := NewServer(service)
-	create := httptest.NewRequest(http.MethodPost, "/fabric/compute-allocations", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","packageId":"basic"}`))
+	server := NewServer(service, "internal-secret")
+	create := testRequest(http.MethodPost, "/fabric/compute-allocations", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","packageId":"basic"}`))
 	create.Header.Set("Idempotency-Key", "sync-http-create")
 	createRec := httptest.NewRecorder()
 	server.ServeHTTP(createRec, create)
@@ -163,7 +199,7 @@ func TestSyncComputeAllocationHTTPRefreshesProviderState(t *testing.T) {
 		t.Fatalf("decode create: %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/fabric/compute-allocations/"+created.ID+"/sync", bytes.NewBufferString(`{}`))
+	req := testRequest(http.MethodPost, "/fabric/compute-allocations/"+created.ID+"/sync", bytes.NewBufferString(`{}`))
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
 
@@ -181,8 +217,8 @@ func TestSyncComputeAllocationHTTPRefreshesProviderState(t *testing.T) {
 
 func TestSyncStorageVolumeHTTPRefreshesProviderState(t *testing.T) {
 	service := fabric.NewService(testProvider{})
-	server := NewServer(service)
-	create := httptest.NewRequest(http.MethodPost, "/fabric/storage-volumes", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","sizeGb":10}`))
+	server := NewServer(service, "internal-secret")
+	create := testRequest(http.MethodPost, "/fabric/storage-volumes", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","sizeGb":10}`))
 	create.Header.Set("Idempotency-Key", "sync-http-storage")
 	createRec := httptest.NewRecorder()
 	server.ServeHTTP(createRec, create)
@@ -190,7 +226,7 @@ func TestSyncStorageVolumeHTTPRefreshesProviderState(t *testing.T) {
 		t.Fatalf("create status = %d, want %d: %s", createRec.Code, http.StatusAccepted, createRec.Body.String())
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/fabric/storage-volumes/vol-test/sync", bytes.NewBufferString(`{}`))
+	req := testRequest(http.MethodPost, "/fabric/storage-volumes/vol-test/sync", bytes.NewBufferString(`{}`))
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
 
@@ -208,9 +244,9 @@ func TestSyncStorageVolumeHTTPRefreshesProviderState(t *testing.T) {
 
 func TestOperationsHTTPReturnsFabricAuditFacts(t *testing.T) {
 	service := fabric.NewService(testProvider{})
-	server := NewServer(service)
+	server := NewServer(service, "internal-secret")
 
-	create := httptest.NewRequest(http.MethodPost, "/fabric/storage-volumes", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","sizeGb":10}`))
+	create := testRequest(http.MethodPost, "/fabric/storage-volumes", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","sizeGb":10}`))
 	create.Header.Set("Idempotency-Key", "http-ops-storage")
 	createRec := httptest.NewRecorder()
 	server.ServeHTTP(createRec, create)
@@ -218,7 +254,7 @@ func TestOperationsHTTPReturnsFabricAuditFacts(t *testing.T) {
 		t.Fatalf("create status = %d, want %d: %s", createRec.Code, http.StatusAccepted, createRec.Body.String())
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/fabric/operations", nil)
+	req := testRequest(http.MethodGet, "/fabric/operations", nil)
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
@@ -240,8 +276,8 @@ func TestOperationsHTTPReturnsFabricAuditFacts(t *testing.T) {
 }
 
 func TestJobHTTPLifecycle(t *testing.T) {
-	server := NewServer(fabric.NewService(testProvider{}))
-	create := httptest.NewRequest(http.MethodPost, "/fabric/jobs", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","requestId":"request-alpha","approvalId":"approval-alpha","environmentRef":"environment-alpha"}`))
+	server := NewServer(fabric.NewService(testProvider{}), "internal-secret")
+	create := testRequest(http.MethodPost, "/fabric/jobs", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","requestId":"request-alpha","approvalId":"approval-alpha","environmentRef":"environment-alpha"}`))
 	create.Header.Set("Idempotency-Key", "http-job-once")
 	createRec := httptest.NewRecorder()
 	server.ServeHTTP(createRec, create)
@@ -253,14 +289,14 @@ func TestJobHTTPLifecycle(t *testing.T) {
 		t.Fatalf("decode job: %v", err)
 	}
 
-	get := httptest.NewRequest(http.MethodGet, "/fabric/jobs/"+created.JobID, nil)
+	get := testRequest(http.MethodGet, "/fabric/jobs/"+created.JobID, nil)
 	getRec := httptest.NewRecorder()
 	server.ServeHTTP(getRec, get)
 	if getRec.Code != http.StatusOK {
 		t.Fatalf("get status = %d, want %d: %s", getRec.Code, http.StatusOK, getRec.Body.String())
 	}
 
-	cancel := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+created.JobID+"/cancel", bytes.NewBufferString(`{}`))
+	cancel := testRequest(http.MethodPost, "/fabric/jobs/"+created.JobID+"/cancel", bytes.NewBufferString(`{}`))
 	cancel.Header.Set("Idempotency-Key", "http-job-cancel")
 	cancelRec := httptest.NewRecorder()
 	server.ServeHTTP(cancelRec, cancel)
@@ -277,8 +313,8 @@ func TestJobHTTPLifecycle(t *testing.T) {
 }
 
 func TestJobHTTPReturnsNotFound(t *testing.T) {
-	server := NewServer(fabric.NewService(testProvider{}))
-	req := httptest.NewRequest(http.MethodGet, "/fabric/jobs/job-missing", nil)
+	server := NewServer(fabric.NewService(testProvider{}), "internal-secret")
+	req := testRequest(http.MethodGet, "/fabric/jobs/job-missing", nil)
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNotFound {
@@ -287,8 +323,8 @@ func TestJobHTTPReturnsNotFound(t *testing.T) {
 }
 
 func TestJobHTTPRequiresCanonicalIdentity(t *testing.T) {
-	server := NewServer(fabric.NewService(testProvider{}))
-	req := httptest.NewRequest(http.MethodPost, "/fabric/jobs", bytes.NewBufferString(`{}`))
+	server := NewServer(fabric.NewService(testProvider{}), "internal-secret")
+	req := testRequest(http.MethodPost, "/fabric/jobs", bytes.NewBufferString(`{}`))
 	req.Header.Set("Idempotency-Key", "invalid-job")
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
@@ -298,8 +334,8 @@ func TestJobHTTPRequiresCanonicalIdentity(t *testing.T) {
 }
 
 func TestRunnerJobHTTPCompletionLifecycle(t *testing.T) {
-	server := NewServer(fabric.NewService(testProvider{}))
-	create := httptest.NewRequest(http.MethodPost, "/fabric/jobs", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","requestId":"request-alpha","approvalId":"approval-alpha"}`))
+	server := NewServer(fabric.NewService(testProvider{}), "internal-secret")
+	create := testRequest(http.MethodPost, "/fabric/jobs", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","requestId":"request-alpha","approvalId":"approval-alpha"}`))
 	create.Header.Set("Idempotency-Key", "http-runner-job")
 	createRec := httptest.NewRecorder()
 	server.ServeHTTP(createRec, create)
@@ -308,7 +344,7 @@ func TestRunnerJobHTTPCompletionLifecycle(t *testing.T) {
 		t.Fatalf("decode job: %v", err)
 	}
 
-	claim := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/claim", bytes.NewBufferString(`{"runnerId":"runner-alpha"}`))
+	claim := testRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/claim", bytes.NewBufferString(`{"runnerId":"runner-alpha"}`))
 	claim.Header.Set("Idempotency-Key", "http-claim")
 	claimRec := httptest.NewRecorder()
 	server.ServeHTTP(claimRec, claim)
@@ -320,7 +356,7 @@ func TestRunnerJobHTTPCompletionLifecycle(t *testing.T) {
 		t.Fatalf("decode claim: %#v, %v", claimed, err)
 	}
 
-	heartbeat := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/heartbeat", bytes.NewBufferString(`{"runnerId":"runner-alpha","leaseToken":"`+claimed.LeaseToken+`"}`))
+	heartbeat := testRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/heartbeat", bytes.NewBufferString(`{"runnerId":"runner-alpha","leaseToken":"`+claimed.LeaseToken+`"}`))
 	heartbeat.Header.Set("Idempotency-Key", "http-heartbeat")
 	heartbeatRec := httptest.NewRecorder()
 	server.ServeHTTP(heartbeatRec, heartbeat)
@@ -328,7 +364,7 @@ func TestRunnerJobHTTPCompletionLifecycle(t *testing.T) {
 		t.Fatalf("heartbeat status = %d: %s", heartbeatRec.Code, heartbeatRec.Body.String())
 	}
 
-	complete := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/complete", bytes.NewBufferString(`{"runnerId":"runner-alpha","leaseToken":"`+claimed.LeaseToken+`","artifactIds":["artifact-alpha"],"reviewIds":["review-alpha"]}`))
+	complete := testRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/complete", bytes.NewBufferString(`{"runnerId":"runner-alpha","leaseToken":"`+claimed.LeaseToken+`","artifactIds":["artifact-alpha"],"reviewIds":["review-alpha"]}`))
 	complete.Header.Set("Idempotency-Key", "http-complete")
 	completeRec := httptest.NewRecorder()
 	server.ServeHTTP(completeRec, complete)
@@ -342,21 +378,21 @@ func TestRunnerJobHTTPCompletionLifecycle(t *testing.T) {
 }
 
 func TestRunnerJobHTTPFailRetryAndConflict(t *testing.T) {
-	server := NewServer(fabric.NewService(testProvider{}))
-	create := httptest.NewRequest(http.MethodPost, "/fabric/jobs", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","requestId":"request-alpha","approvalId":"approval-alpha"}`))
+	server := NewServer(fabric.NewService(testProvider{}), "internal-secret")
+	create := testRequest(http.MethodPost, "/fabric/jobs", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","requestId":"request-alpha","approvalId":"approval-alpha"}`))
 	create.Header.Set("Idempotency-Key", "http-fail-job")
 	createRec := httptest.NewRecorder()
 	server.ServeHTTP(createRec, create)
 	var job fabric.Job
 	_ = json.NewDecoder(createRec.Body).Decode(&job)
-	claim := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/claim", bytes.NewBufferString(`{"runnerId":"runner-alpha"}`))
+	claim := testRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/claim", bytes.NewBufferString(`{"runnerId":"runner-alpha"}`))
 	claim.Header.Set("Idempotency-Key", "http-fail-claim")
 	claimRec := httptest.NewRecorder()
 	server.ServeHTTP(claimRec, claim)
 	var claimed fabric.Job
 	_ = json.NewDecoder(claimRec.Body).Decode(&claimed)
 
-	conflict := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/heartbeat", bytes.NewBufferString(`{"runnerId":"runner-beta","leaseToken":"`+claimed.LeaseToken+`"}`))
+	conflict := testRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/heartbeat", bytes.NewBufferString(`{"runnerId":"runner-beta","leaseToken":"`+claimed.LeaseToken+`"}`))
 	conflict.Header.Set("Idempotency-Key", "http-wrong-runner")
 	conflictRec := httptest.NewRecorder()
 	server.ServeHTTP(conflictRec, conflict)
@@ -364,7 +400,7 @@ func TestRunnerJobHTTPFailRetryAndConflict(t *testing.T) {
 		t.Fatalf("lease conflict status = %d, want %d: %s", conflictRec.Code, http.StatusConflict, conflictRec.Body.String())
 	}
 
-	fail := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/fail", bytes.NewBufferString(`{"runnerId":"runner-alpha","leaseToken":"`+claimed.LeaseToken+`","errorCode":"runner_failed"}`))
+	fail := testRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/fail", bytes.NewBufferString(`{"runnerId":"runner-alpha","leaseToken":"`+claimed.LeaseToken+`","errorCode":"runner_failed"}`))
 	fail.Header.Set("Idempotency-Key", "http-fail")
 	failRec := httptest.NewRecorder()
 	server.ServeHTTP(failRec, fail)
@@ -372,7 +408,7 @@ func TestRunnerJobHTTPFailRetryAndConflict(t *testing.T) {
 		t.Fatalf("fail status = %d: %s", failRec.Code, failRec.Body.String())
 	}
 
-	retry := httptest.NewRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/retry", nil)
+	retry := testRequest(http.MethodPost, "/fabric/jobs/"+job.JobID+"/retry", nil)
 	retry.Header.Set("Idempotency-Key", "http-retry")
 	retryRec := httptest.NewRecorder()
 	server.ServeHTTP(retryRec, retry)

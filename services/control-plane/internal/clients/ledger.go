@@ -253,14 +253,15 @@ type Artifact struct {
 
 type ledgerHTTPClient struct {
 	baseURL string
+	token   string
 	client  *http.Client
 }
 
-func NewLedgerHTTPClient(baseURL string, client *http.Client) LedgerClient {
+func NewLedgerHTTPClient(baseURL, token string, client *http.Client) LedgerClient {
 	if client == nil {
 		client = http.DefaultClient
 	}
-	return &ledgerHTTPClient{baseURL: baseURL, client: client}
+	return &ledgerHTTPClient{baseURL: baseURL, token: token, client: client}
 }
 
 func (c *ledgerHTTPClient) ManualTopUp(ctx context.Context, input ManualTopUpInput, idempotencyKey string) (ManualTopUpResult, error) {
@@ -364,6 +365,7 @@ func (c *ledgerHTTPClient) post(ctx context.Context, path string, input any, ide
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Idempotency-Key", idempotencyKey)
+	c.authorize(req)
 	res, err := c.client.Do(req)
 	if err != nil {
 		return err
@@ -376,11 +378,16 @@ func (c *ledgerHTTPClient) post(ctx context.Context, path string, input any, ide
 	return json.NewDecoder(res.Body).Decode(output)
 }
 
+func (c *ledgerHTTPClient) authorize(req *http.Request) {
+	req.Header.Set("Authorization", "Bearer "+c.token)
+}
+
 func (c *ledgerHTTPClient) get(ctx context.Context, path string, output any) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
 		return err
 	}
+	c.authorize(req)
 	res, err := c.client.Do(req)
 	if err != nil {
 		return err

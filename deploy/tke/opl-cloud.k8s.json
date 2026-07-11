@@ -157,6 +157,15 @@
                     }
                   },
                   {
+                    "name": "OPL_INTERNAL_SERVICE_TOKEN",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "opl-cloud-internal-service",
+                        "key": "OPL_INTERNAL_SERVICE_TOKEN"
+                      }
+                    }
+                  },
+                  {
                     "name": "OPL_CONSOLE_USERS_JSON",
                     "valueFrom": {
                       "secretKeyRef": {
@@ -433,6 +442,15 @@
                         "key": "DATABASE_URL"
                       }
                     }
+                  },
+                  {
+                    "name": "OPL_INTERNAL_SERVICE_TOKEN",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "opl-cloud-internal-service",
+                        "key": "OPL_INTERNAL_SERVICE_TOKEN"
+                      }
+                    }
                   }
                 ],
                 "readinessProbe": {
@@ -579,6 +597,15 @@
                       "secretKeyRef": {
                         "name": "opl-cloud-database",
                         "key": "DATABASE_URL"
+                      }
+                    }
+                  },
+                  {
+                    "name": "OPL_INTERNAL_SERVICE_TOKEN",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "name": "opl-cloud-internal-service",
+                        "key": "OPL_INTERNAL_SERVICE_TOKEN"
                       }
                     }
                   },

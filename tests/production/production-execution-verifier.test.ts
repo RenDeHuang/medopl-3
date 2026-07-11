@@ -54,6 +54,7 @@ test("production execution verifier proves the complete cross-service evidence c
     fabricOrigin: "http://fabric.test",
     ledgerOrigin: "http://ledger.test",
     operatorToken: "operator-token",
+    internalServiceToken: "internal-secret",
     runId,
     fetchImpl
   });
@@ -81,6 +82,8 @@ test("production execution verifier proves the complete cross-service evidence c
   ]);
   assert.equal(requests[0].headers["x-opl-operator-token"], "operator-token");
   assert.ok(requests.slice(1, 6).every(({ headers }) => headers.cookie === "opl_session=session" && headers["x-opl-csrf"] === "csrf-token"));
+  assert.ok(requests.filter(({ origin }) => origin !== "http://control-plane.test").every(({ headers }) => headers.authorization === "Bearer internal-secret"));
+  assert.ok(requests.filter(({ origin }) => origin === "http://control-plane.test").every(({ headers }) => headers.authorization === undefined));
   assert.ok(requests.filter(({ method }) => method === "POST").slice(1).every(({ headers }) => headers["idempotency-key"]));
   assert.deepEqual(requests[9].body.artifactIds, ["artifact-test"]);
   assert.deepEqual(requests[9].body.reviewIds, ["review-test"]);

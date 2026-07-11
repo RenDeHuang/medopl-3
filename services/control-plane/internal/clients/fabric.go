@@ -293,14 +293,15 @@ type Job struct {
 
 type fabricHTTPClient struct {
 	baseURL string
+	token   string
 	client  *http.Client
 }
 
-func NewFabricHTTPClient(baseURL string, client *http.Client) FabricClient {
+func NewFabricHTTPClient(baseURL, token string, client *http.Client) FabricClient {
 	if client == nil {
 		client = http.DefaultClient
 	}
-	return &fabricHTTPClient{baseURL: baseURL, client: client}
+	return &fabricHTTPClient{baseURL: baseURL, token: token, client: client}
 }
 
 func (c *fabricHTTPClient) Catalog(ctx context.Context) (FabricCatalog, error) {
@@ -471,6 +472,7 @@ func (c *fabricHTTPClient) Content(ctx context.Context, workspaceID, digest stri
 		return FabricContent{}, err
 	}
 	req.Header.Set("X-Workspace-ID", workspaceID)
+	c.authorize(req)
 	res, err := c.client.Do(req)
 	if err != nil {
 		return FabricContent{}, err
@@ -484,6 +486,7 @@ func (c *fabricHTTPClient) Content(ctx context.Context, workspaceID, digest stri
 }
 
 func (c *fabricHTTPClient) doJSON(req *http.Request, output any) error {
+	c.authorize(req)
 	res, err := c.client.Do(req)
 	if err != nil {
 		return err
@@ -506,15 +509,11 @@ func (c *fabricHTTPClient) post(ctx context.Context, path string, input any, ide
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Idempotency-Key", idempotencyKey)
-	res, err := c.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return fabricHTTPResponseError(res)
-	}
-	return json.NewDecoder(res.Body).Decode(output)
+	return c.doJSON(req, output)
+}
+
+func (c *fabricHTTPClient) authorize(req *http.Request) {
+	req.Header.Set("Authorization", "Bearer "+c.token)
 }
 
 func (c *fabricHTTPClient) get(ctx context.Context, path string, output any) error {
@@ -522,15 +521,7 @@ func (c *fabricHTTPClient) get(ctx context.Context, path string, output any) err
 	if err != nil {
 		return err
 	}
-	res, err := c.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return fabricHTTPResponseError(res)
-	}
-	return json.NewDecoder(res.Body).Decode(output)
+	return c.doJSON(req, output)
 }
 
 func fabricHTTPResponseError(res *http.Response) error {

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -14,10 +15,14 @@ func main() {
 	addr := controlPlaneAddr()
 	ledgerURL := os.Getenv("LEDGER_URL")
 	fabricURL := os.Getenv("FABRIC_URL")
+	token, err := internalServiceToken(os.Getenv)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	service := controlplane.NewService(
-		clients.NewLedgerHTTPClient(ledgerURL, nil),
-		clients.NewFabricHTTPClient(fabricURL, nil),
+		clients.NewLedgerHTTPClient(ledgerURL, token, nil),
+		clients.NewFabricHTTPClient(fabricURL, token, nil),
 	)
 	store, err := controlserver.StateStoreFromEnv()
 	if err != nil {
@@ -31,6 +36,14 @@ func main() {
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func internalServiceToken(getenv func(string) string) (string, error) {
+	token := getenv("OPL_INTERNAL_SERVICE_TOKEN")
+	if getenv("NODE_ENV") == "production" && token == "" {
+		return "", errors.New("OPL_INTERNAL_SERVICE_TOKEN is required in production")
+	}
+	return token, nil
 }
 
 func controlPlaneAddr() string {

@@ -22,12 +22,13 @@ function assertFields(payload, expected, stage) {
   }
 }
 
-async function requestJson({ fetchImpl, origin, path, method = "GET", body, auth, idempotencyKey, headers = {} }) {
+async function requestJson({ fetchImpl, origin, path, method = "GET", body, auth, serviceToken, idempotencyKey, headers = {} }) {
   const response = await fetchImpl(`${origin}${path}`, {
     method,
     headers: {
       ...(body ? { "content-type": "application/json" } : {}),
       ...(auth?.cookie ? { cookie: auth.cookie, "x-opl-csrf": auth.csrf } : {}),
+      ...(serviceToken ? { authorization: `Bearer ${serviceToken}` } : {}),
       ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       ...headers
     },
@@ -43,6 +44,7 @@ export async function verifyProductionExecutionChain({
   fabricOrigin,
   ledgerOrigin,
   operatorToken,
+  internalServiceToken,
   runId,
   fetchImpl = globalThis.fetch
 }) {
@@ -50,6 +52,7 @@ export async function verifyProductionExecutionChain({
   const fabric = normalizedOrigin(fabricOrigin, "fabric_origin");
   const ledger = normalizedOrigin(ledgerOrigin, "ledger_origin");
   required(operatorToken, "operator_token");
+  required(internalServiceToken, "internal_service_token");
   if (!/^[A-Za-z0-9._:-]{1,80}$/.test(runId || "")) throw new Error("run_id_invalid");
 
   const organizationId = "org-production-verifier";
@@ -108,20 +111,20 @@ export async function verifyProductionExecutionChain({
   required(executed.receiptId, "running_receipt_id");
 
   const claimed = (await requestJson({
-    fetchImpl, origin: fabric, path: `/fabric/jobs/${encodeURIComponent(executed.jobId)}/claim`, method: "POST", idempotencyKey: key("claim"), body: { runnerId }
+    fetchImpl, origin: fabric, path: `/fabric/jobs/${encodeURIComponent(executed.jobId)}/claim`, method: "POST", serviceToken: internalServiceToken, idempotencyKey: key("claim"), body: { runnerId }
   })).payload;
   assertFields(claimed, { ...executionIdentity, requestId: requested.requestId, approvalId: approved.approvalId, jobId: executed.jobId, status: "running" }, "claim");
   required(claimed.leaseToken, "lease_token");
 
   const artifact = (await requestJson({
-    fetchImpl, origin: ledger, path: "/ledger/artifacts", method: "POST", idempotencyKey: key("artifact"),
+    fetchImpl, origin: ledger, path: "/ledger/artifacts", method: "POST", serviceToken: internalServiceToken, idempotencyKey: key("artifact"),
     body: { ...executionIdentity, jobId: executed.jobId, digest, mediaType: "application/json", sizeBytes: Buffer.byteLength(runId), storageRef: `artifact:${runId}` }
   })).payload;
   assertFields(artifact, { ...executionIdentity, jobId: executed.jobId, digest }, "artifact");
   required(artifact.artifactId, "artifact_id");
 
   const review = (await requestJson({
-    fetchImpl, origin: ledger, path: "/ledger/reviews", method: "POST", idempotencyKey: key("review"),
+    fetchImpl, origin: ledger, path: "/ledger/reviews", method: "POST", serviceToken: internalServiceToken, idempotencyKey: key("review"),
     body: {
       ...executionIdentity,
       jobId: executed.jobId,
@@ -136,7 +139,7 @@ export async function verifyProductionExecutionChain({
   required(review.reviewId, "review_id");
 
   const completed = (await requestJson({
-    fetchImpl, origin: fabric, path: `/fabric/jobs/${encodeURIComponent(executed.jobId)}/complete`, method: "POST", idempotencyKey: key("complete"),
+    fetchImpl, origin: fabric, path: `/fabric/jobs/${encodeURIComponent(executed.jobId)}/complete`, method: "POST", serviceToken: internalServiceToken, idempotencyKey: key("complete"),
     body: { runnerId, leaseToken: claimed.leaseToken, artifactIds: [artifact.artifactId], reviewIds: [review.reviewId] }
   })).payload;
   assertFields(completed, { ...executionIdentity, jobId: executed.jobId, status: "succeeded" }, "complete");
@@ -148,12 +151,12 @@ export async function verifyProductionExecutionChain({
   required(synced.receiptId, "receipt_id");
   required(synced.continuationId, "continuation_id");
 
-  const receipt = (await requestJson({ fetchImpl, origin: ledger, path: `/ledger/receipts/${encodeURIComponent(synced.receiptId)}` })).payload;
+  const receipt = (await requestJson({ fetchImpl, origin: ledger, path: `/ledger/receipts/${encodeURIComponent(synced.receiptId)}`, serviceToken: internalServiceToken })).payload;
   assertFields(receipt, { ...executionIdentity, requestId: requested.requestId, approvalId: approved.approvalId, jobId: executed.jobId, artifactId: artifact.artifactId, reviewId: review.reviewId, receiptId: synced.receiptId, continuationId: synced.continuationId, status: "completed" }, "receipt");
 
   const continuationPath = `/api/execution-requests/${encodeURIComponent(requested.requestId)}/continuation`;
   const controlPlaneContinuation = (await requestJson({ fetchImpl, origin: controlPlane, path: continuationPath, auth })).payload;
-  const ledgerContinuation = (await requestJson({ fetchImpl, origin: ledger, path: `/ledger/receipts/${encodeURIComponent(synced.receiptId)}/continuation` })).payload;
+  const ledgerContinuation = (await requestJson({ fetchImpl, origin: ledger, path: `/ledger/receipts/${encodeURIComponent(synced.receiptId)}/continuation`, serviceToken: internalServiceToken })).payload;
   const continuationIdentity = { projectId: project.projectId, taskId: task.taskId, receiptId: synced.receiptId, continuationId: synced.continuationId };
   assertFields(controlPlaneContinuation, continuationIdentity, "control_plane_continuation");
   assertFields(ledgerContinuation, continuationIdentity, "ledger_continuation");
@@ -181,6 +184,7 @@ export async function runProductionExecutionVerifierCli({ env = process.env, std
       fabricOrigin: env.OPL_EXECUTION_FABRIC_ORIGIN,
       ledgerOrigin: env.OPL_EXECUTION_LEDGER_ORIGIN,
       operatorToken: env.OPL_EXECUTION_OPERATOR_TOKEN,
+      internalServiceToken: env.OPL_EXECUTION_INTERNAL_SERVICE_TOKEN,
       runId: env.OPL_EXECUTION_RUN_ID,
       fetchImpl
     });

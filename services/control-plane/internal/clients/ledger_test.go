@@ -11,6 +11,9 @@ import (
 
 func TestLedgerHTTPClientReturnsErrorForFailedMutation(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "Bearer internal-secret" {
+			t.Fatalf("Authorization = %q", got)
+		}
 		if r.URL.Path != "/ledger/holds/release" {
 			t.Fatalf("path = %s, want /ledger/holds/release", r.URL.Path)
 		}
@@ -18,7 +21,7 @@ func TestLedgerHTTPClientReturnsErrorForFailedMutation(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewLedgerHTTPClient(server.URL, server.Client())
+	client := NewLedgerHTTPClient(server.URL, "internal-secret", server.Client())
 	_, err := client.ReleaseHold(context.Background(), HoldReleaseInput{AccountID: "acct-alpha", AmountCents: 1000, Currency: "CNY"}, "release-once")
 	if err == nil || !strings.Contains(err.Error(), "status 409") {
 		t.Fatalf("expected status error, got %v", err)
@@ -38,7 +41,7 @@ func TestLedgerHTTPClientReadsWalletAndSettlementFacts(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewLedgerHTTPClient(server.URL, server.Client())
+	client := NewLedgerHTTPClient(server.URL, "internal-secret", server.Client())
 	wallet, err := client.Wallet(context.Background(), "acct-alpha")
 	if err != nil || wallet.BalanceCents != 9900 {
 		t.Fatalf("wallet = %#v err=%v", wallet, err)
@@ -55,7 +58,7 @@ func TestLedgerHTTPClientReadsReceiptContinuationIdentity(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewLedgerHTTPClient(server.URL, server.Client())
+	client := NewLedgerHTTPClient(server.URL, "internal-secret", server.Client())
 	receipt, err := client.RecordReceipt(context.Background(), ReceiptInput{Type: "execution.receipt.v1", Status: "running", Surface: "workspace", WorkspaceID: "workspace-alpha"}, "receipt-once")
 	if err != nil || receipt.ReceiptID != "receipt-alpha" || receipt.ContinuationID != "continuation-alpha" {
 		t.Fatalf("receipt = %#v err=%v", receipt, err)
@@ -81,7 +84,7 @@ func TestLedgerHTTPClientReadsReviewAndContinuation(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewLedgerHTTPClient(server.URL, server.Client())
+	client := NewLedgerHTTPClient(server.URL, "internal-secret", server.Client())
 	artifact, err := client.Artifact(context.Background(), "artifact-alpha")
 	if err != nil || artifact.JobID != "job-alpha" || artifact.Digest != "sha256:alpha" {
 		t.Fatalf("artifact = %#v err=%v", artifact, err)

@@ -50,6 +50,7 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
 	assert.equal(config.data.OPL_CODEX_BASE_URL, "https://gflabtoken.cn/v1");
 	assert.equal(config.data.LEDGER_URL, "http://opl-cloud-ledger:8081");
 	assert.equal(config.data.FABRIC_URL, "http://opl-cloud-fabric:8082");
+	assert.equal(config.data.OPL_INTERNAL_SERVICE_TOKEN, undefined);
 
 	const deployments = items.filter((item) => item.kind === "Deployment");
 	assert.deepEqual(deployments.map((item) => item.metadata.name), [
@@ -73,6 +74,7 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
   assert.equal(container.env.find((item) => item.name === "PGSSLMODE").value, "disable");
   assert.deepEqual(container.env.filter((item) => item.valueFrom).map((item) => `${item.name}->${item.valueFrom.secretKeyRef.name}/${item.valueFrom.secretKeyRef.key}`), [
     "DATABASE_URL->opl-cloud-database/DATABASE_URL",
+	"OPL_INTERNAL_SERVICE_TOKEN->opl-cloud-internal-service/OPL_INTERNAL_SERVICE_TOKEN",
     "OPL_CONSOLE_USERS_JSON->opl-cloud-auth/OPL_CONSOLE_USERS_JSON",
     "OPL_OPERATOR_SUMMARY_TOKEN->opl-cloud-operator/OPL_OPERATOR_SUMMARY_TOKEN",
     "OPL_AIONUI_ADMIN_PASSWORD_SEED->opl-cloud-aionui/OPL_AIONUI_ADMIN_PASSWORD_SEED",
@@ -105,7 +107,8 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
 	assert.equal(ledger.spec.template.spec.containers[0].ports[0].containerPort, 8081);
 	assert.equal(ledger.spec.template.spec.containers[0].env.find((item) => item.name === "PGSSLMODE").value, "disable");
 	assert.deepEqual(ledger.spec.template.spec.containers[0].env.filter((item) => item.valueFrom).map((item) => `${item.name}->${item.valueFrom.secretKeyRef.name}/${item.valueFrom.secretKeyRef.key}`), [
-		"DATABASE_URL->opl-cloud-database/DATABASE_URL"
+		"DATABASE_URL->opl-cloud-database/DATABASE_URL",
+		"OPL_INTERNAL_SERVICE_TOKEN->opl-cloud-internal-service/OPL_INTERNAL_SERVICE_TOKEN"
 	]);
 	const fabric = deployments.find((item) => item.metadata.name === "opl-cloud-fabric");
 	assert.equal(fabric.spec.template.spec.containers[0].command[0], "/usr/local/bin/opl-fabric");
@@ -113,6 +116,7 @@ test("OPL Cloud TKE manifest declares the control plane, routing, and secret ref
 	assert.equal(fabric.spec.template.spec.containers[0].env.find((item) => item.name === "PGSSLMODE")?.value, "disable");
 	assert.deepEqual(fabric.spec.template.spec.containers[0].env.filter((item) => item.valueFrom).map((item) => `${item.name}->${item.valueFrom.secretKeyRef.name}/${item.valueFrom.secretKeyRef.key}`), [
 		"DATABASE_URL->opl-cloud-database/DATABASE_URL",
+		"OPL_INTERNAL_SERVICE_TOKEN->opl-cloud-internal-service/OPL_INTERNAL_SERVICE_TOKEN",
 		"TENCENTCLOUD_SECRET_ID->opl-cloud-tencent-mutation/TENCENTCLOUD_SECRET_ID",
 		"TENCENTCLOUD_SECRET_KEY->opl-cloud-tencent-mutation/TENCENTCLOUD_SECRET_KEY",
 		"OPL_AIONUI_ADMIN_PASSWORD_SEED->opl-cloud-aionui/OPL_AIONUI_ADMIN_PASSWORD_SEED"

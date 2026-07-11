@@ -125,7 +125,18 @@ test("production execution verifier runs inside TKE and matches the deployment c
   assert.match(runs, /port-forward service\/opl-cloud-ledger 18081:8081/);
   assert.match(runs, /port-forward service\/opl-cloud-fabric 18082:8082/);
   assert.match(runs, /node tools\/production-execution-verifier\.ts/);
+	assert.match(runs, /get secret opl-cloud-internal-service/);
+	assert.match(runs, /OPL_EXECUTION_INTERNAL_SERVICE_TOKEN/);
   assert.doesNotMatch(runs, /x-opl-operator-token/);
+});
+
+test("TKE deploy installs one internal service token secret", async () => {
+	const workflow = await readWorkflow(new URL("../../.github/workflows/deploy-tke-production.yml", import.meta.url));
+	const currentJob = job(workflow, "deploy");
+	const install = serializedStep(stepsByName(currentJob).get("Install Kubernetes secrets"));
+	assert.ok(String(currentJob.env.OPL_INTERNAL_SERVICE_TOKEN || "").includes("secrets.OPL_INTERNAL_SERVICE_TOKEN"));
+	assert.match(install, /create secret generic opl-cloud-internal-service/);
+	assert.match(install, /--from-file=OPL_INTERNAL_SERVICE_TOKEN="\$secret_dir\/internal-service-token"/);
 });
 
 test("TKE deploy can roll forward with an existing auth seed secret", async () => {

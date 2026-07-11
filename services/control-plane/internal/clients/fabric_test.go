@@ -13,6 +13,9 @@ import (
 func TestFabricTransferClientStreamsChunksAndContent(t *testing.T) {
 	body := []byte("content")
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "Bearer internal-secret" {
+			t.Fatalf("Authorization = %q", got)
+		}
 		switch {
 		case r.Method == http.MethodPut:
 			if r.URL.Path != "/fabric/transfers/transfer-alpha/chunks/2" || r.Header.Get("X-Chunk-SHA256") != "chunk-digest" {
@@ -26,7 +29,7 @@ func TestFabricTransferClientStreamsChunksAndContent(t *testing.T) {
 		}
 	}))
 	defer upstream.Close()
-	client := NewFabricHTTPClient(upstream.URL, upstream.Client()).(FabricTransferClient)
+	client := NewFabricHTTPClient(upstream.URL, "internal-secret", upstream.Client()).(FabricTransferClient)
 	transfer, err := client.PutTransferChunk(context.Background(), "transfer-alpha", 2, []byte("chunk"), "chunk-digest")
 	if err != nil || len(transfer.ReceivedChunks) != 1 {
 		t.Fatalf("put = %#v err=%v", transfer, err)
@@ -46,7 +49,7 @@ func TestFabricClientCreatesJob(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	client := NewFabricHTTPClient(upstream.URL, upstream.Client())
+	client := NewFabricHTTPClient(upstream.URL, "internal-secret", upstream.Client())
 	job, err := client.CreateJob(context.Background(), JobInput{OrganizationID: "org-alpha", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", RequestID: "request-alpha", ApprovalID: "approval-alpha"}, "job-once")
 	if err != nil || job.JobID != "job-alpha" || job.Status != "queued" {
 		t.Fatalf("job = %#v err=%v", job, err)
@@ -59,7 +62,7 @@ func TestFabricClientReturnsErrorOnUpstreamFailure(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	client := NewFabricHTTPClient(upstream.URL, upstream.Client())
+	client := NewFabricHTTPClient(upstream.URL, "internal-secret", upstream.Client())
 	if _, err := client.Catalog(context.Background()); err == nil || !strings.Contains(err.Error(), "status 503") {
 		t.Fatalf("expected upstream status error, got %v", err)
 	}
@@ -74,7 +77,7 @@ func TestFabricClientReadsCompletedJobEvidence(t *testing.T) {
 	}))
 	defer upstream.Close()
 
-	client := NewFabricHTTPClient(upstream.URL, upstream.Client())
+	client := NewFabricHTTPClient(upstream.URL, "internal-secret", upstream.Client())
 	job, err := client.GetJob(context.Background(), "job-alpha")
 	if err != nil || job.Status != "succeeded" || job.Attempt != 2 || len(job.ArtifactIDs) != 1 || len(job.ReviewIDs) != 1 {
 		t.Fatalf("job = %#v err=%v", job, err)
@@ -96,7 +99,7 @@ func TestFabricRecoveryClientUsesSnapshotContract(t *testing.T) {
 		}
 	}))
 	defer upstream.Close()
-	client := NewFabricHTTPClient(upstream.URL, upstream.Client()).(FabricRecoveryClient)
+	client := NewFabricHTTPClient(upstream.URL, "internal-secret", upstream.Client()).(FabricRecoveryClient)
 	snapshot, err := client.CreateStorageSnapshot(context.Background(), StorageSnapshotInput{AccountID: "acct-alpha", WorkspaceID: "ws-alpha", VolumeID: "vol-alpha"}, "snapshot-once")
 	if err != nil || snapshot.ID != "snap-alpha" {
 		t.Fatalf("snapshot=%#v err=%v", snapshot, err)

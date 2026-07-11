@@ -1,6 +1,8 @@
 package http
 
 import (
+	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"io"
@@ -12,7 +14,7 @@ import (
 	"opl-cloud/services/fabric/internal/fabric"
 )
 
-func NewServer(service *fabric.Service) http.Handler {
+func NewServer(service *fabric.Service, token string) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
@@ -254,7 +256,23 @@ func NewServer(service *fabric.Service) http.Handler {
 		runtime, err := service.WorkspaceRuntimeStatus(r.Context(), strings.TrimSpace(r.PathValue("workspaceId")))
 		writeResult(w, runtime, err)
 	})
-	return mux
+	return authenticate(mux, token)
+}
+
+func authenticate(next http.Handler, token string) http.Handler {
+	want := sha256.Sum256([]byte("Bearer " + token))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet && r.URL.Path == "/healthz" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		got := sha256.Sum256([]byte(r.Header.Get("Authorization")))
+		if token == "" || subtle.ConstantTimeCompare(got[:], want[:]) != 1 {
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func decodeWrite(w http.ResponseWriter, r *http.Request, idempotencyKey *string, body any) bool {

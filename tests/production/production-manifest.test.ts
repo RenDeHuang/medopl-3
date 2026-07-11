@@ -8,6 +8,7 @@ test("production manifest requires deployment secret refs for every launch varia
     env: {
       OPL_RUNTIME_PROVIDER: { value: "tencent-tke" },
       DATABASE_URL: { secretRef: "opl-cloud/database-url" },
+      OPL_INTERNAL_SERVICE_TOKEN: { secretRef: "opl-cloud/internal-service-token" },
       OPL_CONSOLE_USERS_JSON: { secretRef: "opl-cloud/auth-users-json" },
       OPL_PUBLIC_URL: { value: "https://cloud.medopl.cn" },
       OPL_CONSOLE_DOMAIN: { value: "cloud.medopl.cn" },
@@ -43,6 +44,7 @@ test("production manifest validates Tencent TKE fields only", () => {
     env: {
       OPL_RUNTIME_PROVIDER: { value: "tencent-tke" },
       DATABASE_URL: { secretRef: "opl-cloud/database-url" },
+      OPL_INTERNAL_SERVICE_TOKEN: { secretRef: "opl-cloud/internal-service-token" },
       OPL_CONSOLE_USERS_JSON: { secretRef: "opl-cloud/auth-users-json" },
       OPL_PUBLIC_URL: { value: "https://cloud.medopl.cn" },
       OPL_CONSOLE_DOMAIN: { value: "cloud.medopl.cn" },
@@ -86,6 +88,7 @@ test("production manifest fails closed on missing env and inline secret values",
   assert.equal(report.ok, false);
   assert.ok(report.missingEnv.includes("OPL_CLOUD_IMAGE"));
   assert.ok(report.missingEnv.includes("OPL_CONSOLE_USERS_JSON"));
+  assert.ok(report.missingEnv.includes("OPL_INTERNAL_SERVICE_TOKEN"));
   assert.ok(report.missingEnv.includes("OPL_WORKSPACE_STORAGE_CLASS"));
   assert.deepEqual(report.inlineSecretEnv.sort(), ["DATABASE_URL"]);
   assert.ok(report.failedChecks.includes("required_env"));

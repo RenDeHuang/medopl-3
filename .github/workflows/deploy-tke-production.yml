@@ -70,6 +70,7 @@ jobs:
       TENCENT_DEPLOY_KUBECONFIG: ${{ secrets.TENCENT_DEPLOY_KUBECONFIG }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       OPL_CONSOLE_USERS_JSON: ${{ secrets.OPL_CONSOLE_USERS_JSON }}
+      OPL_INTERNAL_SERVICE_TOKEN: ${{ secrets.OPL_INTERNAL_SERVICE_TOKEN }}
       OPL_OPERATOR_SUMMARY_TOKEN: ${{ secrets.OPL_OPERATOR_SUMMARY_TOKEN }}
       OPL_AIONUI_ADMIN_PASSWORD_SEED: ${{ secrets.OPL_AIONUI_ADMIN_PASSWORD_SEED }}
       OPL_CODEX_API_KEY: ${{ secrets.OPL_CODEX_API_KEY }}
@@ -117,6 +118,7 @@ jobs:
             OPL_CLOUD_IMAGE
             OPL_WORKSPACE_IMAGE
             DATABASE_URL
+            OPL_INTERNAL_SERVICE_TOKEN
             OPL_AIONUI_ADMIN_PASSWORD_SEED
             TCR_USERNAME
             TCR_PASSWORD
@@ -188,6 +190,7 @@ jobs:
           secret_dir="$OPL_DEPLOY_SECRET_DIR"
           docker_config="$secret_dir/docker-config.json"
           printf '%s' "$DATABASE_URL" > "$secret_dir/database-url"
+          printf '%s' "$OPL_INTERNAL_SERVICE_TOKEN" > "$secret_dir/internal-service-token"
           printf '%s:%s' "$TCR_USERNAME" "$TCR_PASSWORD" | base64 | tr -d '\n' > "$secret_dir/tcr-auth"
           cat > "$docker_config" <<JSON
           {"auths":{"$TENCENT_TCR_REGISTRY":{"username":"$TCR_USERNAME","password":"$TCR_PASSWORD","auth":"$(cat "$secret_dir/tcr-auth")"}}}
@@ -197,6 +200,9 @@ jobs:
           kubectl --kubeconfig "$KUBECONFIG" create namespace "$OPL_K8S_NAMESPACE" --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG" apply -f -
           kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" create secret generic opl-cloud-database \
             --from-file=DATABASE_URL="$secret_dir/database-url" \
+            --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG" apply -f -
+          kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" create secret generic opl-cloud-internal-service \
+            --from-file=OPL_INTERNAL_SERVICE_TOKEN="$secret_dir/internal-service-token" \
             --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG" apply -f -
           if [ -n "${OPL_CONSOLE_USERS_JSON:-}" ]; then
             printf '%s' "$OPL_CONSOLE_USERS_JSON" > "$secret_dir/auth-users-json"
