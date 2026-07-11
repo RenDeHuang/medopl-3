@@ -118,7 +118,7 @@ func (f *transferFabricClient) Content(_ context.Context, _ string, digest strin
 
 func TestWorkspaceContentTransferIsAuthorizedAndStreamedThroughFabric(t *testing.T) {
 	fabricClient := &transferFabricClient{fakeFabricClient: &fakeFabricClient{}}
-	server := NewServer(controlplane.NewService(fakeLedgerClient{}, fabricClient))
+	server := newExecutionTestServer(t, controlplane.NewService(fakeLedgerClient{}, fabricClient))
 	admin := operatorSessionForTest(t, server)
 	project := createResourceWithSession(t, server, admin, http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha"}`)
 	projectID := stringValue(project["projectId"])
@@ -173,7 +173,7 @@ func decodeSyncPayload(t *testing.T, rec *httptest.ResponseRecorder) map[string]
 }
 
 func TestWorkspaceSyncAcceptsMutationAndPullsByCursor(t *testing.T) {
-	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	server := newExecutionTestServer(t, controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
 	project := createResourceWithSession(t, server, admin, http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha","localAliasId":"local-project-alpha"}`)
 	projectID := stringValue(project["projectId"])
@@ -210,7 +210,7 @@ func TestWorkspaceSyncAcceptsMutationAndPullsByCursor(t *testing.T) {
 }
 
 func TestWorkspaceSyncPersistsStaleReplaceConflictWithoutOverwrite(t *testing.T) {
-	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	server := newExecutionTestServer(t, controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
 	project := createResourceWithSession(t, server, admin, http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha"}`)
 	projectID := stringValue(project["projectId"])
@@ -245,7 +245,7 @@ func TestWorkspaceSyncPersistsStaleReplaceConflictWithoutOverwrite(t *testing.T)
 }
 
 func TestWorkspaceSyncResolvesConflictByAppendingEvent(t *testing.T) {
-	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	server := newExecutionTestServer(t, controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
 	project := createResourceWithSession(t, server, admin, http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha"}`)
 	projectID := stringValue(project["projectId"])
@@ -282,7 +282,7 @@ func TestWorkspaceSyncResolvesConflictByAppendingEvent(t *testing.T) {
 }
 
 func TestWorkspaceSyncReplaysSameMutationAndRejectsChangedFingerprint(t *testing.T) {
-	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	server := newExecutionTestServer(t, controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
 	project := createResourceWithSession(t, server, admin, http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha"}`)
 	projectID := stringValue(project["projectId"])

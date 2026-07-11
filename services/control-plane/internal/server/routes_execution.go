@@ -28,6 +28,26 @@ func registerExecutionRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 		if !ok {
 			return
 		}
+		workspace, ok := app.getWorkspace(workspaceID)
+		if !ok {
+			writeError(w, http.StatusNotFound, "workspace_not_found")
+			return
+		}
+		organizationAccountID := ""
+		for _, organization := range app.listOrganizations() {
+			if stringValue(organization["id"]) == organizationID {
+				organizationAccountID = stringValue(organization["billingAccountId"])
+				break
+			}
+		}
+		if organizationAccountID == "" {
+			writeError(w, http.StatusNotFound, "organization_not_found")
+			return
+		}
+		if firstNonEmpty(stringValue(workspace["accountId"]), stringValue(workspace["ownerAccountId"])) != organizationAccountID {
+			writeError(w, http.StatusForbidden, "workspace_organization_forbidden")
+			return
+		}
 		row := map[string]any{
 			"id":             "project-" + stableID("project", key)[:18],
 			"projectId":      "project-" + stableID("project", key)[:18],

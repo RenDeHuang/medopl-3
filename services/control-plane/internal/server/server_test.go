@@ -27,6 +27,18 @@ func mustStore(t *testing.T, err error) {
 	}
 }
 
+func newExecutionTestServer(t *testing.T, service *controlplane.Service) http.Handler {
+	t.Helper()
+	store := newMemoryTableStore()
+	mustStore(t, store.SaveOrganization(context.Background(), map[string]any{"id": "org-alpha", "billingAccountId": "acct-alpha", "status": "active"}))
+	mustStore(t, store.SaveWorkspace(context.Background(), map[string]any{"id": "workspace-alpha", "accountId": "acct-alpha", "status": "running"}))
+	server, err := NewPersistentServer(service, store)
+	if err != nil {
+		t.Fatalf("create execution test server: %v", err)
+	}
+	return server
+}
+
 func storedWorkspace(t *testing.T, app *controlPlaneServer, id string) map[string]any {
 	t.Helper()
 	workspace, ok := app.getWorkspace(id)
@@ -793,7 +805,7 @@ func (f *fakeFabricClient) CancelJob(_ context.Context, jobID string, _ string) 
 }
 
 func TestExecutionRoutesPersistCanonicalFlow(t *testing.T) {
-	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	server := newExecutionTestServer(t, controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
 
 	project := createResourceWithSession(t, server, admin, http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha","localAliasId":"local-project-alpha"}`)
@@ -821,6 +833,35 @@ func TestExecutionRoutesPersistCanonicalFlow(t *testing.T) {
 	loaded := createResourceWithSession(t, server, admin, http.MethodGet, "/api/execution-requests/"+requestID, ``)
 	if loaded["status"] != "queued" || loaded["jobId"] != "job-from-fabric" || loaded["receiptId"] != "receipt-from-ledger" {
 		t.Fatalf("unexpected persisted request: %#v", loaded)
+	}
+}
+
+func TestProjectCreationRequiresWorkspaceOrganizationOwnership(t *testing.T) {
+	store := newMemoryTableStore()
+	mustStore(t, store.SaveOrganization(context.Background(), map[string]any{"id": "org-alpha", "billingAccountId": "acct-alpha", "status": "active"}))
+	mustStore(t, store.SaveOrganization(context.Background(), map[string]any{"id": "org-beta", "billingAccountId": "acct-beta", "status": "active"}))
+	mustStore(t, store.SaveWorkspace(context.Background(), map[string]any{"id": "workspace-beta", "accountId": "acct-beta", "status": "running"}))
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}), store)
+	if err != nil {
+		t.Fatalf("create server: %v", err)
+	}
+	admin := operatorSessionForTest(t, server)
+
+	forbidden := requestWithSession(t, server, admin, http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-beta"}`)
+	if forbidden.Code != http.StatusForbidden {
+		t.Fatalf("cross-organization status = %d, want %d: %s", forbidden.Code, http.StatusForbidden, forbidden.Body.String())
+	}
+	heads, err := store.ListProjectTaskSyncHeads(context.Background())
+	if err != nil {
+		t.Fatalf("list projects: %v", err)
+	}
+	if len(heads) != 0 {
+		t.Fatalf("cross-organization request persisted projects: %#v", heads)
+	}
+
+	created := requestWithSession(t, server, admin, http.MethodPost, "/api/projects", `{"organizationId":"org-beta","workspaceId":"workspace-beta"}`)
+	if created.Code != http.StatusCreated {
+		t.Fatalf("same-organization status = %d, want %d: %s", created.Code, http.StatusCreated, created.Body.String())
 	}
 }
 
@@ -854,7 +895,7 @@ func (f *completedExecutionFabricClient) GetJob(_ context.Context, jobID string)
 }
 
 func TestOrganizationMemberSyncsExecutionAndReadsContinuation(t *testing.T) {
-	server := NewServer(controlplane.NewService(&executionCompletionLedgerClient{}, &completedExecutionFabricClient{}))
+	server := newExecutionTestServer(t, controlplane.NewService(&executionCompletionLedgerClient{}, &completedExecutionFabricClient{}))
 	admin := operatorSessionForTest(t, server)
 	memberUser := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"member@execution.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
 	createResourceWithSession(t, server, admin, http.MethodPost, "/api/organizations/members", `{"organizationId":"org-alpha","userId":"`+stringValue(memberUser["id"])+`","accountId":"acct-alpha","role":"member"}`)
@@ -886,7 +927,7 @@ func TestOrganizationMemberSyncsExecutionAndReadsContinuation(t *testing.T) {
 }
 
 func TestProjectIdentityRequiresIdempotencyKey(t *testing.T) {
-	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	server := newExecutionTestServer(t, controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
 	req := httptest.NewRequest(http.MethodPost, "/api/projects", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha"}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -899,7 +940,7 @@ func TestProjectIdentityRequiresIdempotencyKey(t *testing.T) {
 }
 
 func TestExecutionRequestSameKeyDifferentPayloadConflicts(t *testing.T) {
-	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	server := newExecutionTestServer(t, controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
 	project := createResourceWithSession(t, server, admin, http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha"}`)
 	projectID := stringValue(project["projectId"])
@@ -918,7 +959,7 @@ func TestExecutionRequestSameKeyDifferentPayloadConflicts(t *testing.T) {
 }
 
 func TestExecutionRoutesAuthorizeActiveOrganizationMembers(t *testing.T) {
-	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
+	server := newExecutionTestServer(t, controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
 	piUser := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"pi@execution.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
 	createResourceWithSession(t, server, admin, http.MethodPost, "/api/organizations/members", `{"organizationId":"org-alpha","userId":"`+stringValue(piUser["id"])+`","accountId":"acct-alpha","role":"member"}`)
