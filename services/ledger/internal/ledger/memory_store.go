@@ -13,16 +13,17 @@ import (
 )
 
 type MemoryStore struct {
-	mu             sync.Mutex
-	wallets        map[string]Wallet
-	idempotency    map[string]idempotencyRecord
-	receipts       map[string]Receipt
-	reviewPolicies map[string]ReviewPolicy
-	entries        []LedgerEntry
-	walletTx       []WalletTransaction
-	topups         []ManualTopUp
-	settlements    []ResourceSettlementResult
-	nextID         int64
+	mu                      sync.Mutex
+	wallets                 map[string]Wallet
+	idempotency             map[string]idempotencyRecord
+	reviewPolicyIdempotency map[string]idempotencyRecord
+	receipts                map[string]Receipt
+	reviewPolicies          map[string]ReviewPolicy
+	entries                 []LedgerEntry
+	walletTx                []WalletTransaction
+	topups                  []ManualTopUp
+	settlements             []ResourceSettlementResult
+	nextID                  int64
 }
 
 type idempotencyRecord struct {
@@ -32,10 +33,11 @@ type idempotencyRecord struct {
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		wallets:        map[string]Wallet{},
-		idempotency:    map[string]idempotencyRecord{},
-		receipts:       map[string]Receipt{},
-		reviewPolicies: map[string]ReviewPolicy{},
+		wallets:                 map[string]Wallet{},
+		idempotency:             map[string]idempotencyRecord{},
+		reviewPolicyIdempotency: map[string]idempotencyRecord{},
+		receipts:                map[string]Receipt{},
+		reviewPolicies:          map[string]ReviewPolicy{},
 	}
 }
 
@@ -304,7 +306,8 @@ func (s *MemoryStore) Receipt(_ context.Context, receiptID string) (Receipt, err
 	if !ok {
 		return Receipt{}, ErrReceiptNotFound
 	}
-	return receipt, nil
+	gate, err := s.evaluateReviewGateLocked(ReviewGateInput{ExecutionIdentity: executionIdentityFromReceipt(receipt), ReviewIDs: stringSlice(receipt.Continuation["reviewIds"])})
+	return receiptForRead(receipt, gate, err), nil
 }
 
 func (s *MemoryStore) ListReceipts(_ context.Context, query ReceiptQuery) (ReceiptPage, error) {
@@ -326,7 +329,8 @@ func (s *MemoryStore) ListReceipts(_ context.Context, query ReceiptQuery) (Recei
 			(!cursor.CreatedAt.IsZero() && (receipt.CreatedAt.After(cursor.CreatedAt) || (receipt.CreatedAt.Equal(cursor.CreatedAt) && receipt.ReceiptID >= cursor.ReceiptID))) {
 			continue
 		}
-		receipts = append(receipts, receipt)
+		gate, gateErr := s.evaluateReviewGateLocked(ReviewGateInput{ExecutionIdentity: executionIdentityFromReceipt(receipt), ReviewIDs: stringSlice(receipt.Continuation["reviewIds"])})
+		receipts = append(receipts, receiptForRead(receipt, gate, gateErr))
 	}
 	sort.Slice(receipts, func(i, j int) bool {
 		if receipts[i].CreatedAt.Equal(receipts[j].CreatedAt) {
@@ -346,9 +350,11 @@ func (s *MemoryStore) ListReceipts(_ context.Context, query ReceiptQuery) (Recei
 }
 
 func (s *MemoryStore) Continuation(ctx context.Context, receiptID string) (map[string]any, error) {
-	receipt, err := s.Receipt(ctx, receiptID)
-	if err != nil {
-		return nil, err
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	receipt, ok := s.receipts[receiptID]
+	if !ok {
+		return nil, ErrReceiptNotFound
 	}
 	continuation, err := continuationFromReceipt(receipt)
 	if err != nil {
@@ -358,9 +364,9 @@ func (s *MemoryStore) Continuation(ctx context.Context, receiptID string) (map[s
 	if !validExecutionIdentity(identity) {
 		return continuation, nil
 	}
-	gate, err := s.EvaluateReviewGate(ctx, ReviewGateInput{ExecutionIdentity: identity, ReviewIDs: stringSlice(continuation["reviewIds"])})
+	gate, err := s.evaluateReviewGateLocked(ReviewGateInput{ExecutionIdentity: identity, ReviewIDs: stringSlice(continuation["reviewIds"])})
 	if errors.Is(err, ErrReviewPolicyNotFound) {
-		return continuation, nil
+		return nil, ErrContinuationIneligible
 	}
 	if err != nil {
 		return nil, err
@@ -440,7 +446,7 @@ func (s *MemoryStore) CreateReviewPolicy(_ context.Context, input ReviewPolicyIn
 	if err != nil {
 		return ReviewPolicy{}, err
 	}
-	if existing, ok := s.idempotency[input.IdempotencyKey]; ok {
+	if existing, ok := s.reviewPolicyIdempotency[input.IdempotencyKey]; ok {
 		if existing.payloadHash != payloadHash {
 			return ReviewPolicy{}, ErrIdempotencyConflict
 		}
@@ -477,7 +483,7 @@ func (s *MemoryStore) CreateReviewPolicy(_ context.Context, input ReviewPolicyIn
 		previous.Status = "superseded"
 		s.reviewPolicies[previous.PolicyID] = previous
 	}
-	s.idempotency[input.IdempotencyKey] = idempotencyRecord{payloadHash: payloadHash, result: policy}
+	s.reviewPolicyIdempotency[input.IdempotencyKey] = idempotencyRecord{payloadHash: payloadHash, result: policy}
 	return policy, nil
 }
 
@@ -511,11 +517,15 @@ func (s *MemoryStore) ListReviewPolicies(_ context.Context, query ReviewPolicyQu
 }
 
 func (s *MemoryStore) EvaluateReviewGate(_ context.Context, input ReviewGateInput) (ReviewGateResult, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.evaluateReviewGateLocked(input)
+}
+
+func (s *MemoryStore) evaluateReviewGateLocked(input ReviewGateInput) (ReviewGateResult, error) {
 	if !validExecutionIdentity(input.ExecutionIdentity) {
 		return ReviewGateResult{}, ErrInvalidReviewGateInput
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	var active ReviewPolicy
 	for _, policy := range s.reviewPolicies {
 		if policy.Status == "active" && sameExecutionIdentity(policy.ExecutionIdentity, input.ExecutionIdentity) {

@@ -365,7 +365,7 @@ func (s *PostgresStore) ListReceipts(ctx context.Context, query ReceiptQuery) (R
 	}
 	receipts := make([]Receipt, 0, len(rows))
 	for _, row := range rows {
-		receipts = append(receipts, receiptFromEnt(row))
+		receipts = append(receipts, s.receiptForRead(ctx, receiptFromEnt(row)))
 	}
 	page := ReceiptPage{Receipts: receipts, HasMore: hasMore}
 	if hasMore {
@@ -375,6 +375,14 @@ func (s *PostgresStore) ListReceipts(ctx context.Context, query ReceiptQuery) (R
 }
 
 func (s *PostgresStore) Receipt(ctx context.Context, receiptID string) (Receipt, error) {
+	receipt, err := s.receipt(ctx, receiptID)
+	if err != nil {
+		return Receipt{}, err
+	}
+	return s.receiptForRead(ctx, receipt), nil
+}
+
+func (s *PostgresStore) receipt(ctx context.Context, receiptID string) (Receipt, error) {
 	row, err := s.client.EvidenceReceipt.Get(ctx, receiptID)
 	if ledgerent.IsNotFound(err) {
 		return Receipt{}, ErrReceiptNotFound
@@ -386,7 +394,7 @@ func (s *PostgresStore) Receipt(ctx context.Context, receiptID string) (Receipt,
 }
 
 func (s *PostgresStore) Continuation(ctx context.Context, receiptID string) (map[string]any, error) {
-	receipt, err := s.Receipt(ctx, receiptID)
+	receipt, err := s.receipt(ctx, receiptID)
 	if err != nil {
 		return nil, err
 	}
@@ -400,7 +408,7 @@ func (s *PostgresStore) Continuation(ctx context.Context, receiptID string) (map
 	}
 	gate, err := s.EvaluateReviewGate(ctx, ReviewGateInput{ExecutionIdentity: identity, ReviewIDs: stringSlice(continuation["reviewIds"])})
 	if errors.Is(err, ErrReviewPolicyNotFound) {
-		return continuation, nil
+		return nil, ErrContinuationIneligible
 	}
 	if err != nil {
 		return nil, err
@@ -409,6 +417,14 @@ func (s *PostgresStore) Continuation(ctx context.Context, receiptID string) (map
 		return nil, ErrContinuationIneligible
 	}
 	return continuation, nil
+}
+
+func (s *PostgresStore) receiptForRead(ctx context.Context, receipt Receipt) Receipt {
+	if !validExecutionIdentity(executionIdentityFromReceipt(receipt)) {
+		return receipt
+	}
+	gate, err := s.EvaluateReviewGate(ctx, ReviewGateInput{ExecutionIdentity: executionIdentityFromReceipt(receipt), ReviewIDs: stringSlice(receipt.Continuation["reviewIds"])})
+	return receiptForRead(receipt, gate, err)
 }
 
 func (s *PostgresStore) RecordArtifact(ctx context.Context, input ArtifactInput) (Artifact, error) {
@@ -512,7 +528,8 @@ func (s *PostgresStore) CreateReviewPolicy(ctx context.Context, input ReviewPoli
 			return ReviewPolicy{}, err
 		}
 		if exists {
-			return ReviewPolicy{}, ErrInvalidReviewPolicyInput
+			_ = tx.Rollback()
+			return s.replayReviewPolicy(ctx, input.IdempotencyKey, requestHash, ErrInvalidReviewPolicyInput)
 		}
 	} else {
 		previous, err := tx.ReviewPolicy.Get(ctx, input.SupersedesPolicyID)
@@ -527,7 +544,8 @@ func (s *PostgresStore) CreateReviewPolicy(ctx context.Context, input ReviewPoli
 			return ReviewPolicy{}, err
 		}
 		if previousPolicy.Status != "active" || !sameExecutionIdentity(previousPolicy.ExecutionIdentity, input.ExecutionIdentity) || previousPolicy.Version == input.Version {
-			return ReviewPolicy{}, ErrInvalidReviewPolicyInput
+			_ = tx.Rollback()
+			return s.replayReviewPolicy(ctx, input.IdempotencyKey, requestHash, ErrInvalidReviewPolicyInput)
 		}
 		if err := tx.ReviewPolicy.UpdateOneID(previous.ID).SetStatus("superseded").Exec(ctx); err != nil {
 			return ReviewPolicy{}, err
@@ -555,6 +573,10 @@ func (s *PostgresStore) CreateReviewPolicy(ctx context.Context, input ReviewPoli
 		SetCreatedAt(now).
 		Save(ctx)
 	if err != nil {
+		if ledgerent.IsConstraintError(err) {
+			_ = tx.Rollback()
+			return s.replayReviewPolicy(ctx, input.IdempotencyKey, requestHash, err)
+		}
 		return ReviewPolicy{}, err
 	}
 	policy, err := reviewPolicyFromEnt(row)
@@ -562,6 +584,25 @@ func (s *PostgresStore) CreateReviewPolicy(ctx context.Context, input ReviewPoli
 		return ReviewPolicy{}, err
 	}
 	return policy, tx.Commit()
+}
+
+func (s *PostgresStore) replayReviewPolicy(ctx context.Context, idempotencyKey, requestHash string, constraintErr error) (ReviewPolicy, error) {
+	row, err := s.client.ReviewPolicy.Query().Where(reviewpolicy.IdempotencyKey(idempotencyKey)).Only(ctx)
+	if ledgerent.IsNotFound(err) {
+		return ReviewPolicy{}, constraintErr
+	}
+	if err != nil {
+		return ReviewPolicy{}, err
+	}
+	if row.RequestHash != requestHash {
+		return ReviewPolicy{}, ErrIdempotencyConflict
+	}
+	policy, err := reviewPolicyFromEnt(row)
+	if err != nil {
+		return ReviewPolicy{}, err
+	}
+	policy.Replayed = true
+	return policy, nil
 }
 
 func (s *PostgresStore) ReviewPolicy(ctx context.Context, policyID string) (ReviewPolicy, error) {

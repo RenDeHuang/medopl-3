@@ -300,14 +300,14 @@ func TestReviewGateEvaluatesRequiredReviewEvidence(t *testing.T) {
 }
 
 func TestReviewGateUsesRequiredVersionRegardlessOfReviewOrder(t *testing.T) {
-	scope := ExecutionIdentity{WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha"}
+	scope := ExecutionIdentity{OrganizationID: "org-alpha", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha"}
 	policy := ReviewPolicy{
 		ReviewPolicyInput: ReviewPolicyInput{ExecutionIdentity: scope, Version: "2", RequiredReviewers: []RequiredReviewer{{ReviewerRef: "reviewer-rca", ReviewerVersion: "2.0.0"}}},
 		PolicyID:          "policy-alpha", Status: "active",
 	}
 	result := evaluateReviewGate(policy, []Review{
-		{ReviewInput: ReviewInput{WorkspaceID: scope.WorkspaceID, ProjectID: scope.ProjectID, TaskID: scope.TaskID, JobID: scope.JobID, ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0", Decision: "accepted"}, ReviewID: "review-old"},
-		{ReviewInput: ReviewInput{WorkspaceID: scope.WorkspaceID, ProjectID: scope.ProjectID, TaskID: scope.TaskID, JobID: scope.JobID, ReviewerRef: "reviewer-rca", ReviewerVersion: "2.0.0", Decision: "accepted"}, ReviewID: "review-current"},
+		{ReviewInput: ReviewInput{OrganizationID: scope.OrganizationID, WorkspaceID: scope.WorkspaceID, ProjectID: scope.ProjectID, TaskID: scope.TaskID, JobID: scope.JobID, ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0", Decision: "accepted"}, ReviewID: "review-old"},
+		{ReviewInput: ReviewInput{OrganizationID: scope.OrganizationID, WorkspaceID: scope.WorkspaceID, ProjectID: scope.ProjectID, TaskID: scope.TaskID, JobID: scope.JobID, ReviewerRef: "reviewer-rca", ReviewerVersion: "2.0.0", Decision: "accepted"}, ReviewID: "review-current"},
 	})
 	if result.Status != "accepted" || !result.ContinuationEligible || len(result.VersionMismatches) != 0 {
 		t.Fatalf("gate must select required reviewer version: %#v", result)
@@ -330,6 +330,109 @@ func TestContinuationIsIneligibleUntilActiveReviewPolicyPasses(t *testing.T) {
 	}
 	if _, err := store.Continuation(ctx, receipt.ReceiptID); !errors.Is(err, ErrContinuationIneligible) {
 		t.Fatalf("continuation error = %v, want ErrContinuationIneligible", err)
+	}
+}
+
+func TestFullExecutionContinuationFailsClosedWithoutPolicy(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	receipt, err := store.RecordReceipt(ctx, ReceiptInput{
+		Type: "execution.receipt.v1", Status: "completed", Surface: "workspace", OrganizationID: "org-alpha", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha",
+		Continuation: map[string]any{"continuationId": "continuation-no-policy"}, IdempotencyKey: "receipt-no-policy",
+	})
+	if err != nil {
+		t.Fatalf("record receipt: %v", err)
+	}
+	if _, err := store.Continuation(ctx, receipt.ReceiptID); !errors.Is(err, ErrContinuationIneligible) {
+		t.Fatalf("continuation error = %v, want ErrContinuationIneligible", err)
+	}
+}
+
+func TestReceiptReadsHideContinuationUntilGateAccepted(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	scope := ExecutionIdentity{OrganizationID: "org-alpha", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha"}
+	recordReceipt := func(key, continuationID string, reviewIDs []string) Receipt {
+		receipt, err := store.RecordReceipt(ctx, ReceiptInput{
+			Type: "execution.receipt.v1", Status: "completed", Surface: "workspace", OrganizationID: scope.OrganizationID, WorkspaceID: scope.WorkspaceID, ProjectID: scope.ProjectID, TaskID: scope.TaskID, JobID: scope.JobID,
+			Continuation: map[string]any{"continuationId": continuationID, "reviewIds": reviewIDs}, IdempotencyKey: key,
+		})
+		if err != nil {
+			t.Fatalf("record receipt: %v", err)
+		}
+		return receipt
+	}
+	assertHidden := func(receiptID string) {
+		t.Helper()
+		loaded, err := store.Receipt(ctx, receiptID)
+		if err != nil || loaded.ContinuationID != "" || loaded.Continuation != nil {
+			t.Fatalf("receipt continuation must be hidden = %#v, %v", loaded, err)
+		}
+		page, err := store.ListReceipts(ctx, ReceiptQuery{JobID: scope.JobID})
+		if err != nil {
+			t.Fatalf("list receipts: %v", err)
+		}
+		for _, listed := range page.Receipts {
+			if listed.ReceiptID == receiptID && (listed.ContinuationID != "" || listed.Continuation != nil) {
+				t.Fatalf("listed receipt continuation must be hidden: %#v", listed)
+			}
+		}
+	}
+
+	noPolicy := recordReceipt("no-policy-read", "continuation-no-policy-read", nil)
+	assertHidden(noPolicy.ReceiptID)
+	if _, err := store.CreateReviewPolicy(ctx, ReviewPolicyInput{ExecutionIdentity: scope, Version: "1", RequiredReviewers: []RequiredReviewer{{ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0"}}, IdempotencyKey: "read-policy"}); err != nil {
+		t.Fatalf("create policy: %v", err)
+	}
+	rejected, err := store.RecordReview(ctx, ReviewInput{OrganizationID: scope.OrganizationID, WorkspaceID: scope.WorkspaceID, ProjectID: scope.ProjectID, TaskID: scope.TaskID, JobID: scope.JobID, ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0", InputArtifactDigests: []string{"sha256:abc123"}, Checks: map[string]any{"schema": "checked"}, Decision: "rejected", IdempotencyKey: "read-rejected"})
+	if err != nil {
+		t.Fatalf("record rejected review: %v", err)
+	}
+	blocked := recordReceipt("blocked-read", "continuation-blocked", []string{rejected.ReviewID})
+	assertHidden(blocked.ReceiptID)
+	if _, err := store.Continuation(ctx, blocked.ReceiptID); !errors.Is(err, ErrContinuationIneligible) {
+		t.Fatalf("blocked continuation error = %v, want ErrContinuationIneligible", err)
+	}
+
+	accepted, err := store.RecordReview(ctx, ReviewInput{OrganizationID: scope.OrganizationID, WorkspaceID: scope.WorkspaceID, ProjectID: scope.ProjectID, TaskID: scope.TaskID, JobID: scope.JobID, ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0", InputArtifactDigests: []string{"sha256:abc123"}, Checks: map[string]any{"schema": "checked"}, Decision: "accepted", IdempotencyKey: "read-accepted"})
+	if err != nil {
+		t.Fatalf("record accepted review: %v", err)
+	}
+	allowed := recordReceipt("accepted-read", "continuation-accepted", []string{accepted.ReviewID})
+	loaded, err := store.Receipt(ctx, allowed.ReceiptID)
+	if err != nil || loaded.ContinuationID != "continuation-accepted" || loaded.Continuation == nil {
+		t.Fatalf("accepted receipt must expose continuation = %#v, %v", loaded, err)
+	}
+	page, err := store.ListReceipts(ctx, ReceiptQuery{JobID: scope.JobID})
+	if err != nil {
+		t.Fatalf("list accepted receipt: %v", err)
+	}
+	listedAccepted := false
+	for _, listed := range page.Receipts {
+		if listed.ReceiptID == allowed.ReceiptID {
+			listedAccepted = listed.ContinuationID == "continuation-accepted" && listed.Continuation != nil
+		}
+	}
+	if !listedAccepted {
+		t.Fatal("accepted listed receipt must expose continuation")
+	}
+	if continuation, err := store.Continuation(ctx, allowed.ReceiptID); err != nil || continuation["continuationId"] != "continuation-accepted" {
+		t.Fatalf("accepted continuation = %#v, %v", continuation, err)
+	}
+}
+
+func TestReviewPolicyRequiresOrganizationAndUsesOperationScopedIdempotency(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	if _, err := store.CreateReviewPolicy(ctx, ReviewPolicyInput{ExecutionIdentity: ExecutionIdentity{WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha"}, Version: "1", RequiredReviewers: []RequiredReviewer{{ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0"}}, IdempotencyKey: "missing-org"}); !errors.Is(err, ErrInvalidReviewPolicyInput) {
+		t.Fatalf("missing organization error = %v, want ErrInvalidReviewPolicyInput", err)
+	}
+	sharedKey := "operation-scoped-key"
+	if _, err := store.RecordReceipt(ctx, ReceiptInput{Type: "execution.receipt.v1", Status: "completed", Surface: "workspace", WorkspaceID: "workspace-alpha", IdempotencyKey: sharedKey}); err != nil {
+		t.Fatalf("record receipt: %v", err)
+	}
+	if _, err := store.CreateReviewPolicy(ctx, ReviewPolicyInput{ExecutionIdentity: ExecutionIdentity{OrganizationID: "org-alpha", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha"}, Version: "1", RequiredReviewers: []RequiredReviewer{{ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0"}}, IdempotencyKey: sharedKey}); err != nil {
+		t.Fatalf("policy idempotency must be operation scoped: %v", err)
 	}
 }
 

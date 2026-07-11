@@ -139,6 +139,7 @@
     "reviewPolicy": {
       "ownership": "ledger",
       "writeProtocol": "append_new_version_with_idempotency",
+      "idempotencyNamespace": "review_policy",
       "statuses": [
         "active",
         "superseded"
@@ -175,7 +176,8 @@
         "rejected",
         "versionMismatches"
       ],
-      "continuationRule": "eligible only when status is accepted",
+      "continuationRule": "eligible only when status is accepted; a full execution identity without an active policy is ineligible",
+      "receiptReadRule": "for a full execution identity, receipt query and list omit continuationId and continuation unless the active review gate is accepted",
       "waiver": "not_supported_without_auditable_signed_policy_decision"
     },
     "continuationFields": [

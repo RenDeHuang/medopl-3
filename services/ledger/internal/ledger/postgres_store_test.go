@@ -1,12 +1,20 @@
 package ledger
 
 import (
+	"context"
 	"database/sql"
+	"errors"
+	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
+	"time"
+
+	"github.com/lib/pq"
 )
 
 func TestPostgresSchemaUsesEntMigrationLedgerTables(t *testing.T) {
@@ -92,6 +100,103 @@ func TestFormalMigrationsDeclareReceiptColumnsBeforeQueryBackfill(t *testing.T) 
 func TestPostgresStoreImplementsLedgerStore(t *testing.T) {
 	var db *sql.DB
 	var _ Store = NewPostgresStore(db)
+}
+
+func TestPostgresConcurrentReviewPolicyIdempotency(t *testing.T) {
+	db := openLedgerTestPostgres(t)
+	store := NewPostgresStore(db)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	if err := store.Install(ctx); err != nil {
+		t.Fatalf("install ledger schema: %v", err)
+	}
+	input := ReviewPolicyInput{
+		ExecutionIdentity: ExecutionIdentity{OrganizationID: "org-concurrent", WorkspaceID: "workspace-concurrent", ProjectID: "project-concurrent", TaskID: "task-concurrent", JobID: "job-concurrent"},
+		Version:           "1", RequiredReviewers: []RequiredReviewer{{ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0"}}, IdempotencyKey: "policy-concurrent",
+	}
+	type outcome struct {
+		policy ReviewPolicy
+		err    error
+	}
+	start := make(chan struct{})
+	outcomes := make(chan outcome, 2)
+	var wg sync.WaitGroup
+	for range 2 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			policy, err := store.CreateReviewPolicy(ctx, input)
+			outcomes <- outcome{policy: policy, err: err}
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(outcomes)
+	results := make([]ReviewPolicy, 0, 2)
+	for result := range outcomes {
+		if result.err != nil {
+			t.Fatalf("concurrent create: %v", result.err)
+		}
+		results = append(results, result.policy)
+	}
+	if results[0].PolicyID != results[1].PolicyID || results[0].Replayed == results[1].Replayed {
+		t.Fatalf("concurrent results must contain one create and one replay: %#v", results)
+	}
+
+	conflict := input
+	conflict.Version = "2"
+	if _, err := store.CreateReviewPolicy(ctx, conflict); !errors.Is(err, ErrIdempotencyConflict) {
+		t.Fatalf("different fingerprint error = %v, want ErrIdempotencyConflict", err)
+	}
+}
+
+func openLedgerTestPostgres(t *testing.T) *sql.DB {
+	t.Helper()
+	rawURL := os.Getenv("LEDGER_TEST_DATABASE_URL")
+	if rawURL == "" {
+		t.Skip("LEDGER_TEST_DATABASE_URL is not set")
+	}
+	admin, err := sql.Open("postgres", rawURL)
+	if err != nil {
+		t.Fatalf("open test postgres: %v", err)
+	}
+	connectCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := admin.PingContext(connectCtx); err != nil {
+		_ = admin.Close()
+		t.Fatalf("connect test postgres: %v", err)
+	}
+	schema := fmt.Sprintf("ledger_test_%d", time.Now().UnixNano())
+	if _, err := admin.ExecContext(connectCtx, "CREATE SCHEMA "+pq.QuoteIdentifier(schema)); err != nil {
+		_ = admin.Close()
+		t.Fatalf("create test schema: %v", err)
+	}
+	testURL := rawURL
+	if parsed, err := url.Parse(rawURL); err == nil && parsed.Scheme != "" {
+		query := parsed.Query()
+		query.Set("search_path", schema)
+		query.Set("connect_timeout", "10")
+		parsed.RawQuery = query.Encode()
+		testURL = parsed.String()
+	} else {
+		testURL += " search_path=" + pq.QuoteLiteral(schema) + " connect_timeout=10"
+	}
+	db, err := sql.Open("postgres", testURL)
+	if err != nil {
+		_, _ = admin.Exec("DROP SCHEMA " + pq.QuoteIdentifier(schema) + " CASCADE")
+		_ = admin.Close()
+		t.Fatalf("open isolated test schema: %v", err)
+	}
+	db.SetMaxOpenConns(4)
+	t.Cleanup(func() {
+		_ = db.Close()
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_, _ = admin.ExecContext(cleanupCtx, "DROP SCHEMA "+pq.QuoteIdentifier(schema)+" CASCADE")
+		_ = admin.Close()
+	})
+	return db
 }
 
 func readGeneratedLedgerEnt(t *testing.T) string {

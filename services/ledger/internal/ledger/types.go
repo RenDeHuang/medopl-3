@@ -379,7 +379,7 @@ func validateReviewPolicyInput(input ReviewPolicyInput) error {
 }
 
 func validExecutionIdentity(identity ExecutionIdentity) bool {
-	return identity.WorkspaceID != "" && identity.ProjectID != "" && identity.TaskID != "" && identity.JobID != ""
+	return identity.OrganizationID != "" && identity.WorkspaceID != "" && identity.ProjectID != "" && identity.TaskID != "" && identity.JobID != ""
 }
 
 func sameExecutionIdentity(left, right ExecutionIdentity) bool {
@@ -456,6 +456,15 @@ func executionIdentityFromReview(review Review) ExecutionIdentity {
 
 func executionIdentityFromReceipt(receipt Receipt) ExecutionIdentity {
 	return ExecutionIdentity{OrganizationID: receipt.OrganizationID, WorkspaceID: receipt.WorkspaceID, ProjectID: receipt.ProjectID, TaskID: receipt.TaskID, JobID: receipt.JobID}
+}
+
+func receiptForRead(receipt Receipt, gate ReviewGateResult, gateErr error) Receipt {
+	if !validExecutionIdentity(executionIdentityFromReceipt(receipt)) || (gateErr == nil && gate.ContinuationEligible) {
+		return receipt
+	}
+	receipt.ContinuationID = ""
+	receipt.Continuation = nil
+	return receipt
 }
 
 func isOpaqueReference(value string) bool {

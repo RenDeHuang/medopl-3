@@ -53,8 +53,10 @@ test("Ledger general receipt uses the shared execution identity and states", asy
   assert.ok(ledger.generalReceiptV1.forbiddenContent.includes("rawCredential"));
   assert.ok(ledger.receiptTypes.includes("execution.receipt.v1"));
   assert.deepEqual(ledger.generalReceiptV1.reviewPolicy.statuses, ["active", "superseded"]);
+  assert.equal(ledger.generalReceiptV1.reviewPolicy.idempotencyNamespace, "review_policy");
   assert.deepEqual(ledger.generalReceiptV1.reviewGate.statuses, ["accepted", "review_required", "review_blocked"]);
-  assert.equal(ledger.generalReceiptV1.reviewGate.continuationRule, "eligible only when status is accepted");
+  assert.match(ledger.generalReceiptV1.reviewGate.continuationRule, /without an active policy is ineligible/);
+  assert.match(ledger.generalReceiptV1.reviewGate.receiptReadRule, /omit continuationId and continuation/);
 });
 
 test("service owners match the shared execution contract", async () => {
