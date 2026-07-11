@@ -73,11 +73,13 @@ func TestTransferServiceFailureIsLogged(t *testing.T) {
 	}
 }
 
-func TestRuntimeIdempotencyConflictIsHTTPConflict(t *testing.T) {
-	recorder := httptest.NewRecorder()
-	writeResult(recorder, fabric.WorkspaceRuntime{}, fabric.ErrRuntimeIdempotencyConflict)
-	if recorder.Code != http.StatusConflict {
-		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusConflict)
+func TestRuntimeOperationConflictsAreHTTPConflict(t *testing.T) {
+	for _, err := range []error{fabric.ErrRuntimeIdempotencyConflict, fabric.ErrRuntimeOperationInProgress, fabric.ErrRuntimeOperationFailed} {
+		recorder := httptest.NewRecorder()
+		writeResult(recorder, fabric.WorkspaceRuntime{}, err)
+		if recorder.Code != http.StatusConflict {
+			t.Fatalf("error %v status = %d, want %d", err, recorder.Code, http.StatusConflict)
+		}
 	}
 }
 

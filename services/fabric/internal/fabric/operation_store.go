@@ -21,6 +21,8 @@ import (
 
 type OperationStore interface {
 	Append(ctx context.Context, operation FabricOperation) error
+	ClaimRuntime(ctx context.Context, operation FabricOperation) (FabricOperation, bool, error)
+	SaveRuntime(ctx context.Context, operation FabricOperation) error
 	List(ctx context.Context) ([]FabricOperation, error)
 	CatalogStore
 }
@@ -44,6 +46,31 @@ func (s *MemoryOperationStore) Append(_ context.Context, operation FabricOperati
 	defer s.mu.Unlock()
 	s.operation = append(s.operation, operation)
 	return nil
+}
+
+func (s *MemoryOperationStore) ClaimRuntime(_ context.Context, operation FabricOperation) (FabricOperation, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := len(s.operation) - 1; index >= 0; index-- {
+		existing := s.operation[index]
+		if existing.Action == operation.Action && existing.IdempotencyKey == operation.IdempotencyKey && existing.Status != "rejected" {
+			return existing, false, nil
+		}
+	}
+	s.operation = append(s.operation, operation)
+	return operation, true, nil
+}
+
+func (s *MemoryOperationStore) SaveRuntime(_ context.Context, operation FabricOperation) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.operation {
+		if s.operation[index].ID == operation.ID {
+			s.operation[index] = operation
+			return nil
+		}
+	}
+	return fmt.Errorf("runtime_operation_not_found")
 }
 
 func (s *MemoryOperationStore) List(_ context.Context) ([]FabricOperation, error) {
@@ -222,11 +249,7 @@ func transferFromEnt(row *fabricent.ContentTransfer) Transfer {
 }
 
 func (s *PostgresOperationStore) Append(ctx context.Context, operation FabricOperation) error {
-	payload := operation.RedactedProviderPayload
-	if payload == nil {
-		payload = map[string]any{}
-	}
-	payloadJSON, err := json.Marshal(payload)
+	payloadJSON, err := operationPayloadJSON(operation)
 	if err != nil {
 		return err
 	}
@@ -253,6 +276,61 @@ func (s *PostgresOperationStore) Append(ctx context.Context, operation FabricOpe
 		create.SetFinishedAt(operation.FinishedAt)
 	}
 	return create.Exec(ctx)
+}
+
+func (s *PostgresOperationStore) ClaimRuntime(ctx context.Context, operation FabricOperation) (FabricOperation, bool, error) {
+	existing, err := s.client.FabricOperation.Query().
+		Where(fabricoperation.Action(operation.Action), fabricoperation.IdempotencyKey(operation.IdempotencyKey), fabricoperation.StatusNEQ("rejected")).
+		Order(fabricent.Desc(fabricoperation.FieldCreatedAt, fabricoperation.FieldID)).First(ctx)
+	if err == nil {
+		return fabricOperationFromEnt(existing), false, nil
+	}
+	if !fabricent.IsNotFound(err) {
+		return FabricOperation{}, false, err
+	}
+	if err := s.Append(ctx, operation); err == nil {
+		return operation, true, nil
+	}
+	concurrent, queryErr := s.client.FabricOperation.Get(ctx, operation.ID)
+	if queryErr != nil {
+		return FabricOperation{}, false, queryErr
+	}
+	return fabricOperationFromEnt(concurrent), false, nil
+}
+
+func (s *PostgresOperationStore) SaveRuntime(ctx context.Context, operation FabricOperation) error {
+	payloadJSON, err := operationPayloadJSON(operation)
+	if err != nil {
+		return err
+	}
+	update := s.client.FabricOperation.UpdateOneID(operation.ID).
+		SetResourceID(operation.ResourceID).
+		SetWorkspaceID(operation.WorkspaceID).
+		SetProvider(operation.Provider).
+		SetProviderRequestID(operation.ProviderRequestID).
+		SetRedactedProviderPayload(payloadJSON).
+		SetStatus(operation.Status).
+		SetErrorCode(operation.ErrorCode).
+		SetRetryable(operation.Retryable)
+	if operation.FinishedAt.IsZero() {
+		update.ClearFinishedAt()
+	} else {
+		update.SetFinishedAt(operation.FinishedAt)
+	}
+	_, err = update.Save(ctx)
+	if fabricent.IsNotFound(err) {
+		return fmt.Errorf("runtime_operation_not_found")
+	}
+	return err
+}
+
+func operationPayloadJSON(operation FabricOperation) (string, error) {
+	payload := operation.RedactedProviderPayload
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	data, err := json.Marshal(payload)
+	return string(data), err
 }
 
 func (s *PostgresOperationStore) List(ctx context.Context) ([]FabricOperation, error) {

@@ -21,6 +21,7 @@ func TestPostgresOperationSchemaDefinesFabricOperationsAuditTable(t *testing.T) 
 		"request_hash TEXT NOT NULL DEFAULT ''",
 		"redacted_provider_payload TEXT NOT NULL DEFAULT '{}'",
 		"CREATE INDEX IF NOT EXISTS fabric_operations_resource_idx",
+		"CREATE UNIQUE INDEX IF NOT EXISTS fabric_operations_runtime_claim_idx",
 	} {
 		if !strings.Contains(schema, marker) {
 			t.Fatalf("schema missing %q", marker)
@@ -28,6 +29,20 @@ func TestPostgresOperationSchemaDefinesFabricOperationsAuditTable(t *testing.T) 
 	}
 	if strings.Contains(schema, "JSONB") {
 		t.Fatalf("fabric schema must not keep JSONB fact columns")
+	}
+}
+
+func TestRuntimeClaimMigrationMatchesEmbeddedCopy(t *testing.T) {
+	formal, err := os.ReadFile("../../migrations/202607110003_runtime_operation_claim.sql")
+	if err != nil {
+		t.Fatalf("read formal migration: %v", err)
+	}
+	embedded, err := os.ReadFile("ent_migrations/202607110003_runtime_operation_claim.sql")
+	if err != nil {
+		t.Fatalf("read embedded migration: %v", err)
+	}
+	if !bytes.Equal(formal, embedded) {
+		t.Fatal("formal and embedded runtime claim migrations differ")
 	}
 }
 

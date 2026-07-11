@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -490,14 +491,103 @@ func TestCreateWorkspaceRuntimeReplaysIdempotentlyBeforeProvider(t *testing.T) {
 		t.Fatalf("create runtime: %v", err)
 	}
 	replayed, err := service.CreateWorkspaceRuntime(context.Background(), input)
-	if err != nil || replayed.ID != first.ID || provider.calls != 1 {
-		t.Fatalf("runtime replay = %#v err=%v providerCalls=%d", replayed, err, provider.calls)
+	if err != nil || replayed.ID != first.ID || provider.calls.Load() != 1 {
+		t.Fatalf("runtime replay = %#v err=%v providerCalls=%d", replayed, err, provider.calls.Load())
 	}
 	changed := input
 	changed.VolumeID = "storage-other"
 	if _, err := service.CreateWorkspaceRuntime(context.Background(), changed); !errors.Is(err, ErrRuntimeIdempotencyConflict) {
 		t.Fatalf("changed replay error = %v, want ErrRuntimeIdempotencyConflict", err)
 	}
+}
+
+func TestCreateWorkspaceRuntimeClaimsAcrossServiceInstances(t *testing.T) {
+	provider := &blockingRuntimeProvider{entered: make(chan struct{}), release: make(chan struct{})}
+	store := NewMemoryOperationStore()
+	firstService := runtimeTestService(provider, store)
+	secondService := runtimeTestService(provider, store)
+	input := runtimeTestInput("runtime-shared")
+
+	firstDone := make(chan error, 1)
+	go func() {
+		_, err := firstService.CreateWorkspaceRuntime(context.Background(), input)
+		firstDone <- err
+	}()
+	select {
+	case <-provider.entered:
+	case <-time.After(time.Second):
+		t.Fatal("first provider call did not start")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	if _, err := secondService.CreateWorkspaceRuntime(ctx, input); err == nil || err.Error() != "runtime_operation_in_progress" {
+		t.Fatalf("concurrent replay error = %v, want runtime_operation_in_progress", err)
+	}
+	if calls := provider.calls.Load(); calls != 1 {
+		t.Fatalf("provider calls = %d, want 1", calls)
+	}
+	close(provider.release)
+	if err := <-firstDone; err != nil {
+		t.Fatalf("first runtime create: %v", err)
+	}
+
+	restarted := NewServiceWithOperationStore(provider, store)
+	replayed, err := restarted.CreateWorkspaceRuntime(context.Background(), input)
+	if err != nil || replayed.ID != "runtime-alpha" || provider.calls.Load() != 1 {
+		t.Fatalf("restart replay = %#v err=%v providerCalls=%d", replayed, err, provider.calls.Load())
+	}
+	changed := input
+	changed.ImageID = "changed-image"
+	if _, err := restarted.CreateWorkspaceRuntime(context.Background(), changed); !errors.Is(err, ErrRuntimeIdempotencyConflict) {
+		t.Fatalf("changed restart replay error = %v, want ErrRuntimeIdempotencyConflict", err)
+	}
+}
+
+func TestCreateWorkspaceRuntimeDoesNotReapplyPersistedIncompleteOperation(t *testing.T) {
+	for _, status := range []string{"started", "failed"} {
+		t.Run(status, func(t *testing.T) {
+			provider := &countingRuntimeProvider{}
+			store := NewMemoryOperationStore()
+			input := runtimeTestInput("runtime-" + status)
+			now := time.Now().UTC()
+			operation := newOperation("create_workspace_runtime", "workspace_runtime", input.WorkspaceID, "acct-alpha", input.WorkspaceID, input.IdempotencyKey, hashInput(input), now)
+			operation.ID = "persisted-" + status
+			operation.Status = status
+			operation.CreatedAt = now
+			if status == "failed" {
+				operation.FinishedAt = now
+				operation.ErrorCode = "provider_error"
+			}
+			if err := store.Append(context.Background(), operation); err != nil {
+				t.Fatalf("seed operation: %v", err)
+			}
+
+			service := runtimeTestService(provider, store)
+			_, err := service.CreateWorkspaceRuntime(context.Background(), input)
+			want := "runtime_operation_in_progress"
+			if status == "failed" {
+				want = "runtime_operation_failed"
+			}
+			if err == nil || err.Error() != want {
+				t.Fatalf("persisted %s error = %v, want %s", status, err, want)
+			}
+			if calls := provider.calls.Load(); calls != 0 {
+				t.Fatalf("provider calls = %d, want 0", calls)
+			}
+		})
+	}
+}
+
+func runtimeTestService(provider Provider, store OperationStore) *Service {
+	service := NewServiceWithOperationStore(provider, store)
+	service.computes["compute-alpha"] = ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", WorkspaceID: "workspace-alpha", ServiceName: "opl-compute-alpha"}
+	service.volumes["storage-alpha"] = StorageVolume{ID: "storage-alpha", AccountID: "acct-alpha", WorkspaceID: "workspace-alpha", ProviderResourceID: "pvc/storage-alpha"}
+	return service
+}
+
+func runtimeTestInput(key string) WorkspaceRuntimeInput {
+	return WorkspaceRuntimeInput{WorkspaceID: "workspace-alpha", ComputeID: "compute-alpha", VolumeID: "storage-alpha", ImageID: "one-person-lab-app", IdempotencyKey: key}
 }
 
 func waitForOperation(t *testing.T, service *Service, action string, resourceKind string, resourceID string, status string) {
@@ -549,12 +639,31 @@ type testProvider struct{}
 
 type countingRuntimeProvider struct {
 	testProvider
-	calls int
+	calls atomic.Int32
 }
 
 func (p *countingRuntimeProvider) CreateWorkspaceRuntime(_ context.Context, input WorkspaceRuntimeInput, _ ComputeAllocation, _ StorageVolume) (WorkspaceRuntime, error) {
-	p.calls++
+	p.calls.Add(1)
 	return WorkspaceRuntime{ID: "runtime-alpha", WorkspaceID: input.WorkspaceID, Status: "running", Ready: true, ServiceName: "opl-compute-alpha", ProviderRequestID: providerRequestID("runtime", input.IdempotencyKey)}, nil
+}
+
+type blockingRuntimeProvider struct {
+	testProvider
+	calls   atomic.Int32
+	entered chan struct{}
+	release chan struct{}
+}
+
+func (p *blockingRuntimeProvider) CreateWorkspaceRuntime(ctx context.Context, input WorkspaceRuntimeInput, _ ComputeAllocation, _ StorageVolume) (WorkspaceRuntime, error) {
+	if p.calls.Add(1) == 1 {
+		close(p.entered)
+	}
+	select {
+	case <-p.release:
+		return WorkspaceRuntime{ID: "runtime-alpha", WorkspaceID: input.WorkspaceID, Status: "running", Ready: true, ProviderRequestID: providerRequestID("runtime", input.IdempotencyKey)}, nil
+	case <-ctx.Done():
+		return WorkspaceRuntime{}, ctx.Err()
+	}
 }
 
 type contentTestProvider struct {

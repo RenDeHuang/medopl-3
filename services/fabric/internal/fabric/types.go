@@ -14,6 +14,8 @@ var ErrCatalogRecordNotFound = errors.New("catalog_record_not_found")
 var ErrCatalogVersionConflict = errors.New("catalog_version_conflict")
 var ErrInvalidPubMedQuery = errors.New("invalid_pubmed_query")
 var ErrRuntimeIdempotencyConflict = errors.New("runtime_idempotency_conflict")
+var ErrRuntimeOperationInProgress = errors.New("runtime_operation_in_progress")
+var ErrRuntimeOperationFailed = errors.New("runtime_operation_failed")
 
 type Catalog struct {
 	SchemaVersion     int                `json:"schemaVersion"`

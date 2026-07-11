@@ -35,7 +35,6 @@ type Provider interface {
 type Service struct {
 	provider       Provider
 	mu             sync.Mutex
-	runtimeMu      sync.Mutex
 	jobMu          sync.Mutex
 	computes       map[string]ComputeAllocation
 	volumes        map[string]StorageVolume
@@ -514,54 +513,69 @@ func (s *Service) DetachStorageAttachment(ctx context.Context, attachmentID stri
 }
 
 func (s *Service) CreateWorkspaceRuntime(ctx context.Context, input WorkspaceRuntimeInput) (WorkspaceRuntime, error) {
-	// ponytail: one Fabric process serializes runtime apply; use a store-backed lease before running multiple replicas.
-	s.runtimeMu.Lock()
-	defer s.runtimeMu.Unlock()
+	if strings.TrimSpace(input.IdempotencyKey) == "" {
+		return WorkspaceRuntime{}, fmt.Errorf("runtime_idempotency_key_required")
+	}
 	requestHash := hashInput(input)
-	operations, err := s.operations.List(ctx)
-	if err != nil {
-		return WorkspaceRuntime{}, err
-	}
-	for index := len(operations) - 1; index >= 0; index-- {
-		existing := operations[index]
-		if existing.Action != "create_workspace_runtime" || existing.IdempotencyKey != input.IdempotencyKey {
-			continue
-		}
-		if existing.RequestHash != requestHash {
-			return WorkspaceRuntime{}, ErrRuntimeIdempotencyConflict
-		}
-		if existing.Status == "succeeded" {
-			var runtime WorkspaceRuntime
-			if decodeOperationResource(existing, &runtime) {
-				runtime.Access.Password = ""
-				return runtime, nil
-			}
-		}
-	}
 	s.mu.Lock()
 	compute := s.computes[input.ComputeID]
 	volume := s.volumes[input.VolumeID]
 	s.mu.Unlock()
-	operation := newOperation("create_workspace_runtime", "workspace_runtime", input.WorkspaceID, compute.AccountID, input.WorkspaceID, input.IdempotencyKey, requestHash, time.Now().UTC())
+	now := s.now()
+	operation := newOperation("create_workspace_runtime", "workspace_runtime", input.WorkspaceID, compute.AccountID, input.WorkspaceID, input.IdempotencyKey, requestHash, now)
+	operation.ID = "fop_runtime_claim_" + stableSuffix("create_workspace_runtime", input.IdempotencyKey)
+	operation.Status = "started"
+	operation.CreatedAt = now
+	fillOperationResource(&operation, WorkspaceRuntime{WorkspaceID: input.WorkspaceID, ProviderRequestID: providerRequestID("runtime", input.IdempotencyKey)})
 	input.OperationID = operation.OperationID
-	if err := validateRuntimeInput(input, compute, volume); err != nil {
-		operation.ProviderRequestID = providerRequestID("runtime", input.IdempotencyKey)
-		_ = s.recordOperation(ctx, operation, "rejected", WorkspaceRuntime{WorkspaceID: input.WorkspaceID, ProviderRequestID: operation.ProviderRequestID}, err)
+	stored, claimed, err := s.operations.ClaimRuntime(ctx, operation)
+	if err != nil {
 		return WorkspaceRuntime{}, err
 	}
-	if err := s.recordOperation(ctx, operation, "started", WorkspaceRuntime{WorkspaceID: input.WorkspaceID, ProviderRequestID: providerRequestID("runtime", input.IdempotencyKey)}, nil); err != nil {
+	if !claimed {
+		return replayRuntimeOperation(stored, requestHash)
+	}
+	if err := validateRuntimeInput(input, compute, volume); err != nil {
+		_ = s.saveRuntimeOperation(ctx, stored, "failed", WorkspaceRuntime{WorkspaceID: input.WorkspaceID, ProviderRequestID: stored.ProviderRequestID}, err)
 		return WorkspaceRuntime{}, err
 	}
 	runtime, err := s.provider.CreateWorkspaceRuntime(ctx, input, compute, volume)
 	runtime.Access.Password = ""
 	if err != nil {
-		_ = s.recordOperation(ctx, operation, "failed", runtime, err)
+		_ = s.saveRuntimeOperation(ctx, stored, "failed", runtime, err)
 		return runtime, err
 	}
-	if err := s.recordOperation(ctx, operation, "succeeded", runtime, nil); err != nil {
+	if err := s.saveRuntimeOperation(ctx, stored, "succeeded", runtime, nil); err != nil {
 		return runtime, err
 	}
 	return runtime, nil
+}
+
+func replayRuntimeOperation(operation FabricOperation, requestHash string) (WorkspaceRuntime, error) {
+	if operation.RequestHash != requestHash {
+		return WorkspaceRuntime{}, ErrRuntimeIdempotencyConflict
+	}
+	switch operation.Status {
+	case "started":
+		return WorkspaceRuntime{}, ErrRuntimeOperationInProgress
+	case "succeeded":
+		var runtime WorkspaceRuntime
+		if decodeOperationResource(operation, &runtime) {
+			runtime.Access.Password = ""
+			return runtime, nil
+		}
+	}
+	// ponytail: provider apply is not safely repeatable; reconciliation must resolve failed or corrupt claims.
+	return WorkspaceRuntime{}, ErrRuntimeOperationFailed
+}
+
+func (s *Service) saveRuntimeOperation(ctx context.Context, operation FabricOperation, status string, runtime WorkspaceRuntime, operationErr error) error {
+	operation.Status = status
+	operation.FinishedAt = s.now()
+	operation.ErrorCode = errorCode(operationErr)
+	operation.Retryable = false
+	fillOperationResource(&operation, runtime)
+	return s.operations.SaveRuntime(ctx, operation)
 }
 
 func (s *Service) WorkspaceRuntimeStatus(ctx context.Context, workspaceID string) (WorkspaceRuntime, error) {

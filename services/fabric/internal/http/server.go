@@ -315,7 +315,7 @@ func decodeWrite(w http.ResponseWriter, r *http.Request, idempotencyKey *string,
 }
 
 func writeResult(w http.ResponseWriter, body any, err error) {
-	if errors.Is(err, fabric.ErrRuntimeIdempotencyConflict) {
+	if errors.Is(err, fabric.ErrRuntimeIdempotencyConflict) || errors.Is(err, fabric.ErrRuntimeOperationInProgress) || errors.Is(err, fabric.ErrRuntimeOperationFailed) {
 		writeError(w, http.StatusConflict, err.Error())
 		return
 	}
