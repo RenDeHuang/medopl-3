@@ -32,6 +32,7 @@ func newExecutionTestServer(t *testing.T, service *controlplane.Service) http.Ha
 	t.Helper()
 	store := newMemoryTableStore()
 	mustStore(t, store.SaveOrganization(context.Background(), map[string]any{"id": "org-alpha", "billingAccountId": "acct-alpha", "status": "active"}))
+	mustStore(t, store.SaveMembership(context.Background(), map[string]any{"id": "mem-admin-alpha", "organizationId": "org-alpha", "userId": "usr-admin", "accountId": "acct-alpha", "role": "admin", "status": "active"}))
 	mustStore(t, store.SaveWorkspace(context.Background(), map[string]any{"id": "workspace-alpha", "accountId": "acct-alpha", "status": "running"}))
 	server, err := NewPersistentServer(service, store)
 	if err != nil {
@@ -201,8 +202,8 @@ func TestResumeWorkspaceValidatesRetainedResourcesBeforeFabric(t *testing.T) {
 		t.Fatalf("create resume server: %v", err)
 	}
 	admin := operatorSessionForTest(t, server)
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"owner-resume@lab.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside-resume@lab.example","accountId":"acct-beta","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"owner-resume@lab.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside-resume@lab.example","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	owner := loginForTest(t, server, "owner-resume@lab.example", "CorrectHorseBatteryStaple!")
 	outsider := loginForTest(t, server, "outside-resume@lab.example", "CorrectHorseBatteryStaple!")
 	body := `{"computeAllocationId":"compute-replacement","attachmentId":"attachment-replacement"}`
@@ -571,7 +572,7 @@ func TestWorkspaceRuntimeStatusDoesNotReadSecretForUnknownProjection(t *testing.
 	calls := []string{}
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{calls: &calls}))
 	admin := operatorSessionForTest(t, server)
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside-unknown@lab.example","accountId":"acct-beta","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside-unknown@lab.example","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	outsider := loginForTest(t, server, "outside-unknown@lab.example", "CorrectHorseBatteryStaple!")
 
 	before := len(calls)
@@ -588,7 +589,7 @@ func TestWorkspaceRuntimeStatusForbidsCrossAccountSecretRead(t *testing.T) {
 	calls := []string{}
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{calls: &calls}))
 	admin := operatorSessionForTest(t, server)
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside@lab.example","accountId":"acct-beta","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside@lab.example","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	outsider := loginForTest(t, server, "outside@lab.example", "CorrectHorseBatteryStaple!")
 
 	createResourceWithSession(t, server, admin, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
@@ -626,6 +627,7 @@ func TestWorkspaceListNeverExposesPersistedPassword(t *testing.T) {
 }
 
 func TestPersistentFactsSurviveServerRestart(t *testing.T) {
+	setTestOperatorAccount(t, "acct-alpha")
 	path := t.TempDir() + "/control-plane-state.sqlite"
 	service := controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{})
 	server, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
@@ -686,6 +688,7 @@ func TestSessionFactSurvivesServerRestart(t *testing.T) {
 }
 
 func TestWorkspaceTokenStatePersistsAcrossRestart(t *testing.T) {
+	setTestOperatorAccount(t, "acct-alpha")
 	path := t.TempDir() + "/control-plane-state.sqlite"
 	service := controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{})
 	server, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
@@ -744,8 +747,8 @@ func TestLoginAcceptsLegacyScryptPasswordHash(t *testing.T) {
 func TestNonAdminRequestsCannotSelectAnotherAccount(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"alpha@lab.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"beta@lab.example","accountId":"acct-beta","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"alpha@lab.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"beta@lab.example","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	alpha := loginForTest(t, server, "alpha@lab.example", "CorrectHorseBatteryStaple!")
 
 	readOther := httptest.NewRequest(http.MethodGet, "/api/state?accountId=acct-beta", nil)
@@ -807,8 +810,8 @@ func TestCreateUserRejectsDuplicateEmail(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
 
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"pi@lab.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
-	duplicate := requestWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"PI@lab.example","accountId":"acct-beta","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"pi@lab.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
+	duplicate := requestWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"PI@lab.example","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	if duplicate.Code != http.StatusConflict || !strings.Contains(duplicate.Body.String(), "user_already_exists") {
 		t.Fatalf("duplicate create status=%d body=%s, want 409 user_already_exists", duplicate.Code, duplicate.Body.String())
 	}
@@ -1176,9 +1179,17 @@ func TestExecutionRoutesPersistCanonicalFlow(t *testing.T) {
 
 func TestProjectCreationRequiresWorkspaceOrganizationOwnership(t *testing.T) {
 	store := newMemoryTableStore()
+	mustStore(t, store.SaveAccount(context.Background(), map[string]any{"id": "acct-beta", "status": "active"}))
 	mustStore(t, store.SaveOrganization(context.Background(), map[string]any{"id": "org-alpha", "billingAccountId": "acct-alpha", "status": "active"}))
 	mustStore(t, store.SaveOrganization(context.Background(), map[string]any{"id": "org-beta", "billingAccountId": "acct-beta", "status": "active"}))
+	mustStore(t, store.SaveMembership(context.Background(), map[string]any{"id": "mem-admin-alpha", "organizationId": "org-alpha", "userId": "usr-admin", "accountId": "acct-alpha", "role": "admin", "status": "active"}))
 	mustStore(t, store.SaveWorkspace(context.Background(), map[string]any{"id": "workspace-beta", "accountId": "acct-beta", "status": "running"}))
+	passwordHash, err := hashPassword("CorrectHorseBatteryStaple!")
+	if err != nil {
+		t.Fatal(err)
+	}
+	mustStore(t, store.SaveUser(context.Background(), map[string]any{"id": "usr-beta", "email": "beta-admin@example.com", "accountId": "acct-beta", "role": "admin", "status": "active", "passwordHash": passwordHash}))
+	mustStore(t, store.SaveMembership(context.Background(), map[string]any{"id": "mem-admin-beta", "organizationId": "org-beta", "userId": "usr-beta", "accountId": "acct-beta", "role": "admin", "status": "active"}))
 	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}), store)
 	if err != nil {
 		t.Fatalf("create server: %v", err)
@@ -1197,7 +1208,8 @@ func TestProjectCreationRequiresWorkspaceOrganizationOwnership(t *testing.T) {
 		t.Fatalf("cross-organization request persisted projects: %#v", heads)
 	}
 
-	created := requestWithSession(t, server, admin, http.MethodPost, "/api/projects", `{"organizationId":"org-beta","workspaceId":"workspace-beta"}`)
+	betaAdmin := loginForTest(t, server, "beta-admin@example.com", "CorrectHorseBatteryStaple!")
+	created := requestWithSession(t, server, betaAdmin, http.MethodPost, "/api/projects", `{"organizationId":"org-beta","workspaceId":"workspace-beta"}`)
 	if created.Code != http.StatusCreated {
 		t.Fatalf("same-organization status = %d, want %d: %s", created.Code, http.StatusCreated, created.Body.String())
 	}
@@ -1215,6 +1227,7 @@ func TestProjectCreationReportsIdentityStoreFailures(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			store := &failingProjectIdentityStore{memoryTableStore: newMemoryTableStore(), workspaceErr: tc.workspaceErr, organizationErr: tc.organizationErr}
 			mustStore(t, store.SaveOrganization(context.Background(), map[string]any{"id": "org-alpha", "billingAccountId": "acct-alpha", "status": "active"}))
+			mustStore(t, store.SaveMembership(context.Background(), map[string]any{"id": "mem-admin-alpha", "organizationId": "org-alpha", "userId": "usr-admin", "accountId": "acct-alpha", "role": "admin", "status": "active"}))
 			mustStore(t, store.SaveWorkspace(context.Background(), map[string]any{"id": "workspace-alpha", "accountId": "acct-alpha", "status": "running"}))
 			server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}), store)
 			if err != nil {
@@ -1250,6 +1263,7 @@ func TestProjectCreationReportsMissingIdentity(t *testing.T) {
 			store := newMemoryTableStore()
 			if tc.organization != nil {
 				mustStore(t, store.SaveOrganization(context.Background(), tc.organization))
+				mustStore(t, store.SaveMembership(context.Background(), map[string]any{"id": "mem-admin-alpha", "organizationId": "org-alpha", "userId": "usr-admin", "accountId": "acct-alpha", "role": "admin", "status": "active"}))
 			}
 			if tc.workspace != nil {
 				mustStore(t, store.SaveWorkspace(context.Background(), tc.workspace))
@@ -1260,7 +1274,11 @@ func TestProjectCreationReportsMissingIdentity(t *testing.T) {
 			}
 
 			rec := requestWithSession(t, server, operatorSessionForTest(t, server), http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha"}`)
-			if rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), tc.errorCode) {
+			wantStatus := http.StatusNotFound
+			if tc.organization == nil {
+				wantStatus, tc.errorCode = http.StatusForbidden, "organization_membership_required"
+			}
+			if rec.Code != wantStatus || !strings.Contains(rec.Body.String(), tc.errorCode) {
 				t.Fatalf("status = %d body=%s, want %s", rec.Code, rec.Body.String(), tc.errorCode)
 			}
 			heads, err := store.ListProjectTaskSyncHeads(context.Background())
@@ -1306,7 +1324,7 @@ func (f *completedExecutionFabricClient) GetJob(_ context.Context, jobID string)
 func TestOrganizationMemberSyncsExecutionAndReadsContinuation(t *testing.T) {
 	server := newExecutionTestServer(t, controlplane.NewService(&executionCompletionLedgerClient{}, &completedExecutionFabricClient{}))
 	admin := operatorSessionForTest(t, server)
-	memberUser := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"member@execution.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	memberUser := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"member@execution.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	createResourceWithSession(t, server, admin, http.MethodPost, "/api/organizations/members", `{"organizationId":"org-alpha","userId":"`+stringValue(memberUser["id"])+`","accountId":"acct-alpha","role":"member"}`)
 	member := loginForTest(t, server, "member@execution.example", "CorrectHorseBatteryStaple!")
 
@@ -1327,7 +1345,7 @@ func TestOrganizationMemberSyncsExecutionAndReadsContinuation(t *testing.T) {
 		t.Fatalf("continuation status = %d: %s", continuationRec.Code, continuationRec.Body.String())
 	}
 
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside-continuation@example.com","accountId":"acct-beta","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside-continuation@example.com","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	outsider := loginForTest(t, server, "outside-continuation@example.com", "CorrectHorseBatteryStaple!")
 	forbidden := requestWithSession(t, server, outsider, http.MethodGet, "/api/execution-requests/"+requestID+"/continuation", "")
 	if forbidden.Code != http.StatusForbidden {
@@ -1370,7 +1388,7 @@ func TestExecutionRequestSameKeyDifferentPayloadConflicts(t *testing.T) {
 func TestExecutionRoutesAuthorizeActiveOrganizationMembers(t *testing.T) {
 	server := newExecutionTestServer(t, controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
-	piUser := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"pi@execution.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	piUser := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"pi@execution.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	createResourceWithSession(t, server, admin, http.MethodPost, "/api/organizations/members", `{"organizationId":"org-alpha","userId":"`+stringValue(piUser["id"])+`","accountId":"acct-alpha","role":"member"}`)
 	pi := loginForTest(t, server, "pi@execution.example", "CorrectHorseBatteryStaple!")
 	rec := requestWithSession(t, server, pi, http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha"}`)
@@ -1378,7 +1396,7 @@ func TestExecutionRoutesAuthorizeActiveOrganizationMembers(t *testing.T) {
 		t.Fatalf("member status = %d body=%s, want created", rec.Code, rec.Body.String())
 	}
 
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outsider@execution.example","accountId":"acct-beta","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outsider@execution.example","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	outsider := loginForTest(t, server, "outsider@execution.example", "CorrectHorseBatteryStaple!")
 	forbidden := requestWithSession(t, server, outsider, http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha"}`)
 	if forbidden.Code != http.StatusForbidden || !strings.Contains(forbidden.Body.String(), "organization_membership_required") {
@@ -1912,7 +1930,7 @@ func TestPersistDerivesAttachmentAccountFromExistingFacts(t *testing.T) {
 func TestManagementStateUsesRealAccountsAndLedger(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 
-	createResource(t, server, http.MethodPost, "/api/users", `{"email":"owner@lab.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	createResource(t, server, http.MethodPost, "/api/users", `{"email":"owner@lab.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	createResource(t, server, http.MethodPost, "/api/billing/topups", `{"accountId":"acct-alpha","amount":100,"idempotencyKey":"topup-alpha","confirm":true}`)
 	createResource(t, server, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
 	createResource(t, server, http.MethodPost, "/api/billing/resource-settlements", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":123,"confirm":true}`)
@@ -1931,7 +1949,7 @@ func TestManagementStateUsesRealAccountsAndLedger(t *testing.T) {
 	accounts := management["accounts"].([]any)
 	if !slices.ContainsFunc(accounts, func(item any) bool {
 		account := item.(map[string]any)
-		return account["accountId"] == "acct-alpha" && account["email"] == "owner@lab.example" && number(account["totalSpent"]) > 0
+		return account["accountId"] == "acct-alpha" && number(account["totalSpent"]) > 0
 	}) {
 		t.Fatalf("management accounts missing real account totals: %#v", accounts)
 	}
@@ -1958,8 +1976,8 @@ func TestManagementStateUsesRealAccountsAndLedger(t *testing.T) {
 
 func TestOperatorAccountTotalsIgnoreDeletedUserWalletResiduals(t *testing.T) {
 	app := newControlPlaneApp()
-	mustStore(t, app.tables.SaveUser(context.Background(), map[string]any{"id": "usr-active", "accountId": "acct-active", "status": "active", "email": "active@example.test"}))
-	mustStore(t, app.tables.SaveUser(context.Background(), map[string]any{"id": "usr-deleted", "accountId": "acct-deleted", "status": "deleted", "email": "deleted@example.test"}))
+	mustStore(t, app.tables.SaveUser(context.Background(), map[string]any{"id": "usr-active", "accountId": "acct-active", "role": "member", "status": "active", "email": "active@example.test"}))
+	mustStore(t, app.tables.SaveUser(context.Background(), map[string]any{"id": "usr-deleted", "accountId": "acct-deleted", "role": "member", "status": "deleted", "email": "deleted@example.test"}))
 	mustStore(t, app.tables.SaveWallet(context.Background(), map[string]any{"id": "acct-active", "accountId": "acct-active", "balance": 10.0, "frozen": 2.0, "totalSpent": 3.0}))
 	mustStore(t, app.tables.SaveWallet(context.Background(), map[string]any{"id": "acct-deleted", "accountId": "acct-deleted", "balance": 99.0, "frozen": 88.0, "totalSpent": 77.0}))
 	mustStore(t, app.tables.SaveWallet(context.Background(), map[string]any{"id": "acct-wallet-only", "accountId": "acct-wallet-only", "balance": 50.0, "frozen": 40.0, "totalSpent": 30.0}))
@@ -2163,6 +2181,7 @@ func TestConsoleStateHydratesResourceListsFromFabricOperations(t *testing.T) {
 }
 
 func TestConsoleStateSkipsUnscopedHistoricFabricResourceProjection(t *testing.T) {
+	setTestOperatorAccount(t, "acct-alpha")
 	service := controlplane.NewService(fakeLedgerClient{}, &fabricClientWithUnscopedHistoricOperation{})
 	server, err := NewPersistentServer(service, NewTestEntStateStore(t, t.TempDir()+"/historic-fabric.sqlite"))
 	if err != nil {
@@ -2645,7 +2664,7 @@ func TestProtectedAPIRoutesRequireSessionCSRFAndAdminRole(t *testing.T) {
 		t.Fatalf("write without csrf status = %d, want 403: %s", postWithoutCSRFRec.Code, postWithoutCSRFRec.Body.String())
 	}
 
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"owner@lab.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"owner@lab.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	owner := loginForTest(t, server, "owner@lab.example", "CorrectHorseBatteryStaple!")
 	adminReq := httptest.NewRequest(http.MethodPost, "/api/billing/topups", bytes.NewBufferString(`{"accountId":"acct-alpha","amount":100,"idempotencyKey":"topup-nonadmin"}`))
 	adminReq.Header.Set("Content-Type", "application/json")
@@ -2667,7 +2686,7 @@ func TestProtectedAPIRoutesRequireSessionCSRFAndAdminRole(t *testing.T) {
 func TestHighRiskMutationsRequireBackendConfirmation(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
-	created := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"member@lab.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	created := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"member@lab.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 
 	for _, tc := range []struct {
 		method string
@@ -2815,7 +2834,7 @@ func TestUserDeleteLifecycleReturnsNotFoundWithoutStub(t *testing.T) {
 
 func TestUserSoftDeleteRevokesSessionsAndHidesByDefault(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
-	created := createResource(t, server, http.MethodPost, "/api/users", `{"email":"member@lab.example","accountId":"acct-alpha","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	created := createResource(t, server, http.MethodPost, "/api/users", `{"email":"member@lab.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!"}`)
 	loginRec := loginForTest(t, server, "member@lab.example", "CorrectHorseBatteryStaple!")
 
 	deleteReq := httptest.NewRequest(http.MethodPost, "/api/users/delete", bytes.NewBufferString(`{"userId":"`+stringValue(created["id"])+`","reason":"left_lab","confirm":true}`))
@@ -2955,6 +2974,7 @@ func TestSupportTicketMappingRequiresExternalTicket(t *testing.T) {
 }
 
 func TestSupportTicketMappingPersistsExternalContext(t *testing.T) {
+	setTestOperatorAccount(t, "acct-alpha")
 	path := t.TempDir() + "/control-plane-state.sqlite"
 	service := controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{})
 	server, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
@@ -2986,6 +3006,11 @@ func TestSupportTicketMappingPersistsExternalContext(t *testing.T) {
 	if len(tickets) != 1 || tickets[0].(map[string]any)["externalTicketId"] != "ZAM-42" {
 		t.Fatalf("support mapping did not persist: %#v", tickets)
 	}
+}
+
+func setTestOperatorAccount(t *testing.T, accountID string) {
+	t.Helper()
+	t.Setenv("OPL_CONSOLE_USERS_JSON", `[{"id":"usr-admin","email":"admin@medopl.cn","password":"StableAdminPass2026!","role":"admin","accountId":"`+accountID+`"}]`)
 }
 
 func TestActiveConsoleAPIRoutesReachControlPlane(t *testing.T) {

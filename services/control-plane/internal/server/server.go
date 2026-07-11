@@ -271,9 +271,6 @@ func (app *controlPlaneServer) scopedAccountID(w http.ResponseWriter, r *http.Re
 		requested = firstNonEmpty(stringField(input, "accountId", ""), requested)
 	}
 	sessionAccount := stringValue(user["accountId"])
-	if stringValue(user["role"]) == "admin" {
-		return firstNonEmpty(requested, sessionAccount), true
-	}
 	if sessionAccount == "" || (requested != "" && requested != sessionAccount) {
 		writeError(w, http.StatusForbidden, "account_scope_forbidden")
 		return "", false

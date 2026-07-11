@@ -31,10 +31,15 @@ type loginFailure struct {
 }
 
 var (
-	errUserNotFound    = errors.New("user_not_found")
-	errUserExists      = errors.New("user_already_exists")
-	errLastActiveAdmin = errors.New("last_active_admin")
-	errUserDeleted     = errors.New("user_deleted")
+	errUserNotFound              = errors.New("user_not_found")
+	errUserExists                = errors.New("user_already_exists")
+	errLastActiveAdmin           = errors.New("last_active_admin")
+	errUserDeleted               = errors.New("user_deleted")
+	errInvalidRole               = errors.New("invalid_role")
+	errAccountNotFound           = errors.New("account_not_found")
+	errOrganizationNotFound      = errors.New("organization_not_found")
+	errMembershipUserNotFound    = errors.New("membership_user_not_found")
+	errMembershipAccountMismatch = errors.New("membership_account_mismatch")
 )
 
 func newControlPlaneApp() *controlPlaneServer {
@@ -66,6 +71,9 @@ func (app *controlPlaneServer) ensureBootstrapAdmin() error {
 	}
 	if len(users) > 0 {
 		return nil
+	}
+	if err := app.tables.SaveAccount(context.Background(), map[string]any{"id": "acct-admin", "status": "active"}); err != nil {
+		return err
 	}
 	return app.tables.SaveUser(context.Background(), map[string]any{"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"})
 }

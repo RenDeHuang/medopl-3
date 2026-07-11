@@ -10,6 +10,10 @@ import (
 )
 
 func (app *controlPlaneServer) createUser(input map[string]any) (map[string]any, error) {
+	role := stringField(input, "role", "owner")
+	if !validRole(role) {
+		return nil, errInvalidRole
+	}
 	email := stringField(input, "email", "admin@medopl.cn")
 	users, err := app.tables.ListUsers(context.Background(), true)
 	if err != nil {
@@ -29,8 +33,25 @@ func (app *controlPlaneServer) createUser(input map[string]any) (map[string]any,
 	if err != nil {
 		return nil, err
 	}
-	user := map[string]any{"id": id, "email": email, "accountId": stringField(input, "accountId", "acct-admin"), "role": stringField(input, "role", "owner"), "status": "active", "passwordHash": passwordHash}
+	accountID := stringField(input, "accountId", "acct-admin")
+	if err := app.ensureAccount(context.Background(), accountID); err != nil {
+		return nil, err
+	}
+	user := map[string]any{"id": id, "email": email, "accountId": accountID, "role": role, "status": "active", "passwordHash": passwordHash}
 	return sanitizeUser(user), app.tables.SaveUser(context.Background(), user)
+}
+
+func (app *controlPlaneServer) ensureAccount(ctx context.Context, accountID string) error {
+	accounts, err := app.tables.ListAccounts(ctx)
+	if err != nil {
+		return err
+	}
+	for _, account := range accounts {
+		if stringValue(account["id"]) == accountID {
+			return nil
+		}
+	}
+	return app.tables.SaveAccount(ctx, map[string]any{"id": accountID, "status": "active"})
 }
 
 func (app *controlPlaneServer) disableUser(input map[string]any) (map[string]any, error) {
@@ -144,6 +165,9 @@ func (app *controlPlaneServer) dropLegacyOwnerUser() error {
 }
 
 func (app *controlPlaneServer) upsertBootstrapUser(seed map[string]any) error {
+	if err := app.ensureAccount(context.Background(), stringValue(seed["accountId"])); err != nil {
+		return err
+	}
 	id := stringValue(seed["id"])
 	users, err := app.tables.ListUsers(context.Background(), true)
 	if err != nil {
@@ -279,7 +303,7 @@ func (app *controlPlaneServer) session(r *http.Request) (map[string]any, bool) {
 	if err != nil {
 		return nil, false
 	}
-	if user == nil || stringValue(user["status"]) != "active" {
+	if user == nil || stringValue(user["status"]) != "active" || !validRole(stringValue(user["role"])) {
 		return nil, false
 	}
 	return map[string]any{"user": sanitizeUser(user), "csrfToken": stringValue(session["csrf"]), "expiresAt": expiresAt.Format(time.RFC3339)}, true

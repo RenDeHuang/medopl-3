@@ -9,6 +9,7 @@ import (
 
 type memoryTableStore struct {
 	mu             sync.Mutex
+	accounts       controlPlaneRecordSet
 	users          controlPlaneRecordSet
 	sessions       controlPlaneRecordSet
 	organizations  controlPlaneRecordSet
@@ -33,7 +34,8 @@ type memoryTableStore struct {
 
 func newMemoryTableStore() *memoryTableStore {
 	return &memoryTableStore{
-		users:         controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}},
+		accounts:      controlPlaneRecordSet{"acct-admin": {"id": "acct-admin", "status": "active"}, "acct-alpha": {"id": "acct-alpha", "status": "active"}},
+		users:         controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-alpha", "role": "admin", "status": "active"}},
 		sessions:      controlPlaneRecordSet{},
 		organizations: controlPlaneRecordSet{},
 		memberships:   controlPlaneRecordSet{},
@@ -47,6 +49,19 @@ func newMemoryTableStore() *memoryTableStore {
 		projectTasks:  controlPlaneRecordSet{},
 		executionReqs: controlPlaneRecordSet{},
 	}
+}
+
+func (s *memoryTableStore) ListAccounts(_ context.Context) ([]map[string]any, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return filteredRecords(s.accounts, "")
+}
+
+func (s *memoryTableStore) SaveAccount(_ context.Context, row map[string]any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.accounts[stringValue(row["id"])] = cloneMap(row)
+	return nil
 }
 
 func (s *memoryTableStore) ListWorkspaceBackups(_ context.Context, workspaceID string) ([]map[string]any, error) {
@@ -93,6 +108,9 @@ func (s *memoryTableStore) ListUsers(_ context.Context, includeDeleted bool) ([]
 }
 
 func (s *memoryTableStore) SaveUser(_ context.Context, row map[string]any) error {
+	if !validRole(stringValue(row["role"])) {
+		return errInvalidRole
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.users[stringValue(row["id"])] = cloneMap(row)
@@ -146,6 +164,9 @@ func (s *memoryTableStore) ListMemberships(_ context.Context) ([]map[string]any,
 }
 
 func (s *memoryTableStore) SaveMembership(_ context.Context, row map[string]any) error {
+	if !validRole(stringValue(row["role"])) {
+		return errInvalidRole
+	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.memberships[stringValue(row["id"])] = cloneMap(row)

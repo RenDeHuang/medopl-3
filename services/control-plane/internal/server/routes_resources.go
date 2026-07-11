@@ -102,6 +102,10 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneServer, service
 		fresh, err := service.GetComputeAllocation(r.Context(), id)
 		if err == nil && fresh.ID != "" {
 			body := computeResponse(structToMap(fresh))
+			if !app.canAccessResource(r, body) {
+				writeError(w, http.StatusForbidden, "account_scope_forbidden")
+				return
+			}
 			if err := app.saveComputeFact(body); err != nil {
 				writeError(w, http.StatusInternalServerError, "state_persist_failed")
 				return
