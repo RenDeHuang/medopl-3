@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"sort"
 	"time"
 
@@ -28,7 +29,7 @@ func defaultCatalogRecords() ([]Connector, []EnvironmentTemplate) {
 		Resources: ConnectorResourceMetadata{MaxQueryLength: 500, MaxPageSize: 100},
 		Runtime:   ConnectorRuntimeMetadata{Protocol: "ncbi-eutils", BaseURL: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils", TimeoutSeconds: 10}, CreatedAt: createdAt,
 	}
-	pubmed.Digest = catalogRecordDigest(pubmed.VersionIdentity, pubmed.Name, pubmed.Status, pubmed.Resources, pubmed.Runtime)
+	pubmed.Digest = catalogRecordDigest(pubmed.ID, pubmed.Version, pubmed.VersionIdentity, pubmed.Name, pubmed.Status, pubmed.ReadOnly, pubmed.Provider, pubmed.Resources, pubmed.Runtime, pubmed.CreatedAt)
 	templates := []EnvironmentTemplate{
 		minimalEnvironment("python-minimal", "Python Minimal", "python", "3.12.4", "python:3.12.4-slim", createdAt),
 		minimalEnvironment("r-minimal", "R Minimal", "r", "4.4.1", "r-base:4.4.1", createdAt),
@@ -44,7 +45,7 @@ func minimalEnvironment(id, name, runtimeName, runtimeVersion, image string, cre
 		Resources: EnvironmentResourceMetadata{CPU: 1, MemoryMB: 1024, GPU: 0},
 		Runtime:   EnvironmentRuntimeMetadata{Name: runtimeName, Version: runtimeVersion, Image: image}, CreatedAt: createdAt,
 	}
-	template.Digest = catalogRecordDigest(template.VersionIdentity, template.Name, template.Status, template.Resources, template.Runtime)
+	template.Digest = catalogRecordDigest(template.ID, template.Version, template.VersionIdentity, template.Name, template.Status, template.Resources, template.Runtime, template.CreatedAt)
 	return template
 }
 
@@ -61,15 +62,23 @@ func (s *MemoryOperationStore) SeedCatalog(_ context.Context, connectors []Conne
 	defer s.mu.Unlock()
 	for _, record := range connectors {
 		key := catalogKey(record.ID, record.Version)
-		if _, exists := s.connectors[key]; !exists {
-			s.connectors[key] = record
+		if existing, exists := s.connectors[key]; exists {
+			if !sameConnector(existing, record) {
+				return fmt.Errorf("%w: %s", ErrCatalogVersionConflict, key)
+			}
+			continue
 		}
+		s.connectors[key] = record
 	}
 	for _, record := range templates {
 		key := catalogKey(record.ID, record.Version)
-		if _, exists := s.environmentTemplates[key]; !exists {
-			s.environmentTemplates[key] = record
+		if existing, exists := s.environmentTemplates[key]; exists {
+			if !sameEnvironmentTemplate(existing, record) {
+				return fmt.Errorf("%w: %s", ErrCatalogVersionConflict, key)
+			}
+			continue
 		}
+		s.environmentTemplates[key] = record
 	}
 	return nil
 }
@@ -118,8 +127,11 @@ func (s *MemoryOperationStore) EnvironmentTemplate(_ context.Context, id, versio
 
 func (s *PostgresOperationStore) SeedCatalog(ctx context.Context, connectors []Connector, templates []EnvironmentTemplate) error {
 	for _, record := range connectors {
-		_, err := s.client.Connector.Query().Where(connector.ConnectorID(record.ID), connector.Version(record.Version)).Only(ctx)
+		existing, err := s.client.Connector.Query().Where(connector.ConnectorID(record.ID), connector.Version(record.Version)).Only(ctx)
 		if err == nil {
+			if !sameConnector(connectorFromEnt(existing), record) {
+				return fmt.Errorf("%w: %s", ErrCatalogVersionConflict, catalogKey(record.ID, record.Version))
+			}
 			continue
 		}
 		if !fabricent.IsNotFound(err) {
@@ -128,14 +140,21 @@ func (s *PostgresOperationStore) SeedCatalog(ctx context.Context, connectors []C
 		resources, _ := json.Marshal(record.Resources)
 		runtime, _ := json.Marshal(record.Runtime)
 		if err := s.client.Connector.Create().SetID(record.VersionIdentity).SetConnectorID(record.ID).SetVersion(record.Version).SetVersionIdentity(record.VersionIdentity).SetDigest(record.Digest).SetName(record.Name).SetStatus(record.Status).SetReadOnly(record.ReadOnly).SetProvider(record.Provider).SetResourceMetadata(string(resources)).SetRuntimeMetadata(string(runtime)).SetCreatedAt(record.CreatedAt).Exec(ctx); err != nil {
-			if _, lookupErr := s.client.Connector.Query().Where(connector.ConnectorID(record.ID), connector.Version(record.Version)).Only(ctx); lookupErr != nil {
+			concurrent, lookupErr := s.client.Connector.Query().Where(connector.ConnectorID(record.ID), connector.Version(record.Version)).Only(ctx)
+			if lookupErr != nil {
 				return err
+			}
+			if !sameConnector(connectorFromEnt(concurrent), record) {
+				return fmt.Errorf("%w: %s", ErrCatalogVersionConflict, catalogKey(record.ID, record.Version))
 			}
 		}
 	}
 	for _, record := range templates {
-		_, err := s.client.EnvironmentTemplate.Query().Where(environmenttemplate.TemplateID(record.ID), environmenttemplate.Version(record.Version)).Only(ctx)
+		existing, err := s.client.EnvironmentTemplate.Query().Where(environmenttemplate.TemplateID(record.ID), environmenttemplate.Version(record.Version)).Only(ctx)
 		if err == nil {
+			if !sameEnvironmentTemplate(environmentTemplateFromEnt(existing), record) {
+				return fmt.Errorf("%w: %s", ErrCatalogVersionConflict, catalogKey(record.ID, record.Version))
+			}
 			continue
 		}
 		if !fabricent.IsNotFound(err) {
@@ -144,12 +163,24 @@ func (s *PostgresOperationStore) SeedCatalog(ctx context.Context, connectors []C
 		resources, _ := json.Marshal(record.Resources)
 		runtime, _ := json.Marshal(record.Runtime)
 		if err := s.client.EnvironmentTemplate.Create().SetID(record.VersionIdentity).SetTemplateID(record.ID).SetVersion(record.Version).SetVersionIdentity(record.VersionIdentity).SetDigest(record.Digest).SetName(record.Name).SetStatus(record.Status).SetResourceMetadata(string(resources)).SetRuntimeMetadata(string(runtime)).SetCreatedAt(record.CreatedAt).Exec(ctx); err != nil {
-			if _, lookupErr := s.client.EnvironmentTemplate.Query().Where(environmenttemplate.TemplateID(record.ID), environmenttemplate.Version(record.Version)).Only(ctx); lookupErr != nil {
+			concurrent, lookupErr := s.client.EnvironmentTemplate.Query().Where(environmenttemplate.TemplateID(record.ID), environmenttemplate.Version(record.Version)).Only(ctx)
+			if lookupErr != nil {
 				return err
+			}
+			if !sameEnvironmentTemplate(environmentTemplateFromEnt(concurrent), record) {
+				return fmt.Errorf("%w: %s", ErrCatalogVersionConflict, catalogKey(record.ID, record.Version))
 			}
 		}
 	}
 	return nil
+}
+
+func sameConnector(left, right Connector) bool {
+	return left.ID == right.ID && left.Version == right.Version && left.VersionIdentity == right.VersionIdentity && left.Digest == right.Digest && left.Name == right.Name && left.Status == right.Status && left.ReadOnly == right.ReadOnly && left.Provider == right.Provider && left.Resources == right.Resources && left.Runtime == right.Runtime && left.CreatedAt.Equal(right.CreatedAt)
+}
+
+func sameEnvironmentTemplate(left, right EnvironmentTemplate) bool {
+	return left.ID == right.ID && left.Version == right.Version && left.VersionIdentity == right.VersionIdentity && left.Digest == right.Digest && left.Name == right.Name && left.Status == right.Status && left.Resources == right.Resources && left.Runtime == right.Runtime && left.CreatedAt.Equal(right.CreatedAt)
 }
 
 func (s *PostgresOperationStore) ListConnectors(ctx context.Context) ([]Connector, error) {

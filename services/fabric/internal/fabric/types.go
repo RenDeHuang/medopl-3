@@ -11,6 +11,7 @@ var ErrInvalidJobInput = errors.New("invalid_job_input")
 var ErrJobStateConflict = errors.New("job_state_conflict")
 var ErrJobLeaseMismatch = errors.New("job_lease_mismatch")
 var ErrCatalogRecordNotFound = errors.New("catalog_record_not_found")
+var ErrCatalogVersionConflict = errors.New("catalog_version_conflict")
 var ErrInvalidPubMedQuery = errors.New("invalid_pubmed_query")
 
 type Catalog struct {

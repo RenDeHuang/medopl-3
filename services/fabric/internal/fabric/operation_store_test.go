@@ -60,6 +60,14 @@ func TestPostgresOperationSchemaDefinesImmutableCatalogTables(t *testing.T) {
 		"runtime_metadata TEXT NOT NULL",
 		"fabric_connector_identity_immutable",
 		"fabric_environment_template_identity_immutable",
+		"NEW.id IS DISTINCT FROM OLD.id",
+		"NEW.name IS DISTINCT FROM OLD.name",
+		"NEW.status IS DISTINCT FROM OLD.status",
+		"NEW.read_only IS DISTINCT FROM OLD.read_only",
+		"NEW.provider IS DISTINCT FROM OLD.provider",
+		"NEW.resource_metadata IS DISTINCT FROM OLD.resource_metadata",
+		"NEW.runtime_metadata IS DISTINCT FROM OLD.runtime_metadata",
+		"NEW.created_at IS DISTINCT FROM OLD.created_at",
 	} {
 		if !strings.Contains(schema, marker) {
 			t.Fatalf("catalog schema missing %q", marker)

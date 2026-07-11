@@ -17,14 +17,15 @@ import (
 type pubMedClient struct {
 	client  *http.Client
 	baseURL string
-	sleep   func(time.Duration)
+	timeout time.Duration
+	sleep   func(context.Context, time.Duration) error
 }
 
 func newPubMedClient(client *http.Client, baseURL string) *pubMedClient {
 	if client == nil {
 		client = &http.Client{}
 	}
-	return &pubMedClient{client: client, baseURL: strings.TrimRight(baseURL, "/"), sleep: time.Sleep}
+	return &pubMedClient{client: client, baseURL: strings.TrimRight(baseURL, "/"), timeout: 10 * time.Second, sleep: sleepContext}
 }
 
 type pubMedEvidence struct {
@@ -37,7 +38,7 @@ type pubMedEvidence struct {
 
 func (s *Service) QueryPubMed(ctx context.Context, version string, input PubMedQuery) (PubMedResult, error) {
 	input.Query = strings.TrimSpace(input.Query)
-	if len(input.Query) == 0 || len(input.Query) > 500 || input.Page < 1 || input.Page > 1000 || input.PageSize < 1 || input.PageSize > 100 {
+	if len(input.Query) == 0 || len(input.Query) > 500 || input.Page < 1 || input.Page > 1000 || input.PageSize < 1 || input.PageSize > 100 || (input.Page-1)*input.PageSize > 9998 {
 		return PubMedResult{}, ErrInvalidPubMedQuery
 	}
 	connector, err := s.Connector(ctx, "pubmed", version)
@@ -67,8 +68,7 @@ func (s *Service) QueryPubMed(ctx context.Context, version string, input PubMedQ
 	evidence.ResultCount = len(result.Articles)
 	evidence.PMIDs = pmids
 	if err != nil {
-		_ = s.recordOperation(ctx, operation, "failed", evidence, err)
-		return PubMedResult{}, err
+		return PubMedResult{}, errors.Join(err, s.recordOperation(ctx, operation, "failed", evidence, err))
 	}
 	if err := s.recordOperation(ctx, operation, "succeeded", evidence, nil); err != nil {
 		return PubMedResult{}, err
@@ -77,6 +77,8 @@ func (s *Service) QueryPubMed(ctx context.Context, version string, input PubMedQ
 }
 
 func (c *pubMedClient) query(ctx context.Context, input PubMedQuery) (PubMedResult, []string, error) {
+	ctx, cancel := context.WithTimeout(ctx, c.timeout)
+	defer cancel()
 	searchValues := url.Values{"db": {"pubmed"}, "retmode": {"json"}, "term": {input.Query}, "retstart": {strconv.Itoa((input.Page - 1) * input.PageSize)}, "retmax": {strconv.Itoa(input.PageSize)}}
 	body, err := c.get(ctx, "/esearch.fcgi", searchValues)
 	if err != nil {
@@ -115,17 +117,14 @@ func (c *pubMedClient) query(ctx context.Context, input PubMedQuery) (PubMedResu
 func (c *pubMedClient) get(ctx context.Context, path string, values url.Values) ([]byte, error) {
 	var lastErr error
 	for attempt := 0; attempt < 3; attempt++ {
-		requestCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-		req, err := http.NewRequestWithContext(requestCtx, http.MethodGet, c.baseURL+path+"?"+values.Encode(), nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path+"?"+values.Encode(), nil)
 		if err != nil {
-			cancel()
 			return nil, err
 		}
 		response, err := c.client.Do(req)
 		if err == nil {
 			body, readErr := io.ReadAll(io.LimitReader(response.Body, (4<<20)+1))
 			_ = response.Body.Close()
-			cancel()
 			if readErr != nil {
 				return nil, readErr
 			}
@@ -140,17 +139,31 @@ func (c *pubMedClient) get(ctx context.Context, path string, values url.Values) 
 				return nil, lastErr
 			}
 			if attempt < 2 {
-				c.sleep(boundedRetryAfter(response.Header.Get("Retry-After")))
+				if err := c.sleep(ctx, boundedRetryAfter(response.Header.Get("Retry-After"))); err != nil {
+					return nil, err
+				}
 			}
 			continue
 		}
-		cancel()
 		lastErr = err
 		if attempt < 2 {
-			c.sleep(100 * time.Millisecond)
+			if err := c.sleep(ctx, 100*time.Millisecond); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return nil, lastErr
+}
+
+func sleepContext(ctx context.Context, delay time.Duration) error {
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
 
 func boundedRetryAfter(value string) time.Duration {

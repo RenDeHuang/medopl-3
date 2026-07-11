@@ -6,8 +6,8 @@ CREATE INDEX IF NOT EXISTS fabric_environment_templates_status_idx ON fabric_env
 
 CREATE OR REPLACE FUNCTION fabric_connector_identity_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.connector_id IS DISTINCT FROM OLD.connector_id OR NEW.version IS DISTINCT FROM OLD.version OR NEW.version_identity IS DISTINCT FROM OLD.version_identity OR NEW.digest IS DISTINCT FROM OLD.digest THEN
-    RAISE EXCEPTION 'connector version identity and digest are immutable' USING ERRCODE = '23514';
+  IF NEW.id IS DISTINCT FROM OLD.id OR NEW.connector_id IS DISTINCT FROM OLD.connector_id OR NEW.version IS DISTINCT FROM OLD.version OR NEW.version_identity IS DISTINCT FROM OLD.version_identity OR NEW.digest IS DISTINCT FROM OLD.digest OR NEW.name IS DISTINCT FROM OLD.name OR NEW.status IS DISTINCT FROM OLD.status OR NEW.read_only IS DISTINCT FROM OLD.read_only OR NEW.provider IS DISTINCT FROM OLD.provider OR NEW.resource_metadata IS DISTINCT FROM OLD.resource_metadata OR NEW.runtime_metadata IS DISTINCT FROM OLD.runtime_metadata OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION 'connector version is immutable' USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
 END;
@@ -17,8 +17,8 @@ CREATE TRIGGER fabric_connector_identity_immutable BEFORE UPDATE ON fabric_conne
 
 CREATE OR REPLACE FUNCTION fabric_environment_template_identity_immutable() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF NEW.template_id IS DISTINCT FROM OLD.template_id OR NEW.version IS DISTINCT FROM OLD.version OR NEW.version_identity IS DISTINCT FROM OLD.version_identity OR NEW.digest IS DISTINCT FROM OLD.digest THEN
-    RAISE EXCEPTION 'environment template version identity and digest are immutable' USING ERRCODE = '23514';
+  IF NEW.id IS DISTINCT FROM OLD.id OR NEW.template_id IS DISTINCT FROM OLD.template_id OR NEW.version IS DISTINCT FROM OLD.version OR NEW.version_identity IS DISTINCT FROM OLD.version_identity OR NEW.digest IS DISTINCT FROM OLD.digest OR NEW.name IS DISTINCT FROM OLD.name OR NEW.status IS DISTINCT FROM OLD.status OR NEW.resource_metadata IS DISTINCT FROM OLD.resource_metadata OR NEW.runtime_metadata IS DISTINCT FROM OLD.runtime_metadata OR NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+    RAISE EXCEPTION 'environment template version is immutable' USING ERRCODE = '23514';
   END IF;
   RETURN NEW;
 END;

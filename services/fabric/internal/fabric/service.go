@@ -548,6 +548,9 @@ func (s *Service) WorkspaceRuntimeStatus(ctx context.Context, workspaceID string
 }
 
 func (s *Service) Readiness(ctx context.Context) (map[string]any, error) {
+	if s.catalogInitErr != nil {
+		return nil, s.catalogInitErr
+	}
 	return s.provider.Readiness(ctx)
 }
 

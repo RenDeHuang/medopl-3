@@ -2,9 +2,26 @@ package fabric
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
+	"time"
 )
+
+var errCatalogSeed = errors.New("catalog_seed_failed")
+
+type failingCatalogSeedStore struct{ *MemoryOperationStore }
+
+func (s *failingCatalogSeedStore) SeedCatalog(context.Context, []Connector, []EnvironmentTemplate) error {
+	return errCatalogSeed
+}
+
+func TestCatalogSeedFailureMakesServiceUnready(t *testing.T) {
+	service := NewServiceWithOperationStore(testProvider{}, &failingCatalogSeedStore{NewMemoryOperationStore()})
+	if _, err := service.Readiness(context.Background()); !errors.Is(err, errCatalogSeed) {
+		t.Fatalf("readiness error = %v, want catalog seed failure", err)
+	}
+}
 
 func TestCatalogSeedsVersionedPubMedAndMinimalCPUEnvironments(t *testing.T) {
 	store := NewMemoryOperationStore()
@@ -48,27 +65,51 @@ func TestCatalogSeedsVersionedPubMedAndMinimalCPUEnvironments(t *testing.T) {
 	}
 }
 
-func TestCatalogVersionIdentityAndDigestRemainImmutableAcrossSeeding(t *testing.T) {
+func TestCatalogVersionsRejectAllImmutableContentChanges(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryOperationStore()
 	service := NewServiceWithOperationStore(testProvider{}, store)
-	connector, err := service.Connector(ctx, "pubmed", "1.0.0")
+	originalConnector, err := service.Connector(ctx, "pubmed", "1.0.0")
 	if err != nil {
 		t.Fatal(err)
+	}
+	connectorChanges := map[string]func(*Connector){
+		"identity":  func(row *Connector) { row.VersionIdentity = "changed@1.0.0" },
+		"digest":    func(row *Connector) { row.Digest = "sha256:" + strings.Repeat("f", 64) },
+		"name":      func(row *Connector) { row.Name = "Changed" },
+		"status":    func(row *Connector) { row.Status = "disabled" },
+		"readOnly":  func(row *Connector) { row.ReadOnly = !row.ReadOnly },
+		"provider":  func(row *Connector) { row.Provider = "changed" },
+		"resources": func(row *Connector) { row.Resources.MaxPageSize++ },
+		"runtime":   func(row *Connector) { row.Runtime.Protocol = "changed" },
+		"createdAt": func(row *Connector) { row.CreatedAt = row.CreatedAt.Add(time.Second) },
+	}
+	for name, change := range connectorChanges {
+		changed := originalConnector
+		change(&changed)
+		if err := store.SeedCatalog(ctx, []Connector{changed}, nil); !errors.Is(err, ErrCatalogVersionConflict) {
+			t.Fatalf("connector %s change error = %v", name, err)
+		}
 	}
 
-	changed := connector
-	changed.Digest = "sha256:" + strings.Repeat("f", 64)
-	changed.Status = "disabled"
-	if err := store.SeedCatalog(ctx, []Connector{changed}, nil); err != nil {
-		t.Fatal(err)
-	}
-	restarted := NewServiceWithOperationStore(testProvider{}, store)
-	got, err := restarted.Connector(ctx, "pubmed", "1.0.0")
+	originalTemplate, err := service.EnvironmentTemplate(ctx, "python-minimal", "1.0.0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Digest != connector.Digest || got.Status != connector.Status || got.VersionIdentity != "pubmed@1.0.0" {
-		t.Fatalf("immutable connector changed: before=%#v after=%#v", connector, got)
+	templateChanges := map[string]func(*EnvironmentTemplate){
+		"identity":  func(row *EnvironmentTemplate) { row.VersionIdentity = "changed@1.0.0" },
+		"digest":    func(row *EnvironmentTemplate) { row.Digest = "sha256:" + strings.Repeat("f", 64) },
+		"name":      func(row *EnvironmentTemplate) { row.Name = "Changed" },
+		"status":    func(row *EnvironmentTemplate) { row.Status = "disabled" },
+		"resources": func(row *EnvironmentTemplate) { row.Resources.MemoryMB++ },
+		"runtime":   func(row *EnvironmentTemplate) { row.Runtime.Image = "changed" },
+		"createdAt": func(row *EnvironmentTemplate) { row.CreatedAt = row.CreatedAt.Add(time.Second) },
+	}
+	for name, change := range templateChanges {
+		changed := originalTemplate
+		change(&changed)
+		if err := store.SeedCatalog(ctx, nil, []EnvironmentTemplate{changed}); !errors.Is(err, ErrCatalogVersionConflict) {
+			t.Fatalf("template %s change error = %v", name, err)
+		}
 	}
 }
