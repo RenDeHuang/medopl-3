@@ -164,11 +164,6 @@ func AccessUsername(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldEQ(FieldAccessUsername, v))
 }
 
-// AccessPassword applies equality check predicate on the "access_password" field. It's identical to AccessPasswordEQ.
-func AccessPassword(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldAccessPassword, v))
-}
-
 // CredentialStatus applies equality check predicate on the "credential_status" field. It's identical to CredentialStatusEQ.
 func CredentialStatus(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldEQ(FieldCredentialStatus, v))
@@ -1437,71 +1432,6 @@ func AccessUsernameEqualFold(v string) predicate.Workspace {
 // AccessUsernameContainsFold applies the ContainsFold predicate on the "access_username" field.
 func AccessUsernameContainsFold(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldContainsFold(FieldAccessUsername, v))
-}
-
-// AccessPasswordEQ applies the EQ predicate on the "access_password" field.
-func AccessPasswordEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEQ(FieldAccessPassword, v))
-}
-
-// AccessPasswordNEQ applies the NEQ predicate on the "access_password" field.
-func AccessPasswordNEQ(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNEQ(FieldAccessPassword, v))
-}
-
-// AccessPasswordIn applies the In predicate on the "access_password" field.
-func AccessPasswordIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldIn(FieldAccessPassword, vs...))
-}
-
-// AccessPasswordNotIn applies the NotIn predicate on the "access_password" field.
-func AccessPasswordNotIn(vs ...string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldNotIn(FieldAccessPassword, vs...))
-}
-
-// AccessPasswordGT applies the GT predicate on the "access_password" field.
-func AccessPasswordGT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGT(FieldAccessPassword, v))
-}
-
-// AccessPasswordGTE applies the GTE predicate on the "access_password" field.
-func AccessPasswordGTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldGTE(FieldAccessPassword, v))
-}
-
-// AccessPasswordLT applies the LT predicate on the "access_password" field.
-func AccessPasswordLT(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLT(FieldAccessPassword, v))
-}
-
-// AccessPasswordLTE applies the LTE predicate on the "access_password" field.
-func AccessPasswordLTE(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldLTE(FieldAccessPassword, v))
-}
-
-// AccessPasswordContains applies the Contains predicate on the "access_password" field.
-func AccessPasswordContains(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContains(FieldAccessPassword, v))
-}
-
-// AccessPasswordHasPrefix applies the HasPrefix predicate on the "access_password" field.
-func AccessPasswordHasPrefix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasPrefix(FieldAccessPassword, v))
-}
-
-// AccessPasswordHasSuffix applies the HasSuffix predicate on the "access_password" field.
-func AccessPasswordHasSuffix(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldHasSuffix(FieldAccessPassword, v))
-}
-
-// AccessPasswordEqualFold applies the EqualFold predicate on the "access_password" field.
-func AccessPasswordEqualFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldEqualFold(FieldAccessPassword, v))
-}
-
-// AccessPasswordContainsFold applies the ContainsFold predicate on the "access_password" field.
-func AccessPasswordContainsFold(v string) predicate.Workspace {
-	return predicate.Workspace(sql.FieldContainsFold(FieldAccessPassword, v))
 }
 
 // CredentialStatusEQ applies the EQ predicate on the "credential_status" field.

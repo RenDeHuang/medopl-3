@@ -99,9 +99,35 @@ test("Ledger and Fabric Ent models cover money and cloud-operation facts", async
   ]) {
     assert.equal(await exists(`services/ledger/ent/schema/${schema}`), true, `missing Ledger Ent schema ${schema}`);
   }
-  for (const schema of ["fabric_operation.go", "workspace_runtime_access.go"]) {
+  for (const schema of ["fabric_operation.go"]) {
     assert.equal(await exists(`services/fabric/ent/schema/${schema}`), true, `missing Fabric Ent schema ${schema}`);
   }
+
+  assert.equal(await exists("services/fabric/ent/schema/workspace_runtime_access.go"), false, "Fabric must not model runtime credentials as database state");
+});
+
+test("Workspace password authority is Kubernetes Secret only", async () => {
+  const fabricFiles = await files("services/fabric/ent", /\.go$/);
+  for (const file of fabricFiles) {
+    assert.equal((await source(file)).toLowerCase().includes("workspaceruntimeaccess"), false, `${file} retains the retired runtime-access entity`);
+  }
+
+  const workspaceSchema = await source("services/control-plane/ent/schema/shared.go");
+  assert.equal(workspaceSchema.includes('field.String("access_password")'), false, "Control Plane must not model plaintext Workspace passwords");
+  for (const file of await files("services/control-plane/ent", /\.go$/)) {
+    assert.equal((await source(file)).includes("AccessPassword"), false, `${file} retains generated Workspace password persistence`);
+  }
+
+  const fabricMigrations = (await Promise.all([
+    ...await files("services/fabric/migrations", /\.sql$/),
+    ...await files("services/fabric/internal/fabric/ent_migrations", /\.sql$/)
+  ].map(source))).join("\n");
+  const controlPlaneMigrations = (await Promise.all([
+    ...await files("services/control-plane/migrations", /\.sql$/),
+    ...await files("services/control-plane/internal/server/ent_migrations", /\.sql$/)
+  ].map(source))).join("\n");
+  assert.match(fabricMigrations, /DROP TABLE IF EXISTS fabric_workspace_runtime_access/, "Fabric needs a formal hard-cut migration");
+  assert.match(controlPlaneMigrations, /DROP COLUMN IF EXISTS access_password/, "Control Plane needs a formal hard-cut migration");
 });
 
 test("production data path does not keep hand-written SQL fact stores after Ent hard cut", async () => {
@@ -147,6 +173,7 @@ test("Control Plane schema and migrations do not inherit a generic wide fact tab
   ]) {
     const text = await source(migration);
     assert.equal(text.includes("LIKE control_plane_accounts"), false, `${migration} must define tables explicitly`);
+    if (!text.includes("CREATE TABLE")) continue;
     assert.match(text, /control_plane_organizations/, `${migration} must include the organization facts read by Control Plane`);
     const accountsTable = text.split("\n").find((line) => line.includes("CREATE TABLE IF NOT EXISTS control_plane_accounts"));
     const usersTable = text.split("\n").find((line) => line.includes("CREATE TABLE IF NOT EXISTS control_plane_users"));

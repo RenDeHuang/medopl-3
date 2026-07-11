@@ -300,20 +300,6 @@ func (wc *WorkspaceCreate) SetNillableAccessUsername(s *string) *WorkspaceCreate
 	return wc
 }
 
-// SetAccessPassword sets the "access_password" field.
-func (wc *WorkspaceCreate) SetAccessPassword(s string) *WorkspaceCreate {
-	wc.mutation.SetAccessPassword(s)
-	return wc
-}
-
-// SetNillableAccessPassword sets the "access_password" field if the given value is not nil.
-func (wc *WorkspaceCreate) SetNillableAccessPassword(s *string) *WorkspaceCreate {
-	if s != nil {
-		wc.SetAccessPassword(*s)
-	}
-	return wc
-}
-
 // SetCredentialStatus sets the "credential_status" field.
 func (wc *WorkspaceCreate) SetCredentialStatus(s string) *WorkspaceCreate {
 	wc.mutation.SetCredentialStatus(s)
@@ -491,10 +477,6 @@ func (wc *WorkspaceCreate) defaults() {
 		v := workspace.DefaultAccessUsername
 		wc.mutation.SetAccessUsername(v)
 	}
-	if _, ok := wc.mutation.AccessPassword(); !ok {
-		v := workspace.DefaultAccessPassword
-		wc.mutation.SetAccessPassword(v)
-	}
 	if _, ok := wc.mutation.CredentialStatus(); !ok {
 		v := workspace.DefaultCredentialStatus
 		wc.mutation.SetCredentialStatus(v)
@@ -574,9 +556,6 @@ func (wc *WorkspaceCreate) check() error {
 	}
 	if _, ok := wc.mutation.AccessUsername(); !ok {
 		return &ValidationError{Name: "access_username", err: errors.New(`ent: missing required field "Workspace.access_username"`)}
-	}
-	if _, ok := wc.mutation.AccessPassword(); !ok {
-		return &ValidationError{Name: "access_password", err: errors.New(`ent: missing required field "Workspace.access_password"`)}
 	}
 	if _, ok := wc.mutation.CredentialStatus(); !ok {
 		return &ValidationError{Name: "credential_status", err: errors.New(`ent: missing required field "Workspace.credential_status"`)}
@@ -709,10 +688,6 @@ func (wc *WorkspaceCreate) createSpec() (*Workspace, *sqlgraph.CreateSpec) {
 	if value, ok := wc.mutation.AccessUsername(); ok {
 		_spec.SetField(workspace.FieldAccessUsername, field.TypeString, value)
 		_node.AccessUsername = value
-	}
-	if value, ok := wc.mutation.AccessPassword(); ok {
-		_spec.SetField(workspace.FieldAccessPassword, field.TypeString, value)
-		_node.AccessPassword = value
 	}
 	if value, ok := wc.mutation.CredentialStatus(); ok {
 		_spec.SetField(workspace.FieldCredentialStatus, field.TypeString, value)

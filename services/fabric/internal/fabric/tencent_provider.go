@@ -400,7 +400,8 @@ func (p *TencentProvider) WorkspaceRuntimeStatus(ctx context.Context, workspaceI
 	if serviceName == "" || pvcName == "" {
 		return WorkspaceRuntime{WorkspaceID: workspaceID, Status: "not_found", Ready: false, Checks: []Check{{Name: "workspace_resources_found", OK: false}}}, nil
 	}
-	raw, err := p.kubectl(ctx, []string{"get", "deployment/" + serviceName, "pvc/" + pvcName, "service/" + serviceName, "ingress/opl-cloud", "endpoints/" + serviceName, "-o", "json"}, nil)
+	secretRef := serviceName + "-env"
+	raw, err := p.kubectl(ctx, []string{"get", "deployment/" + serviceName, "pvc/" + pvcName, "service/" + serviceName, "ingress/opl-cloud", "endpoints/" + serviceName, "secret/" + secretRef, "--ignore-not-found", "-o", "json"}, nil)
 	if err != nil {
 		return WorkspaceRuntime{WorkspaceID: workspaceID, Status: "unready", ServiceName: serviceName, Ready: false, Checks: []Check{{Name: "kubectl_get", OK: false}}}, nil
 	}
@@ -410,6 +411,7 @@ func (p *TencentProvider) WorkspaceRuntimeStatus(ctx context.Context, workspaceI
 	service := findK8s(items, "Service", serviceName)
 	ingress := findK8s(items, "Ingress", "opl-cloud")
 	endpoints := findK8s(items, "Endpoints", serviceName)
+	access, credentialCheck := runtimeAccessFromSecret(findK8s(items, "Secret", secretRef), secretRef)
 	pods := p.workspacePods(ctx, workspaceID)
 	podDetails := podRuntimeDetails(pods)
 	readyReplicas := number(nested(deployment, "status", "readyReplicas"))
@@ -424,6 +426,7 @@ func (p *TencentProvider) WorkspaceRuntimeStatus(ctx context.Context, workspaceI
 		{Name: "service_targets_workspace", OK: selectorMatches(service, deployment)},
 		{Name: "service_endpoints_ready", OK: readyAddresses > 0, Details: mergeDetails(map[string]any{"readyAddresses": readyAddresses}, podDetails)},
 		{Name: "ingress_routes_workspace_gateway", OK: ingressRoutesGateway(ingress)},
+		credentialCheck,
 	}
 	ready := true
 	for _, check := range checks {
@@ -435,7 +438,19 @@ func (p *TencentProvider) WorkspaceRuntimeStatus(ctx context.Context, workspaceI
 	if !ready {
 		status = "unready"
 	}
-	return WorkspaceRuntime{WorkspaceID: workspaceID, URL: fmt.Sprintf("https://%s/w/%s/", workspaceDomain(), workspaceID), Status: status, ServiceName: serviceName, Ready: ready, Checks: checks}, nil
+	return WorkspaceRuntime{WorkspaceID: workspaceID, URL: fmt.Sprintf("https://%s/w/%s/", workspaceDomain(), workspaceID), Status: status, ServiceName: serviceName, Access: access, Ready: ready, Checks: checks}, nil
+}
+
+func runtimeAccessFromSecret(secret map[string]any, secretRef string) (RuntimeAccess, Check) {
+	access := RuntimeAccess{Username: webuiUsername, CredentialStatus: "missing", SecretRef: secretRef}
+	encoded := stringValue(nested(secret, "data", "webui_password"))
+	password, err := base64.StdEncoding.DecodeString(encoded)
+	if err == nil && len(password) > 0 {
+		access.Password = string(password)
+		access.CredentialStatus = "configured"
+		access.CredentialVersion = "v1"
+	}
+	return access, Check{Name: "workspace_credentials_configured", OK: access.CredentialStatus == "configured"}
 }
 
 func (p *TencentProvider) workspacePods(ctx context.Context, workspaceID string) []any {

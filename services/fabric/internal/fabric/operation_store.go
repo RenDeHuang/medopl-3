@@ -24,22 +24,16 @@ type OperationStore interface {
 	List(ctx context.Context) ([]FabricOperation, error)
 }
 
-type RuntimeAccessStore interface {
-	SaveRuntimeAccess(ctx context.Context, runtime WorkspaceRuntime) error
-	RuntimeAccess(ctx context.Context, workspaceID string) (RuntimeAccess, bool, error)
-}
-
 type MemoryOperationStore struct {
 	mu               sync.Mutex
 	operation        []FabricOperation
-	access           map[string]RuntimeAccess
 	transferSessions map[string]Transfer
 	transferKeys     map[string]string
 	transferChunks   map[string]map[int]TransferChunk
 }
 
 func NewMemoryOperationStore() *MemoryOperationStore {
-	return &MemoryOperationStore{access: map[string]RuntimeAccess{}, transferSessions: map[string]Transfer{}, transferKeys: map[string]string{}, transferChunks: map[string]map[int]TransferChunk{}}
+	return &MemoryOperationStore{transferSessions: map[string]Transfer{}, transferKeys: map[string]string{}, transferChunks: map[string]map[int]TransferChunk{}}
 }
 
 func (s *MemoryOperationStore) Append(_ context.Context, operation FabricOperation) error {
@@ -55,26 +49,6 @@ func (s *MemoryOperationStore) List(_ context.Context) ([]FabricOperation, error
 	operations := make([]FabricOperation, len(s.operation))
 	copy(operations, s.operation)
 	return operations, nil
-}
-
-func (s *MemoryOperationStore) SaveRuntimeAccess(_ context.Context, runtime WorkspaceRuntime) error {
-	if runtime.WorkspaceID == "" || runtime.Access.Username == "" || runtime.Access.Password == "" {
-		return nil
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.access == nil {
-		s.access = map[string]RuntimeAccess{}
-	}
-	s.access[runtime.WorkspaceID] = runtime.Access
-	return nil
-}
-
-func (s *MemoryOperationStore) RuntimeAccess(_ context.Context, workspaceID string) (RuntimeAccess, bool, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	access, ok := s.access[workspaceID]
-	return access, ok, nil
 }
 
 type PostgresOperationStore struct {
@@ -288,52 +262,6 @@ func (s *PostgresOperationStore) List(ctx context.Context) ([]FabricOperation, e
 		operations = append(operations, fabricOperationFromEnt(row))
 	}
 	return operations, nil
-}
-
-func (s *PostgresOperationStore) SaveRuntimeAccess(ctx context.Context, runtime WorkspaceRuntime) error {
-	if runtime.WorkspaceID == "" || runtime.Access.Username == "" || runtime.Access.Password == "" {
-		return nil
-	}
-	_, err := s.client.WorkspaceRuntimeAccess.Get(ctx, runtime.WorkspaceID)
-	if fabricent.IsNotFound(err) {
-		return s.client.WorkspaceRuntimeAccess.Create().
-			SetID(runtime.WorkspaceID).
-			SetRuntimeID(runtime.ID).
-			SetURL(runtime.URL).
-			SetServiceName(runtime.ServiceName).
-			SetUsername(runtime.Access.Username).
-			SetPassword(runtime.Access.Password).
-			SetCredentialStatus(runtime.Access.CredentialStatus).
-			SetCredentialVersion(runtime.Access.CredentialVersion).
-			SetSecretRef(runtime.Access.SecretRef).
-			SetUpdatedAt(runtime.Access.UpdatedAt).
-			Exec(ctx)
-	}
-	if err != nil {
-		return err
-	}
-	return s.client.WorkspaceRuntimeAccess.UpdateOneID(runtime.WorkspaceID).
-		SetRuntimeID(runtime.ID).
-		SetURL(runtime.URL).
-		SetServiceName(runtime.ServiceName).
-		SetUsername(runtime.Access.Username).
-		SetPassword(runtime.Access.Password).
-		SetCredentialStatus(runtime.Access.CredentialStatus).
-		SetCredentialVersion(runtime.Access.CredentialVersion).
-		SetSecretRef(runtime.Access.SecretRef).
-		SetUpdatedAt(runtime.Access.UpdatedAt).
-		Exec(ctx)
-}
-
-func (s *PostgresOperationStore) RuntimeAccess(ctx context.Context, workspaceID string) (RuntimeAccess, bool, error) {
-	row, err := s.client.WorkspaceRuntimeAccess.Get(ctx, workspaceID)
-	if fabricent.IsNotFound(err) {
-		return RuntimeAccess{}, false, nil
-	}
-	if err != nil {
-		return RuntimeAccess{}, false, err
-	}
-	return RuntimeAccess{Username: row.Username, Password: row.Password, CredentialStatus: row.CredentialStatus, CredentialVersion: row.CredentialVersion, SecretRef: row.SecretRef, UpdatedAt: row.UpdatedAt}, true, nil
 }
 
 func fabricOperationFromEnt(row *fabricent.FabricOperation) FabricOperation {

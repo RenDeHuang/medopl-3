@@ -39,9 +39,7 @@ type Service struct {
 	volumes     map[string]StorageVolume
 	snapshots   map[string]StorageSnapshot
 	attachments map[string]StorageAttachment
-	runtimes    map[string]WorkspaceRuntime
 	operations  OperationStore
-	access      RuntimeAccessStore
 	transfers   TransferStore
 	now         func() time.Time
 }
@@ -54,13 +52,12 @@ func NewServiceWithOperationStore(provider Provider, operations OperationStore) 
 	if operations == nil {
 		operations = NewMemoryOperationStore()
 	}
-	computes, volumes, snapshots, attachments, runtimes := replayResourceState(context.Background(), operations)
-	accessStore, _ := operations.(RuntimeAccessStore)
+	computes, volumes, snapshots, attachments, _ := replayResourceState(context.Background(), operations)
 	transferStore, _ := operations.(TransferStore)
 	if transferStore == nil {
 		transferStore = newMemoryTransferStore()
 	}
-	return &Service{provider: provider, computes: computes, volumes: volumes, snapshots: snapshots, attachments: attachments, runtimes: runtimes, operations: operations, access: accessStore, transfers: transferStore, now: func() time.Time { return time.Now().UTC() }}
+	return &Service{provider: provider, computes: computes, volumes: volumes, snapshots: snapshots, attachments: attachments, operations: operations, transfers: transferStore, now: func() time.Time { return time.Now().UTC() }}
 }
 
 func (s *Service) Catalog(_ context.Context) Catalog {
@@ -525,15 +522,9 @@ func (s *Service) CreateWorkspaceRuntime(ctx context.Context, input WorkspaceRun
 		_ = s.recordOperation(ctx, operation, "failed", runtime, err)
 		return runtime, err
 	}
-	if err := s.saveRuntimeAccess(ctx, &runtime); err != nil {
-		return runtime, err
-	}
 	if err := s.recordOperation(ctx, operation, "succeeded", runtime, nil); err != nil {
 		return runtime, err
 	}
-	s.mu.Lock()
-	s.runtimes[input.WorkspaceID] = runtime
-	s.mu.Unlock()
 	return runtime, nil
 }
 
@@ -542,18 +533,7 @@ func (s *Service) WorkspaceRuntimeStatus(ctx context.Context, workspaceID string
 	if err != nil {
 		return runtime, err
 	}
-	if runtime.Status != "not_found" {
-		_ = s.attachRuntimeAccess(ctx, &runtime)
-		return runtime, nil
-	}
-	s.mu.Lock()
-	if existing, ok := s.runtimes[workspaceID]; ok {
-		s.mu.Unlock()
-		_ = s.attachRuntimeAccess(ctx, &existing)
-		return existing, nil
-	}
-	s.mu.Unlock()
-	return WorkspaceRuntime{WorkspaceID: workspaceID, Status: "not_found"}, nil
+	return runtime, nil
 }
 
 func (s *Service) Readiness(ctx context.Context) (map[string]any, error) {
@@ -868,34 +848,6 @@ func newLeaseToken() (string, error) {
 		return "", err
 	}
 	return "lease-" + hex.EncodeToString(data), nil
-}
-
-func (s *Service) saveRuntimeAccess(ctx context.Context, runtime *WorkspaceRuntime) error {
-	if runtime.Access.CredentialStatus == "" && runtime.Access.Password != "" {
-		runtime.Access.CredentialStatus = "configured"
-	}
-	if runtime.Access.CredentialVersion == "" && runtime.Access.Password != "" {
-		runtime.Access.CredentialVersion = "v1"
-	}
-	if runtime.Access.UpdatedAt.IsZero() && runtime.Access.Password != "" {
-		runtime.Access.UpdatedAt = time.Now().UTC()
-	}
-	if s.access == nil {
-		return nil
-	}
-	return s.access.SaveRuntimeAccess(ctx, *runtime)
-}
-
-func (s *Service) attachRuntimeAccess(ctx context.Context, runtime *WorkspaceRuntime) error {
-	if runtime.Access.Password != "" || s.access == nil {
-		return nil
-	}
-	access, ok, err := s.access.RuntimeAccess(ctx, runtime.WorkspaceID)
-	if err != nil || !ok {
-		return err
-	}
-	runtime.Access = access
-	return nil
 }
 
 func replayResourceState(ctx context.Context, operations OperationStore) (map[string]ComputeAllocation, map[string]StorageVolume, map[string]StorageSnapshot, map[string]StorageAttachment, map[string]WorkspaceRuntime) {

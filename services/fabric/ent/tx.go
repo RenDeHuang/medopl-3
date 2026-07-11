@@ -18,8 +18,6 @@ type Tx struct {
 	ContentTransferChunk *ContentTransferChunkClient
 	// FabricOperation is the client for interacting with the FabricOperation builders.
 	FabricOperation *FabricOperationClient
-	// WorkspaceRuntimeAccess is the client for interacting with the WorkspaceRuntimeAccess builders.
-	WorkspaceRuntimeAccess *WorkspaceRuntimeAccessClient
 
 	// lazily loaded.
 	client     *Client
@@ -154,7 +152,6 @@ func (tx *Tx) init() {
 	tx.ContentTransfer = NewContentTransferClient(tx.config)
 	tx.ContentTransferChunk = NewContentTransferChunkClient(tx.config)
 	tx.FabricOperation = NewFabricOperationClient(tx.config)
-	tx.WorkspaceRuntimeAccess = NewWorkspaceRuntimeAccessClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

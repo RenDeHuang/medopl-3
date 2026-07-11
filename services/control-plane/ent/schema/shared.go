@@ -226,7 +226,6 @@ func workspaceFields() []ent.Field {
 		field.String("access_token_status").Default(""),
 		field.String("access_account").Default(""),
 		field.String("access_username").Default(""),
-		field.String("access_password").Default(""),
 		field.String("credential_status").Default(""),
 		field.String("credential_version").Default(""),
 		field.String("credential_secret_ref").Default(""),

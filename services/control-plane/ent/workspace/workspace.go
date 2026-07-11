@@ -53,8 +53,6 @@ const (
 	FieldAccessAccount = "access_account"
 	// FieldAccessUsername holds the string denoting the access_username field in the database.
 	FieldAccessUsername = "access_username"
-	// FieldAccessPassword holds the string denoting the access_password field in the database.
-	FieldAccessPassword = "access_password"
 	// FieldCredentialStatus holds the string denoting the credential_status field in the database.
 	FieldCredentialStatus = "credential_status"
 	// FieldCredentialVersion holds the string denoting the credential_version field in the database.
@@ -90,7 +88,6 @@ var Columns = []string{
 	FieldAccessTokenStatus,
 	FieldAccessAccount,
 	FieldAccessUsername,
-	FieldAccessPassword,
 	FieldCredentialStatus,
 	FieldCredentialVersion,
 	FieldCredentialSecretRef,
@@ -150,8 +147,6 @@ var (
 	DefaultAccessAccount string
 	// DefaultAccessUsername holds the default value on creation for the "access_username" field.
 	DefaultAccessUsername string
-	// DefaultAccessPassword holds the default value on creation for the "access_password" field.
-	DefaultAccessPassword string
 	// DefaultCredentialStatus holds the default value on creation for the "credential_status" field.
 	DefaultCredentialStatus string
 	// DefaultCredentialVersion holds the default value on creation for the "credential_version" field.
@@ -270,11 +265,6 @@ func ByAccessAccount(opts ...sql.OrderTermOption) OrderOption {
 // ByAccessUsername orders the results by the access_username field.
 func ByAccessUsername(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAccessUsername, opts...).ToFunc()
-}
-
-// ByAccessPassword orders the results by the access_password field.
-func ByAccessPassword(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldAccessPassword, opts...).ToFunc()
 }
 
 // ByCredentialStatus orders the results by the credential_status field.

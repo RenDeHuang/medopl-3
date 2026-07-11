@@ -279,7 +279,13 @@ func (s *memoryTableStore) ListWorkspaces(_ context.Context, accountID string) (
 func (s *memoryTableStore) SaveWorkspace(_ context.Context, row map[string]any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.workspaces[stringValue(row["id"])] = cloneMap(row)
+	row = cloneMap(row)
+	access, _ := row["access"].(map[string]any)
+	access = cloneMap(access)
+	delete(access, "password")
+	row["access"] = access
+	delete(row, "runtimePassword")
+	s.workspaces[stringValue(row["id"])] = row
 	return nil
 }
 

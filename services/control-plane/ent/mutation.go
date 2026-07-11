@@ -29777,7 +29777,6 @@ type WorkspaceMutation struct {
 	access_token_status           *string
 	access_account                *string
 	access_username               *string
-	access_password               *string
 	credential_status             *string
 	credential_version            *string
 	credential_secret_ref         *string
@@ -30612,42 +30611,6 @@ func (m *WorkspaceMutation) ResetAccessUsername() {
 	m.access_username = nil
 }
 
-// SetAccessPassword sets the "access_password" field.
-func (m *WorkspaceMutation) SetAccessPassword(s string) {
-	m.access_password = &s
-}
-
-// AccessPassword returns the value of the "access_password" field in the mutation.
-func (m *WorkspaceMutation) AccessPassword() (r string, exists bool) {
-	v := m.access_password
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldAccessPassword returns the old "access_password" field's value of the Workspace entity.
-// If the Workspace object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *WorkspaceMutation) OldAccessPassword(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldAccessPassword is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldAccessPassword requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldAccessPassword: %w", err)
-	}
-	return oldValue.AccessPassword, nil
-}
-
-// ResetAccessPassword resets all changes to the "access_password" field.
-func (m *WorkspaceMutation) ResetAccessPassword() {
-	m.access_password = nil
-}
-
 // SetCredentialStatus sets the "credential_status" field.
 func (m *WorkspaceMutation) SetCredentialStatus(s string) {
 	m.credential_status = &s
@@ -30826,7 +30789,7 @@ func (m *WorkspaceMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *WorkspaceMutation) Fields() []string {
-	fields := make([]string, 0, 25)
+	fields := make([]string, 0, 24)
 	if m.created_at != nil {
 		fields = append(fields, workspace.FieldCreatedAt)
 	}
@@ -30886,9 +30849,6 @@ func (m *WorkspaceMutation) Fields() []string {
 	}
 	if m.access_username != nil {
 		fields = append(fields, workspace.FieldAccessUsername)
-	}
-	if m.access_password != nil {
-		fields = append(fields, workspace.FieldAccessPassword)
 	}
 	if m.credential_status != nil {
 		fields = append(fields, workspace.FieldCredentialStatus)
@@ -30950,8 +30910,6 @@ func (m *WorkspaceMutation) Field(name string) (ent.Value, bool) {
 		return m.AccessAccount()
 	case workspace.FieldAccessUsername:
 		return m.AccessUsername()
-	case workspace.FieldAccessPassword:
-		return m.AccessPassword()
 	case workspace.FieldCredentialStatus:
 		return m.CredentialStatus()
 	case workspace.FieldCredentialVersion:
@@ -31009,8 +30967,6 @@ func (m *WorkspaceMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldAccessAccount(ctx)
 	case workspace.FieldAccessUsername:
 		return m.OldAccessUsername(ctx)
-	case workspace.FieldAccessPassword:
-		return m.OldAccessPassword(ctx)
 	case workspace.FieldCredentialStatus:
 		return m.OldCredentialStatus(ctx)
 	case workspace.FieldCredentialVersion:
@@ -31168,13 +31124,6 @@ func (m *WorkspaceMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetAccessUsername(v)
 		return nil
-	case workspace.FieldAccessPassword:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetAccessPassword(v)
-		return nil
 	case workspace.FieldCredentialStatus:
 		v, ok := value.(string)
 		if !ok {
@@ -31311,9 +31260,6 @@ func (m *WorkspaceMutation) ResetField(name string) error {
 		return nil
 	case workspace.FieldAccessUsername:
 		m.ResetAccessUsername()
-		return nil
-	case workspace.FieldAccessPassword:
-		m.ResetAccessPassword()
 		return nil
 	case workspace.FieldCredentialStatus:
 		m.ResetCredentialStatus()

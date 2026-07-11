@@ -1838,24 +1838,20 @@ func init() {
 	workspaceDescAccessUsername := workspaceFields[20].Descriptor()
 	// workspace.DefaultAccessUsername holds the default value on creation for the access_username field.
 	workspace.DefaultAccessUsername = workspaceDescAccessUsername.Default.(string)
-	// workspaceDescAccessPassword is the schema descriptor for access_password field.
-	workspaceDescAccessPassword := workspaceFields[21].Descriptor()
-	// workspace.DefaultAccessPassword holds the default value on creation for the access_password field.
-	workspace.DefaultAccessPassword = workspaceDescAccessPassword.Default.(string)
 	// workspaceDescCredentialStatus is the schema descriptor for credential_status field.
-	workspaceDescCredentialStatus := workspaceFields[22].Descriptor()
+	workspaceDescCredentialStatus := workspaceFields[21].Descriptor()
 	// workspace.DefaultCredentialStatus holds the default value on creation for the credential_status field.
 	workspace.DefaultCredentialStatus = workspaceDescCredentialStatus.Default.(string)
 	// workspaceDescCredentialVersion is the schema descriptor for credential_version field.
-	workspaceDescCredentialVersion := workspaceFields[23].Descriptor()
+	workspaceDescCredentialVersion := workspaceFields[22].Descriptor()
 	// workspace.DefaultCredentialVersion holds the default value on creation for the credential_version field.
 	workspace.DefaultCredentialVersion = workspaceDescCredentialVersion.Default.(string)
 	// workspaceDescCredentialSecretRef is the schema descriptor for credential_secret_ref field.
-	workspaceDescCredentialSecretRef := workspaceFields[24].Descriptor()
+	workspaceDescCredentialSecretRef := workspaceFields[23].Descriptor()
 	// workspace.DefaultCredentialSecretRef holds the default value on creation for the credential_secret_ref field.
 	workspace.DefaultCredentialSecretRef = workspaceDescCredentialSecretRef.Default.(string)
 	// workspaceDescAccessRequiresLogin is the schema descriptor for access_requires_login field.
-	workspaceDescAccessRequiresLogin := workspaceFields[25].Descriptor()
+	workspaceDescAccessRequiresLogin := workspaceFields[24].Descriptor()
 	// workspace.DefaultAccessRequiresLogin holds the default value on creation for the access_requires_login field.
 	workspace.DefaultAccessRequiresLogin = workspaceDescAccessRequiresLogin.Default.(bool)
 	// workspaceDescID is the schema descriptor for id field.

@@ -57,8 +57,6 @@ type Workspace struct {
 	AccessAccount string `json:"access_account,omitempty"`
 	// AccessUsername holds the value of the "access_username" field.
 	AccessUsername string `json:"access_username,omitempty"`
-	// AccessPassword holds the value of the "access_password" field.
-	AccessPassword string `json:"access_password,omitempty"`
 	// CredentialStatus holds the value of the "credential_status" field.
 	CredentialStatus string `json:"credential_status,omitempty"`
 	// CredentialVersion holds the value of the "credential_version" field.
@@ -77,7 +75,7 @@ func (*Workspace) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case workspace.FieldAccessRequiresLogin:
 			values[i] = new(sql.NullBool)
-		case workspace.FieldID, workspace.FieldAccountID, workspace.FieldOwnerAccountID, workspace.FieldOwnerUserID, workspace.FieldUserID, workspace.FieldName, workspace.FieldURL, workspace.FieldState, workspace.FieldStatus, workspace.FieldStorageID, workspace.FieldCurrentComputeAllocationID, workspace.FieldCurrentAttachmentID, workspace.FieldRuntimeID, workspace.FieldRuntimeServiceName, workspace.FieldRuntimeServiceNameRoot, workspace.FieldServiceName, workspace.FieldAccessTokenStatus, workspace.FieldAccessAccount, workspace.FieldAccessUsername, workspace.FieldAccessPassword, workspace.FieldCredentialStatus, workspace.FieldCredentialVersion, workspace.FieldCredentialSecretRef:
+		case workspace.FieldID, workspace.FieldAccountID, workspace.FieldOwnerAccountID, workspace.FieldOwnerUserID, workspace.FieldUserID, workspace.FieldName, workspace.FieldURL, workspace.FieldState, workspace.FieldStatus, workspace.FieldStorageID, workspace.FieldCurrentComputeAllocationID, workspace.FieldCurrentAttachmentID, workspace.FieldRuntimeID, workspace.FieldRuntimeServiceName, workspace.FieldRuntimeServiceNameRoot, workspace.FieldServiceName, workspace.FieldAccessTokenStatus, workspace.FieldAccessAccount, workspace.FieldAccessUsername, workspace.FieldCredentialStatus, workspace.FieldCredentialVersion, workspace.FieldCredentialSecretRef:
 			values[i] = new(sql.NullString)
 		case workspace.FieldCreatedAt, workspace.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -222,12 +220,6 @@ func (w *Workspace) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				w.AccessUsername = value.String
 			}
-		case workspace.FieldAccessPassword:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field access_password", values[i])
-			} else if value.Valid {
-				w.AccessPassword = value.String
-			}
 		case workspace.FieldCredentialStatus:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field credential_status", values[i])
@@ -347,9 +339,6 @@ func (w *Workspace) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("access_username=")
 	builder.WriteString(w.AccessUsername)
-	builder.WriteString(", ")
-	builder.WriteString("access_password=")
-	builder.WriteString(w.AccessPassword)
 	builder.WriteString(", ")
 	builder.WriteString("credential_status=")
 	builder.WriteString(w.CredentialStatus)

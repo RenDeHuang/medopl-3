@@ -14,7 +14,6 @@ import (
 	"opl-cloud/services/fabric/ent/contenttransfer"
 	"opl-cloud/services/fabric/ent/contenttransferchunk"
 	"opl-cloud/services/fabric/ent/fabricoperation"
-	"opl-cloud/services/fabric/ent/workspaceruntimeaccess"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
@@ -32,8 +31,6 @@ type Client struct {
 	ContentTransferChunk *ContentTransferChunkClient
 	// FabricOperation is the client for interacting with the FabricOperation builders.
 	FabricOperation *FabricOperationClient
-	// WorkspaceRuntimeAccess is the client for interacting with the WorkspaceRuntimeAccess builders.
-	WorkspaceRuntimeAccess *WorkspaceRuntimeAccessClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -48,7 +45,6 @@ func (c *Client) init() {
 	c.ContentTransfer = NewContentTransferClient(c.config)
 	c.ContentTransferChunk = NewContentTransferChunkClient(c.config)
 	c.FabricOperation = NewFabricOperationClient(c.config)
-	c.WorkspaceRuntimeAccess = NewWorkspaceRuntimeAccessClient(c.config)
 }
 
 type (
@@ -139,12 +135,11 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:                    ctx,
-		config:                 cfg,
-		ContentTransfer:        NewContentTransferClient(cfg),
-		ContentTransferChunk:   NewContentTransferChunkClient(cfg),
-		FabricOperation:        NewFabricOperationClient(cfg),
-		WorkspaceRuntimeAccess: NewWorkspaceRuntimeAccessClient(cfg),
+		ctx:                  ctx,
+		config:               cfg,
+		ContentTransfer:      NewContentTransferClient(cfg),
+		ContentTransferChunk: NewContentTransferChunkClient(cfg),
+		FabricOperation:      NewFabricOperationClient(cfg),
 	}, nil
 }
 
@@ -162,12 +157,11 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:                    ctx,
-		config:                 cfg,
-		ContentTransfer:        NewContentTransferClient(cfg),
-		ContentTransferChunk:   NewContentTransferChunkClient(cfg),
-		FabricOperation:        NewFabricOperationClient(cfg),
-		WorkspaceRuntimeAccess: NewWorkspaceRuntimeAccessClient(cfg),
+		ctx:                  ctx,
+		config:               cfg,
+		ContentTransfer:      NewContentTransferClient(cfg),
+		ContentTransferChunk: NewContentTransferChunkClient(cfg),
+		FabricOperation:      NewFabricOperationClient(cfg),
 	}, nil
 }
 
@@ -199,7 +193,6 @@ func (c *Client) Use(hooks ...Hook) {
 	c.ContentTransfer.Use(hooks...)
 	c.ContentTransferChunk.Use(hooks...)
 	c.FabricOperation.Use(hooks...)
-	c.WorkspaceRuntimeAccess.Use(hooks...)
 }
 
 // Intercept adds the query interceptors to all the entity clients.
@@ -208,7 +201,6 @@ func (c *Client) Intercept(interceptors ...Interceptor) {
 	c.ContentTransfer.Intercept(interceptors...)
 	c.ContentTransferChunk.Intercept(interceptors...)
 	c.FabricOperation.Intercept(interceptors...)
-	c.WorkspaceRuntimeAccess.Intercept(interceptors...)
 }
 
 // Mutate implements the ent.Mutator interface.
@@ -220,8 +212,6 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ContentTransferChunk.mutate(ctx, m)
 	case *FabricOperationMutation:
 		return c.FabricOperation.mutate(ctx, m)
-	case *WorkspaceRuntimeAccessMutation:
-		return c.WorkspaceRuntimeAccess.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
@@ -626,147 +616,12 @@ func (c *FabricOperationClient) mutate(ctx context.Context, m *FabricOperationMu
 	}
 }
 
-// WorkspaceRuntimeAccessClient is a client for the WorkspaceRuntimeAccess schema.
-type WorkspaceRuntimeAccessClient struct {
-	config
-}
-
-// NewWorkspaceRuntimeAccessClient returns a client for the WorkspaceRuntimeAccess from the given config.
-func NewWorkspaceRuntimeAccessClient(c config) *WorkspaceRuntimeAccessClient {
-	return &WorkspaceRuntimeAccessClient{config: c}
-}
-
-// Use adds a list of mutation hooks to the hooks stack.
-// A call to `Use(f, g, h)` equals to `workspaceruntimeaccess.Hooks(f(g(h())))`.
-func (c *WorkspaceRuntimeAccessClient) Use(hooks ...Hook) {
-	c.hooks.WorkspaceRuntimeAccess = append(c.hooks.WorkspaceRuntimeAccess, hooks...)
-}
-
-// Intercept adds a list of query interceptors to the interceptors stack.
-// A call to `Intercept(f, g, h)` equals to `workspaceruntimeaccess.Intercept(f(g(h())))`.
-func (c *WorkspaceRuntimeAccessClient) Intercept(interceptors ...Interceptor) {
-	c.inters.WorkspaceRuntimeAccess = append(c.inters.WorkspaceRuntimeAccess, interceptors...)
-}
-
-// Create returns a builder for creating a WorkspaceRuntimeAccess entity.
-func (c *WorkspaceRuntimeAccessClient) Create() *WorkspaceRuntimeAccessCreate {
-	mutation := newWorkspaceRuntimeAccessMutation(c.config, OpCreate)
-	return &WorkspaceRuntimeAccessCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// CreateBulk returns a builder for creating a bulk of WorkspaceRuntimeAccess entities.
-func (c *WorkspaceRuntimeAccessClient) CreateBulk(builders ...*WorkspaceRuntimeAccessCreate) *WorkspaceRuntimeAccessCreateBulk {
-	return &WorkspaceRuntimeAccessCreateBulk{config: c.config, builders: builders}
-}
-
-// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
-// a builder and applies setFunc on it.
-func (c *WorkspaceRuntimeAccessClient) MapCreateBulk(slice any, setFunc func(*WorkspaceRuntimeAccessCreate, int)) *WorkspaceRuntimeAccessCreateBulk {
-	rv := reflect.ValueOf(slice)
-	if rv.Kind() != reflect.Slice {
-		return &WorkspaceRuntimeAccessCreateBulk{err: fmt.Errorf("calling to WorkspaceRuntimeAccessClient.MapCreateBulk with wrong type %T, need slice", slice)}
-	}
-	builders := make([]*WorkspaceRuntimeAccessCreate, rv.Len())
-	for i := 0; i < rv.Len(); i++ {
-		builders[i] = c.Create()
-		setFunc(builders[i], i)
-	}
-	return &WorkspaceRuntimeAccessCreateBulk{config: c.config, builders: builders}
-}
-
-// Update returns an update builder for WorkspaceRuntimeAccess.
-func (c *WorkspaceRuntimeAccessClient) Update() *WorkspaceRuntimeAccessUpdate {
-	mutation := newWorkspaceRuntimeAccessMutation(c.config, OpUpdate)
-	return &WorkspaceRuntimeAccessUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOne returns an update builder for the given entity.
-func (c *WorkspaceRuntimeAccessClient) UpdateOne(wra *WorkspaceRuntimeAccess) *WorkspaceRuntimeAccessUpdateOne {
-	mutation := newWorkspaceRuntimeAccessMutation(c.config, OpUpdateOne, withWorkspaceRuntimeAccess(wra))
-	return &WorkspaceRuntimeAccessUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// UpdateOneID returns an update builder for the given id.
-func (c *WorkspaceRuntimeAccessClient) UpdateOneID(id string) *WorkspaceRuntimeAccessUpdateOne {
-	mutation := newWorkspaceRuntimeAccessMutation(c.config, OpUpdateOne, withWorkspaceRuntimeAccessID(id))
-	return &WorkspaceRuntimeAccessUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// Delete returns a delete builder for WorkspaceRuntimeAccess.
-func (c *WorkspaceRuntimeAccessClient) Delete() *WorkspaceRuntimeAccessDelete {
-	mutation := newWorkspaceRuntimeAccessMutation(c.config, OpDelete)
-	return &WorkspaceRuntimeAccessDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
-}
-
-// DeleteOne returns a builder for deleting the given entity.
-func (c *WorkspaceRuntimeAccessClient) DeleteOne(wra *WorkspaceRuntimeAccess) *WorkspaceRuntimeAccessDeleteOne {
-	return c.DeleteOneID(wra.ID)
-}
-
-// DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *WorkspaceRuntimeAccessClient) DeleteOneID(id string) *WorkspaceRuntimeAccessDeleteOne {
-	builder := c.Delete().Where(workspaceruntimeaccess.ID(id))
-	builder.mutation.id = &id
-	builder.mutation.op = OpDeleteOne
-	return &WorkspaceRuntimeAccessDeleteOne{builder}
-}
-
-// Query returns a query builder for WorkspaceRuntimeAccess.
-func (c *WorkspaceRuntimeAccessClient) Query() *WorkspaceRuntimeAccessQuery {
-	return &WorkspaceRuntimeAccessQuery{
-		config: c.config,
-		ctx:    &QueryContext{Type: TypeWorkspaceRuntimeAccess},
-		inters: c.Interceptors(),
-	}
-}
-
-// Get returns a WorkspaceRuntimeAccess entity by its id.
-func (c *WorkspaceRuntimeAccessClient) Get(ctx context.Context, id string) (*WorkspaceRuntimeAccess, error) {
-	return c.Query().Where(workspaceruntimeaccess.ID(id)).Only(ctx)
-}
-
-// GetX is like Get, but panics if an error occurs.
-func (c *WorkspaceRuntimeAccessClient) GetX(ctx context.Context, id string) *WorkspaceRuntimeAccess {
-	obj, err := c.Get(ctx, id)
-	if err != nil {
-		panic(err)
-	}
-	return obj
-}
-
-// Hooks returns the client hooks.
-func (c *WorkspaceRuntimeAccessClient) Hooks() []Hook {
-	return c.hooks.WorkspaceRuntimeAccess
-}
-
-// Interceptors returns the client interceptors.
-func (c *WorkspaceRuntimeAccessClient) Interceptors() []Interceptor {
-	return c.inters.WorkspaceRuntimeAccess
-}
-
-func (c *WorkspaceRuntimeAccessClient) mutate(ctx context.Context, m *WorkspaceRuntimeAccessMutation) (Value, error) {
-	switch m.Op() {
-	case OpCreate:
-		return (&WorkspaceRuntimeAccessCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdate:
-		return (&WorkspaceRuntimeAccessUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpUpdateOne:
-		return (&WorkspaceRuntimeAccessUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
-	case OpDelete, OpDeleteOne:
-		return (&WorkspaceRuntimeAccessDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
-	default:
-		return nil, fmt.Errorf("ent: unknown WorkspaceRuntimeAccess mutation op: %q", m.Op())
-	}
-}
-
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		ContentTransfer, ContentTransferChunk, FabricOperation,
-		WorkspaceRuntimeAccess []ent.Hook
+		ContentTransfer, ContentTransferChunk, FabricOperation []ent.Hook
 	}
 	inters struct {
-		ContentTransfer, ContentTransferChunk, FabricOperation,
-		WorkspaceRuntimeAccess []ent.Interceptor
+		ContentTransfer, ContentTransferChunk, FabricOperation []ent.Interceptor
 	}
 )

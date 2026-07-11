@@ -60,6 +60,23 @@ func TestEntStateStoreIgnoresDuplicateEventProjectionIDs(t *testing.T) {
 	}
 }
 
+func TestEntStateStoreNeverPersistsWorkspacePassword(t *testing.T) {
+	store := NewTestEntStateStore(t, t.TempDir()+"/workspace-secret.sqlite")
+	if err := store.SaveWorkspace(context.Background(), map[string]any{
+		"id": "ws-alpha", "accountId": "acct-alpha",
+		"access": map[string]any{"username": "opl", "password": "must-not-persist", "secretRef": "opl-compute-alpha-env"},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := store.ListWorkspaces(context.Background(), "acct-alpha")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if password := stringValue(valueOrNil(rows[0], "access", "password")); password != "" {
+		t.Fatalf("Workspace password persisted: %q", password)
+	}
+}
+
 func TestEntStateStorePersistsWalletTransactionWalletAfter(t *testing.T) {
 	store := NewTestEntStateStore(t, t.TempDir()+"/wallet-after.sqlite")
 	if err := store.SaveWalletTransaction(context.Background(), map[string]any{

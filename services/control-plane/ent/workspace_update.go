@@ -300,20 +300,6 @@ func (wu *WorkspaceUpdate) SetNillableAccessUsername(s *string) *WorkspaceUpdate
 	return wu
 }
 
-// SetAccessPassword sets the "access_password" field.
-func (wu *WorkspaceUpdate) SetAccessPassword(s string) *WorkspaceUpdate {
-	wu.mutation.SetAccessPassword(s)
-	return wu
-}
-
-// SetNillableAccessPassword sets the "access_password" field if the given value is not nil.
-func (wu *WorkspaceUpdate) SetNillableAccessPassword(s *string) *WorkspaceUpdate {
-	if s != nil {
-		wu.SetAccessPassword(*s)
-	}
-	return wu
-}
-
 // SetCredentialStatus sets the "credential_status" field.
 func (wu *WorkspaceUpdate) SetCredentialStatus(s string) *WorkspaceUpdate {
 	wu.mutation.SetCredentialStatus(s)
@@ -479,9 +465,6 @@ func (wu *WorkspaceUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := wu.mutation.AccessUsername(); ok {
 		_spec.SetField(workspace.FieldAccessUsername, field.TypeString, value)
-	}
-	if value, ok := wu.mutation.AccessPassword(); ok {
-		_spec.SetField(workspace.FieldAccessPassword, field.TypeString, value)
 	}
 	if value, ok := wu.mutation.CredentialStatus(); ok {
 		_spec.SetField(workspace.FieldCredentialStatus, field.TypeString, value)
@@ -787,20 +770,6 @@ func (wuo *WorkspaceUpdateOne) SetNillableAccessUsername(s *string) *WorkspaceUp
 	return wuo
 }
 
-// SetAccessPassword sets the "access_password" field.
-func (wuo *WorkspaceUpdateOne) SetAccessPassword(s string) *WorkspaceUpdateOne {
-	wuo.mutation.SetAccessPassword(s)
-	return wuo
-}
-
-// SetNillableAccessPassword sets the "access_password" field if the given value is not nil.
-func (wuo *WorkspaceUpdateOne) SetNillableAccessPassword(s *string) *WorkspaceUpdateOne {
-	if s != nil {
-		wuo.SetAccessPassword(*s)
-	}
-	return wuo
-}
-
 // SetCredentialStatus sets the "credential_status" field.
 func (wuo *WorkspaceUpdateOne) SetCredentialStatus(s string) *WorkspaceUpdateOne {
 	wuo.mutation.SetCredentialStatus(s)
@@ -996,9 +965,6 @@ func (wuo *WorkspaceUpdateOne) sqlSave(ctx context.Context) (_node *Workspace, e
 	}
 	if value, ok := wuo.mutation.AccessUsername(); ok {
 		_spec.SetField(workspace.FieldAccessUsername, field.TypeString, value)
-	}
-	if value, ok := wuo.mutation.AccessPassword(); ok {
-		_spec.SetField(workspace.FieldAccessPassword, field.TypeString, value)
 	}
 	if value, ok := wuo.mutation.CredentialStatus(); ok {
 		_spec.SetField(workspace.FieldCredentialStatus, field.TypeString, value)

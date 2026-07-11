@@ -94,31 +94,11 @@ var (
 		Columns:    FabricOperationsColumns,
 		PrimaryKey: []*schema.Column{FabricOperationsColumns[0]},
 	}
-	// FabricWorkspaceRuntimeAccessColumns holds the columns for the "fabric_workspace_runtime_access" table.
-	FabricWorkspaceRuntimeAccessColumns = []*schema.Column{
-		{Name: "workspace_id", Type: field.TypeString, Unique: true},
-		{Name: "runtime_id", Type: field.TypeString},
-		{Name: "url", Type: field.TypeString},
-		{Name: "service_name", Type: field.TypeString, Default: ""},
-		{Name: "username", Type: field.TypeString},
-		{Name: "password", Type: field.TypeString},
-		{Name: "credential_status", Type: field.TypeString},
-		{Name: "credential_version", Type: field.TypeString},
-		{Name: "secret_ref", Type: field.TypeString, Default: ""},
-		{Name: "updated_at", Type: field.TypeTime},
-	}
-	// FabricWorkspaceRuntimeAccessTable holds the schema information for the "fabric_workspace_runtime_access" table.
-	FabricWorkspaceRuntimeAccessTable = &schema.Table{
-		Name:       "fabric_workspace_runtime_access",
-		Columns:    FabricWorkspaceRuntimeAccessColumns,
-		PrimaryKey: []*schema.Column{FabricWorkspaceRuntimeAccessColumns[0]},
-	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		FabricContentTransfersTable,
 		FabricContentTransferChunksTable,
 		FabricOperationsTable,
-		FabricWorkspaceRuntimeAccessTable,
 	}
 )
 
@@ -128,8 +108,5 @@ func init() {
 	}
 	FabricContentTransferChunksTable.Annotation = &entsql.Annotation{
 		Table: "fabric_content_transfer_chunks",
-	}
-	FabricWorkspaceRuntimeAccessTable.Annotation = &entsql.Annotation{
-		Table: "fabric_workspace_runtime_access",
 	}
 }

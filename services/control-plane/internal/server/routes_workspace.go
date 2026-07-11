@@ -114,6 +114,13 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}
-		writeJSON(w, http.StatusCreated, body)
+		response := cloneMap(body)
+		if workspace.RuntimePassword != "" {
+			access, _ := response["access"].(map[string]any)
+			access = cloneMap(access)
+			access["password"] = workspace.RuntimePassword
+			response["access"] = access
+		}
+		writeJSON(w, http.StatusCreated, response)
 	}))
 }

@@ -688,7 +688,6 @@ var (
 		{Name: "access_token_status", Type: field.TypeString, Default: ""},
 		{Name: "access_account", Type: field.TypeString, Default: ""},
 		{Name: "access_username", Type: field.TypeString, Default: ""},
-		{Name: "access_password", Type: field.TypeString, Default: ""},
 		{Name: "credential_status", Type: field.TypeString, Default: ""},
 		{Name: "credential_version", Type: field.TypeString, Default: ""},
 		{Name: "credential_secret_ref", Type: field.TypeString, Default: ""},

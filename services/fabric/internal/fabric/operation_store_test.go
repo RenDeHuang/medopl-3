@@ -6,7 +6,6 @@ import (
 
 	"opl-cloud/services/fabric/ent/contenttransfer"
 	"opl-cloud/services/fabric/ent/contenttransferchunk"
-	"opl-cloud/services/fabric/ent/workspaceruntimeaccess"
 )
 
 func TestPostgresOperationSchemaDefinesFabricOperationsAuditTable(t *testing.T) {
@@ -39,10 +38,11 @@ func TestPostgresOperationSchemaDefinesContentTransferTables(t *testing.T) {
 	}
 }
 
-func TestPostgresOperationSchemaUsesEntWorkspaceRuntimeAccessTable(t *testing.T) {
+func TestPostgresOperationSchemaDropsRetiredWorkspaceRuntimeAccessTable(t *testing.T) {
 	schema := PostgresOperationSchemaSQL()
-	marker := "CREATE TABLE IF NOT EXISTS " + workspaceruntimeaccess.Table
-	if !strings.Contains(schema, marker) {
-		t.Fatalf("schema missing Ent runtime access table %q", workspaceruntimeaccess.Table)
+	createAt := strings.Index(schema, "CREATE TABLE IF NOT EXISTS fabric_workspace_runtime_access")
+	dropAt := strings.Index(schema, "DROP TABLE IF EXISTS fabric_workspace_runtime_access")
+	if dropAt < 0 || dropAt < createAt {
+		t.Fatal("Fabric hard-cut migration must drop the retired runtime access table")
 	}
 }

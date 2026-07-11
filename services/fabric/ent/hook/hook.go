@@ -44,18 +44,6 @@ func (f FabricOperationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Va
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.FabricOperationMutation", m)
 }
 
-// The WorkspaceRuntimeAccessFunc type is an adapter to allow the use of ordinary
-// function as WorkspaceRuntimeAccess mutator.
-type WorkspaceRuntimeAccessFunc func(context.Context, *ent.WorkspaceRuntimeAccessMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f WorkspaceRuntimeAccessFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.WorkspaceRuntimeAccessMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.WorkspaceRuntimeAccessMutation", m)
-}
-
 // Condition is a hook condition function.
 type Condition func(context.Context, ent.Mutation) bool
 

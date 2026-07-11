@@ -49,9 +49,6 @@ func (app *controlPlaneServer) saveWorkspaceProjection(workspace domain.Workspac
 		access["account"] = workspace.RuntimeUsername
 		access["username"] = workspace.RuntimeUsername
 	}
-	if workspace.RuntimePassword != "" {
-		access["password"] = workspace.RuntimePassword
-	}
 	if workspace.CredentialStatus != "" {
 		access["credentialStatus"] = workspace.CredentialStatus
 	}

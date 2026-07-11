@@ -217,7 +217,7 @@ func TestRuntimeStatusRecoversWorkspaceResourcesFromKubernetesLabels(t *testing.
 				},
 			}}}), nil
 		}
-		want := []string{"get", "deployment/opl-compute-alpha", "pvc/opl-storage-alpha-data", "service/opl-compute-alpha", "ingress/opl-cloud", "endpoints/opl-compute-alpha", "-o", "json"}
+		want := []string{"get", "deployment/opl-compute-alpha", "pvc/opl-storage-alpha-data", "service/opl-compute-alpha", "ingress/opl-cloud", "endpoints/opl-compute-alpha", "secret/opl-compute-alpha-env", "--ignore-not-found", "-o", "json"}
 		if !slices.Equal(args, want) {
 			t.Fatalf("kubectl args = %#v, want %#v", args, want)
 		}
@@ -227,6 +227,7 @@ func TestRuntimeStatusRecoversWorkspaceResourcesFromKubernetesLabels(t *testing.
 			service,
 			map[string]any{"kind": "Ingress", "metadata": map[string]any{"name": "opl-cloud"}, "spec": map[string]any{"rules": []any{map[string]any{"http": map[string]any{"paths": []any{map[string]any{"path": "/", "backend": map[string]any{"service": map[string]any{"name": gatewayService, "port": map[string]any{"number": 8787}}}}}}}}}},
 			map[string]any{"kind": "Endpoints", "metadata": map[string]any{"name": "opl-compute-alpha"}, "subsets": []any{map[string]any{"addresses": []any{map[string]any{"ip": "10.0.0.8"}}}}},
+			map[string]any{"kind": "Secret", "metadata": map[string]any{"name": "opl-compute-alpha-env"}, "data": map[string]any{"webui_password": base64.StdEncoding.EncodeToString([]byte("secret-password"))}},
 		}}), nil
 	}
 
@@ -237,6 +238,16 @@ func TestRuntimeStatusRecoversWorkspaceResourcesFromKubernetesLabels(t *testing.
 	}
 	if !status.Ready {
 		t.Fatalf("status = %#v, want ready", status)
+	}
+	if status.Access.Password != "secret-password" || status.Access.Username != webuiUsername || status.Access.CredentialStatus != "configured" || status.Access.SecretRef != "opl-compute-alpha-env" {
+		t.Fatalf("runtime access must come transiently from Workspace Secret: %#v", status.Access)
+	}
+}
+
+func TestRuntimeAccessFromMissingWorkspaceSecret(t *testing.T) {
+	access, check := runtimeAccessFromSecret(nil, "opl-compute-alpha-env")
+	if access.Password != "" || access.CredentialStatus != "missing" || access.SecretRef != "opl-compute-alpha-env" || check.OK {
+		t.Fatalf("missing Secret access = %#v check = %#v", access, check)
 	}
 }
 

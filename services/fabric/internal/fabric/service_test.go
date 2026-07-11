@@ -473,8 +473,8 @@ func TestServiceReplaysResourceStateFromOperationStore(t *testing.T) {
 		t.Fatalf("detach replayed attachment = %#v err=%v", detached, err)
 	}
 	status, err := replayedAgain.WorkspaceRuntimeStatus(ctx, runtime.WorkspaceID)
-	if err != nil || status.Status != "running" {
-		t.Fatalf("replayed runtime status = %#v err=%v", status, err)
+	if err != nil || status.Status != "not_found" || status.Access.Password != "" {
+		t.Fatalf("runtime status must come from provider/Secret, not replayed facts: %#v err=%v", status, err)
 	}
 }
 

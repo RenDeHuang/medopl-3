@@ -402,6 +402,7 @@ func workspaceResponse(row map[string]any) map[string]any {
 	if row == nil {
 		row = map[string]any{}
 	}
+	delete(row, "runtimePassword")
 	row["ownerAccountId"] = firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]))
 	row["ownerUserId"] = firstNonEmpty(stringValue(row["ownerUserId"]), stringValue(row["ownerId"]))
 	row["state"] = firstNonEmpty(stringValue(row["state"]), stringValue(row["status"]))
@@ -414,14 +415,12 @@ func workspaceResponse(row map[string]any) map[string]any {
 	row["runtimeStatus"] = runtimeStatus
 	access, _ := row["access"].(map[string]any)
 	access = cloneMap(access)
+	delete(access, "password")
 	access["tokenStatus"] = firstNonEmpty(stringValue(access["tokenStatus"]), "active")
 	access["requiresLogin"] = false
 	if username := stringValue(row["runtimeUsername"]); username != "" {
 		access["account"] = username
 		access["username"] = username
-	}
-	if password := stringValue(row["runtimePassword"]); password != "" {
-		access["password"] = password
 	}
 	if status := stringValue(row["credentialStatus"]); status != "" {
 		access["credentialStatus"] = status

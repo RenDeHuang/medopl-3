@@ -168,8 +168,15 @@ func TestCreateWorkspaceHTTPUsesControlPlaneService(t *testing.T) {
 	if access := workspace["access"].(map[string]any); access["account"] != "admin" || access["password"] != "runtime-password-alpha" {
 		t.Fatalf("workspace response must include runtime login credentials from Fabric: %#v", access)
 	}
+	if workspace["runtimePassword"] != nil {
+		t.Fatalf("workspace response leaked internal runtimePassword field: %#v", workspace)
+	}
 	if slices.Contains(calls[3:], "fabric.compute") || slices.Contains(calls[3:], "fabric.storage") {
 		t.Fatalf("workspace create must not allocate replacement resources: %#v", calls)
+	}
+	management := requestWithSession(t, server, session, http.MethodGet, "/api/management/state", "")
+	if strings.Contains(management.Body.String(), "runtime-password-alpha") {
+		t.Fatalf("Control Plane persisted Workspace password in state or audit: %s", management.Body.String())
 	}
 }
 
@@ -322,9 +329,54 @@ func TestWorkspaceRuntimeStatusPassesFabricChecks(t *testing.T) {
 	if body["ready"] != false {
 		t.Fatalf("ready must come from Fabric runtime state: %#v", body)
 	}
+	access := body["access"].(map[string]any)
+	if access["password"] != "runtime-password-alpha" || access["secretRef"] != "opl-compute-from-fabric-env" {
+		t.Fatalf("runtime status must return transient Fabric credentials: %#v", body)
+	}
 	checks := body["checks"].([]any)
 	if len(checks) != 2 || checks[0].(map[string]any)["name"] != "deployment_ready" || checks[1].(map[string]any)["name"] != "service_endpoints_ready" {
 		t.Fatalf("runtime checks must pass through Fabric details: %#v", body["checks"])
+	}
+}
+
+func TestWorkspaceRuntimeStatusForbidsCrossAccountSecretRead(t *testing.T) {
+	calls := []string{}
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{calls: &calls}))
+	admin := operatorSessionForTest(t, server)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside@lab.example","accountId":"acct-beta","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	outsider := loginForTest(t, server, "outside@lab.example", "CorrectHorseBatteryStaple!")
+
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"compute-from-fabric","storageId":"volume-from-fabric","mountPath":"/data"}`)
+	workspace := createResourceWithSession(t, server, admin, http.MethodPost, "/api/workspaces", `{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
+
+	before := len(calls)
+	response := requestWithSession(t, server, outsider, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"`+stringValue(workspace["id"])+`"}`)
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "account_scope_forbidden") {
+		t.Fatalf("cross-account runtime status = %d: %s", response.Code, response.Body.String())
+	}
+	if len(calls) != before {
+		t.Fatalf("cross-account status reached Fabric Secret lookup: %#v", calls[before:])
+	}
+}
+
+func TestWorkspaceListNeverExposesPersistedPassword(t *testing.T) {
+	app := newControlPlaneApp()
+	mustStore(t, app.tables.SaveWorkspace(context.Background(), map[string]any{
+		"id": "ws-alpha", "accountId": "acct-alpha", "state": "running",
+		"access": map[string]any{"username": "opl", "password": "must-not-leak", "secretRef": "opl-compute-alpha-env"},
+	}))
+	stored, err := app.tables.ListWorkspaces(context.Background(), "acct-alpha")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if password := stringValue(valueOrNil(stored[0], "access", "password")); password != "" {
+		t.Fatalf("memory store retained Workspace password: %q", password)
+	}
+	workspace := app.state("acct-alpha", nil)["workspaces"].([]any)[0].(map[string]any)
+	if password := stringValue(valueOrNil(workspace, "access", "password")); password != "" {
+		t.Fatalf("Workspace list exposed password: %q", password)
 	}
 }
 
@@ -775,6 +827,7 @@ func (f *fakeFabricClient) WorkspaceRuntimeStatus(_ context.Context, workspaceID
 		URL:         "https://workspace.medopl.cn/w/" + workspaceID + "/",
 		Status:      "unready",
 		ServiceName: "opl-compute-from-fabric",
+		Access:      clients.WorkspaceRuntimeAccess{Username: "opl", Password: "runtime-password-alpha", CredentialStatus: "configured", CredentialVersion: "v1", SecretRef: "opl-compute-from-fabric-env"},
 		Ready:       false,
 		Checks: []any{
 			map[string]any{"name": "deployment_ready", "ok": true},

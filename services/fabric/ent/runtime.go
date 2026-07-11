@@ -7,7 +7,6 @@ import (
 	"opl-cloud/services/fabric/ent/contenttransferchunk"
 	"opl-cloud/services/fabric/ent/fabricoperation"
 	"opl-cloud/services/fabric/ent/schema"
-	"opl-cloud/services/fabric/ent/workspaceruntimeaccess"
 	"time"
 )
 
@@ -149,48 +148,4 @@ func init() {
 	fabricoperationDescID := fabricoperationFields[0].Descriptor()
 	// fabricoperation.IDValidator is a validator for the "id" field. It is called by the builders before save.
 	fabricoperation.IDValidator = fabricoperationDescID.Validators[0].(func(string) error)
-	workspaceruntimeaccessFields := schema.WorkspaceRuntimeAccess{}.Fields()
-	_ = workspaceruntimeaccessFields
-	// workspaceruntimeaccessDescRuntimeID is the schema descriptor for runtime_id field.
-	workspaceruntimeaccessDescRuntimeID := workspaceruntimeaccessFields[1].Descriptor()
-	// workspaceruntimeaccess.RuntimeIDValidator is a validator for the "runtime_id" field. It is called by the builders before save.
-	workspaceruntimeaccess.RuntimeIDValidator = workspaceruntimeaccessDescRuntimeID.Validators[0].(func(string) error)
-	// workspaceruntimeaccessDescURL is the schema descriptor for url field.
-	workspaceruntimeaccessDescURL := workspaceruntimeaccessFields[2].Descriptor()
-	// workspaceruntimeaccess.URLValidator is a validator for the "url" field. It is called by the builders before save.
-	workspaceruntimeaccess.URLValidator = workspaceruntimeaccessDescURL.Validators[0].(func(string) error)
-	// workspaceruntimeaccessDescServiceName is the schema descriptor for service_name field.
-	workspaceruntimeaccessDescServiceName := workspaceruntimeaccessFields[3].Descriptor()
-	// workspaceruntimeaccess.DefaultServiceName holds the default value on creation for the service_name field.
-	workspaceruntimeaccess.DefaultServiceName = workspaceruntimeaccessDescServiceName.Default.(string)
-	// workspaceruntimeaccessDescUsername is the schema descriptor for username field.
-	workspaceruntimeaccessDescUsername := workspaceruntimeaccessFields[4].Descriptor()
-	// workspaceruntimeaccess.UsernameValidator is a validator for the "username" field. It is called by the builders before save.
-	workspaceruntimeaccess.UsernameValidator = workspaceruntimeaccessDescUsername.Validators[0].(func(string) error)
-	// workspaceruntimeaccessDescPassword is the schema descriptor for password field.
-	workspaceruntimeaccessDescPassword := workspaceruntimeaccessFields[5].Descriptor()
-	// workspaceruntimeaccess.PasswordValidator is a validator for the "password" field. It is called by the builders before save.
-	workspaceruntimeaccess.PasswordValidator = workspaceruntimeaccessDescPassword.Validators[0].(func(string) error)
-	// workspaceruntimeaccessDescCredentialStatus is the schema descriptor for credential_status field.
-	workspaceruntimeaccessDescCredentialStatus := workspaceruntimeaccessFields[6].Descriptor()
-	// workspaceruntimeaccess.CredentialStatusValidator is a validator for the "credential_status" field. It is called by the builders before save.
-	workspaceruntimeaccess.CredentialStatusValidator = workspaceruntimeaccessDescCredentialStatus.Validators[0].(func(string) error)
-	// workspaceruntimeaccessDescCredentialVersion is the schema descriptor for credential_version field.
-	workspaceruntimeaccessDescCredentialVersion := workspaceruntimeaccessFields[7].Descriptor()
-	// workspaceruntimeaccess.CredentialVersionValidator is a validator for the "credential_version" field. It is called by the builders before save.
-	workspaceruntimeaccess.CredentialVersionValidator = workspaceruntimeaccessDescCredentialVersion.Validators[0].(func(string) error)
-	// workspaceruntimeaccessDescSecretRef is the schema descriptor for secret_ref field.
-	workspaceruntimeaccessDescSecretRef := workspaceruntimeaccessFields[8].Descriptor()
-	// workspaceruntimeaccess.DefaultSecretRef holds the default value on creation for the secret_ref field.
-	workspaceruntimeaccess.DefaultSecretRef = workspaceruntimeaccessDescSecretRef.Default.(string)
-	// workspaceruntimeaccessDescUpdatedAt is the schema descriptor for updated_at field.
-	workspaceruntimeaccessDescUpdatedAt := workspaceruntimeaccessFields[9].Descriptor()
-	// workspaceruntimeaccess.DefaultUpdatedAt holds the default value on creation for the updated_at field.
-	workspaceruntimeaccess.DefaultUpdatedAt = workspaceruntimeaccessDescUpdatedAt.Default.(func() time.Time)
-	// workspaceruntimeaccess.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
-	workspaceruntimeaccess.UpdateDefaultUpdatedAt = workspaceruntimeaccessDescUpdatedAt.UpdateDefault.(func() time.Time)
-	// workspaceruntimeaccessDescID is the schema descriptor for id field.
-	workspaceruntimeaccessDescID := workspaceruntimeaccessFields[0].Descriptor()
-	// workspaceruntimeaccess.IDValidator is a validator for the "id" field. It is called by the builders before save.
-	workspaceruntimeaccess.IDValidator = workspaceruntimeaccessDescID.Validators[0].(func(string) error)
 }

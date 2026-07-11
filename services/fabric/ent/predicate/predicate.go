@@ -14,6 +14,3 @@ type ContentTransferChunk func(*sql.Selector)
 
 // FabricOperation is the predicate function for fabricoperation builders.
 type FabricOperation func(*sql.Selector)
-
-// WorkspaceRuntimeAccess is the predicate function for workspaceruntimeaccess builders.
-type WorkspaceRuntimeAccess func(*sql.Selector)
