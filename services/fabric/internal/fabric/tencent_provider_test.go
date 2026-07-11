@@ -179,21 +179,27 @@ func TestWorkspaceManifestSkipsGatewaySecretWhenCodexKeyMissing(t *testing.T) {
 	}
 }
 
-func TestTencentRuntimeCreationReturnsCredentialMetadataOnly(t *testing.T) {
+func TestTencentRuntimeCreationUsesActualReadinessAfterApply(t *testing.T) {
 	t.Setenv("OPL_AIONUI_ADMIN_PASSWORD_SEED", "workspace-secret-2026-very-long")
 	provider := NewTencentProvider()
+	var calls [][]string
 	provider.kubectl = func(_ context.Context, args []string, _ []byte) ([]byte, error) {
-		if !slices.Equal(args, []string{"apply", "-f", "-"}) {
-			t.Fatalf("kubectl args = %#v", args)
+		calls = append(calls, append([]string(nil), args...))
+		if slices.Equal(args, []string{"apply", "-f", "-"}) {
+			return nil, nil
 		}
+		if slices.Equal(args, []string{"get", "deployment,service", "-l", "oplcloud.cn/workspace-id=ws-alpha", "-o", "json"}) {
+			return mustJSON(map[string]any{"kind": "List", "items": []any{}}), nil
+		}
+		t.Fatalf("unexpected kubectl args: %#v", args)
 		return nil, nil
 	}
-	runtime, err := provider.CreateWorkspaceRuntime(context.Background(), WorkspaceRuntimeInput{WorkspaceID: "ws-alpha", IdempotencyKey: "runtime-once"}, ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", ServiceName: "opl-compute-alpha"}, StorageVolume{ID: "storage-alpha", ProviderResourceID: "pvc/opl-storage-alpha-data"})
+	runtime, err := provider.CreateWorkspaceRuntime(context.Background(), WorkspaceRuntimeInput{WorkspaceID: "ws-alpha", IdempotencyKey: "runtime-unready"}, ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", ServiceName: "opl-compute-alpha"}, StorageVolume{ID: "storage-alpha", ProviderResourceID: "pvc/opl-storage-alpha-data"})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("create runtime: %v", err)
 	}
-	if runtime.Access.Password != "" || runtime.Access.CredentialStatus != "configured" || runtime.Access.SecretRef != "opl-compute-alpha-env" {
-		t.Fatalf("runtime creation must not return the generated Secret value: %#v", runtime.Access)
+	if runtime.Ready || runtime.Status != "not_found" || runtime.Access.CredentialStatus == "configured" || len(calls) != 2 {
+		t.Fatalf("apply must be followed by actual readiness: runtime=%#v calls=%#v", runtime, calls)
 	}
 }
 

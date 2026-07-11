@@ -13,6 +13,7 @@ var ErrJobLeaseMismatch = errors.New("job_lease_mismatch")
 var ErrCatalogRecordNotFound = errors.New("catalog_record_not_found")
 var ErrCatalogVersionConflict = errors.New("catalog_version_conflict")
 var ErrInvalidPubMedQuery = errors.New("invalid_pubmed_query")
+var ErrRuntimeIdempotencyConflict = errors.New("runtime_idempotency_conflict")
 
 type Catalog struct {
 	SchemaVersion     int                `json:"schemaVersion"`

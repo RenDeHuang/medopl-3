@@ -73,6 +73,14 @@ func TestTransferServiceFailureIsLogged(t *testing.T) {
 	}
 }
 
+func TestRuntimeIdempotencyConflictIsHTTPConflict(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	writeResult(recorder, fabric.WorkspaceRuntime{}, fabric.ErrRuntimeIdempotencyConflict)
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusConflict)
+	}
+}
+
 func TestContentTransferHTTPResumesAndDownloads(t *testing.T) {
 	server := NewServer(fabric.NewService(testProvider{}), "internal-secret")
 	body := []byte("workspace bytes")

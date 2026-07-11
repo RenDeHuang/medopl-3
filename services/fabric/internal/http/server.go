@@ -315,6 +315,10 @@ func decodeWrite(w http.ResponseWriter, r *http.Request, idempotencyKey *string,
 }
 
 func writeResult(w http.ResponseWriter, body any, err error) {
+	if errors.Is(err, fabric.ErrRuntimeIdempotencyConflict) {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

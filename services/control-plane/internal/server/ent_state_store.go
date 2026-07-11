@@ -863,6 +863,109 @@ func (s *postgresEntStateStore) SaveWorkspace(ctx context.Context, row map[strin
 	return s.replaceRecord(ctx, row, func(id string) error { return s.client.Workspace.DeleteOneID(id).Exec(ctx) }, func() any { return s.client.Workspace.Create() }, workspaceEntFields)
 }
 
+func (s *postgresEntStateStore) ClaimWorkspaceResume(ctx context.Context, workspaceID string, operation map[string]any) (map[string]any, bool, error) {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	claim, err := decodeWorkspaceResumeOperation(operation)
+	if err != nil {
+		return nil, false, err
+	}
+	existing, err := tx.RuntimeOperation.Get(ctx, stringValue(operation["id"]))
+	if err == nil {
+		existingRecord := recordFromEnt(existing, runtimeOpEntFields)
+		result, err := decodeWorkspaceResumeOperation(existingRecord)
+		if err != nil {
+			return nil, false, err
+		}
+		if result.RequestHash != claim.RequestHash {
+			return nil, false, errIdempotencyConflict
+		}
+		if existing.Status == "succeeded" && result.Response != nil {
+			return cloneMap(result.Response), true, tx.Commit()
+		}
+		if existing.Status == "started" && result.LeaseExpiresAt != nil && result.LeaseExpiresAt.After(time.Now().UTC()) {
+			return nil, false, errWorkspaceResumeInProgress
+		}
+		update := tx.RuntimeOperation.UpdateOneID(existing.ID).SetStatus("started").SetResult(stringValue(operation["result"]))
+		if existing.Status == "retryable" {
+			update.Where(runtimeoperation.StatusEQ("retryable"))
+		} else {
+			update.Where(runtimeoperation.StatusEQ("started"), runtimeoperation.ResultEQ(existing.Result))
+		}
+		if _, err := update.Save(ctx); err != nil {
+			if controlplaneent.IsNotFound(err) {
+				return nil, false, errWorkspaceResumeInProgress
+			}
+			return nil, false, err
+		}
+		if _, err := tx.Workspace.UpdateOneID(workspaceID).SetState("resuming").SetStatus("resuming").Save(ctx); err != nil {
+			return nil, false, err
+		}
+		return nil, false, tx.Commit()
+	}
+	if !controlplaneent.IsNotFound(err) {
+		return nil, false, err
+	}
+	if _, err := tx.Workspace.UpdateOneID(workspaceID).
+		Where(workspace.Or(workspace.StateIn("suspended", "stopped"), workspace.And(workspace.StateEQ(""), workspace.StatusIn("suspended", "stopped")))).
+		SetState("resuming").SetStatus("resuming").Save(ctx); err != nil {
+		if controlplaneent.IsNotFound(err) {
+			concurrent, queryErr := tx.RuntimeOperation.Get(ctx, stringValue(operation["id"]))
+			if queryErr == nil {
+				result, decodeErr := decodeWorkspaceResumeOperation(recordFromEnt(concurrent, runtimeOpEntFields))
+				if decodeErr != nil {
+					return nil, false, decodeErr
+				}
+				if result.RequestHash != claim.RequestHash {
+					return nil, false, errIdempotencyConflict
+				}
+				if concurrent.Status == "succeeded" && result.Response != nil {
+					return cloneMap(result.Response), true, tx.Commit()
+				}
+				return nil, false, errWorkspaceResumeInProgress
+			}
+			return nil, false, errWorkspaceResumeInProgress
+		}
+		return nil, false, err
+	}
+	store := &postgresEntStateStore{client: tx.Client()}
+	if err := store.SaveRuntimeOperation(ctx, operation); err != nil {
+		return nil, false, err
+	}
+	return nil, false, tx.Commit()
+}
+
+func (s *postgresEntStateStore) FailWorkspaceResume(ctx context.Context, workspaceID string, operationID string, errorCode string) error {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	operation, err := tx.RuntimeOperation.Get(ctx, operationID)
+	if controlplaneent.IsNotFound(err) {
+		return tx.Commit()
+	}
+	if err != nil {
+		return err
+	}
+	result, err := decodeWorkspaceResumeOperation(recordFromEnt(operation, runtimeOpEntFields))
+	if err != nil {
+		return err
+	}
+	result.ErrorCode = errorCode
+	result.LeaseExpiresAt = nil
+	if _, err := tx.RuntimeOperation.UpdateOneID(operationID).Where(runtimeoperation.StatusEQ("started")).SetStatus("retryable").SetResult(encodeWorkspaceResumeOperation(result)).Save(ctx); err != nil && !controlplaneent.IsNotFound(err) {
+		return err
+	}
+	if _, err := tx.Workspace.UpdateOneID(workspaceID).Where(workspace.Or(workspace.StateEQ("resuming"), workspace.StatusEQ("resuming"))).SetState("suspended").SetStatus("suspended").Save(ctx); err != nil && !controlplaneent.IsNotFound(err) {
+		return err
+	}
+	return tx.Commit()
+}
+
 func (s *postgresEntStateStore) CommitWorkspaceResume(ctx context.Context, workspace map[string]any, audit map[string]any, operation map[string]any) error {
 	tx, err := s.client.Tx(ctx)
 	if err != nil {

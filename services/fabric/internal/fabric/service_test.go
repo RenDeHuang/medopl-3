@@ -478,6 +478,28 @@ func TestServiceReplaysResourceStateFromOperationStore(t *testing.T) {
 	}
 }
 
+func TestCreateWorkspaceRuntimeReplaysIdempotentlyBeforeProvider(t *testing.T) {
+	provider := &countingRuntimeProvider{}
+	service := NewServiceWithOperationStore(provider, NewMemoryOperationStore())
+	service.computes["compute-alpha"] = ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", WorkspaceID: "workspace-alpha", ServiceName: "opl-compute-alpha"}
+	service.volumes["storage-alpha"] = StorageVolume{ID: "storage-alpha", AccountID: "acct-alpha", WorkspaceID: "workspace-alpha", ProviderResourceID: "pvc/storage-alpha"}
+	service.volumes["storage-other"] = StorageVolume{ID: "storage-other", AccountID: "acct-alpha", WorkspaceID: "workspace-alpha", ProviderResourceID: "pvc/storage-other"}
+	input := WorkspaceRuntimeInput{WorkspaceID: "workspace-alpha", ComputeID: "compute-alpha", VolumeID: "storage-alpha", ImageID: "one-person-lab-app", IdempotencyKey: "runtime-once"}
+	first, err := service.CreateWorkspaceRuntime(context.Background(), input)
+	if err != nil {
+		t.Fatalf("create runtime: %v", err)
+	}
+	replayed, err := service.CreateWorkspaceRuntime(context.Background(), input)
+	if err != nil || replayed.ID != first.ID || provider.calls != 1 {
+		t.Fatalf("runtime replay = %#v err=%v providerCalls=%d", replayed, err, provider.calls)
+	}
+	changed := input
+	changed.VolumeID = "storage-other"
+	if _, err := service.CreateWorkspaceRuntime(context.Background(), changed); !errors.Is(err, ErrRuntimeIdempotencyConflict) {
+		t.Fatalf("changed replay error = %v, want ErrRuntimeIdempotencyConflict", err)
+	}
+}
+
 func waitForOperation(t *testing.T, service *Service, action string, resourceKind string, resourceID string, status string) {
 	t.Helper()
 	deadline := time.Now().Add(time.Second)
@@ -524,6 +546,16 @@ func (p *blockingProvider) CreateComputeAllocation(ctx context.Context, input Co
 }
 
 type testProvider struct{}
+
+type countingRuntimeProvider struct {
+	testProvider
+	calls int
+}
+
+func (p *countingRuntimeProvider) CreateWorkspaceRuntime(_ context.Context, input WorkspaceRuntimeInput, _ ComputeAllocation, _ StorageVolume) (WorkspaceRuntime, error) {
+	p.calls++
+	return WorkspaceRuntime{ID: "runtime-alpha", WorkspaceID: input.WorkspaceID, Status: "running", Ready: true, ServiceName: "opl-compute-alpha", ProviderRequestID: providerRequestID("runtime", input.IdempotencyKey)}, nil
+}
 
 type contentTestProvider struct {
 	testProvider

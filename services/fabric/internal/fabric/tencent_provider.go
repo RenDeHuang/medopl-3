@@ -386,12 +386,23 @@ func (p *TencentProvider) CreateWorkspaceRuntime(ctx context.Context, input Work
 	}
 	now := time.Now().UTC()
 	serviceName := firstNonEmpty(compute.ServiceName, k8sName(compute.ID))
-	token := stableID(input.WorkspaceID, input.IdempotencyKey, now.String())[:24]
+	token := stableID(input.WorkspaceID, input.IdempotencyKey)[:24]
 	tags := oplCostTags(compute.AccountID, input.WorkspaceID, input.WorkspaceID, input.OperationID)
 	if _, err := p.kubectl(ctx, []string{"apply", "-f", "-"}, workspaceManifest(input.WorkspaceID, input.WorkspaceID, token, serviceName, compute, volume, tags)); err != nil {
 		return WorkspaceRuntime{}, err
 	}
-	return WorkspaceRuntime{ID: fabricID("rt", input.WorkspaceID, now), WorkspaceID: input.WorkspaceID, URL: fmt.Sprintf("https://%s/w/%s/", workspaceDomain(), input.WorkspaceID), Status: "running", ServiceName: serviceName, ProviderRequestID: providerRequestID("runtime", input.IdempotencyKey), Access: RuntimeAccess{Username: webuiUsername, CredentialStatus: "configured", CredentialVersion: "v1", SecretRef: serviceName + "-env", UpdatedAt: now}, Ready: true, CostTags: tags, CreatedAt: now}, nil
+	runtime, err := p.WorkspaceRuntimeStatus(ctx, input.WorkspaceID)
+	if err != nil {
+		return WorkspaceRuntime{}, err
+	}
+	runtime.ID = "rt_" + stableSuffix(input.WorkspaceID, input.IdempotencyKey)[:18]
+	runtime.WorkspaceID = input.WorkspaceID
+	runtime.URL = firstNonEmpty(runtime.URL, fmt.Sprintf("https://%s/w/%s/", workspaceDomain(), input.WorkspaceID))
+	runtime.ServiceName = firstNonEmpty(runtime.ServiceName, serviceName)
+	runtime.ProviderRequestID = providerRequestID("runtime", input.IdempotencyKey)
+	runtime.CostTags = tags
+	runtime.CreatedAt = now
+	return runtime, nil
 }
 
 func (p *TencentProvider) WorkspaceRuntimeStatus(ctx context.Context, workspaceID string) (WorkspaceRuntime, error) {

@@ -1,6 +1,34 @@
 package server
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"time"
+)
+
+var errWorkspaceResumeInProgress = errors.New("workspace_resume_in_progress")
+var errWorkspaceNotSuspended = errors.New("workspace_not_suspended")
+
+type workspaceResumeOperationResult struct {
+	RequestHash    string         `json:"requestHash"`
+	LeaseExpiresAt *time.Time     `json:"leaseExpiresAt,omitempty"`
+	Response       map[string]any `json:"response,omitempty"`
+	ErrorCode      string         `json:"errorCode,omitempty"`
+}
+
+func decodeWorkspaceResumeOperation(operation map[string]any) (workspaceResumeOperationResult, error) {
+	var result workspaceResumeOperationResult
+	if err := json.Unmarshal([]byte(stringValue(operation["result"])), &result); err != nil || result.RequestHash == "" {
+		return workspaceResumeOperationResult{}, errors.New("invalid_workspace_resume_operation")
+	}
+	return result, nil
+}
+
+func encodeWorkspaceResumeOperation(result workspaceResumeOperationResult) string {
+	payload, _ := json.Marshal(result)
+	return string(payload)
+}
 
 type controlPlaneTableStore interface {
 	ListUsers(ctx context.Context, includeDeleted bool) ([]map[string]any, error)
@@ -25,6 +53,8 @@ type controlPlaneTableStore interface {
 	DeleteAttachment(ctx context.Context, id string) error
 	ListWorkspaces(ctx context.Context, accountID string) ([]map[string]any, error)
 	SaveWorkspace(ctx context.Context, row map[string]any) error
+	ClaimWorkspaceResume(ctx context.Context, workspaceID string, operation map[string]any) (map[string]any, bool, error)
+	FailWorkspaceResume(ctx context.Context, workspaceID string, operationID string, errorCode string) error
 	CommitWorkspaceResume(ctx context.Context, workspace map[string]any, audit map[string]any, operation map[string]any) error
 	DeleteWorkspace(ctx context.Context, id string) error
 	ListWorkspaceBackups(ctx context.Context, workspaceID string) ([]map[string]any, error)

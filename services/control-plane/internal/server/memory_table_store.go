@@ -4,6 +4,7 @@ import (
 	"context"
 	"sort"
 	"sync"
+	"time"
 )
 
 type memoryTableStore struct {
@@ -285,6 +286,80 @@ func (s *memoryTableStore) SaveWorkspace(_ context.Context, row map[string]any) 
 	delete(access, "password")
 	row["access"] = access
 	s.workspaces[stringValue(row["id"])] = row
+	return nil
+}
+
+func (s *memoryTableStore) ClaimWorkspaceResume(_ context.Context, workspaceID string, operation map[string]any) (map[string]any, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now().UTC()
+	for index := range s.runtimeOps {
+		existing := s.runtimeOps[index]
+		if stringValue(existing["id"]) != stringValue(operation["id"]) {
+			continue
+		}
+		result, err := decodeWorkspaceResumeOperation(existing)
+		if err != nil {
+			return nil, false, err
+		}
+		claim, _ := decodeWorkspaceResumeOperation(operation)
+		if result.RequestHash != claim.RequestHash {
+			return nil, false, errIdempotencyConflict
+		}
+		if stringValue(existing["status"]) == "succeeded" && result.Response != nil {
+			return cloneMap(result.Response), true, nil
+		}
+		if stringValue(existing["status"]) == "started" && result.LeaseExpiresAt != nil && result.LeaseExpiresAt.After(now) {
+			return nil, false, errWorkspaceResumeInProgress
+		}
+		s.runtimeOps[index] = cloneMap(operation)
+		workspace := cloneMap(s.workspaces[workspaceID])
+		workspace["state"], workspace["status"] = "resuming", "resuming"
+		s.workspaces[workspaceID] = workspace
+		return nil, false, nil
+	}
+	workspace, ok := s.workspaces[workspaceID]
+	if !ok {
+		return nil, false, errWorkspaceNotSuspended
+	}
+	state := firstNonEmpty(stringValue(workspace["state"]), stringValue(workspace["status"]))
+	if state == "resuming" {
+		return nil, false, errWorkspaceResumeInProgress
+	}
+	if state != "suspended" && state != "stopped" {
+		return nil, false, errWorkspaceNotSuspended
+	}
+	workspace = cloneMap(workspace)
+	workspace["state"], workspace["status"] = "resuming", "resuming"
+	s.workspaces[workspaceID] = workspace
+	s.runtimeOps = append(s.runtimeOps, cloneMap(operation))
+	return nil, false, nil
+}
+
+func (s *memoryTableStore) FailWorkspaceResume(_ context.Context, workspaceID string, operationID string, errorCode string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	workspace := cloneMap(s.workspaces[workspaceID])
+	if firstNonEmpty(stringValue(workspace["state"]), stringValue(workspace["status"])) == "resuming" {
+		workspace["state"], workspace["status"] = "suspended", "suspended"
+		s.workspaces[workspaceID] = workspace
+	}
+	for index := range s.runtimeOps {
+		if stringValue(s.runtimeOps[index]["id"]) != operationID {
+			continue
+		}
+		operation := cloneMap(s.runtimeOps[index])
+		result, err := decodeWorkspaceResumeOperation(operation)
+		if err != nil {
+			return err
+		}
+		result.ErrorCode = errorCode
+		result.LeaseExpiresAt = nil
+		operation["status"] = "retryable"
+		operation["result"] = encodeWorkspaceResumeOperation(result)
+		s.runtimeOps[index] = operation
+		break
+	}
 	return nil
 }
 

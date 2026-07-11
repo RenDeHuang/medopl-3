@@ -35,6 +35,7 @@ type Provider interface {
 type Service struct {
 	provider       Provider
 	mu             sync.Mutex
+	runtimeMu      sync.Mutex
 	jobMu          sync.Mutex
 	computes       map[string]ComputeAllocation
 	volumes        map[string]StorageVolume
@@ -513,11 +514,35 @@ func (s *Service) DetachStorageAttachment(ctx context.Context, attachmentID stri
 }
 
 func (s *Service) CreateWorkspaceRuntime(ctx context.Context, input WorkspaceRuntimeInput) (WorkspaceRuntime, error) {
+	// ponytail: one Fabric process serializes runtime apply; use a store-backed lease before running multiple replicas.
+	s.runtimeMu.Lock()
+	defer s.runtimeMu.Unlock()
+	requestHash := hashInput(input)
+	operations, err := s.operations.List(ctx)
+	if err != nil {
+		return WorkspaceRuntime{}, err
+	}
+	for index := len(operations) - 1; index >= 0; index-- {
+		existing := operations[index]
+		if existing.Action != "create_workspace_runtime" || existing.IdempotencyKey != input.IdempotencyKey {
+			continue
+		}
+		if existing.RequestHash != requestHash {
+			return WorkspaceRuntime{}, ErrRuntimeIdempotencyConflict
+		}
+		if existing.Status == "succeeded" {
+			var runtime WorkspaceRuntime
+			if decodeOperationResource(existing, &runtime) {
+				runtime.Access.Password = ""
+				return runtime, nil
+			}
+		}
+	}
 	s.mu.Lock()
 	compute := s.computes[input.ComputeID]
 	volume := s.volumes[input.VolumeID]
 	s.mu.Unlock()
-	operation := newOperation("create_workspace_runtime", "workspace_runtime", input.WorkspaceID, compute.AccountID, input.WorkspaceID, input.IdempotencyKey, hashInput(input), time.Now().UTC())
+	operation := newOperation("create_workspace_runtime", "workspace_runtime", input.WorkspaceID, compute.AccountID, input.WorkspaceID, input.IdempotencyKey, requestHash, time.Now().UTC())
 	input.OperationID = operation.OperationID
 	if err := validateRuntimeInput(input, compute, volume); err != nil {
 		operation.ProviderRequestID = providerRequestID("runtime", input.IdempotencyKey)

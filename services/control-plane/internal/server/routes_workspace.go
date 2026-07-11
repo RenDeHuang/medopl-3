@@ -1,8 +1,9 @@
 package server
 
 import (
-	"encoding/json"
+	"errors"
 	"net/http"
+	"time"
 
 	"opl-cloud/services/control-plane/internal/controlplane"
 )
@@ -107,25 +108,20 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 			if stringValue(operation["id"]) != operationID {
 				continue
 			}
-			var result struct {
-				RequestHash string         `json:"requestHash"`
-				Response    map[string]any `json:"response"`
-			}
-			if json.Unmarshal([]byte(stringValue(operation["result"])), &result) != nil || result.Response == nil {
+			result, err := decodeWorkspaceResumeOperation(operation)
+			if err != nil {
 				writeError(w, http.StatusInternalServerError, "state_read_failed")
 				return
 			}
 			if result.RequestHash != requestHash {
-				writeError(w, http.StatusConflict, "idempotency_conflict")
+				writeError(w, http.StatusConflict, errIdempotencyConflict.Error())
 				return
 			}
-			writeJSON(w, http.StatusOK, result.Response)
-			return
-		}
-		state := firstNonEmpty(stringValue(workspace["state"]), stringValue(workspace["status"]))
-		if state != "suspended" && state != "stopped" {
-			writeError(w, http.StatusConflict, "workspace_not_suspended")
-			return
+			if stringValue(operation["status"]) == "succeeded" && result.Response != nil {
+				writeJSON(w, http.StatusOK, result.Response)
+				return
+			}
+			break
 		}
 		accountID := firstNonEmpty(stringValue(workspace["accountId"]), stringValue(workspace["ownerAccountId"]))
 		storageID := stringValue(workspace["storageId"])
@@ -151,12 +147,46 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 			writeError(w, http.StatusConflict, "resume_resources_not_ready")
 			return
 		}
+		before := cloneMap(workspace)
+		leaseExpiresAt := time.Now().UTC().Add(2 * time.Minute)
+		claimOperation := map[string]any{
+			"id": operationID, "operationId": operationID, "accountId": accountID, "workspaceId": workspaceID, "resourceId": workspaceID, "resourceKind": "workspace_runtime", "action": "workspace.resume",
+			"provider": stringValue(workspace["provider"]), "status": "started", "computeAllocationId": computeID, "storageId": storageID, "attachmentId": attachmentID,
+			"result": encodeWorkspaceResumeOperation(workspaceResumeOperationResult{RequestHash: requestHash, LeaseExpiresAt: &leaseExpiresAt}),
+		}
+		replayed, replay, err := app.tables.ClaimWorkspaceResume(r.Context(), workspaceID, claimOperation)
+		if err != nil {
+			switch {
+			case errors.Is(err, errIdempotencyConflict):
+				writeError(w, http.StatusConflict, errIdempotencyConflict.Error())
+			case errors.Is(err, errWorkspaceResumeInProgress):
+				writeError(w, http.StatusConflict, errWorkspaceResumeInProgress.Error())
+			case errors.Is(err, errWorkspaceNotSuspended):
+				writeError(w, http.StatusConflict, errWorkspaceNotSuspended.Error())
+			default:
+				writeError(w, http.StatusInternalServerError, "state_persist_failed")
+			}
+			return
+		}
+		if replay {
+			writeJSON(w, http.StatusOK, replayed)
+			return
+		}
+		state := firstNonEmpty(stringValue(workspace["state"]), stringValue(workspace["status"]))
+		if state != "suspended" && state != "stopped" {
+			_ = app.tables.FailWorkspaceResume(r.Context(), workspaceID, operationID, "workspace_not_suspended")
+			writeError(w, http.StatusConflict, "workspace_not_suspended")
+			return
+		}
 		resumed, err := service.ResumeWorkspace(r.Context(), controlplane.ResumeWorkspaceInput{WorkspaceID: workspaceID, AccountID: accountID, OwnerID: stringValue(workspace["ownerUserId"]), Name: stringValue(workspace["name"]), PackageID: stringValue(workspace["packageId"]), URL: stringValue(workspace["url"]), AttachmentID: attachmentID, ComputeID: computeID, VolumeID: storageID}, key)
 		if err != nil {
+			if failErr := app.tables.FailWorkspaceResume(r.Context(), workspaceID, operationID, "fabric_resume_failed"); failErr != nil {
+				writeError(w, http.StatusInternalServerError, "state_persist_failed")
+				return
+			}
 			writeUpstreamError(w, err)
 			return
 		}
-		before := cloneMap(workspace)
 		workspace["state"], workspace["status"] = resumed.Status, resumed.Status
 		workspace["computeAllocationId"], workspace["currentComputeAllocationId"] = resumed.ComputeID, resumed.ComputeID
 		workspace["attachmentId"], workspace["currentAttachmentId"] = resumed.AttachmentID, resumed.AttachmentID
@@ -187,10 +217,10 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 		}
 		workspace["access"] = access
 		body := workspaceResponse(cloneMap(workspace))
-		result, _ := json.Marshal(map[string]any{"requestHash": requestHash, "response": body})
-		operation := map[string]any{"id": operationID, "operationId": operationID, "accountId": accountID, "workspaceId": workspaceID, "resourceId": workspaceID, "resourceKind": "workspace_runtime", "action": "workspace.resume", "provider": stringValue(workspace["provider"]), "providerRequestId": resumed.RuntimeID, "status": "succeeded", "result": string(result), "computeAllocationId": resumed.ComputeID, "storageId": resumed.VolumeID, "attachmentId": resumed.AttachmentID, "runtimeServiceName": resumed.RuntimeServiceName}
+		operation := map[string]any{"id": operationID, "operationId": operationID, "accountId": accountID, "workspaceId": workspaceID, "resourceId": workspaceID, "resourceKind": "workspace_runtime", "action": "workspace.resume", "provider": stringValue(workspace["provider"]), "providerRequestId": resumed.RuntimeID, "status": "succeeded", "result": encodeWorkspaceResumeOperation(workspaceResumeOperationResult{RequestHash: requestHash, Response: body}), "computeAllocationId": resumed.ComputeID, "storageId": resumed.VolumeID, "attachmentId": resumed.AttachmentID, "runtimeServiceName": resumed.RuntimeServiceName}
 		audit := app.auditEvent(r, "workspace.resume", "workspace", workspaceID, accountID, before, body, "succeeded")
 		if err := app.tables.CommitWorkspaceResume(r.Context(), workspace, audit, operation); err != nil {
+			_ = app.tables.FailWorkspaceResume(r.Context(), workspaceID, operationID, "resume_commit_failed")
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}

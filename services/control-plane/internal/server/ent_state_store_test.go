@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"entgo.io/ent/dialect"
 	_ "github.com/mattn/go-sqlite3"
@@ -95,6 +96,39 @@ func TestEntStateStoreWorkspaceResumeCommitRollsBackAllFacts(t *testing.T) {
 	operations, _ := store.ListRuntimeOperations(ctx)
 	if len(workspaces) != 1 || workspaces[0]["state"] != "suspended" || len(audits) != 0 || len(operations) != 0 {
 		t.Fatalf("failed resume commit was not atomic: workspaces=%#v audits=%#v operations=%#v", workspaces, audits, operations)
+	}
+}
+
+func TestEntStateStoreWorkspaceResumeClaimIsRetryableAndExclusive(t *testing.T) {
+	ctx := context.Background()
+	store := NewTestEntStateStore(t, t.TempDir()+"/resume-claim.sqlite")
+	if err := store.SaveWorkspace(ctx, map[string]any{"id": "workspace-alpha", "accountId": "acct-alpha", "state": "suspended", "status": "suspended"}); err != nil {
+		t.Fatalf("seed workspace: %v", err)
+	}
+	lease := time.Now().UTC().Add(time.Minute)
+	operation := map[string]any{"id": "resume-alpha", "operationId": "resume-alpha", "workspaceId": "workspace-alpha", "resourceId": "workspace-alpha", "resourceKind": "workspace_runtime", "action": "workspace.resume", "status": "started", "result": encodeWorkspaceResumeOperation(workspaceResumeOperationResult{RequestHash: "hash-alpha", LeaseExpiresAt: &lease})}
+	if _, replayed, err := store.ClaimWorkspaceResume(ctx, "workspace-alpha", operation); err != nil || replayed {
+		t.Fatalf("claim = replayed:%v err:%v", replayed, err)
+	}
+	if _, _, err := store.ClaimWorkspaceResume(ctx, "workspace-alpha", operation); !errors.Is(err, errWorkspaceResumeInProgress) {
+		t.Fatalf("same-key concurrent claim error = %v", err)
+	}
+	different := cloneMap(operation)
+	different["id"], different["operationId"] = "resume-other", "resume-other"
+	different["result"] = encodeWorkspaceResumeOperation(workspaceResumeOperationResult{RequestHash: "hash-other", LeaseExpiresAt: &lease})
+	if _, _, err := store.ClaimWorkspaceResume(ctx, "workspace-alpha", different); !errors.Is(err, errWorkspaceResumeInProgress) {
+		t.Fatalf("different-key concurrent claim error = %v", err)
+	}
+	if err := store.FailWorkspaceResume(ctx, "workspace-alpha", "resume-alpha", "fabric_failed"); err != nil {
+		t.Fatalf("fail claim: %v", err)
+	}
+	workspaces, _ := store.ListWorkspaces(ctx, "")
+	operations, _ := store.ListRuntimeOperations(ctx)
+	if len(workspaces) != 1 || workspaces[0]["state"] != "suspended" || len(operations) != 1 || operations[0]["status"] != "retryable" {
+		t.Fatalf("retryable state: workspaces=%#v operations=%#v", workspaces, operations)
+	}
+	if _, replayed, err := store.ClaimWorkspaceResume(ctx, "workspace-alpha", operation); err != nil || replayed {
+		t.Fatalf("retry claim = replayed:%v err:%v", replayed, err)
 	}
 }
 

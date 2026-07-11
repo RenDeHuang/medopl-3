@@ -314,8 +314,8 @@ func TestResumeWorkspaceAuditFailureDoesNotPersistRunningProjection(t *testing.T
 		t.Fatalf("audit failure left partial running projection: %#v", workspace[0])
 	}
 	operations, _ := store.ListRuntimeOperations(context.Background())
-	if len(operations) != 0 {
-		t.Fatalf("audit failure persisted idempotency result: %#v", operations)
+	if len(operations) != 1 || operations[0]["status"] != "retryable" {
+		t.Fatalf("audit failure must leave deterministic retryable operation: %#v", operations)
 	}
 }
 
@@ -345,6 +345,61 @@ func TestResumeWorkspaceKeepsUnreadyRuntimeClosedAndCredentialsIntact(t *testing
 	stored, _ := store.ListWorkspaces(context.Background(), "")
 	if stringValue(nested(stored[0], "runtime", "serviceName")) != "" || stringValue(stored[0]["runtimeServiceName"]) != "" || stringValue(stored[0]["serviceName"]) != "" {
 		t.Fatalf("provisioning resume kept stale service pointers: %#v", stored[0])
+	}
+}
+
+func TestConcurrentWorkspaceResumeClaimsBeforeFabricSideEffects(t *testing.T) {
+	store := newMemoryTableStore()
+	mustStore(t, store.SaveWorkspace(context.Background(), map[string]any{"id": "workspace-alpha", "accountId": "acct-alpha", "ownerAccountId": "acct-alpha", "state": "suspended", "status": "suspended", "storageId": "storage-alpha", "url": "https://workspace.medopl.cn/w/workspace-alpha/", "access": map[string]any{"tokenStatus": "suspended"}}))
+	mustStore(t, store.SaveStorage(context.Background(), map[string]any{"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "workspace-alpha", "status": "available"}))
+	mustStore(t, store.SaveCompute(context.Background(), map[string]any{"id": "compute-new", "accountId": "acct-alpha", "workspaceId": "workspace-alpha", "status": "running"}))
+	mustStore(t, store.SaveAttachment(context.Background(), map[string]any{"id": "attachment-new", "accountId": "acct-alpha", "workspaceId": "workspace-alpha", "computeAllocationId": "compute-new", "storageId": "storage-alpha", "status": "attached"}))
+	fabric := &blockingResumeFabricClient{fakeFabricClient: fakeFabricClient{}, entered: make(chan struct{}, 2), release: make(chan struct{})}
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, fabric), store)
+	if err != nil {
+		t.Fatalf("create resume server: %v", err)
+	}
+	session := operatorSessionForTest(t, server)
+	resume := func(key string) <-chan *httptest.ResponseRecorder {
+		done := make(chan *httptest.ResponseRecorder, 1)
+		req := httptest.NewRequest(http.MethodPost, "/api/workspaces/workspace-alpha/resume", bytes.NewBufferString(`{"computeAllocationId":"compute-new","attachmentId":"attachment-new"}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Idempotency-Key", key)
+		addAuth(req, session)
+		go func() {
+			rec := httptest.NewRecorder()
+			server.ServeHTTP(rec, req)
+			done <- rec
+		}()
+		return done
+	}
+	first := resume("resume-first")
+	select {
+	case <-fabric.entered:
+	case <-time.After(time.Second):
+		t.Fatal("first resume did not reach Fabric")
+	}
+	second := resume("resume-second")
+	select {
+	case <-fabric.entered:
+		close(fabric.release)
+		<-first
+		<-second
+		t.Fatal("concurrent resume reached Fabric twice")
+	case response := <-second:
+		if response.Code != http.StatusConflict {
+			close(fabric.release)
+			<-first
+			t.Fatalf("second resume status = %d: %s", response.Code, response.Body.String())
+		}
+	case <-time.After(time.Second):
+		close(fabric.release)
+		<-first
+		t.Fatal("second resume did not resolve deterministically")
+	}
+	close(fabric.release)
+	if response := <-first; response.Code != http.StatusOK {
+		t.Fatalf("first resume status = %d: %s", response.Code, response.Body.String())
 	}
 }
 
@@ -944,6 +999,22 @@ func (catalogFabricClient) Catalog(_ context.Context) (clients.FabricCatalog, er
 type fakeFabricClient struct {
 	calls   *[]string
 	runtime clients.WorkspaceRuntime
+}
+
+type blockingResumeFabricClient struct {
+	fakeFabricClient
+	entered chan struct{}
+	release chan struct{}
+}
+
+func (f *blockingResumeFabricClient) CreateWorkspaceRuntime(ctx context.Context, input clients.WorkspaceRuntimeInput, key string) (clients.WorkspaceRuntime, error) {
+	f.entered <- struct{}{}
+	select {
+	case <-f.release:
+		return f.fakeFabricClient.CreateWorkspaceRuntime(ctx, input, key)
+	case <-ctx.Done():
+		return clients.WorkspaceRuntime{}, ctx.Err()
+	}
 }
 
 func (f *fakeFabricClient) record(call string) {
