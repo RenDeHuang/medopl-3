@@ -52,6 +52,11 @@ test("Ledger general receipt uses the shared execution identity and states", asy
   });
   assert.ok(ledger.generalReceiptV1.forbiddenContent.includes("rawCredential"));
   assert.ok(ledger.receiptTypes.includes("execution.receipt.v1"));
+  assert.deepEqual(ledger.generalReceiptV1.reviewPolicy.statuses, ["active", "superseded"]);
+  assert.equal(ledger.generalReceiptV1.reviewPolicy.idempotencyNamespace, "review_policy");
+  assert.deepEqual(ledger.generalReceiptV1.reviewGate.statuses, ["accepted", "review_required", "review_blocked"]);
+  assert.match(ledger.generalReceiptV1.reviewGate.continuationRule, /without an active policy is ineligible/);
+  assert.match(ledger.generalReceiptV1.reviewGate.receiptReadRule, /omit continuationId and continuation/);
 });
 
 test("service owners match the shared execution contract", async () => {
@@ -63,6 +68,8 @@ test("service owners match the shared execution contract", async () => {
   }
   assert.deepEqual(boundary.externalServices.gateway.owns, ["gatewayKeys", "routePolicies", "modelPolicies", "usageEvents"]);
   assert.equal(boundary.externalServices.gateway.evidenceSink, "ledger");
+  assert.ok(boundary.services.ledger.owns.includes("reviewPolicies"));
+  assert.ok(boundary.services.ledger.readApis.includes("reviewGateEvaluation"));
 });
 
 test("published HTTP APIs preserve service ownership without compatibility routes", async () => {
@@ -104,4 +111,5 @@ test("published HTTP APIs preserve service ownership without compatibility route
   assert.ok(ledger.receiptTypes.includes("artifact.manifest.v1"));
   assert.ok(ledger.receiptTypes.includes("review.result.v1"));
   assert.equal(ledger.generalReceiptV1.api.resolveContinuation, shared.httpApis.ledger.resolveContinuation);
+  assert.equal(ledger.generalReceiptV1.api.evaluateReviewGate, "POST /ledger/review-gates/evaluate");
 });

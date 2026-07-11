@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "owner": "OPL Platform Architecture",
   "purpose": "Target ownership contract for Console UI, Control Plane, Ledger, Fabric, and the external Gateway boundary.",
   "state": "current",
@@ -51,6 +51,7 @@
         "evidenceReceipts",
         "artifactManifests",
         "reviewResults",
+        "reviewPolicies",
         "continuations",
         "auditEvents",
         "idempotencyKeys",
@@ -58,7 +59,9 @@
       ],
       "writeProtocol": "append_first_with_idempotency",
       "readApis": [
-        "receiptQuery"
+        "receiptQuery",
+        "reviewPolicyQuery",
+        "reviewGateEvaluation"
       ]
     },
     "fabric": {

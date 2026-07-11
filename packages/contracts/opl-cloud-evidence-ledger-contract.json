@@ -1,14 +1,14 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "owner": "OPL Ledger",
   "purpose": "General execution evidence receipts and current control-plane lifecycle receipts.",
   "state": "current",
-  "machineBoundary": "General receipt states, identity, provenance, artifact, review, continuation, idempotency, and current receipt API shape.",
+  "machineBoundary": "General receipt states, identity, provenance, artifact, review result, review policy and gate, continuation, idempotency, and current receipt API shape.",
   "lifecycle": {
     "type": "long_term_contract",
     "removalCondition": "Replace only with a newer current contract for the same boundary."
   },
-  "currentScope": "general execution receipt v1, Artifact Manifests, Review Results, continuation, and current Workspace lifecycle receipts",
+  "currentScope": "general execution receipt v1, Artifact Manifests, Review Results, versioned Review Policies and gates, continuation, and current Workspace lifecycle receipts",
   "receiptTypes": [
     "workspace.created",
     "workspace.compute_stopped",
@@ -40,7 +40,11 @@
       "recordArtifact": "POST /ledger/artifacts",
       "queryArtifact": "GET /ledger/artifacts/<artifactId>",
       "recordReview": "POST /ledger/reviews",
-      "queryReview": "GET /ledger/reviews/<reviewId>"
+      "queryReview": "GET /ledger/reviews/<reviewId>",
+      "createReviewPolicy": "POST /ledger/review-policies",
+      "listReviewPolicies": "GET /ledger/review-policies",
+      "queryReviewPolicy": "GET /ledger/review-policies/<policyId>",
+      "evaluateReviewGate": "POST /ledger/review-gates/evaluate"
     },
     "query": {
       "endpoint": "GET /ledger/receipts",
@@ -127,6 +131,55 @@
       "jobId",
       "createdAt"
     ],
+    "reviewDecisions": [
+      "pending",
+      "accepted",
+      "rejected"
+    ],
+    "reviewPolicy": {
+      "ownership": "ledger",
+      "writeProtocol": "append_new_version_with_idempotency",
+      "idempotencyNamespace": "review_policy",
+      "statuses": [
+        "active",
+        "superseded"
+      ],
+      "scopeFields": [
+        "organizationId",
+        "workspaceId",
+        "projectId",
+        "taskId",
+        "jobId"
+      ],
+      "requiredFields": [
+        "policyId",
+        "version",
+        "requiredReviewers[].reviewerRef",
+        "requiredReviewers[].reviewerVersion",
+        "status",
+        "createdAt"
+      ]
+    },
+    "reviewGate": {
+      "input": [
+        "execution identity",
+        "reviewIds"
+      ],
+      "statuses": [
+        "accepted",
+        "review_required",
+        "review_blocked"
+      ],
+      "evidence": [
+        "missing",
+        "pending",
+        "rejected",
+        "versionMismatches"
+      ],
+      "continuationRule": "eligible only when status is accepted; a full execution identity without an active policy is ineligible",
+      "receiptReadRule": "for a full execution identity, receipt query and list omit continuationId and continuation unless the active review gate is accepted",
+      "waiver": "not_supported_without_auditable_signed_policy_decision"
+    },
     "continuationFields": [
       "continuationId",
       "receiptId",

@@ -19,6 +19,7 @@ import (
 	"opl-cloud/services/ledger/ent/manualtopup"
 	"opl-cloud/services/ledger/ent/reconciliationreport"
 	"opl-cloud/services/ledger/ent/resourcesettlement"
+	"opl-cloud/services/ledger/ent/reviewpolicy"
 	"opl-cloud/services/ledger/ent/wallet"
 	"opl-cloud/services/ledger/ent/wallettransaction"
 
@@ -48,6 +49,8 @@ type Client struct {
 	ReconciliationReport *ReconciliationReportClient
 	// ResourceSettlement is the client for interacting with the ResourceSettlement builders.
 	ResourceSettlement *ResourceSettlementClient
+	// ReviewPolicy is the client for interacting with the ReviewPolicy builders.
+	ReviewPolicy *ReviewPolicyClient
 	// Wallet is the client for interacting with the Wallet builders.
 	Wallet *WalletClient
 	// WalletTransaction is the client for interacting with the WalletTransaction builders.
@@ -71,6 +74,7 @@ func (c *Client) init() {
 	c.ManualTopup = NewManualTopupClient(c.config)
 	c.ReconciliationReport = NewReconciliationReportClient(c.config)
 	c.ResourceSettlement = NewResourceSettlementClient(c.config)
+	c.ReviewPolicy = NewReviewPolicyClient(c.config)
 	c.Wallet = NewWalletClient(c.config)
 	c.WalletTransaction = NewWalletTransactionClient(c.config)
 }
@@ -173,6 +177,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ManualTopup:          NewManualTopupClient(cfg),
 		ReconciliationReport: NewReconciliationReportClient(cfg),
 		ResourceSettlement:   NewResourceSettlementClient(cfg),
+		ReviewPolicy:         NewReviewPolicyClient(cfg),
 		Wallet:               NewWalletClient(cfg),
 		WalletTransaction:    NewWalletTransactionClient(cfg),
 	}, nil
@@ -202,6 +207,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ManualTopup:          NewManualTopupClient(cfg),
 		ReconciliationReport: NewReconciliationReportClient(cfg),
 		ResourceSettlement:   NewResourceSettlementClient(cfg),
+		ReviewPolicy:         NewReviewPolicyClient(cfg),
 		Wallet:               NewWalletClient(cfg),
 		WalletTransaction:    NewWalletTransactionClient(cfg),
 	}, nil
@@ -234,8 +240,8 @@ func (c *Client) Close() error {
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
 		c.EvidenceReceipt, c.Hold, c.HoldRelease, c.IdempotencyKey, c.LedgerEntry,
-		c.ManualTopup, c.ReconciliationReport, c.ResourceSettlement, c.Wallet,
-		c.WalletTransaction,
+		c.ManualTopup, c.ReconciliationReport, c.ResourceSettlement, c.ReviewPolicy,
+		c.Wallet, c.WalletTransaction,
 	} {
 		n.Use(hooks...)
 	}
@@ -246,8 +252,8 @@ func (c *Client) Use(hooks ...Hook) {
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
 		c.EvidenceReceipt, c.Hold, c.HoldRelease, c.IdempotencyKey, c.LedgerEntry,
-		c.ManualTopup, c.ReconciliationReport, c.ResourceSettlement, c.Wallet,
-		c.WalletTransaction,
+		c.ManualTopup, c.ReconciliationReport, c.ResourceSettlement, c.ReviewPolicy,
+		c.Wallet, c.WalletTransaction,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -272,6 +278,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.ReconciliationReport.mutate(ctx, m)
 	case *ResourceSettlementMutation:
 		return c.ResourceSettlement.mutate(ctx, m)
+	case *ReviewPolicyMutation:
+		return c.ReviewPolicy.mutate(ctx, m)
 	case *WalletMutation:
 		return c.Wallet.mutate(ctx, m)
 	case *WalletTransactionMutation:
@@ -1345,6 +1353,139 @@ func (c *ResourceSettlementClient) mutate(ctx context.Context, m *ResourceSettle
 	}
 }
 
+// ReviewPolicyClient is a client for the ReviewPolicy schema.
+type ReviewPolicyClient struct {
+	config
+}
+
+// NewReviewPolicyClient returns a client for the ReviewPolicy from the given config.
+func NewReviewPolicyClient(c config) *ReviewPolicyClient {
+	return &ReviewPolicyClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `reviewpolicy.Hooks(f(g(h())))`.
+func (c *ReviewPolicyClient) Use(hooks ...Hook) {
+	c.hooks.ReviewPolicy = append(c.hooks.ReviewPolicy, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `reviewpolicy.Intercept(f(g(h())))`.
+func (c *ReviewPolicyClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ReviewPolicy = append(c.inters.ReviewPolicy, interceptors...)
+}
+
+// Create returns a builder for creating a ReviewPolicy entity.
+func (c *ReviewPolicyClient) Create() *ReviewPolicyCreate {
+	mutation := newReviewPolicyMutation(c.config, OpCreate)
+	return &ReviewPolicyCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ReviewPolicy entities.
+func (c *ReviewPolicyClient) CreateBulk(builders ...*ReviewPolicyCreate) *ReviewPolicyCreateBulk {
+	return &ReviewPolicyCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ReviewPolicyClient) MapCreateBulk(slice any, setFunc func(*ReviewPolicyCreate, int)) *ReviewPolicyCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ReviewPolicyCreateBulk{err: fmt.Errorf("calling to ReviewPolicyClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ReviewPolicyCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ReviewPolicyCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ReviewPolicy.
+func (c *ReviewPolicyClient) Update() *ReviewPolicyUpdate {
+	mutation := newReviewPolicyMutation(c.config, OpUpdate)
+	return &ReviewPolicyUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ReviewPolicyClient) UpdateOne(rp *ReviewPolicy) *ReviewPolicyUpdateOne {
+	mutation := newReviewPolicyMutation(c.config, OpUpdateOne, withReviewPolicy(rp))
+	return &ReviewPolicyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ReviewPolicyClient) UpdateOneID(id string) *ReviewPolicyUpdateOne {
+	mutation := newReviewPolicyMutation(c.config, OpUpdateOne, withReviewPolicyID(id))
+	return &ReviewPolicyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ReviewPolicy.
+func (c *ReviewPolicyClient) Delete() *ReviewPolicyDelete {
+	mutation := newReviewPolicyMutation(c.config, OpDelete)
+	return &ReviewPolicyDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ReviewPolicyClient) DeleteOne(rp *ReviewPolicy) *ReviewPolicyDeleteOne {
+	return c.DeleteOneID(rp.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ReviewPolicyClient) DeleteOneID(id string) *ReviewPolicyDeleteOne {
+	builder := c.Delete().Where(reviewpolicy.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ReviewPolicyDeleteOne{builder}
+}
+
+// Query returns a query builder for ReviewPolicy.
+func (c *ReviewPolicyClient) Query() *ReviewPolicyQuery {
+	return &ReviewPolicyQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeReviewPolicy},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ReviewPolicy entity by its id.
+func (c *ReviewPolicyClient) Get(ctx context.Context, id string) (*ReviewPolicy, error) {
+	return c.Query().Where(reviewpolicy.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ReviewPolicyClient) GetX(ctx context.Context, id string) *ReviewPolicy {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ReviewPolicyClient) Hooks() []Hook {
+	return c.hooks.ReviewPolicy
+}
+
+// Interceptors returns the client interceptors.
+func (c *ReviewPolicyClient) Interceptors() []Interceptor {
+	return c.inters.ReviewPolicy
+}
+
+func (c *ReviewPolicyClient) mutate(ctx context.Context, m *ReviewPolicyMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ReviewPolicyCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ReviewPolicyUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ReviewPolicyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ReviewPolicyDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ReviewPolicy mutation op: %q", m.Op())
+	}
+}
+
 // WalletClient is a client for the Wallet schema.
 type WalletClient struct {
 	config
@@ -1615,11 +1756,12 @@ func (c *WalletTransactionClient) mutate(ctx context.Context, m *WalletTransacti
 type (
 	hooks struct {
 		EvidenceReceipt, Hold, HoldRelease, IdempotencyKey, LedgerEntry, ManualTopup,
-		ReconciliationReport, ResourceSettlement, Wallet, WalletTransaction []ent.Hook
+		ReconciliationReport, ResourceSettlement, ReviewPolicy, Wallet,
+		WalletTransaction []ent.Hook
 	}
 	inters struct {
 		EvidenceReceipt, Hold, HoldRelease, IdempotencyKey, LedgerEntry, ManualTopup,
-		ReconciliationReport, ResourceSettlement, Wallet,
+		ReconciliationReport, ResourceSettlement, ReviewPolicy, Wallet,
 		WalletTransaction []ent.Interceptor
 	}
 )
