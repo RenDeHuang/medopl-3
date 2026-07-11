@@ -99,7 +99,7 @@ test("Ledger and Fabric Ent models cover money and cloud-operation facts", async
   ]) {
     assert.equal(await exists(`services/ledger/ent/schema/${schema}`), true, `missing Ledger Ent schema ${schema}`);
   }
-  for (const schema of ["fabric_operation.go"]) {
+	for (const schema of ["fabric_operation.go", "connector.go", "environment_template.go"]) {
     assert.equal(await exists(`services/fabric/ent/schema/${schema}`), true, `missing Fabric Ent schema ${schema}`);
   }
 

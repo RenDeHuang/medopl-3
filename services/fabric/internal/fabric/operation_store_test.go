@@ -1,6 +1,8 @@
 package fabric
 
 import (
+	"bytes"
+	"os"
 	"strings"
 	"testing"
 
@@ -44,5 +46,54 @@ func TestPostgresOperationSchemaDropsRetiredWorkspaceRuntimeAccessTable(t *testi
 	dropAt := strings.Index(schema, "DROP TABLE IF EXISTS fabric_workspace_runtime_access")
 	if dropAt < 0 || dropAt < createAt {
 		t.Fatal("Fabric hard-cut migration must drop the retired runtime access table")
+	}
+}
+
+func TestPostgresOperationSchemaDefinesImmutableCatalogTables(t *testing.T) {
+	schema := PostgresOperationSchemaSQL()
+	for _, marker := range []string{
+		"CREATE TABLE IF NOT EXISTS fabric_connectors",
+		"CREATE TABLE IF NOT EXISTS fabric_environment_templates",
+		"UNIQUE (connector_id, version)",
+		"UNIQUE (template_id, version)",
+		"resource_metadata TEXT NOT NULL",
+		"runtime_metadata TEXT NOT NULL",
+		"fabric_connector_identity_immutable",
+		"fabric_environment_template_identity_immutable",
+		"NEW.id IS DISTINCT FROM OLD.id",
+		"NEW.name IS DISTINCT FROM OLD.name",
+		"NEW.status IS DISTINCT FROM OLD.status",
+		"NEW.read_only IS DISTINCT FROM OLD.read_only",
+		"NEW.provider IS DISTINCT FROM OLD.provider",
+		"NEW.resource_metadata IS DISTINCT FROM OLD.resource_metadata",
+		"NEW.runtime_metadata IS DISTINCT FROM OLD.runtime_metadata",
+		"NEW.created_at IS DISTINCT FROM OLD.created_at",
+	} {
+		if !strings.Contains(schema, marker) {
+			t.Fatalf("catalog schema missing %q", marker)
+		}
+	}
+	formal, err := os.ReadFile("../../migrations/202607110002_fabric_catalog.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	local, err := os.ReadFile("ent_migrations/202607110002_fabric_catalog.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(formal, local) {
+		t.Fatal("formal and embedded catalog migrations differ")
+	}
+}
+
+func TestPostgresMigrationChainRejectsStandalonePatchMarkers(t *testing.T) {
+	for lineNumber, line := range strings.Split(PostgresOperationSchemaSQL(), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "--") {
+			continue
+		}
+		if strings.Trim(trimmed, "+-@*") == "" {
+			t.Fatalf("migration chain line %d is a standalone non-SQL patch marker: %q", lineNumber+1, line)
+		}
 	}
 }
