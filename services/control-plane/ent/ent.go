@@ -35,6 +35,7 @@ import (
 	"opl-cloud/services/control-plane/ent/walletprojection"
 	"opl-cloud/services/control-plane/ent/wallettransactionprojection"
 	"opl-cloud/services/control-plane/ent/workspace"
+	"opl-cloud/services/control-plane/ent/workspacebackup"
 	"opl-cloud/services/control-plane/ent/workspacesyncevent"
 	"reflect"
 	"sync"
@@ -131,6 +132,7 @@ func checkColumn(table, column string) error {
 			walletprojection.Table:            walletprojection.ValidColumn,
 			wallettransactionprojection.Table: wallettransactionprojection.ValidColumn,
 			workspace.Table:                   workspace.ValidColumn,
+			workspacebackup.Table:             workspacebackup.ValidColumn,
 			workspacesyncevent.Table:          workspacesyncevent.ValidColumn,
 		})
 	})

@@ -16,6 +16,7 @@ type memoryTableStore struct {
 	storages       controlPlaneRecordSet
 	attachments    controlPlaneRecordSet
 	workspaces     controlPlaneRecordSet
+	backups        controlPlaneRecordSet
 	wallets        controlPlaneRecordSet
 	ledger         []map[string]any
 	walletTx       []map[string]any
@@ -39,11 +40,42 @@ func newMemoryTableStore() *memoryTableStore {
 		storages:      controlPlaneRecordSet{},
 		attachments:   controlPlaneRecordSet{},
 		workspaces:    controlPlaneRecordSet{},
+		backups:       controlPlaneRecordSet{},
 		wallets:       controlPlaneRecordSet{},
 		support:       controlPlaneRecordSet{},
 		projectTasks:  controlPlaneRecordSet{},
 		executionReqs: controlPlaneRecordSet{},
 	}
+}
+
+func (s *memoryTableStore) ListWorkspaceBackups(_ context.Context, workspaceID string) ([]map[string]any, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]map[string]any, 0)
+	for _, row := range s.backups {
+		if workspaceID == "" || stringValue(row["workspaceId"]) == workspaceID {
+			out = append(out, cloneMap(row))
+		}
+	}
+	sort.Slice(out, func(i, j int) bool { return stringValue(out[i]["createdAt"]) < stringValue(out[j]["createdAt"]) })
+	return out, nil
+}
+
+func (s *memoryTableStore) SaveWorkspaceBackup(_ context.Context, row map[string]any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, existing := range s.backups {
+		if stringValue(existing["idempotencyKey"]) != stringValue(row["idempotencyKey"]) {
+			continue
+		}
+		if stringValue(existing["requestHash"]) != stringValue(row["requestHash"]) {
+			return errIdempotencyConflict
+		}
+		s.backups[stringValue(existing["id"])] = cloneMap(row)
+		return nil
+	}
+	s.backups[stringValue(row["id"])] = cloneMap(row)
+	return nil
 }
 
 func (s *memoryTableStore) ListUsers(_ context.Context, includeDeleted bool) ([]map[string]any, error) {

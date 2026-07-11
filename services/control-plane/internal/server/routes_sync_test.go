@@ -21,6 +21,81 @@ type transferFabricClient struct {
 	body     []byte
 }
 
+type recoveryFabricClient struct{ *fakeFabricClient }
+
+func (f *recoveryFabricClient) CreateStorageSnapshot(_ context.Context, input clients.StorageSnapshotInput, _ string) (clients.StorageSnapshot, error) {
+	return clients.StorageSnapshot{ID: "snap-alpha", AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, VolumeID: input.VolumeID, Status: "ready", ProviderRequestID: "private-provider-request", SizeGB: 10, CreatedAt: "2026-07-11T00:00:00Z"}, nil
+}
+func (f *recoveryFabricClient) GetStorageSnapshot(_ context.Context, id string) (clients.StorageSnapshot, error) {
+	return clients.StorageSnapshot{ID: id, AccountID: "acct-alpha", WorkspaceID: "ws-alpha", VolumeID: "vol-test", Status: "ready", SizeGB: 10}, nil
+}
+func (f *recoveryFabricClient) SyncStorageSnapshot(ctx context.Context, id string) (clients.StorageSnapshot, error) {
+	return f.GetStorageSnapshot(ctx, id)
+}
+func (f *recoveryFabricClient) RestoreStorageSnapshot(_ context.Context, _ string, input clients.StorageRestoreInput, _ string) (clients.StorageVolume, error) {
+	return clients.StorageVolume{ID: input.TargetVolumeID, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, Status: "ready", SizeGB: 10}, nil
+}
+func (f *recoveryFabricClient) DestroyStorageSnapshot(_ context.Context, id, _ string) (clients.StorageSnapshot, error) {
+	return clients.StorageSnapshot{ID: id, Status: "destroyed"}, nil
+}
+
+func TestWorkspaceBackupRestoreCloneAndExportKeepBackendTruth(t *testing.T) {
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &recoveryFabricClient{fakeFabricClient: &fakeFabricClient{}}))
+	admin := operatorSessionForTest(t, server)
+	compute := createResourceWithSession(t, server, admin, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","packageId":"basic"}`)
+	storage := createResourceWithSession(t, server, admin, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","sizeGb":10}`)
+	attachment := createResourceWithSession(t, server, admin, http.MethodPost, "/api/storage-attachments", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","computeAllocationId":"`+stringValue(compute["id"])+`","storageId":"`+stringValue(storage["id"])+`"}`)
+	workspace := createResourceWithSession(t, server, admin, http.MethodPost, "/api/workspaces", `{"accountId":"acct-alpha","ownerId":"usr-alpha","attachmentId":"`+stringValue(attachment["id"])+`","name":"Alpha"}`)
+	workspaceID := stringValue(workspace["id"])
+
+	created := syncRequest(t, server, admin, http.MethodPost, "/api/workspaces/"+workspaceID+"/backups", "backup-once", `{"syncCursor":7,"projectVersions":{"project-alpha":3},"artifactIds":["artifact-alpha"],"receiptIds":["receipt-alpha"],"continuationIds":["continuation-alpha"]}`)
+	if created.Code != http.StatusCreated {
+		t.Fatalf("create backup=%d %s", created.Code, created.Body.String())
+	}
+	backup := decodeSyncPayload(t, created)
+	backupID := stringValue(backup["backupId"])
+	if backupID == "" || stringValue(backup["providerRequestId"]) != "" {
+		t.Fatalf("backup projection leaked provider facts: %#v", backup)
+	}
+
+	exported := syncRequest(t, server, admin, http.MethodGet, "/api/workspace-backups/"+backupID+"/export", "", "")
+	if exported.Code != http.StatusOK || strings.Contains(exported.Body.String(), "private-provider-request") || strings.Contains(exported.Body.String(), "providerSnapshot") {
+		t.Fatalf("export=%d %s", exported.Code, exported.Body.String())
+	}
+	restored := syncRequest(t, server, admin, http.MethodPost, "/api/workspace-backups/"+backupID+"/restore", "restore-once", `{"targetStorageId":"vol-restored"}`)
+	if restored.Code != http.StatusAccepted || !strings.Contains(restored.Body.String(), "vol-restored") {
+		t.Fatalf("restore=%d %s", restored.Code, restored.Body.String())
+	}
+	stateRec := syncRequest(t, server, admin, http.MethodGet, "/api/state?accountId=acct-alpha", "", "")
+	var state map[string]any
+	if stateRec.Code != http.StatusOK || json.NewDecoder(stateRec.Body).Decode(&state) != nil {
+		t.Fatalf("state=%d %s", stateRec.Code, stateRec.Body.String())
+	}
+	foundRestored := false
+	for _, value := range state["storageVolumes"].([]any) {
+		foundRestored = foundRestored || stringValue(value.(map[string]any)["id"]) == "vol-restored"
+	}
+	if !foundRestored {
+		t.Fatalf("restored storage projection missing: %#v", state["storageVolumes"])
+	}
+	cloned := syncRequest(t, server, admin, http.MethodPost, "/api/workspace-backups/"+backupID+"/clone", "clone-once", `{"name":"Alpha Clone"}`)
+	if cloned.Code != http.StatusCreated {
+		t.Fatalf("clone=%d %s", cloned.Code, cloned.Body.String())
+	}
+	clone := decodeSyncPayload(t, cloned)
+	if stringValue(clone["workspaceId"]) == workspaceID || stringValue(clone["storageId"]) == stringValue(storage["id"]) {
+		t.Fatalf("clone reused source identity: %#v", clone)
+	}
+	destroyed := syncRequest(t, server, admin, http.MethodPost, "/api/workspace-backups/"+backupID+"/destroy", "destroy-backup-once", "{}")
+	if destroyed.Code != http.StatusAccepted || !strings.Contains(destroyed.Body.String(), "destroyed") {
+		t.Fatalf("destroy backup=%d %s", destroyed.Code, destroyed.Body.String())
+	}
+	listed := syncRequest(t, server, admin, http.MethodGet, "/api/workspaces/"+workspaceID+"/backups", "", "")
+	if listed.Code != http.StatusOK || !strings.Contains(listed.Body.String(), `"status":"destroyed"`) {
+		t.Fatalf("backup state not persisted=%d %s", listed.Code, listed.Body.String())
+	}
+}
+
 func (f *transferFabricClient) CreateTransfer(_ context.Context, input clients.ContentTransferInput, _ string) (clients.ContentTransfer, error) {
 	f.transfer = clients.ContentTransfer{TransferID: "transfer-alpha", OrganizationID: input.OrganizationID, WorkspaceID: input.WorkspaceID, ProjectID: input.ProjectID, Path: input.Path, Digest: input.Digest, Size: input.Size, ChunkSize: 4 << 20, ChunkCount: 1, Status: "uploading"}
 	return f.transfer, nil
@@ -48,7 +123,9 @@ func TestWorkspaceContentTransferIsAuthorizedAndStreamedThroughFabric(t *testing
 	project := createResourceWithSession(t, server, admin, http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha"}`)
 	projectID := stringValue(project["projectId"])
 	unknown := syncRequest(t, server, admin, http.MethodPost, "/api/workspaces/workspace-alpha/transfers", "transfer-unknown", `{"organizationId":"org-alpha","projectId":"project-missing","path":"inputs/a.txt","digest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","size":7}`)
-	if unknown.Code != http.StatusNotFound { t.Fatalf("unknown project=%d %s", unknown.Code, unknown.Body.String()) }
+	if unknown.Code != http.StatusNotFound {
+		t.Fatalf("unknown project=%d %s", unknown.Code, unknown.Body.String())
+	}
 	created := syncRequest(t, server, admin, http.MethodPost, "/api/workspaces/workspace-alpha/transfers", "transfer-once", `{"organizationId":"org-alpha","projectId":"`+projectID+`","path":"inputs/a.txt","digest":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","size":7}`)
 	if created.Code != http.StatusCreated {
 		t.Fatalf("create=%d %s", created.Code, created.Body.String())

@@ -55,6 +55,7 @@ func NewPersistentServer(service *controlplane.Service, store StateStore) (http.
 	registerExecutionRoutes(mux, app, service)
 	registerSyncRoutes(mux, app)
 	registerTransferRoutes(mux, app, service)
+	registerRecoveryRoutes(mux, app, service)
 	return mux, nil
 }
 

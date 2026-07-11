@@ -38,6 +38,14 @@ type FabricTransferClient interface {
 	Content(context.Context, string, string) (FabricContent, error)
 }
 
+type FabricRecoveryClient interface {
+	CreateStorageSnapshot(context.Context, StorageSnapshotInput, string) (StorageSnapshot, error)
+	GetStorageSnapshot(context.Context, string) (StorageSnapshot, error)
+	SyncStorageSnapshot(context.Context, string) (StorageSnapshot, error)
+	RestoreStorageSnapshot(context.Context, string, StorageRestoreInput, string) (StorageVolume, error)
+	DestroyStorageSnapshot(context.Context, string, string) (StorageSnapshot, error)
+}
+
 type FabricHTTPError struct {
 	StatusCode int
 	Body       string
@@ -164,6 +172,29 @@ type StorageVolume struct {
 	HoldAmountCents    int64  `json:"holdAmountCents,omitempty"`
 	HoldReleaseID      string `json:"holdReleaseId,omitempty"`
 	Wallet             Wallet `json:"wallet,omitempty"`
+}
+
+type StorageSnapshotInput struct {
+	AccountID   string `json:"accountId"`
+	WorkspaceID string `json:"workspaceId"`
+	VolumeID    string `json:"volumeId"`
+}
+
+type StorageRestoreInput struct {
+	AccountID      string `json:"accountId"`
+	WorkspaceID    string `json:"workspaceId"`
+	TargetVolumeID string `json:"targetVolumeId"`
+}
+
+type StorageSnapshot struct {
+	ID                string `json:"id"`
+	AccountID         string `json:"accountId"`
+	WorkspaceID       string `json:"workspaceId"`
+	VolumeID          string `json:"volumeId"`
+	Status            string `json:"status"`
+	ProviderRequestID string `json:"providerRequestId"`
+	SizeGB            int    `json:"sizeGb"`
+	CreatedAt         string `json:"createdAt"`
 }
 
 type StorageAttachmentInput struct {
@@ -317,6 +348,36 @@ func (c *fabricHTTPClient) SyncStorageVolume(ctx context.Context, id string) (St
 func (c *fabricHTTPClient) DestroyStorageVolume(ctx context.Context, id string, idempotencyKey string) (StorageVolume, error) {
 	var result StorageVolume
 	err := c.post(ctx, "/fabric/storage-volumes/"+id+"/destroy", map[string]string{}, idempotencyKey, &result)
+	return result, err
+}
+
+func (c *fabricHTTPClient) CreateStorageSnapshot(ctx context.Context, input StorageSnapshotInput, idempotencyKey string) (StorageSnapshot, error) {
+	var result StorageSnapshot
+	err := c.post(ctx, "/fabric/storage-snapshots", input, idempotencyKey, &result)
+	return result, err
+}
+
+func (c *fabricHTTPClient) GetStorageSnapshot(ctx context.Context, id string) (StorageSnapshot, error) {
+	var result StorageSnapshot
+	err := c.get(ctx, "/fabric/storage-snapshots/"+url.PathEscape(id), &result)
+	return result, err
+}
+
+func (c *fabricHTTPClient) SyncStorageSnapshot(ctx context.Context, id string) (StorageSnapshot, error) {
+	var result StorageSnapshot
+	err := c.post(ctx, "/fabric/storage-snapshots/"+url.PathEscape(id)+"/sync", map[string]any{}, "", &result)
+	return result, err
+}
+
+func (c *fabricHTTPClient) RestoreStorageSnapshot(ctx context.Context, id string, input StorageRestoreInput, idempotencyKey string) (StorageVolume, error) {
+	var result StorageVolume
+	err := c.post(ctx, "/fabric/storage-snapshots/"+url.PathEscape(id)+"/restore", input, idempotencyKey, &result)
+	return result, err
+}
+
+func (c *fabricHTTPClient) DestroyStorageSnapshot(ctx context.Context, id, idempotencyKey string) (StorageSnapshot, error) {
+	var result StorageSnapshot
+	err := c.post(ctx, "/fabric/storage-snapshots/"+url.PathEscape(id)+"/destroy", map[string]any{}, idempotencyKey, &result)
 	return result, err
 }
 

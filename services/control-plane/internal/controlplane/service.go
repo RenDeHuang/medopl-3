@@ -23,6 +23,46 @@ func (s *Service) fabricTransfers() (clients.FabricTransferClient, error) {
 	return client, nil
 }
 
+func (s *Service) fabricRecovery() (clients.FabricRecoveryClient, error) {
+	client, ok := s.fabric.(clients.FabricRecoveryClient)
+	if !ok {
+		return nil, errors.New("fabric_recovery_unavailable")
+	}
+	return client, nil
+}
+
+func (s *Service) CreateStorageSnapshot(ctx context.Context, input clients.StorageSnapshotInput, key string) (clients.StorageSnapshot, error) {
+	client, err := s.fabricRecovery()
+	if err != nil {
+		return clients.StorageSnapshot{}, err
+	}
+	return client.CreateStorageSnapshot(ctx, input, key)
+}
+
+func (s *Service) SyncStorageSnapshot(ctx context.Context, id string) (clients.StorageSnapshot, error) {
+	client, err := s.fabricRecovery()
+	if err != nil {
+		return clients.StorageSnapshot{}, err
+	}
+	return client.SyncStorageSnapshot(ctx, id)
+}
+
+func (s *Service) RestoreStorageSnapshot(ctx context.Context, id string, input clients.StorageRestoreInput, key string) (clients.StorageVolume, error) {
+	client, err := s.fabricRecovery()
+	if err != nil {
+		return clients.StorageVolume{}, err
+	}
+	return client.RestoreStorageSnapshot(ctx, id, input, key)
+}
+
+func (s *Service) DestroyStorageSnapshot(ctx context.Context, id, key string) (clients.StorageSnapshot, error) {
+	client, err := s.fabricRecovery()
+	if err != nil {
+		return clients.StorageSnapshot{}, err
+	}
+	return client.DestroyStorageSnapshot(ctx, id, key)
+}
+
 func (s *Service) CreateContentTransfer(ctx context.Context, input clients.ContentTransferInput, key string) (clients.ContentTransfer, error) {
 	client, err := s.fabricTransfers()
 	if err != nil {

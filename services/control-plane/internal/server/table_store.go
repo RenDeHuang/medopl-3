@@ -26,6 +26,8 @@ type controlPlaneTableStore interface {
 	ListWorkspaces(ctx context.Context, accountID string) ([]map[string]any, error)
 	SaveWorkspace(ctx context.Context, row map[string]any) error
 	DeleteWorkspace(ctx context.Context, id string) error
+	ListWorkspaceBackups(ctx context.Context, workspaceID string) ([]map[string]any, error)
+	SaveWorkspaceBackup(ctx context.Context, row map[string]any) error
 
 	ListWallets(ctx context.Context, accountID string) ([]map[string]any, error)
 	SaveWallet(ctx context.Context, row map[string]any) error

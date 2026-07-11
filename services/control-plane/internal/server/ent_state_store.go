@@ -29,6 +29,7 @@ import (
 	"opl-cloud/services/control-plane/ent/supportticketmapping"
 	"opl-cloud/services/control-plane/ent/wallettransactionprojection"
 	"opl-cloud/services/control-plane/ent/workspace"
+	"opl-cloud/services/control-plane/ent/workspacebackup"
 	"opl-cloud/services/control-plane/ent/workspacesyncevent"
 )
 
@@ -387,6 +388,17 @@ var (
 		textField("CredentialVersion", "SetCredentialVersion", "access", "credentialVersion"),
 		textField("CredentialSecretRef", "SetCredentialSecretRef", "access", "secretRef"),
 		boolField("AccessRequiresLogin", "SetAccessRequiresLogin", "access", "requiresLogin"),
+	}
+	workspaceBackupEntFields = []entRecordField{
+		textField("AccountID", "SetAccountID", "accountId"),
+		textField("WorkspaceID", "SetWorkspaceID", "workspaceId"),
+		textField("StorageID", "SetStorageID", "storageId"),
+		textField("SnapshotID", "SetSnapshotID", "snapshotId"),
+		textField("Status", "SetStatus", "status"),
+		textField("IdempotencyKey", "SetIdempotencyKey", "idempotencyKey"),
+		textField("RequestHash", "SetRequestHash", "requestHash"),
+		textField("ManifestJSON", "SetManifestJSON", "manifestJson"),
+		textField("RestoredStorageID", "SetRestoredStorageID", "restoredStorageId"),
 	}
 	walletEntFields = []entRecordField{
 		textField("AccountID", "SetAccountID", "accountId"),
@@ -858,6 +870,38 @@ func (s *postgresEntStateStore) DeleteWorkspace(ctx context.Context, id string) 
 		return nil
 	}
 	return err
+}
+
+func (s *postgresEntStateStore) ListWorkspaceBackups(ctx context.Context, workspaceID string) ([]map[string]any, error) {
+	query := s.client.WorkspaceBackup.Query()
+	if workspaceID != "" {
+		query = query.Where(workspacebackup.WorkspaceID(workspaceID))
+	}
+	rows, err := loadRecordSet(ctx, query.All, workspaceBackupEntFields)
+	if err != nil {
+		return nil, err
+	}
+	return filteredRecords(rows, "")
+}
+
+func (s *postgresEntStateStore) SaveWorkspaceBackup(ctx context.Context, row map[string]any) error {
+	id := stringValue(row["id"])
+	if id == "" {
+		return errors.New("missing_record_id")
+	}
+	existing, err := s.client.WorkspaceBackup.Query().Where(workspacebackup.IdempotencyKey(stringValue(row["idempotencyKey"]))).Only(ctx)
+	if err == nil {
+		if existing.RequestHash != stringValue(row["requestHash"]) {
+			return errIdempotencyConflict
+		}
+		builder := s.client.WorkspaceBackup.UpdateOneID(existing.ID)
+		setRecordFields(builder, row, workspaceBackupEntFields)
+		return execCreate(ctx, builder)
+	}
+	if !controlplaneent.IsNotFound(err) {
+		return err
+	}
+	return saveRecord(ctx, id, row, s.client.WorkspaceBackup.Create(), workspaceBackupEntFields)
 }
 
 func (s *postgresEntStateStore) ListWallets(ctx context.Context, accountID string) ([]map[string]any, error) {

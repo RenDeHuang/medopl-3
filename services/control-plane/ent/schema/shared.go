@@ -234,6 +234,20 @@ func workspaceFields() []ent.Field {
 	)
 }
 
+func workspaceBackupFields() []ent.Field {
+	return append(baseFields(),
+		field.String("account_id").NotEmpty(),
+		field.String("workspace_id").NotEmpty(),
+		field.String("storage_id").NotEmpty(),
+		field.String("snapshot_id").NotEmpty(),
+		field.String("status").NotEmpty(),
+		field.String("idempotency_key").NotEmpty(),
+		field.String("request_hash").NotEmpty(),
+		field.String("manifest_json").Default("{}"),
+		field.String("restored_storage_id").Default(""),
+	)
+}
+
 func walletProjectionFields() []ent.Field {
 	return append(baseFields(),
 		field.String("account_id").NotEmpty(),

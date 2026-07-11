@@ -80,3 +80,29 @@ func TestFabricClientReadsCompletedJobEvidence(t *testing.T) {
 		t.Fatalf("job = %#v err=%v", job, err)
 	}
 }
+
+func TestFabricRecoveryClientUsesSnapshotContract(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Idempotency-Key") == "" {
+			t.Fatalf("missing idempotency key for %s", r.URL.Path)
+		}
+		switch r.URL.Path {
+		case "/fabric/storage-snapshots":
+			_ = json.NewEncoder(w).Encode(StorageSnapshot{ID: "snap-alpha", WorkspaceID: "ws-alpha", VolumeID: "vol-alpha", Status: "ready"})
+		case "/fabric/storage-snapshots/snap-alpha/restore":
+			_ = json.NewEncoder(w).Encode(StorageVolume{ID: "vol-restored", WorkspaceID: "ws-restored", Status: "restoring"})
+		default:
+			t.Fatalf("unexpected recovery path %s", r.URL.Path)
+		}
+	}))
+	defer upstream.Close()
+	client := NewFabricHTTPClient(upstream.URL, upstream.Client()).(FabricRecoveryClient)
+	snapshot, err := client.CreateStorageSnapshot(context.Background(), StorageSnapshotInput{AccountID: "acct-alpha", WorkspaceID: "ws-alpha", VolumeID: "vol-alpha"}, "snapshot-once")
+	if err != nil || snapshot.ID != "snap-alpha" {
+		t.Fatalf("snapshot=%#v err=%v", snapshot, err)
+	}
+	volume, err := client.RestoreStorageSnapshot(context.Background(), "snap-alpha", StorageRestoreInput{AccountID: "acct-alpha", WorkspaceID: "ws-restored", TargetVolumeID: "vol-restored"}, "restore-once")
+	if err != nil || volume.ID != "vol-restored" {
+		t.Fatalf("volume=%#v err=%v", volume, err)
+	}
+}
