@@ -616,7 +616,6 @@ func (s *Service) CreateWorkspace(ctx context.Context, input CreateWorkspaceInpu
 		RuntimeID:           runtime.ID,
 		RuntimeServiceName:  runtime.ServiceName,
 		RuntimeUsername:     runtime.Access.Username,
-		RuntimePassword:     runtime.Access.Password,
 		CredentialStatus:    runtime.Access.CredentialStatus,
 		CredentialVersion:   runtime.Access.CredentialVersion,
 		CredentialSecretRef: runtime.Access.SecretRef,

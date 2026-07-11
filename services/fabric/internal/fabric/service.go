@@ -518,6 +518,7 @@ func (s *Service) CreateWorkspaceRuntime(ctx context.Context, input WorkspaceRun
 		return WorkspaceRuntime{}, err
 	}
 	runtime, err := s.provider.CreateWorkspaceRuntime(ctx, input, compute, volume)
+	runtime.Access.Password = ""
 	if err != nil {
 		_ = s.recordOperation(ctx, operation, "failed", runtime, err)
 		return runtime, err
@@ -978,6 +979,7 @@ func fillOperationResource(operation *FabricOperation, resource any) {
 		operation.RedactedProviderPayload = map[string]any{"resource": value, "providerAttachmentId": value.ProviderAttachmentID, "computeId": value.ComputeID, "volumeId": value.VolumeID, "costTags": value.CostTags}
 	case WorkspaceRuntime:
 		redacted := value
+		credentialConfigured := value.Access.CredentialStatus == "configured" || value.Access.Password != ""
 		if redacted.Access.Password != "" {
 			redacted.Access.Password = ""
 			redacted.Access.CredentialStatus = firstNonEmpty(redacted.Access.CredentialStatus, "configured")
@@ -985,7 +987,7 @@ func fillOperationResource(operation *FabricOperation, resource any) {
 		operation.ResourceID = firstNonEmpty(value.WorkspaceID, operation.ResourceID)
 		operation.WorkspaceID = firstNonEmpty(value.WorkspaceID, operation.WorkspaceID)
 		operation.ProviderRequestID = firstNonEmpty(value.ProviderRequestID, operation.ProviderRequestID)
-		operation.RedactedProviderPayload = map[string]any{"resource": redacted, "serviceName": value.ServiceName, "ready": value.Ready, "credentialConfigured": value.Access.Password != "", "credentialVersion": value.Access.CredentialVersion, "secretRef": value.Access.SecretRef, "costTags": value.CostTags}
+		operation.RedactedProviderPayload = map[string]any{"resource": redacted, "serviceName": value.ServiceName, "ready": value.Ready, "credentialConfigured": credentialConfigured, "credentialVersion": value.Access.CredentialVersion, "secretRef": value.Access.SecretRef, "costTags": value.CostTags}
 	case Job:
 		redacted := value
 		redacted.LeaseToken = ""

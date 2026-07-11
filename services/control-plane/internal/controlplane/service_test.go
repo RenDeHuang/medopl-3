@@ -2,7 +2,9 @@ package controlplane
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"opl-cloud/services/control-plane/internal/clients"
@@ -36,8 +38,12 @@ func TestCreateWorkspaceOrchestratesLedgerAndFabric(t *testing.T) {
 	if workspace.ComputeID != "compute-alpha" || workspace.VolumeID != "volume-alpha" || workspace.AttachmentID != "attachment-alpha" {
 		t.Fatalf("workspace must bind existing resources: %#v", workspace)
 	}
-	if workspace.RuntimeUsername != "admin" || workspace.RuntimePassword != "runtime-password-alpha" {
-		t.Fatalf("workspace must carry runtime credentials from Fabric: %#v", workspace)
+	if workspace.RuntimeUsername != "admin" || workspace.CredentialSecretRef != "opl-compute-alpha-env" {
+		t.Fatalf("workspace creation must carry credential metadata only: %#v", workspace)
+	}
+	encoded, _ := json.Marshal(workspace)
+	if strings.Contains(string(encoded), "runtime-password-alpha") || strings.Contains(string(encoded), "runtimePassword") {
+		t.Fatalf("workspace creation leaked runtime password: %s", encoded)
 	}
 	wantCalls := []string{"fabric.runtime", "ledger.receipt"}
 	if !reflect.DeepEqual(calls, wantCalls) {

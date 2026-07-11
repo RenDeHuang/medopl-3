@@ -165,8 +165,8 @@ func TestCreateWorkspaceHTTPUsesControlPlaneService(t *testing.T) {
 	if access, ok := workspace["access"].(map[string]any); !ok || access["tokenStatus"] != "active" {
 		t.Fatalf("workspace response must include active URL access state: %#v", workspace)
 	}
-	if access := workspace["access"].(map[string]any); access["account"] != "admin" || access["password"] != "runtime-password-alpha" {
-		t.Fatalf("workspace response must include runtime login credentials from Fabric: %#v", access)
+	if access := workspace["access"].(map[string]any); access["account"] != "admin" || access["password"] != nil {
+		t.Fatalf("workspace creation must include credential metadata without plaintext: %#v", access)
 	}
 	if workspace["runtimePassword"] != nil {
 		t.Fatalf("workspace response leaked internal runtimePassword field: %#v", workspace)
@@ -309,10 +309,15 @@ func TestConsoleStateComputePoolsReadFabricCatalog(t *testing.T) {
 }
 
 func TestWorkspaceRuntimeStatusPassesFabricChecks(t *testing.T) {
-	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
-	req := httptest.NewRequest(http.MethodPost, "/api/workspaces/runtime-status", bytes.NewBufferString(`{"workspaceId":"ws-alpha"}`))
-	req.Header.Set("Content-Type", "application/json")
+	calls := []string{}
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{calls: &calls}))
 	session := operatorSessionForTest(t, server)
+	createResourceWithSession(t, server, session, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+	createResourceWithSession(t, server, session, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10}`)
+	createResourceWithSession(t, server, session, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"compute-from-fabric","storageId":"volume-from-fabric","mountPath":"/data"}`)
+	workspace := createResourceWithSession(t, server, session, http.MethodPost, "/api/workspaces", `{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/workspaces/runtime-status", bytes.NewBufferString(`{"workspaceId":"`+stringValue(workspace["id"])+`"}`))
+	req.Header.Set("Content-Type", "application/json")
 	addSessionCookies(req, session)
 	req.Header.Set("x-opl-csrf", session.Header().Get("x-opl-csrf-token"))
 	rec := httptest.NewRecorder()
@@ -336,6 +341,23 @@ func TestWorkspaceRuntimeStatusPassesFabricChecks(t *testing.T) {
 	checks := body["checks"].([]any)
 	if len(checks) != 2 || checks[0].(map[string]any)["name"] != "deployment_ready" || checks[1].(map[string]any)["name"] != "service_endpoints_ready" {
 		t.Fatalf("runtime checks must pass through Fabric details: %#v", body["checks"])
+	}
+}
+
+func TestWorkspaceRuntimeStatusDoesNotReadSecretForUnknownProjection(t *testing.T) {
+	calls := []string{}
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{calls: &calls}))
+	admin := operatorSessionForTest(t, server)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside-unknown@lab.example","accountId":"acct-beta","role":"pi","password":"CorrectHorseBatteryStaple!"}`)
+	outsider := loginForTest(t, server, "outside-unknown@lab.example", "CorrectHorseBatteryStaple!")
+
+	before := len(calls)
+	response := requestWithSession(t, server, outsider, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"ws-unknown"}`)
+	if response.Code != http.StatusNotFound || !strings.Contains(response.Body.String(), "workspace_not_found") {
+		t.Fatalf("unknown runtime status = %d: %s", response.Code, response.Body.String())
+	}
+	if len(calls) != before || strings.Contains(response.Body.String(), "runtime-password-alpha") {
+		t.Fatalf("unknown projection reached Fabric or returned a password: calls=%#v body=%s", calls[before:], response.Body.String())
 	}
 }
 

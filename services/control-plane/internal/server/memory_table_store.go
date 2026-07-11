@@ -284,7 +284,6 @@ func (s *memoryTableStore) SaveWorkspace(_ context.Context, row map[string]any) 
 	access = cloneMap(access)
 	delete(access, "password")
 	row["access"] = access
-	delete(row, "runtimePassword")
 	s.workspaces[stringValue(row["id"])] = row
 	return nil
 }

@@ -371,7 +371,7 @@ func TestStorageSnapshotRestorePersistsAndKeepsSourceVolume(t *testing.T) {
 	}
 }
 
-func TestWorkspaceRuntimeAccessIsBusinessStateNotOperationPayload(t *testing.T) {
+func TestWorkspaceRuntimeCreationDoesNotReturnCredential(t *testing.T) {
 	store := NewMemoryOperationStore()
 	service := NewServiceWithOperationStore(testProvider{}, store)
 	ctx := context.Background()
@@ -389,8 +389,8 @@ func TestWorkspaceRuntimeAccessIsBusinessStateNotOperationPayload(t *testing.T) 
 	if err != nil {
 		t.Fatalf("create runtime: %v", err)
 	}
-	if runtime.Access.Username != "admin" || runtime.Access.Password != "runtime-password-alpha" {
-		t.Fatalf("runtime access not returned from business state: %#v", runtime.Access)
+	if runtime.Access.Password != "" || runtime.Access.CredentialStatus != "configured" || runtime.Access.SecretRef != "opl-ca-test-env" {
+		t.Fatalf("runtime creation must return credential metadata only: %#v", runtime.Access)
 	}
 
 	operations, err := service.ListOperations(ctx)

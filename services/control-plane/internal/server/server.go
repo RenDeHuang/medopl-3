@@ -402,7 +402,6 @@ func workspaceResponse(row map[string]any) map[string]any {
 	if row == nil {
 		row = map[string]any{}
 	}
-	delete(row, "runtimePassword")
 	row["ownerAccountId"] = firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]))
 	row["ownerUserId"] = firstNonEmpty(stringValue(row["ownerUserId"]), stringValue(row["ownerId"]))
 	row["state"] = firstNonEmpty(stringValue(row["state"]), stringValue(row["status"]))

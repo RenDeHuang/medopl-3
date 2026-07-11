@@ -391,8 +391,7 @@ func (p *TencentProvider) CreateWorkspaceRuntime(ctx context.Context, input Work
 	if _, err := p.kubectl(ctx, []string{"apply", "-f", "-"}, workspaceManifest(input.WorkspaceID, input.WorkspaceID, token, serviceName, compute, volume, tags)); err != nil {
 		return WorkspaceRuntime{}, err
 	}
-	password := deriveAionUIAdminPassword(os.Getenv("OPL_AIONUI_ADMIN_PASSWORD_SEED"), input.WorkspaceID, token)
-	return WorkspaceRuntime{ID: fabricID("rt", input.WorkspaceID, now), WorkspaceID: input.WorkspaceID, URL: fmt.Sprintf("https://%s/w/%s/", workspaceDomain(), input.WorkspaceID), Status: "running", ServiceName: serviceName, ProviderRequestID: providerRequestID("runtime", input.IdempotencyKey), Access: RuntimeAccess{Username: webuiUsername, Password: password, CredentialStatus: firstNonEmpty(passwordStatus(password), "pending"), CredentialVersion: "v1", SecretRef: serviceName + "-env", UpdatedAt: now}, Ready: true, CostTags: tags, CreatedAt: now}, nil
+	return WorkspaceRuntime{ID: fabricID("rt", input.WorkspaceID, now), WorkspaceID: input.WorkspaceID, URL: fmt.Sprintf("https://%s/w/%s/", workspaceDomain(), input.WorkspaceID), Status: "running", ServiceName: serviceName, ProviderRequestID: providerRequestID("runtime", input.IdempotencyKey), Access: RuntimeAccess{Username: webuiUsername, CredentialStatus: "configured", CredentialVersion: "v1", SecretRef: serviceName + "-env", UpdatedAt: now}, Ready: true, CostTags: tags, CreatedAt: now}, nil
 }
 
 func (p *TencentProvider) WorkspaceRuntimeStatus(ctx context.Context, workspaceID string) (WorkspaceRuntime, error) {
@@ -787,13 +786,6 @@ func deriveWebUISessionSecret(seed string, workspaceID string, token string) str
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write([]byte("webui-session:" + workspaceID + ":" + token))
 	return hex.EncodeToString(mac.Sum(nil))
-}
-
-func passwordStatus(password string) string {
-	if strings.TrimSpace(password) == "" {
-		return "pending"
-	}
-	return "configured"
 }
 
 func stableID(parts ...string) string {

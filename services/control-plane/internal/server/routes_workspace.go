@@ -63,7 +63,12 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 	mux.HandleFunc("POST /api/workspaces/runtime-status", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		workspaceID := stringField(input, "workspaceId", "")
-		if workspace, ok := app.getWorkspace(workspaceID); ok && !app.canAccessResource(r, workspace) {
+		workspace, ok := app.getWorkspace(workspaceID)
+		if !ok {
+			writeError(w, http.StatusNotFound, "workspace_not_found")
+			return
+		}
+		if !app.canAccessResource(r, workspace) {
 			writeError(w, http.StatusForbidden, "account_scope_forbidden")
 			return
 		}
@@ -114,13 +119,6 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}
-		response := cloneMap(body)
-		if workspace.RuntimePassword != "" {
-			access, _ := response["access"].(map[string]any)
-			access = cloneMap(access)
-			access["password"] = workspace.RuntimePassword
-			response["access"] = access
-		}
-		writeJSON(w, http.StatusCreated, response)
+		writeJSON(w, http.StatusCreated, body)
 	}))
 }

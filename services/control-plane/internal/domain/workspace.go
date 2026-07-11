@@ -15,7 +15,6 @@ type WorkspaceProjection struct {
 	RuntimeID           string `json:"runtimeId"`
 	RuntimeServiceName  string `json:"runtimeServiceName,omitempty"`
 	RuntimeUsername     string `json:"runtimeUsername,omitempty"`
-	RuntimePassword     string `json:"runtimePassword,omitempty"`
 	CredentialStatus    string `json:"credentialStatus,omitempty"`
 	CredentialVersion   string `json:"credentialVersion,omitempty"`
 	CredentialSecretRef string `json:"credentialSecretRef,omitempty"`

@@ -179,6 +179,24 @@ func TestWorkspaceManifestSkipsGatewaySecretWhenCodexKeyMissing(t *testing.T) {
 	}
 }
 
+func TestTencentRuntimeCreationReturnsCredentialMetadataOnly(t *testing.T) {
+	t.Setenv("OPL_AIONUI_ADMIN_PASSWORD_SEED", "workspace-secret-2026-very-long")
+	provider := NewTencentProvider()
+	provider.kubectl = func(_ context.Context, args []string, _ []byte) ([]byte, error) {
+		if !slices.Equal(args, []string{"apply", "-f", "-"}) {
+			t.Fatalf("kubectl args = %#v", args)
+		}
+		return nil, nil
+	}
+	runtime, err := provider.CreateWorkspaceRuntime(context.Background(), WorkspaceRuntimeInput{WorkspaceID: "ws-alpha", IdempotencyKey: "runtime-once"}, ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", ServiceName: "opl-compute-alpha"}, StorageVolume{ID: "storage-alpha", ProviderResourceID: "pvc/opl-storage-alpha-data"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if runtime.Access.Password != "" || runtime.Access.CredentialStatus != "configured" || runtime.Access.SecretRef != "opl-compute-alpha-env" {
+		t.Fatalf("runtime creation must not return the generated Secret value: %#v", runtime.Access)
+	}
+}
+
 func TestRuntimeStatusRecoversWorkspaceResourcesFromKubernetesLabels(t *testing.T) {
 	t.Setenv("OPL_WORKSPACE_IMAGE", "workspace-image:test")
 	provider := NewTencentProvider()
