@@ -77,3 +77,15 @@ func TestPostgresOperationSchemaDefinesImmutableCatalogTables(t *testing.T) {
 		t.Fatal("formal and embedded catalog migrations differ")
 	}
 }
+
+func TestPostgresMigrationChainRejectsStandalonePatchMarkers(t *testing.T) {
+	for lineNumber, line := range strings.Split(PostgresOperationSchemaSQL(), "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "--") {
+			continue
+		}
+		if strings.Trim(trimmed, "+-@*") == "" {
+			t.Fatalf("migration chain line %d is a standalone non-SQL patch marker: %q", lineNumber+1, line)
+		}
+	}
+}
