@@ -433,12 +433,16 @@ func (p *TencentProvider) PublishWorkspaceContent(ctx context.Context, workspace
 	if _, err := p.kubectl(ctx, []string{"exec", deployment, "--", "mv", temporary, target}, nil); err != nil {
 		return err
 	}
-	published, err := p.kubectl(ctx, []string{"exec", deployment, "--", "cat", target}, nil)
+	digestOutput, err := p.kubectl(ctx, []string{"exec", deployment, "--", "sha256sum", target}, nil)
 	if err != nil {
-		return fmt.Errorf("workspace_content_readback_command_failed: %w", err)
+		return fmt.Errorf("workspace_content_digest_command_failed: %w", err)
 	}
-	if !bytes.Equal(published, body) {
-		return fmt.Errorf("workspace_content_digest_mismatch expected_sha256=%s actual_sha256=%x expected_size=%d actual_size=%d", digest, sha256.Sum256(published), len(body), len(published))
+	fields := strings.Fields(string(digestOutput))
+	if len(fields) == 0 || !validDigest(fields[0]) {
+		return fmt.Errorf("workspace_content_digest_invalid")
+	}
+	if fields[0] != digest {
+		return fmt.Errorf("workspace_content_digest_mismatch expected_sha256=%s actual_sha256=%s", digest, fields[0])
 	}
 	return nil
 }
