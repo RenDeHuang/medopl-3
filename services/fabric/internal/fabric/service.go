@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -32,16 +33,19 @@ type Provider interface {
 }
 
 type Service struct {
-	provider    Provider
-	mu          sync.Mutex
-	jobMu       sync.Mutex
-	computes    map[string]ComputeAllocation
-	volumes     map[string]StorageVolume
-	snapshots   map[string]StorageSnapshot
-	attachments map[string]StorageAttachment
-	operations  OperationStore
-	transfers   TransferStore
-	now         func() time.Time
+	provider       Provider
+	mu             sync.Mutex
+	jobMu          sync.Mutex
+	computes       map[string]ComputeAllocation
+	volumes        map[string]StorageVolume
+	snapshots      map[string]StorageSnapshot
+	attachments    map[string]StorageAttachment
+	operations     OperationStore
+	transfers      TransferStore
+	catalog        CatalogStore
+	catalogInitErr error
+	pubmed         *pubMedClient
+	now            func() time.Time
 }
 
 func NewService(provider Provider) *Service {
@@ -49,6 +53,10 @@ func NewService(provider Provider) *Service {
 }
 
 func NewServiceWithOperationStore(provider Provider, operations OperationStore) *Service {
+	return NewServiceWithPubMed(provider, operations, &http.Client{Timeout: 10 * time.Second}, "https://eutils.ncbi.nlm.nih.gov/entrez/eutils")
+}
+
+func NewServiceWithPubMed(provider Provider, operations OperationStore, client *http.Client, baseURL string) *Service {
 	if operations == nil {
 		operations = NewMemoryOperationStore()
 	}
@@ -57,7 +65,9 @@ func NewServiceWithOperationStore(provider Provider, operations OperationStore) 
 	if transferStore == nil {
 		transferStore = newMemoryTransferStore()
 	}
-	return &Service{provider: provider, computes: computes, volumes: volumes, snapshots: snapshots, attachments: attachments, operations: operations, transfers: transferStore, now: func() time.Time { return time.Now().UTC() }}
+	connectors, templates := defaultCatalogRecords()
+	catalogErr := operations.SeedCatalog(context.Background(), connectors, templates)
+	return &Service{provider: provider, computes: computes, volumes: volumes, snapshots: snapshots, attachments: attachments, operations: operations, transfers: transferStore, catalog: operations, catalogInitErr: catalogErr, pubmed: newPubMedClient(client, baseURL), now: func() time.Time { return time.Now().UTC() }}
 }
 
 func (s *Service) Catalog(_ context.Context) Catalog {
@@ -996,6 +1006,8 @@ func fillOperationResource(operation *FabricOperation, resource any) {
 		operation.WorkspaceID = value.WorkspaceID
 		operation.ProviderRequestID = firstNonEmpty(operation.ProviderRequestID, value.JobID)
 		operation.RedactedProviderPayload = map[string]any{"resource": redacted, "leaseTokenHash": value.leaseTokenHash}
+	case pubMedEvidence:
+		operation.RedactedProviderPayload = map[string]any{"querySha256": value.QuerySHA256, "page": value.Page, "pageSize": value.PageSize, "resultCount": value.ResultCount, "pmids": value.PMIDs}
 	}
 }
 

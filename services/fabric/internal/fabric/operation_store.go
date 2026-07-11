@@ -22,18 +22,21 @@ import (
 type OperationStore interface {
 	Append(ctx context.Context, operation FabricOperation) error
 	List(ctx context.Context) ([]FabricOperation, error)
+	CatalogStore
 }
 
 type MemoryOperationStore struct {
-	mu               sync.Mutex
-	operation        []FabricOperation
-	transferSessions map[string]Transfer
-	transferKeys     map[string]string
-	transferChunks   map[string]map[int]TransferChunk
+	mu                   sync.Mutex
+	operation            []FabricOperation
+	transferSessions     map[string]Transfer
+	transferKeys         map[string]string
+	transferChunks       map[string]map[int]TransferChunk
+	connectors           map[string]Connector
+	environmentTemplates map[string]EnvironmentTemplate
 }
 
 func NewMemoryOperationStore() *MemoryOperationStore {
-	return &MemoryOperationStore{transferSessions: map[string]Transfer{}, transferKeys: map[string]string{}, transferChunks: map[string]map[int]TransferChunk{}}
+	return &MemoryOperationStore{transferSessions: map[string]Transfer{}, transferKeys: map[string]string{}, transferChunks: map[string]map[int]TransferChunk{}, connectors: map[string]Connector{}, environmentTemplates: map[string]EnvironmentTemplate{}}
 }
 
 func (s *MemoryOperationStore) Append(_ context.Context, operation FabricOperation) error {
