@@ -14,6 +14,7 @@ import (
 	"opl-cloud/services/ledger/ent/manualtopup"
 	"opl-cloud/services/ledger/ent/reconciliationreport"
 	"opl-cloud/services/ledger/ent/resourcesettlement"
+	"opl-cloud/services/ledger/ent/reviewpolicy"
 	"opl-cloud/services/ledger/ent/wallet"
 	"opl-cloud/services/ledger/ent/wallettransaction"
 	"reflect"
@@ -90,6 +91,7 @@ func checkColumn(table, column string) error {
 			manualtopup.Table:          manualtopup.ValidColumn,
 			reconciliationreport.Table: reconciliationreport.ValidColumn,
 			resourcesettlement.Table:   resourcesettlement.ValidColumn,
+			reviewpolicy.Table:         reviewpolicy.ValidColumn,
 			wallet.Table:               wallet.ValidColumn,
 			wallettransaction.Table:    wallettransaction.ValidColumn,
 		})

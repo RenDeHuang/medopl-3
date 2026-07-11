@@ -178,6 +178,10 @@ func NewServer(store ledger.Store, token string) http.Handler {
 			writeError(w, http.StatusNotFound, err.Error())
 			return
 		}
+		if errors.Is(err, ledger.ErrContinuationIneligible) {
+			writeError(w, http.StatusConflict, err.Error())
+			return
+		}
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "continuation query failed")
 			return
@@ -258,6 +262,82 @@ func NewServer(store ledger.Store, token string) http.Handler {
 		}
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "review query failed")
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
+	})
+	mux.HandleFunc("POST /ledger/review-policies", func(w http.ResponseWriter, r *http.Request) {
+		idempotencyKey := r.Header.Get("Idempotency-Key")
+		if idempotencyKey == "" {
+			writeError(w, http.StatusBadRequest, "missing Idempotency-Key")
+			return
+		}
+		var input ledger.ReviewPolicyInput
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid JSON body")
+			return
+		}
+		input.IdempotencyKey = idempotencyKey
+		result, err := store.CreateReviewPolicy(r.Context(), input)
+		if errors.Is(err, ledger.ErrInvalidReviewPolicyInput) {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if errors.Is(err, ledger.ErrReviewPolicyNotFound) {
+			writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		if errors.Is(err, ledger.ErrIdempotencyConflict) {
+			writeError(w, http.StatusConflict, err.Error())
+			return
+		}
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "review policy failed")
+			return
+		}
+		writeJSON(w, http.StatusCreated, result)
+	})
+	mux.HandleFunc("GET /ledger/review-policies", func(w http.ResponseWriter, r *http.Request) {
+		values := r.URL.Query()
+		result, err := store.ListReviewPolicies(r.Context(), ledger.ReviewPolicyQuery{
+			ExecutionIdentity: ledger.ExecutionIdentity{OrganizationID: values.Get("organizationId"), WorkspaceID: values.Get("workspaceId"), ProjectID: values.Get("projectId"), TaskID: values.Get("taskId"), JobID: values.Get("jobId")},
+			Status:            values.Get("status"),
+		})
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "review policy list failed")
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
+	})
+	mux.HandleFunc("GET /ledger/review-policies/{id}", func(w http.ResponseWriter, r *http.Request) {
+		result, err := store.ReviewPolicy(r.Context(), r.PathValue("id"))
+		if errors.Is(err, ledger.ErrReviewPolicyNotFound) {
+			writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "review policy query failed")
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
+	})
+	mux.HandleFunc("POST /ledger/review-gates/evaluate", func(w http.ResponseWriter, r *http.Request) {
+		var input ledger.ReviewGateInput
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			writeError(w, http.StatusBadRequest, "invalid JSON body")
+			return
+		}
+		result, err := store.EvaluateReviewGate(r.Context(), input)
+		if errors.Is(err, ledger.ErrInvalidReviewGateInput) {
+			writeError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if errors.Is(err, ledger.ErrReviewPolicyNotFound) {
+			writeError(w, http.StatusNotFound, err.Error())
+			return
+		}
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "review gate evaluation failed")
 			return
 		}
 		writeJSON(w, http.StatusOK, result)

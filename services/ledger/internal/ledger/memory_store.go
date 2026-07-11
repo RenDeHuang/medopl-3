@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -12,15 +13,16 @@ import (
 )
 
 type MemoryStore struct {
-	mu          sync.Mutex
-	wallets     map[string]Wallet
-	idempotency map[string]idempotencyRecord
-	receipts    map[string]Receipt
-	entries     []LedgerEntry
-	walletTx    []WalletTransaction
-	topups      []ManualTopUp
-	settlements []ResourceSettlementResult
-	nextID      int64
+	mu             sync.Mutex
+	wallets        map[string]Wallet
+	idempotency    map[string]idempotencyRecord
+	receipts       map[string]Receipt
+	reviewPolicies map[string]ReviewPolicy
+	entries        []LedgerEntry
+	walletTx       []WalletTransaction
+	topups         []ManualTopUp
+	settlements    []ResourceSettlementResult
+	nextID         int64
 }
 
 type idempotencyRecord struct {
@@ -30,9 +32,10 @@ type idempotencyRecord struct {
 
 func NewMemoryStore() *MemoryStore {
 	return &MemoryStore{
-		wallets:     map[string]Wallet{},
-		idempotency: map[string]idempotencyRecord{},
-		receipts:    map[string]Receipt{},
+		wallets:        map[string]Wallet{},
+		idempotency:    map[string]idempotencyRecord{},
+		receipts:       map[string]Receipt{},
+		reviewPolicies: map[string]ReviewPolicy{},
 	}
 }
 
@@ -347,7 +350,25 @@ func (s *MemoryStore) Continuation(ctx context.Context, receiptID string) (map[s
 	if err != nil {
 		return nil, err
 	}
-	return continuationFromReceipt(receipt)
+	continuation, err := continuationFromReceipt(receipt)
+	if err != nil {
+		return nil, err
+	}
+	identity := executionIdentityFromReceipt(receipt)
+	if !validExecutionIdentity(identity) {
+		return continuation, nil
+	}
+	gate, err := s.EvaluateReviewGate(ctx, ReviewGateInput{ExecutionIdentity: identity, ReviewIDs: stringSlice(continuation["reviewIds"])})
+	if errors.Is(err, ErrReviewPolicyNotFound) {
+		return continuation, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if !gate.ContinuationEligible {
+		return nil, ErrContinuationIneligible
+	}
+	return continuation, nil
 }
 
 func (s *MemoryStore) RecordArtifact(ctx context.Context, input ArtifactInput) (Artifact, error) {
@@ -382,10 +403,7 @@ func (s *MemoryStore) RecordReview(ctx context.Context, input ReviewInput) (Revi
 	if err := validateReviewInput(input); err != nil {
 		return Review{}, err
 	}
-	status := "completed"
-	if input.Decision == "rejected" {
-		status = "review_blocked"
-	}
+	status := reviewReceiptStatus(input.Decision)
 	receipt, err := s.RecordReceipt(ctx, ReceiptInput{
 		Type: reviewReceiptType, Status: status, Surface: "ledger",
 		OrganizationID: input.OrganizationID, WorkspaceID: input.WorkspaceID, ProjectID: input.ProjectID, TaskID: input.TaskID, JobID: input.JobID,
@@ -408,6 +426,117 @@ func (s *MemoryStore) Review(_ context.Context, reviewID string) (Review, error)
 		}
 	}
 	return Review{}, ErrReviewNotFound
+}
+
+func (s *MemoryStore) CreateReviewPolicy(_ context.Context, input ReviewPolicyInput) (ReviewPolicy, error) {
+	if err := validateReviewPolicyInput(input); err != nil {
+		return ReviewPolicy{}, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	hashInput := input
+	hashInput.IdempotencyKey = ""
+	payloadHash, err := hashJSON(hashInput)
+	if err != nil {
+		return ReviewPolicy{}, err
+	}
+	if existing, ok := s.idempotency[input.IdempotencyKey]; ok {
+		if existing.payloadHash != payloadHash {
+			return ReviewPolicy{}, ErrIdempotencyConflict
+		}
+		policy, ok := existing.result.(ReviewPolicy)
+		if !ok {
+			return ReviewPolicy{}, ErrIdempotencyConflict
+		}
+		if current, ok := s.reviewPolicies[policy.PolicyID]; ok {
+			policy = current
+		}
+		policy.Replayed = true
+		return policy, nil
+	}
+	if input.SupersedesPolicyID != "" {
+		previous, ok := s.reviewPolicies[input.SupersedesPolicyID]
+		if !ok {
+			return ReviewPolicy{}, ErrReviewPolicyNotFound
+		}
+		if previous.Status != "active" || !sameExecutionIdentity(previous.ExecutionIdentity, input.ExecutionIdentity) || previous.Version == input.Version {
+			return ReviewPolicy{}, ErrInvalidReviewPolicyInput
+		}
+	} else {
+		for _, existing := range s.reviewPolicies {
+			if existing.Status == "active" && sameExecutionIdentity(existing.ExecutionIdentity, input.ExecutionIdentity) {
+				return ReviewPolicy{}, ErrInvalidReviewPolicyInput
+			}
+		}
+	}
+	policy := ReviewPolicy{ReviewPolicyInput: input, PolicyID: evidenceID("review-policy", input.IdempotencyKey), Status: "active", CreatedAt: time.Now().UTC()}
+	policy.IdempotencyKey = ""
+	s.reviewPolicies[policy.PolicyID] = policy
+	if input.SupersedesPolicyID != "" {
+		previous := s.reviewPolicies[input.SupersedesPolicyID]
+		previous.Status = "superseded"
+		s.reviewPolicies[previous.PolicyID] = previous
+	}
+	s.idempotency[input.IdempotencyKey] = idempotencyRecord{payloadHash: payloadHash, result: policy}
+	return policy, nil
+}
+
+func (s *MemoryStore) ReviewPolicy(_ context.Context, policyID string) (ReviewPolicy, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	policy, ok := s.reviewPolicies[policyID]
+	if !ok {
+		return ReviewPolicy{}, ErrReviewPolicyNotFound
+	}
+	return policy, nil
+}
+
+func (s *MemoryStore) ListReviewPolicies(_ context.Context, query ReviewPolicyQuery) ([]ReviewPolicy, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	policies := make([]ReviewPolicy, 0, len(s.reviewPolicies))
+	for _, policy := range s.reviewPolicies {
+		if (query.OrganizationID != "" && policy.OrganizationID != query.OrganizationID) || (query.WorkspaceID != "" && policy.WorkspaceID != query.WorkspaceID) || (query.ProjectID != "" && policy.ProjectID != query.ProjectID) || (query.TaskID != "" && policy.TaskID != query.TaskID) || (query.JobID != "" && policy.JobID != query.JobID) || (query.Status != "" && policy.Status != query.Status) {
+			continue
+		}
+		policies = append(policies, policy)
+	}
+	sort.Slice(policies, func(i, j int) bool {
+		if policies[i].CreatedAt.Equal(policies[j].CreatedAt) {
+			return policies[i].PolicyID > policies[j].PolicyID
+		}
+		return policies[i].CreatedAt.After(policies[j].CreatedAt)
+	})
+	return policies, nil
+}
+
+func (s *MemoryStore) EvaluateReviewGate(_ context.Context, input ReviewGateInput) (ReviewGateResult, error) {
+	if !validExecutionIdentity(input.ExecutionIdentity) {
+		return ReviewGateResult{}, ErrInvalidReviewGateInput
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var active ReviewPolicy
+	for _, policy := range s.reviewPolicies {
+		if policy.Status == "active" && sameExecutionIdentity(policy.ExecutionIdentity, input.ExecutionIdentity) {
+			active = policy
+			break
+		}
+	}
+	if active.PolicyID == "" {
+		return ReviewGateResult{}, ErrReviewPolicyNotFound
+	}
+	wanted := make(map[string]struct{}, len(input.ReviewIDs))
+	for _, id := range input.ReviewIDs {
+		wanted[id] = struct{}{}
+	}
+	reviews := make([]Review, 0, len(wanted))
+	for _, receipt := range s.receipts {
+		if _, ok := wanted[receipt.ReviewID]; ok && receipt.Type == reviewReceiptType {
+			reviews = append(reviews, reviewFromReceipt(receipt))
+		}
+	}
+	return evaluateReviewGate(active, reviews), nil
 }
 
 func (s *MemoryStore) SettleResource(_ context.Context, input ResourceSettlementInput) (ResourceSettlementResult, error) {

@@ -16,12 +16,16 @@ var ErrInsufficientFrozen = errors.New("insufficient frozen balance")
 var ErrInvalidHoldInput = errors.New("hold resource identity required")
 var ErrReceiptNotFound = errors.New("receipt not found")
 var ErrContinuationNotFound = errors.New("continuation not found")
+var ErrContinuationIneligible = errors.New("continuation is not eligible")
 var ErrInvalidReceiptInput = errors.New("invalid receipt input")
 var ErrInvalidReceiptQuery = errors.New("invalid receipt query")
 var ErrArtifactNotFound = errors.New("artifact not found")
 var ErrInvalidArtifactInput = errors.New("invalid artifact input")
 var ErrReviewNotFound = errors.New("review not found")
 var ErrInvalidReviewInput = errors.New("invalid review input")
+var ErrReviewPolicyNotFound = errors.New("review policy not found")
+var ErrInvalidReviewPolicyInput = errors.New("invalid review policy input")
+var ErrInvalidReviewGateInput = errors.New("invalid review gate input")
 
 const artifactReceiptType = "artifact.manifest.v1"
 const reviewReceiptType = "review.result.v1"
@@ -276,6 +280,63 @@ type Review struct {
 	Replayed  bool      `json:"replayed"`
 }
 
+type ExecutionIdentity struct {
+	OrganizationID string `json:"organizationId"`
+	WorkspaceID    string `json:"workspaceId"`
+	ProjectID      string `json:"projectId"`
+	TaskID         string `json:"taskId"`
+	JobID          string `json:"jobId"`
+}
+
+type RequiredReviewer struct {
+	ReviewerRef     string `json:"reviewerRef"`
+	ReviewerVersion string `json:"reviewerVersion"`
+}
+
+type ReviewPolicyInput struct {
+	ExecutionIdentity
+	Version            string             `json:"version"`
+	RequiredReviewers  []RequiredReviewer `json:"requiredReviewers"`
+	SupersedesPolicyID string             `json:"supersedesPolicyId,omitempty"`
+	IdempotencyKey     string             `json:"-"`
+}
+
+type ReviewPolicy struct {
+	ReviewPolicyInput
+	PolicyID  string    `json:"policyId"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
+	Replayed  bool      `json:"replayed"`
+}
+
+type ReviewPolicyQuery struct {
+	ExecutionIdentity
+	Status string
+}
+
+type ReviewGateInput struct {
+	ExecutionIdentity
+	ReviewIDs []string `json:"reviewIds"`
+}
+
+type ReviewGateEvidence struct {
+	ReviewerRef     string `json:"reviewerRef"`
+	RequiredVersion string `json:"requiredVersion"`
+	ReviewID        string `json:"reviewId,omitempty"`
+	ActualVersion   string `json:"actualVersion,omitempty"`
+}
+
+type ReviewGateResult struct {
+	PolicyID             string               `json:"policyId"`
+	PolicyVersion        string               `json:"policyVersion"`
+	Status               string               `json:"status"`
+	ContinuationEligible bool                 `json:"continuationEligible"`
+	Missing              []ReviewGateEvidence `json:"missing"`
+	Pending              []ReviewGateEvidence `json:"pending"`
+	Rejected             []ReviewGateEvidence `json:"rejected"`
+	VersionMismatches    []ReviewGateEvidence `json:"versionMismatches"`
+}
+
 func validateArtifactInput(input ArtifactInput) error {
 	if input.WorkspaceID == "" || input.ProjectID == "" || input.TaskID == "" || input.JobID == "" || input.Digest == "" || input.MediaType == "" || input.SizeBytes < 0 || input.IdempotencyKey == "" || !isOpaqueReference(input.StorageRef) {
 		return ErrInvalidArtifactInput
@@ -284,10 +345,117 @@ func validateArtifactInput(input ArtifactInput) error {
 }
 
 func validateReviewInput(input ReviewInput) error {
-	if input.WorkspaceID == "" || input.ProjectID == "" || input.TaskID == "" || input.JobID == "" || input.ReviewerRef == "" || input.ReviewerVersion == "" || len(input.InputArtifactDigests) == 0 || len(input.Checks) == 0 || input.IdempotencyKey == "" || (input.Decision != "accepted" && input.Decision != "rejected") || containsForbiddenReceiptKey(input.Checks) {
+	if input.WorkspaceID == "" || input.ProjectID == "" || input.TaskID == "" || input.JobID == "" || !isOpaqueReference(input.ReviewerRef) || !isOpaqueReference(input.ReviewerVersion) || len(input.InputArtifactDigests) == 0 || len(input.Checks) == 0 || input.IdempotencyKey == "" || (input.Decision != "accepted" && input.Decision != "pending" && input.Decision != "rejected") || containsForbiddenReceiptKey(input.Checks) {
 		return ErrInvalidReviewInput
 	}
 	return nil
+}
+
+func reviewReceiptStatus(decision string) string {
+	if decision == "rejected" {
+		return "review_blocked"
+	}
+	if decision == "pending" {
+		return "review_required"
+	}
+	return "completed"
+}
+
+func validateReviewPolicyInput(input ReviewPolicyInput) error {
+	if !validExecutionIdentity(input.ExecutionIdentity) || !isOpaqueReference(input.Version) || input.IdempotencyKey == "" || len(input.RequiredReviewers) == 0 || (input.SupersedesPolicyID != "" && !isOpaqueReference(input.SupersedesPolicyID)) {
+		return ErrInvalidReviewPolicyInput
+	}
+	seen := make(map[string]struct{}, len(input.RequiredReviewers))
+	for _, required := range input.RequiredReviewers {
+		if !isOpaqueReference(required.ReviewerRef) || !isOpaqueReference(required.ReviewerVersion) {
+			return ErrInvalidReviewPolicyInput
+		}
+		if _, exists := seen[required.ReviewerRef]; exists {
+			return ErrInvalidReviewPolicyInput
+		}
+		seen[required.ReviewerRef] = struct{}{}
+	}
+	return nil
+}
+
+func validExecutionIdentity(identity ExecutionIdentity) bool {
+	return identity.WorkspaceID != "" && identity.ProjectID != "" && identity.TaskID != "" && identity.JobID != ""
+}
+
+func sameExecutionIdentity(left, right ExecutionIdentity) bool {
+	return left == right
+}
+
+func evaluateReviewGate(policy ReviewPolicy, reviews []Review) ReviewGateResult {
+	result := ReviewGateResult{
+		PolicyID: policy.PolicyID, PolicyVersion: policy.Version, Status: "accepted", ContinuationEligible: true,
+		Missing: []ReviewGateEvidence{}, Pending: []ReviewGateEvidence{}, Rejected: []ReviewGateEvidence{}, VersionMismatches: []ReviewGateEvidence{},
+	}
+	for _, required := range policy.RequiredReviewers {
+		var mismatch *Review
+		var pending *Review
+		var rejected *Review
+		accepted := false
+		for i := range reviews {
+			review := &reviews[i]
+			if review.ReviewerRef != required.ReviewerRef || !sameExecutionIdentity(policy.ExecutionIdentity, executionIdentityFromReview(*review)) {
+				continue
+			}
+			if review.ReviewerVersion != required.ReviewerVersion {
+				if mismatch == nil {
+					mismatch = review
+				}
+				continue
+			}
+			switch review.Decision {
+			case "accepted":
+				accepted = true
+			case "pending":
+				pending = review
+			case "rejected":
+				rejected = review
+			}
+		}
+		evidence := ReviewGateEvidence{ReviewerRef: required.ReviewerRef, RequiredVersion: required.ReviewerVersion}
+		if rejected != nil {
+			evidence.ReviewID = rejected.ReviewID
+			evidence.ActualVersion = rejected.ReviewerVersion
+			result.Rejected = append(result.Rejected, evidence)
+			continue
+		}
+		if accepted {
+			continue
+		}
+		if pending != nil {
+			evidence.ReviewID = pending.ReviewID
+			evidence.ActualVersion = pending.ReviewerVersion
+			result.Pending = append(result.Pending, evidence)
+			continue
+		}
+		if mismatch != nil {
+			evidence.ReviewID = mismatch.ReviewID
+			evidence.ActualVersion = mismatch.ReviewerVersion
+			result.VersionMismatches = append(result.VersionMismatches, evidence)
+			continue
+		}
+		result.Missing = append(result.Missing, evidence)
+	}
+	if len(result.Rejected) > 0 || len(result.VersionMismatches) > 0 {
+		result.Status = "review_blocked"
+		result.ContinuationEligible = false
+	} else if len(result.Missing) > 0 || len(result.Pending) > 0 {
+		result.Status = "review_required"
+		result.ContinuationEligible = false
+	}
+	return result
+}
+
+func executionIdentityFromReview(review Review) ExecutionIdentity {
+	return ExecutionIdentity{OrganizationID: review.OrganizationID, WorkspaceID: review.WorkspaceID, ProjectID: review.ProjectID, TaskID: review.TaskID, JobID: review.JobID}
+}
+
+func executionIdentityFromReceipt(receipt Receipt) ExecutionIdentity {
+	return ExecutionIdentity{OrganizationID: receipt.OrganizationID, WorkspaceID: receipt.WorkspaceID, ProjectID: receipt.ProjectID, TaskID: receipt.TaskID, JobID: receipt.JobID}
 }
 
 func isOpaqueReference(value string) bool {

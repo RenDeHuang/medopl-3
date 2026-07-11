@@ -210,6 +210,129 @@ func TestReviewResultRecordsAndQueriesDecision(t *testing.T) {
 	}
 }
 
+func TestReviewPolicyIsVersionedIdempotentAndSupersedes(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	firstInput := ReviewPolicyInput{
+		ExecutionIdentity: ExecutionIdentity{OrganizationID: "org-alpha", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha"},
+		Version:           "1", RequiredReviewers: []RequiredReviewer{{ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0"}}, IdempotencyKey: "policy-v1",
+	}
+	first, err := store.CreateReviewPolicy(ctx, firstInput)
+	if err != nil || first.PolicyID == "" || first.Status != "active" {
+		t.Fatalf("create first policy = %#v, %v", first, err)
+	}
+	replayed, err := store.CreateReviewPolicy(ctx, firstInput)
+	if err != nil || !replayed.Replayed || replayed.PolicyID != first.PolicyID {
+		t.Fatalf("replay first policy = %#v, %v", replayed, err)
+	}
+
+	secondInput := firstInput
+	secondInput.Version = "2"
+	secondInput.RequiredReviewers = []RequiredReviewer{{ReviewerRef: "reviewer-rca", ReviewerVersion: "2.0.0"}}
+	secondInput.SupersedesPolicyID = first.PolicyID
+	secondInput.IdempotencyKey = "policy-v2"
+	second, err := store.CreateReviewPolicy(ctx, secondInput)
+	if err != nil || second.Status != "active" {
+		t.Fatalf("create second policy = %#v, %v", second, err)
+	}
+	loadedFirst, err := store.ReviewPolicy(ctx, first.PolicyID)
+	if err != nil || loadedFirst.Status != "superseded" {
+		t.Fatalf("superseded first policy = %#v, %v", loadedFirst, err)
+	}
+	replayedFirst, err := store.CreateReviewPolicy(ctx, firstInput)
+	if err != nil || replayedFirst.Status != "superseded" || !replayedFirst.Replayed {
+		t.Fatalf("replay must return current policy status = %#v, %v", replayedFirst, err)
+	}
+	policies, err := store.ListReviewPolicies(ctx, ReviewPolicyQuery{ExecutionIdentity: ExecutionIdentity{JobID: "job-alpha"}})
+	if err != nil || len(policies) != 2 || policies[0].PolicyID != second.PolicyID {
+		t.Fatalf("list policies = %#v, %v", policies, err)
+	}
+}
+
+func TestReviewGateEvaluatesRequiredReviewEvidence(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	scope := ExecutionIdentity{OrganizationID: "org-alpha", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha"}
+	policy, err := store.CreateReviewPolicy(ctx, ReviewPolicyInput{
+		ExecutionIdentity: scope, Version: "1",
+		RequiredReviewers: []RequiredReviewer{{ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0"}, {ReviewerRef: "reviewer-book", ReviewerVersion: "2.0.0"}},
+		IdempotencyKey:    "gate-policy",
+	})
+	if err != nil {
+		t.Fatalf("create policy: %v", err)
+	}
+	review := func(key, ref, version, decision string) Review {
+		result, err := store.RecordReview(ctx, ReviewInput{
+			OrganizationID: scope.OrganizationID, WorkspaceID: scope.WorkspaceID, ProjectID: scope.ProjectID, TaskID: scope.TaskID, JobID: scope.JobID,
+			ReviewerRef: ref, ReviewerVersion: version, InputArtifactDigests: []string{"sha256:abc123"}, Checks: map[string]any{"schema": "checked"}, Decision: decision, IdempotencyKey: key,
+		})
+		if err != nil {
+			t.Fatalf("record review: %v", err)
+		}
+		return result
+	}
+	accepted := review("accepted-review", "reviewer-rca", "1.0.0", "accepted")
+	pending := review("pending-review", "reviewer-book", "2.0.0", "pending")
+
+	required, err := store.EvaluateReviewGate(ctx, ReviewGateInput{ExecutionIdentity: scope, ReviewIDs: []string{accepted.ReviewID, pending.ReviewID}})
+	if err != nil || required.Status != "review_required" || required.ContinuationEligible || len(required.Pending) != 1 || required.PolicyID != policy.PolicyID {
+		t.Fatalf("pending gate = %#v, %v", required, err)
+	}
+	required, err = store.EvaluateReviewGate(ctx, ReviewGateInput{ExecutionIdentity: scope, ReviewIDs: []string{accepted.ReviewID}})
+	if err != nil || required.Status != "review_required" || required.ContinuationEligible || len(required.Missing) != 1 {
+		t.Fatalf("missing gate = %#v, %v", required, err)
+	}
+	wrongVersion := review("wrong-version-review", "reviewer-book", "1.0.0", "accepted")
+	blocked, err := store.EvaluateReviewGate(ctx, ReviewGateInput{ExecutionIdentity: scope, ReviewIDs: []string{accepted.ReviewID, wrongVersion.ReviewID}})
+	if err != nil || blocked.Status != "review_blocked" || blocked.ContinuationEligible || len(blocked.VersionMismatches) != 1 {
+		t.Fatalf("version mismatch gate = %#v, %v", blocked, err)
+	}
+	rejected := review("rejected-review", "reviewer-book", "2.0.0", "rejected")
+	blocked, err = store.EvaluateReviewGate(ctx, ReviewGateInput{ExecutionIdentity: scope, ReviewIDs: []string{accepted.ReviewID, rejected.ReviewID}})
+	if err != nil || blocked.Status != "review_blocked" || blocked.ContinuationEligible || len(blocked.Rejected) != 1 {
+		t.Fatalf("rejected gate = %#v, %v", blocked, err)
+	}
+	bookAccepted := review("book-accepted-review", "reviewer-book", "2.0.0", "accepted")
+	passed, err := store.EvaluateReviewGate(ctx, ReviewGateInput{ExecutionIdentity: scope, ReviewIDs: []string{accepted.ReviewID, bookAccepted.ReviewID}})
+	if err != nil || passed.Status != "accepted" || !passed.ContinuationEligible {
+		t.Fatalf("accepted gate = %#v, %v", passed, err)
+	}
+}
+
+func TestReviewGateUsesRequiredVersionRegardlessOfReviewOrder(t *testing.T) {
+	scope := ExecutionIdentity{WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha"}
+	policy := ReviewPolicy{
+		ReviewPolicyInput: ReviewPolicyInput{ExecutionIdentity: scope, Version: "2", RequiredReviewers: []RequiredReviewer{{ReviewerRef: "reviewer-rca", ReviewerVersion: "2.0.0"}}},
+		PolicyID:          "policy-alpha", Status: "active",
+	}
+	result := evaluateReviewGate(policy, []Review{
+		{ReviewInput: ReviewInput{WorkspaceID: scope.WorkspaceID, ProjectID: scope.ProjectID, TaskID: scope.TaskID, JobID: scope.JobID, ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0", Decision: "accepted"}, ReviewID: "review-old"},
+		{ReviewInput: ReviewInput{WorkspaceID: scope.WorkspaceID, ProjectID: scope.ProjectID, TaskID: scope.TaskID, JobID: scope.JobID, ReviewerRef: "reviewer-rca", ReviewerVersion: "2.0.0", Decision: "accepted"}, ReviewID: "review-current"},
+	})
+	if result.Status != "accepted" || !result.ContinuationEligible || len(result.VersionMismatches) != 0 {
+		t.Fatalf("gate must select required reviewer version: %#v", result)
+	}
+}
+
+func TestContinuationIsIneligibleUntilActiveReviewPolicyPasses(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	scope := ExecutionIdentity{OrganizationID: "org-alpha", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha"}
+	if _, err := store.CreateReviewPolicy(ctx, ReviewPolicyInput{ExecutionIdentity: scope, Version: "1", RequiredReviewers: []RequiredReviewer{{ReviewerRef: "reviewer-rca", ReviewerVersion: "1.0.0"}}, IdempotencyKey: "continuation-policy"}); err != nil {
+		t.Fatalf("create policy: %v", err)
+	}
+	receipt, err := store.RecordReceipt(ctx, ReceiptInput{
+		Type: "execution.receipt.v1", Status: "completed", Surface: "workspace", OrganizationID: scope.OrganizationID, WorkspaceID: scope.WorkspaceID, ProjectID: scope.ProjectID, TaskID: scope.TaskID, JobID: scope.JobID,
+		Continuation: map[string]any{"continuationId": "continuation-alpha", "reviewIds": []string{}}, IdempotencyKey: "continuation-gated-receipt",
+	})
+	if err != nil {
+		t.Fatalf("record receipt: %v", err)
+	}
+	if _, err := store.Continuation(ctx, receipt.ReceiptID); !errors.Is(err, ErrContinuationIneligible) {
+		t.Fatalf("continuation error = %v, want ErrContinuationIneligible", err)
+	}
+}
+
 func TestReleaseHoldReducesFrozenWithoutDebitingBalance(t *testing.T) {
 	store := NewMemoryStore()
 	ctx := context.Background()

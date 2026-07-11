@@ -30,6 +30,9 @@ type ReconciliationReport func(*sql.Selector)
 // ResourceSettlement is the predicate function for resourcesettlement builders.
 type ResourceSettlement func(*sql.Selector)
 
+// ReviewPolicy is the predicate function for reviewpolicy builders.
+type ReviewPolicy func(*sql.Selector)
+
 // Wallet is the predicate function for wallet builders.
 type Wallet func(*sql.Selector)
 

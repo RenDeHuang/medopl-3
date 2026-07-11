@@ -31,6 +31,9 @@ func TestPostgresSchemaUsesEntMigrationLedgerTables(t *testing.T) {
 		"CREATE TABLE IF NOT EXISTS reconciliation_reports",
 		"report_json TEXT NOT NULL DEFAULT '{}'",
 		"CREATE TABLE IF NOT EXISTS idempotency_keys",
+		"CREATE TABLE IF NOT EXISTS review_policies",
+		"required_reviewers_json TEXT NOT NULL",
+		"CREATE UNIQUE INDEX IF NOT EXISTS review_policies_active_scope",
 	}
 	for _, marker := range required {
 		if !strings.Contains(schema, marker) {

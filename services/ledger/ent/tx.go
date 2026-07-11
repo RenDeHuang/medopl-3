@@ -28,6 +28,8 @@ type Tx struct {
 	ReconciliationReport *ReconciliationReportClient
 	// ResourceSettlement is the client for interacting with the ResourceSettlement builders.
 	ResourceSettlement *ResourceSettlementClient
+	// ReviewPolicy is the client for interacting with the ReviewPolicy builders.
+	ReviewPolicy *ReviewPolicyClient
 	// Wallet is the client for interacting with the Wallet builders.
 	Wallet *WalletClient
 	// WalletTransaction is the client for interacting with the WalletTransaction builders.
@@ -171,6 +173,7 @@ func (tx *Tx) init() {
 	tx.ManualTopup = NewManualTopupClient(tx.config)
 	tx.ReconciliationReport = NewReconciliationReportClient(tx.config)
 	tx.ResourceSettlement = NewResourceSettlementClient(tx.config)
+	tx.ReviewPolicy = NewReviewPolicyClient(tx.config)
 	tx.Wallet = NewWalletClient(tx.config)
 	tx.WalletTransaction = NewWalletTransactionClient(tx.config)
 }

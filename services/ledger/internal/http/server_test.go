@@ -288,6 +288,33 @@ func TestArtifactAndReviewHTTP(t *testing.T) {
 	}
 }
 
+func TestReviewPolicyAndGateHTTP(t *testing.T) {
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	policyReq := testRequest(http.MethodPost, "/ledger/review-policies", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha","version":"1","requiredReviewers":[{"reviewerRef":"reviewer-rca","reviewerVersion":"1.0.0"}]}`))
+	policyReq.Header.Set("Idempotency-Key", "policy-http")
+	policyRec := httptest.NewRecorder()
+	server.ServeHTTP(policyRec, policyReq)
+	if policyRec.Code != http.StatusCreated {
+		t.Fatalf("create policy status = %d body=%s", policyRec.Code, policyRec.Body.String())
+	}
+	var policy ledger.ReviewPolicy
+	if err := json.Unmarshal(policyRec.Body.Bytes(), &policy); err != nil || policy.PolicyID == "" {
+		t.Fatalf("decode policy = %#v, %v", policy, err)
+	}
+
+	listRec := httptest.NewRecorder()
+	server.ServeHTTP(listRec, testRequest(http.MethodGet, "/ledger/review-policies?jobId=job-alpha&status=active", nil))
+	if listRec.Code != http.StatusOK || !strings.Contains(listRec.Body.String(), policy.PolicyID) {
+		t.Fatalf("list policies status = %d body=%s", listRec.Code, listRec.Body.String())
+	}
+
+	gateRec := httptest.NewRecorder()
+	server.ServeHTTP(gateRec, testRequest(http.MethodPost, "/ledger/review-gates/evaluate", bytes.NewBufferString(`{"organizationId":"org-alpha","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha","reviewIds":[]}`)))
+	if gateRec.Code != http.StatusOK || !strings.Contains(gateRec.Body.String(), `"status":"review_required"`) || !strings.Contains(gateRec.Body.String(), `"continuationEligible":false`) {
+		t.Fatalf("evaluate gate status = %d body=%s", gateRec.Code, gateRec.Body.String())
+	}
+}
+
 func TestEvidenceHTTPMapsInputNotFoundAndConflict(t *testing.T) {
 	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
 	invalidReq := testRequest(http.MethodPost, "/ledger/artifacts", bytes.NewBufferString(`{"workspaceId":"workspace-alpha","storageRef":"https://example.test/result?token=secret"}`))
