@@ -3,6 +3,8 @@ package ledger
 import (
 	"database/sql"
 	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -46,6 +48,40 @@ func TestPostgresSchemaUsesEntMigrationLedgerTables(t *testing.T) {
 	for _, marker := range generatedValidators {
 		if strings.Contains(readGeneratedLedgerEnt(t), marker) {
 			t.Fatalf("ledger resource facts must allow account/resource scoped rows before workspace exists: found %q", marker)
+		}
+	}
+}
+
+func TestFormalMigrationsDeclareReceiptColumnsBeforeQueryBackfill(t *testing.T) {
+	entries, err := os.ReadDir("../../migrations")
+	if err != nil {
+		t.Fatalf("read formal migrations: %v", err)
+	}
+	names := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".sql") {
+			names = append(names, entry.Name())
+		}
+	}
+	sort.Strings(names)
+	var migrations strings.Builder
+	for _, name := range names {
+		data, err := os.ReadFile(filepath.Join("../../migrations", name))
+		if err != nil {
+			t.Fatalf("read formal migration %s: %v", name, err)
+		}
+		migrations.Write(data)
+		migrations.WriteByte('\n')
+	}
+	sql := migrations.String()
+	backfill := strings.Index(sql, "UPDATE evidence_receipts")
+	if backfill < 0 {
+		t.Fatal("formal migrations missing receipt identity backfill")
+	}
+	for _, column := range []string{"receipt_type", "status", "payload_json", "supersedes_receipt_id", "organization_id", "project_id", "task_id", "job_id"} {
+		declaration := strings.Index(sql, "ALTER TABLE evidence_receipts ADD COLUMN IF NOT EXISTS "+column)
+		if declaration < 0 || declaration > backfill {
+			t.Fatalf("formal migrations must declare %s before receipt backfill", column)
 		}
 	}
 }

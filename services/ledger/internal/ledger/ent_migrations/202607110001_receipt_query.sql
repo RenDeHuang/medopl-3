@@ -1,3 +1,7 @@
+ALTER TABLE evidence_receipts ADD COLUMN IF NOT EXISTS receipt_type TEXT NOT NULL DEFAULT '';
+ALTER TABLE evidence_receipts ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT '';
+ALTER TABLE evidence_receipts ADD COLUMN IF NOT EXISTS payload_json TEXT NOT NULL DEFAULT '{}';
+ALTER TABLE evidence_receipts ADD COLUMN IF NOT EXISTS supersedes_receipt_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE evidence_receipts ADD COLUMN IF NOT EXISTS organization_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE evidence_receipts ADD COLUMN IF NOT EXISTS project_id TEXT NOT NULL DEFAULT '';
 ALTER TABLE evidence_receipts ADD COLUMN IF NOT EXISTS task_id TEXT NOT NULL DEFAULT '';
@@ -17,4 +21,3 @@ CREATE INDEX IF NOT EXISTS evidence_receipts_task_created ON evidence_receipts (
 CREATE INDEX IF NOT EXISTS evidence_receipts_job_created ON evidence_receipts (job_id, created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS evidence_receipts_type_created ON evidence_receipts (receipt_type, created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS evidence_receipts_status_created ON evidence_receipts (status, created_at DESC, id DESC);
-
