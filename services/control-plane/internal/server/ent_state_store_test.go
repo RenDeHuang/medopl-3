@@ -77,6 +77,27 @@ func TestEntStateStoreNeverPersistsWorkspacePassword(t *testing.T) {
 	}
 }
 
+func TestEntStateStoreWorkspaceResumeCommitRollsBackAllFacts(t *testing.T) {
+	ctx := context.Background()
+	store := NewTestEntStateStore(t, t.TempDir()+"/resume-transaction.sqlite")
+	original := map[string]any{"id": "workspace-alpha", "accountId": "acct-alpha", "state": "suspended", "status": "suspended"}
+	if err := store.SaveWorkspace(ctx, original); err != nil {
+		t.Fatalf("seed workspace: %v", err)
+	}
+	running := cloneMap(original)
+	running["state"], running["status"] = "running", "running"
+	err := store.CommitWorkspaceResume(ctx, running, map[string]any{"id": "audit-resume", "action": "workspace.resume", "resourceKind": "workspace", "resourceId": "workspace-alpha", "result": "succeeded"}, map[string]any{"action": "workspace.resume"})
+	if err == nil {
+		t.Fatal("resume commit with invalid operation unexpectedly succeeded")
+	}
+	workspaces, _ := store.ListWorkspaces(ctx, "")
+	audits, _ := store.ListAuditEvents(ctx, "")
+	operations, _ := store.ListRuntimeOperations(ctx)
+	if len(workspaces) != 1 || workspaces[0]["state"] != "suspended" || len(audits) != 0 || len(operations) != 0 {
+		t.Fatalf("failed resume commit was not atomic: workspaces=%#v audits=%#v operations=%#v", workspaces, audits, operations)
+	}
+}
+
 func TestEntStateStorePersistsWalletTransactionWalletAfter(t *testing.T) {
 	store := NewTestEntStateStore(t, t.TempDir()+"/wallet-after.sqlite")
 	if err := store.SaveWalletTransaction(context.Background(), map[string]any{

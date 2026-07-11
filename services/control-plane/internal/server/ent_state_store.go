@@ -863,6 +863,27 @@ func (s *postgresEntStateStore) SaveWorkspace(ctx context.Context, row map[strin
 	return s.replaceRecord(ctx, row, func(id string) error { return s.client.Workspace.DeleteOneID(id).Exec(ctx) }, func() any { return s.client.Workspace.Create() }, workspaceEntFields)
 }
 
+func (s *postgresEntStateStore) CommitWorkspaceResume(ctx context.Context, workspace map[string]any, audit map[string]any, operation map[string]any) error {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	store := &postgresEntStateStore{client: tx.Client()}
+	if err := store.SaveAuditEvent(ctx, audit); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if err := store.SaveRuntimeOperation(ctx, operation); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if err := store.SaveWorkspace(ctx, workspace); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
 func (s *postgresEntStateStore) DeleteWorkspace(ctx context.Context, id string) error {
 	err := s.client.Workspace.DeleteOneID(id).Exec(ctx)
 	if controlplaneent.IsNotFound(err) {

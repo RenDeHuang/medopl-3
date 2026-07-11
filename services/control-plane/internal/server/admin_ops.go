@@ -88,6 +88,10 @@ func (app *controlPlaneServer) operatorSummary() map[string]any {
 }
 
 func (app *controlPlaneServer) appendAuditEvent(r *http.Request, action string, resourceKind string, resourceID string, targetAccountID string, before any, after any, result string) error {
+	return app.tables.SaveAuditEvent(r.Context(), app.auditEvent(r, action, resourceKind, resourceID, targetAccountID, before, after, result))
+}
+
+func (app *controlPlaneServer) auditEvent(r *http.Request, action string, resourceKind string, resourceID string, targetAccountID string, before any, after any, result string) map[string]any {
 	user, _ := app.sessionUserContext(r)
 	now := time.Now().UTC().Format(time.RFC3339)
 	event := map[string]any{
@@ -106,7 +110,7 @@ func (app *controlPlaneServer) appendAuditEvent(r *http.Request, action string, 
 		"result":          result,
 		"createdAt":       now,
 	}
-	return app.tables.SaveAuditEvent(r.Context(), event)
+	return event
 }
 
 func (app *controlPlaneServer) rememberRuntimeOperations(operations []clients.FabricOperation) error {

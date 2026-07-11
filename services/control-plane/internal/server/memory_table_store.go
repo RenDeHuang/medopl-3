@@ -288,6 +288,19 @@ func (s *memoryTableStore) SaveWorkspace(_ context.Context, row map[string]any) 
 	return nil
 }
 
+func (s *memoryTableStore) CommitWorkspaceResume(_ context.Context, workspace map[string]any, audit map[string]any, operation map[string]any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	workspace = cloneMap(workspace)
+	access := cloneMap(mapField(workspace, "access"))
+	delete(access, "password")
+	workspace["access"] = access
+	s.workspaces[stringValue(workspace["id"])] = workspace
+	s.auditEvents = upsertProjectionByID(s.auditEvents, cloneMap(audit))
+	s.runtimeOps = upsertProjectionByID(s.runtimeOps, cloneMap(operation))
+	return nil
+}
+
 func (s *memoryTableStore) DeleteWorkspace(_ context.Context, id string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

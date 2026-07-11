@@ -86,6 +86,19 @@ func TestResumeWorkspaceReusesIdentityStorageAndRecordsReceipt(t *testing.T) {
 	}
 }
 
+func TestResumeWorkspaceProjectsUnreadyFabricRuntime(t *testing.T) {
+	calls := []string{}
+	service := NewService(&fakeLedgerClient{calls: &calls}, &fakeFabricClient{calls: &calls, runtime: clients.WorkspaceRuntime{ID: "runtime-new", WorkspaceID: "workspace-alpha", Status: "provisioning", ServiceName: "opl-compute-new", Ready: false}})
+
+	workspace, err := service.ResumeWorkspace(context.Background(), ResumeWorkspaceInput{WorkspaceID: "workspace-alpha", AccountID: "acct-alpha", AttachmentID: "attachment-new", ComputeID: "compute-new", VolumeID: "volume-alpha"}, "resume-provisioning")
+	if err != nil {
+		t.Fatalf("resume provisioning workspace: %v", err)
+	}
+	if workspace.Status != "provisioning" || workspace.RuntimeReady || workspace.CredentialStatus != "" || workspace.RuntimeUsername != "" {
+		t.Fatalf("resume advertised an unready runtime as openable: %#v", workspace)
+	}
+}
+
 func TestExecuteApprovedRequestCreatesJobAndReceipt(t *testing.T) {
 	calls := []string{}
 	service := NewService(&fakeLedgerClient{calls: &calls}, &fakeFabricClient{calls: &calls})
@@ -365,8 +378,9 @@ func (f *fakeLedgerClient) ListResourceSettlements(ctx context.Context, accountI
 }
 
 type fakeFabricClient struct {
-	calls *[]string
-	job   clients.Job
+	calls   *[]string
+	job     clients.Job
+	runtime clients.WorkspaceRuntime
 }
 
 func (f *fakeFabricClient) Catalog(ctx context.Context) (clients.FabricCatalog, error) {
@@ -421,7 +435,10 @@ func (f *fakeFabricClient) DetachStorageAttachment(ctx context.Context, id strin
 
 func (f *fakeFabricClient) CreateWorkspaceRuntime(ctx context.Context, input clients.WorkspaceRuntimeInput, idempotencyKey string) (clients.WorkspaceRuntime, error) {
 	*f.calls = append(*f.calls, "fabric.runtime")
-	return clients.WorkspaceRuntime{ID: "runtime-alpha", WorkspaceID: input.WorkspaceID, URL: "https://workspace.medopl.cn/w/" + input.WorkspaceID + "/", ServiceName: "opl-compute-alpha", Access: clients.WorkspaceRuntimeAccess{Username: "admin", Password: "runtime-password-alpha", CredentialStatus: "configured", CredentialVersion: "v1", SecretRef: "opl-compute-alpha-env"}}, nil
+	if f.runtime.ID != "" {
+		return f.runtime, nil
+	}
+	return clients.WorkspaceRuntime{ID: "runtime-alpha", WorkspaceID: input.WorkspaceID, URL: "https://workspace.medopl.cn/w/" + input.WorkspaceID + "/", Status: "running", ServiceName: "opl-compute-alpha", Access: clients.WorkspaceRuntimeAccess{Username: "admin", Password: "runtime-password-alpha", CredentialStatus: "configured", CredentialVersion: "v1", SecretRef: "opl-compute-alpha-env"}, Ready: true}, nil
 }
 
 func (f *fakeFabricClient) WorkspaceRuntimeStatus(ctx context.Context, workspaceID string) (clients.WorkspaceRuntime, error) {

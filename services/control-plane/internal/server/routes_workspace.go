@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"opl-cloud/services/control-plane/internal/controlplane"
@@ -91,6 +92,36 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 			writeError(w, http.StatusForbidden, "account_scope_forbidden")
 			return
 		}
+		key, ok := executionMutationKey(w, r)
+		if !ok {
+			return
+		}
+		requestHash := stableID(string(mustJSON(input)))
+		operationID := "resume-" + stableID(workspaceID, key)[:18]
+		operations, err := app.tables.ListRuntimeOperations(r.Context())
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "state_read_failed")
+			return
+		}
+		for _, operation := range operations {
+			if stringValue(operation["id"]) != operationID {
+				continue
+			}
+			var result struct {
+				RequestHash string         `json:"requestHash"`
+				Response    map[string]any `json:"response"`
+			}
+			if json.Unmarshal([]byte(stringValue(operation["result"])), &result) != nil || result.Response == nil {
+				writeError(w, http.StatusInternalServerError, "state_read_failed")
+				return
+			}
+			if result.RequestHash != requestHash {
+				writeError(w, http.StatusConflict, "idempotency_conflict")
+				return
+			}
+			writeJSON(w, http.StatusOK, result.Response)
+			return
+		}
 		state := firstNonEmpty(stringValue(workspace["state"]), stringValue(workspace["status"]))
 		if state != "suspended" && state != "stopped" {
 			writeError(w, http.StatusConflict, "workspace_not_suspended")
@@ -120,30 +151,46 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 			writeError(w, http.StatusConflict, "resume_resources_not_ready")
 			return
 		}
-		resumed, err := service.ResumeWorkspace(r.Context(), controlplane.ResumeWorkspaceInput{WorkspaceID: workspaceID, AccountID: accountID, OwnerID: stringValue(workspace["ownerUserId"]), Name: stringValue(workspace["name"]), PackageID: stringValue(workspace["packageId"]), URL: stringValue(workspace["url"]), AttachmentID: attachmentID, ComputeID: computeID, VolumeID: storageID}, mutationKey(r, input))
+		resumed, err := service.ResumeWorkspace(r.Context(), controlplane.ResumeWorkspaceInput{WorkspaceID: workspaceID, AccountID: accountID, OwnerID: stringValue(workspace["ownerUserId"]), Name: stringValue(workspace["name"]), PackageID: stringValue(workspace["packageId"]), URL: stringValue(workspace["url"]), AttachmentID: attachmentID, ComputeID: computeID, VolumeID: storageID}, key)
 		if err != nil {
 			writeUpstreamError(w, err)
 			return
 		}
 		before := cloneMap(workspace)
-		workspace["state"], workspace["status"] = "running", "running"
+		workspace["state"], workspace["status"] = resumed.Status, resumed.Status
 		workspace["computeAllocationId"], workspace["currentComputeAllocationId"] = resumed.ComputeID, resumed.ComputeID
 		workspace["attachmentId"], workspace["currentAttachmentId"] = resumed.AttachmentID, resumed.AttachmentID
 		workspace["runtimeId"] = resumed.RuntimeID
 		workspace["runtime"] = map[string]any{"serviceName": resumed.RuntimeServiceName}
+		workspace["runtimeServiceName"], workspace["serviceName"] = resumed.RuntimeServiceName, resumed.RuntimeServiceName
 		workspace["receiptId"] = resumed.ReceiptID
 		workspace["url"] = resumed.URL
 		access := cloneMap(mapField(workspace, "access"))
-		access["tokenStatus"], access["requiresLogin"] = "active", false
-		access["account"], access["username"] = resumed.RuntimeUsername, resumed.RuntimeUsername
-		access["credentialStatus"], access["credentialVersion"], access["secretRef"] = resumed.CredentialStatus, resumed.CredentialVersion, resumed.CredentialSecretRef
-		workspace["access"] = access
-		if err := app.tables.SaveWorkspace(r.Context(), workspace); err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
+		credentialsReady := resumed.RuntimeReady && resumed.RuntimeUsername != "" && resumed.CredentialStatus == "configured" && resumed.CredentialSecretRef != ""
+		if credentialsReady {
+			access["tokenStatus"] = "active"
+		} else {
+			access["tokenStatus"] = "suspended"
 		}
+		access["requiresLogin"] = false
+		if resumed.RuntimeUsername != "" {
+			access["account"], access["username"] = resumed.RuntimeUsername, resumed.RuntimeUsername
+		}
+		if resumed.CredentialStatus != "" {
+			access["credentialStatus"] = resumed.CredentialStatus
+		}
+		if resumed.CredentialVersion != "" {
+			access["credentialVersion"] = resumed.CredentialVersion
+		}
+		if resumed.CredentialSecretRef != "" {
+			access["secretRef"] = resumed.CredentialSecretRef
+		}
+		workspace["access"] = access
 		body := workspaceResponse(cloneMap(workspace))
-		if err := app.appendAuditEvent(r, "workspace.resume", "workspace", workspaceID, accountID, before, body, "succeeded"); err != nil {
+		result, _ := json.Marshal(map[string]any{"requestHash": requestHash, "response": body})
+		operation := map[string]any{"id": operationID, "operationId": operationID, "accountId": accountID, "workspaceId": workspaceID, "resourceId": workspaceID, "resourceKind": "workspace_runtime", "action": "workspace.resume", "provider": stringValue(workspace["provider"]), "providerRequestId": resumed.RuntimeID, "status": "succeeded", "result": string(result), "computeAllocationId": resumed.ComputeID, "storageId": resumed.VolumeID, "attachmentId": resumed.AttachmentID, "runtimeServiceName": resumed.RuntimeServiceName}
+		audit := app.auditEvent(r, "workspace.resume", "workspace", workspaceID, accountID, before, body, "succeeded")
+		if err := app.tables.CommitWorkspaceResume(r.Context(), workspace, audit, operation); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}

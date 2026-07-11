@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"sync"
@@ -188,7 +189,7 @@ func TestResumeWorkspaceValidatesRetainedResourcesBeforeFabric(t *testing.T) {
 		"name": "Alpha Lab", "packageId": "basic", "url": "https://workspace.medopl.cn/w/workspace-alpha/",
 		"state": "suspended", "status": "suspended", "storageId": "storage-alpha",
 		"currentComputeAllocationId": "", "currentAttachmentId": "", "runtimeId": "runtime-old",
-		"runtime": map[string]any{"serviceName": "opl-compute-old"}, "access": map[string]any{"tokenStatus": "suspended"},
+		"runtime": map[string]any{"serviceName": "opl-compute-old"}, "runtimeServiceName": "opl-compute-old-root", "serviceName": "opl-compute-old-legacy", "access": map[string]any{"tokenStatus": "suspended"},
 	}
 	mustStore(t, store.SaveWorkspace(context.Background(), workspace))
 	mustStore(t, store.SaveStorage(context.Background(), map[string]any{"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "workspace-alpha", "status": "available"}))
@@ -205,6 +206,14 @@ func TestResumeWorkspaceValidatesRetainedResourcesBeforeFabric(t *testing.T) {
 	owner := loginForTest(t, server, "owner-resume@lab.example", "CorrectHorseBatteryStaple!")
 	outsider := loginForTest(t, server, "outside-resume@lab.example", "CorrectHorseBatteryStaple!")
 	body := `{"computeAllocationId":"compute-replacement","attachmentId":"attachment-replacement"}`
+	missingKeyReq := httptest.NewRequest(http.MethodPost, "/api/workspaces/workspace-alpha/resume", bytes.NewBufferString(body))
+	missingKeyReq.Header.Set("Content-Type", "application/json")
+	addAuth(missingKeyReq, owner)
+	missingKey := httptest.NewRecorder()
+	server.ServeHTTP(missingKey, missingKeyReq)
+	if missingKey.Code != http.StatusBadRequest || !strings.Contains(missingKey.Body.String(), "missing Idempotency-Key") || len(calls) != 0 {
+		t.Fatalf("missing-key resume = %d calls=%#v: %s", missingKey.Code, calls, missingKey.Body.String())
+	}
 
 	before := len(calls)
 	forbidden := requestWithSession(t, server, outsider, http.MethodPost, "/api/workspaces/workspace-alpha/resume", body)
@@ -254,9 +263,88 @@ func TestResumeWorkspaceValidatesRetainedResourcesBeforeFabric(t *testing.T) {
 	if got := calls[before:]; !slices.Equal(got, []string{"fabric.runtime"}) {
 		t.Fatalf("resume Fabric calls = %#v", got)
 	}
+	replayed := requestWithSession(t, server, owner, http.MethodPost, "/api/workspaces/workspace-alpha/resume", body)
+	if replayed.Code != http.StatusOK || len(calls[before:]) != 1 {
+		t.Fatalf("resume replay = %d calls=%#v body=%s", replayed.Code, calls[before:], replayed.Body.String())
+	}
+	var replayedResult map[string]any
+	if err := json.NewDecoder(replayed.Body).Decode(&replayedResult); err != nil || !reflect.DeepEqual(replayedResult, result) {
+		t.Fatalf("resume replay changed prior result: first=%#v replay=%#v err=%v", result, replayedResult, err)
+	}
+	changed := requestWithSession(t, server, owner, http.MethodPost, "/api/workspaces/workspace-alpha/resume", `{"computeAllocationId":"compute-other","attachmentId":"attachment-replacement"}`)
+	if changed.Code != http.StatusConflict || !strings.Contains(changed.Body.String(), "idempotency_conflict") || len(calls[before:]) != 1 {
+		t.Fatalf("changed resume replay = %d calls=%#v body=%s", changed.Code, calls[before:], changed.Body.String())
+	}
+	stored, _ := store.ListWorkspaces(context.Background(), "")
+	if nested(stored[0], "runtime", "serviceName") != "opl-compute-from-fabric" || stored[0]["runtimeServiceName"] != "opl-compute-from-fabric" || stored[0]["serviceName"] != "opl-compute-from-fabric" {
+		t.Fatalf("resume kept stale runtime service pointers: %#v", stored[0])
+	}
 	heads, err := store.ListProjectTaskSyncHeads(context.Background())
 	if err != nil || len(heads) != 1 || numberField(heads[0], "version", 0) != 7 {
 		t.Fatalf("resume changed project/task sync heads: %#v err=%v", heads, err)
+	}
+}
+
+type failingResumeCommitStore struct{ *memoryTableStore }
+
+func (s *failingResumeCommitStore) CommitWorkspaceResume(context.Context, map[string]any, map[string]any, map[string]any) error {
+	return errors.New("audit write failed")
+}
+
+func (s *failingResumeCommitStore) SaveAuditEvent(context.Context, map[string]any) error {
+	return errors.New("audit write failed")
+}
+
+func TestResumeWorkspaceAuditFailureDoesNotPersistRunningProjection(t *testing.T) {
+	store := &failingResumeCommitStore{memoryTableStore: newMemoryTableStore()}
+	mustStore(t, store.SaveWorkspace(context.Background(), map[string]any{"id": "workspace-alpha", "accountId": "acct-alpha", "ownerAccountId": "acct-alpha", "state": "suspended", "status": "suspended", "storageId": "storage-alpha", "url": "https://workspace.medopl.cn/w/workspace-alpha/", "access": map[string]any{"tokenStatus": "suspended"}}))
+	mustStore(t, store.SaveStorage(context.Background(), map[string]any{"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "workspace-alpha", "status": "available"}))
+	mustStore(t, store.SaveCompute(context.Background(), map[string]any{"id": "compute-new", "accountId": "acct-alpha", "workspaceId": "workspace-alpha", "status": "running"}))
+	mustStore(t, store.SaveAttachment(context.Background(), map[string]any{"id": "attachment-new", "accountId": "acct-alpha", "workspaceId": "workspace-alpha", "computeAllocationId": "compute-new", "storageId": "storage-alpha", "status": "attached"}))
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}), store)
+	if err != nil {
+		t.Fatalf("create audit failure server: %v", err)
+	}
+	response := requestWithSession(t, server, operatorSessionForTest(t, server), http.MethodPost, "/api/workspaces/workspace-alpha/resume", `{"computeAllocationId":"compute-new","attachmentId":"attachment-new"}`)
+	if response.Code != http.StatusInternalServerError {
+		t.Fatalf("audit failure status = %d: %s", response.Code, response.Body.String())
+	}
+	workspace, _ := store.ListWorkspaces(context.Background(), "")
+	if workspace[0]["state"] != "suspended" || workspace[0]["status"] != "suspended" {
+		t.Fatalf("audit failure left partial running projection: %#v", workspace[0])
+	}
+	operations, _ := store.ListRuntimeOperations(context.Background())
+	if len(operations) != 0 {
+		t.Fatalf("audit failure persisted idempotency result: %#v", operations)
+	}
+}
+
+func TestResumeWorkspaceKeepsUnreadyRuntimeClosedAndCredentialsIntact(t *testing.T) {
+	store := newMemoryTableStore()
+	mustStore(t, store.SaveWorkspace(context.Background(), map[string]any{"id": "workspace-alpha", "accountId": "acct-alpha", "ownerAccountId": "acct-alpha", "state": "suspended", "status": "suspended", "storageId": "storage-alpha", "url": "https://workspace.medopl.cn/w/workspace-alpha/", "runtime": map[string]any{"serviceName": "old-nested"}, "runtimeServiceName": "old-root", "serviceName": "old-legacy", "access": map[string]any{"tokenStatus": "suspended", "account": "opl", "username": "opl", "credentialStatus": "configured", "credentialVersion": "v1", "secretRef": "old-secret"}}))
+	mustStore(t, store.SaveStorage(context.Background(), map[string]any{"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "workspace-alpha", "status": "available"}))
+	mustStore(t, store.SaveCompute(context.Background(), map[string]any{"id": "compute-new", "accountId": "acct-alpha", "workspaceId": "workspace-alpha", "status": "running"}))
+	mustStore(t, store.SaveAttachment(context.Background(), map[string]any{"id": "attachment-new", "accountId": "acct-alpha", "workspaceId": "workspace-alpha", "computeAllocationId": "compute-new", "storageId": "storage-alpha", "status": "attached"}))
+	runtime := clients.WorkspaceRuntime{ID: "runtime-new", WorkspaceID: "workspace-alpha", Status: "provisioning", Ready: false}
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{runtime: runtime}), store)
+	if err != nil {
+		t.Fatalf("create provisioning resume server: %v", err)
+	}
+	response := requestWithSession(t, server, operatorSessionForTest(t, server), http.MethodPost, "/api/workspaces/workspace-alpha/resume", `{"computeAllocationId":"compute-new","attachmentId":"attachment-new"}`)
+	if response.Code != http.StatusOK {
+		t.Fatalf("provisioning resume status = %d: %s", response.Code, response.Body.String())
+	}
+	var body map[string]any
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatalf("decode provisioning resume: %v", err)
+	}
+	access := mapField(body, "access")
+	if body["state"] != "provisioning" || body["openable"] != false || access["tokenStatus"] != "suspended" || access["credentialStatus"] != "configured" || access["secretRef"] != "old-secret" {
+		t.Fatalf("unready runtime became openable or cleared credentials: %#v", body)
+	}
+	stored, _ := store.ListWorkspaces(context.Background(), "")
+	if stringValue(nested(stored[0], "runtime", "serviceName")) != "" || stringValue(stored[0]["runtimeServiceName"]) != "" || stringValue(stored[0]["serviceName"]) != "" {
+		t.Fatalf("provisioning resume kept stale service pointers: %#v", stored[0])
 	}
 }
 
@@ -854,7 +942,8 @@ func (catalogFabricClient) Catalog(_ context.Context) (clients.FabricCatalog, er
 }
 
 type fakeFabricClient struct {
-	calls *[]string
+	calls   *[]string
+	runtime clients.WorkspaceRuntime
 }
 
 func (f *fakeFabricClient) record(call string) {
@@ -918,7 +1007,10 @@ func (f *fakeFabricClient) DetachStorageAttachment(_ context.Context, id string,
 
 func (f *fakeFabricClient) CreateWorkspaceRuntime(_ context.Context, input clients.WorkspaceRuntimeInput, _ string) (clients.WorkspaceRuntime, error) {
 	f.record("fabric.runtime")
-	return clients.WorkspaceRuntime{ID: "runtime-from-fabric", WorkspaceID: input.WorkspaceID, URL: "https://workspace.medopl.cn/w/ws-from-fabric/", ServiceName: "opl-compute-from-fabric", Access: clients.WorkspaceRuntimeAccess{Username: "admin", Password: "runtime-password-alpha"}}, nil
+	if f.runtime.ID != "" {
+		return f.runtime, nil
+	}
+	return clients.WorkspaceRuntime{ID: "runtime-from-fabric", WorkspaceID: input.WorkspaceID, URL: "https://workspace.medopl.cn/w/ws-from-fabric/", Status: "running", ServiceName: "opl-compute-from-fabric", Access: clients.WorkspaceRuntimeAccess{Username: "admin", Password: "runtime-password-alpha", CredentialStatus: "configured", CredentialVersion: "v1", SecretRef: "opl-compute-from-fabric-env"}, Ready: true}, nil
 }
 
 func (f *fakeFabricClient) WorkspaceRuntimeStatus(_ context.Context, workspaceID string) (clients.WorkspaceRuntime, error) {
