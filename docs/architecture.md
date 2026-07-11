@@ -12,13 +12,13 @@ OPL Cloud has five product layers:
 
 ## Current Implementation Slice
 
-This repository uses four explicit service boundaries:
+This repository has four runtime components and one non-runtime contract package:
 
 - `apps/console-ui`: React + TypeScript browser UI. It owns no persistence and calls only the Control Plane API.
 - `services/control-plane`: Go UI-facing API and product orchestrator. It owns auth, organizations, users, workspaces, support, operation requests, and UI projections. It calls Ledger and Fabric through typed HTTP clients.
 - `services/ledger`: Go service backed by PostgreSQL. It owns wallets, holds, manual top-ups, ledger entries, wallet transactions, receipts, audit events, evidence references, idempotency keys, and reconciliation.
 - `services/fabric`: Go service backed by PostgreSQL for Tencent Cloud and Kubernetes operations. It owns resource catalog, compute, storage, attachments, runtime templates, runtimes, provider request ids, retryable resource operations, resumable content transfers, and storage snapshots.
-- `packages/contracts`: machine-readable product, route, lifecycle, billing, management, storage, evidence, and service-boundary contracts.
+- `packages/contracts`: machine-readable product, route, lifecycle, billing, management, storage, evidence, and service-boundary contracts. It is source-of-truth data, not a fifth runtime service.
 
 ## Boundaries
 
@@ -40,9 +40,11 @@ Ledger details such as dedup rows, request fingerprints, and raw event payloads 
 
 ## Persistence
 
-PostgreSQL is the production persistence target for Control Plane, Fabric, and Ledger. In-memory stores remain test and local-development adapters only.
+PostgreSQL is the production persistence target for Control Plane, Fabric, and Ledger. In-memory stores are intended for tests and local development.
 
 Commercial identity, wallet, Workspace, billing, support, audit, and receipt data must persist across rollouts when `DATABASE_URL` is configured.
+
+Fabric rejects a production start without `DATABASE_URL`. Ledger does not yet fail closed: its executable falls back to an in-memory store whenever `DATABASE_URL` is absent, including in production. Production deployment and readiness checks must therefore supply and verify Ledger's database configuration; making the Ledger executable reject that configuration error remains a security hardening gap.
 
 ## Current Production Constraint
 
