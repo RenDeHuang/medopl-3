@@ -76,26 +76,28 @@ func TestReceiptRejectsMissingIdentityAndSecretContent(t *testing.T) {
 	}
 }
 
-func TestExecutionContinuationRequiresFullIdentity(t *testing.T) {
-	store := NewMemoryStore()
-	ctx := context.Background()
-	receipt, err := store.RecordReceipt(ctx, ReceiptInput{
-		Type:           "execution.receipt.v1",
-		Status:         "completed",
-		Surface:        "workspace",
-		WorkspaceID:    "workspace-alpha",
-		ProjectID:      "project-alpha",
-		TaskID:         "task-alpha",
-		IdempotencyKey: "receipt-continuation",
-		Continuation: map[string]any{
-			"continuationId":          "continuation-alpha",
-			"taskVersion":             float64(3),
-			"requiredArtifactDigests": []any{"sha256:alpha"},
-			"environmentRef":          "environment-alpha",
-		},
-	})
-	if !errors.Is(err, ErrInvalidReceiptInput) || receipt.ReceiptID != "" {
-		t.Fatalf("incomplete execution continuation = %#v, %v", receipt, err)
+func TestAnyContinuationRequiresFullIdentity(t *testing.T) {
+	for _, receiptType := range []string{"execution.receipt.v1", "workspace.created"} {
+		store := NewMemoryStore()
+		receipt, err := store.RecordReceipt(context.Background(), ReceiptInput{
+			Type:           receiptType,
+			Status:         "completed",
+			Surface:        "workspace",
+			WorkspaceID:    "workspace-alpha",
+			ProjectID:      "project-alpha",
+			TaskID:         "task-alpha",
+			JobID:          "job-alpha",
+			IdempotencyKey: "receipt-continuation",
+			Continuation: map[string]any{
+				"continuationId":          "continuation-alpha",
+				"taskVersion":             float64(3),
+				"requiredArtifactDigests": []any{"sha256:alpha"},
+				"environmentRef":          "environment-alpha",
+			},
+		})
+		if !errors.Is(err, ErrInvalidReceiptInput) || receipt.ReceiptID != "" {
+			t.Fatalf("%s incomplete continuation = %#v, %v", receiptType, receipt, err)
+		}
 	}
 }
 
@@ -111,10 +113,10 @@ func TestLegacyReceiptWithoutContinuationRemainsReadable(t *testing.T) {
 	}
 }
 
-func TestPersistedIncompleteExecutionReceiptNeverExposesContinuation(t *testing.T) {
+func TestPersistedIncompleteReceiptNeverExposesContinuation(t *testing.T) {
 	store := NewMemoryStore()
 	receipt := Receipt{
-		ReceiptInput: ReceiptInput{Type: "execution.receipt.v1", Status: "completed", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", ContinuationID: "continuation-old", Continuation: map[string]any{"continuationId": "continuation-old"}},
+		ReceiptInput: ReceiptInput{Type: "workspace.created", Status: "completed", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha", ContinuationID: "continuation-old", Continuation: map[string]any{"continuationId": "continuation-old"}},
 		ReceiptID:    "receipt-old",
 		CreatedAt:    time.Now().UTC(),
 	}

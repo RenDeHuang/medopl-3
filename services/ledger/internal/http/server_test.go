@@ -168,6 +168,17 @@ func TestContinuationHTTP(t *testing.T) {
 	}
 }
 
+func TestReceiptHTTPRejectsContinuationWithoutFullIdentity(t *testing.T) {
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	req := testRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(`{"type":"workspace.created","status":"completed","surface":"workspace","workspaceId":"workspace-alpha","projectId":"project-alpha","taskId":"task-alpha","jobId":"job-alpha","continuation":{"continuationId":"continuation-alpha"}}`))
+	req.Header.Set("Idempotency-Key", "invalid-legacy-continuation")
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest || strings.Contains(rec.Body.String(), "continuation-alpha") {
+		t.Fatalf("invalid continuation response = %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestReceiptListHTTPIsAuthenticatedFilteredAndPaginated(t *testing.T) {
 	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
 	for i, body := range []string{
