@@ -414,6 +414,8 @@ type fakeNativeTkeAPI struct {
 	autoRepair               bool
 	rejectMachinePoolFilter  bool
 	machinePoolIds           []string
+	nodeType                 string
+	omitInstanceNodePool     bool
 	calls                    []string
 }
 
@@ -422,6 +424,7 @@ type fakeNativeCvmAPI struct {
 	modifyInstancesRequest   []*cvm2017.ModifyInstancesAttributeRequest
 	instanceName             string
 	empty                    bool
+	err                      error
 }
 
 func (api *fakeNativeCvmAPI) ModifyInstancesAttribute(request *cvm2017.ModifyInstancesAttributeRequest) (*cvm2017.ModifyInstancesAttributeResponse, error) {
@@ -432,6 +435,9 @@ func (api *fakeNativeCvmAPI) ModifyInstancesAttribute(request *cvm2017.ModifyIns
 
 func (api *fakeNativeCvmAPI) DescribeInstances(request *cvm2017.DescribeInstancesRequest) (*cvm2017.DescribeInstancesResponse, error) {
 	api.describeInstancesRequest = append(api.describeInstancesRequest, request)
+	if api.err != nil {
+		return nil, api.err
+	}
 	if api.empty {
 		return &cvm2017.DescribeInstancesResponse{
 			Response: &cvm2017.DescribeInstancesResponseParams{
@@ -562,11 +568,16 @@ func (api *fakeNativeTkeAPI) DescribeClusterInstances(request *tke2022.DescribeC
 		if nodePoolId != "" && nodePoolId != currentNodePoolId {
 			continue
 		}
+		instanceNodePoolId := currentNodePoolId
+		if api.omitInstanceNodePool {
+			instanceNodePoolId = ""
+		}
 		instances = append(instances, &tke2022.Instance{
 			InstanceId:    common.StringPtr(fmt.Sprintf("np-native-%d", index)),
 			InstanceState: common.StringPtr("running"),
 			LanIP:         common.StringPtr(lanIp),
-			NodePoolId:    common.StringPtr(currentNodePoolId),
+			NodePoolId:    common.StringPtr(instanceNodePoolId),
+			NodeType:      common.StringPtr(firstNonEmpty(api.nodeType, "Native")),
 		})
 	}
 	return &tke2022.DescribeClusterInstancesResponse{
@@ -889,6 +900,75 @@ func TestTencentSDKTagComputeMachineVerifiesNativeTKEIdentityWithoutCVMRename(t 
 
 	if !response.Ok || response.InstanceId != "np-native-1" || len(cvmAPI.modifyInstancesRequest) != 0 {
 		t.Fatalf("native tag response=%#v modify requests=%#v", response, cvmAPI.modifyInstancesRequest)
+	}
+}
+
+func TestTencentSDKClientRejectsRegularTKEIdentityWhenCVMIsAbsent(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, nodeType: "Regular"}
+	client := newFakeTencentSDKClient(tkeAPI)
+	client.nativeCvmClient = &fakeNativeCvmAPI{empty: true}
+
+	reconcile := client.ReconcileComputePool(Request{
+		PackageId: "basic",
+		Pool:      ComputePoolInput{Id: "basic", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1},
+	}, map[string]string{})
+	if len(reconcile.Machines) != 1 || reconcile.Machines[0].Ready {
+		t.Fatalf("regular machine without CVM identity = %#v", reconcile.Machines)
+	}
+
+	tagged := client.TagComputeMachine(Request{
+		Tags:       map[string]string{"opl_resource_id": "compute-alpha"},
+		Pool:       ComputePoolInput{NodePoolId: "np-basic"},
+		Allocation: ComputeAllocationInput{InstanceId: "np-native-1", MachineName: "node-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.11"},
+	}, nil)
+	if tagged.Ok || tagged.ErrorCode != "tencent_verify_native_compute_machine_failed" {
+		t.Fatalf("regular machine tag = %#v", tagged)
+	}
+}
+
+func TestTencentSDKClientDoesNotTreatCVMAPIErrorAsNativeIdentity(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1}
+	client := newFakeTencentSDKClient(tkeAPI)
+	client.nativeCvmClient = &fakeNativeCvmAPI{err: errors.New("cvm unavailable")}
+
+	reconcile := client.ReconcileComputePool(Request{
+		PackageId: "basic",
+		Pool:      ComputePoolInput{Id: "basic", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1},
+	}, map[string]string{})
+	if reconcile.Ok || reconcile.ErrorCode != "tencent_describe_cvm_instance_failed" {
+		t.Fatalf("reconcile after CVM API error = %#v", reconcile)
+	}
+
+	created := client.CreateComputeAllocation(Request{
+		AccountId: "acct-alpha", PackageId: "basic",
+		Pool:       ComputePoolInput{Id: "basic", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic"},
+		Allocation: ComputeAllocationInput{Id: "compute-alpha"},
+	}, map[string]string{})
+	if created.Ok || created.ErrorCode != "tencent_describe_cvm_instance_failed" {
+		t.Fatalf("create after CVM API error = %#v", created)
+	}
+}
+
+func TestTencentSDKTagComputeMachineRequiresExactNativeNodePoolIdentity(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, omitInstanceNodePool: true}
+	client := newFakeTencentSDKClient(tkeAPI)
+	client.nativeCvmClient = &fakeNativeCvmAPI{empty: true}
+
+	response := client.TagComputeMachine(Request{
+		Tags:       map[string]string{"opl_resource_id": "compute-alpha"},
+		Pool:       ComputePoolInput{NodePoolId: "np-basic"},
+		Allocation: ComputeAllocationInput{InstanceId: "np-native-1", MachineName: "node-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.11"},
+	}, nil)
+	if response.Ok || response.ErrorCode != "tencent_verify_native_compute_machine_failed" {
+		t.Fatalf("native tag without exact pool identity = %#v", response)
+	}
+
+	response = client.TagComputeMachine(Request{
+		Tags:       map[string]string{"opl_resource_id": "compute-alpha"},
+		Allocation: ComputeAllocationInput{InstanceId: "np-native-1", MachineName: "node-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.11"},
+	}, nil)
+	if response.Ok || response.ErrorCode != "tencent_verify_native_compute_machine_failed" {
+		t.Fatalf("native tag without requested pool identity = %#v", response)
 	}
 }
 
