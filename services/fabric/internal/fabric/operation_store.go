@@ -17,6 +17,7 @@ import (
 	"opl-cloud/services/fabric/ent/contenttransfer"
 	"opl-cloud/services/fabric/ent/contenttransferchunk"
 	"opl-cloud/services/fabric/ent/fabricoperation"
+	"opl-cloud/services/fabric/ent/machineownership"
 )
 
 type OperationStore interface {
@@ -24,6 +25,11 @@ type OperationStore interface {
 	ClaimRuntime(ctx context.Context, operation FabricOperation) (FabricOperation, bool, error)
 	SaveRuntime(ctx context.Context, operation FabricOperation) error
 	List(ctx context.Context) ([]FabricOperation, error)
+	ClaimMachine(ctx context.Context, ownership MachineOwnership) (MachineOwnership, bool, error)
+	SaveMachineOwnership(ctx context.Context, ownership MachineOwnership) error
+	MachineOwnership(ctx context.Context, resourceID string) (MachineOwnership, error)
+	ListMachineOwnerships(ctx context.Context) ([]MachineOwnership, error)
+	WithPoolLock(ctx context.Context, poolKey string, fn func(context.Context) error) error
 	CatalogStore
 }
 
@@ -35,10 +41,73 @@ type MemoryOperationStore struct {
 	transferChunks       map[string]map[int]TransferChunk
 	connectors           map[string]Connector
 	environmentTemplates map[string]EnvironmentTemplate
+	machineOwnerships    map[string]MachineOwnership
+	poolLocks            map[string]*sync.Mutex
 }
 
 func NewMemoryOperationStore() *MemoryOperationStore {
-	return &MemoryOperationStore{transferSessions: map[string]Transfer{}, transferKeys: map[string]string{}, transferChunks: map[string]map[int]TransferChunk{}, connectors: map[string]Connector{}, environmentTemplates: map[string]EnvironmentTemplate{}}
+	return &MemoryOperationStore{transferSessions: map[string]Transfer{}, transferKeys: map[string]string{}, transferChunks: map[string]map[int]TransferChunk{}, connectors: map[string]Connector{}, environmentTemplates: map[string]EnvironmentTemplate{}, machineOwnerships: map[string]MachineOwnership{}, poolLocks: map[string]*sync.Mutex{}}
+}
+
+func (s *MemoryOperationStore) WithPoolLock(ctx context.Context, poolKey string, fn func(context.Context) error) error {
+	s.mu.Lock()
+	lock := s.poolLocks[poolKey]
+	if lock == nil {
+		lock = &sync.Mutex{}
+		s.poolLocks[poolKey] = lock
+	}
+	s.mu.Unlock()
+	lock.Lock()
+	defer lock.Unlock()
+	return fn(ctx)
+}
+
+func (s *MemoryOperationStore) ClaimMachine(_ context.Context, ownership MachineOwnership) (MachineOwnership, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if existing, ok := s.machineOwnerships[ownership.ResourceID]; ok {
+		if existing.MachineID != ownership.MachineID || existing.InstanceID != ownership.InstanceID {
+			return MachineOwnership{}, false, ErrMachineOwnershipConflict
+		}
+		return existing, false, nil
+	}
+	for _, existing := range s.machineOwnerships {
+		if existing.MachineID == ownership.MachineID || (ownership.InstanceID != "" && existing.InstanceID == ownership.InstanceID) {
+			return MachineOwnership{}, false, ErrMachineOwnershipConflict
+		}
+	}
+	s.machineOwnerships[ownership.ResourceID] = ownership
+	return ownership, true, nil
+}
+
+func (s *MemoryOperationStore) SaveMachineOwnership(_ context.Context, ownership MachineOwnership) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.machineOwnerships[ownership.ResourceID]; !ok {
+		return ErrMachineOwnershipNotFound
+	}
+	s.machineOwnerships[ownership.ResourceID] = ownership
+	return nil
+}
+
+func (s *MemoryOperationStore) MachineOwnership(_ context.Context, resourceID string) (MachineOwnership, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	ownership, ok := s.machineOwnerships[resourceID]
+	if !ok {
+		return MachineOwnership{}, ErrMachineOwnershipNotFound
+	}
+	return ownership, nil
+}
+
+func (s *MemoryOperationStore) ListMachineOwnerships(_ context.Context) ([]MachineOwnership, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	out := make([]MachineOwnership, 0, len(s.machineOwnerships))
+	for _, ownership := range s.machineOwnerships {
+		out = append(out, ownership)
+	}
+	return out, nil
 }
 
 func (s *MemoryOperationStore) Append(_ context.Context, operation FabricOperation) error {
@@ -283,6 +352,118 @@ func (s *PostgresOperationStore) Append(ctx context.Context, operation FabricOpe
 	return create.Exec(ctx)
 }
 
+func (s *PostgresOperationStore) ClaimMachine(ctx context.Context, ownership MachineOwnership) (MachineOwnership, bool, error) {
+	existing, err := s.client.MachineOwnership.Query().Where(machineownership.ResourceID(ownership.ResourceID)).Only(ctx)
+	if err == nil {
+		result := machineOwnershipFromEnt(existing)
+		if result.MachineID != ownership.MachineID || result.InstanceID != ownership.InstanceID {
+			return MachineOwnership{}, false, ErrMachineOwnershipConflict
+		}
+		return result, false, nil
+	}
+	if !fabricent.IsNotFound(err) {
+		return MachineOwnership{}, false, err
+	}
+	create := s.client.MachineOwnership.Create().
+		SetID(ownership.ID).
+		SetResourceID(ownership.ResourceID).
+		SetAccountID(ownership.AccountID).
+		SetWorkspaceID(ownership.WorkspaceID).
+		SetPackageID(ownership.PackageID).
+		SetNodePoolID(ownership.NodePoolID).
+		SetMachineID(ownership.MachineID).
+		SetNodeName(ownership.NodeName).
+		SetStatus(ownership.Status).
+		SetProviderRequestID(ownership.ProviderRequestID).
+		SetClaimedAt(ownership.ClaimedAt)
+	if ownership.InstanceID != "" {
+		create.SetInstanceID(ownership.InstanceID)
+	}
+	if ownership.ReleasedAt != nil {
+		create.SetReleasedAt(*ownership.ReleasedAt)
+	}
+	created, err := create.Save(ctx)
+	if fabricent.IsConstraintError(err) {
+		return MachineOwnership{}, false, ErrMachineOwnershipConflict
+	}
+	if err != nil {
+		return MachineOwnership{}, false, err
+	}
+	return machineOwnershipFromEnt(created), true, nil
+}
+
+func (s *PostgresOperationStore) SaveMachineOwnership(ctx context.Context, ownership MachineOwnership) error {
+	row, err := s.client.MachineOwnership.Query().Where(machineownership.ResourceID(ownership.ResourceID)).Only(ctx)
+	if fabricent.IsNotFound(err) {
+		return ErrMachineOwnershipNotFound
+	}
+	if err != nil {
+		return err
+	}
+	update := s.client.MachineOwnership.UpdateOneID(row.ID).
+		SetAccountID(ownership.AccountID).
+		SetWorkspaceID(ownership.WorkspaceID).
+		SetPackageID(ownership.PackageID).
+		SetNodePoolID(ownership.NodePoolID).
+		SetMachineID(ownership.MachineID).
+		SetNodeName(ownership.NodeName).
+		SetStatus(ownership.Status).
+		SetProviderRequestID(ownership.ProviderRequestID).
+		SetClaimedAt(ownership.ClaimedAt)
+	if ownership.InstanceID == "" {
+		update.ClearInstanceID()
+	} else {
+		update.SetInstanceID(ownership.InstanceID)
+	}
+	if ownership.ReleasedAt == nil {
+		update.ClearReleasedAt()
+	} else {
+		update.SetReleasedAt(*ownership.ReleasedAt)
+	}
+	if err := update.Exec(ctx); fabricent.IsConstraintError(err) {
+		return ErrMachineOwnershipConflict
+	} else {
+		return err
+	}
+}
+
+func (s *PostgresOperationStore) MachineOwnership(ctx context.Context, resourceID string) (MachineOwnership, error) {
+	row, err := s.client.MachineOwnership.Query().Where(machineownership.ResourceID(resourceID)).Only(ctx)
+	if fabricent.IsNotFound(err) {
+		return MachineOwnership{}, ErrMachineOwnershipNotFound
+	}
+	if err != nil {
+		return MachineOwnership{}, err
+	}
+	return machineOwnershipFromEnt(row), nil
+}
+
+func (s *PostgresOperationStore) ListMachineOwnerships(ctx context.Context) ([]MachineOwnership, error) {
+	rows, err := s.client.MachineOwnership.Query().Order(fabricent.Asc(machineownership.FieldClaimedAt, machineownership.FieldID)).All(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]MachineOwnership, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, machineOwnershipFromEnt(row))
+	}
+	return out, nil
+}
+
+func (s *PostgresOperationStore) WithPoolLock(ctx context.Context, poolKey string, fn func(context.Context) error) error {
+	conn, err := s.db.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	key := "fabric-pool:" + poolKey
+	if _, err := conn.ExecContext(ctx, "SELECT pg_advisory_lock(hashtext($1))", key); err != nil {
+		return err
+	}
+	defer func() { _, _ = conn.ExecContext(context.Background(), "SELECT pg_advisory_unlock(hashtext($1))", key) }()
+	return fn(ctx)
+}
+
 func (s *PostgresOperationStore) ClaimRuntime(ctx context.Context, operation FabricOperation) (FabricOperation, bool, error) {
 	existing, err := s.client.FabricOperation.Query().
 		Where(fabricoperation.Action(operation.Action), fabricoperation.IdempotencyKey(operation.IdempotencyKey), fabricoperation.StatusNEQ("rejected")).
@@ -398,4 +579,8 @@ func fabricOperationFromEnt(row *fabricent.FabricOperation) FabricOperation {
 		_ = json.Unmarshal([]byte(row.RedactedProviderPayload), &operation.RedactedProviderPayload)
 	}
 	return operation
+}
+
+func machineOwnershipFromEnt(row *fabricent.MachineOwnership) MachineOwnership {
+	return MachineOwnership{ID: row.ID, ResourceID: row.ResourceID, AccountID: row.AccountID, WorkspaceID: row.WorkspaceID, PackageID: row.PackageID, NodePoolID: row.NodePoolID, MachineID: row.MachineID, InstanceID: row.InstanceID, NodeName: row.NodeName, Status: row.Status, ProviderRequestID: row.ProviderRequestID, ClaimedAt: row.ClaimedAt, ReleasedAt: row.ReleasedAt}
 }

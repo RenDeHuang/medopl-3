@@ -10,6 +10,8 @@ var ErrJobIdempotencyConflict = errors.New("job_idempotency_conflict")
 var ErrInvalidJobInput = errors.New("invalid_job_input")
 var ErrJobStateConflict = errors.New("job_state_conflict")
 var ErrJobLeaseMismatch = errors.New("job_lease_mismatch")
+var ErrMachineOwnershipConflict = errors.New("machine_ownership_conflict")
+var ErrMachineOwnershipNotFound = errors.New("machine_ownership_not_found")
 var ErrCatalogRecordNotFound = errors.New("catalog_record_not_found")
 var ErrCatalogVersionConflict = errors.New("catalog_version_conflict")
 var ErrInvalidPubMedQuery = errors.New("invalid_pubmed_query")
@@ -154,6 +156,50 @@ type ComputeAllocation struct {
 	ProviderData       map[string]string `json:"providerData,omitempty"`
 	CostTags           map[string]string `json:"costTags,omitempty"`
 	CreatedAt          time.Time         `json:"createdAt"`
+}
+
+type MachineOwnership struct {
+	ID                string     `json:"id"`
+	ResourceID        string     `json:"resourceId"`
+	AccountID         string     `json:"accountId"`
+	WorkspaceID       string     `json:"workspaceId,omitempty"`
+	PackageID         string     `json:"packageId"`
+	NodePoolID        string     `json:"nodePoolId"`
+	MachineID         string     `json:"machineId"`
+	InstanceID        string     `json:"instanceId,omitempty"`
+	NodeName          string     `json:"nodeName,omitempty"`
+	Status            string     `json:"status"`
+	ProviderRequestID string     `json:"providerRequestId,omitempty"`
+	ClaimedAt         time.Time  `json:"claimedAt"`
+	ReleasedAt        *time.Time `json:"releasedAt,omitempty"`
+}
+
+type ProviderMachine struct {
+	MachineID    string `json:"machineId"`
+	InstanceID   string `json:"instanceId,omitempty"`
+	NodeName     string `json:"nodeName,omitempty"`
+	PrivateIP    string `json:"privateIp,omitempty"`
+	PublicIP     string `json:"publicIp,omitempty"`
+	InstanceType string `json:"instanceType,omitempty"`
+	Ready        bool   `json:"ready"`
+}
+
+type ComputePoolDemand struct {
+	PoolID          string `json:"poolId"`
+	PackageID       string `json:"packageId"`
+	NodePoolID      string `json:"nodePoolId,omitempty"`
+	InstanceType    string `json:"instanceType"`
+	DesiredReplicas int64  `json:"desiredReplicas"`
+	DryRun          bool   `json:"dryRun,omitempty"`
+}
+
+type ComputePoolState struct {
+	PoolID            string            `json:"poolId"`
+	NodePoolID        string            `json:"nodePoolId"`
+	DesiredReplicas   int64             `json:"desiredReplicas"`
+	CurrentReplicas   int64             `json:"currentReplicas"`
+	ProviderRequestID string            `json:"providerRequestId,omitempty"`
+	Machines          []ProviderMachine `json:"machines"`
 }
 
 type StorageVolumeInput struct {

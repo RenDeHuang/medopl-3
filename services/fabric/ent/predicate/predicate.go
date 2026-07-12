@@ -20,3 +20,6 @@ type EnvironmentTemplate func(*sql.Selector)
 
 // FabricOperation is the predicate function for fabricoperation builders.
 type FabricOperation func(*sql.Selector)
+
+// MachineOwnership is the predicate function for machineownership builders.
+type MachineOwnership func(*sql.Selector)

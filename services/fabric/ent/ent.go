@@ -11,6 +11,7 @@ import (
 	"opl-cloud/services/fabric/ent/contenttransferchunk"
 	"opl-cloud/services/fabric/ent/environmenttemplate"
 	"opl-cloud/services/fabric/ent/fabricoperation"
+	"opl-cloud/services/fabric/ent/machineownership"
 	"reflect"
 	"sync"
 
@@ -82,6 +83,7 @@ func checkColumn(table, column string) error {
 			contenttransferchunk.Table: contenttransferchunk.ValidColumn,
 			environmenttemplate.Table:  environmenttemplate.ValidColumn,
 			fabricoperation.Table:      fabricoperation.ValidColumn,
+			machineownership.Table:     machineownership.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

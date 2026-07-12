@@ -68,6 +68,18 @@ func (f FabricOperationFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Va
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.FabricOperationMutation", m)
 }
 
+// The MachineOwnershipFunc type is an adapter to allow the use of ordinary
+// function as MachineOwnership mutator.
+type MachineOwnershipFunc func(context.Context, *ent.MachineOwnershipMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f MachineOwnershipFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.MachineOwnershipMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.MachineOwnershipMutation", m)
+}
+
 // Condition is a hook condition function.
 type Condition func(context.Context, ent.Mutation) bool
 

@@ -46,11 +46,12 @@ type provisionerRequest struct {
 }
 
 type provisionerPool struct {
-	ID           string            `json:"id,omitempty"`
-	PackageID    string            `json:"packageId,omitempty"`
-	InstanceType string            `json:"instanceType,omitempty"`
-	NodePoolID   string            `json:"nodePoolId,omitempty"`
-	Labels       map[string]string `json:"desiredNodeLabels,omitempty"`
+	ID              string            `json:"id,omitempty"`
+	PackageID       string            `json:"packageId,omitempty"`
+	InstanceType    string            `json:"instanceType,omitempty"`
+	NodePoolID      string            `json:"nodePoolId,omitempty"`
+	Labels          map[string]string `json:"desiredNodeLabels,omitempty"`
+	DesiredReplicas int64             `json:"desiredReplicas,omitempty"`
 }
 
 type provisionerAllocation struct {
@@ -63,21 +64,32 @@ type provisionerAllocation struct {
 }
 
 type provisionerResponse struct {
-	OK                bool              `json:"ok"`
-	OperationID       string            `json:"operationId,omitempty"`
-	PoolID            string            `json:"poolId,omitempty"`
-	NodePoolID        string            `json:"nodePoolId,omitempty"`
-	InstanceID        string            `json:"instanceId,omitempty"`
-	NodeName          string            `json:"nodeName,omitempty"`
-	PrivateIP         string            `json:"privateIp,omitempty"`
-	PublicIP          string            `json:"publicIp,omitempty"`
-	Status            string            `json:"status,omitempty"`
-	ProviderRequestID string            `json:"providerRequestId,omitempty"`
-	ProviderData      map[string]string `json:"providerData,omitempty"`
-	ErrorCode         string            `json:"errorCode,omitempty"`
-	Message           string            `json:"message,omitempty"`
-	Retryable         bool              `json:"retryable,omitempty"`
-	MissingEnv        []string          `json:"missingEnv,omitempty"`
+	OK                bool                 `json:"ok"`
+	OperationID       string               `json:"operationId,omitempty"`
+	PoolID            string               `json:"poolId,omitempty"`
+	NodePoolID        string               `json:"nodePoolId,omitempty"`
+	InstanceID        string               `json:"instanceId,omitempty"`
+	NodeName          string               `json:"nodeName,omitempty"`
+	PrivateIP         string               `json:"privateIp,omitempty"`
+	PublicIP          string               `json:"publicIp,omitempty"`
+	Status            string               `json:"status,omitempty"`
+	ProviderRequestID string               `json:"providerRequestId,omitempty"`
+	ProviderData      map[string]string    `json:"providerData,omitempty"`
+	ErrorCode         string               `json:"errorCode,omitempty"`
+	Message           string               `json:"message,omitempty"`
+	Retryable         bool                 `json:"retryable,omitempty"`
+	MissingEnv        []string             `json:"missingEnv,omitempty"`
+	Machines          []provisionerMachine `json:"machines,omitempty"`
+}
+
+type provisionerMachine struct {
+	MachineID    string `json:"machineId"`
+	InstanceID   string `json:"instanceId,omitempty"`
+	NodeName     string `json:"nodeName,omitempty"`
+	PrivateIP    string `json:"privateIp,omitempty"`
+	PublicIP     string `json:"publicIp,omitempty"`
+	InstanceType string `json:"instanceType,omitempty"`
+	Ready        bool   `json:"ready"`
 }
 
 type plan struct {
@@ -136,6 +148,34 @@ func (p *TencentProvider) CreateComputeAllocation(ctx context.Context, input Com
 		CostTags:           tags,
 		CreatedAt:          now,
 	}, nil
+}
+
+func (p *TencentProvider) ReconcileComputePool(ctx context.Context, input ComputePoolDemand) (ComputePoolState, error) {
+	response, err := p.provision(ctx, provisionerRequest{Action: "reconcile_compute_pool", DryRun: input.DryRun, PackageID: input.PackageID, Pool: provisionerPool{ID: input.PoolID, PackageID: input.PackageID, InstanceType: input.InstanceType, NodePoolID: input.NodePoolID, DesiredReplicas: input.DesiredReplicas}})
+	if err != nil {
+		return ComputePoolState{}, err
+	}
+	if !response.OK {
+		return ComputePoolState{}, provisionerError(response)
+	}
+	state := ComputePoolState{PoolID: firstNonEmpty(response.PoolID, input.PoolID), NodePoolID: firstNonEmpty(response.NodePoolID, input.NodePoolID), DesiredReplicas: input.DesiredReplicas, CurrentReplicas: int64(len(response.Machines)), ProviderRequestID: response.ProviderRequestID}
+	for _, machine := range response.Machines {
+		state.Machines = append(state.Machines, ProviderMachine{MachineID: machine.MachineID, InstanceID: machine.InstanceID, NodeName: machine.NodeName, PrivateIP: machine.PrivateIP, PublicIP: machine.PublicIP, InstanceType: machine.InstanceType, Ready: machine.Ready})
+	}
+	return state, nil
+}
+
+func (p *TencentProvider) TagComputeMachine(ctx context.Context, machine ProviderMachine, ownership MachineOwnership) error {
+	if machine.NodeName == "" {
+		return fmt.Errorf("compute_node_identity_required")
+	}
+	_, err := p.kubectl(ctx, []string{"label", "node/" + machine.NodeName, "oplcloud.cn/resource-id=" + ownership.ResourceID, "oplcloud.cn/account-id=" + ownership.AccountID, "oplcloud.cn/workspace-id=" + ownership.WorkspaceID, "--overwrite"}, nil)
+	return err
+}
+
+func (p *TencentProvider) DeleteComputeMachine(ctx context.Context, machine ProviderMachine) error {
+	_, err := p.DestroyComputeAllocation(ctx, ComputeAllocation{ID: machine.MachineID, MachineName: machine.MachineID, InstanceID: machine.InstanceID, CVMInstanceID: machine.InstanceID, NodeName: machine.NodeName, PrivateIP: machine.PrivateIP, Provider: "tencent-tke"})
+	return err
 }
 
 func (p *TencentProvider) SyncComputeAllocation(ctx context.Context, allocation ComputeAllocation) (ComputeAllocation, error) {

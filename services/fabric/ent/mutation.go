@@ -11,6 +11,7 @@ import (
 	"opl-cloud/services/fabric/ent/contenttransferchunk"
 	"opl-cloud/services/fabric/ent/environmenttemplate"
 	"opl-cloud/services/fabric/ent/fabricoperation"
+	"opl-cloud/services/fabric/ent/machineownership"
 	"opl-cloud/services/fabric/ent/predicate"
 	"sync"
 	"time"
@@ -33,6 +34,7 @@ const (
 	TypeContentTransferChunk = "ContentTransferChunk"
 	TypeEnvironmentTemplate  = "EnvironmentTemplate"
 	TypeFabricOperation      = "FabricOperation"
+	TypeMachineOwnership     = "MachineOwnership"
 )
 
 // ConnectorMutation represents an operation that mutates the Connector nodes in the graph.
@@ -4629,4 +4631,971 @@ func (m *FabricOperationMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *FabricOperationMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown FabricOperation edge %s", name)
+}
+
+// MachineOwnershipMutation represents an operation that mutates the MachineOwnership nodes in the graph.
+type MachineOwnershipMutation struct {
+	config
+	op                  Op
+	typ                 string
+	id                  *string
+	resource_id         *string
+	account_id          *string
+	workspace_id        *string
+	package_id          *string
+	node_pool_id        *string
+	machine_id          *string
+	instance_id         *string
+	node_name           *string
+	status              *string
+	provider_request_id *string
+	claimed_at          *time.Time
+	released_at         *time.Time
+	clearedFields       map[string]struct{}
+	done                bool
+	oldValue            func(context.Context) (*MachineOwnership, error)
+	predicates          []predicate.MachineOwnership
+}
+
+var _ ent.Mutation = (*MachineOwnershipMutation)(nil)
+
+// machineownershipOption allows management of the mutation configuration using functional options.
+type machineownershipOption func(*MachineOwnershipMutation)
+
+// newMachineOwnershipMutation creates new mutation for the MachineOwnership entity.
+func newMachineOwnershipMutation(c config, op Op, opts ...machineownershipOption) *MachineOwnershipMutation {
+	m := &MachineOwnershipMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeMachineOwnership,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withMachineOwnershipID sets the ID field of the mutation.
+func withMachineOwnershipID(id string) machineownershipOption {
+	return func(m *MachineOwnershipMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *MachineOwnership
+		)
+		m.oldValue = func(ctx context.Context) (*MachineOwnership, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().MachineOwnership.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withMachineOwnership sets the old MachineOwnership of the mutation.
+func withMachineOwnership(node *MachineOwnership) machineownershipOption {
+	return func(m *MachineOwnershipMutation) {
+		m.oldValue = func(context.Context) (*MachineOwnership, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m MachineOwnershipMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m MachineOwnershipMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of MachineOwnership entities.
+func (m *MachineOwnershipMutation) SetID(id string) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *MachineOwnershipMutation) ID() (id string, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *MachineOwnershipMutation) IDs(ctx context.Context) ([]string, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []string{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().MachineOwnership.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetResourceID sets the "resource_id" field.
+func (m *MachineOwnershipMutation) SetResourceID(s string) {
+	m.resource_id = &s
+}
+
+// ResourceID returns the value of the "resource_id" field in the mutation.
+func (m *MachineOwnershipMutation) ResourceID() (r string, exists bool) {
+	v := m.resource_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldResourceID returns the old "resource_id" field's value of the MachineOwnership entity.
+// If the MachineOwnership object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MachineOwnershipMutation) OldResourceID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldResourceID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldResourceID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldResourceID: %w", err)
+	}
+	return oldValue.ResourceID, nil
+}
+
+// ResetResourceID resets all changes to the "resource_id" field.
+func (m *MachineOwnershipMutation) ResetResourceID() {
+	m.resource_id = nil
+}
+
+// SetAccountID sets the "account_id" field.
+func (m *MachineOwnershipMutation) SetAccountID(s string) {
+	m.account_id = &s
+}
+
+// AccountID returns the value of the "account_id" field in the mutation.
+func (m *MachineOwnershipMutation) AccountID() (r string, exists bool) {
+	v := m.account_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAccountID returns the old "account_id" field's value of the MachineOwnership entity.
+// If the MachineOwnership object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MachineOwnershipMutation) OldAccountID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAccountID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAccountID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAccountID: %w", err)
+	}
+	return oldValue.AccountID, nil
+}
+
+// ResetAccountID resets all changes to the "account_id" field.
+func (m *MachineOwnershipMutation) ResetAccountID() {
+	m.account_id = nil
+}
+
+// SetWorkspaceID sets the "workspace_id" field.
+func (m *MachineOwnershipMutation) SetWorkspaceID(s string) {
+	m.workspace_id = &s
+}
+
+// WorkspaceID returns the value of the "workspace_id" field in the mutation.
+func (m *MachineOwnershipMutation) WorkspaceID() (r string, exists bool) {
+	v := m.workspace_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWorkspaceID returns the old "workspace_id" field's value of the MachineOwnership entity.
+// If the MachineOwnership object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MachineOwnershipMutation) OldWorkspaceID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWorkspaceID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWorkspaceID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWorkspaceID: %w", err)
+	}
+	return oldValue.WorkspaceID, nil
+}
+
+// ResetWorkspaceID resets all changes to the "workspace_id" field.
+func (m *MachineOwnershipMutation) ResetWorkspaceID() {
+	m.workspace_id = nil
+}
+
+// SetPackageID sets the "package_id" field.
+func (m *MachineOwnershipMutation) SetPackageID(s string) {
+	m.package_id = &s
+}
+
+// PackageID returns the value of the "package_id" field in the mutation.
+func (m *MachineOwnershipMutation) PackageID() (r string, exists bool) {
+	v := m.package_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPackageID returns the old "package_id" field's value of the MachineOwnership entity.
+// If the MachineOwnership object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MachineOwnershipMutation) OldPackageID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPackageID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPackageID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPackageID: %w", err)
+	}
+	return oldValue.PackageID, nil
+}
+
+// ResetPackageID resets all changes to the "package_id" field.
+func (m *MachineOwnershipMutation) ResetPackageID() {
+	m.package_id = nil
+}
+
+// SetNodePoolID sets the "node_pool_id" field.
+func (m *MachineOwnershipMutation) SetNodePoolID(s string) {
+	m.node_pool_id = &s
+}
+
+// NodePoolID returns the value of the "node_pool_id" field in the mutation.
+func (m *MachineOwnershipMutation) NodePoolID() (r string, exists bool) {
+	v := m.node_pool_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNodePoolID returns the old "node_pool_id" field's value of the MachineOwnership entity.
+// If the MachineOwnership object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MachineOwnershipMutation) OldNodePoolID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNodePoolID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNodePoolID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNodePoolID: %w", err)
+	}
+	return oldValue.NodePoolID, nil
+}
+
+// ResetNodePoolID resets all changes to the "node_pool_id" field.
+func (m *MachineOwnershipMutation) ResetNodePoolID() {
+	m.node_pool_id = nil
+}
+
+// SetMachineID sets the "machine_id" field.
+func (m *MachineOwnershipMutation) SetMachineID(s string) {
+	m.machine_id = &s
+}
+
+// MachineID returns the value of the "machine_id" field in the mutation.
+func (m *MachineOwnershipMutation) MachineID() (r string, exists bool) {
+	v := m.machine_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMachineID returns the old "machine_id" field's value of the MachineOwnership entity.
+// If the MachineOwnership object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MachineOwnershipMutation) OldMachineID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMachineID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMachineID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMachineID: %w", err)
+	}
+	return oldValue.MachineID, nil
+}
+
+// ResetMachineID resets all changes to the "machine_id" field.
+func (m *MachineOwnershipMutation) ResetMachineID() {
+	m.machine_id = nil
+}
+
+// SetInstanceID sets the "instance_id" field.
+func (m *MachineOwnershipMutation) SetInstanceID(s string) {
+	m.instance_id = &s
+}
+
+// InstanceID returns the value of the "instance_id" field in the mutation.
+func (m *MachineOwnershipMutation) InstanceID() (r string, exists bool) {
+	v := m.instance_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldInstanceID returns the old "instance_id" field's value of the MachineOwnership entity.
+// If the MachineOwnership object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MachineOwnershipMutation) OldInstanceID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldInstanceID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldInstanceID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldInstanceID: %w", err)
+	}
+	return oldValue.InstanceID, nil
+}
+
+// ClearInstanceID clears the value of the "instance_id" field.
+func (m *MachineOwnershipMutation) ClearInstanceID() {
+	m.instance_id = nil
+	m.clearedFields[machineownership.FieldInstanceID] = struct{}{}
+}
+
+// InstanceIDCleared returns if the "instance_id" field was cleared in this mutation.
+func (m *MachineOwnershipMutation) InstanceIDCleared() bool {
+	_, ok := m.clearedFields[machineownership.FieldInstanceID]
+	return ok
+}
+
+// ResetInstanceID resets all changes to the "instance_id" field.
+func (m *MachineOwnershipMutation) ResetInstanceID() {
+	m.instance_id = nil
+	delete(m.clearedFields, machineownership.FieldInstanceID)
+}
+
+// SetNodeName sets the "node_name" field.
+func (m *MachineOwnershipMutation) SetNodeName(s string) {
+	m.node_name = &s
+}
+
+// NodeName returns the value of the "node_name" field in the mutation.
+func (m *MachineOwnershipMutation) NodeName() (r string, exists bool) {
+	v := m.node_name
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldNodeName returns the old "node_name" field's value of the MachineOwnership entity.
+// If the MachineOwnership object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MachineOwnershipMutation) OldNodeName(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldNodeName is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldNodeName requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldNodeName: %w", err)
+	}
+	return oldValue.NodeName, nil
+}
+
+// ResetNodeName resets all changes to the "node_name" field.
+func (m *MachineOwnershipMutation) ResetNodeName() {
+	m.node_name = nil
+}
+
+// SetStatus sets the "status" field.
+func (m *MachineOwnershipMutation) SetStatus(s string) {
+	m.status = &s
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *MachineOwnershipMutation) Status() (r string, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the MachineOwnership entity.
+// If the MachineOwnership object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MachineOwnershipMutation) OldStatus(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *MachineOwnershipMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetProviderRequestID sets the "provider_request_id" field.
+func (m *MachineOwnershipMutation) SetProviderRequestID(s string) {
+	m.provider_request_id = &s
+}
+
+// ProviderRequestID returns the value of the "provider_request_id" field in the mutation.
+func (m *MachineOwnershipMutation) ProviderRequestID() (r string, exists bool) {
+	v := m.provider_request_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldProviderRequestID returns the old "provider_request_id" field's value of the MachineOwnership entity.
+// If the MachineOwnership object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MachineOwnershipMutation) OldProviderRequestID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldProviderRequestID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldProviderRequestID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldProviderRequestID: %w", err)
+	}
+	return oldValue.ProviderRequestID, nil
+}
+
+// ResetProviderRequestID resets all changes to the "provider_request_id" field.
+func (m *MachineOwnershipMutation) ResetProviderRequestID() {
+	m.provider_request_id = nil
+}
+
+// SetClaimedAt sets the "claimed_at" field.
+func (m *MachineOwnershipMutation) SetClaimedAt(t time.Time) {
+	m.claimed_at = &t
+}
+
+// ClaimedAt returns the value of the "claimed_at" field in the mutation.
+func (m *MachineOwnershipMutation) ClaimedAt() (r time.Time, exists bool) {
+	v := m.claimed_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldClaimedAt returns the old "claimed_at" field's value of the MachineOwnership entity.
+// If the MachineOwnership object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MachineOwnershipMutation) OldClaimedAt(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldClaimedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldClaimedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldClaimedAt: %w", err)
+	}
+	return oldValue.ClaimedAt, nil
+}
+
+// ResetClaimedAt resets all changes to the "claimed_at" field.
+func (m *MachineOwnershipMutation) ResetClaimedAt() {
+	m.claimed_at = nil
+}
+
+// SetReleasedAt sets the "released_at" field.
+func (m *MachineOwnershipMutation) SetReleasedAt(t time.Time) {
+	m.released_at = &t
+}
+
+// ReleasedAt returns the value of the "released_at" field in the mutation.
+func (m *MachineOwnershipMutation) ReleasedAt() (r time.Time, exists bool) {
+	v := m.released_at
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReleasedAt returns the old "released_at" field's value of the MachineOwnership entity.
+// If the MachineOwnership object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *MachineOwnershipMutation) OldReleasedAt(ctx context.Context) (v *time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReleasedAt is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReleasedAt requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReleasedAt: %w", err)
+	}
+	return oldValue.ReleasedAt, nil
+}
+
+// ClearReleasedAt clears the value of the "released_at" field.
+func (m *MachineOwnershipMutation) ClearReleasedAt() {
+	m.released_at = nil
+	m.clearedFields[machineownership.FieldReleasedAt] = struct{}{}
+}
+
+// ReleasedAtCleared returns if the "released_at" field was cleared in this mutation.
+func (m *MachineOwnershipMutation) ReleasedAtCleared() bool {
+	_, ok := m.clearedFields[machineownership.FieldReleasedAt]
+	return ok
+}
+
+// ResetReleasedAt resets all changes to the "released_at" field.
+func (m *MachineOwnershipMutation) ResetReleasedAt() {
+	m.released_at = nil
+	delete(m.clearedFields, machineownership.FieldReleasedAt)
+}
+
+// Where appends a list predicates to the MachineOwnershipMutation builder.
+func (m *MachineOwnershipMutation) Where(ps ...predicate.MachineOwnership) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the MachineOwnershipMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *MachineOwnershipMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.MachineOwnership, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *MachineOwnershipMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *MachineOwnershipMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (MachineOwnership).
+func (m *MachineOwnershipMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *MachineOwnershipMutation) Fields() []string {
+	fields := make([]string, 0, 12)
+	if m.resource_id != nil {
+		fields = append(fields, machineownership.FieldResourceID)
+	}
+	if m.account_id != nil {
+		fields = append(fields, machineownership.FieldAccountID)
+	}
+	if m.workspace_id != nil {
+		fields = append(fields, machineownership.FieldWorkspaceID)
+	}
+	if m.package_id != nil {
+		fields = append(fields, machineownership.FieldPackageID)
+	}
+	if m.node_pool_id != nil {
+		fields = append(fields, machineownership.FieldNodePoolID)
+	}
+	if m.machine_id != nil {
+		fields = append(fields, machineownership.FieldMachineID)
+	}
+	if m.instance_id != nil {
+		fields = append(fields, machineownership.FieldInstanceID)
+	}
+	if m.node_name != nil {
+		fields = append(fields, machineownership.FieldNodeName)
+	}
+	if m.status != nil {
+		fields = append(fields, machineownership.FieldStatus)
+	}
+	if m.provider_request_id != nil {
+		fields = append(fields, machineownership.FieldProviderRequestID)
+	}
+	if m.claimed_at != nil {
+		fields = append(fields, machineownership.FieldClaimedAt)
+	}
+	if m.released_at != nil {
+		fields = append(fields, machineownership.FieldReleasedAt)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *MachineOwnershipMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case machineownership.FieldResourceID:
+		return m.ResourceID()
+	case machineownership.FieldAccountID:
+		return m.AccountID()
+	case machineownership.FieldWorkspaceID:
+		return m.WorkspaceID()
+	case machineownership.FieldPackageID:
+		return m.PackageID()
+	case machineownership.FieldNodePoolID:
+		return m.NodePoolID()
+	case machineownership.FieldMachineID:
+		return m.MachineID()
+	case machineownership.FieldInstanceID:
+		return m.InstanceID()
+	case machineownership.FieldNodeName:
+		return m.NodeName()
+	case machineownership.FieldStatus:
+		return m.Status()
+	case machineownership.FieldProviderRequestID:
+		return m.ProviderRequestID()
+	case machineownership.FieldClaimedAt:
+		return m.ClaimedAt()
+	case machineownership.FieldReleasedAt:
+		return m.ReleasedAt()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *MachineOwnershipMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case machineownership.FieldResourceID:
+		return m.OldResourceID(ctx)
+	case machineownership.FieldAccountID:
+		return m.OldAccountID(ctx)
+	case machineownership.FieldWorkspaceID:
+		return m.OldWorkspaceID(ctx)
+	case machineownership.FieldPackageID:
+		return m.OldPackageID(ctx)
+	case machineownership.FieldNodePoolID:
+		return m.OldNodePoolID(ctx)
+	case machineownership.FieldMachineID:
+		return m.OldMachineID(ctx)
+	case machineownership.FieldInstanceID:
+		return m.OldInstanceID(ctx)
+	case machineownership.FieldNodeName:
+		return m.OldNodeName(ctx)
+	case machineownership.FieldStatus:
+		return m.OldStatus(ctx)
+	case machineownership.FieldProviderRequestID:
+		return m.OldProviderRequestID(ctx)
+	case machineownership.FieldClaimedAt:
+		return m.OldClaimedAt(ctx)
+	case machineownership.FieldReleasedAt:
+		return m.OldReleasedAt(ctx)
+	}
+	return nil, fmt.Errorf("unknown MachineOwnership field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *MachineOwnershipMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case machineownership.FieldResourceID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetResourceID(v)
+		return nil
+	case machineownership.FieldAccountID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAccountID(v)
+		return nil
+	case machineownership.FieldWorkspaceID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWorkspaceID(v)
+		return nil
+	case machineownership.FieldPackageID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPackageID(v)
+		return nil
+	case machineownership.FieldNodePoolID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNodePoolID(v)
+		return nil
+	case machineownership.FieldMachineID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMachineID(v)
+		return nil
+	case machineownership.FieldInstanceID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetInstanceID(v)
+		return nil
+	case machineownership.FieldNodeName:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetNodeName(v)
+		return nil
+	case machineownership.FieldStatus:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case machineownership.FieldProviderRequestID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetProviderRequestID(v)
+		return nil
+	case machineownership.FieldClaimedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetClaimedAt(v)
+		return nil
+	case machineownership.FieldReleasedAt:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReleasedAt(v)
+		return nil
+	}
+	return fmt.Errorf("unknown MachineOwnership field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *MachineOwnershipMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *MachineOwnershipMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *MachineOwnershipMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown MachineOwnership numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *MachineOwnershipMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(machineownership.FieldInstanceID) {
+		fields = append(fields, machineownership.FieldInstanceID)
+	}
+	if m.FieldCleared(machineownership.FieldReleasedAt) {
+		fields = append(fields, machineownership.FieldReleasedAt)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *MachineOwnershipMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *MachineOwnershipMutation) ClearField(name string) error {
+	switch name {
+	case machineownership.FieldInstanceID:
+		m.ClearInstanceID()
+		return nil
+	case machineownership.FieldReleasedAt:
+		m.ClearReleasedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown MachineOwnership nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *MachineOwnershipMutation) ResetField(name string) error {
+	switch name {
+	case machineownership.FieldResourceID:
+		m.ResetResourceID()
+		return nil
+	case machineownership.FieldAccountID:
+		m.ResetAccountID()
+		return nil
+	case machineownership.FieldWorkspaceID:
+		m.ResetWorkspaceID()
+		return nil
+	case machineownership.FieldPackageID:
+		m.ResetPackageID()
+		return nil
+	case machineownership.FieldNodePoolID:
+		m.ResetNodePoolID()
+		return nil
+	case machineownership.FieldMachineID:
+		m.ResetMachineID()
+		return nil
+	case machineownership.FieldInstanceID:
+		m.ResetInstanceID()
+		return nil
+	case machineownership.FieldNodeName:
+		m.ResetNodeName()
+		return nil
+	case machineownership.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case machineownership.FieldProviderRequestID:
+		m.ResetProviderRequestID()
+		return nil
+	case machineownership.FieldClaimedAt:
+		m.ResetClaimedAt()
+		return nil
+	case machineownership.FieldReleasedAt:
+		m.ResetReleasedAt()
+		return nil
+	}
+	return fmt.Errorf("unknown MachineOwnership field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *MachineOwnershipMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *MachineOwnershipMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *MachineOwnershipMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *MachineOwnershipMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *MachineOwnershipMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *MachineOwnershipMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *MachineOwnershipMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown MachineOwnership unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *MachineOwnershipMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown MachineOwnership edge %s", name)
 }

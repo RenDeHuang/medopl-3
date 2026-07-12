@@ -41,6 +41,7 @@ type ComputePoolInput struct {
 	InstanceType      string            `json:"instanceType,omitempty"`
 	NodePoolId        string            `json:"nodePoolId,omitempty"`
 	DesiredNodeLabels map[string]string `json:"desiredNodeLabels,omitempty"`
+	DesiredReplicas   int64             `json:"desiredReplicas,omitempty"`
 }
 
 type ComputeAllocationInput struct {
@@ -68,10 +69,22 @@ type Response struct {
 	Message           string            `json:"message,omitempty"`
 	Retryable         bool              `json:"retryable,omitempty"`
 	MissingEnv        []string          `json:"missingEnv,omitempty"`
+	Machines          []MachineOutput   `json:"machines,omitempty"`
+}
+
+type MachineOutput struct {
+	MachineId    string `json:"machineId"`
+	InstanceId   string `json:"instanceId,omitempty"`
+	NodeName     string `json:"nodeName,omitempty"`
+	PrivateIp    string `json:"privateIp,omitempty"`
+	PublicIp     string `json:"publicIp,omitempty"`
+	InstanceType string `json:"instanceType,omitempty"`
+	Ready        bool   `json:"ready"`
 }
 
 type TencentClient interface {
 	CreateComputeAllocation(request Request, env map[string]string) Response
+	ReconcileComputePool(request Request, env map[string]string) Response
 	SyncComputeAllocation(request Request, env map[string]string) Response
 	DestroyComputeAllocation(request Request, env map[string]string) Response
 }
@@ -106,6 +119,10 @@ func (unimplementedTencentClient) CreateComputeAllocation(_ Request, _ map[strin
 		Message:   "Tencent live compute allocation is not implemented in this build.",
 		Retryable: false,
 	}
+}
+
+func (unimplementedTencentClient) ReconcileComputePool(_ Request, _ map[string]string) Response {
+	return Response{Ok: false, ErrorCode: "tencent_live_not_implemented", Message: "Tencent live compute pool reconciliation is not implemented in this build.", Retryable: false}
 }
 
 func (unimplementedTencentClient) DestroyComputeAllocation(_ Request, _ map[string]string) Response {
@@ -353,6 +370,100 @@ func (client *tencentSDKClient) CreateComputeAllocation(request Request, env map
 			"publicIp":                    publicIp,
 		},
 	}
+}
+
+func (client *tencentSDKClient) ReconcileComputePool(request Request, env map[string]string) Response {
+	if client == nil || client.nativeTkeClient == nil {
+		return Response{Ok: false, ErrorCode: "tencent_sdk_client_missing", Message: "Tencent TKE SDK client is missing.", Retryable: false}
+	}
+	if request.Pool.DesiredReplicas < 0 {
+		return Response{Ok: false, ErrorCode: "desired_replicas_invalid", Message: "Node pool desired replicas cannot be negative.", Retryable: false}
+	}
+	nodePoolId := request.Pool.NodePoolId
+	var pool *tke2022.NodePool
+	requestId := ""
+	if nodePoolId != "" {
+		described, id, err := client.describeNativeNodePool(nodePoolId)
+		if err == nil {
+			pool, requestId = described, id
+		} else if !isNodePoolNotFound(err) {
+			return sdkErrorResponse("tencent_describe_node_pool_failed", err)
+		}
+	}
+	if pool == nil {
+		discovered, id, err := client.discoverNativeNodePool(request)
+		if err != nil {
+			return sdkErrorResponse("tencent_describe_node_pool_failed", err)
+		}
+		if discovered != nil {
+			pool, requestId = discovered, id
+			nodePoolId = stringValue(discovered.NodePoolId)
+		}
+	}
+	if pool == nil && request.Pool.DesiredReplicas == 0 {
+		return Response{Ok: true, PoolId: request.Pool.Id, Status: "ready", ProviderRequestId: requestId}
+	}
+	if pool == nil {
+		createRequest, failure := buildCreateNativeNodePoolRequest(request, env)
+		if failure != nil {
+			return *failure
+		}
+		created, err := client.nativeTkeClient.CreateNodePool(createRequest)
+		if err != nil {
+			return sdkErrorResponse("tencent_create_node_pool_failed", err)
+		}
+		nodePoolId = stringValue(created.Response.NodePoolId)
+		requestId = stringValue(created.Response.RequestId)
+		if nodePoolId == "" {
+			return Response{Ok: false, ErrorCode: "tencent_node_pool_id_missing", Message: "Tencent TKE did not return a node pool id.", ProviderRequestId: requestId, Retryable: true}
+		}
+		described, id, err := client.describeNativeNodePool(nodePoolId)
+		if err != nil {
+			response := sdkErrorResponse("tencent_describe_node_pool_failed", err)
+			response.ProviderRequestId = requestId
+			return response
+		}
+		pool = described
+		requestId = firstNonEmpty(id, requestId)
+	}
+	current := nativeReplicas(pool)
+	if current != request.Pool.DesiredReplicas {
+		scaleRequest := tke2022.NewScaleNodePoolRequest()
+		scaleRequest.ClusterId = common.StringPtr(client.clusterId)
+		scaleRequest.NodePoolId = common.StringPtr(nodePoolId)
+		scaleRequest.Replicas = common.Int64Ptr(request.Pool.DesiredReplicas)
+		scaled, err := client.nativeTkeClient.ScaleNodePool(scaleRequest)
+		if err != nil {
+			response := sdkErrorResponse("tencent_scale_node_pool_failed", err)
+			response.ProviderRequestId = requestId
+			return response
+		}
+		requestId = firstNonEmpty(stringValue(scaled.Response.RequestId), requestId)
+	}
+	machines, describeRequestId, err := client.describeClusterMachines(nodePoolId)
+	if err != nil {
+		response := sdkErrorResponse("tencent_describe_cluster_machines_failed", err)
+		response.ProviderRequestId = requestId
+		return response
+	}
+	output := make([]MachineOutput, 0, len(machines))
+	for _, machine := range machines {
+		if machine == nil || stringValue(machine.MachineName) == "" {
+			continue
+		}
+		state := strings.ToLower(strings.TrimSpace(stringValue(machine.MachineState)))
+		ready := state == "" || state == "running" || state == "normal" || state == "ready"
+		privateIp := stringValue(machine.LanIP)
+		instanceId, publicIp := "", ""
+		if cvmInstance, _, resolveErr := client.describeCvmInstanceByPrivateIp(privateIp); resolveErr == nil {
+			instanceId = stringValue(cvmInstance.InstanceId)
+			publicIp = firstString(cvmInstance.PublicIpAddresses)
+		} else {
+			ready = false
+		}
+		output = append(output, MachineOutput{MachineId: stringValue(machine.MachineName), InstanceId: instanceId, NodeName: kubernetesNodeName(machine), PrivateIp: privateIp, PublicIp: publicIp, InstanceType: stringValue(machine.InstanceType), Ready: ready && instanceId != ""})
+	}
+	return Response{Ok: true, OperationId: "op-reconcile-pool-" + stableSuffix(nodePoolId, fmt.Sprintf("%d", request.Pool.DesiredReplicas))[:12], PoolId: request.Pool.Id, NodePoolId: nodePoolId, Status: "reconciling", ProviderRequestId: firstNonEmpty(describeRequestId, requestId), Machines: output, ProviderData: map[string]string{"currentReplicas": fmt.Sprintf("%d", len(machines)), "desiredReplicas": fmt.Sprintf("%d", request.Pool.DesiredReplicas)}}
 }
 
 func (client *tencentSDKClient) DestroyComputeAllocation(request Request, _ map[string]string) Response {
@@ -933,6 +1044,16 @@ func handleWithClient(request Request, env map[string]string, client TencentClie
 	}
 
 	switch request.Action {
+	case "reconcile_compute_pool":
+		if request.DryRun {
+			machines := make([]MachineOutput, 0, request.Pool.DesiredReplicas)
+			for index := int64(0); index < request.Pool.DesiredReplicas; index++ {
+				id := fmt.Sprintf("%s-%06d", firstNonEmpty(request.Pool.Id, "pool"), index+1)
+				machines = append(machines, MachineOutput{MachineId: id, InstanceId: "ins-" + id, NodeName: id, PrivateIp: fmt.Sprintf("10.0.%d.%d", index/250, index%250+1), InstanceType: request.Pool.InstanceType, Ready: true})
+			}
+			return Response{Ok: true, PoolId: request.Pool.Id, NodePoolId: firstNonEmpty(request.Pool.NodePoolId, "np-"+request.Pool.Id), Status: "ready", ProviderRequestId: "dryrun-reconcile-" + request.Pool.Id, Machines: machines}
+		}
+		return client.ReconcileComputePool(request, env)
 	case "create_compute_allocation":
 		if request.DryRun {
 			return dryRunCreateComputeAllocation(request, env)
@@ -962,7 +1083,7 @@ func isLiveMutation(request Request) bool {
 	if request.DryRun {
 		return false
 	}
-	return request.Action == "create_compute_allocation" || request.Action == "destroy_compute_allocation"
+	return request.Action == "reconcile_compute_pool" || request.Action == "create_compute_allocation" || request.Action == "destroy_compute_allocation"
 }
 
 func missingEnv(env map[string]string) []string {

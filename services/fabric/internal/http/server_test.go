@@ -498,8 +498,21 @@ func (testProvider) PublishWorkspaceContent(_ context.Context, _, _ string, _ []
 	return nil
 }
 
-func (testProvider) CreateComputeAllocation(_ context.Context, input fabric.ComputeAllocationInput) (fabric.ComputeAllocation, error) {
-	return fabric.ComputeAllocation{ID: "ca-test", AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, PackageID: input.PackageID, Status: "allocated", ProviderRequestID: "compute-test"}, nil
+func (testProvider) ReconcileComputePool(_ context.Context, input fabric.ComputePoolDemand) (fabric.ComputePoolState, error) {
+	machines := make([]fabric.ProviderMachine, 0, input.DesiredReplicas)
+	for index := int64(0); index < input.DesiredReplicas; index++ {
+		id := fmt.Sprintf("%s-%03d", input.PoolID, index+1)
+		machines = append(machines, fabric.ProviderMachine{MachineID: id, InstanceID: "ins-" + id, NodeName: id, InstanceType: input.InstanceType, Ready: true})
+	}
+	return fabric.ComputePoolState{PoolID: input.PoolID, NodePoolID: "np-" + input.PoolID, DesiredReplicas: input.DesiredReplicas, CurrentReplicas: input.DesiredReplicas, ProviderRequestID: "pool-test", Machines: machines}, nil
+}
+
+func (testProvider) TagComputeMachine(_ context.Context, _ fabric.ProviderMachine, _ fabric.MachineOwnership) error {
+	return nil
+}
+
+func (testProvider) DeleteComputeMachine(_ context.Context, _ fabric.ProviderMachine) error {
+	return nil
 }
 
 func (testProvider) SyncComputeAllocation(_ context.Context, allocation fabric.ComputeAllocation) (fabric.ComputeAllocation, error) {

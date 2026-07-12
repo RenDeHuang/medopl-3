@@ -8,6 +8,7 @@ import (
 	"opl-cloud/services/fabric/ent/contenttransferchunk"
 	"opl-cloud/services/fabric/ent/environmenttemplate"
 	"opl-cloud/services/fabric/ent/fabricoperation"
+	"opl-cloud/services/fabric/ent/machineownership"
 	"opl-cloud/services/fabric/ent/schema"
 	"time"
 )
@@ -242,4 +243,46 @@ func init() {
 	fabricoperationDescID := fabricoperationFields[0].Descriptor()
 	// fabricoperation.IDValidator is a validator for the "id" field. It is called by the builders before save.
 	fabricoperation.IDValidator = fabricoperationDescID.Validators[0].(func(string) error)
+	machineownershipFields := schema.MachineOwnership{}.Fields()
+	_ = machineownershipFields
+	// machineownershipDescResourceID is the schema descriptor for resource_id field.
+	machineownershipDescResourceID := machineownershipFields[1].Descriptor()
+	// machineownership.ResourceIDValidator is a validator for the "resource_id" field. It is called by the builders before save.
+	machineownership.ResourceIDValidator = machineownershipDescResourceID.Validators[0].(func(string) error)
+	// machineownershipDescAccountID is the schema descriptor for account_id field.
+	machineownershipDescAccountID := machineownershipFields[2].Descriptor()
+	// machineownership.AccountIDValidator is a validator for the "account_id" field. It is called by the builders before save.
+	machineownership.AccountIDValidator = machineownershipDescAccountID.Validators[0].(func(string) error)
+	// machineownershipDescWorkspaceID is the schema descriptor for workspace_id field.
+	machineownershipDescWorkspaceID := machineownershipFields[3].Descriptor()
+	// machineownership.DefaultWorkspaceID holds the default value on creation for the workspace_id field.
+	machineownership.DefaultWorkspaceID = machineownershipDescWorkspaceID.Default.(string)
+	// machineownershipDescPackageID is the schema descriptor for package_id field.
+	machineownershipDescPackageID := machineownershipFields[4].Descriptor()
+	// machineownership.PackageIDValidator is a validator for the "package_id" field. It is called by the builders before save.
+	machineownership.PackageIDValidator = machineownershipDescPackageID.Validators[0].(func(string) error)
+	// machineownershipDescNodePoolID is the schema descriptor for node_pool_id field.
+	machineownershipDescNodePoolID := machineownershipFields[5].Descriptor()
+	// machineownership.NodePoolIDValidator is a validator for the "node_pool_id" field. It is called by the builders before save.
+	machineownership.NodePoolIDValidator = machineownershipDescNodePoolID.Validators[0].(func(string) error)
+	// machineownershipDescMachineID is the schema descriptor for machine_id field.
+	machineownershipDescMachineID := machineownershipFields[6].Descriptor()
+	// machineownership.MachineIDValidator is a validator for the "machine_id" field. It is called by the builders before save.
+	machineownership.MachineIDValidator = machineownershipDescMachineID.Validators[0].(func(string) error)
+	// machineownershipDescNodeName is the schema descriptor for node_name field.
+	machineownershipDescNodeName := machineownershipFields[8].Descriptor()
+	// machineownership.DefaultNodeName holds the default value on creation for the node_name field.
+	machineownership.DefaultNodeName = machineownershipDescNodeName.Default.(string)
+	// machineownershipDescStatus is the schema descriptor for status field.
+	machineownershipDescStatus := machineownershipFields[9].Descriptor()
+	// machineownership.StatusValidator is a validator for the "status" field. It is called by the builders before save.
+	machineownership.StatusValidator = machineownershipDescStatus.Validators[0].(func(string) error)
+	// machineownershipDescProviderRequestID is the schema descriptor for provider_request_id field.
+	machineownershipDescProviderRequestID := machineownershipFields[10].Descriptor()
+	// machineownership.DefaultProviderRequestID holds the default value on creation for the provider_request_id field.
+	machineownership.DefaultProviderRequestID = machineownershipDescProviderRequestID.Default.(string)
+	// machineownershipDescID is the schema descriptor for id field.
+	machineownershipDescID := machineownershipFields[0].Descriptor()
+	// machineownership.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	machineownership.IDValidator = machineownershipDescID.Validators[0].(func(string) error)
 }

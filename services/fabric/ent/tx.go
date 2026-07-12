@@ -22,6 +22,8 @@ type Tx struct {
 	EnvironmentTemplate *EnvironmentTemplateClient
 	// FabricOperation is the client for interacting with the FabricOperation builders.
 	FabricOperation *FabricOperationClient
+	// MachineOwnership is the client for interacting with the MachineOwnership builders.
+	MachineOwnership *MachineOwnershipClient
 
 	// lazily loaded.
 	client     *Client
@@ -158,6 +160,7 @@ func (tx *Tx) init() {
 	tx.ContentTransferChunk = NewContentTransferChunkClient(tx.config)
 	tx.EnvironmentTemplate = NewEnvironmentTemplateClient(tx.config)
 	tx.FabricOperation = NewFabricOperationClient(tx.config)
+	tx.MachineOwnership = NewMachineOwnershipClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

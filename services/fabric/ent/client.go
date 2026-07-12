@@ -16,6 +16,7 @@ import (
 	"opl-cloud/services/fabric/ent/contenttransferchunk"
 	"opl-cloud/services/fabric/ent/environmenttemplate"
 	"opl-cloud/services/fabric/ent/fabricoperation"
+	"opl-cloud/services/fabric/ent/machineownership"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
@@ -37,6 +38,8 @@ type Client struct {
 	EnvironmentTemplate *EnvironmentTemplateClient
 	// FabricOperation is the client for interacting with the FabricOperation builders.
 	FabricOperation *FabricOperationClient
+	// MachineOwnership is the client for interacting with the MachineOwnership builders.
+	MachineOwnership *MachineOwnershipClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -53,6 +56,7 @@ func (c *Client) init() {
 	c.ContentTransferChunk = NewContentTransferChunkClient(c.config)
 	c.EnvironmentTemplate = NewEnvironmentTemplateClient(c.config)
 	c.FabricOperation = NewFabricOperationClient(c.config)
+	c.MachineOwnership = NewMachineOwnershipClient(c.config)
 }
 
 type (
@@ -150,6 +154,7 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 		ContentTransferChunk: NewContentTransferChunkClient(cfg),
 		EnvironmentTemplate:  NewEnvironmentTemplateClient(cfg),
 		FabricOperation:      NewFabricOperationClient(cfg),
+		MachineOwnership:     NewMachineOwnershipClient(cfg),
 	}, nil
 }
 
@@ -174,6 +179,7 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 		ContentTransferChunk: NewContentTransferChunkClient(cfg),
 		EnvironmentTemplate:  NewEnvironmentTemplateClient(cfg),
 		FabricOperation:      NewFabricOperationClient(cfg),
+		MachineOwnership:     NewMachineOwnershipClient(cfg),
 	}, nil
 }
 
@@ -202,21 +208,23 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
-	c.Connector.Use(hooks...)
-	c.ContentTransfer.Use(hooks...)
-	c.ContentTransferChunk.Use(hooks...)
-	c.EnvironmentTemplate.Use(hooks...)
-	c.FabricOperation.Use(hooks...)
+	for _, n := range []interface{ Use(...Hook) }{
+		c.Connector, c.ContentTransfer, c.ContentTransferChunk, c.EnvironmentTemplate,
+		c.FabricOperation, c.MachineOwnership,
+	} {
+		n.Use(hooks...)
+	}
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
-	c.Connector.Intercept(interceptors...)
-	c.ContentTransfer.Intercept(interceptors...)
-	c.ContentTransferChunk.Intercept(interceptors...)
-	c.EnvironmentTemplate.Intercept(interceptors...)
-	c.FabricOperation.Intercept(interceptors...)
+	for _, n := range []interface{ Intercept(...Interceptor) }{
+		c.Connector, c.ContentTransfer, c.ContentTransferChunk, c.EnvironmentTemplate,
+		c.FabricOperation, c.MachineOwnership,
+	} {
+		n.Intercept(interceptors...)
+	}
 }
 
 // Mutate implements the ent.Mutator interface.
@@ -232,6 +240,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.EnvironmentTemplate.mutate(ctx, m)
 	case *FabricOperationMutation:
 		return c.FabricOperation.mutate(ctx, m)
+	case *MachineOwnershipMutation:
+		return c.MachineOwnership.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
@@ -902,14 +912,147 @@ func (c *FabricOperationClient) mutate(ctx context.Context, m *FabricOperationMu
 	}
 }
 
+// MachineOwnershipClient is a client for the MachineOwnership schema.
+type MachineOwnershipClient struct {
+	config
+}
+
+// NewMachineOwnershipClient returns a client for the MachineOwnership from the given config.
+func NewMachineOwnershipClient(c config) *MachineOwnershipClient {
+	return &MachineOwnershipClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `machineownership.Hooks(f(g(h())))`.
+func (c *MachineOwnershipClient) Use(hooks ...Hook) {
+	c.hooks.MachineOwnership = append(c.hooks.MachineOwnership, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `machineownership.Intercept(f(g(h())))`.
+func (c *MachineOwnershipClient) Intercept(interceptors ...Interceptor) {
+	c.inters.MachineOwnership = append(c.inters.MachineOwnership, interceptors...)
+}
+
+// Create returns a builder for creating a MachineOwnership entity.
+func (c *MachineOwnershipClient) Create() *MachineOwnershipCreate {
+	mutation := newMachineOwnershipMutation(c.config, OpCreate)
+	return &MachineOwnershipCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of MachineOwnership entities.
+func (c *MachineOwnershipClient) CreateBulk(builders ...*MachineOwnershipCreate) *MachineOwnershipCreateBulk {
+	return &MachineOwnershipCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *MachineOwnershipClient) MapCreateBulk(slice any, setFunc func(*MachineOwnershipCreate, int)) *MachineOwnershipCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &MachineOwnershipCreateBulk{err: fmt.Errorf("calling to MachineOwnershipClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*MachineOwnershipCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &MachineOwnershipCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for MachineOwnership.
+func (c *MachineOwnershipClient) Update() *MachineOwnershipUpdate {
+	mutation := newMachineOwnershipMutation(c.config, OpUpdate)
+	return &MachineOwnershipUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *MachineOwnershipClient) UpdateOne(mo *MachineOwnership) *MachineOwnershipUpdateOne {
+	mutation := newMachineOwnershipMutation(c.config, OpUpdateOne, withMachineOwnership(mo))
+	return &MachineOwnershipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *MachineOwnershipClient) UpdateOneID(id string) *MachineOwnershipUpdateOne {
+	mutation := newMachineOwnershipMutation(c.config, OpUpdateOne, withMachineOwnershipID(id))
+	return &MachineOwnershipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for MachineOwnership.
+func (c *MachineOwnershipClient) Delete() *MachineOwnershipDelete {
+	mutation := newMachineOwnershipMutation(c.config, OpDelete)
+	return &MachineOwnershipDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *MachineOwnershipClient) DeleteOne(mo *MachineOwnership) *MachineOwnershipDeleteOne {
+	return c.DeleteOneID(mo.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *MachineOwnershipClient) DeleteOneID(id string) *MachineOwnershipDeleteOne {
+	builder := c.Delete().Where(machineownership.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &MachineOwnershipDeleteOne{builder}
+}
+
+// Query returns a query builder for MachineOwnership.
+func (c *MachineOwnershipClient) Query() *MachineOwnershipQuery {
+	return &MachineOwnershipQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeMachineOwnership},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a MachineOwnership entity by its id.
+func (c *MachineOwnershipClient) Get(ctx context.Context, id string) (*MachineOwnership, error) {
+	return c.Query().Where(machineownership.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *MachineOwnershipClient) GetX(ctx context.Context, id string) *MachineOwnership {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *MachineOwnershipClient) Hooks() []Hook {
+	return c.hooks.MachineOwnership
+}
+
+// Interceptors returns the client interceptors.
+func (c *MachineOwnershipClient) Interceptors() []Interceptor {
+	return c.inters.MachineOwnership
+}
+
+func (c *MachineOwnershipClient) mutate(ctx context.Context, m *MachineOwnershipMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&MachineOwnershipCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&MachineOwnershipUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&MachineOwnershipUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&MachineOwnershipDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown MachineOwnership mutation op: %q", m.Op())
+	}
+}
+
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
 		Connector, ContentTransfer, ContentTransferChunk, EnvironmentTemplate,
-		FabricOperation []ent.Hook
+		FabricOperation, MachineOwnership []ent.Hook
 	}
 	inters struct {
 		Connector, ContentTransfer, ContentTransferChunk, EnvironmentTemplate,
-		FabricOperation []ent.Interceptor
+		FabricOperation, MachineOwnership []ent.Interceptor
 	}
 )

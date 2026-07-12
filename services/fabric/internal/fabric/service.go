@@ -15,7 +15,9 @@ import (
 )
 
 type Provider interface {
-	CreateComputeAllocation(ctx context.Context, input ComputeAllocationInput) (ComputeAllocation, error)
+	ReconcileComputePool(ctx context.Context, input ComputePoolDemand) (ComputePoolState, error)
+	TagComputeMachine(ctx context.Context, machine ProviderMachine, ownership MachineOwnership) error
+	DeleteComputeMachine(ctx context.Context, machine ProviderMachine) error
 	SyncComputeAllocation(ctx context.Context, allocation ComputeAllocation) (ComputeAllocation, error)
 	DestroyComputeAllocation(ctx context.Context, allocation ComputeAllocation) (ComputeAllocation, error)
 	CreateStorageVolume(ctx context.Context, input StorageVolumeInput) (StorageVolume, error)
@@ -107,7 +109,7 @@ func (s *Service) CreateComputeAllocation(ctx context.Context, input ComputeAllo
 	s.computes[allocation.ID] = allocation
 	s.mu.Unlock()
 
-	go s.finishComputeAllocation(input, id, allocation, operation)
+	go s.reconcileComputePool(allocation.PackageID, input.DryRun)
 	return allocation, nil
 }
 
@@ -160,30 +162,6 @@ func (s *Service) SyncComputeAllocation(ctx context.Context, allocationID string
 	s.computes[allocationID] = allocation
 	s.mu.Unlock()
 	return allocation, nil
-}
-
-func (s *Service) finishComputeAllocation(input ComputeAllocationInput, id string, pending ComputeAllocation, operation FabricOperation) {
-	allocation, err := s.provider.CreateComputeAllocation(context.Background(), input)
-	if err != nil {
-		allocation = pending
-		allocation.Status = "failed"
-		allocation.ProviderRequestID = firstNonEmpty(allocation.ProviderRequestID, providerRequestID("compute", input.IdempotencyKey))
-	} else {
-		allocation.ID = id
-		if allocation.Status == "" {
-			allocation.Status = "running"
-		}
-		if allocation.Provider == "" {
-			allocation.Provider = "tencent-tke"
-		}
-		if allocation.ProviderRequestID == "" {
-			allocation.ProviderRequestID = providerRequestID("compute", input.IdempotencyKey)
-		}
-	}
-	_ = s.recordOperation(context.Background(), operation, operationStatus(err), allocation, err)
-	s.mu.Lock()
-	s.computes[id] = allocation
-	s.mu.Unlock()
 }
 
 func (s *Service) DestroyComputeAllocation(ctx context.Context, allocationID string) (ComputeAllocation, error) {

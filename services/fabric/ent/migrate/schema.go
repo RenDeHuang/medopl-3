@@ -158,6 +158,28 @@ var (
 		Columns:    FabricOperationsColumns,
 		PrimaryKey: []*schema.Column{FabricOperationsColumns[0]},
 	}
+	// MachineOwnershipsColumns holds the columns for the "machine_ownerships" table.
+	MachineOwnershipsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeString, Unique: true},
+		{Name: "resource_id", Type: field.TypeString, Unique: true},
+		{Name: "account_id", Type: field.TypeString},
+		{Name: "workspace_id", Type: field.TypeString, Default: ""},
+		{Name: "package_id", Type: field.TypeString},
+		{Name: "node_pool_id", Type: field.TypeString},
+		{Name: "machine_id", Type: field.TypeString, Unique: true},
+		{Name: "instance_id", Type: field.TypeString, Unique: true, Nullable: true},
+		{Name: "node_name", Type: field.TypeString, Default: ""},
+		{Name: "status", Type: field.TypeString},
+		{Name: "provider_request_id", Type: field.TypeString, Default: ""},
+		{Name: "claimed_at", Type: field.TypeTime},
+		{Name: "released_at", Type: field.TypeTime, Nullable: true},
+	}
+	// MachineOwnershipsTable holds the schema information for the "machine_ownerships" table.
+	MachineOwnershipsTable = &schema.Table{
+		Name:       "machine_ownerships",
+		Columns:    MachineOwnershipsColumns,
+		PrimaryKey: []*schema.Column{MachineOwnershipsColumns[0]},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		FabricConnectorsTable,
@@ -165,6 +187,7 @@ var (
 		FabricContentTransferChunksTable,
 		FabricEnvironmentTemplatesTable,
 		FabricOperationsTable,
+		MachineOwnershipsTable,
 	}
 )
 

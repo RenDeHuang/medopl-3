@@ -124,6 +124,10 @@ type fakeTencentClient struct {
 	destroyedRequest Request
 }
 
+func (client *fakeTencentClient) ReconcileComputePool(request Request, _ map[string]string) Response {
+	return Response{Ok: true, PoolId: request.Pool.Id, NodePoolId: request.Pool.NodePoolId, Status: "ready"}
+}
+
 func (client *fakeTencentClient) CreateComputeAllocation(request Request, env map[string]string) Response {
 	client.createdRequest = request
 	return Response{

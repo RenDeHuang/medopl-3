@@ -267,7 +267,7 @@ func TestComputeAllocationReturnsProvisioningBeforeProviderCompletes(t *testing.
 	for time.Now().Before(deadline) {
 		current, ok = service.GetComputeAllocation(context.Background(), allocation.ID)
 		if ok && current.Status == "running" {
-			if current.ID != allocation.ID || current.NodeName != "node-alpha" {
+			if current.ID != allocation.ID || current.NodeName == "" || current.MachineName == "" || current.InstanceID == "" {
 				t.Fatalf("completed allocation lost identity: %#v", current)
 			}
 			return
@@ -660,9 +660,9 @@ type blockingProvider struct {
 	done chan struct{}
 }
 
-func (p *blockingProvider) CreateComputeAllocation(ctx context.Context, input ComputeAllocationInput) (ComputeAllocation, error) {
+func (p *blockingProvider) ReconcileComputePool(ctx context.Context, input ComputePoolDemand) (ComputePoolState, error) {
 	<-p.done
-	return ComputeAllocation{ID: input.ID, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, PackageID: input.PackageID, Status: "running", Provider: "tencent-tke", ProviderRequestID: providerRequestID("compute", input.IdempotencyKey), NodeName: "node-alpha", CreatedAt: time.Now().UTC()}, nil
+	return testProvider{}.ReconcileComputePool(ctx, input)
 }
 
 type testProvider struct{}
@@ -726,10 +726,20 @@ func (p *contentTestProvider) PublishWorkspaceContent(_ context.Context, _ strin
 	return nil
 }
 
-func (testProvider) CreateComputeAllocation(_ context.Context, input ComputeAllocationInput) (ComputeAllocation, error) {
-	now := time.Now().UTC()
-	return ComputeAllocation{ID: "ca-test", AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, PackageID: input.PackageID, Status: "allocated", Provider: "tencent-tke", ProviderRequestID: providerRequestID("compute", input.IdempotencyKey), ServiceName: "opl-ca-test", CreatedAt: now}, nil
+func (testProvider) ReconcileComputePool(_ context.Context, input ComputePoolDemand) (ComputePoolState, error) {
+	machines := make([]ProviderMachine, 0, input.DesiredReplicas)
+	for index := int64(0); index < input.DesiredReplicas; index++ {
+		id := fmt.Sprintf("%s-%03d", input.PoolID, index+1)
+		machines = append(machines, ProviderMachine{MachineID: id, InstanceID: "ins-" + id, NodeName: id, InstanceType: input.InstanceType, Ready: true})
+	}
+	return ComputePoolState{PoolID: input.PoolID, NodePoolID: "np-" + input.PoolID, DesiredReplicas: input.DesiredReplicas, CurrentReplicas: input.DesiredReplicas, ProviderRequestID: "pool-test", Machines: machines}, nil
 }
+
+func (testProvider) TagComputeMachine(_ context.Context, _ ProviderMachine, _ MachineOwnership) error {
+	return nil
+}
+
+func (testProvider) DeleteComputeMachine(_ context.Context, _ ProviderMachine) error { return nil }
 
 func (testProvider) SyncComputeAllocation(_ context.Context, allocation ComputeAllocation) (ComputeAllocation, error) {
 	allocation.Status = "running"
