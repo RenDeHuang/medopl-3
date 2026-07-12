@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -72,6 +74,38 @@ func TestPeriodicSettlementWorkerSettlesActiveResources(t *testing.T) {
 	if ledger.keys[0] == ledger.keys[1] || ledger.keys[0] == "" || ledger.settlements[0].UsagePeriodEnd != "2026-07-09T12:00:00Z" {
 		t.Fatalf("settlements must use stable per-period idempotency: keys=%#v settlements=%#v", ledger.keys, ledger.settlements)
 	}
+}
+
+func TestPeriodicSettlementContinuesAfterResourceFailure(t *testing.T) {
+	app := newControlPlaneAppEmpty()
+	mustStore(t, app.tables.SaveCompute(context.Background(), freshBillableResource(map[string]any{"id": "compute-alpha", "accountId": "acct-alpha", "packageId": "basic", "status": "running"})))
+	mustStore(t, app.tables.SaveStorage(context.Background(), freshBillableResource(map[string]any{"id": "storage-alpha", "accountId": "acct-beta", "packageId": "basic", "status": "available", "sizeGb": 10})))
+	ledger := &failFirstSettlementLedger{}
+	service := controlPlaneServiceForTest(ledger)
+
+	err := app.runPeriodicSettlementOnce(context.Background(), service, time.Now().UTC())
+	if err == nil || !strings.Contains(err.Error(), "insufficient balance") || len(ledger.keys) != 2 {
+		t.Fatalf("worker stopped early: keys=%#v err=%v", ledger.keys, err)
+	}
+	rows, listErr := app.tables.ListLedger(context.Background(), "")
+	if listErr != nil || len(rows) != 1 {
+		t.Fatalf("successful later settlement was not projected: rows=%#v err=%v", rows, listErr)
+	}
+}
+
+type failFirstSettlementLedger struct {
+	settlementWorkerLedger
+	failed bool
+}
+
+func (l *failFirstSettlementLedger) SettleResource(ctx context.Context, input clients.ResourceSettlementInput, key string) (clients.ResourceSettlementResult, error) {
+	if !l.failed {
+		l.failed = true
+		l.settlements = append(l.settlements, input)
+		l.keys = append(l.keys, key)
+		return clients.ResourceSettlementResult{}, errors.New("insufficient balance")
+	}
+	return l.settlementWorkerLedger.SettleResource(ctx, input, key)
 }
 
 func TestPeriodicSettlementWorkerDoesNotDuplicateControlPlaneProjectionsOnReplay(t *testing.T) {
