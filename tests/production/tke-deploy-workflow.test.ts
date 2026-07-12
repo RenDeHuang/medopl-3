@@ -121,9 +121,15 @@ test("production execution verifier runs inside TKE and matches the deployment c
   assert.ok(contract.productionExecutionWorkflow, "deployment contract must define the production execution verifier");
   const workflow = await readWorkflow(contract.productionExecutionWorkflow.file);
   assertWorkflowContract(workflow, contract.productionExecutionWorkflow, contract);
+  const liveJob = job(workflow, "verify");
   const currentJob = job(workflow, contract.productionExecutionWorkflow.job);
+  const liveRuns = serializedRuns(liveJob);
   const runs = serializedRuns(currentJob);
 
+  assert.equal(liveJob.outputs.workspace_id, "${{ steps.verify.outputs.workspace_id }}");
+  assert.match(liveRuns, /production-verifier-result\.json/);
+  assert.match(liveRuns, /A-Za-z0-9/);
+  assert.match(liveRuns, /workspace_id=.*payload\.workspaceId/);
   assert.match(runs, /port-forward service\/opl-cloud-control-plane 18787:8787/);
   assert.match(runs, /port-forward service\/opl-cloud-ledger 18081:8081/);
   assert.match(runs, /port-forward service\/opl-cloud-fabric 18082:8082/);
@@ -132,6 +138,7 @@ test("production execution verifier runs inside TKE and matches the deployment c
 	assert.match(runs, /OPL_EXECUTION_INTERNAL_SERVICE_TOKEN/);
   assert.ok(String(currentJob.env.OPL_EXECUTION_AUTH_USERS_JSON || "").includes("secrets.OPL_CONSOLE_USERS_JSON"));
   assert.equal(currentJob.env.OPL_EXECUTION_ACCOUNT_ID, "${{ inputs.account_id }}");
+  assert.equal(currentJob.env.OPL_EXECUTION_WORKSPACE_ID, "${{ needs.verify.outputs.workspace_id }}");
   assert.doesNotMatch(runs, /x-opl-operator-token/);
 });
 

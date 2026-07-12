@@ -48,6 +48,8 @@ jobs:
     name: Verify live OPL business chain
     runs-on: ubuntu-latest
     environment: production
+    outputs:
+      workspace_id: ${{ steps.verify.outputs.workspace_id }}
     env:
       OPL_CONSOLE_ORIGIN: ${{ inputs.origin }}
       OPL_VERIFY_OPERATOR_TOKEN: ${{ secrets.OPL_OPERATOR_SUMMARY_TOKEN }}
@@ -80,7 +82,19 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Verify production audit evidence chain
-        run: npm run verify:production
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          result="$RUNNER_TEMP/production-verifier-result.json"
+          trap 'rm -f "$result"' EXIT
+          node tools/production-verifier.ts | tee "$result"
+          node -e '
+            const fs = require("node:fs");
+            const payload = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            if (!/^[A-Za-z0-9._:-]{1,128}$/.test(payload.workspaceId || "")) throw new Error("workspace_id_required");
+            process.stdout.write(`workspace_id=${payload.workspaceId}\n`);
+          ' "$result" >> "$GITHUB_OUTPUT"
 
       - name: Upload browser E2E screenshots
         if: always()
@@ -106,6 +120,7 @@ jobs:
       OPL_EXECUTION_OPERATOR_TOKEN: ${{ secrets.OPL_OPERATOR_SUMMARY_TOKEN }}
       OPL_EXECUTION_AUTH_USERS_JSON: ${{ secrets.OPL_CONSOLE_USERS_JSON }}
       OPL_EXECUTION_ACCOUNT_ID: ${{ inputs.account_id }}
+      OPL_EXECUTION_WORKSPACE_ID: ${{ needs.verify.outputs.workspace_id }}
       OPL_EXECUTION_RUN_ID: ${{ inputs.run_id || github.run_id }}
 
     steps:

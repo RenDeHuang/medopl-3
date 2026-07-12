@@ -16,7 +16,7 @@ test("production execution verifier proves the complete cross-service evidence c
   const digest = `sha256:${createHash("sha256").update(runId).digest("hex")}`;
   const identity = {
     organizationId: "org-owner-test",
-    workspaceId: `workspace-${runId}`,
+    workspaceId: "workspace-real-test",
     projectId: "project-test",
     taskId: "task-test",
     requestId: "request-test",
@@ -62,6 +62,7 @@ test("production execution verifier proves the complete cross-service evidence c
     internalServiceToken: "internal-secret",
     authUsersJson: JSON.stringify([{ role: "owner", accountId: "acct-owner", email: "owner@example.com", password: "owner-password" }]),
     accountId: "acct-owner",
+    workspaceId: identity.workspaceId,
     runId,
     fetchImpl
   });

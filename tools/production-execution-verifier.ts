@@ -49,6 +49,7 @@ export async function verifyProductionExecutionChain({
   internalServiceToken,
   authUsersJson,
   accountId,
+  workspaceId,
   runId,
   fetchImpl = globalThis.fetch
 }) {
@@ -59,7 +60,7 @@ export async function verifyProductionExecutionChain({
   required(internalServiceToken, "internal_service_token");
   if (!/^[A-Za-z0-9._:-]{1,80}$/.test(runId || "")) throw new Error("run_id_invalid");
 
-  const workspaceId = `workspace-${runId}`;
+  required(workspaceId, "workspace_id");
   const runnerId = `runner-${runId}`;
   const environmentRef = "environment-production-verifier";
   const digest = `sha256:${createHash("sha256").update(runId).digest("hex")}`;
@@ -210,6 +211,7 @@ export async function runProductionExecutionVerifierCli({ env = process.env, std
       internalServiceToken: env.OPL_EXECUTION_INTERNAL_SERVICE_TOKEN,
       authUsersJson: env.OPL_EXECUTION_AUTH_USERS_JSON,
       accountId: env.OPL_EXECUTION_ACCOUNT_ID,
+      workspaceId: env.OPL_EXECUTION_WORKSPACE_ID,
       runId: env.OPL_EXECUTION_RUN_ID,
       fetchImpl
     });
