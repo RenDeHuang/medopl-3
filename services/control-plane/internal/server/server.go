@@ -579,6 +579,7 @@ func settlementResponse(result clients.ResourceSettlementResult) map[string]any 
 		"workspaceId":             result.WorkspaceID,
 		"resourceType":            result.ResourceType,
 		"resourceId":              result.ResourceID,
+		"holdId":                  result.HoldID,
 		"amount":                  float64(result.AmountCents) / 100,
 		"amountCents":             result.AmountCents,
 		"status":                  result.Status,
@@ -600,6 +601,7 @@ func completeSettlementResult(result clients.ResourceSettlementResult, input con
 	result.WorkspaceID = firstNonEmpty(result.WorkspaceID, input.WorkspaceID)
 	result.ResourceType = firstNonEmpty(result.ResourceType, input.ResourceType)
 	result.ResourceID = firstNonEmpty(result.ResourceID, input.ResourceID)
+	result.HoldID = firstNonEmpty(result.HoldID, input.HoldID)
 	if result.AmountCents == 0 {
 		result.AmountCents = input.AmountCents
 	}

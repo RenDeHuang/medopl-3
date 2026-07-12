@@ -943,7 +943,7 @@ func (fakeLedgerClient) Continuation(_ context.Context, receiptID string) (map[s
 }
 
 func (fakeLedgerClient) SettleResource(_ context.Context, input clients.ResourceSettlementInput, _ string) (clients.ResourceSettlementResult, error) {
-	return clients.ResourceSettlementResult{ID: "settlement-from-ledger", AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: input.ResourceType, ResourceID: input.ResourceID, AmountCents: input.AmountCents, Status: "settled", LedgerEntryID: "ledger-settlement-from-ledger", WalletTransactionID: "wallet-settlement-from-ledger", PricingVersion: input.PricingVersion, PriceSnapshot: input.PriceSnapshot, UsagePeriodStart: input.UsagePeriodStart, UsagePeriodEnd: input.UsagePeriodEnd, Quantity: input.Quantity, Unit: input.Unit, ProviderCostEvidenceRef: input.ProviderCostEvidenceRef, Wallet: clients.Wallet{AccountID: input.AccountID, BalanceCents: 8800, AvailableCents: 8800, Currency: "CNY"}}, nil
+	return clients.ResourceSettlementResult{ID: "settlement-from-ledger", AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: input.ResourceType, ResourceID: input.ResourceID, HoldID: input.HoldID, AmountCents: input.AmountCents, Status: "settled", LedgerEntryID: "ledger-settlement-from-ledger", WalletTransactionID: "wallet-settlement-from-ledger", PricingVersion: input.PricingVersion, PriceSnapshot: input.PriceSnapshot, UsagePeriodStart: input.UsagePeriodStart, UsagePeriodEnd: input.UsagePeriodEnd, Quantity: input.Quantity, Unit: input.Unit, ProviderCostEvidenceRef: input.ProviderCostEvidenceRef, Wallet: clients.Wallet{AccountID: input.AccountID, BalanceCents: 8800, AvailableCents: 8800, Currency: "CNY"}}, nil
 }
 
 type fakeLedgerClientWithoutSettlementIdentity struct {
@@ -2583,10 +2583,10 @@ func TestResourceSettlementProjectionKeepsRequestIdentityWhenLedgerOmitsIt(t *te
 
 func TestResourceSettlementPassesPriceAndEvidenceSnapshotToLedger(t *testing.T) {
 	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}))
-	body := `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","amountCents":123,"currency":"CNY","pricingVersion":"opl-tencent-v1","priceSnapshot":{"unitPriceCents":123,"sku":"basic-cvm"},"usagePeriodStart":"2026-07-08T00:00:00Z","usagePeriodEnd":"2026-07-08T01:00:00Z","quantity":1,"unit":"hour","providerCostEvidenceRef":"fabric:op-alpha","confirm":true}`
+	body := `{"accountId":"acct-alpha","workspaceId":"ws-alpha","resourceType":"compute","resourceId":"compute-alpha","holdId":"hold-compute-alpha","amountCents":123,"currency":"CNY","pricingVersion":"opl-tencent-v1","priceSnapshot":{"unitPriceCents":123,"sku":"basic-cvm"},"usagePeriodStart":"2026-07-08T00:00:00Z","usagePeriodEnd":"2026-07-08T01:00:00Z","quantity":1,"unit":"hour","providerCostEvidenceRef":"fabric:op-alpha","confirm":true}`
 
 	settlement := createResource(t, server, http.MethodPost, "/api/billing/resource-settlements", body)
-	if settlement["pricingVersion"] != "opl-tencent-v1" || settlement["providerCostEvidenceRef"] != "fabric:op-alpha" {
+	if settlement["holdId"] != "hold-compute-alpha" || settlement["pricingVersion"] != "opl-tencent-v1" || settlement["providerCostEvidenceRef"] != "fabric:op-alpha" {
 		t.Fatalf("settlement response lost price/evidence fields: %#v", settlement)
 	}
 	priceSnapshot := settlement["priceSnapshot"].(map[string]any)

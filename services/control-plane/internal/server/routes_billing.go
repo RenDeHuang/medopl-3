@@ -71,6 +71,7 @@ func registerBillingRoutes(mux *http.ServeMux, app *controlPlaneServer, service 
 			WorkspaceID:             stringField(input, "workspaceId", ""),
 			ResourceType:            stringField(input, "resourceType", "compute"),
 			ResourceID:              firstNonEmpty(stringField(input, "resourceId", ""), stringField(input, "computeAllocationId", ""), stringField(input, "storageId", "")),
+			HoldID:                  stringField(input, "holdId", ""),
 			AmountCents:             settlementAmountCents(input),
 			Currency:                stringField(input, "currency", "CNY"),
 			PricingVersion:          stringField(input, "pricingVersion", ""),
