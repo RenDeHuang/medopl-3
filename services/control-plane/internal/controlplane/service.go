@@ -546,6 +546,11 @@ func (s *Service) DestroyComputeAllocation(ctx context.Context, input DestroyRes
 	if err != nil {
 		return allocation, err
 	}
+	allocation.BillingStatus = "stopping"
+	if !isDestroyedResource(allocation.Status) {
+		return allocation, nil
+	}
+	allocation.BillingStatus = "stopped"
 	if input.HoldID != "" {
 		release, err := s.ReleaseResourceHold(ctx, input, "compute", "destroy_compute", idempotencyKey)
 		if err != nil {
@@ -564,6 +569,10 @@ func (s *Service) DestroyComputeAllocation(ctx context.Context, input DestroyRes
 
 func isExternallyDeletedResource(status string) bool {
 	return status == "external_deleted" || status == "deleted" || status == "missing"
+}
+
+func isDestroyedResource(status string) bool {
+	return status == "destroyed" || isExternallyDeletedResource(status)
 }
 
 func (s *Service) CreateStorageVolume(ctx context.Context, input StorageVolumeInput, idempotencyKey string) (clients.StorageVolume, error) {

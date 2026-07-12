@@ -199,6 +199,7 @@ type ComputePoolState struct {
 	DesiredReplicas   int64             `json:"desiredReplicas"`
 	CurrentReplicas   int64             `json:"currentReplicas"`
 	ProviderRequestID string            `json:"providerRequestId,omitempty"`
+	ProviderData      map[string]string `json:"providerData,omitempty"`
 	Machines          []ProviderMachine `json:"machines"`
 }
 

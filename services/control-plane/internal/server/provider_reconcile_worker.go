@@ -78,6 +78,21 @@ func (app *controlPlaneServer) runProviderReconcileOnce(ctx context.Context, ser
 		return err
 	}
 	for id, row := range computes {
+		if billingStatusFor(row) == "stopping" && stringValue(row["desiredStatus"]) == "destroyed" {
+			result, destroyErr := service.DestroyComputeAllocation(ctx, destroyResourceInput(id, row), "provider-reconcile:destroy-compute:"+id)
+			if destroyErr != nil {
+				errs = append(errs, destroyErr)
+				if saveErr := app.saveComputeFact(providerSyncFacts(row, destroyErr)); saveErr != nil {
+					errs = append(errs, saveErr)
+				}
+				continue
+			}
+			body := providerSyncFacts(computeResponse(mergeMaps(row, structToMap(result))), nil)
+			if saveErr := app.saveComputeFact(body); saveErr != nil {
+				errs = append(errs, saveErr)
+			}
+			continue
+		}
 		if stringValue(row["status"]) == "failed" && stringValue(row["holdId"]) != "" && stringValue(row["holdReleaseId"]) == "" {
 			release, releaseErr := service.ReleaseResourceHold(ctx, destroyResourceInput(id, row), "compute", "compute_create_failed", "provider-reconcile:compute:"+id)
 			if releaseErr != nil {

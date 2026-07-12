@@ -253,6 +253,31 @@ func TestProviderReconcileWorkerPersistsExternalDeleteAndRelease(t *testing.T) {
 	}
 }
 
+func TestProviderReconcileCompletesDestroyAndReleasesHold(t *testing.T) {
+	app := newControlPlaneAppEmpty()
+	mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{
+		"id":              "compute-destroying",
+		"accountId":       "acct-alpha",
+		"workspaceId":     "ws-alpha",
+		"packageId":       "basic",
+		"status":          "destroying",
+		"desiredStatus":   "destroyed",
+		"billingStatus":   "stopping",
+		"holdId":          "hold-compute-destroying",
+		"holdAmountCents": int64(7862),
+	}))
+	ledger := &settlementWorkerLedger{}
+	service := controlPlaneServiceForTest(ledger)
+
+	if err := app.runProviderReconcileOnce(context.Background(), service, time.Now().UTC()); err != nil {
+		t.Fatalf("provider reconcile: %v", err)
+	}
+	compute, _ := app.getCompute("compute-destroying")
+	if len(ledger.releases) != 1 || compute["status"] != "destroyed" || compute["billingStatus"] != "stopped" || compute["holdReleaseId"] != "release-compute-compute-destroying" {
+		t.Fatalf("destroy was not finalized: releases=%#v compute=%#v", ledger.releases, compute)
+	}
+}
+
 func TestProviderReconcileReleasesFailedComputeHold(t *testing.T) {
 	app := newControlPlaneAppEmpty()
 	mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{

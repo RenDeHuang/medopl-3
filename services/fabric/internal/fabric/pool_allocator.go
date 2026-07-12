@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"time"
 )
 
@@ -165,6 +166,9 @@ func (s *Service) reconcileComputePoolOnce(ctx context.Context, packageID string
 	}
 	plan := packagePlan(packageID)
 	state, err := s.provider.ReconcileComputePool(ctx, ComputePoolDemand{PoolID: plan.ID, PackageID: packageID, NodePoolID: plan.NodePoolID, InstanceType: plan.InstanceType, DesiredReplicas: int64(len(active) + len(pending)), DryRun: dryRun})
+	if evidenceErr := s.recordPoolReconcileEvidence(ctx, pending, state, err); evidenceErr != nil {
+		return false, false, evidenceErr
+	}
 	if err != nil {
 		return false, false, err
 	}
@@ -234,6 +238,35 @@ func (s *Service) reconcileComputePoolOnce(ctx context.Context, packageID string
 	}
 	remaining, err := s.pendingComputeOperations(ctx, packageID)
 	return len(remaining) == 0 && state.CurrentReplicas == state.DesiredReplicas, limit > 0, err
+}
+
+func (s *Service) recordPoolReconcileEvidence(ctx context.Context, pending []FabricOperation, state ComputePoolState, reconcileErr error) error {
+	for index := range pending {
+		var resource ComputeAllocation
+		if !decodeOperationResource(pending[index], &resource) {
+			continue
+		}
+		if resource.ProviderData == nil {
+			resource.ProviderData = map[string]string{}
+		}
+		attempt, _ := strconv.Atoi(resource.ProviderData["poolReconcileAttempt"])
+		for key, value := range state.ProviderData {
+			resource.ProviderData[key] = value
+		}
+		resource.ProviderData["poolReconcileAttempt"] = strconv.Itoa(attempt + 1)
+		resource.ProviderData["desiredReplicas"] = strconv.FormatInt(state.DesiredReplicas, 10)
+		resource.ProviderData["currentReplicas"] = strconv.FormatInt(state.CurrentReplicas, 10)
+		resource.ProviderData["nodePoolId"] = state.NodePoolID
+		resource.ProviderData["describeMachinesRequestId"] = state.ProviderRequestID
+		resource.PoolID = firstNonEmpty(state.PoolID, resource.PoolID)
+		resource.NodePoolID = firstNonEmpty(state.NodePoolID, resource.NodePoolID)
+		resource.ProviderRequestID = firstNonEmpty(state.ProviderRequestID, resource.ProviderRequestID)
+		if err := s.recordOperation(ctx, pending[index], "started", resource, reconcileErr); err != nil {
+			return err
+		}
+		fillOperationResource(&pending[index], resource)
+	}
+	return nil
 }
 
 func (s *Service) pendingComputeOperations(ctx context.Context, packageID string) ([]FabricOperation, error) {

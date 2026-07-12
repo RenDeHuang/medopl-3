@@ -45,6 +45,18 @@ type transientProviderError struct {
 	calls int
 }
 
+type evidencePoolProvider struct{ testProvider }
+
+func (*evidencePoolProvider) ReconcileComputePool(_ context.Context, input ComputePoolDemand) (ComputePoolState, error) {
+	return ComputePoolState{
+		PoolID:            input.PoolID,
+		NodePoolID:        "np-basic",
+		DesiredReplicas:   input.DesiredReplicas,
+		CurrentReplicas:   0,
+		ProviderRequestID: "req-describe-machines",
+	}, nil
+}
+
 func (p *transientProviderError) ReconcileComputePool(_ context.Context, input ComputePoolDemand) (ComputePoolState, error) {
 	p.calls++
 	if input.DesiredReplicas > 0 && p.calls == 1 {
@@ -56,6 +68,31 @@ func (p *transientProviderError) ReconcileComputePool(_ context.Context, input C
 func TestPoolReconcileWindowAllowsNativeMachineProvisioning(t *testing.T) {
 	if time.Duration(poolReconcileAttempts)*poolReconcileDelay < 15*time.Minute {
 		t.Fatalf("pool reconcile window = %s, want at least 15m", time.Duration(poolReconcileAttempts)*poolReconcileDelay)
+	}
+}
+
+func TestPoolAllocatorPersistsPoolEvidence(t *testing.T) {
+	store := NewMemoryOperationStore()
+	service := NewServiceWithOperationStore(&evidencePoolProvider{}, store)
+	resource := ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", PackageID: "basic", Status: "provisioning"}
+	operation := newOperation("create_compute_allocation", "compute_allocation", resource.ID, resource.AccountID, "", "request-alpha", hashInput(resource), time.Now().UTC())
+	if err := service.recordOperation(context.Background(), operation, "started", resource, nil); err != nil {
+		t.Fatal(err)
+	}
+	service.computes[resource.ID] = resource
+
+	_, _, _ = service.reconcileComputePoolOnce(context.Background(), "basic", false)
+
+	operations, err := store.List(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var latest ComputeAllocation
+	if !decodeOperationResource(operations[len(operations)-1], &latest) {
+		t.Fatalf("latest operation missing resource: %#v", operations[len(operations)-1])
+	}
+	if latest.ProviderData["poolReconcileAttempt"] != "1" || latest.ProviderData["desiredReplicas"] != "1" || latest.ProviderData["currentReplicas"] != "0" || latest.ProviderData["describeMachinesRequestId"] != "req-describe-machines" {
+		t.Fatalf("pool evidence not persisted: %#v", latest.ProviderData)
 	}
 }
 
@@ -177,23 +214,25 @@ func TestPendingComputeOperationStopsWhenDestroyStarts(t *testing.T) {
 	}
 }
 
-func TestDestroyComputeAllocationReturnsPoolScaleDownFailure(t *testing.T) {
+func TestDestroyComputeAllocationRecordsPoolScaleDownFailure(t *testing.T) {
 	service := NewServiceWithOperationStore(&scaleDownFailureProvider{}, NewMemoryOperationStore())
-	resource := ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", PackageID: "basic", Status: "provisioning"}
+	resource := ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", PackageID: "basic", Status: "provisioning", Provider: "tencent-tke", ProviderRequestID: "compute-alpha-request"}
 	service.computes[resource.ID] = resource
 	oldAttempts, oldDelay := poolReconcileAttempts, poolReconcileDelay
 	poolReconcileAttempts, poolReconcileDelay = 1, 0
 	t.Cleanup(func() { poolReconcileAttempts, poolReconcileDelay = oldAttempts, oldDelay })
 
-	if _, err := service.DestroyComputeAllocation(context.Background(), resource.ID); err == nil {
-		t.Fatal("destroy succeeded before pool scale-down was confirmed")
+	allocation, err := service.DestroyComputeAllocation(context.Background(), resource.ID)
+	if err != nil || allocation.Status != "destroying" {
+		t.Fatalf("destroy response = %#v err=%v", allocation, err)
 	}
+	waitForOperation(t, service, "destroy_compute_allocation", "compute_allocation", resource.ID, "failed")
 }
 
 func TestDestroyFinalizesCancelingCreateAfterPoolCleanup(t *testing.T) {
 	store := NewMemoryOperationStore()
 	service := NewServiceWithOperationStore(testProvider{}, store)
-	resource := ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", PackageID: "basic", Status: "provisioning"}
+	resource := ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", PackageID: "basic", Status: "provisioning", Provider: "tencent-tke", ProviderRequestID: "compute-alpha-request"}
 	create := newOperation("create_compute_allocation", "compute_allocation", resource.ID, resource.AccountID, "", "create-alpha", hashInput(resource), time.Now().UTC())
 	if err := service.recordOperation(context.Background(), create, "canceling", resource, fmt.Errorf("compute_machine_unavailable")); err != nil {
 		t.Fatal(err)
@@ -203,6 +242,7 @@ func TestDestroyFinalizesCancelingCreateAfterPoolCleanup(t *testing.T) {
 	if _, err := service.DestroyComputeAllocation(context.Background(), resource.ID); err != nil {
 		t.Fatal(err)
 	}
+	waitForOperation(t, service, "destroy_compute_allocation", "compute_allocation", resource.ID, "succeeded")
 	operations, err := store.List(context.Background())
 	if err != nil {
 		t.Fatal(err)

@@ -45,6 +45,7 @@ type Service struct {
 	volumes        map[string]StorageVolume
 	snapshots      map[string]StorageSnapshot
 	attachments    map[string]StorageAttachment
+	destroying     map[string]bool
 	operations     OperationStore
 	transfers      TransferStore
 	catalog        CatalogStore
@@ -72,7 +73,7 @@ func NewServiceWithPubMed(provider Provider, operations OperationStore, client *
 	}
 	connectors, templates := defaultCatalogRecords()
 	catalogErr := operations.SeedCatalog(context.Background(), connectors, templates)
-	return &Service{provider: provider, computes: computes, volumes: volumes, snapshots: snapshots, attachments: attachments, operations: operations, transfers: transferStore, catalog: operations, catalogInitErr: catalogErr, pubmed: newPubMedClient(client, baseURL), now: func() time.Time { return time.Now().UTC() }}
+	return &Service{provider: provider, computes: computes, volumes: volumes, snapshots: snapshots, attachments: attachments, destroying: map[string]bool{}, operations: operations, transfers: transferStore, catalog: operations, catalogInitErr: catalogErr, pubmed: newPubMedClient(client, baseURL), now: func() time.Time { return time.Now().UTC() }}
 }
 
 func (s *Service) Catalog(_ context.Context) Catalog {
@@ -180,22 +181,66 @@ func (s *Service) DestroyComputeAllocation(ctx context.Context, allocationID str
 		_ = s.recordOperation(ctx, operation, "rejected", ComputeAllocation{ID: allocationID}, err)
 		return ComputeAllocation{}, err
 	}
-	operation := newOperation("destroy_compute_allocation", "compute_allocation", allocationID, existing.AccountID, existing.WorkspaceID, "", hashInput(map[string]string{"id": allocationID}), time.Now().UTC())
-	if err := s.recordOperation(ctx, operation, "started", existing, nil); err != nil {
-		return ComputeAllocation{}, err
-	}
-	var allocation ComputeAllocation
 	plan := packagePlan(firstNonEmpty(existing.PackageID, "basic"))
-	err := s.operations.WithPoolLock(ctx, plan.ID+":"+plan.InstanceType, func(lockCtx context.Context) error {
+	operation := newOperation("destroy_compute_allocation", "compute_allocation", allocationID, existing.AccountID, existing.WorkspaceID, "", hashInput(map[string]string{"id": allocationID}), time.Now().UTC())
+	allocation := existing
+	startWorker := false
+	err := s.operations.WithPoolLock(ctx, "compute-destroy:"+allocationID, func(lockCtx context.Context) error {
+		latest, found, err := s.latestComputeDestroyOperation(lockCtx, allocationID)
+		if err != nil {
+			return err
+		}
+		if found && (latest.Status == "started" || latest.Status == "succeeded") {
+			operation = latest
+			_ = decodeOperationResource(latest, &allocation)
+			if latest.Status == "succeeded" {
+				return nil
+			}
+			s.mu.Lock()
+			startWorker = !s.destroying[allocationID]
+			s.destroying[allocationID] = true
+			s.mu.Unlock()
+			return nil
+		}
+		allocation.Status = "destroying"
+		if err := s.recordOperation(lockCtx, operation, "started", allocation, nil); err != nil {
+			return err
+		}
 		s.mu.Lock()
-		current := s.computes[allocationID]
+		s.computes[allocationID] = allocation
+		s.destroying[allocationID] = true
+		s.mu.Unlock()
+		startWorker = true
+		return nil
+	})
+	if err != nil {
+		return allocation, err
+	}
+	if startWorker {
+		go s.finishDestroyComputeAllocation(operation, allocation, plan)
+	}
+	return allocation, nil
+}
+
+func (s *Service) finishDestroyComputeAllocation(operation FabricOperation, existing ComputeAllocation, plan plan) {
+	ctx := context.Background()
+	allocation := existing
+	err := s.operations.WithPoolLock(ctx, plan.ID+":"+plan.InstanceType, func(lockCtx context.Context) error {
+		if latest, found, err := s.latestComputeDestroyOperation(lockCtx, existing.ID); err != nil {
+			return err
+		} else if found && latest.Status == "succeeded" {
+			_ = decodeOperationResource(latest, &allocation)
+			return nil
+		}
+		s.mu.Lock()
+		current := s.computes[existing.ID]
 		s.mu.Unlock()
 		var providerErr error
 		allocation, providerErr = s.provider.DestroyComputeAllocation(lockCtx, current)
 		if providerErr != nil {
 			return providerErr
 		}
-		if ownership, ownershipErr := s.operations.MachineOwnership(lockCtx, allocationID); ownershipErr == nil {
+		if ownership, ownershipErr := s.operations.MachineOwnership(lockCtx, existing.ID); ownershipErr == nil {
 			now := s.now()
 			ownership.Status = "released"
 			ownership.ReleasedAt = &now
@@ -208,19 +253,36 @@ func (s *Service) DestroyComputeAllocation(ctx context.Context, allocationID str
 		if err := s.reconcileComputePoolLocked(lockCtx, firstNonEmpty(existing.PackageID, "basic"), false); err != nil {
 			return err
 		}
-		return s.cancelPendingComputeCreation(lockCtx, allocationID, allocation)
+		return s.cancelPendingComputeCreation(lockCtx, existing.ID, allocation)
 	})
 	if err != nil {
+		if allocation.ID == "" {
+			allocation = existing
+		}
+		allocation.Status = "destroying"
 		_ = s.recordOperation(ctx, operation, "failed", allocation, err)
-		return allocation, err
-	}
-	if err := s.recordOperation(ctx, operation, "succeeded", allocation, nil); err != nil {
-		return allocation, err
+	} else {
+		_ = s.recordOperation(ctx, operation, "succeeded", allocation, nil)
+		s.mu.Lock()
+		s.computes[existing.ID] = allocation
+		s.mu.Unlock()
 	}
 	s.mu.Lock()
-	s.computes[allocationID] = allocation
+	delete(s.destroying, existing.ID)
 	s.mu.Unlock()
-	return allocation, nil
+}
+
+func (s *Service) latestComputeDestroyOperation(ctx context.Context, allocationID string) (FabricOperation, bool, error) {
+	operations, err := s.operations.List(ctx)
+	if err != nil {
+		return FabricOperation{}, false, err
+	}
+	for index := len(operations) - 1; index >= 0; index-- {
+		if operations[index].Action == "destroy_compute_allocation" && operations[index].ResourceID == allocationID {
+			return operations[index], true, nil
+		}
+	}
+	return FabricOperation{}, false, nil
 }
 
 func (s *Service) cancelPendingComputeCreation(ctx context.Context, allocationID string, allocation ComputeAllocation) error {

@@ -81,6 +81,18 @@ func TestReconcileComputePoolPreservesRawMachineCount(t *testing.T) {
 	}
 }
 
+func TestReconcileComputePoolPreservesDemandWhenProvisionerProcessFails(t *testing.T) {
+	provider := NewTencentProvider()
+	provider.provision = func(_ context.Context, _ provisionerRequest) (provisionerResponse, error) {
+		return provisionerResponse{}, errors.New("provisioner unavailable")
+	}
+
+	state, err := provider.ReconcileComputePool(context.Background(), ComputePoolDemand{PoolID: "basic", PackageID: "basic", NodePoolID: "np-basic", DesiredReplicas: 2})
+	if err == nil || state.PoolID != "basic" || state.NodePoolID != "np-basic" || state.DesiredReplicas != 2 {
+		t.Fatalf("pool state = %#v err=%v", state, err)
+	}
+}
+
 func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 	t.Setenv("OPL_WORKSPACE_IMAGE", "workspace-image:test")
 	t.Setenv("OPL_IMAGE_PULL_SECRET_NAME", "pull-secret")

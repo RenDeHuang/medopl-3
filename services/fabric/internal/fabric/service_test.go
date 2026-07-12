@@ -353,6 +353,7 @@ func TestResourceMutationsAppendFabricOperationFacts(t *testing.T) {
 	if _, err := service.DestroyComputeAllocation(ctx, compute.ID); err != nil {
 		t.Fatalf("destroy compute: %v", err)
 	}
+	waitForOperation(t, service, "destroy_compute_allocation", "compute_allocation", compute.ID, "succeeded")
 
 	operations, err := service.ListOperations(ctx)
 	if err != nil {
@@ -707,6 +708,67 @@ type blockingProvider struct {
 func (p *blockingProvider) ReconcileComputePool(ctx context.Context, input ComputePoolDemand) (ComputePoolState, error) {
 	<-p.done
 	return testProvider{}.ReconcileComputePool(ctx, input)
+}
+
+type blockingComputeDestroyProvider struct {
+	testProvider
+	destroyCalls atomic.Int32
+	entered      chan struct{}
+	release      chan struct{}
+}
+
+func (p *blockingComputeDestroyProvider) DestroyComputeAllocation(_ context.Context, allocation ComputeAllocation) (ComputeAllocation, error) {
+	if p.destroyCalls.Add(1) == 1 {
+		close(p.entered)
+	}
+	<-p.release
+	allocation.Status = "destroyed"
+	return allocation, nil
+}
+
+func TestComputeAsyncDestroyReturnsBeforeProviderCleanupAndReplays(t *testing.T) {
+	provider := &blockingComputeDestroyProvider{entered: make(chan struct{}), release: make(chan struct{})}
+	service := NewServiceWithOperationStore(provider, NewMemoryOperationStore())
+	compute, err := service.CreateComputeAllocation(context.Background(), ComputeAllocationInput{AccountID: "acct-alpha", WorkspaceID: "ws-alpha", PackageID: "basic", IdempotencyKey: "async-destroy-create"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitForOperation(t, service, "create_compute_allocation", "compute_allocation", compute.ID, "succeeded")
+	t.Cleanup(func() {
+		select {
+		case <-provider.release:
+		default:
+			close(provider.release)
+		}
+	})
+
+	result := make(chan ComputeAllocation, 1)
+	errs := make(chan error, 1)
+	go func() {
+		allocation, destroyErr := service.DestroyComputeAllocation(context.Background(), compute.ID)
+		result <- allocation
+		errs <- destroyErr
+	}()
+
+	select {
+	case allocation := <-result:
+		if err := <-errs; err != nil || allocation.Status != "destroying" {
+			t.Fatalf("destroy response = %#v err=%v", allocation, err)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("destroy blocked on provider cleanup")
+	}
+	<-provider.entered
+	replayed, err := service.DestroyComputeAllocation(context.Background(), compute.ID)
+	if err != nil || replayed.Status != "destroying" || provider.destroyCalls.Load() != 1 {
+		t.Fatalf("destroy replay = %#v err=%v calls=%d", replayed, err, provider.destroyCalls.Load())
+	}
+	close(provider.release)
+	waitForOperation(t, service, "destroy_compute_allocation", "compute_allocation", compute.ID, "succeeded")
+	finished, err := service.DestroyComputeAllocation(context.Background(), compute.ID)
+	if err != nil || finished.Status != "destroyed" || provider.destroyCalls.Load() != 1 {
+		t.Fatalf("finished destroy replay = %#v err=%v calls=%d", finished, err, provider.destroyCalls.Load())
+	}
 }
 
 type testProvider struct{}

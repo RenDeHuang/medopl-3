@@ -424,6 +424,41 @@ func TestDestroyComputeAllocationReleasesHoldAfterFabricDestroy(t *testing.T) {
 	}
 }
 
+type destroyingComputeFabricClient struct{ fakeFabricClient }
+
+func (f *destroyingComputeFabricClient) DestroyComputeAllocation(_ context.Context, id string, _ string) (clients.ComputeAllocation, error) {
+	*f.calls = append(*f.calls, "fabric.compute-destroy")
+	return clients.ComputeAllocation{ID: id, Status: "destroying", ProviderRequestID: "compute-destroy-request-alpha"}, nil
+}
+
+func TestDestroyingDoesNotReleaseComputeHold(t *testing.T) {
+	calls := []string{}
+	service := NewService(&fakeLedgerClient{calls: &calls}, &destroyingComputeFabricClient{fakeFabricClient{calls: &calls}})
+
+	compute, err := service.DestroyComputeAllocation(context.Background(), DestroyResourceInput{ID: "compute-alpha", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", HoldID: "hold-alpha", HoldAmountCents: 7862}, "destroy-compute")
+	if err != nil || compute.Status != "destroying" || compute.BillingStatus != "stopping" || compute.HoldReleaseID != "" {
+		t.Fatalf("destroying compute = %#v err=%v", compute, err)
+	}
+	wantCalls := []string{"fabric.compute-destroy"}
+	if !reflect.DeepEqual(calls, wantCalls) {
+		t.Fatalf("calls = %#v, want %#v", calls, wantCalls)
+	}
+}
+
+func TestDestroyedComputeWithoutHoldStopsBilling(t *testing.T) {
+	calls := []string{}
+	service := NewService(&fakeLedgerClient{calls: &calls}, &fakeFabricClient{calls: &calls})
+
+	compute, err := service.DestroyComputeAllocation(context.Background(), DestroyResourceInput{ID: "compute-alpha", AccountID: "acct-alpha"}, "destroy-compute")
+	if err != nil || compute.Status != "destroyed" || compute.BillingStatus != "stopped" {
+		t.Fatalf("destroyed compute = %#v err=%v", compute, err)
+	}
+	wantCalls := []string{"fabric.compute-destroy"}
+	if !reflect.DeepEqual(calls, wantCalls) {
+		t.Fatalf("calls = %#v, want %#v", calls, wantCalls)
+	}
+}
+
 func TestSyncComputeAllocationReleasesHoldWhenProviderDeleted(t *testing.T) {
 	calls := []string{}
 	service := NewService(&fakeLedgerClient{calls: &calls}, &fakeFabricClient{calls: &calls})
@@ -658,7 +693,7 @@ func (f *fakeFabricClient) SyncComputeAllocation(ctx context.Context, id string)
 
 func (f *fakeFabricClient) DestroyComputeAllocation(ctx context.Context, id string, idempotencyKey string) (clients.ComputeAllocation, error) {
 	*f.calls = append(*f.calls, "fabric.compute-destroy")
-	return clients.ComputeAllocation{ID: id, ProviderRequestID: "compute-destroy-request-alpha"}, nil
+	return clients.ComputeAllocation{ID: id, Status: "destroyed", ProviderRequestID: "compute-destroy-request-alpha"}, nil
 }
 
 func (f *fakeFabricClient) CreateStorageVolume(ctx context.Context, input clients.StorageVolumeInput, idempotencyKey string) (clients.StorageVolume, error) {

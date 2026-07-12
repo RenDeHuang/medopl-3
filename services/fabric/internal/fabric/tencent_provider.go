@@ -104,20 +104,21 @@ type plan struct {
 }
 
 func (p *TencentProvider) ReconcileComputePool(ctx context.Context, input ComputePoolDemand) (ComputePoolState, error) {
+	state := ComputePoolState{PoolID: input.PoolID, NodePoolID: input.NodePoolID, DesiredReplicas: input.DesiredReplicas}
 	response, err := p.provision(ctx, provisionerRequest{Action: "reconcile_compute_pool", DryRun: input.DryRun, PackageID: input.PackageID, Pool: provisionerPool{ID: input.PoolID, PackageID: input.PackageID, InstanceType: input.InstanceType, NodePoolID: input.NodePoolID, DesiredReplicas: input.DesiredReplicas}})
 	if err != nil {
-		return ComputePoolState{}, err
-	}
-	if !response.OK {
-		return ComputePoolState{}, provisionerError(response)
+		return state, err
 	}
 	currentReplicas := int64(len(response.Machines))
 	if value, parseErr := strconv.ParseInt(response.ProviderData["currentReplicas"], 10, 64); parseErr == nil {
 		currentReplicas = value
 	}
-	state := ComputePoolState{PoolID: firstNonEmpty(response.PoolID, input.PoolID), NodePoolID: firstNonEmpty(response.NodePoolID, input.NodePoolID), DesiredReplicas: input.DesiredReplicas, CurrentReplicas: currentReplicas, ProviderRequestID: response.ProviderRequestID}
+	state = ComputePoolState{PoolID: firstNonEmpty(response.PoolID, input.PoolID), NodePoolID: firstNonEmpty(response.NodePoolID, input.NodePoolID), DesiredReplicas: input.DesiredReplicas, CurrentReplicas: currentReplicas, ProviderRequestID: response.ProviderRequestID, ProviderData: response.ProviderData}
 	for _, machine := range response.Machines {
 		state.Machines = append(state.Machines, ProviderMachine{MachineID: machine.MachineID, InstanceID: machine.InstanceID, NodeName: machine.NodeName, PrivateIP: machine.PrivateIP, PublicIP: machine.PublicIP, InstanceType: machine.InstanceType, Ready: machine.Ready})
+	}
+	if !response.OK {
+		return state, provisionerError(response)
 	}
 	return state, nil
 }

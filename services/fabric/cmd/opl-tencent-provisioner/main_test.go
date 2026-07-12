@@ -855,6 +855,33 @@ func TestTencentSDKClientPoolFallbackExcludesMachinesFromOtherPools(t *testing.T
 	}
 }
 
+func TestTencentSDKClientReconcileEvidence(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic"}
+	client := newFakeTencentSDKClient(tkeAPI)
+
+	response := client.ReconcileComputePool(Request{
+		PackageId: "basic",
+		Pool:      ComputePoolInput{Id: "basic", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1},
+	}, map[string]string{})
+
+	want := map[string]string{
+		"nodePoolId":                "np-basic",
+		"currentReplicas":           "1",
+		"desiredReplicas":           "1",
+		"scaleNodePoolRequestId":    "req-scale-pool",
+		"describeMachinesRequestId": "req-describe-machines",
+		"machineStates":             "node-basic-1=running",
+	}
+	if !response.Ok {
+		t.Fatalf("reconcile failed: %#v", response)
+	}
+	for key, value := range want {
+		if response.ProviderData[key] != value {
+			t.Fatalf("providerData[%q] = %q, want %q: %#v", key, response.ProviderData[key], value, response.ProviderData)
+		}
+	}
+}
+
 func TestTencentSDKClientCreateAllocationDiscoversExistingPackageNodePool(t *testing.T) {
 	tkeAPI := &fakeNativeTkeAPI{discoverNodePoolId: "np-discovered", replicas: 2}
 	client := newFakeTencentSDKClient(tkeAPI)

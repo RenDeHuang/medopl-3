@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
+	tcerrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	cvm2017 "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm/v20170312"
 	tke2022 "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tke/v20220501"
@@ -388,10 +389,12 @@ func (client *tencentSDKClient) ReconcileComputePool(request Request, env map[st
 	nodePoolId := request.Pool.NodePoolId
 	var pool *tke2022.NodePool
 	requestId := ""
+	describeNodePoolRequestId := ""
 	if nodePoolId != "" {
 		described, id, err := client.describeNativeNodePool(nodePoolId)
 		if err == nil {
 			pool, requestId = described, id
+			describeNodePoolRequestId = id
 		} else if !isNodePoolNotFound(err) {
 			return sdkErrorResponse("tencent_describe_node_pool_failed", err)
 		}
@@ -403,6 +406,7 @@ func (client *tencentSDKClient) ReconcileComputePool(request Request, env map[st
 		}
 		if discovered != nil {
 			pool, requestId = discovered, id
+			describeNodePoolRequestId = id
 			nodePoolId = stringValue(discovered.NodePoolId)
 		}
 	}
@@ -431,8 +435,10 @@ func (client *tencentSDKClient) ReconcileComputePool(request Request, env map[st
 		}
 		pool = described
 		requestId = firstNonEmpty(id, requestId)
+		describeNodePoolRequestId = id
 	}
 	current := nativeReplicas(pool)
+	scaleRequestId := ""
 	if current != request.Pool.DesiredReplicas {
 		scaleRequest := tke2022.NewScaleNodePoolRequest()
 		scaleRequest.ClusterId = common.StringPtr(client.clusterId)
@@ -442,9 +448,16 @@ func (client *tencentSDKClient) ReconcileComputePool(request Request, env map[st
 		if err != nil {
 			response := sdkErrorResponse("tencent_scale_node_pool_failed", err)
 			response.ProviderRequestId = requestId
+			response.PoolId = request.Pool.Id
+			response.NodePoolId = nodePoolId
+			response.ProviderData["nodePoolId"] = nodePoolId
+			response.ProviderData["currentReplicas"] = fmt.Sprintf("%d", current)
+			response.ProviderData["desiredReplicas"] = fmt.Sprintf("%d", request.Pool.DesiredReplicas)
+			response.ProviderData["describeNodePoolRequestId"] = describeNodePoolRequestId
 			return response
 		}
-		requestId = firstNonEmpty(stringValue(scaled.Response.RequestId), requestId)
+		scaleRequestId = stringValue(scaled.Response.RequestId)
+		requestId = firstNonEmpty(scaleRequestId, requestId)
 	}
 	machines, describeRequestId, err := client.describeClusterMachines(nodePoolId)
 	if err != nil {
@@ -453,11 +466,13 @@ func (client *tencentSDKClient) ReconcileComputePool(request Request, env map[st
 		return response
 	}
 	output := make([]MachineOutput, 0, len(machines))
+	machineStates := make([]string, 0, len(machines))
 	for _, machine := range machines {
 		if machine == nil || stringValue(machine.MachineName) == "" {
 			continue
 		}
 		state := strings.ToLower(strings.TrimSpace(stringValue(machine.MachineState)))
+		machineStates = append(machineStates, stringValue(machine.MachineName)+"="+state)
 		ready := state == "" || state == "running" || state == "normal" || state == "ready"
 		privateIp := stringValue(machine.LanIP)
 		instanceId, publicIp := "", ""
@@ -469,7 +484,7 @@ func (client *tencentSDKClient) ReconcileComputePool(request Request, env map[st
 		}
 		output = append(output, MachineOutput{MachineId: stringValue(machine.MachineName), InstanceId: instanceId, NodeName: kubernetesNodeName(machine), PrivateIp: privateIp, PublicIp: publicIp, InstanceType: stringValue(machine.InstanceType), Ready: ready && instanceId != ""})
 	}
-	return Response{Ok: true, OperationId: "op-reconcile-pool-" + stableSuffix(nodePoolId, fmt.Sprintf("%d", request.Pool.DesiredReplicas))[:12], PoolId: request.Pool.Id, NodePoolId: nodePoolId, Status: "reconciling", ProviderRequestId: firstNonEmpty(describeRequestId, requestId), Machines: output, ProviderData: map[string]string{"currentReplicas": fmt.Sprintf("%d", len(machines)), "desiredReplicas": fmt.Sprintf("%d", request.Pool.DesiredReplicas)}}
+	return Response{Ok: true, OperationId: "op-reconcile-pool-" + stableSuffix(nodePoolId, fmt.Sprintf("%d", request.Pool.DesiredReplicas))[:12], PoolId: request.Pool.Id, NodePoolId: nodePoolId, Status: "reconciling", ProviderRequestId: firstNonEmpty(describeRequestId, requestId), Machines: output, ProviderData: map[string]string{"nodePoolId": nodePoolId, "currentReplicas": fmt.Sprintf("%d", len(machines)), "desiredReplicas": fmt.Sprintf("%d", request.Pool.DesiredReplicas), "describeNodePoolRequestId": describeNodePoolRequestId, "scaleNodePoolRequestId": scaleRequestId, "describeMachinesRequestId": describeRequestId, "machineStates": strings.Join(machineStates, ",")}}
 }
 
 func (client *tencentSDKClient) TagComputeMachine(request Request, _ map[string]string) Response {
@@ -1406,10 +1421,19 @@ func firstString(values []*string) string {
 }
 
 func sdkErrorResponse(code string, err error) Response {
-	return Response{
+	response := Response{
 		Ok:        false,
 		ErrorCode: code,
 		Message:   err.Error(),
 		Retryable: true,
+		ProviderData: map[string]string{
+			"providerErrorCode":    code,
+			"providerErrorMessage": err.Error(),
+		},
 	}
+	if sdkErr, ok := err.(*tcerrors.TencentCloudSDKError); ok {
+		response.ProviderRequestId = sdkErr.RequestId
+		response.ProviderData["providerErrorRequestId"] = sdkErr.RequestId
+	}
+	return response
 }
