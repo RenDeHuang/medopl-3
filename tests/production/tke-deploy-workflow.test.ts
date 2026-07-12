@@ -133,8 +133,12 @@ test("production execution verifier runs inside TKE and matches the deployment c
 test("TKE deploy installs one internal service token secret", async () => {
 	const workflow = await readWorkflow(new URL("../../.github/workflows/deploy-tke-production.yml", import.meta.url));
 	const currentJob = job(workflow, "deploy");
+	const check = serializedStep(stepsByName(currentJob).get("Check deployment inputs"));
 	const install = serializedStep(stepsByName(currentJob).get("Install Kubernetes secrets"));
 	assert.ok(String(currentJob.env.OPL_INTERNAL_SERVICE_TOKEN || "").includes("secrets.OPL_INTERNAL_SERVICE_TOKEN"));
+	assert.doesNotMatch(check, /\n\s*OPL_INTERNAL_SERVICE_TOKEN\s*\n/);
+	assert.match(install, /if \[ -n "\$\{OPL_INTERNAL_SERVICE_TOKEN:-\}" \]/);
+	assert.match(install, /get secret opl-cloud-internal-service/);
 	assert.match(install, /create secret generic opl-cloud-internal-service/);
 	assert.match(install, /--from-file=OPL_INTERNAL_SERVICE_TOKEN="\$secret_dir\/internal-service-token"/);
 });
