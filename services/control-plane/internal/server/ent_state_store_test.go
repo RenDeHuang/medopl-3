@@ -61,6 +61,69 @@ func TestEntStateStoreIgnoresDuplicateEventProjectionIDs(t *testing.T) {
 	}
 }
 
+func TestComputeFactRefreshIgnoresFabricWalletWithoutAccount(t *testing.T) {
+	store := NewTestEntStateStore(t, t.TempDir()+"/empty-fabric-wallet.sqlite")
+	app := newControlPlaneAppEmpty()
+	app.tables = store
+	row := map[string]any{
+		"id":              "compute-alpha",
+		"accountId":       "acct-alpha",
+		"status":          "provisioning",
+		"holdId":          "hold-alpha",
+		"holdAmountCents": int64(16800),
+		"wallet":          map[string]any{"accountId": "acct-alpha", "balanceCents": int64(20000), "frozenCents": int64(16800), "availableCents": int64(3200), "currency": "CNY"},
+	}
+	if err := app.saveComputeFact(row); err != nil {
+		t.Fatalf("seed compute fact: %v", err)
+	}
+
+	refreshed := cloneMap(row)
+	refreshed["wallet"] = map[string]any{"accountId": "", "balanceCents": int64(0), "frozenCents": int64(0), "availableCents": int64(0), "currency": ""}
+	if err := app.saveComputeFact(refreshed); err != nil {
+		t.Fatalf("Fabric refresh with an empty wallet must preserve Ledger facts: %v", err)
+	}
+
+	wallets, err := store.ListWallets(context.Background(), "acct-alpha")
+	if err != nil {
+		t.Fatalf("list wallets: %v", err)
+	}
+	if len(wallets) != 1 || int64(numberField(wallets[0], "frozenCents", 0)) != 16800 {
+		t.Fatalf("Fabric refresh changed the Ledger wallet projection: %#v", wallets)
+	}
+}
+
+func TestTerminalComputeFactRefreshIgnoresFabricWalletWithoutAccount(t *testing.T) {
+	store := NewTestEntStateStore(t, t.TempDir()+"/empty-terminal-fabric-wallet.sqlite")
+	app := newControlPlaneAppEmpty()
+	app.tables = store
+	row := map[string]any{
+		"id":              "compute-alpha",
+		"accountId":       "acct-alpha",
+		"status":          "destroyed",
+		"holdId":          "hold-alpha",
+		"holdReleaseId":   "release-alpha",
+		"holdAmountCents": int64(16800),
+		"wallet":          map[string]any{"accountId": "acct-alpha", "balanceCents": int64(20000), "frozenCents": int64(0), "availableCents": int64(20000), "currency": "CNY"},
+	}
+	if err := app.saveComputeFact(row); err != nil {
+		t.Fatalf("seed terminal compute fact: %v", err)
+	}
+
+	refreshed := cloneMap(row)
+	refreshed["wallet"] = map[string]any{"accountId": "", "balanceCents": int64(0), "frozenCents": int64(0), "availableCents": int64(0), "currency": ""}
+	if err := app.saveComputeFact(refreshed); err != nil {
+		t.Fatalf("terminal Fabric refresh with an empty wallet must preserve Ledger facts: %v", err)
+	}
+
+	wallets, err := store.ListWallets(context.Background(), "acct-alpha")
+	if err != nil {
+		t.Fatalf("list wallets: %v", err)
+	}
+	if len(wallets) != 1 || int64(numberField(wallets[0], "frozenCents", 0)) != 0 || int64(numberField(wallets[0], "balanceCents", 0)) != 20000 {
+		t.Fatalf("terminal Fabric refresh changed the released Ledger wallet projection: %#v", wallets)
+	}
+}
+
 func TestEntStateStoreNeverPersistsWorkspacePassword(t *testing.T) {
 	store := NewTestEntStateStore(t, t.TempDir()+"/workspace-secret.sqlite")
 	if err := store.SaveWorkspace(context.Background(), map[string]any{

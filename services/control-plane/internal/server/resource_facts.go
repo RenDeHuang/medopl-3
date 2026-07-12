@@ -50,8 +50,11 @@ func (app *controlPlaneServer) saveHoldProjection(accountID string, resourceType
 		return nil
 	}
 	if wallet, ok := row["wallet"].(map[string]any); ok {
-		if err := app.tables.SaveWallet(context.Background(), walletProjection(walletFromMap(wallet))); err != nil {
-			return err
+		ledgerWallet := walletFromMap(wallet)
+		if ledgerWallet.AccountID != "" {
+			if err := app.tables.SaveWallet(context.Background(), walletProjection(ledgerWallet)); err != nil {
+				return err
+			}
 		}
 	}
 	ledger := map[string]any{"id": holdID, "accountId": accountID, "type": resourceType + "_hold", "resourceId": resourceID, "amountCents": int64(numberField(row, "holdAmountCents", 0))}
@@ -69,8 +72,11 @@ func (app *controlPlaneServer) saveReleaseProjection(accountID string, resourceT
 		return nil
 	}
 	if wallet, ok := row["wallet"].(map[string]any); ok {
-		if err := app.tables.SaveWallet(context.Background(), walletProjection(walletFromMap(wallet))); err != nil {
-			return err
+		ledgerWallet := walletFromMap(wallet)
+		if ledgerWallet.AccountID != "" {
+			if err := app.tables.SaveWallet(context.Background(), walletProjection(ledgerWallet)); err != nil {
+				return err
+			}
 		}
 	}
 	ledger := map[string]any{"id": releaseID, "accountId": accountID, "type": resourceType + "_hold_released", "resourceId": resourceID, "amountCents": int64(numberField(row, "holdAmountCents", 0))}
