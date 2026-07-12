@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { parse } from "yaml";
@@ -548,17 +549,77 @@ test("TKE diagnostics can print a redacted single-resource console state summary
   assert.match(text, /\/api\/auth\/operator-login/, "diagnostics must use operator auth instead of public state");
   assert.match(text, /"x-opl-operator-token": operatorToken/, "diagnostics must send the operator token in the required header");
   assert.doesNotMatch(text, /JSON\.stringify\(\{ operatorToken \}\)/, "diagnostics must not send the operator token in the body");
-  assert.match(text, /\/api\/state\?accountId=/, "diagnostics must scope state to one account");
+  assert.match(text, /\/api\/management\/state/, "operator diagnostics must use the operator-wide management endpoint");
+  assert.match(text, /item\.accountId === accountId/, "diagnostics must scope management facts back to the selected account");
+  assert.match(text, /operation\.accountId === accountId/, "diagnostics must account-scope every runtime operation");
   assert.match(text, /computeAllocationId/, "summary must identify the selected compute allocation");
   assert.match(text, /runtimeOperations/, "summary must include matching runtime operations");
+  assert.match(text, /entry\.type === "compute_hold" && entry\.resourceId === computeAllocationId/, "summary must identify the resource Hold without a time-window guess");
+  assert.match(text, /entry\.type === "compute_hold_released" && entry\.id === compute\.ledgerEntryId/, "summary must identify the exact Hold release entry");
+  assert.match(text, /ledgerEntryIds\.has\(transaction\.ledgerEntryId\)/, "summary must join wallet transitions through exact ledger entry ids");
   assert.match(text, /providerData/, "summary must include provider identity data needed for TKE debugging");
-  assert.match(text, /workspace\.storageId/, "summary must link workspaces through the current storageId field");
-  assert.doesNotMatch(text, /workspace\.storageVolumeId/, "summary must not rely on retired storageVolumeId linkage");
+  assert.doesNotMatch(text, /attachments:/, "summary must not print unrelated attachment state");
+  assert.doesNotMatch(text, /workspaces:/, "summary must not print unrelated Workspace state");
   assert.match(text, /safeMessage/, "summary must include provider safeMessage for failed operations");
   assert.match(text, /deleteMethod/, "summary must include provider delete evidence");
   assert.doesNotMatch(text, /console\.log\(payload\)/, "diagnostics must not print the full state payload");
   assert.doesNotMatch(text, /accessToken|tokenStatus/i, "diagnostics must not print workspace tokens");
   assert.doesNotMatch(text, /console\.log\([^)]*cookie/i, "diagnostics must not print session cookies");
+});
+
+test("TKE resource diagnostics execute tenant-safe Hold release filtering", async () => {
+  const contract = await readJson(deploymentContractPath);
+  const workflow = await readWorkflow(contract.diagnosticsWorkflow.file);
+  const step = stepsByName(job(workflow, contract.diagnosticsWorkflow.job)).get("Show redacted console resource state");
+  const script = step.run.match(/node --input-type=module <<'NODE'\n([\s\S]*?)\n\s*NODE/)?.[1];
+  assert.ok(script, "diagnostics must contain an executable Node script");
+
+  const state = {
+    computeAllocations: [
+      { id: "compute-alpha", accountId: "acct-other", ledgerEntryId: "release-other" },
+      { id: "compute-alpha", accountId: "acct-alpha", status: "failed", billingStatus: "stopped", holdId: "hold-alpha", holdReleaseId: "release-alpha", ledgerEntryId: "ledger-release-alpha" }
+    ],
+    runtimeOperations: [
+      { id: "op-alpha", accountId: "acct-alpha", resourceId: "compute-alpha", status: "failed" },
+      { id: "op-other", accountId: "acct-other", resourceId: "compute-alpha", status: "succeeded" }
+    ],
+    billingLedger: [
+      { id: "ledger-hold-alpha", accountId: "acct-alpha", type: "compute_hold", resourceId: "compute-alpha", amountCents: 1700, direction: "hold" },
+      { id: "ledger-release-alpha", accountId: "acct-alpha", type: "compute_hold_released", amountCents: 1700, direction: "release" },
+      { id: "ledger-debit-alpha", accountId: "acct-alpha", type: "compute_debit", resourceId: "compute-alpha", amountCents: -100 },
+      { id: "ledger-hold-other", accountId: "acct-other", type: "compute_hold", resourceId: "compute-alpha", amountCents: 900 }
+    ],
+    walletTransactions: [
+      { id: "wallet-hold-alpha", accountId: "acct-alpha", ledgerEntryId: "ledger-hold-alpha", amountCents: 1700, balanceCents: 10000, frozenCents: 1700, availableCents: 8300, totalSpentCents: 0 },
+      { id: "wallet-release-alpha", accountId: "acct-alpha", ledgerEntryId: "ledger-release-alpha", amountCents: 0, balanceCents: 10000, frozenCents: 0, availableCents: 10000, totalSpentCents: 0 },
+      { id: "wallet-debit-alpha", accountId: "acct-alpha", ledgerEntryId: "ledger-debit-alpha", amountCents: -100, balanceCents: 9900, frozenCents: 1700, totalSpentCents: 100 },
+      { id: "wallet-hold-other", accountId: "acct-other", ledgerEntryId: "ledger-hold-alpha", amountCents: 900 }
+    ]
+  };
+  const fetchStub = `
+    const diagnosticState = ${JSON.stringify(state)};
+    globalThis.fetch = async (url) => String(url).endsWith("/api/auth/operator-login")
+      ? new Response("{}", { status: 200, headers: { "content-type": "application/json", "set-cookie": "opl_session=test; Path=/" } })
+      : new Response(JSON.stringify(diagnosticState), { status: 200, headers: { "content-type": "application/json" } });
+  `;
+  const result = spawnSync(process.execPath, ["--input-type=module"], {
+    input: fetchStub + script,
+    encoding: "utf8",
+    env: { ...process.env, OPL_DIAG_ACCOUNT_ID: "acct-alpha", OPL_DIAG_COMPUTE_ALLOCATION_ID: "compute-alpha", OPL_OPERATOR_SUMMARY_TOKEN: "test-token" }
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const line = result.stdout.split("\n").find((entry) => entry.startsWith("CONSOLE_RESOURCE_STATE_SUMMARY="));
+  assert.ok(line, `diagnostics did not print summary: ${result.stdout}`);
+  const summary = JSON.parse(line.slice("CONSOLE_RESOURCE_STATE_SUMMARY=".length));
+
+  assert.deepEqual(summary.runtimeOperations.map((item) => item.id), ["op-alpha"]);
+  assert.deepEqual(summary.billingLedger.map((item) => item.id), ["ledger-hold-alpha", "ledger-release-alpha"]);
+  assert.deepEqual(summary.walletTransactions.map((item) => item.id), ["wallet-hold-alpha", "wallet-release-alpha"]);
+  const [hold, release] = summary.walletTransactions;
+  assert.equal(release.amountCents, 0, "release must not debit the wallet");
+  assert.equal(release.balanceCents, hold.balanceCents, "release must preserve balance");
+  assert.equal(release.totalSpentCents, hold.totalSpentCents, "release must preserve total spent");
+  assert.ok(release.frozenCents < hold.frozenCents, "release must reduce frozen funds");
 });
 
 test("Console residual cleanup workflow is API-scoped and gated by exact resource confirmation", async () => {

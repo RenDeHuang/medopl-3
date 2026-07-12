@@ -393,24 +393,29 @@ jobs:
             headers: { "x-opl-operator-token": operatorToken }
           });
           const sessionHeader = cookieHeaderFromSetCookie(login.response.headers.get("set-cookie") || "");
-          const state = await fetchWithRetry(`/api/state?accountId=${encodeURIComponent(accountId)}`, {
+          const state = await fetchWithRetry("/api/management/state", {
             headers: { cookie: sessionHeader }
           });
           const payload = state.body || {};
-          const compute = (payload.computeAllocations || []).find((item) => item.id === computeAllocationId) || null;
-          const attachments = (payload.storageAttachments || []).filter((item) => item.computeAllocationId === computeAllocationId);
-          const storageIds = new Set(attachments.map((item) => item.storageId).filter(Boolean));
-          const workspaces = (payload.workspaces || []).filter((workspace) =>
-            workspace.currentComputeAllocationId === computeAllocationId ||
-            workspace.currentAttachmentId && attachments.some((item) => item.id === workspace.currentAttachmentId) ||
-            workspace.storageId && storageIds.has(workspace.storageId)
-          );
-          const runtimeOperations = (payload.runtimeOperations || []).filter((operation) =>
-            operation.resourceId === computeAllocationId ||
-            operation.computeAllocationId === computeAllocationId ||
-            operation.id === compute?.operationId ||
-            operation.id === compute?.lastOperationId
-          );
+          const compute = (payload.computeAllocations || []).find((item) => item.id === computeAllocationId && item.accountId === accountId) || null;
+          const runtimeOperations = compute ? (payload.runtimeOperations || []).filter((operation) =>
+            operation.accountId === accountId && (
+              operation.resourceId === computeAllocationId ||
+              operation.computeAllocationId === computeAllocationId ||
+              operation.id === compute.operationId ||
+              operation.id === compute.lastOperationId
+            )
+          ) : [];
+          const billingLedger = compute ? (payload.billingLedger || []).filter((entry) =>
+            entry.accountId === accountId && (
+              entry.type === "compute_hold" && entry.resourceId === computeAllocationId ||
+              entry.type === "compute_hold_released" && entry.id === compute.ledgerEntryId
+            )
+          ) : [];
+          const ledgerEntryIds = new Set(billingLedger.map((entry) => entry.id));
+          const walletTransactions = compute ? (payload.walletTransactions || []).filter((transaction) =>
+            transaction.accountId === accountId && ledgerEntryIds.has(transaction.ledgerEntryId)
+          ) : [];
           const summary = {
             accountId,
             computeAllocationId,
@@ -420,6 +425,11 @@ jobs:
               error: compute.error || "",
               safeMessage: compute.safeMessage || "",
               billingStatus: compute.billingStatus,
+              holdId: compute.holdId,
+              holdReleaseId: compute.holdReleaseId,
+              holdAmountCents: compute.holdAmountCents,
+              ledgerEntryId: compute.ledgerEntryId,
+              walletTransactionId: compute.walletTransactionId,
               provisioningStage: compute.provisioningStage,
               providerResourceId: compute.providerResourceId,
               providerRequestId: compute.providerRequestId,
@@ -469,24 +479,24 @@ jobs:
               createdAt: operation.createdAt,
               updatedAt: operation.updatedAt
             })),
-            attachments: attachments.map((attachment) => ({
-              id: attachment.id,
-              status: attachment.status,
-              storageId: attachment.storageId,
-              mountPath: attachment.mountPath,
-              providerAttachmentId: attachment.providerAttachmentId,
-              createdAt: attachment.createdAt,
-              updatedAt: attachment.updatedAt
+            billingLedger: billingLedger.map((entry) => ({
+              id: entry.id,
+              type: entry.type,
+              resourceId: entry.resourceId,
+              amountCents: entry.amountCents,
+              direction: entry.direction,
+              createdAt: entry.createdAt
             })),
-            workspaces: workspaces.map((workspace) => ({
-              id: workspace.id,
-              state: workspace.state,
-              storageId: workspace.storageId,
-              currentComputeAllocationId: workspace.currentComputeAllocationId,
-              currentAttachmentId: workspace.currentAttachmentId,
-              urlStatus: workspace.urlStatus || workspace.access?.status || "",
-              runtimeStatus: workspace.runtimeStatus || workspace.server?.status || "",
-              updatedAt: workspace.updatedAt
+            walletTransactions: walletTransactions.map((transaction) => ({
+              id: transaction.id,
+              type: transaction.type,
+              ledgerEntryId: transaction.ledgerEntryId,
+              amountCents: transaction.amountCents,
+              balanceCents: transaction.balanceCents,
+              frozenCents: transaction.frozenCents,
+              availableCents: transaction.availableCents,
+              totalSpentCents: transaction.totalSpentCents,
+              createdAt: transaction.createdAt
             }))
           };
           console.log(`CONSOLE_RESOURCE_STATE_SUMMARY=${JSON.stringify(summary)}`);

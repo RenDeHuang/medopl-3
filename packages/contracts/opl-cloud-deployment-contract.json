@@ -274,7 +274,7 @@
       ],
       "Show redacted console resource state": [
         "/api/auth/operator-login",
-        "/api/state?accountId=",
+        "/api/management/state",
         "computeAllocationId",
         "runtimeOperations",
         "providerData"

@@ -488,6 +488,8 @@ func (s *Service) CreateComputeAllocation(ctx context.Context, input ComputeAllo
 		if releaseErr == nil {
 			failed.HoldAmountCents = release.AmountCents
 			failed.HoldReleaseID = release.ID
+			failed.LedgerEntryID = release.LedgerEntryID
+			failed.WalletTransactionID = release.WalletTransactionID
 			failed.Wallet = release.Wallet
 			failed.BillingStatus = "stopped"
 		}
@@ -518,6 +520,8 @@ func (s *Service) SyncComputeAllocation(ctx context.Context, input DestroyResour
 		allocation.HoldID = input.HoldID
 		allocation.HoldAmountCents = input.HoldAmountCents
 		allocation.HoldReleaseID = release.ID
+		allocation.LedgerEntryID = release.LedgerEntryID
+		allocation.WalletTransactionID = release.WalletTransactionID
 		allocation.Wallet = release.Wallet
 		allocation.BillingStatus = "stopped"
 	}
@@ -550,6 +554,8 @@ func (s *Service) DestroyComputeAllocation(ctx context.Context, input DestroyRes
 		allocation.HoldID = input.HoldID
 		allocation.HoldAmountCents = release.AmountCents
 		allocation.HoldReleaseID = release.ID
+		allocation.LedgerEntryID = release.LedgerEntryID
+		allocation.WalletTransactionID = release.WalletTransactionID
 		allocation.Wallet = release.Wallet
 		allocation.BillingStatus = "stopped"
 	}
@@ -579,6 +585,8 @@ func (s *Service) CreateStorageVolume(ctx context.Context, input StorageVolumeIn
 		if releaseErr == nil {
 			failed.HoldAmountCents = release.AmountCents
 			failed.HoldReleaseID = release.ID
+			failed.LedgerEntryID = release.LedgerEntryID
+			failed.WalletTransactionID = release.WalletTransactionID
 			failed.Wallet = release.Wallet
 			failed.BillingStatus = "stopped"
 		}
@@ -591,8 +599,21 @@ func (s *Service) CreateStorageVolume(ctx context.Context, input StorageVolumeIn
 	if (volume.Status == "ready" || volume.Status == "available") && volume.ProviderResourceID != "" {
 		activation, err := s.ledger.ActivateHold(ctx, clients.HoldActivationInput{AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: "storage", ResourceID: id, HoldID: hold.ID, Currency: "CNY", ProviderEvidenceRef: "fabric:" + volume.ProviderResourceID}, idempotencyKey+":hold-activation")
 		if err != nil {
-			_, releaseErr := s.ReleaseResourceHold(ctx, DestroyResourceInput{ID: id, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, HoldID: hold.ID}, "storage", "storage_activation_failed", idempotencyKey)
-			return clients.StorageVolume{}, errors.Join(err, releaseErr)
+			volume.BillingStatus = "stopping"
+			if _, cleanupErr := s.fabric.DestroyStorageVolume(ctx, id, idempotencyKey+":activation-cleanup"); cleanupErr != nil {
+				return volume, errors.Join(err, cleanupErr)
+			}
+			volume.Status = "failed"
+			release, releaseErr := s.ReleaseResourceHold(ctx, DestroyResourceInput{ID: id, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, HoldID: hold.ID}, "storage", "storage_activation_failed", idempotencyKey)
+			if releaseErr == nil {
+				volume.HoldAmountCents = release.AmountCents
+				volume.HoldReleaseID = release.ID
+				volume.LedgerEntryID = release.LedgerEntryID
+				volume.WalletTransactionID = release.WalletTransactionID
+				volume.Wallet = release.Wallet
+				volume.BillingStatus = "stopped"
+			}
+			return volume, errors.Join(err, releaseErr)
 		}
 		volume.HoldAmountCents = activation.RemainingCents
 		volume.Wallet = activation.Wallet
@@ -617,6 +638,8 @@ func (s *Service) SyncStorageVolume(ctx context.Context, input DestroyResourceIn
 		volume.HoldID = input.HoldID
 		volume.HoldAmountCents = input.HoldAmountCents
 		volume.HoldReleaseID = release.ID
+		volume.LedgerEntryID = release.LedgerEntryID
+		volume.WalletTransactionID = release.WalletTransactionID
 		volume.Wallet = release.Wallet
 		volume.BillingStatus = "stopped"
 	}
@@ -648,6 +671,8 @@ func (s *Service) DestroyStorageVolume(ctx context.Context, input DestroyResourc
 		volume.HoldID = input.HoldID
 		volume.HoldAmountCents = release.AmountCents
 		volume.HoldReleaseID = release.ID
+		volume.LedgerEntryID = release.LedgerEntryID
+		volume.WalletTransactionID = release.WalletTransactionID
 		volume.Wallet = release.Wallet
 		volume.BillingStatus = "stopped"
 	}

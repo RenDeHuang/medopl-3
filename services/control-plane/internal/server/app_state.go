@@ -398,6 +398,9 @@ func ledgerEntryProjections(entries []clients.LedgerEntry, settlements map[strin
 			"reason":         entry.Reason,
 			"createdAt":      entry.CreatedAt,
 		}
+		if strings.HasSuffix(entry.Source, "_hold") {
+			row["resourceId"] = entry.Reason
+		}
 		if settlement, ok := settlements[entry.ID]; ok {
 			row["type"] = settlement.ResourceType + "_debit"
 			row["amountCents"] = -settlement.AmountCents

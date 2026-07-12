@@ -339,7 +339,7 @@ func TestCreateComputeFailureReturnsReleasedHoldFacts(t *testing.T) {
 	calls := []string{}
 	service := NewService(&fakeLedgerClient{calls: &calls}, &failingComputeCreateFabricClient{fakeFabricClient: fakeFabricClient{calls: &calls}})
 	compute, err := service.CreateComputeAllocation(context.Background(), ComputeAllocationInput{ID: "compute-alpha", AccountID: "acct-alpha", HoldAmountCents: 200, ActivationAmountCents: 100}, "compute-failed")
-	if err == nil || compute.Status != "failed" || compute.HoldID != "hold-alpha" || compute.HoldReleaseID == "" || compute.BillingStatus != "stopped" {
+	if err == nil || compute.Status != "failed" || compute.HoldID != "hold-alpha" || compute.HoldReleaseID == "" || compute.LedgerEntryID != "ledger-release" || compute.WalletTransactionID != "wallet-release" || compute.BillingStatus != "stopped" {
 		t.Fatalf("failed compute = %#v err=%v", compute, err)
 	}
 }
@@ -376,8 +376,34 @@ func TestCreateStorageFailureReturnsReleasedHoldFacts(t *testing.T) {
 	calls := []string{}
 	service := NewService(&fakeLedgerClient{calls: &calls}, &failingStorageCreateFabricClient{fakeFabricClient: fakeFabricClient{calls: &calls}})
 	volume, err := service.CreateStorageVolume(context.Background(), StorageVolumeInput{ID: "storage-alpha", AccountID: "acct-alpha", SizeGB: 10, HoldAmountCents: 200, ActivationAmountCents: 100}, "storage-failed")
-	if err == nil || volume.Status != "failed" || volume.HoldID != "hold-alpha" || volume.HoldReleaseID == "" || volume.BillingStatus != "stopped" {
+	if err == nil || volume.Status != "failed" || volume.HoldID != "hold-alpha" || volume.HoldReleaseID == "" || volume.LedgerEntryID != "ledger-release" || volume.WalletTransactionID != "wallet-release" || volume.BillingStatus != "stopped" {
 		t.Fatalf("failed storage = %#v err=%v", volume, err)
+	}
+}
+
+func TestCreateStorageActivationFailureCleansProviderBeforeReleasingHold(t *testing.T) {
+	calls := []string{}
+	service := NewService(&failingActivationLedgerClient{fakeLedgerClient: fakeLedgerClient{calls: &calls}}, &readyStorageFabricClient{fakeFabricClient: fakeFabricClient{calls: &calls}})
+	volume, err := service.CreateStorageVolume(context.Background(), StorageVolumeInput{ID: "storage-alpha", AccountID: "acct-alpha", SizeGB: 10, HoldAmountCents: 200, ActivationAmountCents: 100}, "storage-activation-failed")
+	if err == nil || volume.Status != "failed" || volume.BillingStatus != "stopped" || volume.HoldReleaseID != "release-alpha" || volume.LedgerEntryID != "ledger-release" || volume.WalletTransactionID != "wallet-release" {
+		t.Fatalf("storage activation compensation = %#v err=%v", volume, err)
+	}
+	wantCalls := []string{"ledger.hold", "fabric.storage", "ledger.activate", "fabric.storage-destroy", "ledger.release"}
+	if !reflect.DeepEqual(calls, wantCalls) {
+		t.Fatalf("calls = %#v, want %#v", calls, wantCalls)
+	}
+}
+
+func TestCreateStorageActivationFailureKeepsHoldWhenProviderCleanupFails(t *testing.T) {
+	calls := []string{}
+	service := NewService(&failingActivationLedgerClient{fakeLedgerClient: fakeLedgerClient{calls: &calls}}, &failingStorageDestroyFabricClient{readyStorageFabricClient: readyStorageFabricClient{fakeFabricClient: fakeFabricClient{calls: &calls}}})
+	volume, err := service.CreateStorageVolume(context.Background(), StorageVolumeInput{ID: "storage-alpha", AccountID: "acct-alpha", SizeGB: 10, HoldAmountCents: 200, ActivationAmountCents: 100}, "storage-cleanup-failed")
+	if err == nil || volume.BillingStatus != "stopping" || volume.HoldReleaseID != "" {
+		t.Fatalf("storage with failed cleanup = %#v err=%v", volume, err)
+	}
+	wantCalls := []string{"ledger.hold", "fabric.storage", "ledger.activate", "fabric.storage-destroy"}
+	if !reflect.DeepEqual(calls, wantCalls) {
+		t.Fatalf("calls = %#v, want %#v", calls, wantCalls)
 	}
 }
 
@@ -389,7 +415,7 @@ func TestDestroyComputeAllocationReleasesHoldAfterFabricDestroy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("destroy compute: %v", err)
 	}
-	if compute.HoldReleaseID != "release-alpha" || compute.Wallet.AccountID != "acct-alpha" {
+	if compute.HoldReleaseID != "release-alpha" || compute.LedgerEntryID != "ledger-release" || compute.WalletTransactionID != "wallet-release" || compute.Wallet.AccountID != "acct-alpha" {
 		t.Fatalf("compute missing release linkage: %#v", compute)
 	}
 	wantCalls := []string{"fabric.compute-destroy", "ledger.release"}
@@ -406,7 +432,7 @@ func TestSyncComputeAllocationReleasesHoldWhenProviderDeleted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sync compute: %v", err)
 	}
-	if compute.Status != "external_deleted" || compute.BillingStatus != "stopped" || compute.HoldReleaseID != "release-alpha" {
+	if compute.Status != "external_deleted" || compute.BillingStatus != "stopped" || compute.HoldReleaseID != "release-alpha" || compute.LedgerEntryID != "ledger-release" || compute.WalletTransactionID != "wallet-release" {
 		t.Fatalf("compute must stop billing on provider deletion: %#v", compute)
 	}
 	wantCalls := []string{"fabric.compute-sync", "ledger.release"}
@@ -423,7 +449,7 @@ func TestDestroyStorageVolumeReleasesHoldAfterFabricDestroy(t *testing.T) {
 	if err != nil {
 		t.Fatalf("destroy storage: %v", err)
 	}
-	if volume.HoldReleaseID != "release-alpha" || volume.Wallet.AccountID != "acct-alpha" {
+	if volume.HoldReleaseID != "release-alpha" || volume.LedgerEntryID != "ledger-release" || volume.WalletTransactionID != "wallet-release" || volume.Wallet.AccountID != "acct-alpha" {
 		t.Fatalf("storage missing release linkage: %#v", volume)
 	}
 	wantCalls := []string{"fabric.storage-destroy", "ledger.release"}
@@ -440,7 +466,7 @@ func TestSyncStorageVolumeReleasesHoldWhenProviderDeleted(t *testing.T) {
 	if err != nil {
 		t.Fatalf("sync storage: %v", err)
 	}
-	if volume.Status != "external_deleted" || volume.BillingStatus != "stopped" || volume.HoldReleaseID != "release-alpha" {
+	if volume.Status != "external_deleted" || volume.BillingStatus != "stopped" || volume.HoldReleaseID != "release-alpha" || volume.LedgerEntryID != "ledger-release" || volume.WalletTransactionID != "wallet-release" {
 		t.Fatalf("storage must stop billing on provider deletion: %#v", volume)
 	}
 	wantCalls := []string{"fabric.storage-sync", "ledger.release"}
@@ -473,7 +499,7 @@ func (f *fakeLedgerClient) ActivateHold(_ context.Context, input clients.HoldAct
 
 func (f *fakeLedgerClient) ReleaseHold(ctx context.Context, input clients.HoldReleaseInput, idempotencyKey string) (clients.HoldReleaseResult, error) {
 	*f.calls = append(*f.calls, "ledger.release")
-	return clients.HoldReleaseResult{ID: "release-alpha", AccountID: input.AccountID, AmountCents: 16800, Status: "released", Wallet: clients.Wallet{AccountID: input.AccountID, BalanceCents: 20000, AvailableCents: 20000}}, nil
+	return clients.HoldReleaseResult{ID: "release-alpha", AccountID: input.AccountID, AmountCents: 16800, Status: "released", LedgerEntryID: "ledger-release", WalletTransactionID: "wallet-release", Wallet: clients.Wallet{AccountID: input.AccountID, BalanceCents: 20000, AvailableCents: 20000}}, nil
 }
 
 func (f *fakeLedgerClient) RecordReceipt(ctx context.Context, input clients.ReceiptInput, idempotencyKey string) (clients.Receipt, error) {
@@ -557,11 +583,22 @@ type failingComputeCreateFabricClient struct{ fakeFabricClient }
 
 type failingStorageCreateFabricClient struct{ fakeFabricClient }
 
+type readyStorageFabricClient struct{ fakeFabricClient }
+
+type failingStorageDestroyFabricClient struct{ readyStorageFabricClient }
+
 type failingReleaseLedgerClient struct{ fakeLedgerClient }
+
+type failingActivationLedgerClient struct{ fakeLedgerClient }
 
 func (f *failingReleaseLedgerClient) ReleaseHold(_ context.Context, _ clients.HoldReleaseInput, _ string) (clients.HoldReleaseResult, error) {
 	*f.calls = append(*f.calls, "ledger.release")
 	return clients.HoldReleaseResult{}, errors.New("ledger release failed")
+}
+
+func (f *failingActivationLedgerClient) ActivateHold(_ context.Context, _ clients.HoldActivationInput, _ string) (clients.HoldActivationResult, error) {
+	*f.calls = append(*f.calls, "ledger.activate")
+	return clients.HoldActivationResult{}, errors.New("ledger activation failed")
 }
 
 func (f *runningComputeFabricClient) SyncComputeAllocation(_ context.Context, id string) (clients.ComputeAllocation, error) {
@@ -587,6 +624,16 @@ func (f *failingComputeCreateFabricClient) CreateComputeAllocation(context.Conte
 func (f *failingStorageCreateFabricClient) CreateStorageVolume(context.Context, clients.StorageVolumeInput, string) (clients.StorageVolume, error) {
 	*f.calls = append(*f.calls, "fabric.storage")
 	return clients.StorageVolume{}, errors.New("tencent storage create failed")
+}
+
+func (f *readyStorageFabricClient) CreateStorageVolume(_ context.Context, input clients.StorageVolumeInput, _ string) (clients.StorageVolume, error) {
+	*f.calls = append(*f.calls, "fabric.storage")
+	return clients.StorageVolume{ID: input.ID, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, Status: "ready", ProviderResourceID: "pvc/storage-alpha"}, nil
+}
+
+func (f *failingStorageDestroyFabricClient) DestroyStorageVolume(_ context.Context, _ string, _ string) (clients.StorageVolume, error) {
+	*f.calls = append(*f.calls, "fabric.storage-destroy")
+	return clients.StorageVolume{}, errors.New("provider cleanup failed")
 }
 
 func (f *fakeFabricClient) Catalog(ctx context.Context) (clients.FabricCatalog, error) {

@@ -672,12 +672,21 @@ func TestPersistentFactsSurviveServerRestart(t *testing.T) {
 		t.Fatalf("compute allocation did not survive restart: %#v", computes)
 	}
 	ledger := state["billingLedger"].([]any)
-	if len(ledger) != 1 || ledger[0].(map[string]any)["type"] != "compute_hold" {
+	if len(ledger) != 1 || ledger[0].(map[string]any)["type"] != "compute_hold" || ledger[0].(map[string]any)["resourceId"] == "" {
 		t.Fatalf("compute hold ledger did not survive restart: %#v", ledger)
 	}
 	wallet := state["wallet"].(map[string]any)
 	if wallet["frozenCents"].(float64) <= 0 {
 		t.Fatalf("wallet frozen state did not survive restart: %#v", wallet)
+	}
+}
+
+func TestHoldLedgerProjectionKeepsResourceIdentity(t *testing.T) {
+	rows := ledgerEntryProjections([]clients.LedgerEntry{{
+		ID: "ledger-hold-alpha", AccountID: "acct-alpha", Source: "compute_hold", Reason: "compute-alpha",
+	}}, nil)
+	if len(rows) != 1 || rows[0]["resourceId"] != "compute-alpha" {
+		t.Fatalf("hold ledger projection lost resource identity: %#v", rows)
 	}
 }
 
