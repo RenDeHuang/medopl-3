@@ -138,8 +138,11 @@ test("TKE deploy installs one internal service token secret", async () => {
 	assert.ok(String(currentJob.env.OPL_INTERNAL_SERVICE_TOKEN || "").includes("secrets.OPL_INTERNAL_SERVICE_TOKEN"));
 	assert.doesNotMatch(check, /\n\s*OPL_INTERNAL_SERVICE_TOKEN\s*\n/);
 	assert.match(install, /if \[ -n "\$\{OPL_INTERNAL_SERVICE_TOKEN:-\}" \]/);
-	assert.match(install, /get secret opl-cloud-internal-service/);
+	assert.match(install, /get secret opl-cloud-internal-service[^\n]*jsonpath='\{\.data\.OPL_INTERNAL_SERVICE_TOKEN\}'/);
+	assert.match(install, /base64 -d > "\$secret_dir\/internal-service-token"/);
 	assert.match(install, /openssl rand -hex 32 > "\$secret_dir\/internal-service-token"/);
+	assert.match(install, /tr -d '\\r\\n'/);
+	assert.match(install, /if \[ ! -s "\$secret_dir\/internal-service-token" \]/);
 	assert.match(install, /create secret generic opl-cloud-internal-service/);
 	assert.match(install, /--from-file=OPL_INTERNAL_SERVICE_TOKEN="\$secret_dir\/internal-service-token"/);
 });
