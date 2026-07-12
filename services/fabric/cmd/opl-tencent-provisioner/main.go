@@ -523,6 +523,19 @@ func (client *tencentSDKClient) TagComputeMachine(request Request, _ map[string]
 	if instanceID == "" || resourceID == "" || len(resourceID) > 60 {
 		return Response{Ok: false, ErrorCode: "compute_machine_identity_required", Message: "Machine instance id and a resource id of at most 60 characters are required.", Retryable: false}
 	}
+	if strings.HasPrefix(instanceID, "np-") {
+		nativeInstance, requestID, err := client.describeTkeClusterInstanceByPrivateIp(request.Allocation.PrivateIp, request.Pool.NodePoolId)
+		if err != nil {
+			return sdkErrorResponse("tencent_verify_native_compute_machine_failed", err)
+		}
+		if stringValue(nativeInstance.InstanceId) != instanceID {
+			return Response{Ok: false, ErrorCode: "compute_machine_identity_unverified", Message: "Tencent TKE instance did not match the claimed machine identity.", ProviderRequestId: requestID, Retryable: true}
+		}
+		return Response{Ok: true, InstanceId: instanceID, Status: "tagged", ProviderRequestId: requestID}
+	}
+	if !strings.HasPrefix(instanceID, "ins-") {
+		return Response{Ok: false, ErrorCode: "compute_machine_identity_unverified", Message: "Tencent machine identity source is unsupported.", Retryable: false}
+	}
 	describe := cvm2017.NewDescribeInstancesRequest()
 	describe.InstanceIds = []*string{common.StringPtr(instanceID)}
 	described, err := client.nativeCvmClient.DescribeInstances(describe)
@@ -533,14 +546,7 @@ func (client *tencentSDKClient) TagComputeMachine(request Request, _ map[string]
 		return sdkErrorResponse("tencent_verify_compute_machine_failed", fmt.Errorf("Tencent CVM DescribeInstances response is missing"))
 	}
 	if len(described.Response.InstanceSet) == 0 {
-		nativeInstance, requestID, nativeErr := client.describeTkeClusterInstanceByPrivateIp(request.Allocation.PrivateIp, request.Pool.NodePoolId)
-		if nativeErr != nil {
-			return sdkErrorResponse("tencent_verify_native_compute_machine_failed", nativeErr)
-		}
-		if stringValue(nativeInstance.InstanceId) != instanceID {
-			return Response{Ok: false, ErrorCode: "compute_machine_identity_unverified", Message: "Tencent TKE instance did not match the claimed machine identity.", ProviderRequestId: requestID, Retryable: true}
-		}
-		return Response{Ok: true, InstanceId: instanceID, Status: "tagged", ProviderRequestId: requestID}
+		return Response{Ok: false, ErrorCode: "compute_machine_identity_unverified", Message: "Tencent CVM instance did not match the claimed machine identity.", ProviderRequestId: stringValue(described.Response.RequestId), Retryable: true}
 	}
 	if len(described.Response.InstanceSet) != 1 || described.Response.InstanceSet[0] == nil || stringValue(described.Response.InstanceSet[0].InstanceId) != instanceID {
 		return Response{Ok: false, ErrorCode: "compute_machine_identity_unverified", Message: "Tencent CVM instance did not match the claimed machine identity.", ProviderRequestId: stringValue(described.Response.RequestId), Retryable: true}

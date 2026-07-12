@@ -931,7 +931,7 @@ func TestTencentSDKClientReconcileCompletesNativeIdentityWhenMachineLanIPIsMissi
 
 func TestTencentSDKTagComputeMachineVerifiesNativeTKEIdentityWithoutCVMRename(t *testing.T) {
 	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1}
-	cvmAPI := &fakeNativeCvmAPI{empty: true}
+	cvmAPI := &fakeNativeCvmAPI{err: errors.New("native identity must not call CVM")}
 	client := &tencentSDKClient{clusterId: "cls-123", nativeTkeClient: tkeAPI, nativeCvmClient: cvmAPI}
 
 	response := client.TagComputeMachine(Request{
@@ -942,8 +942,39 @@ func TestTencentSDKTagComputeMachineVerifiesNativeTKEIdentityWithoutCVMRename(t 
 		},
 	}, nil)
 
-	if !response.Ok || response.InstanceId != "np-native-1" || len(cvmAPI.modifyInstancesRequest) != 0 {
-		t.Fatalf("native tag response=%#v modify requests=%#v", response, cvmAPI.modifyInstancesRequest)
+	if !response.Ok || response.InstanceId != "np-native-1" || len(cvmAPI.describeInstancesRequest) != 0 || len(cvmAPI.modifyInstancesRequest) != 0 {
+		t.Fatalf("native tag response=%#v describe requests=%#v modify requests=%#v", response, cvmAPI.describeInstancesRequest, cvmAPI.modifyInstancesRequest)
+	}
+}
+
+func TestTencentSDKTagComputeMachineDoesNotFallbackFromCVMToTKE(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1}
+	cvmAPI := &fakeNativeCvmAPI{empty: true}
+	client := &tencentSDKClient{clusterId: "cls-123", nativeTkeClient: tkeAPI, nativeCvmClient: cvmAPI}
+
+	response := client.TagComputeMachine(Request{
+		Tags:       map[string]string{"opl_resource_id": "compute-alpha"},
+		Pool:       ComputePoolInput{NodePoolId: "np-basic"},
+		Allocation: ComputeAllocationInput{InstanceId: "ins-alpha", PrivateIp: "10.0.0.11"},
+	}, nil)
+
+	if response.Ok || response.ErrorCode != "compute_machine_identity_unverified" || len(tkeAPI.describeInstancesRequest) != 0 || len(cvmAPI.modifyInstancesRequest) != 0 {
+		t.Fatalf("CVM-to-TKE fallback response=%#v TKE requests=%#v modify requests=%#v", response, tkeAPI.describeInstancesRequest, cvmAPI.modifyInstancesRequest)
+	}
+}
+
+func TestTencentSDKTagComputeMachineRejectsUnknownIdentitySource(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1}
+	cvmAPI := &fakeNativeCvmAPI{}
+	client := &tencentSDKClient{clusterId: "cls-123", nativeTkeClient: tkeAPI, nativeCvmClient: cvmAPI}
+
+	response := client.TagComputeMachine(Request{
+		Tags:       map[string]string{"opl_resource_id": "compute-alpha"},
+		Allocation: ComputeAllocationInput{InstanceId: "machine-alpha"},
+	}, nil)
+
+	if response.Ok || response.ErrorCode != "compute_machine_identity_unverified" || len(tkeAPI.describeInstancesRequest) != 0 || len(cvmAPI.describeInstancesRequest) != 0 || len(cvmAPI.modifyInstancesRequest) != 0 {
+		t.Fatalf("unknown identity response=%#v TKE requests=%#v CVM requests=%#v modify requests=%#v", response, tkeAPI.describeInstancesRequest, cvmAPI.describeInstancesRequest, cvmAPI.modifyInstancesRequest)
 	}
 }
 
@@ -1039,8 +1070,7 @@ func TestTencentSDKClientRejectsMalformedCVMResponses(t *testing.T) {
 
 			tagged := client.TagComputeMachine(Request{
 				Tags:       map[string]string{"opl_resource_id": "compute-alpha"},
-				Pool:       ComputePoolInput{NodePoolId: "np-basic"},
-				Allocation: ComputeAllocationInput{InstanceId: "np-native-1", MachineName: "node-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.11"},
+				Allocation: ComputeAllocationInput{InstanceId: "ins-alpha"},
 			}, nil)
 			if tagged.Ok || tagged.ErrorCode != "tencent_verify_compute_machine_failed" {
 				t.Fatalf("tag malformed CVM response = %#v", tagged)
