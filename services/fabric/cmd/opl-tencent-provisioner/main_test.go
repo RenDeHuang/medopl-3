@@ -425,6 +425,8 @@ type fakeNativeCvmAPI struct {
 	instanceName             string
 	empty                    bool
 	err                      error
+	nilResponse              bool
+	nilEnvelope              bool
 }
 
 func (api *fakeNativeCvmAPI) ModifyInstancesAttribute(request *cvm2017.ModifyInstancesAttributeRequest) (*cvm2017.ModifyInstancesAttributeResponse, error) {
@@ -437,6 +439,12 @@ func (api *fakeNativeCvmAPI) DescribeInstances(request *cvm2017.DescribeInstance
 	api.describeInstancesRequest = append(api.describeInstancesRequest, request)
 	if api.err != nil {
 		return nil, api.err
+	}
+	if api.nilResponse {
+		return nil, nil
+	}
+	if api.nilEnvelope {
+		return &cvm2017.DescribeInstancesResponse{}, nil
 	}
 	if api.empty {
 		return &cvm2017.DescribeInstancesResponse{
@@ -969,6 +977,39 @@ func TestTencentSDKTagComputeMachineRequiresExactNativeNodePoolIdentity(t *testi
 	}, nil)
 	if response.Ok || response.ErrorCode != "tencent_verify_native_compute_machine_failed" {
 		t.Fatalf("native tag without requested pool identity = %#v", response)
+	}
+}
+
+func TestTencentSDKClientRejectsMalformedCVMResponses(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		api  *fakeNativeCvmAPI
+	}{
+		{name: "nil response", api: &fakeNativeCvmAPI{nilResponse: true}},
+		{name: "nil envelope", api: &fakeNativeCvmAPI{nilEnvelope: true}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1}
+			client := newFakeTencentSDKClient(tkeAPI)
+			client.nativeCvmClient = test.api
+
+			reconcile := client.ReconcileComputePool(Request{
+				PackageId: "basic",
+				Pool:      ComputePoolInput{Id: "basic", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1},
+			}, map[string]string{})
+			if reconcile.Ok || reconcile.ErrorCode != "tencent_describe_cvm_instance_failed" {
+				t.Fatalf("reconcile malformed CVM response = %#v", reconcile)
+			}
+
+			tagged := client.TagComputeMachine(Request{
+				Tags:       map[string]string{"opl_resource_id": "compute-alpha"},
+				Pool:       ComputePoolInput{NodePoolId: "np-basic"},
+				Allocation: ComputeAllocationInput{InstanceId: "np-native-1", MachineName: "node-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.11"},
+			}, nil)
+			if tagged.Ok || tagged.ErrorCode != "tencent_verify_compute_machine_failed" {
+				t.Fatalf("tag malformed CVM response = %#v", tagged)
+			}
+		})
 	}
 }
 

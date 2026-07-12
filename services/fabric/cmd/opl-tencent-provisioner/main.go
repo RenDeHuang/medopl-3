@@ -515,7 +515,10 @@ func (client *tencentSDKClient) TagComputeMachine(request Request, _ map[string]
 	if err != nil {
 		return sdkErrorResponse("tencent_verify_compute_machine_failed", err)
 	}
-	if described.Response == nil || len(described.Response.InstanceSet) == 0 {
+	if described == nil || described.Response == nil {
+		return sdkErrorResponse("tencent_verify_compute_machine_failed", fmt.Errorf("Tencent CVM DescribeInstances response is missing"))
+	}
+	if len(described.Response.InstanceSet) == 0 {
 		nativeInstance, requestID, nativeErr := client.describeTkeClusterInstanceByPrivateIp(request.Allocation.PrivateIp, request.Pool.NodePoolId)
 		if nativeErr != nil {
 			return sdkErrorResponse("tencent_verify_native_compute_machine_failed", nativeErr)
@@ -525,7 +528,7 @@ func (client *tencentSDKClient) TagComputeMachine(request Request, _ map[string]
 		}
 		return Response{Ok: true, InstanceId: instanceID, Status: "tagged", ProviderRequestId: requestID}
 	}
-	if len(described.Response.InstanceSet) != 1 || stringValue(described.Response.InstanceSet[0].InstanceId) != instanceID {
+	if len(described.Response.InstanceSet) != 1 || described.Response.InstanceSet[0] == nil || stringValue(described.Response.InstanceSet[0].InstanceId) != instanceID {
 		return Response{Ok: false, ErrorCode: "compute_machine_identity_unverified", Message: "Tencent CVM instance did not match the claimed machine identity.", ProviderRequestId: stringValue(described.Response.RequestId), Retryable: true}
 	}
 	modify := cvm2017.NewModifyInstancesAttributeRequest()
@@ -890,12 +893,15 @@ func (client *tencentSDKClient) describeCvmInstanceByPrivateIp(privateIp string)
 	if err != nil {
 		return nil, "", err
 	}
-	requestId := ""
-	if describeResponse != nil && describeResponse.Response != nil {
-		requestId = stringValue(describeResponse.Response.RequestId)
-		if len(describeResponse.Response.InstanceSet) > 0 {
-			return describeResponse.Response.InstanceSet[0], requestId, nil
+	if describeResponse == nil || describeResponse.Response == nil {
+		return nil, "", fmt.Errorf("Tencent CVM DescribeInstances response is missing")
+	}
+	requestId := stringValue(describeResponse.Response.RequestId)
+	if len(describeResponse.Response.InstanceSet) > 0 {
+		if describeResponse.Response.InstanceSet[0] == nil {
+			return nil, requestId, fmt.Errorf("Tencent CVM DescribeInstances returned an empty instance")
 		}
+		return describeResponse.Response.InstanceSet[0], requestId, nil
 	}
 	return nil, requestId, fmt.Errorf("%w for private IP %s", errCVMInstanceNotFound, privateIp)
 }
