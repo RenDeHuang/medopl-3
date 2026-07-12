@@ -104,6 +104,8 @@ jobs:
       OPL_EXECUTION_LEDGER_ORIGIN: http://127.0.0.1:18081
       OPL_EXECUTION_FABRIC_ORIGIN: http://127.0.0.1:18082
       OPL_EXECUTION_OPERATOR_TOKEN: ${{ secrets.OPL_OPERATOR_SUMMARY_TOKEN }}
+      OPL_EXECUTION_AUTH_USERS_JSON: ${{ secrets.OPL_CONSOLE_USERS_JSON }}
+      OPL_EXECUTION_ACCOUNT_ID: ${{ inputs.account_id }}
       OPL_EXECUTION_RUN_ID: ${{ inputs.run_id || github.run_id }}
 
     steps:

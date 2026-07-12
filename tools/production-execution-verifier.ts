@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { verificationOwnerFromSeed } from "./production-verifier.ts";
+
 function normalizedOrigin(value, name) {
   let parsed;
   try {
@@ -45,6 +47,8 @@ export async function verifyProductionExecutionChain({
   ledgerOrigin,
   operatorToken,
   internalServiceToken,
+  authUsersJson,
+  accountId,
   runId,
   fetchImpl = globalThis.fetch
 }) {
@@ -69,18 +73,27 @@ export async function verifyProductionExecutionChain({
     body: {},
     headers: { "x-opl-operator-token": operatorToken }
   });
-  const auth = {
+  const operatorAuth = {
     cookie: required(login.response.headers.get("set-cookie")?.split(";", 1)[0], "session_cookie"),
     csrf: required(login.response.headers.get("x-opl-csrf-token") || login.payload.csrfToken, "csrf_token")
   };
-  const userId = required(login.payload?.user?.id, "operator_user_id");
-  const accountId = required(login.payload?.user?.accountId, "operator_account_id");
-  const management = (await requestJson({ fetchImpl, origin: controlPlane, path: "/api/management/state", auth })).payload;
+  const management = (await requestJson({ fetchImpl, origin: controlPlane, path: "/api/management/state", auth: operatorAuth })).payload;
+  const owner = verificationOwnerFromSeed(authUsersJson, accountId);
+  const ownerLogin = await requestJson({
+    fetchImpl, origin: controlPlane, path: "/api/auth/login", method: "POST",
+    body: { email: owner.email, password: owner.password }
+  });
+  const auth = {
+    cookie: required(ownerLogin.response.headers.get("set-cookie")?.split(";", 1)[0], "owner_session_cookie"),
+    csrf: required(ownerLogin.response.headers.get("x-opl-csrf-token") || ownerLogin.payload.csrfToken, "owner_csrf_token")
+  };
+  const userId = required(ownerLogin.payload?.user?.id, "owner_user_id");
+  const ownerAccountId = required(ownerLogin.payload?.user?.accountId, "owner_account_id");
   const organizations = new Map((management.organizations || [])
-    .filter((organization) => organization.id && organization.billingAccountId === accountId && organization.status === "active")
+    .filter((organization) => organization.id && organization.billingAccountId === ownerAccountId && organization.status === "active")
     .map((organization) => [organization.id, organization]));
   const organizationIds = new Set((management.memberships || [])
-    .filter((membership) => membership.userId === userId && membership.accountId === accountId && membership.status === "active" && organizations.has(membership.organizationId))
+    .filter((membership) => membership.userId === userId && membership.accountId === ownerAccountId && membership.status === "active" && organizations.has(membership.organizationId))
     .map((membership) => membership.organizationId));
   if (organizationIds.size !== 1) throw new Error("execution_organization_membership_required");
   const [organizationId] = organizationIds;
@@ -195,6 +208,8 @@ export async function runProductionExecutionVerifierCli({ env = process.env, std
       ledgerOrigin: env.OPL_EXECUTION_LEDGER_ORIGIN,
       operatorToken: env.OPL_EXECUTION_OPERATOR_TOKEN,
       internalServiceToken: env.OPL_EXECUTION_INTERNAL_SERVICE_TOKEN,
+      authUsersJson: env.OPL_EXECUTION_AUTH_USERS_JSON,
+      accountId: env.OPL_EXECUTION_ACCOUNT_ID,
       runId: env.OPL_EXECUTION_RUN_ID,
       fetchImpl
     });

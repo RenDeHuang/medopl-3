@@ -15,7 +15,7 @@ test("production execution verifier proves the complete cross-service evidence c
   const runId = "train4-test";
   const digest = `sha256:${createHash("sha256").update(runId).digest("hex")}`;
   const identity = {
-    organizationId: "org-operator-test",
+    organizationId: "org-owner-test",
     workspaceId: `workspace-${runId}`,
     projectId: "project-test",
     taskId: "task-test",
@@ -26,9 +26,10 @@ test("production execution verifier proves the complete cross-service evidence c
   const responses = [
     jsonResponse({ csrfToken: "csrf-token", user: { id: "usr-operator", accountId: "acct-operator" } }, { headers: { "set-cookie": "opl_session=session; Path=/", "x-opl-csrf-token": "csrf-token" } }),
     jsonResponse({
-      organizations: [{ id: identity.organizationId, billingAccountId: "acct-operator", status: "active" }],
-      memberships: [{ organizationId: identity.organizationId, userId: "usr-operator", accountId: "acct-operator", status: "active" }]
+      organizations: [{ id: identity.organizationId, billingAccountId: "acct-owner", status: "active" }],
+      memberships: [{ organizationId: identity.organizationId, userId: "usr-owner", accountId: "acct-owner", status: "active" }]
     }),
+    jsonResponse({ csrfToken: "owner-csrf", user: { id: "usr-owner", accountId: "acct-owner" } }, { headers: { "set-cookie": "opl_owner=owner; Path=/", "x-opl-csrf-token": "owner-csrf" } }),
     jsonResponse({ ...identity, taskId: undefined, requestId: undefined, approvalId: undefined, jobId: undefined }, { status: 201 }),
     jsonResponse({ ...identity, requestId: undefined, approvalId: undefined, jobId: undefined }, { status: 201 }),
     jsonResponse({ ...identity, approvalId: "", jobId: undefined }, { status: 201 }),
@@ -59,6 +60,8 @@ test("production execution verifier proves the complete cross-service evidence c
     ledgerOrigin: "http://ledger.test",
     operatorToken: "operator-token",
     internalServiceToken: "internal-secret",
+    authUsersJson: JSON.stringify([{ role: "owner", accountId: "acct-owner", email: "owner@example.com", password: "owner-password" }]),
+    accountId: "acct-owner",
     runId,
     fetchImpl
   });
@@ -71,6 +74,7 @@ test("production execution verifier proves the complete cross-service evidence c
   assert.deepEqual(requests.map(({ method, origin, path }) => `${method} ${origin}${path}`), [
     "POST http://control-plane.test/api/auth/operator-login",
     "GET http://control-plane.test/api/management/state",
+    "POST http://control-plane.test/api/auth/login",
     "POST http://control-plane.test/api/projects",
     "POST http://control-plane.test/api/projects/project-test/tasks",
     "POST http://control-plane.test/api/execution-requests",
@@ -87,10 +91,11 @@ test("production execution verifier proves the complete cross-service evidence c
   ]);
   assert.equal(requests[0].headers["x-opl-operator-token"], "operator-token");
   assert.equal(requests.find(({ path }) => path === "/api/projects").body.organizationId, identity.organizationId);
-  assert.ok(requests.filter(({ origin }) => origin === "http://control-plane.test").slice(1).every(({ headers }) => headers.cookie === "opl_session=session" && headers["x-opl-csrf"] === "csrf-token"));
+  assert.equal(requests.find(({ path }) => path === "/api/management/state").headers.cookie, "opl_session=session");
+  assert.ok(requests.filter(({ origin, path }) => origin === "http://control-plane.test" && !path.startsWith("/api/auth/") && path !== "/api/management/state").every(({ headers }) => headers.cookie === "opl_owner=owner" && headers["x-opl-csrf"] === "owner-csrf"));
   assert.ok(requests.filter(({ origin }) => origin !== "http://control-plane.test").every(({ headers }) => headers.authorization === "Bearer internal-secret"));
   assert.ok(requests.filter(({ origin }) => origin === "http://control-plane.test").every(({ headers }) => headers.authorization === undefined));
-  assert.ok(requests.filter(({ method }) => method === "POST").slice(1).every(({ headers }) => headers["idempotency-key"]));
+  assert.ok(requests.filter(({ method, path }) => method === "POST" && !path.startsWith("/api/auth/")).every(({ headers }) => headers["idempotency-key"]));
   const completion = requests.find(({ path }) => path === "/fabric/jobs/job-test/complete");
   assert.deepEqual(completion.body.artifactIds, ["artifact-test"]);
   assert.deepEqual(completion.body.reviewIds, ["review-test"]);

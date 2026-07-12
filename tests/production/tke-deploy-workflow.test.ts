@@ -130,6 +130,8 @@ test("production execution verifier runs inside TKE and matches the deployment c
   assert.match(runs, /node tools\/production-execution-verifier\.ts/);
 	assert.match(runs, /get secret opl-cloud-internal-service/);
 	assert.match(runs, /OPL_EXECUTION_INTERNAL_SERVICE_TOKEN/);
+  assert.ok(String(currentJob.env.OPL_EXECUTION_AUTH_USERS_JSON || "").includes("secrets.OPL_CONSOLE_USERS_JSON"));
+  assert.equal(currentJob.env.OPL_EXECUTION_ACCOUNT_ID, "${{ inputs.account_id }}");
   assert.doesNotMatch(runs, /x-opl-operator-token/);
 });
 
