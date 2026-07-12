@@ -557,6 +557,10 @@ test("TKE diagnostics can print a redacted single-resource console state summary
   assert.match(text, /entry\.type === "compute_hold" && entry\.resourceId === computeAllocationId/, "summary must identify the resource Hold without a time-window guess");
   assert.match(text, /entry\.type === "compute_hold_released" && entry\.id === compute\.ledgerEntryId/, "summary must identify the exact Hold release entry");
   assert.match(text, /ledgerEntryIds\.has\(transaction\.ledgerEntryId\)/, "summary must join wallet transitions through exact ledger entry ids");
+  assert.match(text, /FROM hold_releases hr/, "diagnostics must query the authoritative Hold release record");
+  assert.match(text, /hr\.id = \$1 AND hr\.hold_id = \$2/, "diagnostics must identify the exact release and Hold without time-window guessing");
+  assert.match(text, /release_transaction_amount_cents/, "diagnostics must expose that release does not debit balance");
+  assert.doesNotMatch(text, /previous_tx|LEFT JOIN LATERAL/, "diagnostics must not infer release causality from account transaction timing");
   assert.match(text, /providerData/, "summary must include provider identity data needed for TKE debugging");
   assert.doesNotMatch(text, /attachments:/, "summary must not print unrelated attachment state");
   assert.doesNotMatch(text, /workspaces:/, "summary must not print unrelated Workspace state");

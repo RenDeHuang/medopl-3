@@ -353,7 +353,7 @@ jobs:
           kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" port-forward service/opl-cloud-control-plane 18788:8787 > /tmp/opl-cloud-resource-state-port-forward.log 2>&1 &
           port_forward_pid="$!"
           trap 'kill "$port_forward_pid" 2>/dev/null || true' EXIT
-          node --input-type=module <<'NODE'
+          console_summary="$(node --input-type=module <<'NODE'
           const origin = "http://127.0.0.1:18788";
           const accountId = process.env.OPL_DIAG_ACCOUNT_ID || "pi-production-verifier";
           const computeAllocationId = process.env.OPL_DIAG_COMPUTE_ALLOCATION_ID || "";
@@ -500,4 +500,73 @@ jobs:
             }))
           };
           console.log(`CONSOLE_RESOURCE_STATE_SUMMARY=${JSON.stringify(summary)}`);
+          NODE
+          )"
+          printf '%s\n' "$console_summary"
+          release_identity="$(printf '%s\n' "$console_summary" | node -e '
+            const fs = require("node:fs");
+            const line = fs.readFileSync(0, "utf8").split("\n").find((item) => item.startsWith("CONSOLE_RESOURCE_STATE_SUMMARY="));
+            const summary = line ? JSON.parse(line.slice("CONSOLE_RESOURCE_STATE_SUMMARY=".length)) : {};
+            process.stdout.write(`${summary.compute?.holdReleaseId || ""}\t${summary.compute?.holdId || ""}`);
+          ')"
+          IFS=$'\t' read -r hold_release_id hold_id <<< "$release_identity"
+          if [ -z "$hold_release_id" ] || [ -z "$hold_id" ]; then
+            echo "ledger_hold_release=not_available"
+            exit 0
+          fi
+          kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec -i deploy/opl-cloud-ledger -c ledger -- \
+            env OPL_DIAG_ACCOUNT_ID="$OPL_DIAG_ACCOUNT_ID" \
+                OPL_DIAG_COMPUTE_ALLOCATION_ID="$OPL_DIAG_COMPUTE_ALLOCATION_ID" \
+                OPL_DIAG_HOLD_RELEASE_ID="$hold_release_id" \
+                OPL_DIAG_HOLD_ID="$hold_id" node <<'NODE'
+          const { Client } = require("pg");
+          (async () => {
+            const client = new Client({ connectionString: process.env.DATABASE_URL, ssl: false });
+            await client.connect();
+            try {
+              const result = await client.query(
+                `SELECT hr.id, hr.hold_id, hr.resource_id, hr.amount_cents, hr.status,
+                        h.original_cents, h.remaining_cents, h.consumed_cents, h.released_cents, h.status AS hold_status,
+                        release_tx.amount_cents AS release_transaction_amount_cents,
+                        release_tx.balance_cents AS release_balance_cents,
+                        release_tx.frozen_cents AS release_frozen_cents,
+                        release_tx.available_cents AS release_available_cents,
+                        release_tx.total_spent_cents AS release_total_spent_cents
+                 FROM hold_releases hr
+                 JOIN holds h ON h.id = hr.hold_id
+                 JOIN wallet_transactions release_tx ON release_tx.id = hr.wallet_transaction_id
+                 WHERE hr.id = $1 AND hr.hold_id = $2 AND hr.account_id = $3
+                   AND hr.resource_type = 'compute' AND hr.resource_id = $4`,
+                [process.env.OPL_DIAG_HOLD_RELEASE_ID, process.env.OPL_DIAG_HOLD_ID, process.env.OPL_DIAG_ACCOUNT_ID, process.env.OPL_DIAG_COMPUTE_ALLOCATION_ID]
+              );
+              const row = result.rows[0] || null;
+              const cents = (value) => value == null ? null : Number(value);
+              const summary = row ? {
+                id: row.id,
+                holdId: row.hold_id,
+                resourceId: row.resource_id,
+                status: row.status,
+                holdStatus: row.hold_status,
+                amountCents: cents(row.amount_cents),
+                originalCents: cents(row.original_cents),
+                remainingCents: cents(row.remaining_cents),
+                consumedCents: cents(row.consumed_cents),
+                releasedCents: cents(row.released_cents),
+                releaseTransactionAmountCents: cents(row.release_transaction_amount_cents),
+                releaseBalanceCents: cents(row.release_balance_cents),
+                releaseFrozenCents: cents(row.release_frozen_cents),
+                releaseTotalSpentCents: cents(row.release_total_spent_cents),
+                invariants: {
+                  noDebit: cents(row.release_transaction_amount_cents) === 0,
+                  holdReleased: row.status === "released" && row.hold_status === "released" && cents(row.remaining_cents) === 0 && cents(row.released_cents) === cents(row.amount_cents)
+                }
+              } : null;
+              console.log(`LEDGER_HOLD_RELEASE_SUMMARY=${JSON.stringify(summary)}`);
+            } finally {
+              await client.end();
+            }
+          })().catch((error) => {
+            console.error(`ledger_hold_release_query_failed:${error.message}`);
+            process.exit(1);
+          });
           NODE
