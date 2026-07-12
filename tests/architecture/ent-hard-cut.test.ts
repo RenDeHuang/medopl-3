@@ -51,6 +51,13 @@ test("Go services use Ent schema and migrations for production persistence", asy
   }
 });
 
+test("resource Hold migration does not restore released historical funds", async () => {
+	const migration = await readFile("services/ledger/migrations/202607120001_resource_hold_lifecycle.sql", "utf8");
+	assert.match(migration, /released_cents\s*=\s*amount_cents[^;]*status\s*=\s*'released'/is);
+	assert.match(migration, /remaining_cents\s*=\s*amount_cents[^;]*status\s*=\s*'held'/is);
+	assert.doesNotMatch(migration, /remaining_cents\s*=\s*amount_cents\s+WHERE\s+remaining_cents\s*=\s*0\s+AND/is);
+});
+
 test("Control Plane Ent model includes current facts and archive facts", async () => {
   const requiredSchemas = [
     "account.go",

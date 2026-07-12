@@ -26,6 +26,17 @@ func TestHoldActivationConsumesFirstHourAndKeepsGuarantee(t *testing.T) {
 	}
 }
 
+func TestHoldActivationRejectsMissingProviderEvidence(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	_, _ = store.ManualTopUp(ctx, ManualTopUpInput{AccountID: "acct-a", AmountCents: 200, Currency: "CNY", IdempotencyKey: "topup-no-evidence"})
+	hold, _ := store.CreateHold(ctx, HoldInput{AccountID: "acct-a", ResourceType: "compute", ResourceID: "ca-a", AmountCents: 200, ActivationAmountCents: 100, Currency: "CNY", IdempotencyKey: "hold-no-evidence"})
+	_, err := store.ActivateHold(ctx, HoldActivationInput{AccountID: "acct-a", ResourceType: "compute", ResourceID: "ca-a", HoldID: hold.ID, Currency: "CNY", IdempotencyKey: "activate-no-evidence"})
+	if !errors.Is(err, ErrInvalidHoldInput) {
+		t.Fatalf("missing evidence error = %v", err)
+	}
+}
+
 func TestReleaseHoldReleasesLedgerRemainingWithoutDebitingBalance(t *testing.T) {
 	store := NewMemoryStore()
 	ctx := context.Background()
@@ -38,6 +49,20 @@ func TestReleaseHoldReleasesLedgerRemainingWithoutDebitingBalance(t *testing.T) 
 	}
 	if release.AmountCents != 16800 || release.Wallet.BalanceCents != 19900 || release.Wallet.FrozenCents != 0 || release.Wallet.AvailableCents != 19900 {
 		t.Fatalf("release = %#v", release)
+	}
+}
+
+func TestReleaseExhaustedHoldCompletesWithZeroAmount(t *testing.T) {
+	store := NewMemoryStore()
+	ctx := context.Background()
+	_, _ = store.ManualTopUp(ctx, ManualTopUpInput{AccountID: "acct-a", AmountCents: 200, Currency: "CNY", IdempotencyKey: "topup-exhausted"})
+	hold, _ := store.CreateHold(ctx, HoldInput{AccountID: "acct-a", ResourceType: "compute", ResourceID: "ca-a", AmountCents: 200, ActivationAmountCents: 100, Currency: "CNY", IdempotencyKey: "hold-exhausted"})
+	_, _ = store.ActivateHold(ctx, HoldActivationInput{AccountID: "acct-a", ResourceType: "compute", ResourceID: "ca-a", HoldID: hold.ID, Currency: "CNY", ProviderEvidenceRef: "fabric:machine-a", IdempotencyKey: "activate-exhausted"})
+	_, _ = store.SettleResource(ctx, ResourceSettlementInput{AccountID: "acct-a", ResourceType: "compute", ResourceID: "ca-a", HoldID: hold.ID, AmountCents: 100, Currency: "CNY", IdempotencyKey: "settle-exhausted"})
+
+	release, err := store.ReleaseHold(ctx, HoldReleaseInput{AccountID: "acct-a", ResourceType: "compute", ResourceID: "ca-a", HoldID: hold.ID, Currency: "CNY", IdempotencyKey: "release-exhausted"})
+	if err != nil || release.AmountCents != 0 || store.holds[hold.ID].Status != "released" {
+		t.Fatalf("exhausted release = %#v hold=%#v err=%v", release, store.holds[hold.ID], err)
 	}
 }
 

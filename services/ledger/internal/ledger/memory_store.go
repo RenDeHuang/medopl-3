@@ -212,6 +212,9 @@ func (s *MemoryStore) CreateHold(_ context.Context, input HoldInput) (HoldResult
 func (s *MemoryStore) ActivateHold(_ context.Context, input HoldActivationInput) (HoldActivationResult, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if input.AccountID == "" || input.ResourceType == "" || input.ResourceID == "" || input.HoldID == "" || input.Currency == "" || input.ProviderEvidenceRef == "" {
+		return HoldActivationResult{}, ErrInvalidHoldInput
+	}
 
 	payloadHash, err := hashJSON(input)
 	if err != nil {
@@ -286,7 +289,7 @@ func (s *MemoryStore) ReleaseHold(_ context.Context, input HoldReleaseInput) (Ho
 	if !holdMatches(hold, input.AccountID, input.WorkspaceID, input.ResourceType, input.ResourceID, input.Currency) {
 		return HoldReleaseResult{}, ErrHoldIdentityMismatch
 	}
-	if hold.Status == "released" || hold.RemainingCents <= 0 {
+	if hold.Status == "released" || hold.RemainingCents < 0 {
 		return HoldReleaseResult{}, ErrInvalidHoldState
 	}
 	amount := hold.RemainingCents

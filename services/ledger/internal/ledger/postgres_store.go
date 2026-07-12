@@ -219,6 +219,9 @@ func (s *PostgresStore) CreateHold(ctx context.Context, input HoldInput) (HoldRe
 }
 
 func (s *PostgresStore) ActivateHold(ctx context.Context, input HoldActivationInput) (HoldActivationResult, error) {
+	if input.AccountID == "" || input.ResourceType == "" || input.ResourceID == "" || input.HoldID == "" || input.Currency == "" || input.ProviderEvidenceRef == "" {
+		return HoldActivationResult{}, ErrInvalidHoldInput
+	}
 	unlock, err := s.lockAccount(ctx, input.AccountID)
 	if err != nil {
 		return HoldActivationResult{}, err
@@ -334,7 +337,7 @@ func (s *PostgresStore) ReleaseHold(ctx context.Context, input HoldReleaseInput)
 	if !holdEntMatches(row, input.AccountID, input.WorkspaceID, input.ResourceType, input.ResourceID, input.Currency) {
 		return HoldReleaseResult{}, ErrHoldIdentityMismatch
 	}
-	if row.Status == "released" || row.RemainingCents <= 0 {
+	if row.Status == "released" || row.RemainingCents < 0 {
 		return HoldReleaseResult{}, ErrInvalidHoldState
 	}
 	amount := row.RemainingCents

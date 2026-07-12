@@ -5,7 +5,8 @@ ALTER TABLE holds ADD COLUMN IF NOT EXISTS consumed_cents BIGINT NOT NULL DEFAUL
 ALTER TABLE holds ADD COLUMN IF NOT EXISTS released_cents BIGINT NOT NULL DEFAULT 0;
 ALTER TABLE holds ADD COLUMN IF NOT EXISTS provider_evidence_ref TEXT NOT NULL DEFAULT '';
 UPDATE holds SET original_cents = amount_cents WHERE original_cents = 0;
-UPDATE holds SET remaining_cents = amount_cents WHERE remaining_cents = 0 AND consumed_cents = 0 AND released_cents = 0;
+UPDATE holds SET remaining_cents = amount_cents, status = 'reserved' WHERE status = 'held';
+UPDATE holds SET released_cents = amount_cents, remaining_cents = 0 WHERE status = 'released';
 
 ALTER TABLE resource_settlements ADD COLUMN IF NOT EXISTS hold_id TEXT NOT NULL DEFAULT '';
 
