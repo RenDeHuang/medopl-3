@@ -2235,6 +2235,58 @@ func TestConsoleStateHydratesResourceListsFromFabricOperations(t *testing.T) {
 	}
 }
 
+func TestRememberRuntimeOperationPreservesComputeCommercialFacts(t *testing.T) {
+	app := newControlPlaneAppEmpty()
+	mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{
+		"id": "compute-alpha", "accountId": "acct-alpha", "ownerUserId": "user-alpha", "name": "Alpha compute",
+		"status": "provisioning", "holdId": "hold-compute", "holdAmountCents": int64(7862),
+		"pricingVersion": "pricing-v1", "priceSnapshot": map[string]any{"packageId": "basic", "unitPriceCents": int64(47)},
+	}))
+
+	err := app.rememberRuntimeOperations([]clients.FabricOperation{{
+		ID: "fabric-compute", OperationID: "operation-compute", ResourceKind: "compute_allocation", ResourceID: "compute-alpha",
+		AccountID: "acct-alpha", Status: "succeeded", RedactedProviderPayload: map[string]any{"resource": map[string]any{
+			"id": "compute-alpha", "accountId": "acct-alpha", "status": "running", "nodeName": "node-from-fabric",
+		}},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	compute, _ := app.getCompute("compute-alpha")
+	if compute["holdId"] != "hold-compute" || int64(numberField(compute, "holdAmountCents", 0)) != 7862 || compute["pricingVersion"] != "pricing-v1" || compute["ownerUserId"] != "user-alpha" || compute["name"] != "Alpha compute" {
+		t.Fatalf("Fabric operation erased Control Plane facts: %#v", compute)
+	}
+	if compute["nodeName"] != "node-from-fabric" || compute["status"] != "running" {
+		t.Fatalf("Fabric provider facts were not applied: %#v", compute)
+	}
+}
+
+func TestRememberRuntimeOperationPreservesStorageCommercialFacts(t *testing.T) {
+	app := newControlPlaneAppEmpty()
+	mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{
+		"id": "storage-alpha", "accountId": "acct-alpha", "ownerUserId": "user-alpha", "name": "Alpha storage",
+		"status": "provisioning", "holdId": "hold-storage", "holdAmountCents": int64(101),
+		"pricingVersion": "pricing-v1", "priceSnapshot": map[string]any{"resourceType": "storage", "unitPriceCents": int64(1)},
+	}))
+
+	err := app.rememberRuntimeOperations([]clients.FabricOperation{{
+		ID: "fabric-storage", OperationID: "operation-storage", ResourceKind: "storage_volume", ResourceID: "storage-alpha",
+		AccountID: "acct-alpha", Status: "succeeded", RedactedProviderPayload: map[string]any{"resource": map[string]any{
+			"id": "storage-alpha", "accountId": "acct-alpha", "status": "ready", "providerResourceId": "pvc/storage-alpha-data",
+		}},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	storage, _ := app.getStorage("storage-alpha")
+	if storage["holdId"] != "hold-storage" || int64(numberField(storage, "holdAmountCents", 0)) != 101 || storage["pricingVersion"] != "pricing-v1" || storage["ownerUserId"] != "user-alpha" || storage["name"] != "Alpha storage" {
+		t.Fatalf("Fabric operation erased Control Plane facts: %#v", storage)
+	}
+	if storage["providerResourceId"] != "pvc/storage-alpha-data" || storage["status"] != "available" {
+		t.Fatalf("Fabric provider facts were not applied: %#v", storage)
+	}
+}
+
 func TestConsoleStateSkipsUnscopedHistoricFabricResourceProjection(t *testing.T) {
 	setTestOperatorAccount(t, "acct-alpha")
 	service := controlplane.NewService(fakeLedgerClient{}, &fabricClientWithUnscopedHistoricOperation{})
