@@ -303,6 +303,10 @@ func (app *controlPlaneServer) listRuntimeOperations() []map[string]any {
 		if result := stringValue(row["result"]); result != "" {
 			var payload map[string]any
 			if json.Unmarshal([]byte(result), &payload) == nil {
+				if errorCode := stringValue(payload["_fabricErrorCode"]); errorCode != "" {
+					row["errorCode"] = errorCode
+					delete(payload, "_fabricErrorCode")
+				}
 				row["redactedProviderPayload"] = payload
 			}
 		}

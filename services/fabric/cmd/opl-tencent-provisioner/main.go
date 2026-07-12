@@ -707,6 +707,30 @@ func (client *tencentSDKClient) describeClusterMachines(nodePoolId string) ([]*t
 		fallbackRequest.ClusterId = common.StringPtr(client.clusterId)
 		fallbackRequest.Limit = common.Int64Ptr(100)
 		describeResponse, err = client.nativeTkeClient.DescribeClusterMachines(fallbackRequest)
+		if err == nil {
+			instanceRequest := tke2022.NewDescribeClusterInstancesRequest()
+			instanceRequest.ClusterId = common.StringPtr(client.clusterId)
+			instanceRequest.Limit = common.Int64Ptr(100)
+			instanceRequest.Filters = []*tke2022.Filter{{Name: common.StringPtr("NodePoolIds"), Values: []*string{common.StringPtr(nodePoolId)}}}
+			instances, instanceErr := client.nativeTkeClient.DescribeClusterInstances(instanceRequest)
+			if instanceErr != nil {
+				err = instanceErr
+			} else {
+				poolIPs := map[string]bool{}
+				for _, instance := range instances.Response.InstanceSet {
+					if instance != nil && stringValue(instance.NodePoolId) == nodePoolId {
+						poolIPs[stringValue(instance.LanIP)] = true
+					}
+				}
+				machines := describeResponse.Response.Machines[:0]
+				for _, machine := range describeResponse.Response.Machines {
+					if machine != nil && poolIPs[stringValue(machine.LanIP)] {
+						machines = append(machines, machine)
+					}
+				}
+				describeResponse.Response.Machines = machines
+			}
+		}
 	}
 	if err != nil {
 		return nil, "", err

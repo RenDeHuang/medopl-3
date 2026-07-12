@@ -413,6 +413,7 @@ type fakeNativeTkeAPI struct {
 	enableAutoscaling        bool
 	autoRepair               bool
 	rejectMachinePoolFilter  bool
+	machinePoolIds           []string
 	calls                    []string
 }
 
@@ -552,6 +553,9 @@ func (api *fakeNativeTkeAPI) DescribeClusterInstances(request *tke2022.DescribeC
 			continue
 		}
 		currentNodePoolId := api.nodePoolId
+		if int(index) <= len(api.machinePoolIds) {
+			currentNodePoolId = api.machinePoolIds[index-1]
+		}
 		if currentNodePoolId == "" {
 			currentNodePoolId = "np-basic"
 		}
@@ -829,6 +833,25 @@ func TestTencentSDKClientCreateAllocationFallsBackWhenClusterMachinesRejectsNode
 	}
 	if clusterMachineNodePoolIdFilterValue(tkeAPI.describeMachinesRequest[1]) != "" {
 		t.Fatalf("second machine describe should fallback without filter: %#v", tkeAPI.describeMachinesRequest[1])
+	}
+}
+
+func TestTencentSDKClientPoolFallbackExcludesMachinesFromOtherPools(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{
+		nodePoolId:              "np-basic",
+		replicas:                2,
+		rejectMachinePoolFilter: true,
+		machinePoolIds:          []string{"np-pro", "np-basic"},
+	}
+	client := newFakeTencentSDKClient(tkeAPI)
+
+	response := client.ReconcileComputePool(Request{
+		PackageId: "basic",
+		Pool:      ComputePoolInput{Id: "basic", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 2},
+	}, map[string]string{})
+
+	if !response.Ok || len(response.Machines) != 1 || response.Machines[0].MachineId != "node-basic-2" {
+		t.Fatalf("pool fallback leaked another pool's machine: %#v", response)
 	}
 }
 

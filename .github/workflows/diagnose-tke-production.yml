@@ -463,6 +463,7 @@ jobs:
               operationType: operation.operationType,
               status: operation.status,
               stage: operation.stage || operation.provisioningStage || "",
+              errorCode: operation.errorCode || "",
               error: operation.error || "",
               safeMessage: operation.safeMessage || "",
               providerRequestId: operation.providerRequestId || "",

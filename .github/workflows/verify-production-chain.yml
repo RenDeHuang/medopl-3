@@ -33,7 +33,7 @@ on:
       url_attempts:
         description: Workspace URL readiness attempts.
         required: false
-        default: "30"
+        default: "90"
         type: string
       retry_delay_ms:
         description: Delay between Workspace readiness attempts.

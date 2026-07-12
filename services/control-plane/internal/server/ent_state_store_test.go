@@ -432,7 +432,7 @@ func TestControlPlaneAdminFactsSurviveServerRestart(t *testing.T) {
 	if _, err := first.createMembership(map[string]any{"organizationId": organization["id"], "userId": "usr-alpha", "accountId": "acct-alpha", "role": "owner"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := first.rememberRuntimeOperations([]clients.FabricOperation{{ID: "fabric-op-alpha", OperationID: "operation-alpha", WorkspaceID: "ws-alpha", ResourceID: "compute-alpha", ResourceKind: "compute_allocation", Status: "succeeded", RedactedProviderPayload: map[string]any{"costTags": map[string]any{"opl_operation_id": "operation-alpha"}}}}); err != nil {
+	if err := first.rememberRuntimeOperations([]clients.FabricOperation{{ID: "fabric-op-alpha", OperationID: "operation-alpha", WorkspaceID: "ws-alpha", ResourceID: "compute-alpha", ResourceKind: "compute_allocation", Status: "failed", ErrorCode: "compute_machine_unavailable", RedactedProviderPayload: map[string]any{"costTags": map[string]any{"opl_operation_id": "operation-alpha"}}}}); err != nil {
 		t.Fatal(err)
 	}
 	if err := first.rememberReconciliation(clients.ReconciliationResult{ID: "reconcile-alpha", Status: "mismatch", BlockNewWorkspaces: true, Reason: "provider_cost_gap"}); err != nil {
@@ -451,6 +451,9 @@ func TestControlPlaneAdminFactsSurviveServerRestart(t *testing.T) {
 	payload := operation["redactedProviderPayload"].(map[string]any)
 	if payload["costTags"].(map[string]any)["opl_operation_id"] != "operation-alpha" {
 		t.Fatalf("runtime evidence did not survive restart: %#v", operation)
+	}
+	if operation["errorCode"] != "compute_machine_unavailable" {
+		t.Fatalf("runtime error code did not survive restart: %#v", operation)
 	}
 	reconciliation := state["billingReconciliation"].(map[string]any)
 	guard := reconciliation["guard"].(map[string]any)

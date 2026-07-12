@@ -15,6 +15,7 @@ import (
 	"os/exec"
 	"path"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -110,7 +111,11 @@ func (p *TencentProvider) ReconcileComputePool(ctx context.Context, input Comput
 	if !response.OK {
 		return ComputePoolState{}, provisionerError(response)
 	}
-	state := ComputePoolState{PoolID: firstNonEmpty(response.PoolID, input.PoolID), NodePoolID: firstNonEmpty(response.NodePoolID, input.NodePoolID), DesiredReplicas: input.DesiredReplicas, CurrentReplicas: int64(len(response.Machines)), ProviderRequestID: response.ProviderRequestID}
+	currentReplicas := int64(len(response.Machines))
+	if value, parseErr := strconv.ParseInt(response.ProviderData["currentReplicas"], 10, 64); parseErr == nil {
+		currentReplicas = value
+	}
+	state := ComputePoolState{PoolID: firstNonEmpty(response.PoolID, input.PoolID), NodePoolID: firstNonEmpty(response.NodePoolID, input.NodePoolID), DesiredReplicas: input.DesiredReplicas, CurrentReplicas: currentReplicas, ProviderRequestID: response.ProviderRequestID}
 	for _, machine := range response.Machines {
 		state.Machines = append(state.Machines, ProviderMachine{MachineID: machine.MachineID, InstanceID: machine.InstanceID, NodeName: machine.NodeName, PrivateIP: machine.PrivateIP, PublicIP: machine.PublicIP, InstanceType: machine.InstanceType, Ready: machine.Ready})
 	}

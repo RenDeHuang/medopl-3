@@ -181,7 +181,11 @@ func (app *controlPlaneServer) auditEvent(r *http.Request, action string, resour
 func (app *controlPlaneServer) rememberRuntimeOperations(operations []clients.FabricOperation) error {
 	for _, operation := range operations {
 		row := structToMap(operation)
-		payload, err := json.Marshal(operation.RedactedProviderPayload)
+		result := cloneMap(operation.RedactedProviderPayload)
+		if operation.ErrorCode != "" {
+			result["_fabricErrorCode"] = operation.ErrorCode
+		}
+		payload, err := json.Marshal(result)
 		if err != nil {
 			return err
 		}

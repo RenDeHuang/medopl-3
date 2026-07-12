@@ -8,37 +8,55 @@ import (
 )
 
 var (
-	poolReconcileAttempts = 30
+	poolReconcileAttempts = 90
 	poolReconcileDelay    = 10 * time.Second
 )
 
-func (s *Service) reconcileComputePool(packageID string, dryRun bool) {
+func (s *Service) reconcileComputePool(packageID string, dryRun bool) error {
 	if packageID == "" {
 		packageID = "basic"
 	}
 	plan := packagePlan(packageID)
 	poolKey := plan.ID + ":" + plan.InstanceType
-	_ = s.operations.WithPoolLock(context.Background(), poolKey, func(ctx context.Context) error {
-		var lastErr error
-		for attempt := 0; attempt < poolReconcileAttempts; attempt++ {
-			complete, progressed, err := s.reconcileComputePoolOnce(ctx, packageID, dryRun)
-			if err == nil && complete {
-				return nil
-			}
-			if err != nil {
-				lastErr = err
-			} else if !progressed {
-				lastErr = fmt.Errorf("compute_machine_unavailable")
-			}
-			if !progressed && attempt+1 < poolReconcileAttempts {
-				time.Sleep(poolReconcileDelay)
-			}
-		}
-		return s.failPendingComputeOperations(ctx, packageID, lastErr)
+	return s.operations.WithPoolLock(context.Background(), poolKey, func(ctx context.Context) error {
+		return s.reconcileComputePoolLocked(ctx, packageID, dryRun)
 	})
 }
 
-func (s *Service) failPendingComputeOperations(ctx context.Context, packageID string, cause error) error {
+func (s *Service) reconcileComputePoolLocked(ctx context.Context, packageID string, dryRun bool) error {
+	var lastErr error
+	var providerErr error
+	for attempt := 0; attempt < poolReconcileAttempts; attempt++ {
+		complete, progressed, err := s.reconcileComputePoolOnce(ctx, packageID, dryRun)
+		if err == nil && complete {
+			return nil
+		}
+		if err != nil {
+			lastErr = err
+			providerErr = err
+		} else if !progressed && providerErr == nil {
+			lastErr = fmt.Errorf("compute_machine_unavailable")
+		}
+		if !progressed && attempt+1 < poolReconcileAttempts {
+			time.Sleep(poolReconcileDelay)
+		}
+	}
+	if providerErr != nil {
+		lastErr = providerErr
+	}
+	if err := s.preparePendingComputeFailures(ctx, packageID, lastErr); err != nil {
+		return err
+	}
+	if err := s.reconcileFailedComputeCleanup(ctx, packageID, dryRun); err != nil {
+		return err
+	}
+	if err := s.finalizePendingComputeFailures(ctx, packageID, lastErr); err != nil {
+		return err
+	}
+	return lastErr
+}
+
+func (s *Service) preparePendingComputeFailures(ctx context.Context, packageID string, cause error) error {
 	pending, err := s.pendingComputeOperations(ctx, packageID)
 	if err != nil {
 		return err
@@ -61,7 +79,61 @@ func (s *Service) failPendingComputeOperations(ctx context.Context, packageID st
 			resource.InstanceID = ownership.InstanceID
 			resource.CVMInstanceID = ownership.InstanceID
 			resource.NodeName = ownership.NodeName
+			if err := s.recordOperation(ctx, operation, "failed", resource, cause); err != nil {
+				return err
+			}
+			s.mu.Lock()
+			s.computes[resource.ID] = resource
+			s.mu.Unlock()
+			continue
 		}
+		resource.Status = "provisioning"
+		if err := s.recordOperation(ctx, operation, "canceling", resource, cause); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Service) reconcileFailedComputeCleanup(ctx context.Context, packageID string, dryRun bool) error {
+	var lastErr error
+	for attempt := 0; attempt < poolReconcileAttempts; attempt++ {
+		complete, progressed, err := s.reconcileComputePoolOnce(ctx, packageID, dryRun)
+		if err == nil && complete {
+			return nil
+		}
+		if err != nil {
+			lastErr = err
+		} else if !progressed {
+			lastErr = fmt.Errorf("compute_cleanup_unconfirmed")
+		}
+		if !progressed && attempt+1 < poolReconcileAttempts {
+			time.Sleep(poolReconcileDelay)
+		}
+	}
+	return lastErr
+}
+
+func (s *Service) finalizePendingComputeFailures(ctx context.Context, packageID string, cause error) error {
+	operations, err := s.operations.List(ctx)
+	if err != nil {
+		return err
+	}
+	latest := map[string]FabricOperation{}
+	for _, operation := range operations {
+		if operation.Action == "create_compute_allocation" {
+			latest[operation.OperationID] = operation
+		}
+	}
+	for _, operation := range latest {
+		if operation.Status != "canceling" {
+			continue
+		}
+		var resource ComputeAllocation
+		if !decodeOperationResource(operation, &resource) || firstNonEmpty(resource.PackageID, "basic") != packageID {
+			continue
+		}
+		resource.Status = "failed"
 		if err := s.recordOperation(ctx, operation, "failed", resource, cause); err != nil {
 			return err
 		}
@@ -161,7 +233,7 @@ func (s *Service) reconcileComputePoolOnce(ctx context.Context, packageID string
 		s.mu.Unlock()
 	}
 	remaining, err := s.pendingComputeOperations(ctx, packageID)
-	return len(remaining) == 0, limit > 0, err
+	return len(remaining) == 0 && state.CurrentReplicas == state.DesiredReplicas, limit > 0, err
 }
 
 func (s *Service) pendingComputeOperations(ctx context.Context, packageID string) ([]FabricOperation, error) {
@@ -170,14 +242,18 @@ func (s *Service) pendingComputeOperations(ctx context.Context, packageID string
 		return nil, err
 	}
 	latest := map[string]FabricOperation{}
+	destroyRequested := map[string]bool{}
 	for _, operation := range records {
 		if operation.Action == "create_compute_allocation" {
 			latest[operation.OperationID] = operation
 		}
+		if operation.Action == "destroy_compute_allocation" && operation.Status != "rejected" {
+			destroyRequested[operation.ResourceID] = true
+		}
 	}
 	out := []FabricOperation{}
 	for _, operation := range latest {
-		if operation.Status != "started" {
+		if operation.Status != "started" || destroyRequested[operation.ResourceID] {
 			continue
 		}
 		var resource ComputeAllocation

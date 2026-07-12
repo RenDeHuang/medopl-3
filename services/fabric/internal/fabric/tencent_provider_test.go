@@ -66,6 +66,21 @@ func TestDestroyComputeAllocationWithoutClaimedMachineSkipsProviderMutation(t *t
 	}
 }
 
+func TestReconcileComputePoolPreservesRawMachineCount(t *testing.T) {
+	provider := NewTencentProvider()
+	provider.provision = func(_ context.Context, request provisionerRequest) (provisionerResponse, error) {
+		if request.Action != "reconcile_compute_pool" {
+			t.Fatalf("provider request = %#v", request)
+		}
+		return provisionerResponse{OK: true, ProviderData: map[string]string{"currentReplicas": "1"}}, nil
+	}
+
+	state, err := provider.ReconcileComputePool(context.Background(), ComputePoolDemand{PoolID: "basic", PackageID: "basic", DesiredReplicas: 0})
+	if err != nil || state.CurrentReplicas != 1 {
+		t.Fatalf("pool state = %#v err=%v", state, err)
+	}
+}
+
 func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 	t.Setenv("OPL_WORKSPACE_IMAGE", "workspace-image:test")
 	t.Setenv("OPL_IMAGE_PULL_SECRET_NAME", "pull-secret")

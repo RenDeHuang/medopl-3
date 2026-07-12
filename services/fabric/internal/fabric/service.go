@@ -111,7 +111,7 @@ func (s *Service) CreateComputeAllocation(ctx context.Context, input ComputeAllo
 	s.computes[allocation.ID] = allocation
 	s.mu.Unlock()
 
-	go s.reconcileComputePool(allocation.PackageID, input.DryRun)
+	go func() { _ = s.reconcileComputePool(allocation.PackageID, input.DryRun) }()
 	return allocation, nil
 }
 
@@ -184,20 +184,35 @@ func (s *Service) DestroyComputeAllocation(ctx context.Context, allocationID str
 	if err := s.recordOperation(ctx, operation, "started", existing, nil); err != nil {
 		return ComputeAllocation{}, err
 	}
-	allocation, err := s.provider.DestroyComputeAllocation(ctx, existing)
+	var allocation ComputeAllocation
+	plan := packagePlan(firstNonEmpty(existing.PackageID, "basic"))
+	err := s.operations.WithPoolLock(ctx, plan.ID+":"+plan.InstanceType, func(lockCtx context.Context) error {
+		s.mu.Lock()
+		current := s.computes[allocationID]
+		s.mu.Unlock()
+		var providerErr error
+		allocation, providerErr = s.provider.DestroyComputeAllocation(lockCtx, current)
+		if providerErr != nil {
+			return providerErr
+		}
+		if ownership, ownershipErr := s.operations.MachineOwnership(lockCtx, allocationID); ownershipErr == nil {
+			now := s.now()
+			ownership.Status = "released"
+			ownership.ReleasedAt = &now
+			if err := s.operations.SaveMachineOwnership(lockCtx, ownership); err != nil {
+				return err
+			}
+		} else if ownershipErr != ErrMachineOwnershipNotFound {
+			return ownershipErr
+		}
+		if err := s.reconcileComputePoolLocked(lockCtx, firstNonEmpty(existing.PackageID, "basic"), false); err != nil {
+			return err
+		}
+		return s.cancelPendingComputeCreation(lockCtx, allocationID, allocation)
+	})
 	if err != nil {
 		_ = s.recordOperation(ctx, operation, "failed", allocation, err)
 		return allocation, err
-	}
-	if ownership, ownershipErr := s.operations.MachineOwnership(ctx, allocationID); ownershipErr == nil {
-		now := s.now()
-		ownership.Status = "released"
-		ownership.ReleasedAt = &now
-		if err := s.operations.SaveMachineOwnership(ctx, ownership); err != nil {
-			return allocation, err
-		}
-	} else if ownershipErr != ErrMachineOwnershipNotFound {
-		return allocation, ownershipErr
 	}
 	if err := s.recordOperation(ctx, operation, "succeeded", allocation, nil); err != nil {
 		return allocation, err
@@ -205,8 +220,24 @@ func (s *Service) DestroyComputeAllocation(ctx context.Context, allocationID str
 	s.mu.Lock()
 	s.computes[allocationID] = allocation
 	s.mu.Unlock()
-	go s.reconcileComputePool(firstNonEmpty(existing.PackageID, "basic"), false)
 	return allocation, nil
+}
+
+func (s *Service) cancelPendingComputeCreation(ctx context.Context, allocationID string, allocation ComputeAllocation) error {
+	operations, err := s.operations.List(ctx)
+	if err != nil {
+		return err
+	}
+	latest := FabricOperation{}
+	for _, candidate := range operations {
+		if candidate.Action == "create_compute_allocation" && candidate.ResourceID == allocationID {
+			latest = candidate
+		}
+	}
+	if latest.Status != "started" && latest.Status != "canceling" {
+		return nil
+	}
+	return s.recordOperation(ctx, latest, "failed", allocation, fmt.Errorf("compute_create_canceled"))
 }
 
 func (s *Service) CreateStorageVolume(ctx context.Context, input StorageVolumeInput) (StorageVolume, error) {
