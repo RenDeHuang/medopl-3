@@ -86,6 +86,24 @@ func TestComputeActivationRequiresClaimedMachineIdentity(t *testing.T) {
 	}
 }
 
+func TestComputeActivationUsesResourceIdempotencyKey(t *testing.T) {
+	calls := []string{}
+	ledger := &fakeLedgerClient{calls: &calls}
+	service := NewService(ledger, &runningComputeFabricClient{fakeFabricClient: fakeFabricClient{calls: &calls}})
+	input := DestroyResourceInput{ID: "compute-alpha", AccountID: "acct-alpha", HoldID: "hold-alpha"}
+
+	if _, err := service.SyncComputeAllocation(context.Background(), input, "readiness"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := service.SyncComputeAllocation(context.Background(), input, "provider-reconcile"); err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(ledger.activationKeys, []string{"compute:compute-alpha:hold-activation", "compute:compute-alpha:hold-activation"}) {
+		t.Fatalf("activation keys = %#v", ledger.activationKeys)
+	}
+}
+
 func TestStorageActivationRequiresBoundPVCIdentity(t *testing.T) {
 	calls := []string{}
 	service := NewService(&fakeLedgerClient{calls: &calls}, &readyStorageWithoutIdentityFabricClient{fakeFabricClient: fakeFabricClient{calls: &calls}})
@@ -511,10 +529,11 @@ func TestSyncStorageVolumeReleasesHoldWhenProviderDeleted(t *testing.T) {
 }
 
 type fakeLedgerClient struct {
-	calls     *[]string
-	artifacts map[string]clients.Artifact
-	reviews   map[string]clients.Review
-	receipts  []clients.ReceiptInput
+	calls          *[]string
+	activationKeys []string
+	artifacts      map[string]clients.Artifact
+	reviews        map[string]clients.Review
+	receipts       []clients.ReceiptInput
 }
 
 func (f *fakeLedgerClient) ManualTopUp(ctx context.Context, input clients.ManualTopUpInput, idempotencyKey string) (clients.ManualTopUpResult, error) {
@@ -527,8 +546,9 @@ func (f *fakeLedgerClient) CreateHold(ctx context.Context, input clients.HoldInp
 	return clients.HoldResult{ID: "hold-alpha", AccountID: input.AccountID, ResourceType: input.ResourceType, ResourceID: input.ResourceID, AmountCents: input.AmountCents, ActivationAmountCents: input.ActivationAmountCents, RemainingCents: input.AmountCents, Wallet: clients.Wallet{AccountID: input.AccountID, BalanceCents: 20000, FrozenCents: input.AmountCents, AvailableCents: 20000 - input.AmountCents}}, nil
 }
 
-func (f *fakeLedgerClient) ActivateHold(_ context.Context, input clients.HoldActivationInput, _ string) (clients.HoldActivationResult, error) {
+func (f *fakeLedgerClient) ActivateHold(_ context.Context, input clients.HoldActivationInput, key string) (clients.HoldActivationResult, error) {
 	*f.calls = append(*f.calls, "ledger.activate")
+	f.activationKeys = append(f.activationKeys, key)
 	return clients.HoldActivationResult{HoldResult: clients.HoldResult{ID: input.HoldID, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: input.ResourceType, ResourceID: input.ResourceID, RemainingCents: 16800, Status: "active", Wallet: clients.Wallet{AccountID: input.AccountID, BalanceCents: 19900, FrozenCents: 16800, AvailableCents: 3100}}, ActivationLedgerEntryID: "ledger-activation", ActivationWalletTransactionID: "wallet-activation"}, nil
 }
 

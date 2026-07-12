@@ -868,6 +868,29 @@ type capturingHoldLedgerClient struct {
 	lastHold clients.HoldInput
 }
 
+type blockingActivationLedgerClient struct {
+	fakeLedgerClient
+	calls         atomic.Int32
+	firstEntered  chan struct{}
+	secondEntered chan struct{}
+	release       chan struct{}
+}
+
+func (f *blockingActivationLedgerClient) ActivateHold(ctx context.Context, input clients.HoldActivationInput, key string) (clients.HoldActivationResult, error) {
+	switch f.calls.Add(1) {
+	case 1:
+		close(f.firstEntered)
+		select {
+		case <-f.release:
+		case <-ctx.Done():
+			return clients.HoldActivationResult{}, ctx.Err()
+		}
+	case 2:
+		close(f.secondEntered)
+	}
+	return f.fakeLedgerClient.ActivateHold(ctx, input, key)
+}
+
 func (f *capturingHoldLedgerClient) CreateHold(ctx context.Context, input clients.HoldInput, idempotencyKey string) (clients.HoldResult, error) {
 	f.lastHold = input
 	return f.fakeLedgerClient.CreateHold(ctx, input, idempotencyKey)
@@ -1047,6 +1070,12 @@ type fakeFabricClient struct {
 	runtime clients.WorkspaceRuntime
 }
 
+type provisioningComputeFabricClient struct{ fakeFabricClient }
+
+type pendingComputeFabricClient struct {
+	provisioningComputeFabricClient
+}
+
 type blockingResumeFabricClient struct {
 	fakeFabricClient
 	entered chan struct{}
@@ -1080,6 +1109,21 @@ func (f *fakeFabricClient) Catalog(_ context.Context) (clients.FabricCatalog, er
 func (f *fakeFabricClient) CreateComputeAllocation(_ context.Context, input clients.ComputeAllocationInput, _ string) (clients.ComputeAllocation, error) {
 	f.record("fabric.compute")
 	return clients.ComputeAllocation{ID: input.ID, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, PackageID: input.PackageID, Status: "running", Provider: "tencent-tke", ProviderResourceID: "node/node-from-fabric", ProviderRequestID: "compute-request-from-fabric", InstanceID: "ins-from-fabric", NodeName: "node-from-fabric", BillingStatus: "active", ServiceName: "opl-compute-from-fabric"}, nil
+}
+
+func (f *provisioningComputeFabricClient) CreateComputeAllocation(_ context.Context, input clients.ComputeAllocationInput, _ string) (clients.ComputeAllocation, error) {
+	f.record("fabric.compute")
+	return clients.ComputeAllocation{ID: input.ID, AccountID: input.AccountID, PackageID: input.PackageID, Status: "provisioning", Provider: "tencent-tke"}, nil
+}
+
+func (f *provisioningComputeFabricClient) SyncComputeAllocation(_ context.Context, id string) (clients.ComputeAllocation, error) {
+	f.record("fabric.compute-sync")
+	return clients.ComputeAllocation{ID: id, Status: "running", Provider: "tencent-tke", MachineName: "machine-alpha", InstanceID: "ins-alpha", NodeName: "node-alpha"}, nil
+}
+
+func (f *pendingComputeFabricClient) SyncComputeAllocation(_ context.Context, id string) (clients.ComputeAllocation, error) {
+	f.record("fabric.compute-sync")
+	return clients.ComputeAllocation{ID: id, Status: "provisioning", Provider: "tencent-tke"}, nil
 }
 
 func (f *fakeFabricClient) GetComputeAllocation(_ context.Context, id string) (clients.ComputeAllocation, error) {
@@ -1685,6 +1729,96 @@ func TestCreateComputeAllocationUsesFabricService(t *testing.T) {
 	server.ServeHTTP(getRec, getReq)
 	if getRec.Code != http.StatusOK {
 		t.Fatalf("get status = %d, want %d: %s", getRec.Code, http.StatusOK, getRec.Body.String())
+	}
+}
+
+func TestGetProvisioningComputeActivatesHoldThroughSync(t *testing.T) {
+	calls := []string{}
+	fabric := &provisioningComputeFabricClient{fakeFabricClient{calls: &calls}}
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, fabric))
+	admin := tenantAdminSessionForTest(t, server)
+	created := createResourceWithSession(t, server, admin, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/compute-allocations/"+stringValue(created["id"]), nil)
+	addSessionCookies(req, admin)
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("get status = %d: %s", rec.Code, rec.Body.String())
+	}
+	var body map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if body["status"] != "running" || body["billingStatus"] != "active" || body["ledgerEntryId"] != "ledger-activation" {
+		t.Fatalf("compute did not converge through Hold activation: %#v", body)
+	}
+	if !slices.Contains(calls, "fabric.compute-sync") || slices.Contains(calls, "fabric.compute-get") {
+		t.Fatalf("provisioning GET calls = %#v", calls)
+	}
+}
+
+func TestGetProvisioningComputeWaitsForMachineIdentity(t *testing.T) {
+	calls := []string{}
+	fabric := &pendingComputeFabricClient{provisioningComputeFabricClient{fakeFabricClient{calls: &calls}}}
+	server := NewServer(controlplane.NewService(fakeLedgerClient{}, fabric))
+	admin := tenantAdminSessionForTest(t, server)
+	created := createResourceWithSession(t, server, admin, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/compute-allocations/"+stringValue(created["id"]), nil)
+	addSessionCookies(req, admin)
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("get status = %d: %s", rec.Code, rec.Body.String())
+	}
+	var body map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if body["status"] != "provisioning" || body["billingStatus"] != "pending" || !slices.Contains(calls, "fabric.compute-sync") || slices.Contains(calls, "fabric.compute-get") {
+		t.Fatalf("pending compute response=%#v calls=%#v", body, calls)
+	}
+}
+
+func TestGetProvisioningComputeSerializesHoldActivation(t *testing.T) {
+	fabric := &provisioningComputeFabricClient{}
+	ledger := &blockingActivationLedgerClient{
+		firstEntered:  make(chan struct{}),
+		secondEntered: make(chan struct{}),
+		release:       make(chan struct{}),
+	}
+	server := NewServer(controlplane.NewService(ledger, fabric))
+	admin := tenantAdminSessionForTest(t, server)
+	created := createResourceWithSession(t, server, admin, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
+	results := make(chan map[string]any, 2)
+
+	request := func() {
+		req := httptest.NewRequest(http.MethodGet, "/api/compute-allocations/"+stringValue(created["id"]), nil)
+		addSessionCookies(req, admin)
+		rec := httptest.NewRecorder()
+		server.ServeHTTP(rec, req)
+		var body map[string]any
+		if rec.Code == http.StatusOK {
+			_ = json.NewDecoder(rec.Body).Decode(&body)
+		}
+		results <- body
+	}
+
+	go request()
+	<-ledger.firstEntered
+	go request()
+	select {
+	case <-ledger.secondEntered:
+	case <-time.After(100 * time.Millisecond):
+	}
+	close(ledger.release)
+	first, second := <-results, <-results
+
+	if ledger.calls.Load() != 1 || first["billingStatus"] != "active" || second["billingStatus"] != "active" {
+		t.Fatalf("activation calls=%d first=%#v second=%#v", ledger.calls.Load(), first, second)
 	}
 }
 

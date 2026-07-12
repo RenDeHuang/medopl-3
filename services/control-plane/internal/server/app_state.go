@@ -18,11 +18,20 @@ import (
 )
 
 type controlPlaneServer struct {
-	mu     sync.Mutex
-	store  StateStore
-	tables controlPlaneTableStore
+	mu           sync.Mutex
+	computeLocks sync.Map
+	store        StateStore
+	tables       controlPlaneTableStore
 	// ponytail: per-process limiter; move to Redis when login traffic spans multiple replicas.
 	loginRateLimits map[string]loginFailure
+}
+
+func (app *controlPlaneServer) lockCompute(id string) func() {
+	value, _ := app.computeLocks.LoadOrStore(id, &sync.Mutex{})
+	lock := value.(*sync.Mutex)
+	lock.Lock()
+	// ponytail: process-local locks match the single control-plane replica; use DB advisory locks before scaling replicas.
+	return lock.Unlock
 }
 
 type loginFailure struct {

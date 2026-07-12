@@ -527,7 +527,7 @@ func (s *Service) SyncComputeAllocation(ctx context.Context, input DestroyResour
 	}
 	if (allocation.Status == "running" || allocation.Status == "ready") && input.HoldID != "" && allocation.MachineName != "" && allocation.InstanceID != "" && allocation.NodeName != "" {
 		providerEvidenceRef := "fabric:" + allocation.MachineName + ":" + allocation.InstanceID + ":" + allocation.NodeName
-		activation, err := s.ledger.ActivateHold(ctx, clients.HoldActivationInput{AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: "compute", ResourceID: input.ID, HoldID: input.HoldID, Currency: "CNY", ProviderEvidenceRef: providerEvidenceRef}, idempotencyKey+":hold-activation")
+		activation, err := s.ledger.ActivateHold(ctx, clients.HoldActivationInput{AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, ResourceType: "compute", ResourceID: input.ID, HoldID: input.HoldID, Currency: "CNY", ProviderEvidenceRef: providerEvidenceRef}, "compute:"+input.ID+":hold-activation")
 		if err != nil {
 			return allocation, err
 		}

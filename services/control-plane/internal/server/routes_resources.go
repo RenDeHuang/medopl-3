@@ -106,22 +106,34 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneServer, service
 			writeError(w, http.StatusForbidden, "account_scope_forbidden")
 			return
 		}
+		unlock := app.lockCompute(id)
+		defer unlock()
+		compute, ok = app.getCompute(id)
+		if !ok || !app.canAccessResource(r, compute) {
+			writeError(w, http.StatusNotFound, "compute_allocation_not_found")
+			return
+		}
 		if stringValue(compute["status"]) != "provisioning" {
 			writeJSON(w, http.StatusOK, compute)
 			return
 		}
-		fresh, err := service.GetComputeAllocation(r.Context(), id)
-		if err == nil && fresh.ID != "" {
-			body := computeResponse(mergeMaps(compute, structToMap(fresh)))
-			body["accountId"] = firstNonEmpty(stringValue(compute["accountId"]), stringValue(compute["ownerAccountId"]))
-			if err := app.saveComputeFact(body); err != nil {
+		fresh, err := service.SyncComputeAllocation(r.Context(), destroyResourceInput(id, compute), "compute-readiness:"+id)
+		if err != nil {
+			failed := providerSyncFacts(compute, err)
+			if saveErr := app.saveComputeFact(failed); saveErr != nil {
 				writeError(w, http.StatusInternalServerError, "state_persist_failed")
 				return
 			}
-			writeJSON(w, http.StatusOK, body)
+			writeJSON(w, http.StatusOK, failed)
 			return
 		}
-		writeJSON(w, http.StatusOK, compute)
+		body := billingActivationFacts(compute, providerSyncFacts(computeResponse(mergeMaps(compute, structToMap(fresh))), nil), time.Now())
+		body["accountId"] = firstNonEmpty(stringValue(compute["accountId"]), stringValue(compute["ownerAccountId"]))
+		if err := app.saveComputeFact(body); err != nil {
+			writeError(w, http.StatusInternalServerError, "state_persist_failed")
+			return
+		}
+		writeJSON(w, http.StatusOK, body)
 	}))
 	mux.HandleFunc("POST /api/compute-allocations/{id}/sync", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
@@ -133,6 +145,13 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneServer, service
 		}
 		if !app.canAccessResource(r, existing) {
 			writeError(w, http.StatusForbidden, "account_scope_forbidden")
+			return
+		}
+		unlock := app.lockCompute(id)
+		defer unlock()
+		existing, ok = app.getCompute(id)
+		if !ok || !app.canAccessResource(r, existing) {
+			writeError(w, http.StatusNotFound, "compute_allocation_not_found")
 			return
 		}
 		releaseInput := destroyResourceInput(id, existing)
@@ -171,6 +190,13 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneServer, service
 		}
 		if !app.canAccessResource(r, existing) {
 			writeError(w, http.StatusForbidden, "account_scope_forbidden")
+			return
+		}
+		unlock := app.lockCompute(id)
+		defer unlock()
+		existing, ok = app.getCompute(id)
+		if !ok || !app.canAccessResource(r, existing) {
+			writeError(w, http.StatusNotFound, "compute_allocation_not_found")
 			return
 		}
 		stopping := cloneMap(existing)

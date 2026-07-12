@@ -119,7 +119,7 @@ func TestOwnedProvisioningComputeMayRefreshFromFabric(t *testing.T) {
 	seedTenantMember(t, store, "acct-alpha", "org-alpha", "usr-alpha", "alpha@example.com")
 	mustStore(t, store.SaveCompute(context.Background(), map[string]any{"id": "compute-alpha", "accountId": "acct-alpha", "status": "provisioning"}))
 	calls := []string{}
-	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{calls: &calls}), store)
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &provisioningComputeFabricClient{fakeFabricClient{calls: &calls}}), store)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,7 +127,7 @@ func TestOwnedProvisioningComputeMayRefreshFromFabric(t *testing.T) {
 	addSessionCookies(req, loginForTest(t, server, "alpha@example.com", "CorrectHorseBatteryStaple!"))
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK || !slices.Contains(calls, "fabric.compute-get") || !strings.Contains(rec.Body.String(), `"accountId":"acct-alpha"`) {
+	if rec.Code != http.StatusOK || !slices.Contains(calls, "fabric.compute-sync") || !strings.Contains(rec.Body.String(), `"accountId":"acct-alpha"`) {
 		t.Fatalf("provisioning compute status=%d calls=%#v body=%s", rec.Code, calls, rec.Body.String())
 	}
 }

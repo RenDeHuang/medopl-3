@@ -74,6 +74,58 @@ type pendingStorageProvider struct {
 	deleteCalls int
 }
 
+type countingComputeSyncProvider struct {
+	testProvider
+	syncCalls int
+	lastSync  ComputeAllocation
+}
+
+func (p *countingComputeSyncProvider) SyncComputeAllocation(_ context.Context, allocation ComputeAllocation) (ComputeAllocation, error) {
+	p.syncCalls++
+	p.lastSync = allocation
+	allocation.Status = "running"
+	return allocation, nil
+}
+
+func TestSyncComputeAllocationHydratesSucceededMachineIdentity(t *testing.T) {
+	provider := &countingComputeSyncProvider{}
+	service := NewServiceWithOperationStore(provider, NewMemoryOperationStore())
+	pending := ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", PackageID: "basic", Status: "provisioning"}
+	ready := pending
+	ready.Status = "running"
+	ready.MachineName = "machine-alpha"
+	ready.InstanceID = "ins-alpha"
+	ready.NodeName = "node-alpha"
+	operation := newOperation("create_compute_allocation", "compute_allocation", pending.ID, pending.AccountID, "", "request-alpha", hashInput(pending), time.Now().UTC())
+	if err := service.recordOperation(context.Background(), operation, "succeeded", ready, nil); err != nil {
+		t.Fatal(err)
+	}
+	service.computes[pending.ID] = pending
+
+	allocation, err := service.SyncComputeAllocation(context.Background(), pending.ID)
+
+	if err != nil || allocation.Status != "running" || provider.syncCalls != 1 || provider.lastSync.MachineName != ready.MachineName || provider.lastSync.InstanceID != ready.InstanceID || provider.lastSync.NodeName != ready.NodeName {
+		t.Fatalf("hydrated allocation=%#v err=%v provider=%#v", allocation, err, provider)
+	}
+}
+
+func TestSyncComputeAllocationWaitsForMachineIdentity(t *testing.T) {
+	provider := &countingComputeSyncProvider{}
+	service := NewServiceWithOperationStore(provider, NewMemoryOperationStore())
+	resource := ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", PackageID: "basic", Status: "provisioning"}
+	operation := newOperation("create_compute_allocation", "compute_allocation", resource.ID, resource.AccountID, "", "request-alpha", hashInput(resource), time.Now().UTC())
+	if err := service.recordOperation(context.Background(), operation, "started", resource, nil); err != nil {
+		t.Fatal(err)
+	}
+	service.computes[resource.ID] = resource
+
+	allocation, err := service.SyncComputeAllocation(context.Background(), "compute-alpha")
+
+	if err != nil || allocation.Status != "provisioning" || provider.syncCalls != 0 {
+		t.Fatalf("pending allocation=%#v err=%v provider sync calls=%d", allocation, err, provider.syncCalls)
+	}
+}
+
 func (*pendingStorageProvider) SyncStorageVolume(_ context.Context, volume StorageVolume) (StorageVolume, error) {
 	volume.Status = "pending"
 	return volume, nil

@@ -132,16 +132,27 @@ func (app *controlPlaneServer) runProviderReconcileOnce(ctx context.Context, ser
 		if !providerSyncDue(row, now) {
 			continue
 		}
+		unlock := app.lockCompute(id)
+		current, ok := app.getCompute(id)
+		if !ok || !providerSyncDue(current, now) {
+			unlock()
+			continue
+		}
+		row = current
 		result, err := service.SyncComputeAllocation(ctx, destroyResourceInput(id, row), "provider-reconcile:compute:"+id)
 		if err != nil {
-			if saveErr := app.saveComputeFact(providerSyncFacts(row, err)); saveErr != nil {
+			saveErr := app.saveComputeFact(providerSyncFacts(row, err))
+			unlock()
+			if saveErr != nil {
 				return saveErr
 			}
 			continue
 		}
 		body := billingActivationFacts(row, providerSyncFacts(computeResponse(mergeMaps(row, structToMap(result))), nil), now)
-		if err := app.saveComputeFact(body); err != nil {
-			return err
+		saveErr := app.saveComputeFact(body)
+		unlock()
+		if saveErr != nil {
+			return saveErr
 		}
 	}
 	for id, row := range storages {

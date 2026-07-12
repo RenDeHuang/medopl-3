@@ -255,7 +255,7 @@ func TestCreateComputeAllocationHTTPRequiresIdempotencyKey(t *testing.T) {
 	}
 }
 
-func TestSyncComputeAllocationHTTPRefreshesProviderState(t *testing.T) {
+func TestSyncComputeAllocationHTTPWaitsForMachineOwnership(t *testing.T) {
 	service := fabric.NewService(testProvider{})
 	server := NewServer(service, "internal-secret")
 	create := testRequest(http.MethodPost, "/fabric/compute-allocations", bytes.NewBufferString(`{"accountId":"acct-alpha","workspaceId":"ws-alpha","packageId":"basic"}`))
@@ -281,8 +281,8 @@ func TestSyncComputeAllocationHTTPRefreshesProviderState(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&allocation); err != nil {
 		t.Fatalf("decode sync: %v", err)
 	}
-	if allocation.Status != "external_deleted" {
-		t.Fatalf("sync must return provider state, got %#v", allocation)
+	if allocation.Status != "provisioning" {
+		t.Fatalf("sync before machine ownership = %#v", allocation)
 	}
 }
 

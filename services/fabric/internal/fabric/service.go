@@ -134,6 +134,30 @@ func (s *Service) SyncComputeAllocation(ctx context.Context, allocationID string
 		_ = s.recordOperation(ctx, operation, "rejected", ComputeAllocation{ID: allocationID}, err)
 		return ComputeAllocation{}, err
 	}
+	if existing.Status == "provisioning" && (existing.MachineName == "" || firstNonEmpty(existing.InstanceID, existing.CVMInstanceID) == "" || existing.NodeName == "") {
+		operations, err := s.operations.List(ctx)
+		if err != nil {
+			return existing, err
+		}
+		for index := len(operations) - 1; index >= 0; index-- {
+			operation := operations[index]
+			if operation.Action != "create_compute_allocation" || operation.ResourceID != allocationID {
+				continue
+			}
+			if operation.Status == "started" {
+				return existing, nil
+			}
+			if operation.Status == "succeeded" {
+				if !decodeOperationResource(operation, &existing) || existing.MachineName == "" || firstNonEmpty(existing.InstanceID, existing.CVMInstanceID) == "" || existing.NodeName == "" {
+					return existing, fmt.Errorf("compute_machine_identity_required")
+				}
+				s.mu.Lock()
+				s.computes[allocationID] = existing
+				s.mu.Unlock()
+			}
+			break
+		}
+	}
 	if existing.Status == "failed" && existing.NodePoolID == "" && existing.MachineName == "" && existing.InstanceID == "" {
 		return existing, nil
 	}
