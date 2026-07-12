@@ -10,6 +10,8 @@ import (
 	"opl-cloud/services/control-plane/internal/domain"
 )
 
+const workspaceCompensationTimeout = 30 * time.Second
+
 type Service struct {
 	ledger clients.LedgerClient
 	fabric clients.FabricClient
@@ -617,7 +619,9 @@ func (s *Service) CreateWorkspace(ctx context.Context, input CreateWorkspaceInpu
 	}
 	receipt, err := s.ledger.RecordReceipt(ctx, clients.ReceiptInput{Type: "workspace.created", Status: "completed", Surface: "workspace", WorkspaceID: workspaceID, JobID: runtime.ID, Execution: map[string]any{"providerRequestId": runtime.ID}, OutputRefs: map[string]any{"redactedUrl": runtime.URL}, Continuation: map[string]any{"action": "open_workspace_url", "tokenVersion": "v1", "redactedUrl": runtime.URL}}, idempotencyKey+":receipt")
 	if err != nil {
-		_, cleanupErr := s.fabric.DestroyWorkspaceRuntime(ctx, workspaceID, idempotencyKey+":runtime-compensation")
+		cleanupCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), workspaceCompensationTimeout)
+		defer cancel()
+		_, cleanupErr := s.fabric.DestroyWorkspaceRuntime(cleanupCtx, workspaceID, idempotencyKey+":runtime-compensation")
 		return domain.WorkspaceProjection{}, errors.Join(err, cleanupErr)
 	}
 

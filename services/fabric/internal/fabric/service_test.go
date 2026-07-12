@@ -515,6 +515,22 @@ func TestDestroyWorkspaceRuntimeReplaysIdempotentlyBeforeProvider(t *testing.T) 
 	}
 }
 
+func TestDestroyWorkspaceRuntimeRetriesFailedProviderOperation(t *testing.T) {
+	provider := &failOnceDestroyProvider{}
+	service := NewServiceWithOperationStore(provider, NewMemoryOperationStore())
+
+	if _, err := service.DestroyWorkspaceRuntime(context.Background(), "workspace-alpha", "runtime-destroy-once"); err == nil {
+		t.Fatal("first destroy succeeded, want transient failure")
+	}
+	runtime, err := service.DestroyWorkspaceRuntime(context.Background(), "workspace-alpha", "runtime-destroy-once")
+	if err != nil || runtime.Status != "destroyed" || provider.destroyCalls.Load() != 2 {
+		t.Fatalf("retry destroy = %#v err=%v providerCalls=%d", runtime, err, provider.destroyCalls.Load())
+	}
+	if _, err := service.DestroyWorkspaceRuntime(context.Background(), "workspace-alpha", "runtime-destroy-once"); err != nil || provider.destroyCalls.Load() != 2 {
+		t.Fatalf("successful replay err=%v providerCalls=%d", err, provider.destroyCalls.Load())
+	}
+}
+
 func TestCreateWorkspaceRuntimeClaimsAcrossServiceInstances(t *testing.T) {
 	provider := &blockingRuntimeProvider{entered: make(chan struct{}), release: make(chan struct{})}
 	store := NewMemoryOperationStore()
@@ -655,6 +671,18 @@ type countingRuntimeProvider struct {
 	testProvider
 	calls        atomic.Int32
 	destroyCalls atomic.Int32
+}
+
+type failOnceDestroyProvider struct {
+	testProvider
+	destroyCalls atomic.Int32
+}
+
+func (p *failOnceDestroyProvider) DestroyWorkspaceRuntime(_ context.Context, workspaceID string) (WorkspaceRuntime, error) {
+	if p.destroyCalls.Add(1) == 1 {
+		return WorkspaceRuntime{WorkspaceID: workspaceID, Status: "destroying"}, errors.New("cluster unavailable")
+	}
+	return WorkspaceRuntime{WorkspaceID: workspaceID, Status: "destroyed"}, nil
 }
 
 func (p *countingRuntimeProvider) CreateWorkspaceRuntime(_ context.Context, input WorkspaceRuntimeInput, _ ComputeAllocation, _ StorageVolume) (WorkspaceRuntime, error) {

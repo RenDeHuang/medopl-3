@@ -85,6 +85,22 @@ func TestCreateWorkspaceJoinsReceiptAndCleanupFailures(t *testing.T) {
 	}
 }
 
+func TestCreateWorkspaceCompensatesAfterRequestCancellation(t *testing.T) {
+	calls := []string{}
+	ctx, cancel := context.WithCancel(context.Background())
+	ledger := &failingReceiptLedger{fakeLedgerClient: fakeLedgerClient{calls: &calls}, err: errReceiptWrite, beforeReturn: cancel}
+	fabric := &compensatingFabricClient{fakeFabricClient: fakeFabricClient{calls: &calls}}
+	service := NewService(ledger, fabric)
+
+	_, err := service.CreateWorkspace(ctx, CreateWorkspaceInput{
+		AccountID: "acct-alpha", OwnerID: "user-alpha", Name: "Alpha", PackageID: "basic",
+		AttachmentID: "attachment-alpha", ComputeID: "compute-alpha", VolumeID: "volume-alpha",
+	}, "workspace-once")
+	if !errors.Is(err, errReceiptWrite) || fabric.destroyCtxErr != nil || !fabric.destroyHasDeadline {
+		t.Fatalf("canceled receipt cleanup: err=%v cleanupCtxErr=%v hasDeadline=%t", err, fabric.destroyCtxErr, fabric.destroyHasDeadline)
+	}
+}
+
 var (
 	errReceiptWrite   = errors.New("receipt write failed")
 	errRuntimeCleanup = errors.New("runtime cleanup failed")
@@ -92,11 +108,15 @@ var (
 
 type failingReceiptLedger struct {
 	fakeLedgerClient
-	err error
+	err          error
+	beforeReturn func()
 }
 
 func (l *failingReceiptLedger) RecordReceipt(context.Context, clients.ReceiptInput, string) (clients.Receipt, error) {
 	*l.calls = append(*l.calls, "ledger.receipt")
+	if l.beforeReturn != nil {
+		l.beforeReturn()
+	}
 	return clients.Receipt{}, l.err
 }
 
@@ -104,11 +124,15 @@ type compensatingFabricClient struct {
 	fakeFabricClient
 	destroyedWorkspaceID string
 	destroyErr           error
+	destroyCtxErr        error
+	destroyHasDeadline   bool
 }
 
-func (f *compensatingFabricClient) DestroyWorkspaceRuntime(_ context.Context, workspaceID, _ string) (clients.WorkspaceRuntime, error) {
+func (f *compensatingFabricClient) DestroyWorkspaceRuntime(ctx context.Context, workspaceID, _ string) (clients.WorkspaceRuntime, error) {
 	*f.calls = append(*f.calls, "fabric.runtime-destroy")
 	f.destroyedWorkspaceID = workspaceID
+	f.destroyCtxErr = ctx.Err()
+	_, f.destroyHasDeadline = ctx.Deadline()
 	return clients.WorkspaceRuntime{WorkspaceID: workspaceID, Status: "destroyed"}, f.destroyErr
 }
 

@@ -300,6 +300,25 @@ func TestDestroyWorkspaceRuntimeReturnsDiscoveryFailure(t *testing.T) {
 	}
 }
 
+func TestDestroyWorkspaceRuntimeDeletesSecretOnlyRemnant(t *testing.T) {
+	provider := NewTencentProvider()
+	var calls [][]string
+	provider.kubectl = func(_ context.Context, args []string, _ []byte) ([]byte, error) {
+		calls = append(calls, append([]string(nil), args...))
+		if args[0] == "get" {
+			return []byte(`{"items":[{"kind":"Secret","metadata":{"name":"opl-compute-alpha-env","labels":{"oplcloud.cn/workspace-id":"ws-alpha"}}}]}`), nil
+		}
+		return nil, nil
+	}
+
+	if _, err := provider.DestroyWorkspaceRuntime(context.Background(), "ws-alpha"); err != nil {
+		t.Fatal(err)
+	}
+	if len(calls) != 2 || calls[0][1] != "deployment,service,secret" || !slices.Contains(calls[1], "secret/opl-compute-alpha-env") || slices.Contains(calls[1], "ingress/opl-cloud") {
+		t.Fatalf("kubectl calls = %#v", calls)
+	}
+}
+
 func TestRuntimeAccessFromMissingWorkspaceSecret(t *testing.T) {
 	access, check := runtimeAccessFromSecret(nil, "opl-compute-alpha-env")
 	if access.Password != "" || access.CredentialStatus != "missing" || access.SecretRef != "opl-compute-alpha-env" || check.OK {

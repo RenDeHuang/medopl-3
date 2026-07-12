@@ -406,7 +406,7 @@ func (p *TencentProvider) CreateWorkspaceRuntime(ctx context.Context, input Work
 }
 
 func (p *TencentProvider) DestroyWorkspaceRuntime(ctx context.Context, workspaceID string) (WorkspaceRuntime, error) {
-	serviceName, _, err := p.workspaceRuntimeResourcesStrict(ctx, workspaceID)
+	serviceName, _, err := p.workspaceRuntimeResourcesStrict(ctx, workspaceID, true)
 	if err != nil {
 		return WorkspaceRuntime{}, err
 	}
@@ -513,15 +513,19 @@ func (p *TencentProvider) Readiness(ctx context.Context) (map[string]any, error)
 }
 
 func (p *TencentProvider) workspaceRuntimeResources(ctx context.Context, workspaceID string) (string, string) {
-	serviceName, pvcName, _ := p.workspaceRuntimeResourcesStrict(ctx, workspaceID)
+	serviceName, pvcName, _ := p.workspaceRuntimeResourcesStrict(ctx, workspaceID, false)
 	return serviceName, pvcName
 }
 
-func (p *TencentProvider) workspaceRuntimeResourcesStrict(ctx context.Context, workspaceID string) (string, string, error) {
+func (p *TencentProvider) workspaceRuntimeResourcesStrict(ctx context.Context, workspaceID string, includeSecret bool) (string, string, error) {
 	if strings.TrimSpace(workspaceID) == "" {
 		return "", "", nil
 	}
-	raw, err := p.kubectl(ctx, []string{"get", "deployment,service", "-l", "oplcloud.cn/workspace-id=" + workspaceID, "-o", "json"}, nil)
+	resourceKinds := "deployment,service"
+	if includeSecret {
+		resourceKinds += ",secret"
+	}
+	raw, err := p.kubectl(ctx, []string{"get", resourceKinds, "-l", "oplcloud.cn/workspace-id=" + workspaceID, "-o", "json"}, nil)
 	if err != nil {
 		return "", "", err
 	}
@@ -529,6 +533,10 @@ func (p *TencentProvider) workspaceRuntimeResourcesStrict(ctx context.Context, w
 	deployment := findK8sByLabel(items, "Deployment", "oplcloud.cn/workspace-id", workspaceID)
 	service := findK8sByLabel(items, "Service", "oplcloud.cn/workspace-id", workspaceID)
 	serviceName := firstNonEmpty(stringValue(nested(deployment, "metadata", "name")), stringValue(nested(service, "metadata", "name")))
+	secretName := stringValue(nested(findK8sByLabel(items, "Secret", "oplcloud.cn/workspace-id", workspaceID), "metadata", "name"))
+	if serviceName == "" && strings.HasSuffix(secretName, "-env") {
+		serviceName = strings.TrimSuffix(secretName, "-env")
+	}
 	return serviceName, firstPVCClaimName(deployment), nil
 }
 
