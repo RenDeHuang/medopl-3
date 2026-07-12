@@ -1099,6 +1099,11 @@ func (f *fakeFabricClient) CreateWorkspaceRuntime(_ context.Context, input clien
 	return clients.WorkspaceRuntime{ID: "runtime-from-fabric", WorkspaceID: input.WorkspaceID, URL: "https://workspace.medopl.cn/w/ws-from-fabric/", Status: "running", ServiceName: "opl-compute-from-fabric", Access: clients.WorkspaceRuntimeAccess{Username: "admin", Password: "runtime-password-alpha", CredentialStatus: "configured", CredentialVersion: "v1", SecretRef: "opl-compute-from-fabric-env"}, Ready: true}, nil
 }
 
+func (f *fakeFabricClient) DestroyWorkspaceRuntime(_ context.Context, workspaceID, _ string) (clients.WorkspaceRuntime, error) {
+	f.record("fabric.runtime-destroy")
+	return clients.WorkspaceRuntime{WorkspaceID: workspaceID, Status: "destroyed"}, nil
+}
+
 func (f *fakeFabricClient) WorkspaceRuntimeStatus(_ context.Context, workspaceID string) (clients.WorkspaceRuntime, error) {
 	f.record("fabric.runtime-status")
 	return clients.WorkspaceRuntime{

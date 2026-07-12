@@ -405,6 +405,19 @@ func (p *TencentProvider) CreateWorkspaceRuntime(ctx context.Context, input Work
 	return runtime, nil
 }
 
+func (p *TencentProvider) DestroyWorkspaceRuntime(ctx context.Context, workspaceID string) (WorkspaceRuntime, error) {
+	serviceName, _, err := p.workspaceRuntimeResourcesStrict(ctx, workspaceID)
+	if err != nil {
+		return WorkspaceRuntime{}, err
+	}
+	if serviceName != "" {
+		if _, err := p.kubectl(ctx, []string{"delete", "deployment/" + serviceName, "service/" + serviceName, "secret/" + serviceName + "-env", "--ignore-not-found=true"}, nil); err != nil {
+			return WorkspaceRuntime{}, err
+		}
+	}
+	return WorkspaceRuntime{WorkspaceID: workspaceID, Status: "destroyed", ServiceName: serviceName}, nil
+}
+
 func (p *TencentProvider) WorkspaceRuntimeStatus(ctx context.Context, workspaceID string) (WorkspaceRuntime, error) {
 	serviceName, pvcName := p.workspaceRuntimeResources(ctx, workspaceID)
 	if serviceName == "" || pvcName == "" {
@@ -500,18 +513,23 @@ func (p *TencentProvider) Readiness(ctx context.Context) (map[string]any, error)
 }
 
 func (p *TencentProvider) workspaceRuntimeResources(ctx context.Context, workspaceID string) (string, string) {
+	serviceName, pvcName, _ := p.workspaceRuntimeResourcesStrict(ctx, workspaceID)
+	return serviceName, pvcName
+}
+
+func (p *TencentProvider) workspaceRuntimeResourcesStrict(ctx context.Context, workspaceID string) (string, string, error) {
 	if strings.TrimSpace(workspaceID) == "" {
-		return "", ""
+		return "", "", nil
 	}
 	raw, err := p.kubectl(ctx, []string{"get", "deployment,service", "-l", "oplcloud.cn/workspace-id=" + workspaceID, "-o", "json"}, nil)
 	if err != nil {
-		return "", ""
+		return "", "", err
 	}
 	items := kubectlItems(raw)
 	deployment := findK8sByLabel(items, "Deployment", "oplcloud.cn/workspace-id", workspaceID)
 	service := findK8sByLabel(items, "Service", "oplcloud.cn/workspace-id", workspaceID)
 	serviceName := firstNonEmpty(stringValue(nested(deployment, "metadata", "name")), stringValue(nested(service, "metadata", "name")))
-	return serviceName, firstPVCClaimName(deployment)
+	return serviceName, firstPVCClaimName(deployment), nil
 }
 
 func (p *TencentProvider) PublishWorkspaceContent(ctx context.Context, workspaceID, targetPath string, body []byte) error {

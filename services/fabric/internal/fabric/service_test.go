@@ -501,6 +501,20 @@ func TestCreateWorkspaceRuntimeReplaysIdempotentlyBeforeProvider(t *testing.T) {
 	}
 }
 
+func TestDestroyWorkspaceRuntimeReplaysIdempotentlyBeforeProvider(t *testing.T) {
+	provider := &countingRuntimeProvider{}
+	service := NewServiceWithOperationStore(provider, NewMemoryOperationStore())
+
+	first, err := service.DestroyWorkspaceRuntime(context.Background(), "workspace-alpha", "runtime-destroy-once")
+	if err != nil {
+		t.Fatalf("destroy runtime: %v", err)
+	}
+	replayed, err := service.DestroyWorkspaceRuntime(context.Background(), "workspace-alpha", "runtime-destroy-once")
+	if err != nil || replayed.Status != "destroyed" || first.WorkspaceID != "workspace-alpha" || provider.destroyCalls.Load() != 1 {
+		t.Fatalf("destroy replay = %#v err=%v providerCalls=%d", replayed, err, provider.destroyCalls.Load())
+	}
+}
+
 func TestCreateWorkspaceRuntimeClaimsAcrossServiceInstances(t *testing.T) {
 	provider := &blockingRuntimeProvider{entered: make(chan struct{}), release: make(chan struct{})}
 	store := NewMemoryOperationStore()
@@ -639,12 +653,18 @@ type testProvider struct{}
 
 type countingRuntimeProvider struct {
 	testProvider
-	calls atomic.Int32
+	calls        atomic.Int32
+	destroyCalls atomic.Int32
 }
 
 func (p *countingRuntimeProvider) CreateWorkspaceRuntime(_ context.Context, input WorkspaceRuntimeInput, _ ComputeAllocation, _ StorageVolume) (WorkspaceRuntime, error) {
 	p.calls.Add(1)
 	return WorkspaceRuntime{ID: "runtime-alpha", WorkspaceID: input.WorkspaceID, Status: "running", Ready: true, ServiceName: "opl-compute-alpha", ProviderRequestID: providerRequestID("runtime", input.IdempotencyKey)}, nil
+}
+
+func (p *countingRuntimeProvider) DestroyWorkspaceRuntime(_ context.Context, workspaceID string) (WorkspaceRuntime, error) {
+	p.destroyCalls.Add(1)
+	return WorkspaceRuntime{WorkspaceID: workspaceID, Status: "destroyed"}, nil
 }
 
 type blockingRuntimeProvider struct {
@@ -735,6 +755,10 @@ func (testProvider) DetachStorageAttachment(_ context.Context, attachment Storag
 
 func (testProvider) CreateWorkspaceRuntime(_ context.Context, input WorkspaceRuntimeInput, _ ComputeAllocation, _ StorageVolume) (WorkspaceRuntime, error) {
 	return WorkspaceRuntime{ID: "rt-test", WorkspaceID: input.WorkspaceID, Status: "running", ServiceName: "opl-ca-test", ProviderRequestID: providerRequestID("runtime", input.IdempotencyKey), Access: RuntimeAccess{Username: "admin", Password: "runtime-password-alpha", CredentialStatus: "configured", CredentialVersion: "v1", SecretRef: "opl-ca-test-env"}}, nil
+}
+
+func (testProvider) DestroyWorkspaceRuntime(_ context.Context, workspaceID string) (WorkspaceRuntime, error) {
+	return WorkspaceRuntime{WorkspaceID: workspaceID, Status: "destroyed"}, nil
 }
 
 func (testProvider) WorkspaceRuntimeStatus(_ context.Context, workspaceID string) (WorkspaceRuntime, error) {

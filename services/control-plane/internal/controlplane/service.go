@@ -617,7 +617,8 @@ func (s *Service) CreateWorkspace(ctx context.Context, input CreateWorkspaceInpu
 	}
 	receipt, err := s.ledger.RecordReceipt(ctx, clients.ReceiptInput{Type: "workspace.created", Status: "completed", Surface: "workspace", WorkspaceID: workspaceID, JobID: runtime.ID, Execution: map[string]any{"providerRequestId": runtime.ID}, OutputRefs: map[string]any{"redactedUrl": runtime.URL}, Continuation: map[string]any{"action": "open_workspace_url", "tokenVersion": "v1", "redactedUrl": runtime.URL}}, idempotencyKey+":receipt")
 	if err != nil {
-		return domain.WorkspaceProjection{}, err
+		_, cleanupErr := s.fabric.DestroyWorkspaceRuntime(ctx, workspaceID, idempotencyKey+":runtime-compensation")
+		return domain.WorkspaceProjection{}, errors.Join(err, cleanupErr)
 	}
 
 	return domain.WorkspaceProjection{
