@@ -9,6 +9,8 @@ import test from "node:test";
 import {
   DEFAULT_SOAK_DURATION_MS,
   SOAK_SLOT_COUNT,
+  manifestsFromArtifactDir,
+  productionSoakEvidenceCheck,
   runProductionSoak,
   validateSoakManifests
 } from "../../tools/production-soak-coordinator.ts";
@@ -53,6 +55,72 @@ function argument(args, name) {
 
 function immediate() {
   return new Promise((resolve) => setImmediate(resolve));
+}
+
+function terminalState(item) {
+  const computeIds = [item.ids.computeAllocationId, item.ids.replacementComputeAllocationId].filter(Boolean);
+  const attachmentIds = [item.ids.attachmentId, item.ids.replacementAttachmentId].filter(Boolean);
+  const workspaceIds = [item.ids.workspaceId, item.ids.replacementWorkspaceId].filter(Boolean);
+  const computeAllocations = computeIds.map((id) => ({
+    id,
+    accountId: item.accountId,
+    name: id === item.ids.replacementComputeAllocationId ? item.resourceNames.replacementCompute : item.resourceNames.compute,
+    status: "destroyed",
+    billingStatus: "stopped",
+    holdId: id === item.ids.replacementComputeAllocationId ? item.holdIds.replacementCompute : item.holdIds.compute,
+    holdReleaseId: `release-${id}`,
+    machineName: item.machineIdentities[id].machineId,
+    instanceId: item.machineIdentities[id].instanceId,
+    nodeName: item.machineIdentities[id].nodeName
+  }));
+  const storageVolumes = [{
+    id: item.ids.storageId,
+    accountId: item.accountId,
+    name: item.resourceNames.storage,
+    status: "destroyed",
+    billingStatus: "stopped",
+    holdId: item.holdIds.storage,
+    holdReleaseId: `release-${item.ids.storageId}`
+  }];
+  return {
+    computeAllocations,
+    storageVolumes,
+    storageAttachments: attachmentIds.map((id) => ({
+      id,
+      accountId: item.accountId,
+      status: "detached",
+      computeAllocationId: id === item.ids.replacementAttachmentId ? item.ids.replacementComputeAllocationId : item.ids.computeAllocationId,
+      storageId: item.ids.storageId
+    })),
+    workspaces: workspaceIds.map((id) => ({
+      id,
+      accountId: item.accountId,
+      name: id === item.ids.replacementWorkspaceId ? item.resourceNames.replacementWorkspace : item.resourceNames.workspace,
+      state: "data_deleted",
+      status: "unrecoverable",
+      computeAllocationId: "",
+      currentComputeAllocationId: "",
+      attachmentId: "",
+      currentAttachmentId: "",
+      storageId: item.ids.storageId,
+      openable: false,
+      accessState: "disabled",
+      access: { tokenStatus: "disabled" }
+    })),
+    billingLedger: [...computeAllocations, ...storageVolumes].map((row) => ({
+      id: row.holdReleaseId,
+      accountId: item.accountId,
+      resourceId: row.id,
+      type: `${computeIds.includes(row.id) ? "compute" : "storage"}_hold_released`
+    }))
+  };
+}
+
+function jsonResponse(payload, init = {}) {
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: { "content-type": "application/json", ...(init.headers || {}) }
+  });
 }
 
 test("production soak is exactly five slots for a bounded 15 minutes", () => {
@@ -105,7 +173,14 @@ test("coordinator releases only after all five are ready, polls evidence, and wa
     const readyFile = argument(args, "--ready-file");
     const releaseFile = argument(args, "--release-file");
     queueMicrotask(async () => {
-      await writeFile(manifestPath, JSON.stringify(manifest(Number(slot), { runId })));
+      await writeFile(manifestPath, JSON.stringify(manifest(Number(slot), {
+        runId,
+        resourceNames: {
+          compute: `Production Verification Lab ${runId} compute ${runId}`,
+          storage: `Production Verification Lab ${runId} storage ${runId}`,
+          workspace: `Production Verification Lab ${runId}`
+        }
+      })));
       await writeFile(readyFile, "{}\n");
       ready.add(slot);
       while (true) {
@@ -123,6 +198,7 @@ test("coordinator releases only after all five are ready, polls evidence, and wa
     return child;
   };
   let evidenceCalls = 0;
+  let now = 0;
 
   const result = await runProductionSoak({
     origin: "https://cloud.medopl.cn",
@@ -133,7 +209,8 @@ test("coordinator releases only after all five are ready, polls evidence, and wa
     evidenceIntervalMs: 3,
     readyPollMs: 1,
     spawnImpl,
-    sleepImpl: immediate,
+    nowImpl: () => now,
+    sleepImpl: async (ms) => { now += ms; await immediate(); },
     evidenceCheck: async ({ phase, manifests }) => {
       evidenceCalls += 1;
       assert.equal(manifests.length, 5);
@@ -148,11 +225,206 @@ test("coordinator releases only after all five are ready, polls evidence, and wa
   }
   assert.deepEqual(releasedAt, [5, 5, 5, 5, 5]);
   assert.equal(exited.size, 5);
-  assert.equal(evidenceCalls, 5, "barrier + three soak polls + final zero-residual check");
+  assert.equal(evidenceCalls, 4, "barrier + two in-deadline soak polls + final terminal check");
   assert.equal(result.ok, true);
   assert.deepEqual(result.children.map((child) => child.exitCode), [0, 0, 0, 0, 0]);
   assert.equal(children.length, 5);
   assert.equal(JSON.parse(await readFile(join(root, "result.json"), "utf8")).ok, true);
+});
+
+test("soak deadline aborts hung evidence, releases children, and awaits exact cleanup", async () => {
+  const root = await mkdtemp(join(tmpdir(), "production-soak-timeout-"));
+  const cleaned = new Set();
+  const spawnImpl = (_command, args) => {
+    const child = new FakeChild();
+    const slot = argument(args, "--slot");
+    const runId = argument(args, "--run-id");
+    const manifestPath = argument(args, "--manifest-path");
+    const readyFile = argument(args, "--ready-file");
+    const releaseFile = argument(args, "--release-file");
+    queueMicrotask(async () => {
+      await writeFile(manifestPath, JSON.stringify(manifest(Number(slot), {
+        runId,
+        resourceNames: {
+          compute: `Production Verification Lab ${runId} compute ${runId}`,
+          storage: `Production Verification Lab ${runId} storage ${runId}`,
+          workspace: `Production Verification Lab ${runId}`
+        }
+      })));
+      await writeFile(readyFile, "{}\n");
+      while (true) {
+        try {
+          await access(releaseFile);
+          break;
+        } catch {
+          await immediate();
+        }
+      }
+      cleaned.add(slot);
+      child.emit("close", 0, null);
+    });
+    return child;
+  };
+  let now = 100;
+
+  await assert.rejects(
+    runProductionSoak({
+      origin: "https://cloud.medopl.cn",
+      accountId: "account-production",
+      baseRunId: "soak-timeout",
+      artifactDir: root,
+      soakDurationMs: 9,
+      evidenceIntervalMs: 3,
+      readyPollMs: 1,
+      spawnImpl,
+      nowImpl: () => now,
+      sleepImpl: immediate,
+      setTimeoutImpl: (callback, delay) => {
+        const timer = { cancelled: false, handle: null };
+        timer.handle = setImmediate(() => {
+          if (!timer.cancelled) {
+            now += delay;
+            callback();
+          }
+        });
+        return timer;
+      },
+      clearTimeoutImpl: (timer) => {
+        timer.cancelled = true;
+        clearImmediate(timer.handle);
+      },
+      evidenceCheck: ({ phase, signal, deadline }) => {
+        if (phase === "final") return Promise.resolve({ controlPlaneTerminalResources: 0 });
+        assert.ok(signal instanceof AbortSignal);
+        assert.equal(deadline, 109);
+        return new Promise(() => {});
+      }
+    }),
+    /production_soak_evidence_timeout/
+  );
+
+  assert.equal(now, 109, "evidence latency must consume, not extend, the hold deadline");
+  assert.equal(cleaned.size, 5, "deadline failure must release and await all ready children");
+});
+
+test("final evidence accepts exact persisted terminal projections and rejects bad release proof", async () => {
+  const primary = manifest(1);
+  const item = {
+    ...primary,
+    resourceNames: {
+      ...primary.resourceNames,
+      replacementCompute: `${primary.resourceNames.workspace} replacement compute ${primary.runId}`,
+      replacementWorkspace: primary.resourceNames.workspace
+    },
+    ids: {
+      ...primary.ids,
+      replacementComputeAllocationId: "compute-replacement-01",
+      replacementAttachmentId: "attachment-replacement-01",
+      replacementWorkspaceId: "workspace-replacement-01"
+    },
+    holdIds: { ...primary.holdIds, replacementCompute: "hold-compute-replacement-01" },
+    machineIdentities: {
+      ...primary.machineIdentities,
+      "compute-replacement-01": {
+        machineId: "machine-replacement-01",
+        instanceId: "instance-replacement-01",
+        nodeName: "node-replacement-01"
+      }
+    }
+  };
+  const state = terminalState(item);
+  const seenSignals = [];
+  const fetchImpl = async (url, options) => {
+    seenSignals.push(options.signal);
+    if (String(url).endsWith("/api/auth/operator-login")) {
+      return jsonResponse({ csrfToken: "csrf" }, { headers: { "set-cookie": "session=operator", "x-opl-csrf-token": "csrf" } });
+    }
+    return jsonResponse(state);
+  };
+  const signal = new AbortController().signal;
+
+  assert.deepEqual(
+    await productionSoakEvidenceCheck({
+      phase: "final",
+      manifests: [item],
+      origin: "https://cloud.medopl.cn",
+      operatorToken: "operator",
+      fetchImpl,
+      signal,
+      deadline: Date.now() + 1000
+    }),
+    { controlPlaneTerminalResources: 7, missingSlots: 0 }
+  );
+  assert.deepEqual(seenSignals, [signal, signal], "operator login and management state must share the deadline signal");
+
+  for (const mutate of [
+    (copy) => { copy.computeAllocations[0].name = "other-run"; },
+    (copy) => { copy.computeAllocations[0].instanceId = "instance-other"; },
+    (copy) => { copy.computeAllocations[0].holdId = "wrong-hold"; },
+    (copy) => { copy.billingLedger[0].id = "wrong-release"; },
+    (copy) => { copy.billingLedger.push({ ...copy.billingLedger[0] }); },
+    (copy) => { copy.billingLedger.push({ ...copy.billingLedger[0], id: "extra-wrong-release" }); },
+    (copy) => { copy.workspaces[0].access.tokenStatus = "active"; }
+  ]) {
+    const invalid = structuredClone(state);
+    mutate(invalid);
+    await assert.rejects(
+      productionSoakEvidenceCheck({
+        phase: "final",
+        manifests: [item],
+        origin: "https://cloud.medopl.cn",
+        operatorToken: "operator",
+        fetchImpl: async (url) => String(url).endsWith("/api/auth/operator-login")
+          ? jsonResponse({ csrfToken: "csrf" }, { headers: { "set-cookie": "session=operator" } })
+          : jsonResponse(invalid),
+        signal
+      }),
+      /production_soak_terminal_evidence_invalid/
+    );
+  }
+});
+
+test("residual verification loads partial manifests and checks missing slots by exact run label", async () => {
+  const root = await mkdtemp(join(tmpdir(), "production-soak-partial-"));
+  const first = manifest(1);
+  await writeFile(join(root, "result.json"), JSON.stringify({
+    accountId: first.accountId,
+    slots: Array.from({ length: 5 }, (_, index) => ({ slot: String(index + 1).padStart(2, "0"), runId: `soak-run-${String(index + 1).padStart(2, "0")}` }))
+  }));
+  await writeFile(join(root, "manifest-01.json"), JSON.stringify(first));
+
+  const loaded = await manifestsFromArtifactDir(root);
+  assert.equal(loaded.length, 5);
+  assert.equal(loaded.filter((item) => item.missing).length, 4);
+  const state = terminalState(first);
+  assert.deepEqual(
+    await productionSoakEvidenceCheck({
+      phase: "final",
+      manifests: loaded,
+      origin: "https://cloud.medopl.cn",
+      operatorToken: "operator",
+      fetchImpl: async (url) => String(url).endsWith("/api/auth/operator-login")
+        ? jsonResponse({ csrfToken: "csrf" }, { headers: { "set-cookie": "session=operator" } })
+        : jsonResponse(state),
+      signal: new AbortController().signal
+    }),
+    { controlPlaneTerminalResources: 4, missingSlots: 4 }
+  );
+
+  state.computeAllocations.push({ id: "unknown", accountId: first.accountId, name: "Production Verification Lab soak-run-03", status: "running", billingStatus: "active" });
+  await assert.rejects(
+    productionSoakEvidenceCheck({
+      phase: "final",
+      manifests: loaded,
+      origin: "https://cloud.medopl.cn",
+      operatorToken: "operator",
+      fetchImpl: async (url) => String(url).endsWith("/api/auth/operator-login")
+        ? jsonResponse({ csrfToken: "csrf" }, { headers: { "set-cookie": "session=operator" } })
+        : jsonResponse(state),
+      signal: new AbortController().signal
+    }),
+    /production_soak_terminal_evidence_invalid/
+  );
 });
 
 test("one child failure releases ready peers and waits for every verifier cleanup", async () => {

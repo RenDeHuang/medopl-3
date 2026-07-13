@@ -131,7 +131,7 @@ jobs:
             action: "capacity_preflight",
             packageId: "basic",
             pool: {
-              id: "pool-basic-2c4g",
+              id: "basic",
               instanceType: process.env.OPL_BASIC_COMPUTE_INSTANCE_TYPE,
               nodePoolId: process.env.OPL_BASIC_COMPUTE_NODE_POOL_ID,
               desiredReplicas: requiredCapacity
@@ -181,7 +181,7 @@ jobs:
           set -euo pipefail
           node tools/production-soak-coordinator.ts
 
-      - name: Verify exact zero residuals
+      - name: Verify control-plane terminal evidence
         if: always() && steps.soak.outcome != 'skipped'
         shell: bash
         run: |

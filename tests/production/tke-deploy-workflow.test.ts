@@ -121,6 +121,22 @@ test("production verifier workflow always cleans failed paid resources", async (
   assert.equal(currentJob.env.OPL_VERIFY_PACKAGE_ID, "basic");
 });
 
+test("production resource workflows share the non-cancelling concurrency lock", async () => {
+  for (const file of [
+    "provision-manual-workspace.yml",
+    "cleanup-console-resource-residual.yml",
+    "cleanup-tke-compute-residual.yml",
+    "cleanup-tke-nodepool-machines.yml",
+    "deploy-tke-production.yml",
+    "verify-production-chain.yml",
+    "verify-production-soak.yml"
+  ]) {
+    const workflow = await readWorkflow(new URL(`../../.github/workflows/${file}`, import.meta.url));
+    assert.equal(workflow.concurrency?.group, "production-resource-verification", file);
+    assert.equal(workflow.concurrency?.["cancel-in-progress"], false, file);
+  }
+});
+
 test("production soak workflow is paid, capacity-gated, non-overlapping, and cleanup-exact", async () => {
   const workflow = await readWorkflow(new URL("../../.github/workflows/verify-production-soak.yml", import.meta.url));
   const currentJob = job(workflow, "soak");
@@ -141,6 +157,8 @@ test("production soak workflow is paid, capacity-gated, non-overlapping, and cle
   assert.match(serializedStep(stepMap.get("Prepare kubeconfig and evidence directory")), /TENCENT_DEPLOY_CLUSTER_ID/);
   assert.match(serializedStep(stepMap.get("Prepare kubeconfig and evidence directory")), /OPL_BASIC_COMPUTE_INSTANCE_TYPE/);
   assert.match(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /action:\s*"capacity_preflight"/);
+  assert.match(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /id:\s*"basic"/);
+  assert.doesNotMatch(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /id:\s*"pool-basic-2c4g"/);
   assert.match(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /DescribeAccountQuota|remainingQuota/);
   assert.match(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /DescribeZoneInstanceConfigInfos|instanceAvailable/);
   assert.match(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /DescribeNodePools|nodePool/);
@@ -151,7 +169,7 @@ test("production soak workflow is paid, capacity-gated, non-overlapping, and cle
   assert.match(serializedStep(stepMap.get("Run five-machine production soak")), /tools\/production-soak-coordinator\.ts/);
   assert.equal(stepMap.get("Upload soak manifests, results, and evidence").if, "always()");
   assert.equal(stepMap.get("Remove temporary credentials").if, "always()");
-  assert.match(serializedStep(stepMap.get("Verify exact zero residuals")), /production-soak-coordinator\.ts/);
+  assert.match(serializedStep(stepMap.get("Verify control-plane terminal evidence")), /production-soak-coordinator\.ts/);
   assert.doesNotMatch(runs, /cleanup-console-resource-residual|cleanup-tke-compute-residual|cleanup-tke-nodepool-machines/);
   assert.doesNotMatch(runs, /ScaleNodePool|kubectl[^\n]*delete|rollout restart|deployment[^\n]*restart/);
 });

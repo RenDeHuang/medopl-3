@@ -61,8 +61,11 @@ function assertDistinct(values, label) {
   if (new Set(values).size !== values.length) throw new Error(`production_soak_identity_duplicate:${label}`);
 }
 
-export function validateSoakManifests(manifests, { accountId, runIds }) {
-  if (!Array.isArray(manifests) || manifests.length !== SOAK_SLOT_COUNT || runIds?.length !== SOAK_SLOT_COUNT) {
+export function validateSoakManifests(manifests, { accountId, runIds, requireAll = true }) {
+  if (
+    !Array.isArray(manifests) || runIds?.length !== SOAK_SLOT_COUNT ||
+    (requireAll ? manifests.length !== SOAK_SLOT_COUNT : manifests.length > SOAK_SLOT_COUNT)
+  ) {
     throw new Error("production_soak_manifest_invalid");
   }
   const expectedRuns = new Set(runIds);
@@ -273,55 +276,145 @@ function assertActiveEvidence(state, manifests) {
   return { activeSlots: manifests.length };
 }
 
-function assertZeroResiduals(state, manifests) {
-  const fields = [
-    ["computeAllocations", ["computeAllocationId", "replacementComputeAllocationId"]],
-    ["storageVolumes", ["storageId"]],
-    ["storageAttachments", ["attachmentId", "replacementAttachmentId"]],
-    ["workspaces", ["workspaceId", "replacementWorkspaceId"]]
-  ];
-  const residuals = [];
-  for (const manifest of manifests) {
-    for (const [field, keys] of fields) {
-      for (const key of keys) {
-        const id = manifest.ids?.[key];
-        if (id && (state[field] || []).some((resource) => resource.id === id && resourceAccountId(resource) === manifest.accountId)) {
-          residuals.push({ field, id, runId: manifest.runId });
-        }
-      }
-    }
-    for (const [resourceType, keys] of [
-      ["compute", ["computeAllocationId", "replacementComputeAllocationId"]],
-      ["storage", ["storageId"]]
-    ]) {
-      for (const key of keys) {
-        const resourceId = manifest.ids?.[key];
-        if (!resourceId) continue;
-        const releases = (state.billingLedger || []).filter((entry) =>
-          entry.accountId === manifest.accountId && entry.resourceId === resourceId && entry.type === `${resourceType}_hold_released`
-        );
-        if (releases.length !== 1) residuals.push({ field: "billingLedger", id: resourceId, runId: manifest.runId });
-      }
-    }
-  }
-  if (residuals.length) {
-    const error = new Error("production_soak_residuals_found");
-    error.residuals = residuals;
-    throw error;
-  }
-  return { residuals: 0 };
+function terminalEvidenceError(details) {
+  const error = new Error("production_soak_terminal_evidence_invalid");
+  error.terminalEvidence = details;
+  return error;
 }
 
-export async function productionSoakEvidenceCheck({ phase, manifests, origin, operatorToken, fetchImpl = globalThis.fetch }) {
-  const state = await readProductionManagementState({ fetchImpl, origin, operatorToken });
-  return phase === "final" ? assertZeroResiduals(state, manifests) : assertActiveEvidence(state, manifests);
+function terminalRow(rows, id, accountId, field, runId) {
+  const matches = (rows || []).filter((row) => row?.id === id && resourceAccountId(row) === accountId);
+  if (matches.length !== 1) throw terminalEvidenceError([{ field, id, runId }]);
+  return matches[0];
+}
+
+function hasExactRunLabel(row, runId) {
+  return [row?.runId, row?.name, row?.resourceName, row?.idempotencyKey, row?.sourceEventId]
+    .some((candidate) => String(candidate || "").split(/[^A-Za-z0-9._-]+/).includes(runId));
+}
+
+function assertControlPlaneTerminalEvidence(state, manifests) {
+  const invalid = [];
+  let terminalResources = 0;
+  for (const manifest of manifests) {
+    if (manifest.missing) {
+      const fields = ["computeAllocations", "storageVolumes", "storageAttachments", "workspaces", "runtimeOperations"];
+      if (fields.some((field) => (state[field] || []).some((row) => resourceAccountId(row) === manifest.accountId && hasExactRunLabel(row, manifest.runId)))) {
+        invalid.push({ field: "runLabel", runId: manifest.runId });
+      }
+      continue;
+    }
+    const ids = manifest.ids || {};
+    for (const [key, holdKey] of [
+      ["computeAllocationId", "compute"],
+      ["replacementComputeAllocationId", "replacementCompute"]
+    ]) {
+      const resourceId = ids[key];
+      if (!resourceId) continue;
+      const row = terminalRow(state.computeAllocations, resourceId, manifest.accountId, "computeAllocations", manifest.runId);
+      const expectedName = key === "replacementComputeAllocationId"
+        ? (manifest.resourceNames?.replacementCompute || manifest.resourceNames?.compute)
+        : manifest.resourceNames?.compute;
+      const identity = manifest.machineIdentities?.[resourceId] || {};
+      if (
+        row.name !== expectedName || row.status !== "destroyed" || row.billingStatus !== "stopped" ||
+        row.holdId !== manifest.holdIds?.[holdKey] || !row.holdReleaseId ||
+        row.machineName !== identity.machineId || (row.instanceId || row.cvmInstanceId) !== identity.instanceId ||
+        row.nodeName !== identity.nodeName
+      ) {
+        invalid.push({ field: "computeAllocations", id: resourceId, runId: manifest.runId });
+      } else {
+        const releases = (state.billingLedger || []).filter((entry) =>
+          entry.accountId === manifest.accountId && entry.resourceId === resourceId && entry.type === "compute_hold_released"
+        );
+        if (releases.length !== 1 || releases[0].id !== row.holdReleaseId) {
+          invalid.push({ field: "billingLedger", id: resourceId, runId: manifest.runId });
+        }
+      }
+      terminalResources += 1;
+    }
+    const storage = terminalRow(state.storageVolumes, ids.storageId, manifest.accountId, "storageVolumes", manifest.runId);
+    if (
+      storage.name !== manifest.resourceNames?.storage || storage.status !== "destroyed" || storage.billingStatus !== "stopped" ||
+      storage.holdId !== manifest.holdIds?.storage || !storage.holdReleaseId
+    ) {
+      invalid.push({ field: "storageVolumes", id: ids.storageId, runId: manifest.runId });
+    } else {
+      const releases = (state.billingLedger || []).filter((entry) =>
+        entry.accountId === manifest.accountId && entry.resourceId === ids.storageId &&
+        entry.type === "storage_hold_released"
+      );
+      if (releases.length !== 1 || releases[0].id !== storage.holdReleaseId) {
+        invalid.push({ field: "billingLedger", id: ids.storageId, runId: manifest.runId });
+      }
+    }
+    terminalResources += 1;
+
+    for (const [attachmentKey, computeKey] of [
+      ["attachmentId", "computeAllocationId"],
+      ["replacementAttachmentId", "replacementComputeAllocationId"]
+    ]) {
+      const attachmentId = ids[attachmentKey];
+      if (!attachmentId) continue;
+      const attachment = terminalRow(state.storageAttachments, attachmentId, manifest.accountId, "storageAttachments", manifest.runId);
+      if (
+        !["detached", "deleted"].includes(attachment.status) ||
+        attachment.computeAllocationId !== ids[computeKey] || attachment.storageId !== ids.storageId
+      ) invalid.push({ field: "storageAttachments", id: attachmentId, runId: manifest.runId });
+      terminalResources += 1;
+    }
+
+    for (const workspaceKey of ["workspaceId", "replacementWorkspaceId"]) {
+      const workspaceId = ids[workspaceKey];
+      if (!workspaceId) continue;
+      const workspace = terminalRow(state.workspaces, workspaceId, manifest.accountId, "workspaces", manifest.runId);
+      const expectedName = workspaceKey === "replacementWorkspaceId"
+        ? (manifest.resourceNames?.replacementWorkspace || manifest.resourceNames?.workspace)
+        : manifest.resourceNames?.workspace;
+      if (
+        workspace.name !== expectedName || workspace.state !== "data_deleted" || workspace.status !== "unrecoverable" ||
+        workspace.storageId !== ids.storageId || workspace.computeAllocationId || workspace.currentComputeAllocationId ||
+        workspace.attachmentId || workspace.currentAttachmentId || workspace.access?.tokenStatus !== "disabled" ||
+        workspace.openable !== false || workspace.accessState !== "disabled"
+      ) invalid.push({ field: "workspaces", id: workspaceId, runId: manifest.runId });
+      terminalResources += 1;
+    }
+  }
+  if (invalid.length) throw terminalEvidenceError(invalid);
+  return {
+    controlPlaneTerminalResources: terminalResources,
+    missingSlots: manifests.filter((manifest) => manifest.missing).length
+  };
+}
+
+export async function productionSoakEvidenceCheck({ phase, manifests, origin, operatorToken, fetchImpl = globalThis.fetch, signal = undefined }) {
+  const state = await readProductionManagementState({ fetchImpl, origin, operatorToken, signal });
+  return phase === "final" ? assertControlPlaneTerminalEvidence(state, manifests) : assertActiveEvidence(state, manifests);
 }
 
 function safeError(error) {
   return {
     error: sanitizeDiagnostic(error?.message || "production_soak_failed"),
-    ...(Array.isArray(error?.residuals) ? { residuals: error.residuals } : {})
+    ...(Array.isArray(error?.terminalEvidence) ? { terminalEvidence: error.terminalEvidence } : {})
   };
+}
+
+async function evidenceBeforeDeadline(deadline, evidenceCheck, args, { nowImpl, setTimeoutImpl, clearTimeoutImpl }) {
+  const remaining = deadline - nowImpl();
+  if (remaining <= 0) throw new Error("production_soak_evidence_timeout");
+  const controller = new AbortController();
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeoutImpl(() => {
+      controller.abort();
+      reject(new Error("production_soak_evidence_timeout"));
+    }, remaining);
+  });
+  try {
+    return await Promise.race([evidenceCheck({ ...args, signal: controller.signal, deadline }), timeout]);
+  } finally {
+    clearTimeoutImpl(timer);
+  }
 }
 
 export async function runProductionSoak({
@@ -335,6 +428,9 @@ export async function runProductionSoak({
   readyPollMs = DEFAULT_READY_POLL_MS,
   spawnImpl = spawn,
   sleepImpl = sleep,
+  nowImpl = Date.now,
+  setTimeoutImpl = setTimeout,
+  clearTimeoutImpl = clearTimeout,
   evidenceCheck = productionSoakEvidenceCheck,
   env = process.env,
   fetchImpl = globalThis.fetch
@@ -368,21 +464,22 @@ export async function runProductionSoak({
   let manifests = [];
   let failure = null;
   let evidenceIndex = 0;
-  const recordEvidence = async (phase) => {
-    const evidence = await evidenceCheck({ phase, manifests, origin, accountId, operatorToken: env.OPL_VERIFY_OPERATOR_TOKEN || "", fetchImpl });
+  const recordEvidence = async (phase, deadline) => {
+    const evidence = await evidenceBeforeDeadline(deadline, evidenceCheck, {
+      phase, manifests, origin, accountId, operatorToken: env.OPL_VERIFY_OPERATOR_TOKEN || "", fetchImpl
+    }, { nowImpl, setTimeoutImpl, clearTimeoutImpl });
     await atomicWriteJson(join(artifactDir, `evidence-${String(evidenceIndex++).padStart(3, "0")}.json`), { phase, ...evidence });
   };
   try {
     await waitForAllReady(children, { timeoutMs: readyTimeoutMs, pollMs: readyPollMs, sleepImpl });
     manifests = validateSoakManifests(await readManifests(children), { accountId, runIds: children.map((child) => child.runId) });
-    await recordEvidence("barrier");
-    let elapsed = 0;
-    while (elapsed < soakDurationMs) {
-      const delay = Math.min(evidenceIntervalMs, soakDurationMs - elapsed);
+    const soakDeadline = nowImpl() + soakDurationMs;
+    await recordEvidence("barrier", soakDeadline);
+    while (nowImpl() < soakDeadline) {
+      const delay = Math.min(evidenceIntervalMs, soakDeadline - nowImpl());
       await sleepImpl(delay);
-      elapsed += delay;
       if (children.some((child) => child.exited)) throw new Error("production_soak_child_exited_during_soak");
-      await recordEvidence("soak");
+      if (nowImpl() < soakDeadline) await recordEvidence("soak", soakDeadline);
     }
   } catch (error) {
     failure = error;
@@ -394,8 +491,12 @@ export async function runProductionSoak({
       if (await exists(child.paths.manifest)) available.push(JSON.parse(await readFile(child.paths.manifest, "utf8")));
     }
     if (available.length) {
-      manifests = available;
-      await recordEvidence("final");
+      manifests = validateSoakManifests(available, {
+        accountId,
+        runIds: children.map((child) => child.runId),
+        requireAll: false
+      });
+      await recordEvidence("final", nowImpl() + evidenceIntervalMs);
     }
   } catch (error) {
     failure ||= error;
@@ -434,16 +535,24 @@ function cliArgs(argv) {
   return args;
 }
 
-async function manifestsFromArtifactDir(artifactDir) {
+export async function manifestsFromArtifactDir(artifactDir) {
   const result = JSON.parse(await readFile(join(artifactDir, "result.json"), "utf8"));
   const manifests = [];
   for (let index = 1; index <= SOAK_SLOT_COUNT; index += 1) {
-    manifests.push(JSON.parse(await readFile(join(artifactDir, `manifest-${String(index).padStart(2, "0")}.json`), "utf8")));
+    const slot = String(index).padStart(2, "0");
+    const path = join(artifactDir, `manifest-${slot}.json`);
+    if (await exists(path)) manifests.push(JSON.parse(await readFile(path, "utf8")));
   }
-  return validateSoakManifests(manifests, {
+  const runIds = result.slots?.map((slot) => slot.runId);
+  const validated = validateSoakManifests(manifests, {
     accountId: result.accountId,
-    runIds: result.slots?.map((slot) => slot.runId)
+    runIds,
+    requireAll: false
   });
+  const present = new Set(validated.map((manifest) => manifest.runId));
+  return [...validated, ...result.slots
+    .filter((slot) => !present.has(slot.runId))
+    .map((slot) => ({ runId: slot.runId, slot: slot.slot, accountId: result.accountId, missing: true }))];
 }
 
 export async function runProductionSoakCli({ argv = process.argv.slice(2), env = process.env, stdout = process.stdout, stderr = process.stderr } = {}) {
@@ -455,7 +564,15 @@ export async function runProductionSoakCli({ argv = process.argv.slice(2), env =
     const artifactDir = args["artifact-dir"] || env.OPL_SOAK_ARTIFACT_DIR || "artifacts/production-soak";
     if (args["verify-residuals"] === "true") {
       const manifests = await manifestsFromArtifactDir(artifactDir);
-      const evidence = await productionSoakEvidenceCheck({ phase: "final", manifests, origin, operatorToken: env.OPL_VERIFY_OPERATOR_TOKEN || "" });
+      const deadline = Date.now() + DEFAULT_EVIDENCE_INTERVAL_MS;
+      const evidence = await productionSoakEvidenceCheck({
+        phase: "final",
+        manifests,
+        origin,
+        operatorToken: env.OPL_VERIFY_OPERATOR_TOKEN || "",
+        signal: AbortSignal.timeout(DEFAULT_EVIDENCE_INTERVAL_MS),
+        deadline
+      });
       stdout.write(`${JSON.stringify({ ok: true, ...evidence })}\n`);
       return 0;
     }

@@ -249,6 +249,16 @@ func isCVMNativeNodePool(pool *tke2022.NodePool) bool {
 		stringValue(pool.Native.MachineType) == "NativeCVM" && stringValue(pool.Native.InstanceChargeType) == "POSTPAID_BY_HOUR"
 }
 
+func mutationNodePoolFailure(pool *tke2022.NodePool, request Request, requestID string) *Response {
+	if !isCVMNativeNodePool(pool) {
+		return &Response{Ok: false, ErrorCode: "tencent_cvm_node_pool_required", Message: "Fabric compute requires a POSTPAID NativeCVM node pool.", ProviderRequestId: requestID, Retryable: false}
+	}
+	if isDeletingNodePool(pool) || !matchesCapacityNodePool(pool, request) {
+		return &Response{Ok: false, ErrorCode: "tencent_node_pool_ownership_mismatch", Message: "Node pool does not match the requested ownership labels.", ProviderRequestId: requestID, Retryable: false}
+	}
+	return nil
+}
+
 func matchesCapacityNodePool(pool *tke2022.NodePool, request Request) bool {
 	labels := nodePoolLabels(pool)
 	return request.Pool.Id != "" && request.PackageId != "" && request.Pool.InstanceType != "" &&
@@ -418,16 +428,14 @@ func (client *tencentSDKClient) CreateComputeAllocation(request Request, env map
 	var pool *tke2022.NodePool
 	if nodePoolId != "" {
 		describedPool, requestId, err := client.describeNativeNodePool(nodePoolId)
-		if err != nil && !isNodePoolNotFound(err) {
-			response := sdkErrorResponse("tencent_describe_node_pool_failed", err)
-			return response
+		if err != nil {
+			return sdkErrorResponse("tencent_describe_node_pool_failed", err)
 		}
-		if err == nil {
-			pool = describedPool
-			describeRequestId = requestId
-		} else {
-			nodePoolId = ""
+		if failure := mutationNodePoolFailure(describedPool, request, requestId); failure != nil {
+			return *failure
 		}
+		pool = describedPool
+		describeRequestId = requestId
 	}
 	if nodePoolId == "" {
 		discoveredPool, requestId, err := client.discoverNativeNodePool(request)
@@ -472,8 +480,8 @@ func (client *tencentSDKClient) CreateComputeAllocation(request Request, env map
 		pool = describedPool
 		describeRequestId = requestId
 	}
-	if !isCVMNativeNodePool(pool) {
-		return Response{Ok: false, ErrorCode: "tencent_cvm_node_pool_required", Message: "Fabric compute allocation requires a POSTPAID NativeCVM node pool.", ProviderRequestId: describeRequestId, Retryable: false}
+	if failure := mutationNodePoolFailure(pool, request, describeRequestId); failure != nil {
+		return *failure
 	}
 	modifySelfProvisioningRequestId := ""
 	if nativeSelfProvisioningEnabled(pool) {
@@ -603,12 +611,14 @@ func (client *tencentSDKClient) ReconcileComputePool(request Request, env map[st
 	describeNodePoolRequestId := ""
 	if nodePoolId != "" {
 		described, id, err := client.describeNativeNodePool(nodePoolId)
-		if err == nil {
-			pool, requestId = described, id
-			describeNodePoolRequestId = id
-		} else if !isNodePoolNotFound(err) {
+		if err != nil {
 			return sdkErrorResponse("tencent_describe_node_pool_failed", err)
 		}
+		if failure := mutationNodePoolFailure(described, request, id); failure != nil {
+			return *failure
+		}
+		pool, requestId = described, id
+		describeNodePoolRequestId = id
 	}
 	if pool == nil {
 		discovered, id, err := client.discoverNativeNodePool(request)
@@ -648,8 +658,8 @@ func (client *tencentSDKClient) ReconcileComputePool(request Request, env map[st
 		requestId = firstNonEmpty(id, requestId)
 		describeNodePoolRequestId = id
 	}
-	if !isCVMNativeNodePool(pool) {
-		return Response{Ok: false, ErrorCode: "tencent_cvm_node_pool_required", Message: "Fabric compute reconciliation requires a POSTPAID NativeCVM node pool.", ProviderRequestId: describeNodePoolRequestId, Retryable: false}
+	if failure := mutationNodePoolFailure(pool, request, describeNodePoolRequestId); failure != nil {
+		return *failure
 	}
 	current := nativeReplicas(pool)
 	scaleRequestId := ""
@@ -1213,10 +1223,16 @@ func (client *tencentSDKClient) describeNativeNodePool(nodePoolId string) (*tke2
 	if err != nil {
 		return nil, "", err
 	}
-	if len(describeResponse.Response.NodePools) == 0 {
-		return nil, stringValue(describeResponse.Response.RequestId), fmt.Errorf("node pool not found: %s", nodePoolId)
+	if describeResponse == nil || describeResponse.Response == nil {
+		return nil, "", fmt.Errorf("Tencent TKE DescribeNodePools response is missing")
 	}
-	return describeResponse.Response.NodePools[0], stringValue(describeResponse.Response.RequestId), nil
+	requestID := stringValue(describeResponse.Response.RequestId)
+	if describeResponse.Response.TotalCount == nil || *describeResponse.Response.TotalCount != 1 ||
+		len(describeResponse.Response.NodePools) != 1 || describeResponse.Response.NodePools[0] == nil ||
+		stringValue(describeResponse.Response.NodePools[0].NodePoolId) != nodePoolId {
+		return nil, requestID, fmt.Errorf("node pool not found or ambiguous: %s", nodePoolId)
+	}
+	return describeResponse.Response.NodePools[0], requestID, nil
 }
 
 func (client *tencentSDKClient) discoverNativeNodePool(request Request) (*tke2022.NodePool, string, error) {
@@ -1227,28 +1243,30 @@ func (client *tencentSDKClient) discoverNativeNodePool(request Request) (*tke202
 	if err != nil {
 		return nil, "", err
 	}
+	if describeResponse == nil || describeResponse.Response == nil {
+		return nil, "", fmt.Errorf("Tencent TKE DescribeNodePools response is missing")
+	}
 	requestId := stringValue(describeResponse.Response.RequestId)
+	if describeResponse.Response.TotalCount == nil || *describeResponse.Response.TotalCount != int64(len(describeResponse.Response.NodePools)) {
+		return nil, requestId, fmt.Errorf("node pool discovery is incomplete")
+	}
+	matches := []*tke2022.NodePool{}
 	for _, pool := range describeResponse.Response.NodePools {
 		if matchesPackageNodePool(pool, request) {
-			return pool, requestId, nil
+			matches = append(matches, pool)
 		}
+	}
+	if len(matches) > 1 {
+		return nil, requestId, fmt.Errorf("node pool discovery is ambiguous")
+	}
+	if len(matches) == 1 {
+		return matches[0], requestId, nil
 	}
 	return nil, requestId, nil
 }
 
 func matchesPackageNodePool(pool *tke2022.NodePool, request Request) bool {
-	if pool == nil || isDeletingNodePool(pool) {
-		return false
-	}
-	labels := nodePoolLabels(pool)
-	if request.Pool.Id != "" && labels["oplcloud.cn/pool-id"] == request.Pool.Id {
-		return true
-	}
-	if request.PackageId != "" && request.Pool.InstanceType != "" {
-		return labels["oplcloud.cn/package-id"] == request.PackageId &&
-			labels["oplcloud.cn/instance-type"] == request.Pool.InstanceType
-	}
-	return request.Pool.Id != "" && stringValue(pool.Name) == request.Pool.Id
+	return mutationNodePoolFailure(pool, request, "") == nil
 }
 
 func nodePoolLabels(pool *tke2022.NodePool) map[string]string {
@@ -1264,10 +1282,6 @@ func nodePoolLabels(pool *tke2022.NodePool) map[string]string {
 func isDeletingNodePool(pool *tke2022.NodePool) bool {
 	lifeState := strings.ToLower(strings.TrimSpace(stringValue(pool.LifeState)))
 	return strings.Contains(lifeState, "delet")
-}
-
-func isNodePoolNotFound(err error) bool {
-	return err != nil && strings.Contains(strings.ToLower(err.Error()), "node pool not found")
 }
 
 func firstNonEmpty(values ...string) string {

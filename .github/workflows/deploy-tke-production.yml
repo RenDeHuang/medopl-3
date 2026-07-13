@@ -15,6 +15,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: production-resource-verification
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Deploy OPL Cloud to TKE

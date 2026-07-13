@@ -164,11 +164,12 @@ function requestHeaders({ body = null, auth = null, idempotencyKey = "", headers
 	return Object.keys(headers).length > 0 ? headers : undefined;
 }
 
-async function requestJsonWithResponse({ fetchImpl, origin, path, method = "GET", body = null, auth = null, idempotencyKey = "", headers = {} }) {
+async function requestJsonWithResponse({ fetchImpl, origin, path, method = "GET", body = null, auth = null, idempotencyKey = "", headers = {}, signal = undefined }) {
 	const response = await fetchImpl(endpoint(origin, path), {
 		method,
 		headers: requestHeaders({ body, auth, idempotencyKey, headers }),
-		body: body ? JSON.stringify(body) : undefined
+		body: body ? JSON.stringify(body) : undefined,
+		signal
 	});
   const payload = await readResponse(response);
   if (!response.ok) {
@@ -228,7 +229,7 @@ function browserCookiesFromHeader(cookieHeader = "", url = "") {
     .filter(Boolean);
 }
 
-async function requestOperatorSession({ fetchImpl, origin, operatorToken }) {
+async function requestOperatorSession({ fetchImpl, origin, operatorToken, signal = undefined }) {
   if (!operatorToken) return null;
   const { payload, response } = await requestJsonWithResponse({
     fetchImpl,
@@ -236,7 +237,8 @@ async function requestOperatorSession({ fetchImpl, origin, operatorToken }) {
 		path: "/api/auth/operator-login",
 		method: "POST",
 		body: {},
-		headers: { "x-opl-operator-token": operatorToken }
+		headers: { "x-opl-operator-token": operatorToken },
+		signal
 	});
   return {
     cookie: cookieHeaderFromSetCookie(setCookieHeader(response.headers)),
@@ -1516,12 +1518,12 @@ export function assertProductionVerificationResourceOwnership(state, manifest) {
   }
 }
 
-export async function readProductionManagementState({ fetchImpl, origin, operatorToken }) {
+export async function readProductionManagementState({ fetchImpl, origin, operatorToken, signal = undefined }) {
   const normalizedOrigin = normalizeOrigin(origin);
   assertConsoleOrigin(normalizedOrigin);
-  const auth = await requestOperatorSession({ fetchImpl, origin: normalizedOrigin, operatorToken });
+  const auth = await requestOperatorSession({ fetchImpl, origin: normalizedOrigin, operatorToken, signal });
   if (!auth) throw new Error("production_operator_token_required");
-  return requestJson({ fetchImpl, origin: normalizedOrigin, path: "/api/management/state", auth });
+  return requestJson({ fetchImpl, origin: normalizedOrigin, path: "/api/management/state", auth, signal });
 }
 
 export async function cleanupVerificationResources({ fetchImpl, origin, accountId, manifest, computeAllocationId, storageId, attachmentId, expectedComputeHoldId = "", expectedStorageHoldId = "", checks = null, auth = null, attempts = DEFAULT_WORKSPACE_URL_ATTEMPTS, retryDelayMs = DEFAULT_RETRY_DELAY_MS, cleanupStage = "final-cleanup" }) {

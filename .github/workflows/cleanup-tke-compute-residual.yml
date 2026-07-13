@@ -19,6 +19,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: production-resource-verification
+  cancel-in-progress: false
+
 jobs:
   cleanup:
     name: Cleanup one residual compute runtime
