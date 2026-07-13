@@ -83,6 +83,7 @@ production-verification:<run_id>:<resource_slot>:<stage>
 - compute allocation、storage、attachment、Workspace ID；
 - Hold ID、Fabric operation ID；
 - machine ID、instance ID、node name；
+- 从 Console 页面读取并实际打开的 Workspace URL；
 - 创建时的资源名称和幂等键。
 
 任何故障或清理前重新读取生产 state，并要求 account、run ID、名称、资源 ID 与 ownership
@@ -104,11 +105,13 @@ Machine Ready、ownership active、Workspace ready 后写 ready marker，并在 
 - 恰好 5 个不同 machine ID、instance ID 和 node name；
 - 5 个 Node 都 Ready，标签指向各自 resource ID；
 - 5 个 Workspace workload 和 PVC Ready；
+- 5 个不同的 Workspace URL 均可通过网关访问；
 - 每个资源只有一个 Hold，首小时只核销一次。
 
 15 分钟内周期性检查 ownership、Node、Pod、PVC、billing status 和 Hold remaining。任一漂移
 使 workflow 失败，但仍进入逐 ID cleanup。workflow 设置 60 分钟总超时、同一环境只允许
 一个 soak run，并上传 5 份 manifest、JSON、日志和截图。
+结构化结果必须输出 5 个 Workspace URL；缺少、重复或无法打开任一 URL 都失败。
 
 完整生命周期包含 replacement compute，因此累计最多创建 10 台；运行前容量门要求腾讯云
 至少允许 10 台 Basic CVM 的短时创建、50 GB CBS、相应 TKE Node/IP/Pod 配额。容量门不满足
