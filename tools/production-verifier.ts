@@ -1457,7 +1457,7 @@ function assertVerificationResourceOwnership(state, manifest) {
       instanceId: compute.instanceId || compute.cvmInstanceId,
       nodeName: compute.nodeName
     };
-    if (["running", "ready"].includes(compute.status) && (
+    if (
       !identity.machineId || !identity.instanceId || !identity.nodeName ||
       identity.machineId !== stateIdentity.machineId ||
       identity.instanceId !== stateIdentity.instanceId ||
@@ -1467,7 +1467,7 @@ function assertVerificationResourceOwnership(state, manifest) {
         (row.instanceId || row.cvmInstanceId) === identity.instanceId &&
         row.nodeName === identity.nodeName
       )).length !== 1
-    )) {
+    ) {
       throw new Error("verification_resource_ownership_mismatch");
     }
   }
@@ -1507,16 +1507,19 @@ export async function cleanupVerificationResources({ fetchImpl, origin, accountI
   const ids = manifest?.ids || {};
   const expectedComputeId = cleanupStage === "first-cleanup" ? ids.computeAllocationId : ids.replacementComputeAllocationId;
   const expectedAttachmentId = cleanupStage === "first-cleanup" ? ids.attachmentId : ids.replacementAttachmentId;
+  const hasExplicitTarget = Boolean(computeAllocationId || storageId || attachmentId);
   if (
+    !["first-cleanup", "final-cleanup"].includes(cleanupStage) ||
+    !hasExplicitTarget ||
     accountId !== manifest?.accountId ||
     (computeAllocationId && computeAllocationId !== expectedComputeId) ||
     (storageId && storageId !== ids.storageId) ||
+    (storageId && cleanupStage !== "final-cleanup") ||
     (attachmentId && attachmentId !== expectedAttachmentId)
   ) return ["verification_resource_ownership_mismatch"];
-  const explicitResources = Boolean(computeAllocationId || storageId || attachmentId);
-  const effectiveComputeId = computeAllocationId || (!explicitResources && (manifest?.ids?.replacementComputeAllocationId || manifest?.ids?.computeAllocationId));
-  const effectiveStorageId = storageId || (!explicitResources && manifest?.ids?.storageId);
-  const effectiveAttachmentId = attachmentId || (!explicitResources && (manifest?.ids?.replacementAttachmentId || manifest?.ids?.attachmentId));
+  const effectiveComputeId = computeAllocationId;
+  const effectiveStorageId = storageId;
+  const effectiveAttachmentId = attachmentId;
 
   try {
     const state = await requestJson({

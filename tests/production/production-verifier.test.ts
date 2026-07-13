@@ -2561,6 +2561,9 @@ for (const [name, mutate] of [
   ["wrong hold", (state) => { state.computeAllocations[0].holdId = "hold-other"; }],
   ["missing machine triple", (state, manifest) => { delete manifest.machineIdentities["compute-prod001"].machineId; }],
   ["missing projected machine triple", (state) => { delete state.computeAllocations[0].machineName; }],
+  ["provisioning compute missing projected triple", (state) => { state.computeAllocations[0].status = "provisioning"; delete state.computeAllocations[0].machineName; }],
+  ["stopping compute missing projected triple", (state) => { state.computeAllocations[0].status = "stopping"; delete state.computeAllocations[0].instanceId; }],
+  ["failed compute missing projected triple", (state) => { state.computeAllocations[0].status = "failed"; delete state.computeAllocations[0].nodeName; }],
   ["duplicate machine ownership", (state) => { state.computeAllocations.push({ ...state.computeAllocations[0], id: "compute-duplicate" }); }]
 ]) {
   test(`production verifier sends no cleanup writes for ${name}`, async () => {
@@ -2571,6 +2574,8 @@ for (const [name, mutate] of [
       origin: "https://console.oplcloud.cn",
       accountId: "pi-prod",
       manifest,
+      computeAllocationId: manifest.ids.computeAllocationId,
+      cleanupStage: "first-cleanup",
       fetchImpl: async (url, options = {}) => {
         if ((options.method || "GET") === "GET") return jsonResponse(state);
         writes.push([url, options]);
@@ -2595,6 +2600,8 @@ for (const [name, update] of [
       origin: "https://console.oplcloud.cn",
       accountId: "pi-prod",
       manifest,
+      computeAllocationId: manifest.ids.computeAllocationId,
+      cleanupStage: "first-cleanup",
       fetchImpl: async (...args) => { requests.push(args); throw new Error("unexpected_request"); }
     };
     update(options);
@@ -2602,6 +2609,47 @@ for (const [name, update] of [
     assert.equal(requests.length, 0);
   });
 }
+
+for (const [name, options] of [
+  ["unknown cleanup stage", { cleanupStage: "maybe-cleanup", storageId: "storage-prod001" }],
+  ["no explicit cleanup target", { cleanupStage: "first-cleanup" }],
+  ["primary compute during final cleanup", { cleanupStage: "final-cleanup", computeAllocationId: "compute-prod001" }],
+  ["storage during first cleanup", { cleanupStage: "first-cleanup", storageId: "storage-prod001" }]
+]) {
+  test(`production verifier rejects ${name} before state read`, async () => {
+    const { manifest } = ownedCleanupFixture();
+    const requests = [];
+    const errors = await cleanupVerificationResources({
+      origin: "https://console.oplcloud.cn",
+      accountId: "pi-prod",
+      manifest,
+      ...options,
+      fetchImpl: async (...args) => { requests.push(args); throw new Error("unexpected_request"); }
+    });
+    assert.deepEqual(errors, ["verification_resource_ownership_mismatch"]);
+    assert.equal(requests.length, 0);
+  });
+}
+
+test("production verifier final storage cleanup does not fall back to primary resources", async () => {
+  const { manifest, state } = ownedCleanupFixture();
+  const requests = [];
+  const errors = await cleanupVerificationResources({
+    origin: "https://console.oplcloud.cn",
+    accountId: "pi-prod",
+    manifest,
+    cleanupStage: "final-cleanup",
+    storageId: manifest.ids.storageId,
+    fetchImpl: async (url, options = {}) => {
+      const method = options.method || "GET";
+      requests.push(`${method} ${new URL(String(url)).pathname}`);
+      if (method === "GET") return jsonResponse(state);
+      return jsonResponse({ ...state.storageVolumes[0], status: "destroyed", billingStatus: "stopped", holdReleaseId: "release-storage" });
+    }
+  });
+  assert.deepEqual(errors, []);
+  assert.deepEqual(requests, ["GET /api/state", "POST /api/storage-volumes/destroy"]);
+});
 
 for (const [name, update] of [
   ["compute", (manifest) => { delete manifest.holdIds.compute; }],
@@ -2615,6 +2663,8 @@ for (const [name, update] of [
       origin: "https://console.oplcloud.cn",
       accountId: "pi-prod",
       manifest,
+      computeAllocationId: manifest.ids.computeAllocationId,
+      cleanupStage: "first-cleanup",
       fetchImpl: async (_url, options = {}) => {
         if ((options.method || "GET") === "GET") return jsonResponse(state);
         writes.push(options);
