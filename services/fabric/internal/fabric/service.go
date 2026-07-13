@@ -19,7 +19,7 @@ const storageProvisionTimeout = 10 * time.Minute
 type Provider interface {
 	ReconcileComputePool(ctx context.Context, input ComputePoolDemand) (ComputePoolState, error)
 	TagComputeMachine(ctx context.Context, machine ProviderMachine, ownership MachineOwnership) error
-	DeleteComputeMachine(ctx context.Context, machine ProviderMachine) error
+	DeleteComputeMachine(ctx context.Context, machine ProviderMachine, ownership MachineOwnership) error
 	SyncComputeAllocation(ctx context.Context, allocation ComputeAllocation) (ComputeAllocation, error)
 	DestroyComputeAllocation(ctx context.Context, allocation ComputeAllocation) (ComputeAllocation, error)
 	CreateStorageVolume(ctx context.Context, input StorageVolumeInput) (StorageVolume, error)

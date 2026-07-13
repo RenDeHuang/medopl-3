@@ -51,7 +51,7 @@ async function atomicWriteJson(path, value) {
 
 export async function writeVerificationManifest(path, manifest) {
   const safe = withoutSecrets(manifest);
-  if (safe.workspaceUrl) assertPublicHttpsUrl(safe.workspaceUrl, "public_workspace_url_required");
+  if (safe.workspaceUrl) assertPublicHttpsUrl(safe.workspaceUrl, "public_workspace_url_required", { hostname: "workspace.medopl.cn" });
   await atomicWriteJson(path, safe);
 }
 
@@ -112,14 +112,17 @@ function isNonPublicHostname(hostname) {
   );
 }
 
-export function assertPublicHttpsUrl(url, errorName) {
+export function assertPublicHttpsUrl(url, errorName, { hostname = "" } = {}) {
   let parsed = null;
   try {
     parsed = new URL(url);
   } catch {
     throw new Error(errorName);
   }
-  if (parsed.protocol !== "https:" || isNonPublicHostname(parsed.hostname)) {
+  if (
+    parsed.protocol !== "https:" || isNonPublicHostname(parsed.hostname) || parsed.username || parsed.password || parsed.port ||
+    (hostname && parsed.hostname.toLowerCase() !== hostname)
+  ) {
     throw new Error(errorName);
   }
   return parsed;
@@ -133,7 +136,7 @@ function assertConsoleOrigin(url, { allowPrivateConsoleOrigin = false } = {}) {
   } catch {
     throw new Error("console_origin_required");
   }
-  if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("console_origin_required");
+  if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) throw new Error("console_origin_required");
   return parsed;
 }
 
@@ -246,13 +249,14 @@ async function requestOperatorSession({ fetchImpl, origin, operatorToken, signal
   };
 }
 
-async function requestOwnerSession({ fetchImpl, origin, email, password }) {
+export async function requestOwnerSession({ fetchImpl, origin, email, password, signal = undefined }) {
   const { payload, response } = await requestJsonWithResponse({
     fetchImpl,
     origin,
     path: "/api/auth/login",
     method: "POST",
-    body: { email, password }
+    body: { email, password },
+    signal
   });
   return {
     cookie: cookieHeaderFromSetCookie(setCookieHeader(response.headers)),
@@ -1526,7 +1530,7 @@ export async function readProductionManagementState({ fetchImpl, origin, operato
   return requestJson({ fetchImpl, origin: normalizedOrigin, path: "/api/management/state", auth, signal });
 }
 
-export async function cleanupVerificationResources({ fetchImpl, origin, accountId, manifest, computeAllocationId, storageId, attachmentId, expectedComputeHoldId = "", expectedStorageHoldId = "", checks = null, auth = null, attempts = DEFAULT_WORKSPACE_URL_ATTEMPTS, retryDelayMs = DEFAULT_RETRY_DELAY_MS, cleanupStage = "final-cleanup" }) {
+export async function cleanupVerificationResources({ fetchImpl, origin, accountId, manifest, computeAllocationId, storageId, attachmentId, expectedComputeHoldId = "", expectedStorageHoldId = "", checks = null, auth = null, attempts = DEFAULT_WORKSPACE_URL_ATTEMPTS, retryDelayMs = DEFAULT_RETRY_DELAY_MS, cleanupStage = "final-cleanup", signal = undefined }) {
   const cleanupErrors = [];
   const ids = manifest?.ids || {};
   const expectedComputeId = cleanupStage === "first-cleanup" ? ids.computeAllocationId : ids.replacementComputeAllocationId;
@@ -1550,7 +1554,8 @@ export async function cleanupVerificationResources({ fetchImpl, origin, accountI
       fetchImpl,
       origin,
       path: `/api/state?accountId=${encodeURIComponent(accountId)}`,
-      auth
+      auth,
+      signal
     });
     assertProductionVerificationResourceOwnership(state, manifest);
   } catch (error) {
@@ -1566,7 +1571,8 @@ export async function cleanupVerificationResources({ fetchImpl, origin, accountI
         method: "POST",
         auth,
         idempotencyKey: productionVerificationMutationKey(manifest.runId, manifest.slot, `${cleanupStage}-detach`),
-        body: { accountId, attachmentId: effectiveAttachmentId, confirm: true }
+        body: { accountId, attachmentId: effectiveAttachmentId, confirm: true },
+        signal
       });
       if (detached?.status !== "detached") throw new Error("verification_storage_detached_failed");
       if (checks) {
@@ -1588,7 +1594,8 @@ export async function cleanupVerificationResources({ fetchImpl, origin, accountI
           method: "POST",
           auth,
           idempotencyKey: productionVerificationMutationKey(manifest.runId, manifest.slot, `${cleanupStage}-compute`),
-          body: { accountId, computeAllocationId: effectiveComputeId, confirm: true }
+          body: { accountId, computeAllocationId: effectiveComputeId, confirm: true },
+          signal
         });
         if (
           destroyed?.status === "destroyed" &&
@@ -1622,7 +1629,8 @@ export async function cleanupVerificationResources({ fetchImpl, origin, accountI
         method: "POST",
         auth,
         idempotencyKey: productionVerificationMutationKey(manifest.runId, manifest.slot, `${cleanupStage}-storage`),
-        body: { accountId, storageId: effectiveStorageId, confirmDataLoss: true }
+        body: { accountId, storageId: effectiveStorageId, confirmDataLoss: true },
+        signal
       });
       const expectedHoldId = expectedStorageHoldId || manifest.holdIds.storage;
       const cleanupComplete = Boolean(
@@ -1849,7 +1857,7 @@ export async function verifyProductionChain({
     });
     await persistManifest();
 
-    assertPublicHttpsUrl(workspace.url, "public_workspace_url_required");
+    assertPublicHttpsUrl(workspace.url, "public_workspace_url_required", { hostname: "workspace.medopl.cn" });
     const workspaceUrlResult = await requestWorkspaceUrl({
       fetchImpl,
       url: workspace.url,
@@ -2008,7 +2016,7 @@ export async function verifyProductionChain({
     });
     await persistManifest();
 
-    assertPublicHttpsUrl(replacementWorkspace.url, "public_workspace_url_required");
+    assertPublicHttpsUrl(replacementWorkspace.url, "public_workspace_url_required", { hostname: "workspace.medopl.cn" });
     const replacementWorkspaceUrlResult = await requestWorkspaceUrl({
       fetchImpl,
       url: replacementWorkspace.url,

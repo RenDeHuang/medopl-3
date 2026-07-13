@@ -5,7 +5,9 @@ import { dirname, join } from "node:path";
 import {
   assertProductionVerificationResourceOwnership,
   assertPublicHttpsUrl,
+  cleanupVerificationResources,
   readProductionManagementState,
+  requestOwnerSession,
   verificationOwnerFromSeed
 } from "./production-verifier.ts";
 
@@ -14,6 +16,9 @@ export const DEFAULT_SOAK_DURATION_MS = 15 * 60 * 1000;
 const DEFAULT_EVIDENCE_INTERVAL_MS = 60 * 1000;
 const DEFAULT_READY_TIMEOUT_MS = 20 * 60 * 1000;
 const DEFAULT_READY_POLL_MS = 1000;
+const DEFAULT_COORDINATOR_TIMEOUT_MS = 50 * 60 * 1000;
+const DEFAULT_CLEANUP_RESERVE_MS = 3 * 60 * 1000;
+const DEFAULT_CHILD_TERMINATION_GRACE_MS = 30 * 1000;
 const MAX_CHILD_OUTPUT_BYTES = 64 * 1024;
 
 function assertPositiveDuration(value, error, maximum = Number.POSITIVE_INFINITY) {
@@ -36,7 +41,7 @@ function exactResource(rows, id, accountId) {
 }
 
 function cleanWorkspaceUrl(raw, workspaceId) {
-  const parsed = assertPublicHttpsUrl(raw, "production_soak_manifest_invalid");
+  const parsed = assertPublicHttpsUrl(raw, "production_soak_manifest_invalid", { hostname: "workspace.medopl.cn" });
   try {
     if (decodeURIComponent(parsed.pathname) !== `/w/${workspaceId}/`) throw new Error("production_soak_manifest_invalid");
   } catch {
@@ -267,7 +272,15 @@ function verifierChild({ spawnImpl, origin, accountId, runId, slot, paths, env }
   };
   child.once("error", (error) => finish(1, null, error.message));
   child.once("close", (code, signal) => finish(code ?? 1, signal));
-  return { child, slot, runId, paths, exit, get exited() { return settled; } };
+  return {
+    child,
+    slot,
+    runId,
+    paths,
+    exit,
+    forceExit: (signal, error) => finish(1, signal, error),
+    get exited() { return settled; }
+  };
 }
 
 async function exists(path) {
@@ -311,9 +324,28 @@ async function release(children) {
   await Promise.all(children.map((child) => atomicWriteJson(child.paths.release, { runId: child.runId, slot: child.slot })));
 }
 
-async function drainVerifierCleanup(children, { sleepImpl, pollMs }) {
+async function terminateChildren(children, { sleepImpl, graceMs }) {
+  const targets = children.filter((child) => !child.exited);
+  for (const child of targets) child.child.kill?.("SIGTERM");
+  await Promise.race([Promise.all(targets.map((child) => child.exit)), sleepImpl(graceMs)]);
+  const remaining = targets.filter((child) => !child.exited);
+  for (const child of remaining) child.child.kill?.("SIGKILL");
+  await Promise.race([Promise.all(remaining.map((child) => child.exit)), sleepImpl(graceMs)]);
+  for (const child of remaining.filter((child) => !child.exited)) {
+    child.forceExit("SIGKILL", "production_soak_child_close_timeout");
+  }
+  return targets.map((child) => child.slot);
+}
+
+async function drainVerifierCleanup(children, {
+  sleepImpl, pollMs, deadline, nowImpl, terminationGraceMs, terminateImmediately = []
+}) {
   const released = new Set();
-  while (children.some((child) => !child.exited)) {
+  const initiallyReady = await readyChildren(children);
+  await release(initiallyReady);
+  initiallyReady.forEach((child) => released.add(child.slot));
+  const forced = new Set(await terminateChildren(terminateImmediately, { sleepImpl, graceMs: terminationGraceMs }));
+  while (children.some((child) => !child.exited) && nowImpl() < deadline) {
     const ready = await readyChildren(children);
     const pendingRelease = ready.filter((child) => !released.has(child.slot));
     await release(pendingRelease);
@@ -321,10 +353,51 @@ async function drainVerifierCleanup(children, { sleepImpl, pollMs }) {
     if (children.every((child) => child.exited)) break;
     await Promise.race([
       Promise.all(children.map((child) => child.exit)),
-      sleepImpl(pollMs)
+      sleepImpl(Math.min(pollMs, deadline - nowImpl()))
     ]);
   }
-  return Promise.all(children.map((child) => child.exit));
+  for (const slot of await terminateChildren(children, { sleepImpl, graceMs: terminationGraceMs })) forced.add(slot);
+  return { exits: await Promise.all(children.map((child) => child.exit)), forced };
+}
+
+async function cleanupPersistedManifest({ manifest, origin, accountId, env, fetchImpl, signal }) {
+  const owner = verificationOwnerFromSeed(env.OPL_VERIFY_AUTH_USERS_JSON, accountId);
+  const auth = await requestOwnerSession({
+    fetchImpl,
+    origin,
+    email: owner.email,
+    password: owner.password,
+    signal
+  });
+  const common = { fetchImpl, origin, accountId, manifest, auth, attempts: 1, retryDelayMs: 0, signal };
+  const errors = [];
+  if (manifest.ids?.replacementComputeAllocationId || manifest.ids?.replacementAttachmentId) {
+    errors.push(...await cleanupVerificationResources({
+      ...common,
+      computeAllocationId: manifest.ids?.replacementComputeAllocationId,
+      attachmentId: manifest.ids?.replacementAttachmentId,
+      expectedComputeHoldId: manifest.holdIds?.replacementCompute,
+      cleanupStage: "final-cleanup"
+    }));
+  }
+  if (manifest.ids?.computeAllocationId || manifest.ids?.attachmentId) {
+    errors.push(...await cleanupVerificationResources({
+      ...common,
+      computeAllocationId: manifest.ids?.computeAllocationId,
+      attachmentId: manifest.ids?.attachmentId,
+      expectedComputeHoldId: manifest.holdIds?.compute,
+      cleanupStage: "first-cleanup"
+    }));
+  }
+  if (manifest.ids?.storageId) {
+    errors.push(...await cleanupVerificationResources({
+      ...common,
+      storageId: manifest.ids.storageId,
+      expectedStorageHoldId: manifest.holdIds?.storage,
+      cleanupStage: "final-cleanup"
+    }));
+  }
+  return errors;
 }
 
 function assertActiveEvidence(state, manifests) {
@@ -509,12 +582,16 @@ export async function runProductionSoak({
   evidenceIntervalMs = DEFAULT_EVIDENCE_INTERVAL_MS,
   readyTimeoutMs = DEFAULT_READY_TIMEOUT_MS,
   readyPollMs = DEFAULT_READY_POLL_MS,
+  coordinatorTimeoutMs = DEFAULT_COORDINATOR_TIMEOUT_MS,
+  cleanupReserveMs = DEFAULT_CLEANUP_RESERVE_MS,
+  childTerminationGraceMs = DEFAULT_CHILD_TERMINATION_GRACE_MS,
   spawnImpl = spawn,
   sleepImpl = sleep,
   nowImpl = Date.now,
   setTimeoutImpl = setTimeout,
   clearTimeoutImpl = clearTimeout,
   evidenceCheck = productionSoakEvidenceCheck,
+  cleanupManifestImpl = cleanupPersistedManifest,
   env = process.env,
   fetchImpl = globalThis.fetch
 } = {}) {
@@ -522,10 +599,21 @@ export async function runProductionSoak({
   assertPositiveDuration(evidenceIntervalMs, "production_soak_evidence_interval_invalid", DEFAULT_SOAK_DURATION_MS);
   assertPositiveDuration(readyTimeoutMs, "production_soak_ready_timeout_invalid", 60 * 60 * 1000);
   assertPositiveDuration(readyPollMs, "production_soak_ready_poll_invalid", readyTimeoutMs);
+  assertPositiveDuration(coordinatorTimeoutMs, "production_soak_coordinator_timeout_invalid", DEFAULT_COORDINATOR_TIMEOUT_MS);
+  assertPositiveDuration(cleanupReserveMs, "production_soak_cleanup_reserve_invalid", coordinatorTimeoutMs - 1);
+  assertPositiveDuration(childTerminationGraceMs, "production_soak_child_termination_grace_invalid", cleanupReserveMs);
+  if (
+    childTerminationGraceMs * 2 + evidenceIntervalMs >= cleanupReserveMs ||
+    readyTimeoutMs + soakDurationMs > coordinatorTimeoutMs - cleanupReserveMs
+  ) {
+    throw new Error("production_soak_deadline_budget_invalid");
+  }
   value(origin, "origin_required");
   value(accountId, "account_id_required");
   value(artifactDir, "artifact_dir_required");
   if (!/^[A-Za-z0-9._-]{1,70}$/.test(String(baseRunId || ""))) throw new Error("production_soak_run_id_invalid");
+  const deadline = nowImpl() + coordinatorTimeoutMs;
+  const childDeadline = deadline - cleanupReserveMs;
   await mkdir(artifactDir, { recursive: true });
   const children = Array.from({ length: SOAK_SLOT_COUNT }, (_, index) => {
     const slot = String(index + 1).padStart(2, "0");
@@ -546,6 +634,7 @@ export async function runProductionSoak({
   });
   let manifests = [];
   let failure = null;
+  let terminateImmediately = [];
   let evidenceIndex = 0;
   const recordEvidence = async (phase, deadline) => {
     const evidence = await evidenceBeforeDeadline(deadline, evidenceCheck, {
@@ -566,20 +655,52 @@ export async function runProductionSoak({
     }
   } catch (error) {
     failure = error;
+    if (error?.message === "production_soak_ready_timeout") {
+      const ready = new Set((await readyChildren(children)).map((child) => child.slot));
+      terminateImmediately = children.filter((child) => !ready.has(child.slot));
+    }
   }
-  const exits = await drainVerifierCleanup(children, { sleepImpl, pollMs: readyPollMs });
+  const drained = await drainVerifierCleanup(children, {
+    sleepImpl,
+    pollMs: readyPollMs,
+    deadline: childDeadline,
+    nowImpl,
+    terminationGraceMs: childTerminationGraceMs,
+    terminateImmediately
+  });
+  const exits = drained.exits;
   try {
     const available = [];
     for (const child of children) {
       if (await exists(child.paths.manifest)) available.push(JSON.parse(await readFile(child.paths.manifest, "utf8")));
     }
-    if (available.length) {
-      manifests = normalizePartialSoakManifests(available, {
-        accountId,
-        slots: children.map((child) => ({ slot: child.slot, runId: child.runId }))
-      });
-      await recordEvidence("final", nowImpl() + evidenceIntervalMs);
+    manifests = normalizePartialSoakManifests(available, {
+      accountId,
+      slots: children.map((child) => ({ slot: child.slot, runId: child.runId }))
+    });
+    const bySlot = new Map(manifests.map((manifest) => [manifest.slot, manifest]));
+    for (const slot of drained.forced) {
+      const manifest = bySlot.get(slot);
+      if (!manifest) continue;
+      let cleanupErrors;
+      try {
+        cleanupErrors = await evidenceBeforeDeadline(deadline - evidenceIntervalMs, ({ signal }) => cleanupManifestImpl({
+          manifest, origin, accountId, env, fetchImpl, signal
+        }), {}, { nowImpl, setTimeoutImpl, clearTimeoutImpl });
+      } catch (error) {
+        cleanupErrors = [`production_soak_cleanup_incomplete:${sanitizeDiagnostic(error.message)}`];
+      }
+      if (cleanupErrors.length) {
+        const exit = exits.find((child) => child.slot === slot);
+        exit.cleanupErrors = [...(exit.cleanupErrors || []), ...cleanupErrors];
+        failure ||= new Error("production_soak_cleanup_incomplete");
+      }
     }
+    const present = new Set(manifests.map((manifest) => manifest.runId));
+    manifests.push(...children
+      .filter((child) => !present.has(child.runId))
+      .map((child) => ({ runId: child.runId, slot: child.slot, accountId, missing: true })));
+    await recordEvidence("final", Math.min(deadline, nowImpl() + evidenceIntervalMs));
   } catch (error) {
     failure ||= error;
   }

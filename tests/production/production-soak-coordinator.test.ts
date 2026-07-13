@@ -45,6 +45,14 @@ function manifest(index, overrides = {}) {
 class FakeChild extends EventEmitter {
   stdout = new PassThrough();
   stderr = new PassThrough();
+  kills = [];
+  onKill = null;
+
+  kill(signal) {
+    this.kills.push(signal);
+    this.onKill?.(signal);
+    return true;
+  }
 }
 
 function argument(args, name) {
@@ -628,6 +636,113 @@ test("one child failure releases ready peers and waits for every verifier cleanu
   assert.equal(cleaned.size, 5, "coordinator must await existing verifier cleanup instead of killing children");
 });
 
+test("ready timeout kills the hung child and bounds exact partial-manifest cleanup", async () => {
+  const root = await mkdtemp(join(tmpdir(), "production-soak-hung-child-"));
+  const children = [];
+  const released = new Set();
+  const cleanupCalls = [];
+  let cleanupAborted = false;
+  let terminalEvidenceCalled = false;
+  let now = 0;
+  const spawnImpl = (_command, args) => {
+    const child = new FakeChild();
+    children.push(child);
+    const slot = argument(args, "--slot");
+    const runId = argument(args, "--run-id");
+    const manifestPath = argument(args, "--manifest-path");
+    const readyFile = argument(args, "--ready-file");
+    const releaseFile = argument(args, "--release-file");
+    queueMicrotask(async () => {
+      await writeFile(manifestPath, JSON.stringify(manifest(Number(slot), {
+        runId,
+        resourceNames: {
+          compute: `Production Verification Lab ${runId} compute ${runId}`,
+          storage: `Production Verification Lab ${runId} storage ${runId}`,
+          workspace: `Production Verification Lab ${runId}`
+        }
+      })));
+      if (slot === "03") return;
+      await writeFile(readyFile, "{}\n");
+      while (true) {
+        try {
+          await access(releaseFile);
+          break;
+        } catch {
+          await immediate();
+        }
+      }
+      released.add(slot);
+      child.emit("close", 0, null);
+    });
+    if (slot === "03") {
+      child.onKill = (signal) => {
+        if (signal === "SIGKILL") queueMicrotask(() => child.emit("close", null, "SIGKILL"));
+      };
+    }
+    return child;
+  };
+
+  await assert.rejects(
+    runProductionSoak({
+      origin: "https://cloud.medopl.cn",
+      accountId: "account-production",
+      baseRunId: "soak-hung",
+      artifactDir: root,
+      soakDurationMs: 1,
+      evidenceIntervalMs: 1,
+      readyTimeoutMs: 1,
+      readyPollMs: 1,
+      coordinatorTimeoutMs: 100,
+      cleanupReserveMs: 20,
+      childTerminationGraceMs: 1,
+      spawnImpl,
+      nowImpl: () => now,
+      sleepImpl: immediate,
+      cleanupManifestImpl: async ({ manifest: item, signal }) => {
+        cleanupCalls.push(item.slot);
+        assert.ok(signal instanceof AbortSignal);
+        return new Promise((_, reject) => signal.addEventListener("abort", () => {
+          cleanupAborted = true;
+          reject(new Error("cleanup_network_hung"));
+        }, { once: true }));
+      },
+      setTimeoutImpl: (callback, delay) => {
+        const timer = { cancelled: false, handle: null };
+        timer.handle = setImmediate(() => {
+          if (!timer.cancelled) {
+            now += delay;
+            callback();
+          }
+        });
+        return timer;
+      },
+      clearTimeoutImpl: (timer) => {
+        timer.cancelled = true;
+        clearImmediate(timer.handle);
+      },
+      evidenceCheck: async ({ phase }) => {
+        terminalEvidenceCalled = true;
+        assert.equal(phase, "final");
+        return { controlPlaneTerminalResources: 20 };
+      }
+    }),
+    (error) => {
+      assert.equal(error.result.ok, false);
+      assert.match(error.result.error, /production_soak_ready_timeout/);
+      assert.equal(error.result.children[2].signal, "SIGKILL");
+      assert.match(error.result.children[2].cleanupErrors[0], /production_soak_cleanup_incomplete/);
+      return true;
+    }
+  );
+
+  assert.deepEqual([...released].sort(), ["01", "02", "04", "05"]);
+  assert.deepEqual(children[2].kills, ["SIGTERM", "SIGKILL"]);
+  assert.deepEqual(cleanupCalls, ["03"]);
+  assert.equal(cleanupAborted, true);
+  assert.equal(terminalEvidenceCalled, true);
+  assert.equal(JSON.parse(await readFile(join(root, "result.json"), "utf8")).ok, false);
+});
+
 test("soak duration rejects non-finite, non-positive, and over-15-minute values", async () => {
   for (const soakDurationMs of [Number.NaN, Number.POSITIVE_INFINITY, 0, -1, DEFAULT_SOAK_DURATION_MS + 1]) {
     await assert.rejects(
@@ -641,4 +756,41 @@ test("soak duration rejects non-finite, non-positive, and over-15-minute values"
       /production_soak_duration_invalid/
     );
   }
+});
+
+test("coordinator rejects durations that leave no bounded cleanup and terminal-evidence window", async () => {
+  await assert.rejects(
+    runProductionSoak({
+      origin: "https://cloud.medopl.cn",
+      accountId: "account-production",
+      baseRunId: "invalid-budget",
+      artifactDir: "/tmp/not-used",
+      soakDurationMs: 20,
+      evidenceIntervalMs: 10,
+      readyTimeoutMs: 70,
+      readyPollMs: 1,
+      coordinatorTimeoutMs: 100,
+      cleanupReserveMs: 20,
+      childTerminationGraceMs: 1,
+      spawnImpl: () => { throw new Error("unexpected_spawn"); }
+    }),
+    /production_soak_deadline_budget_invalid/
+  );
+  await assert.rejects(
+    runProductionSoak({
+      origin: "https://cloud.medopl.cn",
+      accountId: "account-production",
+      baseRunId: "invalid-cleanup-budget",
+      artifactDir: "/tmp/not-used",
+      soakDurationMs: 1,
+      evidenceIntervalMs: 10,
+      readyTimeoutMs: 1,
+      readyPollMs: 1,
+      coordinatorTimeoutMs: 100,
+      cleanupReserveMs: 20,
+      childTerminationGraceMs: 6,
+      spawnImpl: () => { throw new Error("unexpected_spawn"); }
+    }),
+    /production_soak_deadline_budget_invalid/
+  );
 });

@@ -88,7 +88,7 @@ if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
 }
 
 function normalizedOrigin(origin) {
-  const parsed = assertPublicHttpsUrl(origin, "public_origin_required");
+  const parsed = assertPublicHttpsUrl(origin, "public_origin_required", { hostname: "cloud.medopl.cn" });
   parsed.pathname = "/";
   parsed.search = "";
   parsed.hash = "";
@@ -96,7 +96,7 @@ function normalizedOrigin(origin) {
 }
 
 function publicWorkspaceUrl(value, workspaceId) {
-  const parsed = assertPublicHttpsUrl(value, "workspace_url_required");
+  const parsed = assertPublicHttpsUrl(value, "workspace_url_required", { hostname: "workspace.medopl.cn" });
   if (parsed.pathname !== `/w/${workspaceId}/`) {
     throw new Error("workspace_url_required");
   }

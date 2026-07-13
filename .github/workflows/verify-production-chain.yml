@@ -3,11 +3,6 @@ name: Verify Production Chain
 on:
   workflow_dispatch:
     inputs:
-      origin:
-        description: Public OPL Console origin.
-        required: true
-        default: "https://cloud.medopl.cn"
-        type: string
       run_id:
         description: Optional verifier run id.
         required: false
@@ -43,7 +38,7 @@ jobs:
       workspace_id: ${{ steps.verify.outputs.workspace_id }}
       workspace_url: ${{ steps.verify.outputs.workspace_url }}
     env:
-      OPL_CONSOLE_ORIGIN: ${{ inputs.origin }}
+      OPL_CONSOLE_ORIGIN: "https://cloud.medopl.cn"
       OPL_VERIFY_AUTH_USERS_JSON: ${{ secrets.OPL_CONSOLE_USERS_JSON }}
       OPL_VERIFY_ACCOUNT_ID: ${{ inputs.account_id }}
       OPL_VERIFY_PACKAGE_ID: "basic"

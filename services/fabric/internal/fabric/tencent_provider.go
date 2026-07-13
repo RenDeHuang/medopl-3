@@ -145,8 +145,12 @@ func (p *TencentProvider) TagComputeMachine(ctx context.Context, machine Provide
 	return err
 }
 
-func (p *TencentProvider) DeleteComputeMachine(ctx context.Context, machine ProviderMachine) error {
-	_, err := p.DestroyComputeAllocation(ctx, ComputeAllocation{ID: machine.MachineID, MachineName: machine.MachineID, InstanceID: machine.InstanceID, CVMInstanceID: machine.InstanceID, NodeName: machine.NodeName, PrivateIP: machine.PrivateIP, Provider: "tencent-tke"})
+func (p *TencentProvider) DeleteComputeMachine(ctx context.Context, machine ProviderMachine, ownership MachineOwnership) error {
+	_, err := p.DestroyComputeAllocation(ctx, ComputeAllocation{
+		ID: ownership.ResourceID, AccountID: ownership.AccountID, NodePoolID: ownership.NodePoolID,
+		MachineName: machine.MachineID, InstanceID: machine.InstanceID, CVMInstanceID: machine.InstanceID,
+		NodeName: machine.NodeName, PrivateIP: machine.PrivateIP, PublicIP: machine.PublicIP, Provider: "tencent-tke",
+	})
 	return err
 }
 
@@ -212,6 +216,7 @@ func (p *TencentProvider) DestroyComputeAllocation(ctx context.Context, allocati
 			InstanceID:  firstNonEmpty(allocation.InstanceID, allocation.CVMInstanceID),
 			MachineName: firstNonEmpty(allocation.MachineName, allocation.ProviderData["machineName"], allocation.NodeName),
 			NodeName:    allocation.NodeName,
+			PrivateIP:   allocation.PrivateIP,
 		},
 	})
 	if err != nil {

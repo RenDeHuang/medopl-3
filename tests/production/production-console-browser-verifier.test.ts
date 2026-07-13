@@ -432,16 +432,23 @@ test("production Console rejects duplicate Machine ownership before attaching st
 
 test("production Console rejects private origins before opening a browser", async () => {
   let browserOpened = false;
-  await assert.rejects(() => verifyProductionConsoleLifecycle({
-    origin: "https://127.0.0.1",
-    accountId,
-    ownerEmail: "owner@example.com",
-    ownerPassword: "owner-password",
-    runId,
-    slot,
-    screenshotDir: "/tmp/private-origin-must-not-open",
-    browserFactory: async () => { browserOpened = true; throw new Error("browser_opened"); }
-  }), /public_origin_required/);
+  for (const origin of [
+    "https://127.0.0.1",
+    "https://attacker.example",
+    "https://user:password@cloud.medopl.cn",
+    "https://cloud.medopl.cn:444"
+  ]) {
+    await assert.rejects(() => verifyProductionConsoleLifecycle({
+      origin,
+      accountId,
+      ownerEmail: "owner@example.com",
+      ownerPassword: "owner-password",
+      runId,
+      slot,
+      screenshotDir: "/tmp/private-origin-must-not-open",
+      browserFactory: async () => { browserOpened = true; throw new Error("browser_opened"); }
+    }), /public_origin_required/);
+  }
   assert.equal(browserOpened, false);
 });
 

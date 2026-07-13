@@ -897,7 +897,9 @@ func (testProvider) TagComputeMachine(_ context.Context, _ ProviderMachine, _ Ma
 	return nil
 }
 
-func (testProvider) DeleteComputeMachine(_ context.Context, _ ProviderMachine) error { return nil }
+func (testProvider) DeleteComputeMachine(_ context.Context, _ ProviderMachine, _ MachineOwnership) error {
+	return nil
+}
 
 func (testProvider) SyncComputeAllocation(_ context.Context, allocation ComputeAllocation) (ComputeAllocation, error) {
 	allocation.Status = "running"

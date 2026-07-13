@@ -84,6 +84,24 @@ func TestDestroyComputeAllocationWithoutClaimedMachineSkipsProviderMutation(t *t
 	}
 }
 
+func TestDeleteComputeMachineForwardsOwnershipAndExactMachineIdentity(t *testing.T) {
+	provider := NewTencentProvider()
+	provider.provision = func(_ context.Context, request provisionerRequest) (provisionerResponse, error) {
+		if request.Action != "destroy_compute_allocation" || request.AccountID != "acct-alpha" || request.Pool.NodePoolID != "np-basic" ||
+			request.Allocation.ID != "compute-alpha" || request.Allocation.MachineName != "machine-alpha" ||
+			request.Allocation.InstanceID != "ins-alpha" || request.Allocation.NodeName != "node-alpha" || request.Allocation.PrivateIP != "10.0.0.8" {
+			t.Fatalf("destroy request lost ownership or machine identity: %#v", request)
+		}
+		return provisionerResponse{OK: true, Status: "destroyed"}, nil
+	}
+	err := provider.DeleteComputeMachine(context.Background(), ProviderMachine{
+		MachineID: "machine-alpha", InstanceID: "ins-alpha", NodeName: "node-alpha", PrivateIP: "10.0.0.8",
+	}, MachineOwnership{ResourceID: "compute-alpha", AccountID: "acct-alpha", NodePoolID: "np-basic"})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestReconcileComputePoolPreservesRawMachineCount(t *testing.T) {
 	provider := NewTencentProvider()
 	provider.provision = func(_ context.Context, request provisionerRequest) (provisionerResponse, error) {

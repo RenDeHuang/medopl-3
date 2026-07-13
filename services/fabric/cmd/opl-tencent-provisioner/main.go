@@ -253,8 +253,22 @@ func mutationNodePoolFailure(pool *tke2022.NodePool, request Request, requestID 
 	if !isCVMNativeNodePool(pool) {
 		return &Response{Ok: false, ErrorCode: "tencent_cvm_node_pool_required", Message: "Fabric compute requires a POSTPAID NativeCVM node pool.", ProviderRequestId: requestID, Retryable: false}
 	}
-	if isDeletingNodePool(pool) || !matchesCapacityNodePool(pool, request) {
+	lifeState := strings.TrimSpace(stringValue(pool.LifeState))
+	if strings.EqualFold(lifeState, "Creating") {
+		return &Response{Ok: false, ErrorCode: "tencent_node_pool_not_ready", Message: "Tencent node pool is still being created.", ProviderRequestId: requestID, Retryable: true}
+	}
+	if !strings.EqualFold(lifeState, "Running") || !matchesCapacityNodePool(pool, request) {
 		return &Response{Ok: false, ErrorCode: "tencent_node_pool_ownership_mismatch", Message: "Node pool does not match the requested ownership labels.", ProviderRequestId: requestID, Retryable: false}
+	}
+	requiredReplicas := request.Pool.DesiredReplicas
+	if request.Allocation.Id != "" {
+		requiredReplicas = nativeReplicas(pool) + 1
+	}
+	if len(pool.Native.InstanceTypes) != 1 || stringValue(pool.Native.InstanceTypes[0]) != request.Pool.InstanceType ||
+		pool.Native.EnableAutoscaling == nil || *pool.Native.EnableAutoscaling ||
+		pool.Native.AutoRepair == nil || *pool.Native.AutoRepair || pool.Native.Replicas == nil ||
+		pool.Native.Scaling == nil || pool.Native.Scaling.MaxReplicas == nil || *pool.Native.Scaling.MaxReplicas < requiredReplicas {
+		return &Response{Ok: false, ErrorCode: "tencent_node_pool_configuration_mismatch", Message: "Node pool runtime configuration does not match the requested Fabric mutation.", ProviderRequestId: requestID, Retryable: false}
 	}
 	return nil
 }
@@ -820,6 +834,18 @@ func (client *tencentSDKClient) DestroyComputeAllocation(request Request, env ma
 		return response
 	}
 	describeRequestId = requestId
+	identityRequestId, err := client.verifyDestroyMachineOwnership(pool, request)
+	if err != nil {
+		return Response{
+			Ok: false, ErrorCode: "compute_machine_identity_unverified", Message: err.Error(),
+			ProviderRequestId: firstNonEmpty(identityRequestId, describeRequestId), Retryable: false,
+			ProviderData: map[string]string{
+				"clusterId": client.clusterId, "region": client.region, "nodePoolId": request.Pool.NodePoolId,
+				"machineName": request.Allocation.MachineName, "nodeName": request.Allocation.NodeName,
+				"privateIp": request.Allocation.PrivateIp, "instanceId": request.Allocation.InstanceId,
+			},
+		}
+	}
 	if nativeSelfProvisioningEnabled(pool) {
 		requestId, err := client.disableNativeNodePoolSelfProvisioning(request.Pool.NodePoolId)
 		if err != nil {
@@ -1019,13 +1045,82 @@ func (client *tencentSDKClient) describeClusterMachines(nodePoolId string) ([]*t
 					}
 				}
 				describeResponse.Response.Machines = machines
+				describeResponse.Response.TotalCount = common.Int64Ptr(int64(len(machines)))
 			}
 		}
 	}
 	if err != nil {
 		return nil, "", err
 	}
+	if describeResponse == nil || describeResponse.Response == nil || describeResponse.Response.TotalCount == nil ||
+		*describeResponse.Response.TotalCount != int64(len(describeResponse.Response.Machines)) {
+		return nil, "", fmt.Errorf("Tencent TKE DescribeClusterMachines response is missing or incomplete")
+	}
 	return describeResponse.Response.Machines, stringValue(describeResponse.Response.RequestId), nil
+}
+
+func (client *tencentSDKClient) verifyDestroyMachineOwnership(pool *tke2022.NodePool, request Request) (string, error) {
+	poolMachines, requestID, err := client.describeClusterMachines(request.Pool.NodePoolId)
+	if err != nil {
+		return requestID, err
+	}
+	machineName := strings.TrimSpace(request.Allocation.MachineName)
+	matches := []*tke2022.Machine{}
+	for _, machine := range poolMachines {
+		if machine != nil && stringValue(machine.MachineName) == machineName {
+			matches = append(matches, machine)
+		}
+	}
+	if len(matches) != 1 {
+		return requestID, fmt.Errorf("machine name is not unique in the exact node pool")
+	}
+	allMachines, globalRequestID, err := client.describeClusterMachines("")
+	if err != nil {
+		return firstNonEmpty(globalRequestID, requestID), err
+	}
+	globalMatches := 0
+	for _, machine := range allMachines {
+		if machine != nil && stringValue(machine.MachineName) == machineName {
+			globalMatches++
+		}
+	}
+	if globalMatches != 1 {
+		return globalRequestID, fmt.Errorf("machine name is not globally unique")
+	}
+	machine := matches[0]
+	privateIP := stringValue(machine.LanIP)
+	if privateIP == "" || (request.Allocation.PrivateIp != "" && request.Allocation.PrivateIp != privateIP) ||
+		(request.Allocation.NodeName != "" && request.Allocation.NodeName != kubernetesNodeName(machine)) {
+		return globalRequestID, fmt.Errorf("machine name, node name, and private IP do not identify the same machine")
+	}
+	machineType := ""
+	if pool != nil && pool.Native != nil {
+		machineType = stringValue(pool.Native.MachineType)
+	}
+	switch {
+	case strings.EqualFold(machineType, "NativeCVM"):
+		instance, providerRequestID, err := client.describeCvmInstanceByPrivateIp(privateIP)
+		if err != nil {
+			return firstNonEmpty(providerRequestID, globalRequestID), err
+		}
+		instanceID := strings.TrimSpace(request.Allocation.InstanceId)
+		if !strings.HasPrefix(instanceID, "ins-") || stringValue(instance.InstanceId) != instanceID {
+			return providerRequestID, fmt.Errorf("CVM instance does not match the supplied instance ID")
+		}
+		return providerRequestID, nil
+	case strings.EqualFold(machineType, "Native"), strings.EqualFold(machineType, "CXM"):
+		instance, providerRequestID, err := client.describeTkeClusterInstanceByPrivateIp(privateIP, request.Pool.NodePoolId)
+		if err != nil {
+			return firstNonEmpty(providerRequestID, globalRequestID), err
+		}
+		if request.Allocation.InstanceId == "" || stringValue(instance.InstanceId) != request.Allocation.InstanceId ||
+			stringValue(instance.NodePoolId) != request.Pool.NodePoolId || stringValue(instance.LanIP) != privateIP {
+			return providerRequestID, fmt.Errorf("TKE instance does not match the supplied machine identity")
+		}
+		return providerRequestID, nil
+	default:
+		return globalRequestID, fmt.Errorf("unsupported Tencent machine provider: %s", machineType)
+	}
 }
 
 func nativeSelfProvisioningEnabled(pool *tke2022.NodePool) bool {
@@ -1266,7 +1361,7 @@ func (client *tencentSDKClient) discoverNativeNodePool(request Request) (*tke202
 }
 
 func matchesPackageNodePool(pool *tke2022.NodePool, request Request) bool {
-	return mutationNodePoolFailure(pool, request, "") == nil
+	return isCVMNativeNodePool(pool) && !isDeletingNodePool(pool) && matchesCapacityNodePool(pool, request)
 }
 
 func nodePoolLabels(pool *tke2022.NodePool) map[string]string {

@@ -121,6 +121,15 @@ test("production verifier workflow always cleans failed paid resources", async (
   assert.equal(currentJob.env.OPL_VERIFY_PACKAGE_ID, "basic");
 });
 
+test("secret-bearing production verifiers use only the fixed Console origin", async () => {
+  for (const [file, jobName] of [["verify-production-chain.yml", "verify"], ["verify-production-soak.yml", "soak"]]) {
+    const workflow = await readWorkflow(new URL(`../../.github/workflows/${file}`, import.meta.url));
+    assert.equal(workflow.on.workflow_dispatch.inputs.origin, undefined, `${file} must not accept a credential-bearing origin`);
+    assert.equal(job(workflow, jobName).env.OPL_CONSOLE_ORIGIN, "https://cloud.medopl.cn", file);
+    assert.doesNotMatch(JSON.stringify(workflow), /inputs\.origin/, file);
+  }
+});
+
 test("production resource workflows share the non-cancelling concurrency lock", async () => {
   for (const file of [
     "provision-manual-workspace.yml",

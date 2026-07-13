@@ -511,7 +511,7 @@ func (testProvider) TagComputeMachine(_ context.Context, _ fabric.ProviderMachin
 	return nil
 }
 
-func (testProvider) DeleteComputeMachine(_ context.Context, _ fabric.ProviderMachine) error {
+func (testProvider) DeleteComputeMachine(_ context.Context, _ fabric.ProviderMachine, _ fabric.MachineOwnership) error {
 	return nil
 }
 

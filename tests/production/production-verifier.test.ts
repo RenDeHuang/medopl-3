@@ -6,6 +6,7 @@ import { basename, join } from "node:path";
 import test from "node:test";
 
 import {
+  assertPublicHttpsUrl,
   cleanupVerificationResources,
   productionVerificationMutationKey,
   runProductionVerifierCli,
@@ -1152,6 +1153,21 @@ test("production verifier refuses localhost Console origins", async () => {
       }
     }),
     /public_origin_required/
+  );
+});
+
+test("public Console and Workspace URLs reject embedded credentials and non-default ports", () => {
+  for (const url of [
+    "https://user:password@cloud.medopl.cn",
+    "https://cloud.medopl.cn:444",
+    "https://user:password@workspace.medopl.cn/w/ws-alpha/",
+    "https://workspace.medopl.cn:444/w/ws-alpha/"
+  ]) {
+    assert.throws(() => assertPublicHttpsUrl(url, "public_url_invalid"), /public_url_invalid/);
+  }
+  assert.throws(
+    () => assertPublicHttpsUrl("https://workspace.attacker.example/w/ws-alpha/", "public_url_invalid", { hostname: "workspace.medopl.cn" }),
+    /public_url_invalid/
   );
 });
 
@@ -2731,6 +2747,36 @@ test("production verifier final storage cleanup does not fall back to primary re
   });
   assert.deepEqual(errors, []);
   assert.deepEqual(requests, ["GET /api/state", "POST /api/storage-volumes/destroy"]);
+});
+
+test("production verifier cleanup forwards its abort signal to every request", async () => {
+  const { manifest, state } = ownedCleanupFixture();
+  const controller = new AbortController();
+  const signals = [];
+  const errors = await cleanupVerificationResources({
+    origin: "https://console.oplcloud.cn",
+    accountId: "pi-prod",
+    manifest,
+    computeAllocationId: manifest.ids.computeAllocationId,
+    attachmentId: manifest.ids.attachmentId,
+    expectedComputeHoldId: manifest.holdIds.compute,
+    cleanupStage: "first-cleanup",
+    signal: controller.signal,
+    fetchImpl: async (url, options = {}) => {
+      signals.push(options.signal);
+      if ((options.method || "GET") === "GET") return jsonResponse(state);
+      if (String(url).endsWith("/detach")) return jsonResponse({ status: "detached" });
+      return jsonResponse({
+        ...state.computeAllocations[0],
+        status: "destroyed",
+        billingStatus: "stopped",
+        holdReleaseId: "release-compute"
+      });
+    }
+  });
+  assert.deepEqual(errors, []);
+  assert.equal(signals.length, 3);
+  assert.ok(signals.every((signal) => signal === controller.signal));
 });
 
 for (const [name, update] of [
