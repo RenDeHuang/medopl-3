@@ -15,9 +15,22 @@ const DEFAULT_AIONUI_ADMIN_USERNAME = "admin";
 const VERIFICATION_PRICING_VERSION = "opl-tencent-v1";
 const DEFAULT_SLOT = "01";
 const DEFAULT_BARRIER_TIMEOUT_MS = 15 * 60 * 1000;
+const MAX_BARRIER_TIMEOUT_MS = 60 * 60 * 1000;
+
+function assertProductionVerificationIdentity(runId, slot) {
+  if (!/^[A-Za-z0-9._-]{1,80}$/.test(String(runId || ""))) throw new Error("production_verification_run_id_invalid");
+  if (!/^[A-Za-z0-9._-]{1,16}$/.test(String(slot || ""))) throw new Error("production_verification_slot_invalid");
+}
+
+function assertBarrierTimeout(barrierTimeoutMs) {
+  if (!Number.isFinite(barrierTimeoutMs) || barrierTimeoutMs <= 0 || barrierTimeoutMs > MAX_BARRIER_TIMEOUT_MS) {
+    throw new Error("production_verification_barrier_timeout_invalid");
+  }
+}
 
 export function productionVerificationMutationKey(runId, slot = DEFAULT_SLOT, stage) {
-  return `production-verification:${runId}:${slot || DEFAULT_SLOT}:${stage}`;
+  assertProductionVerificationIdentity(runId, slot);
+  return `production-verification:${runId}:${slot}:${stage}`;
 }
 
 function withoutSecrets(value) {
@@ -45,6 +58,7 @@ export async function writeVerificationManifest(path, manifest) {
 export async function waitForReleaseBarrier({ readyFile, releaseFile, barrierTimeoutMs = DEFAULT_BARRIER_TIMEOUT_MS, retryDelayMs = DEFAULT_RETRY_DELAY_MS, evidence }) {
   if (!readyFile && !releaseFile) return;
   if (!readyFile || !releaseFile) throw new Error("production_verification_barrier_files_required");
+  assertBarrierTimeout(barrierTimeoutMs);
   await atomicWriteJson(readyFile, withoutSecrets(evidence));
   const deadline = Date.now() + barrierTimeoutMs;
   while (true) {
@@ -1544,8 +1558,9 @@ export async function cleanupVerificationResources({ fetchImpl, origin, accountI
         idempotencyKey: productionVerificationMutationKey(manifest.runId, manifest.slot, `${cleanupStage}-detach`),
         body: { accountId, attachmentId: effectiveAttachmentId, confirm: true }
       });
+      if (detached?.status !== "detached") throw new Error("verification_storage_detached_failed");
       if (checks) {
-        addCheck(checks, "verification_storage_detached", Boolean(detached?.status === "detached"));
+        addCheck(checks, "verification_storage_detached", true);
       }
     } catch (error) {
       cleanupErrors.push(`detach_storage:${error.message}`);
@@ -1599,13 +1614,17 @@ export async function cleanupVerificationResources({ fetchImpl, origin, accountI
         idempotencyKey: productionVerificationMutationKey(manifest.runId, manifest.slot, `${cleanupStage}-storage`),
         body: { accountId, storageId: effectiveStorageId, confirmDataLoss: true }
       });
+      const expectedHoldId = expectedStorageHoldId || manifest.holdIds.storage;
+      const cleanupComplete = Boolean(
+        destroyed?.status === "destroyed" &&
+        destroyed?.billingStatus === "stopped" &&
+        destroyed?.holdId === expectedHoldId &&
+        destroyed?.holdReleaseId
+      );
       if (checks) {
-        addCheck(checks, "verification_storage_destroyed", Boolean(
-          destroyed?.status === "destroyed" &&
-          destroyed?.billingStatus === "stopped" &&
-          (!expectedStorageHoldId || (destroyed?.holdId === expectedStorageHoldId && Boolean(destroyed?.holdReleaseId)))
-        ));
+        addCheck(checks, "verification_storage_destroyed", cleanupComplete);
       }
+      if (!cleanupComplete) throw new Error("verification_storage_destroyed_failed");
     } catch (error) {
       cleanupErrors.push(`destroy_storage:${error.message}`);
     }
@@ -1640,6 +1659,11 @@ export async function verifyProductionChain({
   fetchImpl = globalThis.fetch
 } = {}) {
   if (typeof fetchImpl !== "function") throw new Error("fetch_required");
+  assertProductionVerificationIdentity(runId, slot);
+  if (readyFile || releaseFile) {
+    if (!readyFile || !releaseFile) throw new Error("production_verification_barrier_files_required");
+    assertBarrierTimeout(barrierTimeoutMs);
+  }
   const checks = [];
   const normalizedOrigin = normalizeOrigin(origin);
   assertConsoleOrigin(normalizedOrigin, { allowPrivateConsoleOrigin });

@@ -2212,6 +2212,37 @@ test("production verifier reports cleanup failures without hiding the original v
   ]);
 });
 
+test("production verifier catch reports 2xx cleanup responses that are not terminal", async () => {
+  const chain = tkeChain();
+  const responses = {
+    ...chainResponses(chain),
+    [`GET ${chain.workspace.url}`]: "bad gateway",
+    "POST /api/storage-attachments/detach": { ...chain.attachment, status: "attached" },
+    "POST /api/storage-volumes/destroy": { ...chain.storage, status: "destroying", billingStatus: "stopping" }
+  };
+  let caught = null;
+  try {
+    await verifyProductionChain({
+      origin: "https://console.oplcloud.cn",
+      accountId: "pi-prod",
+      runId: "prod-run",
+      workspaceUrlAttempts: 1,
+      retryDelayMs: 0,
+      fetchImpl: keyedFetch({ responses, statusByKey: {
+        [`GET ${chain.workspace.url}`]: 502,
+        [`GET ${scrubbedWorkspaceUrl(chain.workspace.url)}`]: 502
+      } })
+    });
+  } catch (error) {
+    caught = error;
+  }
+  assert.match(caught.message, /workspace_url_failed:502:bad gateway/);
+  assert.deepEqual(caught.cleanupErrors, [
+    "detach_storage:verification_storage_detached_failed",
+    "destroy_storage:verification_storage_destroyed_failed"
+  ]);
+});
+
 test("production verifier can leave failed resources for live diagnosis", async () => {
   const chain = tkeChain();
   const responses = chainResponses(chain);
@@ -2311,6 +2342,29 @@ test("production verifier CLI help is read-only", async () => {
 	assert.match(output, /--origin/);
 });
 
+for (const timeout of ["NaN", "Infinity", "0", "3600001"]) {
+  test(`production verifier CLI rejects barrier timeout ${timeout} before fetch`, async () => {
+    let stderr = "";
+    let fetches = 0;
+    const code = await runProductionVerifierCli({
+      argv: [
+        "--origin", "https://console.oplcloud.cn",
+        "--run-id", "barrier-input",
+        "--ready-file", "/tmp/ready.json",
+        "--release-file", "/tmp/release",
+        "--barrier-timeout-ms", timeout
+      ],
+      env: {},
+      stdout: { write() {} },
+      stderr: { write(value) { stderr += value; } },
+      fetchImpl: async () => { fetches += 1; throw new Error("unexpected_fetch"); }
+    });
+    assert.equal(code, 1);
+    assert.equal(JSON.parse(stderr).error, "production_verification_barrier_timeout_invalid");
+    assert.equal(fetches, 0);
+  });
+}
+
 test("production verifier CLI preserves safe provider failure details", async () => {
   let stdout = "";
   let stderr = "";
@@ -2353,7 +2407,35 @@ test("production verifier mutation keys are stable and slot-scoped", () => {
   assert.notEqual(productionVerificationMutationKey("run-7", "03", "create-compute"), productionVerificationMutationKey("run-7", "03", "create-storage"));
 });
 
-test("production verifier reuses the same mutation key after a lost create response", async () => {
+for (const [name, runId, slot] of [
+  ["empty run id", "", "01"],
+  ["colon run id", "a:b", "c"],
+  ["slash run id", "a/b", "01"],
+  ["long run id", "x".repeat(81), "01"],
+  ["empty slot", "run", ""],
+  ["colon slot", "a", "b:c"],
+  ["slash slot", "run", "a/b"],
+  ["long slot", "run", "x".repeat(17)]
+]) {
+  test(`production verifier rejects ${name} before key creation or fetch`, async () => {
+    assert.throws(() => productionVerificationMutationKey(runId, slot, "stage"), /production_verification_(run_id|slot)_invalid/);
+    let fetches = 0;
+    await assert.rejects(verifyProductionChain({
+      origin: "https://console.oplcloud.cn",
+      runId,
+      slot,
+      fetchImpl: async () => { fetches += 1; throw new Error("unexpected_fetch"); }
+    }), /production_verification_(run_id|slot)_invalid/);
+    assert.equal(fetches, 0);
+  });
+}
+
+test("production verifier rejects ambiguous colon key components instead of colliding", () => {
+  assert.throws(() => productionVerificationMutationKey("a:b", "c", "stage"), /production_verification_run_id_invalid/);
+  assert.throws(() => productionVerificationMutationKey("a", "b:c", "stage"), /production_verification_slot_invalid/);
+});
+
+test("production verifier client replays the same mutation key after a lost create response", async () => {
   const chain = tkeChain();
   const resourcesByKey = new Map();
   const delivered = [];
@@ -2689,6 +2771,10 @@ test("production verifier barrier atomically publishes ready evidence and observ
     evidence: { runId: "run-7", slot: "03", workspaceUrl: "https://workspace.medopl.cn/w/ws-prod001/" }
   });
   assert.equal(JSON.parse(await readFile(readyFile, "utf8")).workspaceUrl, "https://workspace.medopl.cn/w/ws-prod001/");
+});
+
+test("production verifier ignores barrier timeout when no barrier files are configured", async () => {
+  await waitForReleaseBarrier({ barrierTimeoutMs: Number.NaN });
 });
 
 test("production verifier barrier timeout publishes ready evidence and runs exact cleanup", async () => {
