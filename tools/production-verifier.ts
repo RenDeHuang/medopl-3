@@ -952,10 +952,17 @@ export async function verifyWorkspaceBrowserUi({
           (element.textContent || "").trim() !== submittedPrompt &&
           !element.closest("nav, aside, h1, h2, h3, h4, h5, h6, input, textarea, [role='textbox'], [data-message-role='user'], [data-message-author-role='user']")
         );
-        const processing = Array.from(document.querySelectorAll("body *")).some((element) =>
-          visible(element) && /^Processing(?:\.\.\.|…)?/i.test((element.textContent || "").trim())
+        const processing = Array.from(main?.querySelectorAll(
+          "[aria-busy='true'], [data-status='processing'], [data-testid*='processing'], [class*='processing'], button:disabled"
+        ) || []).some((element) =>
+          visible(element) && /^Processing(?:\.\.\.|…)?$/i.test((element.textContent || "").trim())
         );
-        const send = document.querySelector('[data-testid="guid-send-btn"], button[type="submit"]');
+        const guidSend = document.querySelector('[data-testid="guid-send-btn"]');
+        const composerInput = guidSend ? null : document.querySelector(
+          '[data-testid="guid-input"] textarea, [data-testid="guid-input"], textarea, [contenteditable="true"], [role="textbox"]'
+        );
+        const composer = composerInput?.closest("form, [data-testid*='composer'], [class*='composer']");
+        const send = guidSend || composer?.querySelector('button[type="submit"]');
         return Boolean(
           reply &&
           !processing &&

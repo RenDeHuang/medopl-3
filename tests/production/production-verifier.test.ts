@@ -738,7 +738,8 @@ function fakeAionUiLoginBrowserFactory(actions = []) {
 function fakeGuidDomBrowserFactory(actions = [], {
   firstRun = false,
   setupButtonText = "Finish setup",
-  replyState = "complete"
+  replyState = "complete",
+  unrelatedSubmitBeforeComposer = false
 } = {}) {
   const state = {
     setup: firstRun,
@@ -749,7 +750,9 @@ function fakeGuidDomBrowserFactory(actions = [], {
     fileName: "",
     selected: false,
     marker: "",
-    processing: false
+    processing: false,
+    reply: false,
+    sendDisabled: false
   };
   class FakeTextArea {
     get value() {
@@ -818,7 +821,7 @@ function fakeGuidDomBrowserFactory(actions = [], {
   };
   const sendButton = {
     get disabled() {
-      return !state.selected || !state.prompt || state.processing;
+      return !state.selected || !state.prompt || state.sendDisabled;
     },
     getAttribute(name) {
       if (name === "disabled" && this.disabled) return "";
@@ -830,9 +833,11 @@ function fakeGuidDomBrowserFactory(actions = [], {
       if (this.disabled) return;
       state.marker = state.prompt.match(/OPL_BROWSER_E2E_[\w-]+/)?.[0] || "ok";
       state.processing = replyState === "processing";
-      state.bodyText += state.processing
-        ? `\n${state.marker}\n${state.marker}\n${state.prompt}\nProcessing`
-        : `\n${state.prompt}\n${state.marker}`;
+      state.reply = replyState !== "title-only";
+      state.sendDisabled = replyState === "processing" || replyState === "disabled";
+      state.bodyText += `\n${state.marker}\n${state.marker}\n${state.prompt}`;
+      if (state.reply) state.bodyText += `\n${state.marker}`;
+      if (state.processing) state.bodyText += "\nProcessing";
     },
     getBoundingClientRect() {
       return { width: 36, height: 36, top: 360, bottom: 396, left: 660, right: 696 };
@@ -855,15 +860,34 @@ function fakeGuidDomBrowserFactory(actions = [], {
     getBoundingClientRect() {
       return { width: 800, height: 600, top: 80, bottom: 680, left: 180, right: 980 };
     },
-    querySelectorAll() {
+    querySelectorAll(selector = "") {
+      if (/aria-busy|data-status|processing|button/i.test(selector)) {
+        return state.processing ? [visibleElement("Processing", { "aria-busy": "true" })] : [];
+      }
       return [
         visibleElement(state.prompt, { "data-message-author-role": "user" }, "[data-message-author-role='user']"),
-        ...(state.processing ? [visibleElement("Processing")] : []),
-        ...(!state.processing && state.marker
+        ...(replyState === "complete"
+          ? [visibleElement("Processing complete", { "data-message-author-role": "assistant" })]
+          : []),
+        ...(state.reply && state.marker
           ? [visibleElement(state.marker, { "data-message-author-role": "assistant" })]
           : [])
       ];
     }
+  };
+  const composer = {
+    querySelector(selector) {
+      return selector.includes('button[type="submit"]') ? sendButton : null;
+    },
+    closest() {
+      return this;
+    }
+  };
+  textarea.closest = () => composer;
+  const unrelatedSubmit = {
+    disabled: false,
+    getAttribute: () => null,
+    getBoundingClientRect: () => ({ width: 100, height: 40, top: 20, bottom: 60, left: 20, right: 120 })
   };
   const visibleStyle = { visibility: "visible", display: "block" };
   function installDom() {
@@ -904,11 +928,16 @@ function fakeGuidDomBrowserFactory(actions = [], {
       querySelector(selector) {
         actions.push(["querySelector", selector]);
         if (state.setup) return null;
-        if (selector.includes("main") || selector.includes("[role='main']")) return main;
+        if (selector === "main, [role='main']") return main;
         if (selector.includes('input[type="file"]')) return { getBoundingClientRect: () => ({ width: 1, height: 1 }) };
         if (selector.includes("preset-pill-mas")) return card;
         if (selector.includes("guid-input")) return textarea;
+        if (selector.includes("guid-send-btn") && selector.includes('button[type="submit"]')) {
+          return unrelatedSubmitBeforeComposer ? unrelatedSubmit : sendButton;
+        }
         if (selector.includes("guid-send-btn")) return sendButton;
+        if (selector.includes('button[type="submit"]')) return unrelatedSubmit;
+        if (/textarea|contenteditable|role='textbox'/.test(selector)) return textarea;
         return null;
       },
       querySelectorAll(selector) {
@@ -923,6 +952,7 @@ function fakeGuidDomBrowserFactory(actions = [], {
           return [
             visibleElement(state.marker, {}, "h1"),
             visibleElement(state.marker, {}, "aside"),
+            ...(replyState === "complete" ? [visibleElement("Processing", {}, "aside")] : []),
             ...main.querySelectorAll()
           ];
         }
@@ -1658,20 +1688,56 @@ test("production verifier uses one-person-lab-app guid DOM contract for assistan
   ]);
 });
 
-test("production verifier requires a completed visible assistant reply in the main conversation", async () => {
-  const checks = [];
-
+test("production verifier rejects title sidebar and user markers without an assistant reply", async () => {
   await assert.rejects(
     verifyWorkspaceBrowserUi({
       workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
       runId: "browser-run",
-      checks,
+      checks: [],
+      browserFactory: fakeGuidDomBrowserFactory([], { replyState: "title-only" }),
+      screenshotDir: ""
+    }),
+    /workspace_browser_reply_seen_failed/
+  );
+});
+
+test("production verifier rejects an assistant reply while Processing is active", async () => {
+  await assert.rejects(
+    verifyWorkspaceBrowserUi({
+      workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+      runId: "browser-run",
+      checks: [],
       browserFactory: fakeGuidDomBrowserFactory([], { replyState: "processing" }),
       screenshotDir: ""
     }),
     /workspace_browser_reply_seen_failed/
   );
-  assert.ok(checks.some((check) => check.name === "workspace_browser_reply_seen" && check.ok === false));
+});
+
+test("production verifier rejects an assistant reply while the composer send is disabled", async () => {
+  await assert.rejects(
+    verifyWorkspaceBrowserUi({
+      workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+      runId: "browser-run",
+      checks: [],
+      browserFactory: fakeGuidDomBrowserFactory([], { replyState: "disabled" }),
+      screenshotDir: ""
+    }),
+    /workspace_browser_reply_seen_failed/
+  );
+});
+
+test("production verifier does not substitute an unrelated enabled submit for the disabled GUID send", async () => {
+  await assert.rejects(
+    verifyWorkspaceBrowserUi({
+      workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+      runId: "browser-run",
+      checks: [],
+      browserFactory: fakeGuidDomBrowserFactory([], { replyState: "disabled", unrelatedSubmitBeforeComposer: true }),
+      screenshotDir: ""
+    }),
+    /workspace_browser_reply_seen_failed/
+  );
 });
 
 test("production verifier completes first-run model access before file upload", async () => {
