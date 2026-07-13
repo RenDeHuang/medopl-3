@@ -1,13 +1,19 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { basename } from "node:path";
+import { mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
 import test from "node:test";
 
 import {
+  assertPublicHttpsUrl,
+  cleanupVerificationResources,
+  productionVerificationMutationKey,
   runProductionVerifierCli,
   verificationOwnerFromSeed,
   verifyProductionChain,
-  verifyWorkspaceBrowserUi
+  verifyWorkspaceBrowserUi,
+  waitForReleaseBarrier
 } from "../../tools/production-verifier.ts";
 
 test("production verifier resolves only one unambiguous owner account from the auth seed", () => {
@@ -78,6 +84,7 @@ function tkeChain({ workspaceUrl = "https://workspace.medopl.cn/w/ws-tke-prod001
     packageId: "basic",
     provider: "tencent-tke",
     providerResourceId: "node/opl-node-prod001",
+    machineName: "machine-prod001",
     instanceId: "ins-prod001",
     nodeName: "opl-node-prod001",
     privateIp: "10.0.0.21",
@@ -132,6 +139,7 @@ function tkeChain({ workspaceUrl = "https://workspace.medopl.cn/w/ws-tke-prod001
     id: "compute-prod002",
     holdId: "hold-compute-prod002",
     providerResourceId: "node/opl-node-prod002",
+    machineName: "machine-prod002",
     instanceId: "ins-prod002",
     nodeName: "opl-node-prod002",
     privateIp: "10.0.0.22",
@@ -334,8 +342,46 @@ function keyedFetch({ responses, requests = [], responseHeaders = null, statusBy
         responseKey = `${method} ${lookup.toString()}${key.match(/#\d+$/)?.[0] || ""}`;
       }
     }
-    const payload = responses[responseKey] ?? responses[responseKey.replace(/#\d+$/, "")] ?? responses[key] ?? responses[key.replace(/#\d+$/, "")];
-    if (typeof payload === "string") return htmlResponse(payload);
+    let payload = responses[responseKey] ?? responses[responseKey.replace(/#\d+$/, "")] ?? responses[key] ?? responses[key.replace(/#\d+$/, "")];
+    if (key.startsWith("GET /api/state?accountId=")) {
+      const accountId = parsed.searchParams.get("accountId");
+      const created = (prefix) => requests.filter((request) => request.key === prefix || request.key.startsWith(`${prefix}#`));
+      const computeRequests = created("POST /api/compute-allocations");
+      const attachmentRequests = created("POST /api/storage-attachments");
+      const workspaceRequests = created("POST /api/workspaces");
+      const computes = computeRequests.map((request, index) => {
+        const createdCompute = responses[index ? "POST /api/compute-allocations#2" : "POST /api/compute-allocations"] || {};
+        const readyCompute = Object.entries(responses).find(([responseKey, value]) => responseKey.startsWith(`GET /api/compute-allocations/${createdCompute.id}?`) && value?.status === "running")?.[1];
+        return { ...createdCompute, ...readyCompute, accountId, name: request.body.name };
+      });
+      const storageRequest = requests.find((request) => request.key === "POST /api/storage-volumes");
+      const createdStorage = responses["POST /api/storage-volumes"] || {};
+      const readyStorage = responses[`POST /api/storage-volumes/${createdStorage.id}/sync`] || {};
+      const storages = storageRequest ? [{ ...createdStorage, ...readyStorage, accountId, name: storageRequest.body.name }] : [];
+      const attachments = attachmentRequests.map((request, index) => ({
+        ...(responses[index ? "POST /api/storage-attachments#2" : "POST /api/storage-attachments"] || {}),
+        ownerAccountId: accountId,
+        computeAllocationId: request.body.computeAllocationId,
+        storageId: request.body.storageId
+      }));
+      const workspaceRows = workspaceRequests.map((request, index) => ({
+        ...(responses[index ? "POST /api/workspaces#2" : "POST /api/workspaces"] || {}),
+        ownerAccountId: accountId,
+        name: request.body.workspaceName,
+        computeAllocationId: attachments[index]?.computeAllocationId,
+        storageId: attachments[index]?.storageId,
+        attachmentId: attachments[index]?.id
+      }));
+      payload = {
+        ...payload,
+        account: { accountId },
+        computeAllocations: computes,
+        storageVolumes: storages,
+        storageAttachments: attachments,
+        workspaces: [...new Map(workspaceRows.map((row) => [row.id, row])).values()]
+      };
+    }
+    if (typeof payload === "string") return htmlResponse(payload, statusByKey[key] || statusByKey[key.replace(/#\d+$/, "")] || 200);
     if (payload) {
       if (typeof payload.binaryBody === "string") {
         return binaryResponse(payload.binaryBody, {
@@ -497,7 +543,8 @@ function fakeWorkspaceBrowserFactory(actions = [], {
   assistantLabels = ["@Research", "@Grants", "@PPT"],
   domAssistantSelection = false,
   assistantReplies = false,
-  roleAssistantSelection = true
+  roleAssistantSelection = true,
+  legacyComposerSendDisabled = false
 } = {}) {
   const state = {
     bodyText: `Select an assistant to start a task\n${assistantLabels.join("\n")}`,
@@ -557,15 +604,55 @@ function fakeWorkspaceBrowserFactory(actions = [], {
       actions.push(["waitForFunction", arg, options]);
       const previousDocument = globalThis.document;
       const previousWindow = globalThis.window;
+      let composerContainer;
       const visiblePromptElement = {
         value: state.prompt,
         textContent: state.prompt,
         innerText: state.prompt,
+        closest: () => composerContainer,
         getBoundingClientRect: () => ({ width: state.prompt ? 360 : 0, height: state.prompt ? 40 : 0 })
       };
+      let searchContainer;
+      const searchElement = {
+        value: "",
+        textContent: "",
+        innerText: "",
+        closest: () => searchContainer,
+        getBoundingClientRect: () => ({ width: 240, height: 36 })
+      };
+      const assistantReplyElement = {
+        textContent: state.prompt.replace("请只回复：", ""),
+        getBoundingClientRect: () => ({ width: 360, height: 40 }),
+        getAttribute: (name) => name === "data-message-author-role" ? "assistant" : null,
+        closest: () => null
+      };
+      const main = {
+        querySelectorAll: () => assistantReplies ? [visiblePromptElement, assistantReplyElement] : [visiblePromptElement]
+      };
+      const sendButton = {
+        disabled: legacyComposerSendDisabled,
+        getAttribute: (name) => name === "disabled" && legacyComposerSendDisabled ? "" : null,
+        getBoundingClientRect: () => ({ width: 36, height: 36 })
+      };
+      const searchSubmit = {
+        disabled: false,
+        getAttribute: () => null,
+        getBoundingClientRect: () => ({ width: 80, height: 36 })
+      };
+      composerContainer = {
+        querySelector: (selector) => legacyComposerSendDisabled && selector.includes(":not(:disabled)") ? null : sendButton
+      };
+      searchContainer = { querySelector: () => searchSubmit };
+      const textboxes = firstTextboxIsNotComposer ? [searchElement, visiblePromptElement] : [visiblePromptElement];
       globalThis.document = {
         body: { innerText: state.bodyText },
-        querySelectorAll: () => (state.prompt ? [visiblePromptElement] : [])
+        querySelector: (selector) => {
+          if (selector.includes("main")) return main;
+          if (selector === '[data-testid="guid-send-btn"]') return null;
+          if (/textarea|contenteditable|role="textbox"/.test(selector)) return textboxes[0];
+          return null;
+        },
+        querySelectorAll: (selector) => /textarea|contenteditable|role=.textbox/.test(selector) ? textboxes : []
       };
       globalThis.window = {
         getComputedStyle: () => ({ visibility: "visible", display: "block" })
@@ -720,7 +807,12 @@ function fakeAionUiLoginBrowserFactory(actions = []) {
   };
 }
 
-function fakeGuidDomBrowserFactory(actions = [], { firstRun = false, setupButtonText = "Finish setup" } = {}) {
+function fakeGuidDomBrowserFactory(actions = [], {
+  firstRun = false,
+  setupButtonText = "Finish setup",
+  replyState = "complete",
+  unrelatedSubmitBeforeComposer = false
+} = {}) {
   const state = {
     setup: firstRun,
     hash: "#/home",
@@ -728,7 +820,11 @@ function fakeGuidDomBrowserFactory(actions = [], { firstRun = false, setupButton
     accessKey: "",
     prompt: "",
     fileName: "",
-    selected: false
+    selected: false,
+    marker: "",
+    processing: false,
+    reply: false,
+    sendDisabled: false
   };
   class FakeTextArea {
     get value() {
@@ -797,7 +893,7 @@ function fakeGuidDomBrowserFactory(actions = [], { firstRun = false, setupButton
   };
   const sendButton = {
     get disabled() {
-      return !state.selected || !state.prompt;
+      return !state.selected || !state.prompt || state.sendDisabled;
     },
     getAttribute(name) {
       if (name === "disabled" && this.disabled) return "";
@@ -807,11 +903,63 @@ function fakeGuidDomBrowserFactory(actions = [], { firstRun = false, setupButton
     click() {
       actions.push(["domClick", "guid-send-btn"]);
       if (this.disabled) return;
-      state.bodyText += `\n${state.prompt}\nassistant:${state.prompt.match(/OPL_BROWSER_E2E_[\w-]+/)?.[0] || "ok"}`;
+      state.marker = state.prompt.match(/OPL_BROWSER_E2E_[\w-]+/)?.[0] || "ok";
+      state.processing = replyState === "processing";
+      state.reply = replyState !== "title-only";
+      state.sendDisabled = replyState === "processing" || replyState === "disabled";
+      state.bodyText += `\n${state.marker}\n${state.marker}\n${state.prompt}`;
+      if (state.reply) state.bodyText += `\n${state.marker}`;
+      if (state.processing) state.bodyText += "\nProcessing";
     },
     getBoundingClientRect() {
       return { width: 36, height: 36, top: 360, bottom: 396, left: 660, right: 696 };
     }
+  };
+  const visibleElement = (text, attributes = {}, excludedBy = "") => ({
+    textContent: text,
+    innerText: text,
+    getAttribute(name) {
+      return attributes[name] || null;
+    },
+    closest(selector) {
+      return excludedBy && selector.includes(excludedBy) ? this : null;
+    },
+    getBoundingClientRect() {
+      return { width: 240, height: 40, top: 180, bottom: 220, left: 200, right: 440 };
+    }
+  });
+  const main = {
+    getBoundingClientRect() {
+      return { width: 800, height: 600, top: 80, bottom: 680, left: 180, right: 980 };
+    },
+    querySelectorAll(selector = "") {
+      if (/aria-busy|data-status|processing|button/i.test(selector)) {
+        return state.processing ? [visibleElement("Processing", { "aria-busy": "true" })] : [];
+      }
+      return [
+        visibleElement(state.prompt, { "data-message-author-role": "user" }, "[data-message-author-role='user']"),
+        ...(replyState === "complete"
+          ? [visibleElement("Processing complete", { "data-message-author-role": "assistant" })]
+          : []),
+        ...(state.reply && state.marker
+          ? [visibleElement(state.marker, { "data-message-author-role": "assistant" })]
+          : [])
+      ];
+    }
+  };
+  const composer = {
+    querySelector(selector) {
+      return selector.includes('button[type="submit"]') ? sendButton : null;
+    },
+    closest() {
+      return this;
+    }
+  };
+  textarea.closest = () => composer;
+  const unrelatedSubmit = {
+    disabled: false,
+    getAttribute: () => null,
+    getBoundingClientRect: () => ({ width: 100, height: 40, top: 20, bottom: 60, left: 20, right: 120 })
   };
   const visibleStyle = { visibility: "visible", display: "block" };
   function installDom() {
@@ -852,10 +1000,16 @@ function fakeGuidDomBrowserFactory(actions = [], { firstRun = false, setupButton
       querySelector(selector) {
         actions.push(["querySelector", selector]);
         if (state.setup) return null;
+        if (selector === "main, [role='main']") return main;
         if (selector.includes('input[type="file"]')) return { getBoundingClientRect: () => ({ width: 1, height: 1 }) };
         if (selector.includes("preset-pill-mas")) return card;
         if (selector.includes("guid-input")) return textarea;
+        if (selector.includes("guid-send-btn") && selector.includes('button[type="submit"]')) {
+          return unrelatedSubmitBeforeComposer ? unrelatedSubmit : sendButton;
+        }
         if (selector.includes("guid-send-btn")) return sendButton;
+        if (selector.includes('button[type="submit"]')) return unrelatedSubmit;
+        if (/textarea|contenteditable|role='textbox'/.test(selector)) return textarea;
         return null;
       },
       querySelectorAll(selector) {
@@ -864,6 +1018,15 @@ function fakeGuidDomBrowserFactory(actions = [], { firstRun = false, setupButton
           if (selector.includes("input") || selector.includes("textarea")) return [accessInput];
           if (selector.includes("button")) return [finishButton];
           return [];
+        }
+        if (selector.includes("main") || selector.includes("[role='main']")) return [main];
+        if (selector === "body *") {
+          return [
+            visibleElement(state.marker, {}, "h1"),
+            visibleElement(state.marker, {}, "aside"),
+            ...(replyState === "complete" ? [visibleElement("Processing", {}, "aside")] : []),
+            ...main.querySelectorAll()
+          ];
         }
         if (selector.includes("textarea") || selector.includes("guid-input")) return [textarea];
         if (selector.includes("button") || selector.includes("guid-send-btn")) return [sendButton];
@@ -993,6 +1156,21 @@ test("production verifier refuses localhost Console origins", async () => {
   );
 });
 
+test("public Console and Workspace URLs reject embedded credentials and non-default ports", () => {
+  for (const url of [
+    "https://user:password@cloud.medopl.cn",
+    "https://cloud.medopl.cn:444",
+    "https://user:password@workspace.medopl.cn/w/ws-alpha/",
+    "https://workspace.medopl.cn:444/w/ws-alpha/"
+  ]) {
+    assert.throws(() => assertPublicHttpsUrl(url, "public_url_invalid"), /public_url_invalid/);
+  }
+  assert.throws(
+    () => assertPublicHttpsUrl("https://workspace.attacker.example/w/ws-alpha/", "public_url_invalid", { hostname: "workspace.medopl.cn" }),
+    /public_url_invalid/
+  );
+});
+
 test("staging-local verifier can use a local Console origin while still requiring public Workspace URLs", async () => {
   const requests = [];
   const chain = tkeChain();
@@ -1091,6 +1269,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
     `PUT /api/workspaces/${chain.workspace.id}/transfers/transfer-prod-run/chunks/1`,
     `POST /api/workspaces/${chain.workspace.id}/transfers/transfer-prod-run/complete`,
     `GET /api/workspaces/${chain.workspace.id}/contents/${createHash("sha256").update(`${"x".repeat(4 << 20)}opl transfer prod-run`).digest("hex")}`,
+    "GET /api/state?accountId=pi-prod",
     "POST /api/storage-attachments/detach",
     `POST /api/compute-allocations/${chain.compute.id}/destroy`,
     "POST /api/compute-allocations#2",
@@ -1104,14 +1283,18 @@ test("production verifier exercises the public TKE resource provisioning chain",
     "POST /api/billing/resource-settlements",
     "POST /api/billing/resource-settlements#2",
     "GET /api/state?accountId=pi-prod",
+    "GET /api/state?accountId=pi-prod",
     "POST /api/storage-attachments/detach#2",
     `POST /api/compute-allocations/${chain.replacementCompute.id}/destroy`,
     "POST /api/storage-volumes/destroy"
   ]);
-  assert.equal(requests.find((request) => request.key === "POST /api/billing/topups").idempotencyKey, "production_verification_credit:prod-run");
+  assert.equal(requests.find((request) => request.key === "POST /api/billing/topups").idempotencyKey, "production-verification:prod-run:01:topup");
+  const resourceWrites = requests.filter((request) => request.key.startsWith("POST /api/") && !request.key.includes("runtime-status"));
+  assert.ok(resourceWrites.every((request) => request.idempotencyKey.startsWith("production-verification:prod-run:01:")));
+  assert.equal(new Set(resourceWrites.map((request) => request.idempotencyKey)).size, resourceWrites.length);
   assert.deepEqual(requests.find((request) => request.key === "POST /api/workspaces").body, {
     accountId: "pi-prod",
-    workspaceName: "Production Verification Lab",
+    workspaceName: "Production Verification Lab prod-run",
     attachmentId: chain.attachment.id
   });
   assert.equal(requests.find((request) => request.key === "POST /api/storage-attachments").body.computeAllocationId, chain.compute.id);
@@ -1131,7 +1314,7 @@ test("production verifier exercises the public TKE resource provisioning chain",
   assert.equal(requests.filter((request) => request.key.startsWith("POST /api/storage-volumes/destroy")).length, 1);
   assert.deepEqual(requests.find((request) => request.key === "POST /api/workspaces#2").body, {
     accountId: "pi-prod",
-    workspaceName: "Production Verification Lab",
+    workspaceName: "Production Verification Lab prod-run",
     attachmentId: chain.replacementAttachment.id
   });
   assert.equal(chain.replacementWorkspace.id, chain.workspace.id);
@@ -1218,7 +1401,7 @@ test("production verifier rejects ambiguous owner organization memberships", asy
     /verification_organization_membership_required/
   );
   assert.ok(!requests.some((request) => request.key === "POST /api/projects" || request.key.includes("/transfers")));
-  assert.deepEqual(requests.map((request) => request.key).slice(-3), [
+  assert.deepEqual(requests.filter((request) => request.key.includes("/detach") || request.key.includes("/destroy")).map((request) => request.key), [
     "POST /api/storage-attachments/detach",
     `POST /api/compute-allocations/${chain.compute.id}/destroy`,
     "POST /api/storage-volumes/destroy"
@@ -1572,6 +1755,32 @@ test("production verifier fills the visible composer textbox before sending", as
   assert.ok(checks.some((check) => check.name === "workspace_browser_message_sent" && check.ok === true));
 });
 
+test("production verifier binds legacy reply readiness to the textbox containing the submitted prompt", async () => {
+  const options = {
+    firstTextboxIsNotComposer: true,
+    assistantReplies: true
+  };
+
+  await assert.rejects(
+    verifyWorkspaceBrowserUi({
+      workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+      runId: "browser-run",
+      checks: [],
+      browserFactory: fakeWorkspaceBrowserFactory([], { ...options, legacyComposerSendDisabled: true }),
+      screenshotDir: ""
+    }),
+    /workspace_browser_reply_seen_failed/
+  );
+
+  await verifyWorkspaceBrowserUi({
+    workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+    runId: "browser-run",
+    checks: [],
+    browserFactory: fakeWorkspaceBrowserFactory([], options),
+    screenshotDir: ""
+  });
+});
+
 test("production verifier uses one-person-lab-app guid DOM contract for assistant send", async () => {
   const checks = [];
   const actions = [];
@@ -1595,6 +1804,58 @@ test("production verifier uses one-person-lab-app guid DOM contract for assistan
     "workspace_browser_message_sent:true",
     "workspace_browser_reply_seen:true"
   ]);
+});
+
+test("production verifier rejects title sidebar and user markers without an assistant reply", async () => {
+  await assert.rejects(
+    verifyWorkspaceBrowserUi({
+      workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+      runId: "browser-run",
+      checks: [],
+      browserFactory: fakeGuidDomBrowserFactory([], { replyState: "title-only" }),
+      screenshotDir: ""
+    }),
+    /workspace_browser_reply_seen_failed/
+  );
+});
+
+test("production verifier rejects an assistant reply while Processing is active", async () => {
+  await assert.rejects(
+    verifyWorkspaceBrowserUi({
+      workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+      runId: "browser-run",
+      checks: [],
+      browserFactory: fakeGuidDomBrowserFactory([], { replyState: "processing" }),
+      screenshotDir: ""
+    }),
+    /workspace_browser_reply_seen_failed/
+  );
+});
+
+test("production verifier rejects an assistant reply while the composer send is disabled", async () => {
+  await assert.rejects(
+    verifyWorkspaceBrowserUi({
+      workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+      runId: "browser-run",
+      checks: [],
+      browserFactory: fakeGuidDomBrowserFactory([], { replyState: "disabled" }),
+      screenshotDir: ""
+    }),
+    /workspace_browser_reply_seen_failed/
+  );
+});
+
+test("production verifier does not substitute an unrelated enabled submit for the disabled GUID send", async () => {
+  await assert.rejects(
+    verifyWorkspaceBrowserUi({
+      workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+      runId: "browser-run",
+      checks: [],
+      browserFactory: fakeGuidDomBrowserFactory([], { replyState: "disabled", unrelatedSubmitBeforeComposer: true }),
+      screenshotDir: ""
+    }),
+    /workspace_browser_reply_seen_failed/
+  );
 });
 
 test("production verifier completes first-run model access before file upload", async () => {
@@ -1702,7 +1963,7 @@ test("production verifier reports browser failure stage with resources, checks, 
     "workspace_browser_reply_seen:false"
   ]);
   assert.ok(actions.some((action) => action[0] === "screenshot" && action[1].endsWith("workspace-browser-e2e-prod-run-failure.png")));
-  assert.deepEqual(requests.map((request) => request.key).slice(-3), [
+  assert.deepEqual(requests.filter((request) => request.key.includes("/detach") || request.key.includes("/destroy")).map((request) => request.key), [
     "POST /api/storage-attachments/detach",
     `POST /api/compute-allocations/${chain.compute.id}/destroy`,
     "POST /api/storage-volumes/destroy"
@@ -1922,7 +2183,7 @@ test("production verifier rejects localhost Workspace URLs and still cleans up r
     /public_workspace_url_required/
   );
 
-  assert.deepEqual(requests.map((request) => request.key).slice(-3), [
+  assert.deepEqual(requests.filter((request) => request.key.includes("/detach") || request.key.includes("/destroy")).map((request) => request.key), [
     "POST /api/storage-attachments/detach",
     `POST /api/compute-allocations/${chain.compute.id}/destroy`,
     "POST /api/storage-volumes/destroy"
@@ -1944,20 +2205,16 @@ test("production verifier reports cleanup failures without hiding the original v
     await verifyProductionChain({
       origin: "https://console.oplcloud.cn",
       accountId: "pi-prod",
+      runId: "prod-run",
       workspaceUrlAttempts: 1,
       retryDelayMs: 0,
-      fetchImpl: async (url, options = {}) => {
-        const parsed = new URL(String(url));
-        const method = options.method || "GET";
-        const key = parsed.origin === "https://console.oplcloud.cn" ? `${method} ${parsed.pathname}` : `${method} ${String(url)}`;
-        if (key === "POST /api/storage-attachments/detach") return jsonResponse(responses[key], 500);
-        if (key === `POST /api/compute-allocations/${chain.compute.id}/destroy`) return jsonResponse(responses[key], 500);
-        if (key === "POST /api/storage-volumes/destroy") return jsonResponse(responses[key], 500);
-        const payload = responses[key];
-        if (typeof payload === "string") return htmlResponse(payload, key.startsWith("GET https://") ? 502 : 200);
-        if (payload) return jsonResponse(payload);
-        throw new Error(`unexpected_request:${key}`);
-      }
+      fetchImpl: keyedFetch({ responses, statusByKey: {
+        [`GET ${chain.workspace.url}`]: 502,
+        [`GET ${scrubbedWorkspaceUrl(chain.workspace.url)}`]: 502,
+        "POST /api/storage-attachments/detach": 500,
+        [`POST /api/compute-allocations/${chain.compute.id}/destroy`]: 500,
+        "POST /api/storage-volumes/destroy": 500
+      } })
     });
   } catch (error) {
     caught = error;
@@ -1968,6 +2225,37 @@ test("production verifier reports cleanup failures without hiding the original v
     "detach_storage:request_failed:POST:/api/storage-attachments/detach:500:detach_failed",
     `destroy_compute:request_failed:POST:/api/compute-allocations/${chain.compute.id}/destroy:500:destroy_compute_failed`,
     "destroy_storage:request_failed:POST:/api/storage-volumes/destroy:500:destroy_storage_failed"
+  ]);
+});
+
+test("production verifier catch reports 2xx cleanup responses that are not terminal", async () => {
+  const chain = tkeChain();
+  const responses = {
+    ...chainResponses(chain),
+    [`GET ${chain.workspace.url}`]: "bad gateway",
+    "POST /api/storage-attachments/detach": { ...chain.attachment, status: "attached" },
+    "POST /api/storage-volumes/destroy": { ...chain.storage, status: "destroying", billingStatus: "stopping" }
+  };
+  let caught = null;
+  try {
+    await verifyProductionChain({
+      origin: "https://console.oplcloud.cn",
+      accountId: "pi-prod",
+      runId: "prod-run",
+      workspaceUrlAttempts: 1,
+      retryDelayMs: 0,
+      fetchImpl: keyedFetch({ responses, statusByKey: {
+        [`GET ${chain.workspace.url}`]: 502,
+        [`GET ${scrubbedWorkspaceUrl(chain.workspace.url)}`]: 502
+      } })
+    });
+  } catch (error) {
+    caught = error;
+  }
+  assert.match(caught.message, /workspace_url_failed:502:bad gateway/);
+  assert.deepEqual(caught.cleanupErrors, [
+    "detach_storage:verification_storage_detached_failed",
+    "destroy_storage:verification_storage_destroyed_failed"
   ]);
 });
 
@@ -2021,18 +2309,13 @@ test("production verifier CLI writes structured failure JSON with cleanup errors
     argv: ["--origin", "https://console.oplcloud.cn", "--account", "pi-prod", "--run-id", "cli-fail", "--url-attempts", "1", "--retry-delay-ms", "0"],
     stdout: { write: (chunk) => { stdout += chunk; } },
     stderr: { write: (chunk) => { stderr += chunk; } },
-    fetchImpl: async (url, options = {}) => {
-      const parsed = new URL(String(url));
-      const method = options.method || "GET";
-      const key = parsed.origin === "https://console.oplcloud.cn" ? `${method} ${parsed.pathname}` : `${method} ${String(url)}`;
-      if (key === "POST /api/storage-attachments/detach") return jsonResponse(responses[key], 500);
-      if (key === `POST /api/compute-allocations/${chain.compute.id}/destroy`) return jsonResponse(responses[key], 500);
-      if (key === "POST /api/storage-volumes/destroy") return jsonResponse(responses[key], 500);
-      const payload = responses[key];
-      if (typeof payload === "string") return htmlResponse(payload, key.startsWith("GET https://") ? 502 : 200);
-      if (payload) return jsonResponse(payload);
-      throw new Error(`unexpected_request:${key}`);
-    }
+    fetchImpl: keyedFetch({ responses, statusByKey: {
+      [`GET ${chain.workspace.url}`]: 502,
+      [`GET ${scrubbedWorkspaceUrl(chain.workspace.url)}`]: 502,
+      "POST /api/storage-attachments/detach": 500,
+      [`POST /api/compute-allocations/${chain.compute.id}/destroy`]: 500,
+      "POST /api/storage-volumes/destroy": 500
+    } })
   });
 
   assert.equal(code, 1);
@@ -2075,6 +2358,29 @@ test("production verifier CLI help is read-only", async () => {
 	assert.match(output, /--origin/);
 });
 
+for (const timeout of ["NaN", "Infinity", "0", "3600001"]) {
+  test(`production verifier CLI rejects barrier timeout ${timeout} before fetch`, async () => {
+    let stderr = "";
+    let fetches = 0;
+    const code = await runProductionVerifierCli({
+      argv: [
+        "--origin", "https://console.oplcloud.cn",
+        "--run-id", "barrier-input",
+        "--ready-file", "/tmp/ready.json",
+        "--release-file", "/tmp/release",
+        "--barrier-timeout-ms", timeout
+      ],
+      env: {},
+      stdout: { write() {} },
+      stderr: { write(value) { stderr += value; } },
+      fetchImpl: async () => { fetches += 1; throw new Error("unexpected_fetch"); }
+    });
+    assert.equal(code, 1);
+    assert.equal(JSON.parse(stderr).error, "production_verification_barrier_timeout_invalid");
+    assert.equal(fetches, 0);
+  });
+}
+
 test("production verifier CLI preserves safe provider failure details", async () => {
   let stdout = "";
   let stderr = "";
@@ -2110,3 +2416,537 @@ test("production verifier CLI preserves safe provider failure details", async ()
     retryable: false
   });
 });
+
+test("production verifier mutation keys are stable and slot-scoped", () => {
+  assert.equal(productionVerificationMutationKey("run-7", "03", "create-compute"), "production-verification:run-7:03:create-compute");
+  assert.equal(productionVerificationMutationKey("run-7", "03", "create-compute"), productionVerificationMutationKey("run-7", "03", "create-compute"));
+  assert.notEqual(productionVerificationMutationKey("run-7", "03", "create-compute"), productionVerificationMutationKey("run-7", "03", "create-storage"));
+});
+
+for (const [name, runId, slot] of [
+  ["empty run id", "", "01"],
+  ["colon run id", "a:b", "c"],
+  ["slash run id", "a/b", "01"],
+  ["long run id", "x".repeat(81), "01"],
+  ["empty slot", "run", ""],
+  ["colon slot", "a", "b:c"],
+  ["slash slot", "run", "a/b"],
+  ["long slot", "run", "x".repeat(17)]
+]) {
+  test(`production verifier rejects ${name} before key creation or fetch`, async () => {
+    assert.throws(() => productionVerificationMutationKey(runId, slot, "stage"), /production_verification_(run_id|slot)_invalid/);
+    let fetches = 0;
+    await assert.rejects(verifyProductionChain({
+      origin: "https://console.oplcloud.cn",
+      runId,
+      slot,
+      fetchImpl: async () => { fetches += 1; throw new Error("unexpected_fetch"); }
+    }), /production_verification_(run_id|slot)_invalid/);
+    assert.equal(fetches, 0);
+  });
+}
+
+test("production verifier rejects ambiguous colon key components instead of colliding", () => {
+  assert.throws(() => productionVerificationMutationKey("a:b", "c", "stage"), /production_verification_run_id_invalid/);
+  assert.throws(() => productionVerificationMutationKey("a", "b:c", "stage"), /production_verification_slot_invalid/);
+});
+
+test("production verifier client replays the same mutation key after a lost create response", async () => {
+  const chain = tkeChain();
+  const resourcesByKey = new Map();
+  const delivered = [];
+  let createCount = 0;
+  let holdCount = 0;
+  let activationCount = 0;
+  let debitCount = 0;
+  const statefulFetch = (baseFetch, loseResponse = false) => async (url, options = {}) => {
+    const response = await baseFetch(url, options);
+    if (new URL(String(url)).pathname !== "/api/compute-allocations") return response;
+    const key = options.headers?.["Idempotency-Key"] || "";
+    if (!key.endsWith(":create-compute")) return response;
+    if (!resourcesByKey.has(key)) {
+      resourcesByKey.set(key, chain.compute);
+      createCount += 1;
+      holdCount += 1;
+      activationCount += 1;
+      debitCount += 1;
+    }
+    const resource = resourcesByKey.get(key);
+    delivered.push(resource);
+    if (loseResponse) throw new Error("response_lost");
+    return jsonResponse(resource);
+  };
+  const firstRequests = [];
+  await assert.rejects(verifyProductionChain({
+    origin: "https://console.oplcloud.cn",
+    accountId: "pi-prod",
+    runId: "prod-run",
+    slot: "04",
+    fetchImpl: statefulFetch(keyedFetch({ responses: chainResponses(chain), requests: firstRequests }), true)
+  }), /response_lost/);
+
+  const replayRequests = [];
+  await verifyProductionChain({
+    origin: "https://console.oplcloud.cn",
+    accountId: "pi-prod",
+    runId: "prod-run",
+    slot: "04",
+    fetchImpl: statefulFetch(keyedFetch({ responses: chainResponses(chain), requests: replayRequests }))
+  });
+  const firstKey = firstRequests.find((request) => request.key === "POST /api/compute-allocations").idempotencyKey;
+  const replayKey = replayRequests.find((request) => request.key === "POST /api/compute-allocations").idempotencyKey;
+  assert.equal(firstKey, "production-verification:prod-run:04:create-compute");
+  assert.equal(replayKey, firstKey);
+  assert.equal(createCount, 1);
+  assert.equal(holdCount, 1);
+  assert.equal(activationCount, 1);
+  assert.equal(debitCount, 1);
+  assert.equal(delivered[0], delivered[1]);
+  assert.deepEqual(delivered.map(({ id, holdId }) => ({ id, holdId })), [
+    { id: chain.compute.id, holdId: chain.compute.holdId },
+    { id: chain.compute.id, holdId: chain.compute.holdId }
+  ]);
+});
+
+test("production verifier writes a secret-free manifest with exact resource evidence", async () => {
+  const root = await mkdtemp(join(tmpdir(), "opl-verifier-manifest-"));
+  const path = join(root, "run.json");
+  const chain = tkeChain();
+  await verifyProductionChain({
+    origin: "https://console.oplcloud.cn",
+    accountId: "pi-prod",
+    runId: "prod-run",
+    slot: "03",
+    manifestPath: path,
+    operatorToken: "operator-secret",
+    ownerEmail: "owner@example.com",
+    ownerPassword: "owner-secret",
+    fetchImpl: keyedFetch({
+      responses: {
+        ...chainResponses(chain),
+        "POST /api/auth/operator-login": { accountId: "operator", role: "operator" },
+        "POST /api/auth/login": { accountId: "pi-prod", role: "owner" }
+      },
+      responseHeaders: new Headers({ "content-type": "application/json" })
+    })
+  });
+  const serialized = await readFile(path, "utf8");
+  const manifest = JSON.parse(serialized);
+  assert.equal(manifest.workspaceUrl, scrubbedWorkspaceUrl(chain.workspace.url));
+  assert.deepEqual(manifest.ids, {
+    computeAllocationId: chain.compute.id,
+    storageId: chain.storage.id,
+    attachmentId: chain.attachment.id,
+    workspaceId: chain.workspace.id,
+    replacementComputeAllocationId: chain.replacementCompute.id,
+    replacementAttachmentId: chain.replacementAttachment.id,
+    replacementWorkspaceId: chain.replacementWorkspace.id
+  });
+  assert.deepEqual(manifest.machineIdentities[chain.compute.id], {
+    machineId: chain.compute.machineName,
+    instanceId: chain.compute.instanceId,
+    nodeName: chain.compute.nodeName,
+    privateIp: chain.compute.privateIp
+  });
+  assert.deepEqual(manifest.machineIdentities[chain.replacementCompute.id], {
+    machineId: chain.replacementCompute.machineName,
+    instanceId: chain.replacementCompute.instanceId,
+    nodeName: chain.replacementCompute.nodeName,
+    privateIp: chain.replacementCompute.privateIp
+  });
+  assert.deepEqual(manifest.fileProof, {
+    filePath: "/data/opl-e2e-prod-run.txt",
+    sha256: createHash("sha256").update("opl persistence prod-run").digest("hex")
+  });
+  assert.equal(manifest.machineId, chain.replacementCompute.machineName);
+  assert.equal(manifest.instanceId, chain.replacementCompute.instanceId);
+  assert.equal(manifest.nodeName, chain.replacementCompute.nodeName);
+  assert.doesNotMatch(serialized, /operator-secret|owner-secret|cookie|token|password|secret/i);
+});
+
+test("production verifier persists a returned compute identity before readiness assertion fails", async () => {
+  const root = await mkdtemp(join(tmpdir(), "opl-verifier-early-manifest-"));
+  const manifestPath = join(root, "run.json");
+  const compute = {
+    id: "compute-early",
+    ownerAccountId: "pi-prod",
+    holdId: "hold-compute-early",
+    machineName: "machine-early",
+    instanceId: "ins-early",
+    nodeName: "node-early",
+    provider: "tencent-tke",
+    status: "provisioning",
+    billingStatus: "pending"
+  };
+  await assert.rejects(verifyProductionChain({
+    origin: "https://console.oplcloud.cn",
+    accountId: "pi-prod",
+    runId: "early-run",
+    manifestPath,
+    workspaceUrlAttempts: 0,
+    cleanupOnFailure: false,
+    fetchImpl: keyedFetch({ responses: {
+      "GET /api/production/readiness": { ready: true },
+      "GET /api/runtime/readiness": { ready: true },
+      "POST /api/billing/topups": { id: "pi-prod" },
+      "POST /api/compute-allocations": compute
+    } })
+  }), /compute_created_failed/);
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  assert.equal(manifest.ids.computeAllocationId, compute.id);
+  assert.deepEqual(manifest.machineIdentities[compute.id], {
+    machineId: compute.machineName,
+    instanceId: compute.instanceId,
+    nodeName: compute.nodeName
+  });
+});
+
+test("production verifier uses a stable key while syncing initial storage readiness", async () => {
+  const chain = tkeChain();
+  const responses = chainResponses(chain);
+  responses["POST /api/storage-volumes"] = { ...chain.storage, providerResourceId: "", status: "provisioning", billingStatus: "pending" };
+  responses[`POST /api/storage-volumes/${chain.storage.id}/sync`] = chain.storage;
+  const requests = [];
+  await verifyProductionChain({
+    origin: "https://console.oplcloud.cn",
+    accountId: "pi-prod",
+    runId: "prod-run",
+    slot: "05",
+    retryDelayMs: 0,
+    fetchImpl: keyedFetch({ responses, requests })
+  });
+  const sync = requests.find((request) => request.key === `POST /api/storage-volumes/${chain.storage.id}/sync`);
+  assert.equal(sync.idempotencyKey, "production-verification:prod-run:05:create-storage-sync");
+});
+
+function ownedCleanupFixture() {
+  const manifest = {
+    runId: "run-7",
+    slot: "03",
+    accountId: "pi-prod",
+    resourceNames: {
+      compute: "Production Verification Lab run-7 compute run-7",
+      storage: "Production Verification Lab run-7 storage run-7",
+      workspace: "Production Verification Lab run-7"
+    },
+    ids: {
+      computeAllocationId: "compute-prod001",
+      storageId: "storage-prod001",
+      attachmentId: "attach-prod001",
+      workspaceId: "ws-prod001"
+    },
+    holdIds: { compute: "hold-compute-prod001", storage: "hold-storage-prod001" },
+    machineIdentities: {
+      "compute-prod001": { machineId: "machine-prod001", instanceId: "ins-prod001", nodeName: "opl-node-prod001" }
+    },
+    mutationKeys: {
+      cleanupDetach: "production-verification:run-7:03:final-cleanup-detach",
+      cleanupCompute: "production-verification:run-7:03:final-cleanup-compute",
+      cleanupStorage: "production-verification:run-7:03:final-cleanup-storage"
+    }
+  };
+  const state = {
+    account: { accountId: "pi-prod" },
+    computeAllocations: [{
+      id: "compute-prod001", accountId: "pi-prod", name: manifest.resourceNames.compute,
+      holdId: "hold-compute-prod001", machineName: "machine-prod001", instanceId: "ins-prod001", nodeName: "opl-node-prod001", status: "running"
+    }],
+    storageVolumes: [{ id: "storage-prod001", accountId: "pi-prod", name: manifest.resourceNames.storage, holdId: "hold-storage-prod001" }],
+    storageAttachments: [{ id: "attach-prod001", ownerAccountId: "pi-prod", computeAllocationId: "compute-prod001", storageId: "storage-prod001" }],
+    workspaces: [{ id: "ws-prod001", ownerAccountId: "pi-prod", name: manifest.resourceNames.workspace, computeAllocationId: "compute-prod001", storageId: "storage-prod001", attachmentId: "attach-prod001" }]
+  };
+  return { manifest, state };
+}
+
+for (const [name, mutate] of [
+  ["wrong account", (state) => { state.account.accountId = "pi-other"; }],
+  ["wrong name", (state) => { state.computeAllocations[0].name = "unowned"; }],
+  ["wrong id", (state) => { state.computeAllocations[0].id = "compute-other"; }],
+  ["wrong hold", (state) => { state.computeAllocations[0].holdId = "hold-other"; }],
+  ["missing machine triple", (state, manifest) => { delete manifest.machineIdentities["compute-prod001"].machineId; }],
+  ["missing projected machine triple", (state) => { delete state.computeAllocations[0].machineName; }],
+  ["provisioning compute missing projected triple", (state) => { state.computeAllocations[0].status = "provisioning"; delete state.computeAllocations[0].machineName; }],
+  ["stopping compute missing projected triple", (state) => { state.computeAllocations[0].status = "stopping"; delete state.computeAllocations[0].instanceId; }],
+  ["failed compute missing projected triple", (state) => { state.computeAllocations[0].status = "failed"; delete state.computeAllocations[0].nodeName; }],
+  ["duplicate machine ownership", (state) => { state.computeAllocations.push({ ...state.computeAllocations[0], id: "compute-duplicate" }); }]
+]) {
+  test(`production verifier sends no cleanup writes for ${name}`, async () => {
+    const { manifest, state } = ownedCleanupFixture();
+    mutate(state, manifest);
+    const writes = [];
+    const errors = await cleanupVerificationResources({
+      origin: "https://console.oplcloud.cn",
+      accountId: "pi-prod",
+      manifest,
+      computeAllocationId: manifest.ids.computeAllocationId,
+      cleanupStage: "first-cleanup",
+      fetchImpl: async (url, options = {}) => {
+        if ((options.method || "GET") === "GET") return jsonResponse(state);
+        writes.push([url, options]);
+        throw new Error("unexpected_cleanup_write");
+      }
+    });
+    assert.deepEqual(errors, ["verification_resource_ownership_mismatch"]);
+    assert.equal(writes.length, 0);
+  });
+}
+
+for (const [name, update] of [
+  ["account", (options) => { options.accountId = "pi-victim"; }],
+  ["compute", (options) => { options.computeAllocationId = "compute-victim"; options.cleanupStage = "first-cleanup"; }],
+  ["storage", (options) => { options.storageId = "storage-victim"; }],
+  ["attachment", (options) => { options.attachmentId = "attach-victim"; options.cleanupStage = "first-cleanup"; }]
+]) {
+  test(`production verifier rejects explicit victim ${name} before state read or cleanup write`, async () => {
+    const { manifest } = ownedCleanupFixture();
+    const requests = [];
+    const options = {
+      origin: "https://console.oplcloud.cn",
+      accountId: "pi-prod",
+      manifest,
+      computeAllocationId: manifest.ids.computeAllocationId,
+      cleanupStage: "first-cleanup",
+      fetchImpl: async (...args) => { requests.push(args); throw new Error("unexpected_request"); }
+    };
+    update(options);
+    assert.deepEqual(await cleanupVerificationResources(options), ["verification_resource_ownership_mismatch"]);
+    assert.equal(requests.length, 0);
+  });
+}
+
+for (const [name, options] of [
+  ["unknown cleanup stage", { cleanupStage: "maybe-cleanup", storageId: "storage-prod001" }],
+  ["no explicit cleanup target", { cleanupStage: "first-cleanup" }],
+  ["primary compute during final cleanup", { cleanupStage: "final-cleanup", computeAllocationId: "compute-prod001" }],
+  ["storage during first cleanup", { cleanupStage: "first-cleanup", storageId: "storage-prod001" }]
+]) {
+  test(`production verifier rejects ${name} before state read`, async () => {
+    const { manifest } = ownedCleanupFixture();
+    const requests = [];
+    const errors = await cleanupVerificationResources({
+      origin: "https://console.oplcloud.cn",
+      accountId: "pi-prod",
+      manifest,
+      ...options,
+      fetchImpl: async (...args) => { requests.push(args); throw new Error("unexpected_request"); }
+    });
+    assert.deepEqual(errors, ["verification_resource_ownership_mismatch"]);
+    assert.equal(requests.length, 0);
+  });
+}
+
+test("production verifier final storage cleanup does not fall back to primary resources", async () => {
+  const { manifest, state } = ownedCleanupFixture();
+  const requests = [];
+  const errors = await cleanupVerificationResources({
+    origin: "https://console.oplcloud.cn",
+    accountId: "pi-prod",
+    manifest,
+    cleanupStage: "final-cleanup",
+    storageId: manifest.ids.storageId,
+    fetchImpl: async (url, options = {}) => {
+      const method = options.method || "GET";
+      requests.push(`${method} ${new URL(String(url)).pathname}`);
+      if (method === "GET") return jsonResponse(state);
+      return jsonResponse({ ...state.storageVolumes[0], status: "destroyed", billingStatus: "stopped", holdReleaseId: "release-storage" });
+    }
+  });
+  assert.deepEqual(errors, []);
+  assert.deepEqual(requests, ["GET /api/state", "POST /api/storage-volumes/destroy"]);
+});
+
+test("production verifier cleanup forwards its abort signal to every request", async () => {
+  const { manifest, state } = ownedCleanupFixture();
+  const controller = new AbortController();
+  const signals = [];
+  const errors = await cleanupVerificationResources({
+    origin: "https://console.oplcloud.cn",
+    accountId: "pi-prod",
+    manifest,
+    computeAllocationId: manifest.ids.computeAllocationId,
+    attachmentId: manifest.ids.attachmentId,
+    expectedComputeHoldId: manifest.holdIds.compute,
+    cleanupStage: "first-cleanup",
+    signal: controller.signal,
+    fetchImpl: async (url, options = {}) => {
+      signals.push(options.signal);
+      if ((options.method || "GET") === "GET") return jsonResponse(state);
+      if (String(url).endsWith("/detach")) return jsonResponse({ status: "detached" });
+      return jsonResponse({
+        ...state.computeAllocations[0],
+        status: "destroyed",
+        billingStatus: "stopped",
+        holdReleaseId: "release-compute"
+      });
+    }
+  });
+  assert.deepEqual(errors, []);
+  assert.equal(signals.length, 3);
+  assert.ok(signals.every((signal) => signal === controller.signal));
+});
+
+for (const [name, update] of [
+  ["compute", (manifest) => { delete manifest.holdIds.compute; }],
+  ["storage", (manifest) => { delete manifest.holdIds.storage; }]
+]) {
+  test(`production verifier fails closed when ${name} manifest Hold is missing`, async () => {
+    const { manifest, state } = ownedCleanupFixture();
+    update(manifest);
+    const writes = [];
+    const errors = await cleanupVerificationResources({
+      origin: "https://console.oplcloud.cn",
+      accountId: "pi-prod",
+      manifest,
+      computeAllocationId: manifest.ids.computeAllocationId,
+      cleanupStage: "first-cleanup",
+      fetchImpl: async (_url, options = {}) => {
+        if ((options.method || "GET") === "GET") return jsonResponse(state);
+        writes.push(options);
+        return jsonResponse({});
+      }
+    });
+    assert.deepEqual(errors, ["verification_resource_ownership_mismatch"]);
+    assert.equal(writes.length, 0);
+  });
+}
+
+test("production verifier barrier atomically publishes ready evidence and observes release", async () => {
+  const root = await mkdtemp(join(tmpdir(), "opl-verifier-barrier-"));
+  const readyFile = join(root, "ready.json");
+  const releaseFile = join(root, "release");
+  setTimeout(() => writeFile(releaseFile, "release\n"), 10);
+  await waitForReleaseBarrier({
+    readyFile,
+    releaseFile,
+    barrierTimeoutMs: 500,
+    retryDelayMs: 1,
+    evidence: { runId: "run-7", slot: "03", workspaceUrl: "https://workspace.medopl.cn/w/ws-prod001/" }
+  });
+  assert.equal(JSON.parse(await readFile(readyFile, "utf8")).workspaceUrl, "https://workspace.medopl.cn/w/ws-prod001/");
+});
+
+test("production verifier ignores barrier timeout when no barrier files are configured", async () => {
+  await waitForReleaseBarrier({ barrierTimeoutMs: Number.NaN });
+});
+
+test("production verifier barrier timeout publishes ready evidence and runs exact cleanup", async () => {
+  const root = await mkdtemp(join(tmpdir(), "opl-verifier-barrier-timeout-"));
+  const readyFile = join(root, "ready.json");
+  const chain = tkeChain();
+  const requests = [];
+  await assert.rejects(verifyProductionChain({
+    origin: "https://console.oplcloud.cn",
+    accountId: "pi-prod",
+    runId: "prod-run",
+    readyFile,
+    releaseFile: join(root, "missing-release"),
+    barrierTimeoutMs: 5,
+    retryDelayMs: 1,
+    fetchImpl: keyedFetch({ responses: chainResponses(chain), requests })
+  }), /production_verification_barrier_timeout/);
+  assert.equal(JSON.parse(await readFile(readyFile, "utf8")).workspaceUrl, scrubbedWorkspaceUrl(chain.workspace.url));
+  assert.deepEqual(requests.filter((request) => request.key.includes("/detach") || request.key.includes("/destroy")).map((request) => request.key), [
+    "POST /api/storage-attachments/detach",
+    `POST /api/compute-allocations/${chain.compute.id}/destroy`,
+    "POST /api/storage-volumes/destroy"
+  ]);
+});
+
+test("fault-ready verifier publishes exact proof then cleans primary resources without replacement billing", async () => {
+  const root = await mkdtemp(join(tmpdir(), "opl-verifier-fault-ready-"));
+  const manifestPath = join(root, "manifest.json");
+  const readyFile = join(root, "ready.json");
+  const releaseFile = join(root, "release");
+  const chain = tkeChain();
+  const requests = [];
+  const responses = chainResponses(chain);
+  await writeFile(releaseFile, "release\n");
+
+  const result = await verifyProductionChain({
+    origin: "https://console.oplcloud.cn",
+    accountId: "pi-prod",
+    runId: "prod-run",
+    manifestPath,
+    readyFile,
+    releaseFile,
+    faultReadyOnly: true,
+    retryDelayMs: 0,
+    fetchImpl: keyedFetch({ responses, requests })
+  });
+
+  const writes = requests.filter((request) => request.key.startsWith("POST /api/"));
+  assert.ok(!writes.some((request) => request.key === "POST /api/compute-allocations#2"));
+  assert.ok(!writes.some((request) => request.key.startsWith("POST /api/billing/resource-settlements")));
+  assert.deepEqual(writes.filter((request) => request.key.includes("/detach") || request.key.includes("/destroy")).map((request) => request.key), [
+    "POST /api/storage-attachments/detach",
+    `POST /api/compute-allocations/${chain.compute.id}/destroy`,
+    "POST /api/storage-volumes/destroy"
+  ]);
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  assert.equal(manifest.machineIdentities[chain.compute.id].privateIp, chain.compute.privateIp);
+  assert.deepEqual(manifest.fileProof, {
+    filePath: "/data/opl-e2e-prod-run.txt",
+    sha256: createHash("sha256").update("opl persistence prod-run").digest("hex")
+  });
+  assert.equal(JSON.parse(await readFile(readyFile, "utf8")).workspaceUrl, scrubbedWorkspaceUrl(chain.workspace.url));
+  assert.equal(result.url, chain.workspace.url);
+});
+
+test("fault-ready verifier requires the release barrier before any production request", async () => {
+  let fetches = 0;
+  await assert.rejects(verifyProductionChain({
+    origin: "https://console.oplcloud.cn",
+    runId: "fault-ready-input",
+    faultReadyOnly: true,
+    fetchImpl: async () => { fetches += 1; throw new Error("unexpected_fetch"); }
+  }), /production_verification_fault_barrier_required/);
+  assert.equal(fetches, 0);
+});
+
+test("fault-ready verifier retries exact primary cleanup after a transient detach failure", async () => {
+  const root = await mkdtemp(join(tmpdir(), "opl-verifier-fault-cleanup-retry-"));
+  const chain = tkeChain();
+  const responses = chainResponses(chain);
+  const requests = [];
+  responses["POST /api/storage-attachments/detach"] = { error: "detach_transient" };
+  responses["POST /api/storage-attachments/detach#2"] = { ...chain.attachment, status: "detached" };
+  const releaseFile = join(root, "release");
+  await writeFile(releaseFile, "release\n");
+
+  await assert.rejects(verifyProductionChain({
+    origin: "https://console.oplcloud.cn",
+    accountId: "pi-prod",
+    runId: "prod-run",
+    manifestPath: join(root, "manifest.json"),
+    readyFile: join(root, "ready.json"),
+    releaseFile,
+    faultReadyOnly: true,
+    retryDelayMs: 0,
+    fetchImpl: keyedFetch({
+      responses,
+      requests,
+      statusByKey: { "POST /api/storage-attachments/detach": 500 }
+    })
+  }), /production_verification_cleanup_failed/);
+  assert.equal(requests.filter((request) => request.key.startsWith("POST /api/storage-attachments/detach")).length, 2);
+});
+
+for (const [name, argv, env] of [
+  ["CLI flag", ["--origin", "https://console.oplcloud.cn", "--run-id", "fault-cli", "--fault-ready-only"], {}],
+  ["environment", ["--origin", "https://console.oplcloud.cn", "--run-id", "fault-env"], { OPL_VERIFY_FAULT_READY_ONLY: "true" }]
+]) {
+  test(`production verifier enables fault-ready-only from ${name}`, async () => {
+    let stderr = "";
+    let fetches = 0;
+    const code = await runProductionVerifierCli({
+      argv,
+      env,
+      stdout: { write() {} },
+      stderr: { write(value) { stderr += value; } },
+      fetchImpl: async () => { fetches += 1; throw new Error("unexpected_fetch"); }
+    });
+    assert.equal(code, 1);
+    assert.equal(JSON.parse(stderr).error, "production_verification_fault_barrier_required");
+    assert.equal(fetches, 0);
+  });
+}

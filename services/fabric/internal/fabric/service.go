@@ -19,7 +19,7 @@ const storageProvisionTimeout = 10 * time.Minute
 type Provider interface {
 	ReconcileComputePool(ctx context.Context, input ComputePoolDemand) (ComputePoolState, error)
 	TagComputeMachine(ctx context.Context, machine ProviderMachine, ownership MachineOwnership) error
-	DeleteComputeMachine(ctx context.Context, machine ProviderMachine) error
+	DeleteComputeMachine(ctx context.Context, machine ProviderMachine, ownership MachineOwnership) error
 	SyncComputeAllocation(ctx context.Context, allocation ComputeAllocation) (ComputeAllocation, error)
 	DestroyComputeAllocation(ctx context.Context, allocation ComputeAllocation) (ComputeAllocation, error)
 	CreateStorageVolume(ctx context.Context, input StorageVolumeInput) (StorageVolume, error)
@@ -87,6 +87,10 @@ func (s *Service) Catalog(_ context.Context) Catalog {
 		StorageClasses: []StorageClass{{ID: "workspace-cbs", StorageClassName: "cbs", Provider: "tencent-tke", Available: true}},
 		IngressDomains: []IngressDomain{{ID: "workspace", Host: "workspace.medopl.cn", PathPattern: "/w/<workspaceId>/", Available: true}},
 	}
+}
+
+func (s *Service) MachineOwnership(ctx context.Context, resourceID string) (MachineOwnership, error) {
+	return s.operations.MachineOwnership(ctx, strings.TrimSpace(resourceID))
 }
 
 func (s *Service) CreateComputeAllocation(ctx context.Context, input ComputeAllocationInput) (ComputeAllocation, error) {
@@ -185,6 +189,12 @@ func (s *Service) SyncComputeAllocation(ctx context.Context, allocationID string
 	if allocation.Provider == "" {
 		allocation.Provider = firstNonEmpty(existing.Provider, "tencent-tke")
 	}
+	if isExternallyDeletedComputeStatus(allocation.Status) {
+		if err := s.releaseMachineOwnership(ctx, allocationID); err != nil {
+			_ = s.recordOperation(ctx, operation, "failed", allocation, err)
+			return allocation, err
+		}
+	}
 	if err := s.recordOperation(ctx, operation, "succeeded", allocation, nil); err != nil {
 		return allocation, err
 	}
@@ -226,7 +236,9 @@ func (s *Service) DestroyComputeAllocation(ctx context.Context, allocationID str
 			s.mu.Unlock()
 			return nil
 		}
-		allocation.Status = "destroying"
+		if !isExternallyDeletedComputeStatus(allocation.Status) {
+			allocation.Status = "destroying"
+		}
 		if err := s.recordOperation(lockCtx, operation, "started", allocation, nil); err != nil {
 			return err
 		}
@@ -264,15 +276,8 @@ func (s *Service) finishDestroyComputeAllocation(operation FabricOperation, exis
 		if providerErr != nil {
 			return providerErr
 		}
-		if ownership, ownershipErr := s.operations.MachineOwnership(lockCtx, existing.ID); ownershipErr == nil {
-			now := s.now()
-			ownership.Status = "released"
-			ownership.ReleasedAt = &now
-			if err := s.operations.SaveMachineOwnership(lockCtx, ownership); err != nil {
-				return err
-			}
-		} else if ownershipErr != ErrMachineOwnershipNotFound {
-			return ownershipErr
+		if err := s.releaseMachineOwnership(lockCtx, existing.ID); err != nil {
+			return err
 		}
 		if err := s.reconcileComputePoolLocked(lockCtx, firstNonEmpty(existing.PackageID, "basic"), false); err != nil {
 			return err
@@ -294,6 +299,29 @@ func (s *Service) finishDestroyComputeAllocation(operation FabricOperation, exis
 	s.mu.Lock()
 	delete(s.destroying, existing.ID)
 	s.mu.Unlock()
+}
+
+func (s *Service) releaseMachineOwnership(ctx context.Context, resourceID string) error {
+	ownership, err := s.operations.MachineOwnership(ctx, resourceID)
+	if err == ErrMachineOwnershipNotFound {
+		return nil
+	}
+	if err != nil || ownership.Status == "released" {
+		return err
+	}
+	now := s.now()
+	ownership.Status = "released"
+	ownership.ReleasedAt = &now
+	return s.operations.SaveMachineOwnership(ctx, ownership)
+}
+
+func isExternallyDeletedComputeStatus(status string) bool {
+	switch status {
+	case "external_deleted", "deleted", "missing":
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *Service) latestComputeDestroyOperation(ctx context.Context, allocationID string) (FabricOperation, bool, error) {

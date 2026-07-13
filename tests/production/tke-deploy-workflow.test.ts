@@ -104,6 +104,8 @@ test("production verifier workflow defaults run id to GitHub run id", async () =
     "${{ inputs.run_id || github.run_id }}",
     "empty optional run_id input must not disable verifier file proof ids"
   );
+  assert.equal(workflow.concurrency.group, "production-resource-verification");
+  assert.equal(workflow.concurrency["cancel-in-progress"], false);
 });
 
 test("production verifier workflow always cleans failed paid resources", async () => {
@@ -111,9 +113,74 @@ test("production verifier workflow always cleans failed paid resources", async (
   const currentJob = job(workflow, "verify");
 
   assert.equal(workflow.on.workflow_dispatch.inputs.cleanup_on_failure, undefined);
-  assert.equal(currentJob.env.OPL_VERIFY_CLEANUP_ON_FAILURE, "true");
+  assert.equal(workflow.on.workflow_dispatch.inputs.credit_amount, undefined);
+  assert.equal(workflow.on.workflow_dispatch.inputs.package_id, undefined);
+  assert.equal(currentJob.env.OPL_VERIFY_CLEANUP_ON_FAILURE, undefined);
   assert.ok(String(currentJob.env.OPL_VERIFY_AUTH_USERS_JSON || "").includes("secrets.OPL_CONSOLE_USERS_JSON"));
   assert.equal(workflow.on.workflow_dispatch.inputs.account_id.default, "");
+  assert.equal(currentJob.env.OPL_VERIFY_PACKAGE_ID, "basic");
+});
+
+test("secret-bearing production verifiers use only the fixed Console origin", async () => {
+  for (const [file, jobName] of [["verify-production-chain.yml", "verify"], ["verify-production-soak.yml", "soak"]]) {
+    const workflow = await readWorkflow(new URL(`../../.github/workflows/${file}`, import.meta.url));
+    assert.equal(workflow.on.workflow_dispatch.inputs.origin, undefined, `${file} must not accept a credential-bearing origin`);
+    assert.equal(job(workflow, jobName).env.OPL_CONSOLE_ORIGIN, "https://cloud.medopl.cn", file);
+    assert.doesNotMatch(JSON.stringify(workflow), /inputs\.origin/, file);
+  }
+});
+
+test("production resource workflows share the non-cancelling concurrency lock", async () => {
+  for (const file of [
+    "provision-manual-workspace.yml",
+    "cleanup-console-resource-residual.yml",
+    "cleanup-tke-compute-residual.yml",
+    "cleanup-tke-nodepool-machines.yml",
+    "deploy-tke-production.yml",
+    "verify-production-chain.yml",
+    "verify-production-soak.yml"
+  ]) {
+    const workflow = await readWorkflow(new URL(`../../.github/workflows/${file}`, import.meta.url));
+    assert.equal(workflow.concurrency?.group, "production-resource-verification", file);
+    assert.equal(workflow.concurrency?.["cancel-in-progress"], false, file);
+  }
+});
+
+test("production soak workflow is paid, capacity-gated, non-overlapping, and cleanup-exact", async () => {
+  const workflow = await readWorkflow(new URL("../../.github/workflows/verify-production-soak.yml", import.meta.url));
+  const currentJob = job(workflow, "soak");
+  const stepMap = stepsByName(currentJob);
+  const runs = serializedRuns(currentJob);
+  const stepNames = [...stepMap.keys()];
+
+  assert.equal(workflow.on.workflow_dispatch.inputs.confirm_paid_soak.required, true);
+  assert.match(serializedStep(stepMap.get("Confirm paid five-machine soak")), /RUN_5_TENCENT_CVMS/);
+  assert.equal(currentJob.environment, "production");
+  assert.deepEqual(currentJob["runs-on"], ["self-hosted", "tencent-cloud", "opl-cloud", "tke-vpc"]);
+  assert.equal(currentJob["timeout-minutes"], 60);
+  assert.equal(workflow.concurrency["cancel-in-progress"], false);
+  assert.equal(workflow.concurrency.group, "production-resource-verification");
+  assert.ok(stepNames.indexOf("Verify Tencent and TKE capacity") < stepNames.indexOf("Run five-machine production soak"));
+  assert.equal(stepMap.get("Set up Go").uses, "actions/setup-go@v5");
+  assert.match(serializedStep(stepMap.get("Prepare kubeconfig and evidence directory")), /get configmap opl-cloud-config/);
+  assert.match(serializedStep(stepMap.get("Prepare kubeconfig and evidence directory")), /TENCENT_DEPLOY_CLUSTER_ID/);
+  assert.match(serializedStep(stepMap.get("Prepare kubeconfig and evidence directory")), /OPL_BASIC_COMPUTE_INSTANCE_TYPE/);
+  assert.match(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /action:\s*"capacity_preflight"/);
+  assert.match(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /id:\s*"basic"/);
+  assert.doesNotMatch(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /id:\s*"pool-basic-2c4g"/);
+  assert.match(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /DescribeAccountQuota|remainingQuota/);
+  assert.match(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /DescribeZoneInstanceConfigInfos|instanceAvailable/);
+  assert.match(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /DescribeNodePools|nodePool/);
+  assert.match(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /requiredCapacity[^\n]*5/);
+  assert.match(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /machineType[^\n]*NativeCVM/);
+  assert.doesNotMatch(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /OPL_BASIC_COMPUTE_NODE_POOL_ID[^\n]*required/);
+  assert.doesNotMatch(serializedStep(stepMap.get("Verify Tencent and TKE capacity")), /ScaleNodePool|CreateNodePool|RunInstances/);
+  assert.match(serializedStep(stepMap.get("Run five-machine production soak")), /tools\/production-soak-coordinator\.ts/);
+  assert.equal(stepMap.get("Upload soak manifests, results, and evidence").if, "always()");
+  assert.equal(stepMap.get("Remove temporary credentials").if, "always()");
+  assert.match(serializedStep(stepMap.get("Verify control-plane terminal evidence")), /production-soak-coordinator\.ts/);
+  assert.doesNotMatch(runs, /cleanup-console-resource-residual|cleanup-tke-compute-residual|cleanup-tke-nodepool-machines/);
+  assert.doesNotMatch(runs, /ScaleNodePool|kubectl[^\n]*delete|rollout restart|deployment[^\n]*restart/);
 });
 
 test("production execution verifier runs inside TKE and matches the deployment contract", async () => {
@@ -127,9 +194,20 @@ test("production execution verifier runs inside TKE and matches the deployment c
   const runs = serializedRuns(currentJob);
 
   assert.equal(liveJob.outputs.workspace_id, "${{ steps.verify.outputs.workspace_id }}");
+  assert.equal(liveJob.outputs.workspace_url, "${{ steps.verify.outputs.workspace_url }}");
   assert.match(liveRuns, /production-verifier-result\.json/);
+  assert.match(liveRuns, /node tools\/production-console-browser-verifier\.ts/);
+  assert.doesNotMatch(liveRuns, /node tools\/production-verifier\.ts/);
   assert.match(liveRuns, /A-Za-z0-9/);
   assert.match(liveRuns, /workspace_id=.*payload\.workspaceId/);
+  assert.match(liveRuns, /workspace_url=.*payload\.url/);
+  assert.match(liveRuns, /protocol !== "https:"/);
+  assert.match(liveRuns, /pathname\.startsWith\("\/w\/"\)/);
+  assert.match(liveRuns, /encodeURIComponent/);
+  assert.equal(liveJob.env.OPL_VERIFY_MANIFEST_PATH, "artifacts/production-browser-e2e/manifest.json");
+  const upload = stepsByName(liveJob).get("Upload browser E2E screenshots and manifest");
+  assert.equal(upload.if, "always()");
+  assert.match(String(upload.with.path), /artifacts\/production-browser-e2e/);
   assert.match(runs, /port-forward service\/opl-cloud-control-plane 18787:8787/);
   assert.match(runs, /port-forward service\/opl-cloud-ledger 18081:8081/);
   assert.match(runs, /port-forward service\/opl-cloud-fabric 18082:8082/);

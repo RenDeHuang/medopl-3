@@ -202,7 +202,7 @@ func (s *Service) reconcileComputePoolOnce(ctx context.Context, packageID string
 			continue
 		}
 		if err := s.provider.TagComputeMachine(ctx, machine, claimed); err != nil {
-			if deleteErr := s.provider.DeleteComputeMachine(ctx, machine); deleteErr == nil {
+			if deleteErr := s.provider.DeleteComputeMachine(ctx, machine, claimed); deleteErr == nil {
 				now := s.now()
 				claimed.Status = "released"
 				claimed.ReleasedAt = &now

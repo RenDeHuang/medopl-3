@@ -3,11 +3,6 @@ name: Verify Production Chain
 on:
   workflow_dispatch:
     inputs:
-      origin:
-        description: Public OPL Console origin.
-        required: true
-        default: "https://cloud.medopl.cn"
-        type: string
       run_id:
         description: Optional verifier run id.
         required: false
@@ -16,19 +11,6 @@ on:
         description: Account id used for the paid verifier resources.
         required: false
         default: ""
-        type: string
-      package_id:
-        description: Compute package id to verify.
-        required: false
-        default: "basic"
-        type: choice
-        options:
-          - "basic"
-          - "pro"
-      credit_amount:
-        description: Manual recharge amount for this paid verification.
-        required: false
-        default: "1000"
         type: string
       url_attempts:
         description: Workspace URL readiness attempts.
@@ -43,6 +25,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: production-resource-verification
+  cancel-in-progress: false
+
 jobs:
   verify:
     name: Verify live OPL business chain
@@ -50,20 +36,17 @@ jobs:
     environment: production
     outputs:
       workspace_id: ${{ steps.verify.outputs.workspace_id }}
+      workspace_url: ${{ steps.verify.outputs.workspace_url }}
     env:
-      OPL_CONSOLE_ORIGIN: ${{ inputs.origin }}
-      OPL_VERIFY_OPERATOR_TOKEN: ${{ secrets.OPL_OPERATOR_SUMMARY_TOKEN }}
+      OPL_CONSOLE_ORIGIN: "https://cloud.medopl.cn"
       OPL_VERIFY_AUTH_USERS_JSON: ${{ secrets.OPL_CONSOLE_USERS_JSON }}
       OPL_VERIFY_ACCOUNT_ID: ${{ inputs.account_id }}
-      OPL_VERIFY_PACKAGE_ID: ${{ inputs.package_id }}
-      OPL_VERIFY_CREDIT_AMOUNT: ${{ inputs.credit_amount }}
+      OPL_VERIFY_PACKAGE_ID: "basic"
       OPL_VERIFY_URL_ATTEMPTS: ${{ inputs.url_attempts }}
       OPL_VERIFY_RETRY_DELAY_MS: ${{ inputs.retry_delay_ms }}
       OPL_VERIFY_RUN_ID: ${{ inputs.run_id || github.run_id }}
-      OPL_VERIFY_BROWSER_E2E: "1"
       OPL_VERIFY_SCREENSHOT_DIR: "artifacts/production-browser-e2e"
-      OPL_VERIFY_CLEANUP_ON_FAILURE: "true"
-      OPL_AIONUI_ADMIN_PASSWORD_SEED: ${{ secrets.OPL_AIONUI_ADMIN_PASSWORD_SEED }}
+      OPL_VERIFY_MANIFEST_PATH: "artifacts/production-browser-e2e/manifest.json"
       OPL_VERIFY_MODEL_ACCESS_KEY: ${{ secrets.OPL_CODEX_API_KEY }}
 
     steps:
@@ -88,15 +71,17 @@ jobs:
           set -euo pipefail
           result="$RUNNER_TEMP/production-verifier-result.json"
           trap 'rm -f "$result"' EXIT
-          node tools/production-verifier.ts | tee "$result"
+          node tools/production-console-browser-verifier.ts | tee "$result"
           node -e '
             const fs = require("node:fs");
             const payload = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
             if (!/^[A-Za-z0-9._:-]{1,128}$/.test(payload.workspaceId || "")) throw new Error("workspace_id_required");
-            process.stdout.write(`workspace_id=${payload.workspaceId}\n`);
+            const url = new URL(payload.url);
+            if (url.protocol !== "https:" || !url.pathname.startsWith("/w/")) throw new Error("workspace_url_required");
+            process.stdout.write(`workspace_id=${payload.workspaceId}\nworkspace_url=${encodeURIComponent(payload.url)}\n`);
           ' "$result" >> "$GITHUB_OUTPUT"
 
-      - name: Upload browser E2E screenshots
+      - name: Upload browser E2E screenshots and manifest
         if: always()
         uses: actions/upload-artifact@v4
         with:

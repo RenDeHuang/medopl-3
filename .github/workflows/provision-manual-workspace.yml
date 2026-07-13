@@ -44,6 +44,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: production-resource-verification
+  cancel-in-progress: false
+
 jobs:
   provision:
     name: Provision compute, storage, attachment, and workspace URL

@@ -234,13 +234,15 @@ Run the Console with `OPL_RUNTIME_PROVIDER=tencent-tke`, TCR image refs, a kubec
 
 ## Production Verification
 
-After deploying OPL Console to Tencent TKE with PostgreSQL, TCR images, TLS, DNS, and HTTPS readiness configured, run the real chain verifier from an operator shell only after explicit approval:
+After deploying OPL Console to Tencent TKE with PostgreSQL, TCR images, TLS, DNS, and HTTPS readiness configured, use the `Verify Production Chain` workflow for normal Basic-package acceptance. It logs in as the account owner and drives every commercial mutation through real Console clicks, captures the Workspace URL and screenshots, and uploads a secret-free ownership manifest. The verification account must be funded beforehand; this workflow performs no hidden top-up.
+
+For the existing API-level deep evidence and replacement-resource verifier, run this operator-shell command only after explicit approval:
 
 ```bash
 OPL_CONSOLE_ORIGIN=https://<console-domain> npm run verify:production
 ```
 
-The production verifier is fail-closed and requires public HTTPS Console and Workspace URLs. Local-to-staging uses `npm run staging:e2e` instead, which may talk to a local Console origin but still requires a public Workspace URL. Both verifiers first check:
+The API-level production verifier is fail-closed and requires public HTTPS Console and Workspace URLs. Local-to-staging uses `npm run staging:e2e` instead, which may talk to a local Console origin but still requires a public Workspace URL. Both API verifiers first check:
 
 - `GET /api/production/readiness`
 - `GET /api/runtime/readiness`
@@ -264,7 +266,7 @@ destroy verification storage
 
 This command creates billable Tencent Cloud allocation and storage resources, then attempts to clean them up on both success and post-creation failure paths. By default, the Workspace name and verification ledger source events include a unique run id so repeated verification runs create fresh cloud resources and remain traceable in billing records. Use a dedicated verification account. Successful runs write structured JSON to stdout; failed runs write structured JSON to stderr, including `cleanupErrors` when cleanup does not fully complete. If the verifier reports cleanup errors, inspect OPL Console and Tencent Cloud and explicitly destroy any remaining verification resources. The command writes no smoke report or generated artifact into the repository.
 
-Optional verifier controls:
+Optional API-level verifier controls:
 
 ```bash
 OPL_VERIFY_ACCOUNT_ID=pi-production-verifier

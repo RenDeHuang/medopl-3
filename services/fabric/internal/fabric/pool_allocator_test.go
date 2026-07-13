@@ -109,16 +109,20 @@ func (p *failedCreateCleanupProvider) ReconcileComputePool(_ context.Context, in
 
 type tagFailurePoolProvider struct {
 	testProvider
-	deleteCalls int
-	deleteErr   error
+	deleteCalls     int
+	deleteErr       error
+	deleteMachine   ProviderMachine
+	deleteOwnership MachineOwnership
 }
 
 func (*tagFailurePoolProvider) TagComputeMachine(context.Context, ProviderMachine, MachineOwnership) error {
 	return fmt.Errorf("node label failed")
 }
 
-func (p *tagFailurePoolProvider) DeleteComputeMachine(context.Context, ProviderMachine) error {
+func (p *tagFailurePoolProvider) DeleteComputeMachine(_ context.Context, machine ProviderMachine, ownership MachineOwnership) error {
 	p.deleteCalls++
+	p.deleteMachine = machine
+	p.deleteOwnership = ownership
 	return p.deleteErr
 }
 
@@ -158,6 +162,10 @@ func TestPoolAllocatorDeletesPartiallyTaggedMachineBeforeReleasingClaim(t *testi
 	ownership, err := store.MachineOwnership(context.Background(), resource.ID)
 	if err != nil || ownership.Status != "released" || provider.deleteCalls != 1 {
 		t.Fatalf("partial claim cleanup ownership=%#v err=%v deletes=%d", ownership, err, provider.deleteCalls)
+	}
+	if provider.deleteOwnership.NodePoolID != "np-basic" || provider.deleteOwnership.ResourceID != resource.ID || provider.deleteOwnership.AccountID != resource.AccountID ||
+		provider.deleteOwnership.MachineID != provider.deleteMachine.MachineID || provider.deleteOwnership.InstanceID != provider.deleteMachine.InstanceID || provider.deleteOwnership.NodeName != provider.deleteMachine.NodeName {
+		t.Fatalf("partial claim cleanup lost ownership: machine=%#v ownership=%#v", provider.deleteMachine, provider.deleteOwnership)
 	}
 }
 

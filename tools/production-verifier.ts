@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rename, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 const DEFAULT_ACCOUNT_ID = "pi-production-verifier";
 const DEFAULT_WORKSPACE_NAME = "Production Verification Lab";
@@ -13,6 +13,65 @@ const DEFAULT_MOUNT_PATH = "/data";
 const WORKSPACE_PERSISTENCE_ROOT = "/data";
 const DEFAULT_AIONUI_ADMIN_USERNAME = "admin";
 const VERIFICATION_PRICING_VERSION = "opl-tencent-v1";
+const DEFAULT_SLOT = "01";
+const DEFAULT_BARRIER_TIMEOUT_MS = 15 * 60 * 1000;
+const MAX_BARRIER_TIMEOUT_MS = 60 * 60 * 1000;
+
+function assertProductionVerificationIdentity(runId, slot) {
+  if (!/^[A-Za-z0-9._-]{1,80}$/.test(String(runId || ""))) throw new Error("production_verification_run_id_invalid");
+  if (!/^[A-Za-z0-9._-]{1,16}$/.test(String(slot || ""))) throw new Error("production_verification_slot_invalid");
+}
+
+function assertBarrierTimeout(barrierTimeoutMs) {
+  if (!Number.isFinite(barrierTimeoutMs) || barrierTimeoutMs <= 0 || barrierTimeoutMs > MAX_BARRIER_TIMEOUT_MS) {
+    throw new Error("production_verification_barrier_timeout_invalid");
+  }
+}
+
+export function productionVerificationMutationKey(runId, slot = DEFAULT_SLOT, stage) {
+  assertProductionVerificationIdentity(runId, slot);
+  return `production-verification:${runId}:${slot}:${stage}`;
+}
+
+function withoutSecrets(value) {
+  if (Array.isArray(value)) return value.map(withoutSecrets);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(Object.entries(value)
+    .filter(([key]) => !/(cookie|token|password|secret)/i.test(key))
+    .map(([key, nested]) => [key, withoutSecrets(nested)]));
+}
+
+async function atomicWriteJson(path, value) {
+  if (!path) return;
+  await mkdir(dirname(path), { recursive: true });
+  const temporaryPath = `${path}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
+  await writeFile(temporaryPath, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
+  await rename(temporaryPath, path);
+}
+
+export async function writeVerificationManifest(path, manifest) {
+  const safe = withoutSecrets(manifest);
+  if (safe.workspaceUrl) assertPublicHttpsUrl(safe.workspaceUrl, "public_workspace_url_required", { hostname: "workspace.medopl.cn" });
+  await atomicWriteJson(path, safe);
+}
+
+export async function waitForReleaseBarrier({ readyFile, releaseFile, barrierTimeoutMs = DEFAULT_BARRIER_TIMEOUT_MS, retryDelayMs = DEFAULT_RETRY_DELAY_MS, evidence }) {
+  if (!readyFile && !releaseFile) return;
+  if (!readyFile || !releaseFile) throw new Error("production_verification_barrier_files_required");
+  assertBarrierTimeout(barrierTimeoutMs);
+  await atomicWriteJson(readyFile, withoutSecrets(evidence));
+  const deadline = Date.now() + barrierTimeoutMs;
+  while (true) {
+    try {
+      await access(releaseFile);
+      return;
+    } catch (error) {
+      if (error?.code !== "ENOENT") throw error;
+    }
+    if (Date.now() >= deadline) throw new Error("production_verification_barrier_timeout");
+    await sleep(Math.min(retryDelayMs || 10, Math.max(1, deadline - Date.now())));
+  }
+}
 
 function defaultRunId() {
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+$/, "Z");
@@ -53,14 +112,17 @@ function isNonPublicHostname(hostname) {
   );
 }
 
-function assertPublicHttpsUrl(url, errorName) {
+export function assertPublicHttpsUrl(url, errorName, { hostname = "" } = {}) {
   let parsed = null;
   try {
     parsed = new URL(url);
   } catch {
     throw new Error(errorName);
   }
-  if (parsed.protocol !== "https:" || isNonPublicHostname(parsed.hostname)) {
+  if (
+    parsed.protocol !== "https:" || isNonPublicHostname(parsed.hostname) || parsed.username || parsed.password || parsed.port ||
+    (hostname && parsed.hostname.toLowerCase() !== hostname)
+  ) {
     throw new Error(errorName);
   }
   return parsed;
@@ -74,7 +136,7 @@ function assertConsoleOrigin(url, { allowPrivateConsoleOrigin = false } = {}) {
   } catch {
     throw new Error("console_origin_required");
   }
-  if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("console_origin_required");
+  if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) throw new Error("console_origin_required");
   return parsed;
 }
 
@@ -105,11 +167,12 @@ function requestHeaders({ body = null, auth = null, idempotencyKey = "", headers
 	return Object.keys(headers).length > 0 ? headers : undefined;
 }
 
-async function requestJsonWithResponse({ fetchImpl, origin, path, method = "GET", body = null, auth = null, idempotencyKey = "", headers = {} }) {
+async function requestJsonWithResponse({ fetchImpl, origin, path, method = "GET", body = null, auth = null, idempotencyKey = "", headers = {}, signal = undefined }) {
 	const response = await fetchImpl(endpoint(origin, path), {
 		method,
 		headers: requestHeaders({ body, auth, idempotencyKey, headers }),
-		body: body ? JSON.stringify(body) : undefined
+		body: body ? JSON.stringify(body) : undefined,
+		signal
 	});
   const payload = await readResponse(response);
   if (!response.ok) {
@@ -169,7 +232,7 @@ function browserCookiesFromHeader(cookieHeader = "", url = "") {
     .filter(Boolean);
 }
 
-async function requestOperatorSession({ fetchImpl, origin, operatorToken }) {
+async function requestOperatorSession({ fetchImpl, origin, operatorToken, signal = undefined }) {
   if (!operatorToken) return null;
   const { payload, response } = await requestJsonWithResponse({
     fetchImpl,
@@ -177,7 +240,8 @@ async function requestOperatorSession({ fetchImpl, origin, operatorToken }) {
 		path: "/api/auth/operator-login",
 		method: "POST",
 		body: {},
-		headers: { "x-opl-operator-token": operatorToken }
+		headers: { "x-opl-operator-token": operatorToken },
+		signal
 	});
   return {
     cookie: cookieHeaderFromSetCookie(setCookieHeader(response.headers)),
@@ -185,13 +249,14 @@ async function requestOperatorSession({ fetchImpl, origin, operatorToken }) {
   };
 }
 
-async function requestOwnerSession({ fetchImpl, origin, email, password }) {
+export async function requestOwnerSession({ fetchImpl, origin, email, password, signal = undefined }) {
   const { payload, response } = await requestJsonWithResponse({
     fetchImpl,
     origin,
     path: "/api/auth/login",
     method: "POST",
-    body: { email, password }
+    body: { email, password },
+    signal
   });
   return {
     cookie: cookieHeaderFromSetCookie(setCookieHeader(response.headers)),
@@ -346,7 +411,7 @@ async function verifyWorkspaceRuntimeFile({ fetchImpl, checks, workspaceUrl, run
   return { filePath, content };
 }
 
-async function verifyWorkspaceContentTransfer({ fetchImpl, checks, origin, accountId, workspace, runId, auth, operatorAuth }) {
+async function verifyWorkspaceContentTransfer({ fetchImpl, checks, origin, accountId, workspace, runId, slot, auth, operatorAuth }) {
   const state = await requestJson({ fetchImpl, origin, path: "/api/management/state", auth: operatorAuth });
   const organizations = new Map((state.organizations || [])
     .filter((item) => item.id && item.billingAccountId === accountId && item.status === "active")
@@ -365,7 +430,7 @@ async function verifyWorkspaceContentTransfer({ fetchImpl, checks, origin, accou
     path: "/api/projects",
     method: "POST",
     auth,
-    idempotencyKey: `production-verification:${runId}:project`,
+    idempotencyKey: productionVerificationMutationKey(runId, slot, "create-project"),
     body: { organizationId, workspaceId: workspace.id, localAliasId: `local-project-${runId}` }
   });
   const transfer = await requestJson({
@@ -374,7 +439,7 @@ async function verifyWorkspaceContentTransfer({ fetchImpl, checks, origin, accou
     path: `/api/workspaces/${encodeURIComponent(workspace.id)}/transfers`,
     method: "POST",
     auth,
-    idempotencyKey: `production-verification:${runId}:transfer`,
+    idempotencyKey: productionVerificationMutationKey(runId, slot, "create-transfer"),
     body: { organizationId, projectId: project.projectId, path, digest, size: Buffer.byteLength(content) }
   });
   const body = Buffer.from(content);
@@ -383,7 +448,12 @@ async function verifyWorkspaceContentTransfer({ fetchImpl, checks, origin, accou
     const chunk = chunks[index];
     const response = await fetchImpl(endpoint(origin, `/api/workspaces/${encodeURIComponent(workspace.id)}/transfers/${encodeURIComponent(transfer.transferId)}/chunks/${index}`), {
       method: "PUT",
-      headers: { ...authHeaderValues(auth), "content-type": "application/octet-stream", "x-chunk-sha256": createHash("sha256").update(chunk).digest("hex") },
+      headers: {
+        ...authHeaderValues(auth),
+        "Idempotency-Key": productionVerificationMutationKey(runId, slot, `transfer-chunk-${index}`),
+        "content-type": "application/octet-stream",
+        "x-chunk-sha256": createHash("sha256").update(chunk).digest("hex")
+      },
       body: chunk
     });
     const payload = await readResponse(response);
@@ -409,6 +479,7 @@ async function verifyWorkspaceContentTransfer({ fetchImpl, checks, origin, accou
     path: `/api/workspaces/${encodeURIComponent(workspace.id)}/transfers/${encodeURIComponent(transfer.transferId)}/complete`,
     method: "POST",
     auth,
+    idempotencyKey: productionVerificationMutationKey(runId, slot, "complete-transfer"),
     body: {}
   });
   addCheck(checks, "workspace_content_transfer_completed", completed.status === "completed" && completed.receivedChunks?.length === chunks.length);
@@ -937,17 +1008,45 @@ export async function verifyWorkspaceBrowserUi({
       screenshotDir,
       runId,
       successDetails: { marker },
-      task: () => page.waitForFunction(({ marker: expected }) => {
-        const text = document.body?.innerText || "";
-        const prompt = `请只回复：${expected}`;
-        let count = 0;
-        let index = 0;
-        while ((index = text.indexOf(expected, index)) !== -1) {
-          count += 1;
-          index += expected.length;
-        }
-        return count >= 2 || (text.includes(expected) && !text.includes(prompt));
-      }, { marker }, { timeout: 180_000 })
+      task: () => page.waitForFunction(({ marker: expected, prompt: submittedPrompt }) => {
+        const visible = (element) => {
+          const rect = element.getBoundingClientRect();
+          const style = window.getComputedStyle(element);
+          return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.display !== "none";
+        };
+        const main = document.querySelector("main, [role='main']");
+        const reply = main && Array.from(main.querySelectorAll(
+          "p, pre, code, article, [role='article'], [data-message-role], [data-message-author-role], [data-testid*='message']"
+        )).some((element) =>
+          visible(element) &&
+          (element.textContent || "").trim() === expected &&
+          (element.textContent || "").trim() !== submittedPrompt &&
+          !element.closest("nav, aside, h1, h2, h3, h4, h5, h6, input, textarea, [role='textbox'], [data-message-role='user'], [data-message-author-role='user']")
+        );
+        const processing = Array.from(main?.querySelectorAll(
+          "[aria-busy='true'], [data-status='processing'], [data-testid*='processing'], [class*='processing'], button:disabled"
+        ) || []).some((element) =>
+          visible(element) && /^Processing(?:\.\.\.|…)?$/i.test((element.textContent || "").trim())
+        );
+        const guidSend = document.querySelector('[data-testid="guid-send-btn"]');
+        const composerInput = guidSend ? null : Array.from(document.querySelectorAll(
+          '[data-testid="guid-input"] textarea, [data-testid="guid-input"], textarea, input[type="text"], [contenteditable="true"], [role="textbox"]'
+        )).reverse().find((element) => {
+          const value = element.value || element.textContent || element.innerText || "";
+          return visible(element) && value.trim() === submittedPrompt;
+        });
+        const composer = composerInput?.closest("form, [data-testid*='composer'], [class*='composer']");
+        const send = guidSend || composer?.querySelector('button[type="submit"]:not(:disabled):not([aria-disabled="true"])');
+        return Boolean(
+          reply &&
+          !processing &&
+          send &&
+          visible(send) &&
+          !send.disabled &&
+          send.getAttribute("disabled") === null &&
+          send.getAttribute("aria-disabled") !== "true"
+        );
+      }, { marker, prompt }, { timeout: 180_000 })
     });
 
     await captureBrowserScreenshot({ page, screenshotDir, runId, suffix: "success" });
@@ -1071,6 +1170,7 @@ async function waitForStorageReady({
   storage,
   attempts,
   retryDelayMs,
+  idempotencyKey,
   auth = null,
   checks
 }) {
@@ -1099,6 +1199,7 @@ async function waitForStorageReady({
       path: `/api/storage-volumes/${encodeURIComponent(current.id)}/sync`,
       method: "POST",
       auth,
+      idempotencyKey,
       body: { accountId, storageId: current.id }
     });
   }
@@ -1344,10 +1445,124 @@ function verificationResourceIds({ compute, storage, attachment, workspace, repl
   });
 }
 
-async function cleanupVerificationResources({ fetchImpl, origin, accountId, computeAllocationId, storageId, attachmentId, expectedComputeHoldId = "", expectedStorageHoldId = "", checks = null, auth = null, attempts = DEFAULT_WORKSPACE_URL_ATTEMPTS, retryDelayMs = DEFAULT_RETRY_DELAY_MS }) {
-  const cleanupErrors = [];
+function resourceAccountId(resource) {
+  return resource?.accountId || resource?.ownerAccountId || "";
+}
 
-  if (attachmentId) {
+function exactResource(rows, id, accountId) {
+  const matches = (rows || []).filter((row) => row?.id === id);
+  if (matches.length !== 1 || resourceAccountId(matches[0]) !== accountId) throw new Error("verification_resource_ownership_mismatch");
+  return matches[0];
+}
+
+export function assertProductionVerificationResourceOwnership(state, manifest) {
+  const accountId = manifest?.accountId;
+  const stateAccountId = state?.account?.accountId || state?.account?.id || state?.wallet?.accountId || "";
+  if (!accountId || (stateAccountId && stateAccountId !== accountId)) throw new Error("verification_resource_ownership_mismatch");
+  const ids = manifest.ids || {};
+  const names = manifest.resourceNames || {};
+  const holds = manifest.holdIds || {};
+  const computeIds = [ids.computeAllocationId, ids.replacementComputeAllocationId].filter(Boolean);
+  for (const id of computeIds) {
+    const compute = exactResource(state.computeAllocations, id, accountId);
+    const replacement = id === ids.replacementComputeAllocationId;
+    const expectedName = replacement ? names.replacementCompute : names.compute;
+    const expectedHold = replacement ? holds.replacementCompute : holds.compute;
+    if (!expectedHold || !expectedName?.includes(manifest.runId) || compute.name !== expectedName || compute.holdId !== expectedHold) {
+      throw new Error("verification_resource_ownership_mismatch");
+    }
+    const identity = manifest.machineIdentities?.[id] || {};
+    const stateIdentity = {
+      machineId: compute.machineName,
+      instanceId: compute.instanceId || compute.cvmInstanceId,
+      nodeName: compute.nodeName
+    };
+    if (
+      !identity.machineId || !identity.instanceId || !identity.nodeName ||
+      identity.machineId !== stateIdentity.machineId ||
+      identity.instanceId !== stateIdentity.instanceId ||
+      identity.nodeName !== stateIdentity.nodeName ||
+      (state.computeAllocations || []).filter((row) => (
+        row.machineName === identity.machineId &&
+        (row.instanceId || row.cvmInstanceId) === identity.instanceId &&
+        row.nodeName === identity.nodeName
+      )).length !== 1
+    ) {
+      throw new Error("verification_resource_ownership_mismatch");
+    }
+  }
+  if (ids.storageId) {
+    const storage = exactResource(state.storageVolumes, ids.storageId, accountId);
+    if (!holds.storage || !names.storage?.includes(manifest.runId) || storage.name !== names.storage || storage.holdId !== holds.storage) {
+      throw new Error("verification_resource_ownership_mismatch");
+    }
+  }
+  for (const [id, computeId] of [
+    [ids.attachmentId, ids.computeAllocationId],
+    [ids.replacementAttachmentId, ids.replacementComputeAllocationId]
+  ]) {
+    if (!id) continue;
+    const attachment = exactResource(state.storageAttachments, id, accountId);
+    if (attachment.computeAllocationId !== computeId || (ids.storageId && attachment.storageId !== ids.storageId)) {
+      throw new Error("verification_resource_ownership_mismatch");
+    }
+  }
+  for (const id of [...new Set([ids.workspaceId, ids.replacementWorkspaceId].filter(Boolean))]) {
+    const workspace = exactResource(state.workspaces, id, accountId);
+    const replacement = Boolean(ids.replacementWorkspaceId && id === ids.replacementWorkspaceId && ids.replacementComputeAllocationId);
+    const expectedName = replacement ? (names.replacementWorkspace || names.workspace) : names.workspace;
+    const expectedComputeId = replacement ? ids.replacementComputeAllocationId : ids.computeAllocationId;
+    const expectedAttachmentId = replacement ? ids.replacementAttachmentId : ids.attachmentId;
+    if (
+      !expectedName?.includes(manifest.runId) || workspace.name !== expectedName ||
+      workspace.computeAllocationId !== expectedComputeId ||
+      (ids.storageId && workspace.storageId !== ids.storageId) ||
+      workspace.attachmentId !== expectedAttachmentId
+    ) throw new Error("verification_resource_ownership_mismatch");
+  }
+}
+
+export async function readProductionManagementState({ fetchImpl, origin, operatorToken, signal = undefined }) {
+  const normalizedOrigin = normalizeOrigin(origin);
+  assertConsoleOrigin(normalizedOrigin);
+  const auth = await requestOperatorSession({ fetchImpl, origin: normalizedOrigin, operatorToken, signal });
+  if (!auth) throw new Error("production_operator_token_required");
+  return requestJson({ fetchImpl, origin: normalizedOrigin, path: "/api/management/state", auth, signal });
+}
+
+export async function cleanupVerificationResources({ fetchImpl, origin, accountId, manifest, computeAllocationId, storageId, attachmentId, expectedComputeHoldId = "", expectedStorageHoldId = "", checks = null, auth = null, attempts = DEFAULT_WORKSPACE_URL_ATTEMPTS, retryDelayMs = DEFAULT_RETRY_DELAY_MS, cleanupStage = "final-cleanup", signal = undefined }) {
+  const cleanupErrors = [];
+  const ids = manifest?.ids || {};
+  const expectedComputeId = cleanupStage === "first-cleanup" ? ids.computeAllocationId : ids.replacementComputeAllocationId;
+  const expectedAttachmentId = cleanupStage === "first-cleanup" ? ids.attachmentId : ids.replacementAttachmentId;
+  const hasExplicitTarget = Boolean(computeAllocationId || storageId || attachmentId);
+  if (
+    !["first-cleanup", "final-cleanup"].includes(cleanupStage) ||
+    !hasExplicitTarget ||
+    accountId !== manifest?.accountId ||
+    (computeAllocationId && computeAllocationId !== expectedComputeId) ||
+    (storageId && storageId !== ids.storageId) ||
+    (storageId && cleanupStage !== "final-cleanup") ||
+    (attachmentId && attachmentId !== expectedAttachmentId)
+  ) return ["verification_resource_ownership_mismatch"];
+  const effectiveComputeId = computeAllocationId;
+  const effectiveStorageId = storageId;
+  const effectiveAttachmentId = attachmentId;
+
+  try {
+    const state = await requestJson({
+      fetchImpl,
+      origin,
+      path: `/api/state?accountId=${encodeURIComponent(accountId)}`,
+      auth,
+      signal
+    });
+    assertProductionVerificationResourceOwnership(state, manifest);
+  } catch (error) {
+    return ["verification_resource_ownership_mismatch"];
+  }
+
+  if (effectiveAttachmentId) {
     try {
       const detached = await requestJson({
         fetchImpl,
@@ -1355,28 +1570,32 @@ async function cleanupVerificationResources({ fetchImpl, origin, accountId, comp
         path: "/api/storage-attachments/detach",
         method: "POST",
         auth,
-        body: { accountId, attachmentId, confirm: true }
+        idempotencyKey: productionVerificationMutationKey(manifest.runId, manifest.slot, `${cleanupStage}-detach`),
+        body: { accountId, attachmentId: effectiveAttachmentId, confirm: true },
+        signal
       });
+      if (detached?.status !== "detached") throw new Error("verification_storage_detached_failed");
       if (checks) {
-        addCheck(checks, "verification_storage_detached", Boolean(detached?.status === "detached"));
+        addCheck(checks, "verification_storage_detached", true);
       }
     } catch (error) {
       cleanupErrors.push(`detach_storage:${error.message}`);
     }
   }
 
-  if (computeAllocationId) {
+  if (effectiveComputeId) {
     try {
       let destroyed = null;
       for (let attempt = 1; attempt <= attempts; attempt += 1) {
         destroyed = await requestJson({
           fetchImpl,
           origin,
-          path: `/api/compute-allocations/${encodeURIComponent(computeAllocationId)}/destroy`,
+          path: `/api/compute-allocations/${encodeURIComponent(effectiveComputeId)}/destroy`,
           method: "POST",
           auth,
-          idempotencyKey: `production_verification_cleanup:compute:${computeAllocationId}`,
-          body: { accountId, computeAllocationId, confirm: true }
+          idempotencyKey: productionVerificationMutationKey(manifest.runId, manifest.slot, `${cleanupStage}-compute`),
+          body: { accountId, computeAllocationId: effectiveComputeId, confirm: true },
+          signal
         });
         if (
           destroyed?.status === "destroyed" &&
@@ -1401,7 +1620,7 @@ async function cleanupVerificationResources({ fetchImpl, origin, accountId, comp
     }
   }
 
-  if (storageId) {
+  if (effectiveStorageId) {
     try {
       const destroyed = await requestJson({
         fetchImpl,
@@ -1409,15 +1628,21 @@ async function cleanupVerificationResources({ fetchImpl, origin, accountId, comp
         path: "/api/storage-volumes/destroy",
         method: "POST",
         auth,
-        body: { accountId, storageId, confirmDataLoss: true }
+        idempotencyKey: productionVerificationMutationKey(manifest.runId, manifest.slot, `${cleanupStage}-storage`),
+        body: { accountId, storageId: effectiveStorageId, confirmDataLoss: true },
+        signal
       });
+      const expectedHoldId = expectedStorageHoldId || manifest.holdIds.storage;
+      const cleanupComplete = Boolean(
+        destroyed?.status === "destroyed" &&
+        destroyed?.billingStatus === "stopped" &&
+        destroyed?.holdId === expectedHoldId &&
+        destroyed?.holdReleaseId
+      );
       if (checks) {
-        addCheck(checks, "verification_storage_destroyed", Boolean(
-          destroyed?.status === "destroyed" &&
-          destroyed?.billingStatus === "stopped" &&
-          (!expectedStorageHoldId || (destroyed?.holdId === expectedStorageHoldId && Boolean(destroyed?.holdReleaseId)))
-        ));
+        addCheck(checks, "verification_storage_destroyed", cleanupComplete);
       }
+      if (!cleanupComplete) throw new Error("verification_storage_destroyed_failed");
     } catch (error) {
       cleanupErrors.push(`destroy_storage:${error.message}`);
     }
@@ -1431,6 +1656,11 @@ export async function verifyProductionChain({
   accountId = DEFAULT_ACCOUNT_ID,
   workspaceName,
   runId = defaultRunId(),
+  slot = DEFAULT_SLOT,
+  manifestPath = "",
+  readyFile = "",
+  releaseFile = "",
+  barrierTimeoutMs = DEFAULT_BARRIER_TIMEOUT_MS,
   packageId = DEFAULT_PACKAGE_ID,
   creditAmount = DEFAULT_CREDIT_AMOUNT,
   workspaceUrlAttempts = DEFAULT_WORKSPACE_URL_ATTEMPTS,
@@ -1444,16 +1674,61 @@ export async function verifyProductionChain({
   screenshotDir = "",
   modelAccessKey = "",
   cleanupOnFailure = true,
+  faultReadyOnly = false,
   fetchImpl = globalThis.fetch
 } = {}) {
   if (typeof fetchImpl !== "function") throw new Error("fetch_required");
+  assertProductionVerificationIdentity(runId, slot);
+  if (readyFile || releaseFile) {
+    if (!readyFile || !releaseFile) throw new Error("production_verification_barrier_files_required");
+    assertBarrierTimeout(barrierTimeoutMs);
+  }
+  if (faultReadyOnly && (!readyFile || !releaseFile)) throw new Error("production_verification_fault_barrier_required");
   const checks = [];
   const normalizedOrigin = normalizeOrigin(origin);
   assertConsoleOrigin(normalizedOrigin, { allowPrivateConsoleOrigin });
-  const effectiveWorkspaceName = workspaceName || `${DEFAULT_WORKSPACE_NAME} ${runId}`;
+  const workspaceNameBase = workspaceName || DEFAULT_WORKSPACE_NAME;
+  const effectiveWorkspaceName = workspaceNameBase.includes(runId) ? workspaceNameBase : `${workspaceNameBase} ${runId}`;
   const creditSourceEventId = `production_verification_credit:${runId}`;
   const computeName = `${effectiveWorkspaceName} compute ${runId}`;
   const storageName = `${effectiveWorkspaceName} storage ${runId}`;
+  const replacementComputeName = `${effectiveWorkspaceName} replacement compute ${runId}`;
+  const mutationKeys = Object.fromEntries([
+    "topup", "create-compute", "create-storage", "create-storage-sync", "create-attachment", "create-workspace",
+    "create-project", "create-transfer", "first-cleanup-detach", "first-cleanup-compute",
+    "replacement-compute", "replacement-attachment", "replacement-workspace",
+    "settlement-compute", "settlement-storage", "final-cleanup-detach", "final-cleanup-compute", "final-cleanup-storage"
+  ].map((stage) => [stage, productionVerificationMutationKey(runId, slot, stage)]));
+  const manifest = {
+    runId,
+    slot,
+    accountId,
+    resourceNames: {
+      compute: computeName,
+      storage: storageName,
+      workspace: effectiveWorkspaceName,
+      replacementCompute: replacementComputeName,
+      replacementWorkspace: effectiveWorkspaceName
+    },
+    ids: {},
+    holdIds: {},
+    operationEvidence: {},
+    machineIdentities: {},
+    mutationKeys
+  };
+  const persistManifest = () => writeVerificationManifest(manifestPath, manifest);
+  const rememberCompute = async (key, value) => {
+    manifest.ids[key] = value.id;
+    manifest.holdIds[key === "replacementComputeAllocationId" ? "replacementCompute" : "compute"] = value.holdId;
+    manifest.machineIdentities[value.id] = compactObject({
+      machineId: value.machineId || value.machineName,
+      instanceId: value.instanceId || value.cvmInstanceId,
+      nodeName: value.nodeName,
+      privateIp: value.privateIp
+    });
+    Object.assign(manifest, manifest.machineIdentities[value.id]);
+    await persistManifest();
+  };
   let compute = null;
   let storage = null;
   let attachment = null;
@@ -1479,7 +1754,7 @@ export async function verifyProductionChain({
       path: "/api/billing/topups",
       method: "POST",
       auth: operatorAuth,
-      idempotencyKey: creditSourceEventId,
+      idempotencyKey: mutationKeys.topup,
       body: { accountId, amount: creditAmount, reason: creditSourceEventId, confirm: true }
     });
 
@@ -1494,8 +1769,10 @@ export async function verifyProductionChain({
       path: "/api/compute-allocations",
       method: "POST",
       auth,
+      idempotencyKey: mutationKeys["create-compute"],
       body: { accountId, packageId, name: computeName }
     });
+    await rememberCompute("computeAllocationId", compute);
     compute = await waitForComputeReady({
       fetchImpl,
       origin: normalizedOrigin,
@@ -1506,6 +1783,7 @@ export async function verifyProductionChain({
       auth,
       checks
     });
+    await rememberCompute("computeAllocationId", compute);
 
     storage = await requestJson({
       fetchImpl,
@@ -1513,8 +1791,12 @@ export async function verifyProductionChain({
       path: "/api/storage-volumes",
       method: "POST",
       auth,
+      idempotencyKey: mutationKeys["create-storage"],
       body: { accountId, packageId, name: storageName }
     });
+    manifest.ids.storageId = storage.id;
+    manifest.holdIds.storage = storage.holdId;
+    await persistManifest();
     storage = await waitForStorageReady({
       fetchImpl,
       origin: normalizedOrigin,
@@ -1522,9 +1804,13 @@ export async function verifyProductionChain({
       storage,
       attempts: workspaceUrlAttempts,
       retryDelayMs,
+      idempotencyKey: mutationKeys["create-storage-sync"],
       auth,
       checks
     });
+    manifest.ids.storageId = storage.id;
+    manifest.holdIds.storage = storage.holdId;
+    await persistManifest();
 
     attachment = await requestJson({
       fetchImpl,
@@ -1532,6 +1818,7 @@ export async function verifyProductionChain({
       path: "/api/storage-attachments",
       method: "POST",
       auth,
+      idempotencyKey: mutationKeys["create-attachment"],
       body: {
         accountId,
         computeAllocationId: compute.id,
@@ -1539,6 +1826,8 @@ export async function verifyProductionChain({
         mountPath: DEFAULT_MOUNT_PATH
       }
     });
+    manifest.ids.attachmentId = attachment.id;
+    await persistManifest();
     assertAttachmentShape(checks, attachment, { compute, storage });
 
     workspace = await requestJson({
@@ -1547,8 +1836,12 @@ export async function verifyProductionChain({
       path: "/api/workspaces",
       method: "POST",
       auth,
+      idempotencyKey: mutationKeys["create-workspace"],
       body: { accountId, workspaceName: effectiveWorkspaceName, attachmentId: attachment.id }
     });
+    manifest.ids.workspaceId = workspace.id;
+    manifest.workspaceId = workspace.id;
+    await persistManifest();
     assertWorkspaceShape(checks, workspace, { compute, storage, attachment });
 
     const runtimeStatus = await requestRuntimeStatus({
@@ -1561,8 +1854,13 @@ export async function verifyProductionChain({
       auth
     });
     assertRuntimeStatus(checks, runtimeStatus);
+    manifest.operationEvidence.primary = compactObject({
+      operationId: runtimeStatus.operationId || runtimeStatus.runtimeId,
+      providerRequestId: runtimeStatus.providerRequestId
+    });
+    await persistManifest();
 
-    assertPublicHttpsUrl(workspace.url, "public_workspace_url_required");
+    assertPublicHttpsUrl(workspace.url, "public_workspace_url_required", { hostname: "workspace.medopl.cn" });
     const workspaceUrlResult = await requestWorkspaceUrl({
       fetchImpl,
       url: workspace.url,
@@ -1597,6 +1895,10 @@ export async function verifyProductionChain({
       runId,
       workspaceAuth: workspaceApiAuth
     });
+    manifest.fileProof = {
+      filePath: fileProof.filePath,
+      sha256: createHash("sha256").update(fileProof.content).digest("hex")
+    };
     await verifyWorkspaceContentTransfer({
       fetchImpl,
       checks,
@@ -1604,21 +1906,100 @@ export async function verifyProductionChain({
       accountId,
       workspace,
       runId,
+      slot,
       auth,
       operatorAuth
     });
+    manifest.workspaceUrl = workspaceUrlResult.url;
+    await persistManifest();
+    await waitForReleaseBarrier({
+      readyFile,
+      releaseFile,
+      barrierTimeoutMs,
+      retryDelayMs,
+      evidence: {
+        runId,
+        slot,
+        accountId,
+        workspaceId: workspace.id,
+        workspaceUrl: workspaceUrlResult.url,
+        checks: checks.map(({ name, ok }) => ({ name, ok }))
+      }
+    });
+
+    if (faultReadyOnly) {
+      let cleanupManifest = manifest;
+      if (manifestPath) {
+        const persisted = JSON.parse(await readFile(manifestPath, "utf8"));
+        if (
+          persisted?.runId !== runId || persisted?.slot !== slot || persisted?.accountId !== accountId ||
+          persisted?.ids?.computeAllocationId !== compute.id || persisted?.ids?.storageId !== storage.id
+        ) throw new Error("verification_resource_ownership_mismatch");
+        Object.assign(manifest, persisted);
+        cleanupManifest = manifest;
+      }
+      const primaryCleanupErrors = await cleanupVerificationResources({
+        fetchImpl,
+        origin: normalizedOrigin,
+        accountId,
+        manifest: cleanupManifest,
+        computeAllocationId: compute.id,
+        attachmentId: cleanupManifest.ids.attachmentId,
+        expectedComputeHoldId: compute.holdId,
+        checks,
+        auth,
+        attempts: workspaceUrlAttempts,
+        retryDelayMs,
+        cleanupStage: "first-cleanup"
+      });
+      if (!primaryCleanupErrors.length) {
+        compute = null;
+        attachment = null;
+      }
+      const storageCleanupErrors = await cleanupVerificationResources({
+        fetchImpl,
+        origin: normalizedOrigin,
+        accountId,
+        manifest: cleanupManifest,
+        storageId: storage.id,
+        expectedStorageHoldId: storage.holdId,
+        checks,
+        auth,
+        attempts: workspaceUrlAttempts,
+        retryDelayMs,
+        cleanupStage: "final-cleanup"
+      });
+      if (!storageCleanupErrors.length) storage = null;
+      const cleanupErrors = [...primaryCleanupErrors, ...storageCleanupErrors];
+      if (cleanupErrors.length) {
+        const error = new Error(`production_verification_cleanup_failed:${cleanupErrors.join("|")}`);
+        error.cleanupErrors = cleanupErrors;
+        throw error;
+      }
+      return {
+        ok: true,
+        accountId,
+        runId,
+        workspaceId: workspace.id,
+        workspaceName: effectiveWorkspaceName,
+        url: workspace.url,
+        checks
+      };
+    }
 
     const firstCleanupErrors = await cleanupVerificationResources({
       fetchImpl,
       origin: normalizedOrigin,
       accountId,
+      manifest,
       computeAllocationId: compute.id,
       attachmentId: attachment.id,
       expectedComputeHoldId: compute.holdId,
       checks,
       auth,
       attempts: workspaceUrlAttempts,
-      retryDelayMs
+      retryDelayMs,
+      cleanupStage: "first-cleanup"
     });
     if (firstCleanupErrors.length > 0) {
       const error = new Error(`production_verification_cleanup_failed:${firstCleanupErrors.join("|")}`);
@@ -1634,8 +2015,10 @@ export async function verifyProductionChain({
       path: "/api/compute-allocations",
       method: "POST",
       auth,
-      body: { accountId, packageId, name: `${effectiveWorkspaceName} replacement compute ${runId}` }
+      idempotencyKey: mutationKeys["replacement-compute"],
+      body: { accountId, packageId, name: replacementComputeName }
     });
+    await rememberCompute("replacementComputeAllocationId", replacementCompute);
     replacementCompute = await waitForComputeReady({
       fetchImpl,
       origin: normalizedOrigin,
@@ -1647,6 +2030,7 @@ export async function verifyProductionChain({
       checks,
       name: "replacement_compute_created"
     });
+    await rememberCompute("replacementComputeAllocationId", replacementCompute);
 
     replacementAttachment = await requestJson({
       fetchImpl,
@@ -1654,6 +2038,7 @@ export async function verifyProductionChain({
       path: "/api/storage-attachments",
       method: "POST",
       auth,
+      idempotencyKey: mutationKeys["replacement-attachment"],
       body: {
         accountId,
         computeAllocationId: replacementCompute.id,
@@ -1661,6 +2046,8 @@ export async function verifyProductionChain({
         mountPath: DEFAULT_MOUNT_PATH
       }
     });
+    manifest.ids.replacementAttachmentId = replacementAttachment.id;
+    await persistManifest();
     assertAttachmentShape(checks, replacementAttachment, { compute: replacementCompute, storage }, "replacement_storage_attached");
 
     replacementWorkspace = await requestJson({
@@ -1669,8 +2056,11 @@ export async function verifyProductionChain({
       path: "/api/workspaces",
       method: "POST",
       auth,
+      idempotencyKey: mutationKeys["replacement-workspace"],
       body: { accountId, workspaceName: effectiveWorkspaceName, attachmentId: replacementAttachment.id }
     });
+    manifest.ids.replacementWorkspaceId = replacementWorkspace.id;
+    await persistManifest();
     assertWorkspaceShape(checks, replacementWorkspace, {
       compute: replacementCompute,
       storage,
@@ -1687,8 +2077,13 @@ export async function verifyProductionChain({
       auth
     });
     assertRuntimeStatus(checks, replacementRuntimeStatus, "replacement_workspace_runtime_status");
+    manifest.operationEvidence.replacement = compactObject({
+      operationId: replacementRuntimeStatus.operationId || replacementRuntimeStatus.runtimeId,
+      providerRequestId: replacementRuntimeStatus.providerRequestId
+    });
+    await persistManifest();
 
-    assertPublicHttpsUrl(replacementWorkspace.url, "public_workspace_url_required");
+    assertPublicHttpsUrl(replacementWorkspace.url, "public_workspace_url_required", { hostname: "workspace.medopl.cn" });
     const replacementWorkspaceUrlResult = await requestWorkspaceUrl({
       fetchImpl,
       url: replacementWorkspace.url,
@@ -1719,6 +2114,7 @@ export async function verifyProductionChain({
       path: "/api/billing/resource-settlements",
       method: "POST",
       auth: operatorAuth || auth,
+      idempotencyKey: mutationKeys["settlement-compute"],
       body: {
         accountId,
         workspaceId: replacementCompute.workspaceId || "",
@@ -1739,6 +2135,7 @@ export async function verifyProductionChain({
       path: "/api/billing/resource-settlements",
       method: "POST",
       auth: operatorAuth || auth,
+      idempotencyKey: mutationKeys["settlement-storage"],
       body: {
         accountId,
         workspaceId: storage.workspaceId || "",
@@ -1781,6 +2178,7 @@ export async function verifyProductionChain({
       fetchImpl,
       origin: normalizedOrigin,
       accountId,
+      manifest,
       computeAllocationId: replacementCompute.id,
       storageId: storage.id,
       attachmentId: replacementAttachment.id,
@@ -1789,7 +2187,8 @@ export async function verifyProductionChain({
       checks,
       auth,
       attempts: workspaceUrlAttempts,
-      retryDelayMs
+      retryDelayMs,
+      cleanupStage: "final-cleanup"
     });
     if (cleanupErrors.length > 0) {
       const error = new Error(`production_verification_cleanup_failed:${cleanupErrors.join("|")}`);
@@ -1831,12 +2230,14 @@ export async function verifyProductionChain({
         fetchImpl,
         origin: normalizedOrigin,
         accountId,
+        manifest,
         computeAllocationId: replacementCompute?.id,
         attachmentId: replacementAttachment?.id,
         expectedComputeHoldId: replacementCompute?.holdId,
         auth,
         attempts: workspaceUrlAttempts,
-        retryDelayMs
+        retryDelayMs,
+        cleanupStage: "final-cleanup"
       });
       cleanupErrors.push(...replacementCleanupErrors);
     }
@@ -1845,12 +2246,14 @@ export async function verifyProductionChain({
         fetchImpl,
         origin: normalizedOrigin,
         accountId,
+        manifest,
         computeAllocationId: compute?.id,
         attachmentId: attachment?.id,
         expectedComputeHoldId: compute?.holdId,
         auth,
         attempts: workspaceUrlAttempts,
-        retryDelayMs
+        retryDelayMs,
+        cleanupStage: "first-cleanup"
       });
       cleanupErrors.push(...primaryCleanupErrors);
     }
@@ -1859,10 +2262,12 @@ export async function verifyProductionChain({
         fetchImpl,
         origin: normalizedOrigin,
         accountId,
+        manifest,
         storageId: storage.id,
         auth,
         attempts: workspaceUrlAttempts,
-        retryDelayMs
+        retryDelayMs,
+        cleanupStage: "final-cleanup"
       });
       cleanupErrors.push(...storageCleanupErrors);
     }
@@ -1893,6 +2298,11 @@ function verifierOptionsFromArgs({ argv, env = process.env, fetchImpl = globalTh
     accountId,
     workspaceName: args.workspace || env.OPL_VERIFY_WORKSPACE_NAME,
     runId: args["run-id"] || env.OPL_VERIFY_RUN_ID,
+    slot: args.slot || env.OPL_VERIFY_SLOT || DEFAULT_SLOT,
+    manifestPath: args["manifest-path"] || env.OPL_VERIFY_MANIFEST_PATH || "",
+    readyFile: args["ready-file"] || env.OPL_VERIFY_READY_FILE || "",
+    releaseFile: args["release-file"] || env.OPL_VERIFY_RELEASE_FILE || "",
+    barrierTimeoutMs: Number(args["barrier-timeout-ms"] || env.OPL_VERIFY_BARRIER_TIMEOUT_MS || DEFAULT_BARRIER_TIMEOUT_MS),
     packageId: args.package || env.OPL_VERIFY_PACKAGE_ID || DEFAULT_PACKAGE_ID,
     creditAmount: Number(args.credit || env.OPL_VERIFY_CREDIT_AMOUNT || DEFAULT_CREDIT_AMOUNT),
     workspaceUrlAttempts: Number(args["url-attempts"] || env.OPL_VERIFY_URL_ATTEMPTS || DEFAULT_WORKSPACE_URL_ATTEMPTS),
@@ -1904,6 +2314,7 @@ function verifierOptionsFromArgs({ argv, env = process.env, fetchImpl = globalTh
     screenshotDir: args["screenshot-dir"] || env.OPL_VERIFY_SCREENSHOT_DIR || "",
     modelAccessKey: args["model-access-key"] || env.OPL_VERIFY_MODEL_ACCESS_KEY || env.OPL_CODEX_API_KEY || "",
     cleanupOnFailure: !["0", "false", "no"].includes(String(args["cleanup-on-failure"] || env.OPL_VERIFY_CLEANUP_ON_FAILURE || "true").toLowerCase()),
+    faultReadyOnly: ["1", "true", "yes"].includes(String(args["fault-ready-only"] || env.OPL_VERIFY_FAULT_READY_ONLY || "").toLowerCase()),
     fetchImpl
   };
 }
@@ -1952,7 +2363,7 @@ export async function runProductionVerifierCli({
   fetchImpl = globalThis.fetch
 } = {}) {
 	if (argv.includes("--help") || argv.includes("-h")) {
-		stdout.write("Usage: npm run verify:production -- --origin <https-url> [--account <id>] [--run-id <id>] [--package <id>] [--browser-e2e]\n");
+		stdout.write("Usage: npm run verify:production -- --origin <https-url> [--account <id>] [--run-id <id>] [--slot <id>] [--manifest-path <path>] [--ready-file <path> --release-file <path> --barrier-timeout-ms <ms>] [--package <id>] [--browser-e2e] [--fault-ready-only]\n");
 		return 0;
 	}
   try {

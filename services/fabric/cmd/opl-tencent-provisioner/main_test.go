@@ -3,13 +3,17 @@ package main
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
 
+	cbs2017 "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cbs/v20170312"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
+	tcerrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	cvm2017 "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm/v20170312"
 	tke2022 "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tke/v20220501"
+	vpc2017 "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 )
 
 func TestReadinessRequiresTencentEnv(t *testing.T) {
@@ -123,6 +127,27 @@ type fakeTencentClient struct {
 	syncedRequest    Request
 	destroyedRequest Request
 	taggedRequest    Request
+	truthRequest     Request
+}
+
+func (client *fakeTencentClient) Capacity(request Request, _ map[string]string) Response {
+	return Response{Ok: true, Status: "ready", InstanceType: request.Pool.InstanceType, RequiredCapacity: request.Pool.DesiredReplicas}
+}
+
+func (client *fakeTencentClient) ProviderTruth(request Request, _ map[string]string) Response {
+	client.truthRequest = request
+	return Response{Ok: true, Status: "present", InstanceId: request.Allocation.InstanceId}
+}
+
+func TestProviderTruthUsesTencentClientBoundaryWithoutMutationFlag(t *testing.T) {
+	client := &fakeTencentClient{}
+	request := providerTruthRequest()
+	response := handleWithClient(request, map[string]string{
+		"TENCENTCLOUD_SECRET_ID": "sid", "TENCENTCLOUD_SECRET_KEY": "skey", "TENCENTCLOUD_REGION": "ap-guangzhou", "TENCENT_DEPLOY_CLUSTER_ID": "cls-123",
+	}, client)
+	if !response.Ok || response.Status != "present" || client.truthRequest.Allocation.Id != "compute-alpha" {
+		t.Fatalf("provider truth response=%#v request=%#v", response, client.truthRequest)
+	}
 }
 
 func (client *fakeTencentClient) ReconcileComputePool(request Request, _ map[string]string) Response {
@@ -323,6 +348,9 @@ func TestNewTencentSDKClientBuildsNativeTkeClient(t *testing.T) {
 	if client.nativeTkeClient == nil {
 		t.Fatalf("expected native TKE SDK client")
 	}
+	if client.nativeCbsClient == nil {
+		t.Fatalf("expected native CBS SDK client")
+	}
 }
 
 func TestBuildCreateNativeNodePoolRequestUsesCurrentPackageShape(t *testing.T) {
@@ -367,6 +395,9 @@ func TestBuildCreateNativeNodePoolRequestUsesCurrentPackageShape(t *testing.T) {
 	if createRequest.Native == nil {
 		t.Fatalf("expected native config")
 	}
+	if stringValue(createRequest.Native.MachineType) != "NativeCVM" {
+		t.Fatalf("Fabric package pools must provision CVMs, not CXM native machines: %#v", createRequest.Native.MachineType)
+	}
 	if createRequest.Native.Replicas == nil || *createRequest.Native.Replicas != 0 {
 		t.Fatalf("node pool creation must not allocate a CVM immediately: %#v", createRequest.Native.Replicas)
 	}
@@ -400,38 +431,151 @@ func TestBuildCreateNativeNodePoolRequestUsesCurrentPackageShape(t *testing.T) {
 }
 
 type fakeNativeTkeAPI struct {
-	createNodePoolRequest    *tke2022.CreateNodePoolRequest
-	describeInstancesRequest []*tke2022.DescribeClusterInstancesRequest
-	describeMachinesRequest  []*tke2022.DescribeClusterMachinesRequest
-	describeNodePoolsRequest []*tke2022.DescribeNodePoolsRequest
-	modifyNodePoolRequest    *tke2022.ModifyNodePoolRequest
-	scaleNodePoolRequest     *tke2022.ScaleNodePoolRequest
-	deleteMachinesRequest    *tke2022.DeleteClusterMachinesRequest
-	nodePoolId               string
-	discoverNodePoolId       string
-	replicas                 int64
-	enableAutoscaling        bool
-	autoRepair               bool
-	rejectMachinePoolFilter  bool
-	machinePoolIds           []string
-	nodeType                 string
-	omitInstanceNodePool     bool
-	omitMachineLanIP         bool
-	machineInstanceIDsMatch  bool
-	calls                    []string
+	createNodePoolRequest       *tke2022.CreateNodePoolRequest
+	describeInstancesRequest    []*tke2022.DescribeClusterInstancesRequest
+	describeMachinesRequest     []*tke2022.DescribeClusterMachinesRequest
+	describeNodePoolsRequest    []*tke2022.DescribeNodePoolsRequest
+	modifyNodePoolRequest       *tke2022.ModifyNodePoolRequest
+	scaleNodePoolRequest        *tke2022.ScaleNodePoolRequest
+	deleteMachinesRequest       *tke2022.DeleteClusterMachinesRequest
+	nodePoolId                  string
+	discoverNodePoolId          string
+	ambiguousDiscovery          bool
+	truncatedDiscovery          bool
+	replicas                    int64
+	maxReplicas                 int64
+	readyReplicas               *int64
+	omitNative                  bool
+	omitScaling                 bool
+	omitReplicas                bool
+	omitReadyReplicas           bool
+	lifeState                   string
+	poolType                    string
+	machineType                 string
+	instanceChargeType          string
+	labelPoolId                 string
+	labelPackageId              string
+	labelInstanceType           string
+	instanceTypes               []string
+	enableAutoscaling           bool
+	autoRepair                  bool
+	rejectMachinePoolFilter     bool
+	machinePoolIds              []string
+	nodeType                    string
+	omitInstanceNodePool        bool
+	omitMachineLanIP            bool
+	machineInstanceIDsMatch     bool
+	duplicateMachineName        bool
+	deletedMachineNames         map[string]bool
+	retainDeletedMachines       bool
+	callLog                     *[]string
+	calls                       []string
+	describeNodePoolErr         error
+	describeMachineErr          error
+	describeClusterInstancesErr error
+	omitClusterInstances        bool
+	clusterInstanceID           string
 }
 
 type fakeNativeCvmAPI struct {
-	describeInstancesRequest []*cvm2017.DescribeInstancesRequest
-	modifyInstancesRequest   []*cvm2017.ModifyInstancesAttributeRequest
-	instanceName             string
-	empty                    bool
-	err                      error
-	nilResponse              bool
-	nilEnvelope              bool
-	nilResponseCall          int
-	nilEnvelopeCall          int
-	nilInstanceCall          int
+	describeAccountQuotaRequests []*cvm2017.DescribeAccountQuotaRequest
+	describeZoneConfigRequests   []*cvm2017.DescribeZoneInstanceConfigInfosRequest
+	quotaRemaining               uint64
+	omitQuotaRemaining           bool
+	omitZoneConfig               bool
+	zoneConfigStatus             string
+	zoneConfigChargeType         string
+	describeInstancesRequest     []*cvm2017.DescribeInstancesRequest
+	modifyInstancesRequest       []*cvm2017.ModifyInstancesAttributeRequest
+	instanceName                 string
+	empty                        bool
+	err                          error
+	nilResponse                  bool
+	nilEnvelope                  bool
+	nilResponseCall              int
+	nilEnvelopeCall              int
+	nilInstanceCall              int
+	callLog                      *[]string
+}
+
+type fakeNativeCbsAPI struct {
+	describeDisksRequests []*cbs2017.DescribeDisksRequest
+	empty                 bool
+	err                   error
+}
+
+func (api *fakeNativeCbsAPI) DescribeDisks(request *cbs2017.DescribeDisksRequest) (*cbs2017.DescribeDisksResponse, error) {
+	api.describeDisksRequests = append(api.describeDisksRequests, request)
+	if api.err != nil {
+		return nil, api.err
+	}
+	disks := []*cbs2017.Disk{{DiskId: request.DiskIds[0], DiskState: common.StringPtr("ATTACHED")}}
+	if api.empty {
+		disks = nil
+	}
+	return &cbs2017.DescribeDisksResponse{Response: &cbs2017.DescribeDisksResponseParams{
+		DiskSet: disks, TotalCount: common.Uint64Ptr(uint64(len(disks))), RequestId: common.StringPtr("req-describe-cbs"),
+	}}, nil
+}
+
+func (api *fakeNativeTkeAPI) record(call string) {
+	api.calls = append(api.calls, call)
+	if api.callLog != nil {
+		*api.callLog = append(*api.callLog, call)
+	}
+}
+
+type fakeNativeVpcAPI struct {
+	describeSubnetsRequests []*vpc2017.DescribeSubnetsRequest
+	omitSubnet              bool
+	omitSubnetZone          bool
+	availableIpCount        uint64
+	zone                    string
+}
+
+func (api *fakeNativeVpcAPI) DescribeSubnets(request *vpc2017.DescribeSubnetsRequest) (*vpc2017.DescribeSubnetsResponse, error) {
+	api.describeSubnetsRequests = append(api.describeSubnetsRequests, request)
+	zone := common.StringPtr(firstNonEmpty(api.zone, "na-siliconvalley-1"))
+	if api.omitSubnetZone {
+		zone = nil
+	}
+	subnets := []*vpc2017.Subnet{{
+		SubnetId: common.StringPtr("subnet-basic"), Zone: zone, AvailableIpAddressCount: common.Uint64Ptr(firstNonZeroUint(api.availableIpCount, 8)),
+	}}
+	if api.omitSubnet {
+		subnets = nil
+	}
+	return &vpc2017.DescribeSubnetsResponse{Response: &vpc2017.DescribeSubnetsResponseParams{
+		SubnetSet: subnets, TotalCount: common.Uint64Ptr(uint64(len(subnets))), RequestId: common.StringPtr("req-describe-subnets"),
+	}}, nil
+}
+
+func (api *fakeNativeCvmAPI) DescribeAccountQuota(request *cvm2017.DescribeAccountQuotaRequest) (*cvm2017.DescribeAccountQuotaResponse, error) {
+	api.describeAccountQuotaRequests = append(api.describeAccountQuotaRequests, request)
+	remaining := common.Uint64Ptr(firstNonZeroUint(api.quotaRemaining, 8))
+	if api.omitQuotaRemaining {
+		remaining = nil
+	}
+	return &cvm2017.DescribeAccountQuotaResponse{Response: &cvm2017.DescribeAccountQuotaResponseParams{
+		AccountQuotaOverview: &cvm2017.AccountQuotaOverview{AccountQuota: &cvm2017.AccountQuota{PostPaidQuotaSet: []*cvm2017.PostPaidQuota{{
+			Zone: common.StringPtr("na-siliconvalley-1"), RemainingQuota: remaining, TotalQuota: common.Uint64Ptr(10), UsedQuota: common.Uint64Ptr(2),
+		}}}},
+		RequestId: common.StringPtr("req-account-quota"),
+	}}, nil
+}
+
+func (api *fakeNativeCvmAPI) DescribeZoneInstanceConfigInfos(request *cvm2017.DescribeZoneInstanceConfigInfosRequest) (*cvm2017.DescribeZoneInstanceConfigInfosResponse, error) {
+	api.describeZoneConfigRequests = append(api.describeZoneConfigRequests, request)
+	items := []*cvm2017.InstanceTypeQuotaItem{{
+		Zone: common.StringPtr("na-siliconvalley-1"), InstanceType: common.StringPtr("SA5.LARGE4"), InstanceChargeType: common.StringPtr(firstNonEmpty(api.zoneConfigChargeType, "POSTPAID_BY_HOUR")), Status: common.StringPtr(firstNonEmpty(api.zoneConfigStatus, "SELL")),
+	}}
+	if api.omitZoneConfig {
+		items = nil
+	}
+	return &cvm2017.DescribeZoneInstanceConfigInfosResponse{Response: &cvm2017.DescribeZoneInstanceConfigInfosResponseParams{
+		InstanceTypeQuotaSet: items,
+		RequestId:            common.StringPtr("req-zone-capacity"),
+	}}, nil
 }
 
 func (api *fakeNativeCvmAPI) ModifyInstancesAttribute(request *cvm2017.ModifyInstancesAttributeRequest) (*cvm2017.ModifyInstancesAttributeResponse, error) {
@@ -441,6 +585,9 @@ func (api *fakeNativeCvmAPI) ModifyInstancesAttribute(request *cvm2017.ModifyIns
 }
 
 func (api *fakeNativeCvmAPI) DescribeInstances(request *cvm2017.DescribeInstancesRequest) (*cvm2017.DescribeInstancesResponse, error) {
+	if api.callLog != nil {
+		*api.callLog = append(*api.callLog, "DescribeCVMInstances")
+	}
 	api.describeInstancesRequest = append(api.describeInstancesRequest, request)
 	call := len(api.describeInstancesRequest)
 	if api.err != nil {
@@ -465,7 +612,10 @@ func (api *fakeNativeCvmAPI) DescribeInstances(request *cvm2017.DescribeInstance
 		}, nil
 	}
 	if len(request.InstanceIds) == 1 {
-		return &cvm2017.DescribeInstancesResponse{Response: &cvm2017.DescribeInstancesResponseParams{InstanceSet: []*cvm2017.Instance{{InstanceId: request.InstanceIds[0], InstanceName: common.StringPtr(api.instanceName)}}, TotalCount: common.Int64Ptr(1), RequestId: common.StringPtr("req-verify-cvm")}}, nil
+		return &cvm2017.DescribeInstancesResponse{Response: &cvm2017.DescribeInstancesResponseParams{InstanceSet: []*cvm2017.Instance{{
+			InstanceId: request.InstanceIds[0], InstanceName: common.StringPtr(api.instanceName),
+			PrivateIpAddresses: []*string{common.StringPtr("10.0.0.11")}, InstanceState: common.StringPtr("RUNNING"),
+		}}, TotalCount: common.Int64Ptr(1), RequestId: common.StringPtr("req-verify-cvm")}}, nil
 	}
 	privateIp := cvmPrivateIpFilterValue(request)
 	instanceIndex := 1
@@ -500,7 +650,7 @@ func newFakeTencentSDKClient(tkeAPI *fakeNativeTkeAPI) *tencentSDKClient {
 }
 
 func (api *fakeNativeTkeAPI) CreateNodePool(request *tke2022.CreateNodePoolRequest) (*tke2022.CreateNodePoolResponse, error) {
-	api.calls = append(api.calls, "CreateNodePool")
+	api.record("CreateNodePool")
 	api.createNodePoolRequest = request
 	api.nodePoolId = "np-created"
 	api.replicas = 0
@@ -513,8 +663,11 @@ func (api *fakeNativeTkeAPI) CreateNodePool(request *tke2022.CreateNodePoolReque
 }
 
 func (api *fakeNativeTkeAPI) DescribeNodePools(request *tke2022.DescribeNodePoolsRequest) (*tke2022.DescribeNodePoolsResponse, error) {
-	api.calls = append(api.calls, "DescribeNodePools")
+	api.record("DescribeNodePools")
 	api.describeNodePoolsRequest = append(api.describeNodePoolsRequest, request)
+	if api.describeNodePoolErr != nil {
+		return nil, api.describeNodePoolErr
+	}
 	nodePoolId := api.nodePoolId
 	if nodePoolId == "" {
 		nodePoolId = "np-basic"
@@ -540,37 +693,192 @@ func (api *fakeNativeTkeAPI) DescribeNodePools(request *tke2022.DescribeNodePool
 		}
 		nodePoolId = api.discoverNodePoolId
 	}
+	pools := []*tke2022.NodePool{{
+		NodePoolId: common.StringPtr(nodePoolId),
+		Name:       common.StringPtr("pool-basic-2c4g"),
+		Type:       common.StringPtr(firstNonEmpty(api.poolType, "Native")),
+		LifeState:  common.StringPtr(firstNonEmpty(api.lifeState, "Running")),
+		Labels: []*tke2022.Label{
+			{Name: common.StringPtr("oplcloud.cn/pool-id"), Value: common.StringPtr(firstNonEmpty(api.labelPoolId, "pool-basic-2c4g"))},
+			{Name: common.StringPtr("oplcloud.cn/package-id"), Value: common.StringPtr(firstNonEmpty(api.labelPackageId, "basic"))},
+			{Name: common.StringPtr("oplcloud.cn/instance-type"), Value: common.StringPtr(firstNonEmpty(api.labelInstanceType, "SA5.LARGE4"))},
+		},
+		Native: fakeNativeNodePoolInfo(api),
+	}}
+	if api.ambiguousDiscovery && nodePoolIdFilterValue(request) == "" {
+		duplicate := *pools[0]
+		duplicate.NodePoolId = common.StringPtr("np-basic-duplicate")
+		pools = append(pools, &duplicate)
+	}
+	totalCount := int64(len(pools))
+	if api.truncatedDiscovery && nodePoolIdFilterValue(request) == "" {
+		totalCount++
+	}
 	return &tke2022.DescribeNodePoolsResponse{
 		Response: &tke2022.DescribeNodePoolsResponseParams{
-			NodePools: []*tke2022.NodePool{{
-				NodePoolId: common.StringPtr(nodePoolId),
-				Name:       common.StringPtr("pool-basic-2c4g"),
-				Type:       common.StringPtr("Native"),
-				LifeState:  common.StringPtr("Running"),
-				Labels: []*tke2022.Label{
-					{Name: common.StringPtr("oplcloud.cn/pool-id"), Value: common.StringPtr("pool-basic-2c4g")},
-					{Name: common.StringPtr("oplcloud.cn/package-id"), Value: common.StringPtr("basic")},
-					{Name: common.StringPtr("oplcloud.cn/instance-type"), Value: common.StringPtr("SA5.LARGE4")},
-				},
-				Native: &tke2022.NativeNodePoolInfo{
-					Replicas:          common.Int64Ptr(api.replicas),
-					EnableAutoscaling: common.BoolPtr(api.enableAutoscaling),
-					AutoRepair:        common.BoolPtr(api.autoRepair),
-				},
-			}},
-			TotalCount: common.Int64Ptr(1),
+			NodePools:  pools,
+			TotalCount: common.Int64Ptr(totalCount),
 			RequestId:  common.StringPtr("req-describe-pool"),
 		},
 	}, nil
 }
 
+func firstNonZero(value int64, fallback int64) int64 {
+	if value != 0 {
+		return value
+	}
+	return fallback
+}
+
+func firstNonZeroUint(value uint64, fallback uint64) uint64 {
+	if value != 0 {
+		return value
+	}
+	return fallback
+}
+
+func fakeNativeNodePoolInfo(api *fakeNativeTkeAPI) *tke2022.NativeNodePoolInfo {
+	if api.omitNative {
+		return nil
+	}
+	scaling := &tke2022.MachineSetScaling{MinReplicas: common.Int64Ptr(0), MaxReplicas: common.Int64Ptr(firstNonZero(api.maxReplicas, 10))}
+	if api.omitScaling {
+		scaling = nil
+	}
+	replicas := common.Int64Ptr(api.replicas)
+	if api.omitReplicas {
+		replicas = nil
+	}
+	readyReplicas := api.readyReplicas
+	if readyReplicas == nil && !api.omitReplicas {
+		readyReplicas = common.Int64Ptr(api.replicas)
+	}
+	if api.omitReadyReplicas {
+		readyReplicas = nil
+	}
+	instanceTypes := api.instanceTypes
+	if len(instanceTypes) == 0 {
+		instanceTypes = []string{"SA5.LARGE4"}
+	}
+	return &tke2022.NativeNodePoolInfo{
+		Scaling: scaling, SubnetIds: []*string{common.StringPtr("subnet-basic")}, InstanceTypes: stringsToPtrs(instanceTypes), Replicas: replicas, ReadyReplicas: readyReplicas,
+		EnableAutoscaling: common.BoolPtr(api.enableAutoscaling), AutoRepair: common.BoolPtr(api.autoRepair),
+		MachineType: common.StringPtr(firstNonEmpty(api.machineType, "NativeCVM")), InstanceChargeType: common.StringPtr(firstNonEmpty(api.instanceChargeType, "POSTPAID_BY_HOUR")),
+	}
+}
+
+func TestTencentSDKCapacityIsReadOnlyAndFailsClosedAcrossAllThreeSignals(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", discoverNodePoolId: "np-basic", replicas: 2, maxReplicas: 10, labelPoolId: "basic"}
+	cvmAPI := &fakeNativeCvmAPI{}
+	vpcAPI := &fakeNativeVpcAPI{}
+	client := &tencentSDKClient{region: "na-siliconvalley", clusterId: "cls-123", nativeTkeClient: tkeAPI, nativeCvmClient: cvmAPI, nativeVpcClient: vpcAPI}
+
+	response := client.Capacity(Request{
+		Action:    "capacity_preflight",
+		PackageId: "basic",
+		Pool:      ComputePoolInput{Id: "basic", InstanceType: "SA5.LARGE4", DesiredReplicas: 5},
+	}, map[string]string{})
+
+	if !response.Ok || response.Status != "ready" || !response.InstanceAvailable || response.RemainingQuota != 8 || response.RequiredCapacity != 5 {
+		t.Fatalf("unexpected capacity response: %#v", response)
+	}
+	if response.NodePoolId != "np-basic" || response.CurrentReplicas != 2 || response.MaxReplicas != 10 || response.MachineType != "NativeCVM" || response.TargetReplicas != 7 {
+		t.Fatalf("unexpected node pool capacity: %#v", response)
+	}
+	if len(cvmAPI.describeAccountQuotaRequests) != 1 || len(cvmAPI.describeZoneConfigRequests) != 1 {
+		t.Fatalf("capacity must query CVM quota and availability exactly once: %#v", cvmAPI)
+	}
+	if len(vpcAPI.describeSubnetsRequests) != 1 {
+		t.Fatalf("capacity must resolve the exact node pool subnets once: %#v", vpcAPI)
+	}
+	if got := tkeAPI.calls; len(got) != 1 || got[0] != "DescribeNodePools" {
+		t.Fatalf("capacity must only describe the exact node pool: %#v", got)
+	}
+	if tkeAPI.scaleNodePoolRequest != nil || tkeAPI.createNodePoolRequest != nil || tkeAPI.modifyNodePoolRequest != nil {
+		t.Fatalf("capacity probe must never mutate Tencent resources: %#v", tkeAPI)
+	}
+}
+
+func TestTencentSDKCapacityDiscoveryRequiresOneUntruncatedMatchingPool(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		tke  *fakeNativeTkeAPI
+	}{
+		{name: "missing", tke: &fakeNativeTkeAPI{}},
+		{name: "ambiguous", tke: &fakeNativeTkeAPI{discoverNodePoolId: "np-basic", ambiguousDiscovery: true}},
+		{name: "truncated", tke: &fakeNativeTkeAPI{discoverNodePoolId: "np-basic", truncatedDiscovery: true}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			client := &tencentSDKClient{region: "na-siliconvalley", clusterId: "cls-123", nativeTkeClient: tc.tke, nativeCvmClient: &fakeNativeCvmAPI{}, nativeVpcClient: &fakeNativeVpcAPI{}}
+			response := client.Capacity(Request{Action: "capacity_preflight", PackageId: "basic", Pool: ComputePoolInput{
+				Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", DesiredReplicas: 5,
+			}}, map[string]string{})
+			if response.Ok || tc.tke.scaleNodePoolRequest != nil || tc.tke.createNodePoolRequest != nil || tc.tke.modifyNodePoolRequest != nil {
+				t.Fatalf("discovery must fail closed without mutation: %#v", response)
+			}
+		})
+	}
+}
+
+func TestTencentSDKCapacityPreflightFailsClosedWithoutMutation(t *testing.T) {
+	ready := int64(2)
+	cases := []struct {
+		name string
+		tke  *fakeNativeTkeAPI
+		cvm  *fakeNativeCvmAPI
+		vpc  *fakeNativeVpcAPI
+	}{
+		{name: "sold out", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready}, cvm: &fakeNativeCvmAPI{zoneConfigStatus: "SOLD_OUT"}},
+		{name: "missing exact zone type charge", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready}, cvm: &fakeNativeCvmAPI{zoneConfigChargeType: "PREPAID"}},
+		{name: "quota below five", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready}, cvm: &fakeNativeCvmAPI{quotaRemaining: 4}},
+		{name: "quota missing", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready}, cvm: &fakeNativeCvmAPI{omitQuotaRemaining: true}},
+		{name: "node pool missing", tke: &fakeNativeTkeAPI{nodePoolId: "np-other", replicas: 2, maxReplicas: 10, readyReplicas: &ready}, cvm: &fakeNativeCvmAPI{}},
+		{name: "autoscaling enabled", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready, enableAutoscaling: true}, cvm: &fakeNativeCvmAPI{}},
+		{name: "auto repair enabled", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready, autoRepair: true}, cvm: &fakeNativeCvmAPI{}},
+		{name: "max below current plus five", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 6, readyReplicas: &ready}, cvm: &fakeNativeCvmAPI{}},
+		{name: "replicas missing", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, omitReplicas: true}, cvm: &fakeNativeCvmAPI{}},
+		{name: "ready replicas missing", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, omitReadyReplicas: true}, cvm: &fakeNativeCvmAPI{}},
+		{name: "scaling missing", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, omitScaling: true, readyReplicas: &ready}, cvm: &fakeNativeCvmAPI{}},
+		{name: "wrong instance type", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready, instanceTypes: []string{"SA5.2XLARGE16"}}, cvm: &fakeNativeCvmAPI{}},
+		{name: "pool not running", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready, lifeState: "Creating"}, cvm: &fakeNativeCvmAPI{}},
+		{name: "pool type is not native", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready, poolType: "Managed"}, cvm: &fakeNativeCvmAPI{}},
+		{name: "pool machine type is CXM native", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready, machineType: "Native"}, cvm: &fakeNativeCvmAPI{}},
+		{name: "pool is prepaid", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready, instanceChargeType: "PREPAID"}, cvm: &fakeNativeCvmAPI{}},
+		{name: "pool ownership labels mismatch", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready, labelPackageId: "pro"}, cvm: &fakeNativeCvmAPI{}},
+		{name: "pool subnet missing", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready}, cvm: &fakeNativeCvmAPI{}, vpc: &fakeNativeVpcAPI{omitSubnet: true}},
+		{name: "pool subnet lacks five ips", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready}, cvm: &fakeNativeCvmAPI{}, vpc: &fakeNativeVpcAPI{availableIpCount: 4}},
+		{name: "pool subnet zone missing", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready}, cvm: &fakeNativeCvmAPI{}, vpc: &fakeNativeVpcAPI{omitSubnetZone: true}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			vpcAPI := tc.vpc
+			if vpcAPI == nil {
+				vpcAPI = &fakeNativeVpcAPI{}
+			}
+			client := &tencentSDKClient{region: "na-siliconvalley", clusterId: "cls-123", nativeTkeClient: tc.tke, nativeCvmClient: tc.cvm, nativeVpcClient: vpcAPI}
+			response := client.Capacity(Request{Action: "capacity_preflight", PackageId: "basic", Pool: ComputePoolInput{
+				Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 5,
+			}}, map[string]string{})
+			if response.Ok {
+				t.Fatalf("capacity preflight must fail closed: %#v", response)
+			}
+			if tc.tke.scaleNodePoolRequest != nil || tc.tke.createNodePoolRequest != nil || tc.tke.modifyNodePoolRequest != nil {
+				t.Fatalf("failed preflight must remain read-only: %#v", tc.tke)
+			}
+		})
+	}
+}
+
 func (api *fakeNativeTkeAPI) DescribeClusterInstances(request *tke2022.DescribeClusterInstancesRequest) (*tke2022.DescribeClusterInstancesResponse, error) {
-	api.calls = append(api.calls, "DescribeClusterInstances")
+	api.record("DescribeClusterInstances")
 	api.describeInstancesRequest = append(api.describeInstancesRequest, request)
+	if api.describeClusterInstancesErr != nil {
+		return nil, api.describeClusterInstancesErr
+	}
 	privateIp := clusterInstanceFilterValue(request, "VagueIpAddress")
 	nodePoolId := clusterInstanceFilterValue(request, "NodePoolIds")
 	instances := []*tke2022.Instance{}
-	for index := int64(1); index <= api.replicas; index++ {
+	for index := int64(1); index <= api.replicas && !api.omitClusterInstances; index++ {
 		lanIp := fmt.Sprintf("10.0.0.%d", index+10)
 		if privateIp != "" && privateIp != lanIp {
 			continue
@@ -589,7 +897,7 @@ func (api *fakeNativeTkeAPI) DescribeClusterInstances(request *tke2022.DescribeC
 		if api.omitInstanceNodePool {
 			instanceNodePoolId = ""
 		}
-		instanceID := fmt.Sprintf("np-native-%d", index)
+		instanceID := firstNonEmpty(api.clusterInstanceID, fmt.Sprintf("np-native-%d", index))
 		if api.machineInstanceIDsMatch {
 			instanceID = fmt.Sprintf("node-basic-%d", index)
 		}
@@ -611,23 +919,34 @@ func (api *fakeNativeTkeAPI) DescribeClusterInstances(request *tke2022.DescribeC
 }
 
 func (api *fakeNativeTkeAPI) DescribeClusterMachines(request *tke2022.DescribeClusterMachinesRequest) (*tke2022.DescribeClusterMachinesResponse, error) {
-	api.calls = append(api.calls, "DescribeClusterMachines")
+	api.record("DescribeClusterMachines")
 	api.describeMachinesRequest = append(api.describeMachinesRequest, request)
+	if api.describeMachineErr != nil {
+		return nil, api.describeMachineErr
+	}
 	if api.rejectMachinePoolFilter && clusterMachineNodePoolIdFilterValue(request) != "" {
 		return nil, errors.New("[TencentCloudSDKError] Code=InvalidParameter, Message=invalid filter name NodePoolsId")
 	}
 	machines := []*tke2022.Machine{}
 	for index := int64(1); index <= api.replicas; index++ {
+		machineName := fmt.Sprintf("node-basic-%d", index)
+		if api.deletedMachineNames[machineName] {
+			continue
+		}
 		lanIP := fmt.Sprintf("10.0.0.%d", index+10)
 		if api.omitMachineLanIP {
 			lanIP = ""
 		}
 		machines = append(machines, &tke2022.Machine{
-			MachineName:  common.StringPtr(fmt.Sprintf("node-basic-%d", index)),
+			MachineName:  common.StringPtr(machineName),
 			MachineState: common.StringPtr("Running"),
 			LanIP:        common.StringPtr(lanIP),
 			InstanceType: common.StringPtr("SA5.LARGE4"),
 		})
+	}
+	if api.duplicateMachineName && clusterMachineNodePoolIdFilterValue(request) == "" && len(machines) > 0 {
+		duplicate := *machines[0]
+		machines = append(machines, &duplicate)
 	}
 	return &tke2022.DescribeClusterMachinesResponse{
 		Response: &tke2022.DescribeClusterMachinesResponseParams{
@@ -675,7 +994,7 @@ func cvmPrivateIpFilterValue(request *cvm2017.DescribeInstancesRequest) string {
 }
 
 func (api *fakeNativeTkeAPI) ScaleNodePool(request *tke2022.ScaleNodePoolRequest) (*tke2022.ScaleNodePoolResponse, error) {
-	api.calls = append(api.calls, "ScaleNodePool")
+	api.record("ScaleNodePool")
 	api.scaleNodePoolRequest = request
 	if request.Replicas != nil {
 		api.replicas = *request.Replicas
@@ -688,7 +1007,7 @@ func (api *fakeNativeTkeAPI) ScaleNodePool(request *tke2022.ScaleNodePoolRequest
 }
 
 func (api *fakeNativeTkeAPI) ModifyNodePool(request *tke2022.ModifyNodePoolRequest) (*tke2022.ModifyNodePoolResponse, error) {
-	api.calls = append(api.calls, "ModifyNodePool")
+	api.record("ModifyNodePool")
 	api.modifyNodePoolRequest = request
 	if request.Native != nil && request.Native.EnableAutoscaling != nil {
 		api.enableAutoscaling = *request.Native.EnableAutoscaling
@@ -704,8 +1023,16 @@ func (api *fakeNativeTkeAPI) ModifyNodePool(request *tke2022.ModifyNodePoolReque
 }
 
 func (api *fakeNativeTkeAPI) DeleteClusterMachines(request *tke2022.DeleteClusterMachinesRequest) (*tke2022.DeleteClusterMachinesResponse, error) {
-	api.calls = append(api.calls, "DeleteClusterMachines")
+	api.record("DeleteClusterMachines")
 	api.deleteMachinesRequest = request
+	if api.deletedMachineNames == nil {
+		api.deletedMachineNames = map[string]bool{}
+	}
+	if !api.retainDeletedMachines {
+		for _, name := range request.MachineNames {
+			api.deletedMachineNames[stringValue(name)] = true
+		}
+	}
 	return &tke2022.DeleteClusterMachinesResponse{
 		Response: &tke2022.DeleteClusterMachinesResponseParams{
 			RequestId: common.StringPtr("req-delete-machine"),
@@ -713,7 +1040,7 @@ func (api *fakeNativeTkeAPI) DeleteClusterMachines(request *tke2022.DeleteCluste
 	}, nil
 }
 
-func TestTencentSDKClientCreateAllocationDisablesNodePoolSelfProvisioningBeforeExplicitScale(t *testing.T) {
+func TestTencentSDKClientCreateAllocationRejectsSelfProvisioningBeforeExplicitScale(t *testing.T) {
 	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, enableAutoscaling: true, autoRepair: true}
 	client := newFakeTencentSDKClient(tkeAPI)
 
@@ -729,27 +1056,11 @@ func TestTencentSDKClientCreateAllocationDisablesNodePoolSelfProvisioningBeforeE
 		Allocation: ComputeAllocationInput{Id: "compute-alpha"},
 	}, map[string]string{})
 
-	if !response.Ok {
-		t.Fatalf("expected ok response: %#v", response)
+	if response.Ok || response.ErrorCode != "tencent_node_pool_configuration_mismatch" {
+		t.Fatalf("self-provisioning pool must fail closed: %#v", response)
 	}
-	if tkeAPI.modifyNodePoolRequest == nil {
-		t.Fatalf("expected ModifyNodePool before explicit ScaleNodePool")
-	}
-	if tkeAPI.modifyNodePoolRequest.Native == nil ||
-		tkeAPI.modifyNodePoolRequest.Native.EnableAutoscaling == nil ||
-		*tkeAPI.modifyNodePoolRequest.Native.EnableAutoscaling ||
-		tkeAPI.modifyNodePoolRequest.Native.AutoRepair == nil ||
-		*tkeAPI.modifyNodePoolRequest.Native.AutoRepair {
-		t.Fatalf("explicit Fabric allocation must disable TKE self-provisioning paths: %#v", tkeAPI.modifyNodePoolRequest)
-	}
-	expectedCalls := []string{"DescribeNodePools", "ModifyNodePool", "DescribeClusterMachines", "ScaleNodePool", "DescribeClusterMachines"}
-	if len(tkeAPI.calls) != len(expectedCalls) {
-		t.Fatalf("unexpected call order: %#v", tkeAPI.calls)
-	}
-	for index, expected := range expectedCalls {
-		if tkeAPI.calls[index] != expected {
-			t.Fatalf("unexpected call order: %#v", tkeAPI.calls)
-		}
+	if tkeAPI.modifyNodePoolRequest != nil || tkeAPI.scaleNodePoolRequest != nil {
+		t.Fatalf("conflicting pool readback must remain mutation-free: %#v", tkeAPI.calls)
 	}
 }
 
@@ -802,7 +1113,7 @@ func TestTencentSDKClientCreateAllocationScalesExistingPackageNodePool(t *testin
 	}
 }
 
-func TestTencentSDKClientCreateAllocationUsesTkeInstanceWhenCvmPrivateIpLookupIsEmpty(t *testing.T) {
+func TestTencentSDKClientCreateAllocationRequiresCvmIdentityWithoutTkeFallback(t *testing.T) {
 	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1}
 	client := newFakeTencentSDKClient(tkeAPI)
 	client.nativeCvmClient = &fakeNativeCvmAPI{empty: true}
@@ -819,23 +1130,8 @@ func TestTencentSDKClientCreateAllocationUsesTkeInstanceWhenCvmPrivateIpLookupIs
 		Allocation: ComputeAllocationInput{Id: "compute-alpha"},
 	}, map[string]string{})
 
-	if !response.Ok {
-		t.Fatalf("native TKE allocation should not fail only because CVM private IP lookup is empty: %#v", response)
-	}
-	if response.InstanceId != "" {
-		t.Fatalf("TKE cluster instance id must not be reported as a CVM instance id: %#v", response)
-	}
-	if response.NodeName != "10.0.0.12" {
-		t.Fatalf("expected Kubernetes node hostname from LanIP: %#v", response)
-	}
-	if response.ProviderData["machineName"] != "node-basic-2" {
-		t.Fatalf("expected machineName deletion handle: %#v", response.ProviderData)
-	}
-	if response.ProviderData["instanceIdentitySource"] != "tke_cluster_instance" {
-		t.Fatalf("expected identity source evidence: %#v", response.ProviderData)
-	}
-	if response.ProviderData["tkeClusterInstanceId"] != "np-native-2" {
-		t.Fatalf("expected TKE cluster instance evidence: %#v", response.ProviderData)
+	if response.Ok || response.ErrorCode != "compute_cvm_identity_required" || len(tkeAPI.describeInstancesRequest) != 0 {
+		t.Fatalf("CVM allocation must fail without a real CVM identity and must not fall back to TKE instance IDs: %#v", response)
 	}
 }
 
@@ -883,7 +1179,7 @@ func TestTencentSDKClientPoolFallbackExcludesMachinesFromOtherPools(t *testing.T
 
 	response := client.ReconcileComputePool(Request{
 		PackageId: "basic",
-		Pool:      ComputePoolInput{Id: "basic", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 2},
+		Pool:      ComputePoolInput{Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 2},
 	}, map[string]string{})
 
 	if !response.Ok || len(response.Machines) != 1 || response.Machines[0].MachineId != "node-basic-2" {
@@ -891,22 +1187,18 @@ func TestTencentSDKClientPoolFallbackExcludesMachinesFromOtherPools(t *testing.T
 	}
 }
 
-func TestTencentSDKClientReconcileUsesNativeTKEIdentityWhenCVMIsAbsent(t *testing.T) {
+func TestTencentSDKClientReconcileRequiresCvmIdentityWhenCVMIsAbsent(t *testing.T) {
 	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1}
 	client := newFakeTencentSDKClient(tkeAPI)
 	client.nativeCvmClient = &fakeNativeCvmAPI{empty: true}
 
 	response := client.ReconcileComputePool(Request{
 		PackageId: "basic",
-		Pool:      ComputePoolInput{Id: "basic", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1},
+		Pool:      ComputePoolInput{Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1},
 	}, map[string]string{})
 
-	if !response.Ok || len(response.Machines) != 1 {
-		t.Fatalf("native pool reconcile = %#v", response)
-	}
-	machine := response.Machines[0]
-	if !machine.Ready || machine.InstanceId != "np-native-1" || machine.MachineId != "node-basic-1" || machine.NodeName != "10.0.0.11" {
-		t.Fatalf("native machine identity = %#v", machine)
+	if response.Ok || response.ErrorCode != "compute_cvm_identity_required" || len(tkeAPI.describeInstancesRequest) != 0 {
+		t.Fatalf("CVM pool reconcile must fail instead of using TKE-native identity: %#v", response)
 	}
 }
 
@@ -917,15 +1209,11 @@ func TestTencentSDKClientReconcileCompletesNativeIdentityWhenMachineLanIPIsMissi
 
 	response := client.ReconcileComputePool(Request{
 		PackageId: "basic",
-		Pool:      ComputePoolInput{Id: "basic", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1},
+		Pool:      ComputePoolInput{Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1},
 	}, map[string]string{})
 
-	if !response.Ok || len(response.Machines) != 1 {
-		t.Fatalf("native pool reconcile = %#v", response)
-	}
-	machine := response.Machines[0]
-	if !machine.Ready || machine.InstanceId != "node-basic-1" || machine.MachineId != "node-basic-1" || machine.NodeName != "10.0.0.11" || machine.PrivateIp != "10.0.0.11" {
-		t.Fatalf("completed native machine identity = %#v", machine)
+	if response.Ok || response.ErrorCode != "compute_cvm_identity_required" {
+		t.Fatalf("TKE-discovered private IP still requires a real CVM identity: %#v", response)
 	}
 }
 
@@ -944,6 +1232,22 @@ func TestTencentSDKTagComputeMachineVerifiesNativeTKEIdentityWithoutCVMRename(t 
 
 	if !response.Ok || response.InstanceId != "np-native-1" || len(cvmAPI.describeInstancesRequest) != 0 || len(cvmAPI.modifyInstancesRequest) != 0 {
 		t.Fatalf("native tag response=%#v describe requests=%#v modify requests=%#v", response, cvmAPI.describeInstancesRequest, cvmAPI.modifyInstancesRequest)
+	}
+}
+
+func TestTencentSDKClientRejectsCxmPoolBeforeAnyMutation(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, machineType: "Native"}
+	client := newFakeTencentSDKClient(tkeAPI)
+	response := client.CreateComputeAllocation(Request{
+		AccountId: "pi-alpha", PackageId: "basic",
+		Pool:       ComputePoolInput{Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic"},
+		Allocation: ComputeAllocationInput{Id: "compute-alpha"},
+	}, map[string]string{})
+	if response.Ok || response.ErrorCode != "tencent_cvm_node_pool_required" {
+		t.Fatalf("existing CXM pool must fail closed: %#v", response)
+	}
+	if tkeAPI.modifyNodePoolRequest != nil || tkeAPI.scaleNodePoolRequest != nil || tkeAPI.createNodePoolRequest != nil {
+		t.Fatalf("CXM rejection must happen before any mutation: %#v", tkeAPI)
 	}
 }
 
@@ -985,10 +1289,10 @@ func TestTencentSDKClientRejectsRegularTKEIdentityWhenCVMIsAbsent(t *testing.T) 
 
 	reconcile := client.ReconcileComputePool(Request{
 		PackageId: "basic",
-		Pool:      ComputePoolInput{Id: "basic", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1},
+		Pool:      ComputePoolInput{Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1},
 	}, map[string]string{})
-	if len(reconcile.Machines) != 1 || reconcile.Machines[0].Ready {
-		t.Fatalf("regular machine without CVM identity = %#v", reconcile.Machines)
+	if reconcile.Ok || reconcile.ErrorCode != "compute_cvm_identity_required" {
+		t.Fatalf("regular machine without CVM identity = %#v", reconcile)
 	}
 
 	tagged := client.TagComputeMachine(Request{
@@ -1008,7 +1312,7 @@ func TestTencentSDKClientDoesNotTreatCVMAPIErrorAsNativeIdentity(t *testing.T) {
 
 	reconcile := client.ReconcileComputePool(Request{
 		PackageId: "basic",
-		Pool:      ComputePoolInput{Id: "basic", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1},
+		Pool:      ComputePoolInput{Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1},
 	}, map[string]string{})
 	if reconcile.Ok || reconcile.ErrorCode != "tencent_describe_cvm_instance_failed" {
 		t.Fatalf("reconcile after CVM API error = %#v", reconcile)
@@ -1016,7 +1320,7 @@ func TestTencentSDKClientDoesNotTreatCVMAPIErrorAsNativeIdentity(t *testing.T) {
 
 	created := client.CreateComputeAllocation(Request{
 		AccountId: "acct-alpha", PackageId: "basic",
-		Pool:       ComputePoolInput{Id: "basic", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic"},
+		Pool:       ComputePoolInput{Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic"},
 		Allocation: ComputeAllocationInput{Id: "compute-alpha"},
 	}, map[string]string{})
 	if created.Ok || created.ErrorCode != "tencent_describe_cvm_instance_failed" {
@@ -1062,7 +1366,7 @@ func TestTencentSDKClientRejectsMalformedCVMResponses(t *testing.T) {
 
 			reconcile := client.ReconcileComputePool(Request{
 				PackageId: "basic",
-				Pool:      ComputePoolInput{Id: "basic", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1},
+				Pool:      ComputePoolInput{Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1},
 			}, map[string]string{})
 			if reconcile.Ok || reconcile.ErrorCode != "tencent_describe_cvm_instance_failed" {
 				t.Fatalf("reconcile malformed CVM response = %#v", reconcile)
@@ -1102,7 +1406,7 @@ func TestTencentSDKTagComputeMachineRejectsMalformedCVMReadback(t *testing.T) {
 }
 
 func TestTencentSDKClientReconcileEvidence(t *testing.T) {
-	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic"}
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", labelPoolId: "basic"}
 	client := newFakeTencentSDKClient(tkeAPI)
 
 	response := client.ReconcileComputePool(Request{
@@ -1129,7 +1433,7 @@ func TestTencentSDKClientReconcileEvidence(t *testing.T) {
 }
 
 func TestTencentSDKClientCreateAllocationDiscoversExistingPackageNodePool(t *testing.T) {
-	tkeAPI := &fakeNativeTkeAPI{discoverNodePoolId: "np-discovered", replicas: 2}
+	tkeAPI := &fakeNativeTkeAPI{discoverNodePoolId: "np-discovered", replicas: 2, labelPoolId: "basic"}
 	client := newFakeTencentSDKClient(tkeAPI)
 
 	response := client.CreateComputeAllocation(Request{
@@ -1137,7 +1441,7 @@ func TestTencentSDKClientCreateAllocationDiscoversExistingPackageNodePool(t *tes
 		UserId:    "usr-alpha",
 		PackageId: "basic",
 		Pool: ComputePoolInput{
-			Id:           "pool-basic-2c4g",
+			Id:           "basic",
 			InstanceType: "SA5.LARGE4",
 		},
 		Allocation: ComputeAllocationInput{Id: "compute-alpha"},
@@ -1169,44 +1473,164 @@ func TestTencentSDKClientCreateAllocationDiscoversExistingPackageNodePool(t *tes
 	}
 }
 
-func TestTencentSDKClientCreateAllocationFallsBackFromStaleConfiguredNodePool(t *testing.T) {
-	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-live", discoverNodePoolId: "np-live", replicas: 4}
+func TestTencentSDKClientMutationRejectsStaleConfiguredNodePoolWithoutMutation(t *testing.T) {
+	for _, action := range []string{"create", "reconcile"} {
+		t.Run(action, func(t *testing.T) {
+			tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-live", discoverNodePoolId: "np-live", replicas: 4}
+			client := newFakeTencentSDKClient(tkeAPI)
+			request := Request{AccountId: "pi-alpha", UserId: "usr-alpha", PackageId: "basic", Pool: ComputePoolInput{
+				Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", NodePoolId: "np-stale", DesiredReplicas: 4,
+			}}
+			var response Response
+			if action == "create" {
+				request.Allocation = ComputeAllocationInput{Id: "compute-alpha"}
+				response = client.CreateComputeAllocation(request, map[string]string{})
+			} else {
+				response = client.ReconcileComputePool(request, map[string]string{})
+			}
+			if response.Ok {
+				t.Fatalf("stale explicit node pool must fail closed: %#v", response)
+			}
+			if tkeAPI.createNodePoolRequest != nil || tkeAPI.modifyNodePoolRequest != nil || tkeAPI.scaleNodePoolRequest != nil {
+				t.Fatalf("stale explicit node pool must not mutate another pool: %#v", tkeAPI)
+			}
+			if len(tkeAPI.calls) != 1 || tkeAPI.calls[0] != "DescribeNodePools" {
+				t.Fatalf("stale explicit node pool must not fall back to discovery: %#v", tkeAPI.calls)
+			}
+		})
+	}
+}
+
+func TestTencentSDKClientMutationRejectsConflictingPoolReadbackWithoutMutation(t *testing.T) {
+	for _, testCase := range []struct {
+		name      string
+		configure func(*fakeNativeTkeAPI)
+	}{
+		{name: "wrong instance type", configure: func(api *fakeNativeTkeAPI) { api.instanceTypes = []string{"SA5.2XLARGE16"} }},
+		{name: "autoscaling enabled", configure: func(api *fakeNativeTkeAPI) { api.enableAutoscaling = true }},
+		{name: "auto repair enabled", configure: func(api *fakeNativeTkeAPI) { api.autoRepair = true }},
+		{name: "scaling missing", configure: func(api *fakeNativeTkeAPI) { api.omitScaling = true }},
+		{name: "max replicas insufficient", configure: func(api *fakeNativeTkeAPI) { api.maxReplicas = 1 }},
+		{name: "pool stopped", configure: func(api *fakeNativeTkeAPI) { api.lifeState = "Stopped" }},
+	} {
+		for _, action := range []string{"create", "reconcile"} {
+			t.Run(testCase.name+"/"+action, func(t *testing.T) {
+				tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, maxReplicas: 10}
+				testCase.configure(tkeAPI)
+				client := newFakeTencentSDKClient(tkeAPI)
+				request := Request{PackageId: "basic", Pool: ComputePoolInput{
+					Id: "pool-basic-2c4g", NodePoolId: "np-basic", InstanceType: "SA5.LARGE4", DesiredReplicas: 2,
+				}}
+				var response Response
+				if action == "create" {
+					request.Allocation = ComputeAllocationInput{Id: "compute-alpha"}
+					response = client.CreateComputeAllocation(request, map[string]string{})
+				} else {
+					response = client.ReconcileComputePool(request, map[string]string{})
+				}
+				if response.Ok || tkeAPI.modifyNodePoolRequest != nil || tkeAPI.scaleNodePoolRequest != nil {
+					t.Fatalf("conflicting pool readback must fail before mutation: response=%#v calls=%#v", response, tkeAPI.calls)
+				}
+			})
+		}
+	}
+}
+
+func TestTencentSDKClientMutationWaitsForCreatingPoolWithoutMutation(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 0, lifeState: "Creating"}
 	client := newFakeTencentSDKClient(tkeAPI)
+	response := client.ReconcileComputePool(Request{PackageId: "basic", Pool: ComputePoolInput{
+		Id: "pool-basic-2c4g", NodePoolId: "np-basic", InstanceType: "SA5.LARGE4", DesiredReplicas: 1,
+	}}, map[string]string{})
+	if response.Ok || !response.Retryable || response.ErrorCode != "tencent_node_pool_not_ready" {
+		t.Fatalf("creating pool must return retryable not-ready: %#v", response)
+	}
+	if tkeAPI.modifyNodePoolRequest != nil || tkeAPI.scaleNodePoolRequest != nil {
+		t.Fatalf("creating pool must not mutate: %#v", tkeAPI.calls)
+	}
+}
 
-	response := client.CreateComputeAllocation(Request{
-		AccountId: "pi-alpha",
-		UserId:    "usr-alpha",
-		PackageId: "basic",
-		Pool: ComputePoolInput{
-			Id:           "pool-basic-2c4g",
-			InstanceType: "SA5.LARGE4",
-			NodePoolId:   "np-stale",
-		},
-		Allocation: ComputeAllocationInput{Id: "compute-alpha"},
-	}, map[string]string{})
+func TestTencentSDKClientMutationDiscoversCreatingPoolWithoutCreatingDuplicate(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{discoverNodePoolId: "np-basic", replicas: 0, lifeState: "Creating"}
+	client := newFakeTencentSDKClient(tkeAPI)
+	response := client.ReconcileComputePool(Request{PackageId: "basic", Pool: ComputePoolInput{
+		Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", DesiredReplicas: 1,
+	}}, map[string]string{})
+	if response.Ok || !response.Retryable || response.ErrorCode != "tencent_node_pool_not_ready" {
+		t.Fatalf("discovered creating pool must return retryable not-ready: %#v", response)
+	}
+	if tkeAPI.createNodePoolRequest != nil || tkeAPI.modifyNodePoolRequest != nil || tkeAPI.scaleNodePoolRequest != nil {
+		t.Fatalf("discovered creating pool must not create a duplicate or mutate: %#v", tkeAPI.calls)
+	}
+}
 
-	if !response.Ok {
-		t.Fatalf("expected ok response: %#v", response)
+func TestTencentSDKClientMutationRejectsUnownedNodePoolWithoutMutation(t *testing.T) {
+	cases := []struct {
+		name string
+		tke  *fakeNativeTkeAPI
+	}{
+		{name: "wrong pool label", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", labelPoolId: "pool-other"}},
+		{name: "wrong package label", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", labelPackageId: "pro"}},
+		{name: "wrong instance type label", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", labelInstanceType: "SA5.2XLARGE16"}},
+		{name: "managed pool", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", poolType: "Managed"}},
+		{name: "legacy CXM native pool", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", machineType: "Native"}},
+		{name: "prepaid pool", tke: &fakeNativeTkeAPI{nodePoolId: "np-basic", instanceChargeType: "PREPAID"}},
 	}
-	if response.NodePoolId != "np-live" {
-		t.Fatalf("expected discovered live node pool id: %#v", response)
+	for _, tc := range cases {
+		for _, action := range []string{"create", "reconcile"} {
+			t.Run(tc.name+" "+action, func(t *testing.T) {
+				copy := *tc.tke
+				client := newFakeTencentSDKClient(&copy)
+				request := Request{PackageId: "basic", Pool: ComputePoolInput{
+					Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 1,
+				}}
+				var response Response
+				if action == "create" {
+					request.Allocation = ComputeAllocationInput{Id: "compute-alpha"}
+					response = client.CreateComputeAllocation(request, map[string]string{})
+				} else {
+					response = client.ReconcileComputePool(request, map[string]string{})
+				}
+				if response.Ok {
+					t.Fatalf("unowned node pool must fail closed: %#v", response)
+				}
+				if copy.createNodePoolRequest != nil || copy.modifyNodePoolRequest != nil || copy.scaleNodePoolRequest != nil {
+					t.Fatalf("unowned node pool must not be mutated: %#v", &copy)
+				}
+			})
+		}
 	}
-	if response.NodeName == "" {
-		t.Fatalf("expected fallback allocation to return a node identity: %#v", response)
-	}
-	if tkeAPI.createNodePoolRequest != nil {
-		t.Fatalf("must not create when matching live package pool exists: %#v", tkeAPI.createNodePoolRequest)
-	}
-	if tkeAPI.scaleNodePoolRequest == nil || tkeAPI.scaleNodePoolRequest.Replicas == nil || *tkeAPI.scaleNodePoolRequest.Replicas != 5 {
-		t.Fatalf("expected scale to 5 replicas: %#v", tkeAPI.scaleNodePoolRequest)
-	}
-	expectedCalls := []string{"DescribeNodePools", "DescribeNodePools", "DescribeClusterMachines", "ScaleNodePool", "DescribeClusterMachines"}
-	if len(tkeAPI.calls) != len(expectedCalls) {
-		t.Fatalf("unexpected call order: %#v", tkeAPI.calls)
-	}
-	for index, expected := range expectedCalls {
-		if tkeAPI.calls[index] != expected {
-			t.Fatalf("unexpected call order: %#v", tkeAPI.calls)
+}
+
+func TestTencentSDKClientMutationDiscoveryRejectsDuplicateOrTruncatedResultsWithoutMutation(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		tke  *fakeNativeTkeAPI
+	}{
+		{name: "duplicate", tke: &fakeNativeTkeAPI{discoverNodePoolId: "np-basic", ambiguousDiscovery: true}},
+		{name: "truncated", tke: &fakeNativeTkeAPI{discoverNodePoolId: "np-basic", truncatedDiscovery: true}},
+	} {
+		for _, action := range []string{"create", "reconcile"} {
+			t.Run(tc.name+" "+action, func(t *testing.T) {
+				copy := *tc.tke
+				client := newFakeTencentSDKClient(&copy)
+				request := Request{PackageId: "basic", Pool: ComputePoolInput{
+					Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", DesiredReplicas: 1,
+				}}
+				var response Response
+				if action == "create" {
+					request.Allocation = ComputeAllocationInput{Id: "compute-alpha"}
+					response = client.CreateComputeAllocation(request, map[string]string{})
+				} else {
+					response = client.ReconcileComputePool(request, map[string]string{})
+				}
+				if response.Ok {
+					t.Fatalf("incomplete discovery must fail closed: %#v", response)
+				}
+				if copy.createNodePoolRequest != nil || copy.modifyNodePoolRequest != nil || copy.scaleNodePoolRequest != nil {
+					t.Fatalf("incomplete discovery must not mutate: %#v", &copy)
+				}
+			})
 		}
 	}
 }
@@ -1263,7 +1687,7 @@ func TestTencentSDKClientCreateAllocationCreatesMissingPackageNodePoolThenScales
 }
 
 func TestTencentSDKClientDestroyAllocationDeletesNamedMachine(t *testing.T) {
-	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1}
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2}
 	client := newFakeTencentSDKClient(tkeAPI)
 
 	response := client.DestroyComputeAllocation(Request{
@@ -1271,9 +1695,10 @@ func TestTencentSDKClientDestroyAllocationDeletesNamedMachine(t *testing.T) {
 		Pool:      ComputePoolInput{Id: "pool-basic-2c4g", NodePoolId: "np-basic"},
 		Allocation: ComputeAllocationInput{
 			Id:          "compute-alpha",
-			InstanceId:  "ins-created",
+			InstanceId:  "ins-basic-2",
 			NodeName:    "10.0.0.12",
 			MachineName: "node-basic-2",
+			PrivateIp:   "10.0.0.12",
 		},
 	}, map[string]string{})
 
@@ -1294,12 +1719,79 @@ func TestTencentSDKClientDestroyAllocationDeletesNamedMachine(t *testing.T) {
 	}
 }
 
+func TestTencentSDKClientDestroyValidatesMachineOwnershipBeforeMutation(t *testing.T) {
+	for _, testCase := range []struct {
+		name       string
+		configure  func(*fakeNativeTkeAPI)
+		allocation ComputeAllocationInput
+	}{
+		{name: "duplicate machine name", configure: func(api *fakeNativeTkeAPI) { api.duplicateMachineName = true }, allocation: ComputeAllocationInput{MachineName: "node-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.11", InstanceId: "ins-basic-1"}},
+		{name: "node name mismatch", allocation: ComputeAllocationInput{MachineName: "node-basic-1", NodeName: "wrong-node", PrivateIp: "10.0.0.11", InstanceId: "ins-basic-1"}},
+		{name: "private IP mismatch", allocation: ComputeAllocationInput{MachineName: "node-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.99", InstanceId: "ins-basic-1"}},
+		{name: "CVM instance mismatch", allocation: ComputeAllocationInput{MachineName: "node-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.11", InstanceId: "ins-other"}},
+		{name: "unknown machine provider", configure: func(api *fakeNativeTkeAPI) { api.machineType = "Unknown" }, allocation: ComputeAllocationInput{MachineName: "node-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.11", InstanceId: "ins-basic-1"}},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, enableAutoscaling: true, autoRepair: true}
+			if testCase.configure != nil {
+				testCase.configure(tkeAPI)
+			}
+			client := newFakeTencentSDKClient(tkeAPI)
+			response := client.DestroyComputeAllocation(Request{
+				Pool:       ComputePoolInput{NodePoolId: "np-basic"},
+				Allocation: testCase.allocation,
+			}, map[string]string{"TENCENT_TKE_NODE_DELETE_ATTEMPTS": "1"})
+			if response.Ok || response.ErrorCode != "compute_machine_identity_unverified" {
+				t.Fatalf("destroy must fail closed on an unverified machine triple: %#v", response)
+			}
+			if tkeAPI.modifyNodePoolRequest != nil || tkeAPI.deleteMachinesRequest != nil {
+				t.Fatalf("identity failure must not mutate the node pool: %#v", tkeAPI.calls)
+			}
+		})
+	}
+}
+
+func TestTencentSDKClientDestroyValidatesNativeCVMBeforePoolMutation(t *testing.T) {
+	callOrder := []string{}
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, enableAutoscaling: true, autoRepair: true, callLog: &callOrder}
+	cvmAPI := &fakeNativeCvmAPI{callLog: &callOrder}
+	client := &tencentSDKClient{region: "ap-guangzhou", clusterId: "cls-123", nativeTkeClient: tkeAPI, nativeCvmClient: cvmAPI}
+
+	response := client.DestroyComputeAllocation(Request{
+		Pool: ComputePoolInput{NodePoolId: "np-basic"},
+		Allocation: ComputeAllocationInput{
+			MachineName: "node-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.11", InstanceId: "ins-basic-1",
+		},
+	}, map[string]string{"TENCENT_TKE_NODE_DELETE_ATTEMPTS": "1", "TENCENT_TKE_NODE_DELETE_DELAY_MS": "0"})
+	if !response.Ok {
+		t.Fatalf("expected verified destroy: %#v", response)
+	}
+	expected := []string{"DescribeNodePools", "DescribeClusterMachines", "DescribeClusterMachines", "DescribeCVMInstances", "ModifyNodePool", "DeleteClusterMachines", "DescribeClusterMachines"}
+	if !reflect.DeepEqual(callOrder, expected) {
+		t.Fatalf("identity reads must precede every mutation: %#v", callOrder)
+	}
+}
+
+func TestTencentSDKClientDestroyValidatesLegacyNativeInstanceBeforeDelete(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, machineType: "Native"}
+	client := newFakeTencentSDKClient(tkeAPI)
+	response := client.DestroyComputeAllocation(Request{
+		Pool: ComputePoolInput{NodePoolId: "np-basic"},
+		Allocation: ComputeAllocationInput{
+			MachineName: "node-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.11", InstanceId: "np-native-1",
+		},
+	}, map[string]string{"TENCENT_TKE_NODE_DELETE_ATTEMPTS": "1", "TENCENT_TKE_NODE_DELETE_DELAY_MS": "0"})
+	if !response.Ok || tkeAPI.deleteMachinesRequest == nil {
+		t.Fatalf("legacy Native machine with an exact TKE identity must remain deletable: %#v", response)
+	}
+}
+
 func TestTencentSDKClientDestroyWaitsForMachineAbsence(t *testing.T) {
-	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2}
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, retainDeletedMachines: true}
 	client := newFakeTencentSDKClient(tkeAPI)
 	response := client.DestroyComputeAllocation(Request{
 		Pool:       ComputePoolInput{NodePoolId: "np-basic"},
-		Allocation: ComputeAllocationInput{Id: "compute-alpha", MachineName: "node-basic-2"},
+		Allocation: ComputeAllocationInput{Id: "compute-alpha", MachineName: "node-basic-2", NodeName: "10.0.0.12", PrivateIp: "10.0.0.12", InstanceId: "ins-basic-2"},
 	}, map[string]string{"TENCENT_TKE_NODE_DELETE_ATTEMPTS": "1", "TENCENT_TKE_NODE_DELETE_DELAY_MS": "0"})
 	if response.Ok || response.ErrorCode != "compute_machine_delete_unverified" {
 		t.Fatalf("delete returned before machine absence: %#v", response)
@@ -1307,7 +1799,7 @@ func TestTencentSDKClientDestroyWaitsForMachineAbsence(t *testing.T) {
 }
 
 func TestTencentSDKClientDestroyAllocationDisablesNodePoolSelfProvisioningBeforeDelete(t *testing.T) {
-	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, enableAutoscaling: true, autoRepair: true}
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, enableAutoscaling: true, autoRepair: true}
 	client := newFakeTencentSDKClient(tkeAPI)
 
 	response := client.DestroyComputeAllocation(Request{
@@ -1315,9 +1807,10 @@ func TestTencentSDKClientDestroyAllocationDisablesNodePoolSelfProvisioningBefore
 		Pool:      ComputePoolInput{Id: "pool-basic-2c4g", NodePoolId: "np-basic"},
 		Allocation: ComputeAllocationInput{
 			Id:          "compute-alpha",
-			InstanceId:  "ins-created",
+			InstanceId:  "ins-basic-2",
 			NodeName:    "10.0.0.12",
 			MachineName: "node-basic-2",
+			PrivateIp:   "10.0.0.12",
 		},
 	}, map[string]string{})
 
@@ -1334,7 +1827,7 @@ func TestTencentSDKClientDestroyAllocationDisablesNodePoolSelfProvisioningBefore
 		*tkeAPI.modifyNodePoolRequest.Native.AutoRepair {
 		t.Fatalf("destroy must disable TKE self-provisioning paths before scaledown delete: %#v", tkeAPI.modifyNodePoolRequest)
 	}
-	expectedCalls := []string{"DescribeNodePools", "ModifyNodePool", "DeleteClusterMachines", "DescribeClusterMachines"}
+	expectedCalls := []string{"DescribeNodePools", "DescribeClusterMachines", "DescribeClusterMachines", "ModifyNodePool", "DeleteClusterMachines", "DescribeClusterMachines"}
 	if len(tkeAPI.calls) != len(expectedCalls) {
 		t.Fatalf("unexpected call order: %#v", tkeAPI.calls)
 	}
@@ -1353,9 +1846,8 @@ func TestTencentSDKClientDestroyMachineAllocationAlwaysScalesDownAndTerminates(t
 		AccountId: "pi-alpha",
 		Pool:      ComputePoolInput{Id: "pool-basic-2c4g", NodePoolId: "np-basic"},
 		Allocation: ComputeAllocationInput{
-			Id:          "compute-alpha",
-			NodeName:    "10.0.0.12",
-			MachineName: "np-basic-native",
+			Id: "compute-alpha", InstanceId: "ins-basic-1", NodeName: "10.0.0.11",
+			PrivateIp: "10.0.0.11", MachineName: "node-basic-1",
 		},
 	}, map[string]string{})
 
@@ -1373,7 +1865,7 @@ func TestTencentSDKClientDestroyMachineAllocationAlwaysScalesDownAndTerminates(t
 	}
 }
 
-func TestTencentSDKClientDestroyMachineNameOnlyAllocationScalesDownAndTerminates(t *testing.T) {
+func TestTencentSDKClientDestroyMachineNameOnlyAllocationFailsClosed(t *testing.T) {
 	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1}
 	client := newFakeTencentSDKClient(tkeAPI)
 
@@ -1382,22 +1874,15 @@ func TestTencentSDKClientDestroyMachineNameOnlyAllocationScalesDownAndTerminates
 		Pool:      ComputePoolInput{Id: "pool-basic-2c4g", NodePoolId: "np-basic"},
 		Allocation: ComputeAllocationInput{
 			Id:          "compute-alpha",
-			NodeName:    "10.0.0.12",
-			MachineName: "np-basic-native",
+			MachineName: "node-basic-1",
 		},
 	}, map[string]string{})
 
-	if !response.Ok {
-		t.Fatalf("expected ok response: %#v", response)
+	if response.Ok || response.ErrorCode != "compute_machine_identity_unverified" {
+		t.Fatalf("machineName-only destroy must fail closed: %#v", response)
 	}
-	if tkeAPI.deleteMachinesRequest == nil {
-		t.Fatalf("expected DeleteClusterMachines call")
-	}
-	if tkeAPI.deleteMachinesRequest.EnableScaleDown == nil || !*tkeAPI.deleteMachinesRequest.EnableScaleDown {
-		t.Fatalf("machineName-only compute destroy must scale down the node pool")
-	}
-	if tkeAPI.deleteMachinesRequest.InstanceDeleteMode == nil || *tkeAPI.deleteMachinesRequest.InstanceDeleteMode != "terminate" {
-		t.Fatalf("machineName-only compute destroy must terminate the cloud machine")
+	if tkeAPI.modifyNodePoolRequest != nil || tkeAPI.deleteMachinesRequest != nil {
+		t.Fatalf("machineName-only destroy must not mutate Tencent resources")
 	}
 }
 
@@ -1419,5 +1904,257 @@ func TestTencentSDKClientDestroyAllocationWithoutMachineNameFailsClosed(t *testi
 	}
 	if tkeAPI.scaleNodePoolRequest != nil {
 		t.Fatalf("destroy must not scale down a pool without a node identity: %#v", tkeAPI.scaleNodePoolRequest)
+	}
+}
+
+func providerTruthRequest() Request {
+	return Request{
+		Action:          "provider_truth",
+		AccountId:       "pi-alpha",
+		StorageVolumeId: "disk-storage-alpha",
+		Pool:            ComputePoolInput{ClusterId: "cls-123", NodePoolId: "np-basic"},
+		Allocation: ComputeAllocationInput{
+			Id: "compute-alpha", MachineName: "node-basic-1", InstanceId: "ins-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.11",
+		},
+	}
+}
+
+func newProviderTruthClient(tkeAPI *fakeNativeTkeAPI, cvmAPI *fakeNativeCvmAPI) *tencentSDKClient {
+	return &tencentSDKClient{
+		region: "ap-guangzhou", clusterId: "cls-123", nativeTkeClient: tkeAPI,
+		nativeCvmClient: cvmAPI, nativeCbsClient: &fakeNativeCbsAPI{},
+	}
+}
+
+func TestTencentSDKProviderTruthProbesExactCBSVolume(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 0}
+	cvmAPI := &fakeNativeCvmAPI{empty: true}
+	cbsAPI := &fakeNativeCbsAPI{empty: true}
+	client := &tencentSDKClient{
+		region: "ap-guangzhou", clusterId: "cls-123", nativeTkeClient: tkeAPI,
+		nativeCvmClient: cvmAPI, nativeCbsClient: cbsAPI,
+	}
+
+	response := client.ProviderTruth(providerTruthRequest(), nil)
+
+	if !response.Ok || response.StoragePresent == nil || *response.StoragePresent || response.CBSStatus != "NOT_FOUND" {
+		t.Fatalf("unexpected CBS truth: %#v", response)
+	}
+	if len(cbsAPI.describeDisksRequests) != 1 || len(cbsAPI.describeDisksRequests[0].DiskIds) != 1 || stringValue(cbsAPI.describeDisksRequests[0].DiskIds[0]) != "disk-storage-alpha" {
+		t.Fatalf("CBS truth must query the exact supplied disk: %#v", cbsAPI.describeDisksRequests)
+	}
+}
+
+func TestTencentSDKProviderTruthTreatsExactCBSNotFoundAsAbsent(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 0}
+	cvmAPI := &fakeNativeCvmAPI{empty: true}
+	cbsAPI := &fakeNativeCbsAPI{err: tcerrors.NewTencentCloudSDKError(cbs2017.INVALIDDISKID_NOTFOUND, "disk was deleted", "req-cbs-not-found")}
+	client := &tencentSDKClient{
+		region: "ap-guangzhou", clusterId: "cls-123", nativeTkeClient: tkeAPI,
+		nativeCvmClient: cvmAPI, nativeCbsClient: cbsAPI,
+	}
+
+	response := client.ProviderTruth(providerTruthRequest(), nil)
+
+	if !response.Ok || response.StoragePresent == nil || *response.StoragePresent || response.CBSStatus != "NOT_FOUND" || response.ProviderRequestId != "req-cbs-not-found" {
+		t.Fatalf("unexpected deleted CBS truth: %#v", response)
+	}
+}
+
+func TestTencentSDKProviderTruthRejectsGenericCBSNotFound(t *testing.T) {
+	for _, code := range []string{cbs2017.RESOURCENOTFOUND, cbs2017.RESOURCENOTFOUND_NOTFOUND} {
+		t.Run(code, func(t *testing.T) {
+			tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 0}
+			cvmAPI := &fakeNativeCvmAPI{empty: true}
+			cbsAPI := &fakeNativeCbsAPI{err: tcerrors.NewTencentCloudSDKError(code, "ambiguous resource", "req-cbs-generic")}
+			client := &tencentSDKClient{
+				region: "ap-guangzhou", clusterId: "cls-123", nativeTkeClient: tkeAPI,
+				nativeCvmClient: cvmAPI, nativeCbsClient: cbsAPI,
+			}
+
+			response := client.ProviderTruth(providerTruthRequest(), nil)
+
+			if response.Ok || response.ErrorCode != "tencent_provider_truth_cbs_probe_failed" {
+				t.Fatalf("generic not-found must fail closed: %#v", response)
+			}
+		})
+	}
+}
+
+func assertProviderTruthReadOnly(t *testing.T, tkeAPI *fakeNativeTkeAPI, cvmAPI *fakeNativeCvmAPI) {
+	t.Helper()
+	if tkeAPI.createNodePoolRequest != nil || tkeAPI.modifyNodePoolRequest != nil || tkeAPI.scaleNodePoolRequest != nil || tkeAPI.deleteMachinesRequest != nil || len(cvmAPI.modifyInstancesRequest) != 0 {
+		t.Fatalf("provider truth must not mutate Tencent resources: tke=%#v cvm=%#v", tkeAPI.calls, cvmAPI.modifyInstancesRequest)
+	}
+}
+
+func TestTencentSDKProviderTruthReturnsExactPresentIdentityWithoutMutation(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-basic-1"}
+	cvmAPI := &fakeNativeCvmAPI{instanceName: "compute-alpha"}
+	cbsAPI := &fakeNativeCbsAPI{}
+	client := newProviderTruthClient(tkeAPI, cvmAPI)
+	client.nativeCbsClient = cbsAPI
+
+	response := client.ProviderTruth(providerTruthRequest(), nil)
+
+	if !response.Ok || response.Status != "present" || response.MachineType != "NativeCVM" || response.InstanceId != "ins-basic-1" || response.NodeName != "" || response.PrivateIp != "10.0.0.11" || response.MachinePresent == nil || !*response.MachinePresent || response.CVMStatus != "RUNNING" || response.TKEStatus != "RUNNING" {
+		t.Fatalf("unexpected present truth: %#v", response)
+	}
+	if response.ProviderData["accountId"] != "" || response.ProviderData["requestedAccountId"] != "" || response.ProviderData["resourceId"] != "compute-alpha" || response.ProviderData["machineName"] != "node-basic-1" {
+		t.Fatalf("present truth lost exact identity: %#v", response.ProviderData)
+	}
+	if response.StoragePresent == nil || !*response.StoragePresent || response.CBSStatus != "ATTACHED" || response.ProviderData["storagePresent"] != "true" || response.ProviderData["cbsStatus"] != "ATTACHED" {
+		t.Fatalf("present truth lost exact CBS state: %#v", response)
+	}
+	if len(cbsAPI.describeDisksRequests) != 1 || len(cbsAPI.describeDisksRequests[0].DiskIds) != 1 || stringValue(cbsAPI.describeDisksRequests[0].DiskIds[0]) != "disk-storage-alpha" {
+		t.Fatalf("CBS truth must query the exact supplied disk: %#v", cbsAPI.describeDisksRequests)
+	}
+	if want := []string{"DescribeNodePools", "DescribeClusterMachines", "DescribeClusterInstances"}; !reflect.DeepEqual(tkeAPI.calls, want) {
+		t.Fatalf("unexpected read path: got=%#v want=%#v", tkeAPI.calls, want)
+	}
+	if len(cvmAPI.describeInstancesRequest) != 1 || len(cvmAPI.describeInstancesRequest[0].InstanceIds) != 1 || stringValue(cvmAPI.describeInstancesRequest[0].InstanceIds[0]) != "ins-basic-1" {
+		t.Fatalf("CVM truth must query the exact supplied instance ID: %#v", cvmAPI.describeInstancesRequest)
+	}
+	assertProviderTruthReadOnly(t, tkeAPI, cvmAPI)
+}
+
+func TestTencentSDKProviderTruthReturnsAbsentOnlyWhenEveryExactIdentityIsAbsent(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 0}
+	cvmAPI := &fakeNativeCvmAPI{empty: true}
+	client := newProviderTruthClient(tkeAPI, cvmAPI)
+
+	response := client.ProviderTruth(providerTruthRequest(), nil)
+
+	if !response.Ok || response.Status != "absent" || response.MachinePresent == nil || *response.MachinePresent || response.CVMStatus != "NOT_FOUND" || response.TKEStatus != "NOT_FOUND" || response.NodeName != "" || response.PrivateIp != "10.0.0.11" {
+		t.Fatalf("unexpected absent truth: %#v", response)
+	}
+	assertProviderTruthDescribeOnly(t, tkeAPI.calls)
+	assertProviderTruthReadOnly(t, tkeAPI, cvmAPI)
+}
+
+func TestTencentSDKProviderTruthTreatsAccountAsCorrelationOnly(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-basic-1"}
+	cvmAPI := &fakeNativeCvmAPI{instanceName: "compute-alpha"}
+	client := newProviderTruthClient(tkeAPI, cvmAPI)
+	request := providerTruthRequest()
+	request.AccountId = "pi-wrong"
+
+	response := client.ProviderTruth(request, nil)
+
+	if !response.Ok || response.Status != "present" || response.ProviderData["accountId"] != "" || response.ProviderData["requestedAccountId"] != "" {
+		t.Fatalf("Tencent truth must not claim account ownership: %#v", response)
+	}
+	assertProviderTruthReadOnly(t, tkeAPI, cvmAPI)
+}
+
+func TestTencentSDKProviderTruthDoesNotRequireOrVerifyKubernetesNodeName(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-basic-1"}
+	cvmAPI := &fakeNativeCvmAPI{instanceName: "compute-alpha"}
+	client := newProviderTruthClient(tkeAPI, cvmAPI)
+	request := providerTruthRequest()
+	request.Allocation.NodeName = ""
+
+	response := client.ProviderTruth(request, nil)
+
+	if !response.Ok || response.Status != "present" || response.NodeName != "" {
+		t.Fatalf("Tencent truth must leave Kubernetes node verification to kubectl: %#v", response)
+	}
+	assertProviderTruthReadOnly(t, tkeAPI, cvmAPI)
+}
+
+func TestTencentSDKProviderTruthFailsClosedOnMissingOrMismatchedIdentity(t *testing.T) {
+	testCases := []struct {
+		name      string
+		request   func() Request
+		configure func(*fakeNativeTkeAPI, *fakeNativeCvmAPI)
+	}{
+		{name: "missing account", request: func() Request { request := providerTruthRequest(); request.AccountId = ""; return request }},
+		{name: "missing resource", request: func() Request { request := providerTruthRequest(); request.Allocation.Id = ""; return request }},
+		{name: "missing machine", request: func() Request { request := providerTruthRequest(); request.Allocation.MachineName = ""; return request }},
+		{name: "missing instance", request: func() Request { request := providerTruthRequest(); request.Allocation.InstanceId = ""; return request }},
+		{name: "non CVM instance", request: func() Request {
+			request := providerTruthRequest()
+			request.Allocation.InstanceId = "np-native-1"
+			return request
+		}},
+		{name: "missing private IP", request: func() Request { request := providerTruthRequest(); request.Allocation.PrivateIp = ""; return request }},
+		{name: "wrong cluster", request: func() Request {
+			request := providerTruthRequest()
+			request.Pool.ClusterId = "cls-other"
+			return request
+		}},
+		{name: "missing node pool", request: func() Request { request := providerTruthRequest(); request.Pool.NodePoolId = ""; return request }},
+		{name: "legacy CXM pool", request: providerTruthRequest, configure: func(tke *fakeNativeTkeAPI, _ *fakeNativeCvmAPI) { tke.machineType = "Native" }},
+		{name: "machine mismatch", request: func() Request {
+			request := providerTruthRequest()
+			request.Allocation.MachineName = "node-other"
+			return request
+		}},
+		{name: "private IP mismatch", request: func() Request {
+			request := providerTruthRequest()
+			request.Allocation.PrivateIp = "10.0.0.99"
+			return request
+		}},
+		{name: "resource mismatch", request: providerTruthRequest, configure: func(_ *fakeNativeTkeAPI, cvm *fakeNativeCvmAPI) { cvm.instanceName = "compute-other" }},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-basic-1"}
+			cvmAPI := &fakeNativeCvmAPI{instanceName: "compute-alpha"}
+			if testCase.configure != nil {
+				testCase.configure(tkeAPI, cvmAPI)
+			}
+			client := newProviderTruthClient(tkeAPI, cvmAPI)
+			response := client.ProviderTruth(testCase.request(), nil)
+			if response.Ok || response.ErrorCode == "" {
+				t.Fatalf("provider truth must fail closed: %#v", response)
+			}
+			assertProviderTruthReadOnly(t, tkeAPI, cvmAPI)
+		})
+	}
+}
+
+func TestTencentSDKProviderTruthFailsClosedOnPartialAbsenceOrProbeError(t *testing.T) {
+	testCases := []struct {
+		name      string
+		configure func(*fakeNativeTkeAPI, *fakeNativeCvmAPI)
+	}{
+		{name: "machine absent while CVM remains", configure: func(tke *fakeNativeTkeAPI, _ *fakeNativeCvmAPI) { tke.replicas = 0 }},
+		{name: "CVM absent while machine remains", configure: func(_ *fakeNativeTkeAPI, cvm *fakeNativeCvmAPI) { cvm.empty = true }},
+		{name: "TKE instance absent while machine remains", configure: func(tke *fakeNativeTkeAPI, _ *fakeNativeCvmAPI) { tke.omitClusterInstances = true }},
+		{name: "node pool probe error", configure: func(tke *fakeNativeTkeAPI, _ *fakeNativeCvmAPI) {
+			tke.describeNodePoolErr = errors.New("node pool unavailable")
+		}},
+		{name: "machine probe error", configure: func(tke *fakeNativeTkeAPI, _ *fakeNativeCvmAPI) {
+			tke.describeMachineErr = errors.New("machine unavailable")
+		}},
+		{name: "TKE instance probe error", configure: func(tke *fakeNativeTkeAPI, _ *fakeNativeCvmAPI) {
+			tke.describeClusterInstancesErr = errors.New("TKE instance unavailable")
+		}},
+		{name: "CVM probe error", configure: func(_ *fakeNativeTkeAPI, cvm *fakeNativeCvmAPI) { cvm.err = errors.New("CVM unavailable") }},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-basic-1"}
+			cvmAPI := &fakeNativeCvmAPI{instanceName: "compute-alpha"}
+			testCase.configure(tkeAPI, cvmAPI)
+			client := newProviderTruthClient(tkeAPI, cvmAPI)
+			response := client.ProviderTruth(providerTruthRequest(), nil)
+			if response.Ok || response.ErrorCode == "" {
+				t.Fatalf("partial or unknown truth must fail closed: %#v", response)
+			}
+			assertProviderTruthDescribeOnly(t, tkeAPI.calls)
+			assertProviderTruthReadOnly(t, tkeAPI, cvmAPI)
+		})
+	}
+}
+
+func assertProviderTruthDescribeOnly(t *testing.T, calls []string) {
+	t.Helper()
+	allowed := map[string]bool{"DescribeNodePools": true, "DescribeClusterMachines": true, "DescribeClusterInstances": true}
+	for _, call := range calls {
+		if !allowed[call] {
+			t.Fatalf("provider truth used a non-Describe TKE call: %#v", calls)
+		}
 	}
 }
