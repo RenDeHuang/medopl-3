@@ -298,7 +298,9 @@ export async function verifyProductionConsoleLifecycle({
     await page.getByLabel("邮箱").fill(ownerEmail);
     await page.getByLabel("密码").fill(ownerPassword);
     await clickVisible(page.getByRole("button", { name: "登录", exact: true }));
-    await page.waitForURL("**/console*", { timeout: 30_000 });
+    await page.waitForURL((url) =>
+      url.origin === consoleOrigin && (url.pathname === "/console" || url.pathname.startsWith("/console/")),
+    { timeout: 30_000 });
     await waitVisible(page.getByText("OPL Console", { exact: true }));
     ownerCookie = cookieHeader(await context.cookies(consoleOrigin));
     if (!ownerCookie) throw new Error("verification_owner_session_required");
