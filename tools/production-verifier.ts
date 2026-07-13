@@ -112,7 +112,7 @@ function isNonPublicHostname(hostname) {
   );
 }
 
-function assertPublicHttpsUrl(url, errorName) {
+export function assertPublicHttpsUrl(url, errorName) {
   let parsed = null;
   try {
     parsed = new URL(url);

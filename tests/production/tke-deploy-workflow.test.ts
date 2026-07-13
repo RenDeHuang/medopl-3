@@ -111,9 +111,12 @@ test("production verifier workflow always cleans failed paid resources", async (
   const currentJob = job(workflow, "verify");
 
   assert.equal(workflow.on.workflow_dispatch.inputs.cleanup_on_failure, undefined);
-  assert.equal(currentJob.env.OPL_VERIFY_CLEANUP_ON_FAILURE, "true");
+  assert.equal(workflow.on.workflow_dispatch.inputs.credit_amount, undefined);
+  assert.equal(workflow.on.workflow_dispatch.inputs.package_id, undefined);
+  assert.equal(currentJob.env.OPL_VERIFY_CLEANUP_ON_FAILURE, undefined);
   assert.ok(String(currentJob.env.OPL_VERIFY_AUTH_USERS_JSON || "").includes("secrets.OPL_CONSOLE_USERS_JSON"));
   assert.equal(workflow.on.workflow_dispatch.inputs.account_id.default, "");
+  assert.equal(currentJob.env.OPL_VERIFY_PACKAGE_ID, "basic");
 });
 
 test("production execution verifier runs inside TKE and matches the deployment contract", async () => {
@@ -129,12 +132,18 @@ test("production execution verifier runs inside TKE and matches the deployment c
   assert.equal(liveJob.outputs.workspace_id, "${{ steps.verify.outputs.workspace_id }}");
   assert.equal(liveJob.outputs.workspace_url, "${{ steps.verify.outputs.workspace_url }}");
   assert.match(liveRuns, /production-verifier-result\.json/);
+  assert.match(liveRuns, /node tools\/production-console-browser-verifier\.ts/);
+  assert.doesNotMatch(liveRuns, /node tools\/production-verifier\.ts/);
   assert.match(liveRuns, /A-Za-z0-9/);
   assert.match(liveRuns, /workspace_id=.*payload\.workspaceId/);
   assert.match(liveRuns, /workspace_url=.*payload\.url/);
   assert.match(liveRuns, /protocol !== "https:"/);
   assert.match(liveRuns, /pathname\.startsWith\("\/w\/"\)/);
   assert.match(liveRuns, /encodeURIComponent/);
+  assert.equal(liveJob.env.OPL_VERIFY_MANIFEST_PATH, "artifacts/production-browser-e2e/manifest.json");
+  const upload = stepsByName(liveJob).get("Upload browser E2E screenshots and manifest");
+  assert.equal(upload.if, "always()");
+  assert.match(String(upload.with.path), /artifacts\/production-browser-e2e/);
   assert.match(runs, /port-forward service\/opl-cloud-control-plane 18787:8787/);
   assert.match(runs, /port-forward service\/opl-cloud-ledger 18081:8081/);
   assert.match(runs, /port-forward service\/opl-cloud-fabric 18082:8082/);
