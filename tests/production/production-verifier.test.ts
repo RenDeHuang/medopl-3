@@ -497,7 +497,8 @@ function fakeWorkspaceBrowserFactory(actions = [], {
   assistantLabels = ["@Research", "@Grants", "@PPT"],
   domAssistantSelection = false,
   assistantReplies = false,
-  roleAssistantSelection = true
+  roleAssistantSelection = true,
+  legacyComposerSendDisabled = false
 } = {}) {
   const state = {
     bodyText: `Select an assistant to start a task\n${assistantLabels.join("\n")}`,
@@ -557,11 +558,21 @@ function fakeWorkspaceBrowserFactory(actions = [], {
       actions.push(["waitForFunction", arg, options]);
       const previousDocument = globalThis.document;
       const previousWindow = globalThis.window;
+      let composerContainer;
       const visiblePromptElement = {
         value: state.prompt,
         textContent: state.prompt,
         innerText: state.prompt,
+        closest: () => composerContainer,
         getBoundingClientRect: () => ({ width: state.prompt ? 360 : 0, height: state.prompt ? 40 : 0 })
+      };
+      let searchContainer;
+      const searchElement = {
+        value: "",
+        textContent: "",
+        innerText: "",
+        closest: () => searchContainer,
+        getBoundingClientRect: () => ({ width: 240, height: 36 })
       };
       const assistantReplyElement = {
         textContent: state.prompt.replace("请只回复：", ""),
@@ -573,14 +584,29 @@ function fakeWorkspaceBrowserFactory(actions = [], {
         querySelectorAll: () => assistantReplies ? [visiblePromptElement, assistantReplyElement] : [visiblePromptElement]
       };
       const sendButton = {
-        disabled: false,
-        getAttribute: () => null,
+        disabled: legacyComposerSendDisabled,
+        getAttribute: (name) => name === "disabled" && legacyComposerSendDisabled ? "" : null,
         getBoundingClientRect: () => ({ width: 36, height: 36 })
       };
+      const searchSubmit = {
+        disabled: false,
+        getAttribute: () => null,
+        getBoundingClientRect: () => ({ width: 80, height: 36 })
+      };
+      composerContainer = {
+        querySelector: (selector) => legacyComposerSendDisabled && selector.includes(":not(:disabled)") ? null : sendButton
+      };
+      searchContainer = { querySelector: () => searchSubmit };
+      const textboxes = firstTextboxIsNotComposer ? [searchElement, visiblePromptElement] : [visiblePromptElement];
       globalThis.document = {
         body: { innerText: state.bodyText },
-        querySelector: (selector) => selector.includes("main") ? main : selector.includes("guid-send-btn") ? sendButton : null,
-        querySelectorAll: (selector) => selector === "body *" ? main.querySelectorAll() : state.prompt ? [visiblePromptElement] : []
+        querySelector: (selector) => {
+          if (selector.includes("main")) return main;
+          if (selector === '[data-testid="guid-send-btn"]') return null;
+          if (/textarea|contenteditable|role="textbox"/.test(selector)) return textboxes[0];
+          return null;
+        },
+        querySelectorAll: (selector) => /textarea|contenteditable|role=.textbox/.test(selector) ? textboxes : []
       };
       globalThis.window = {
         getComputedStyle: () => ({ visibility: "visible", display: "block" })
@@ -1661,6 +1687,32 @@ test("production verifier fills the visible composer textbox before sending", as
   );
   assert.ok(actions.some((action) => action[0] === "fill" && action[3] === "last"));
   assert.ok(checks.some((check) => check.name === "workspace_browser_message_sent" && check.ok === true));
+});
+
+test("production verifier binds legacy reply readiness to the textbox containing the submitted prompt", async () => {
+  const options = {
+    firstTextboxIsNotComposer: true,
+    assistantReplies: true
+  };
+
+  await assert.rejects(
+    verifyWorkspaceBrowserUi({
+      workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+      runId: "browser-run",
+      checks: [],
+      browserFactory: fakeWorkspaceBrowserFactory([], { ...options, legacyComposerSendDisabled: true }),
+      screenshotDir: ""
+    }),
+    /workspace_browser_reply_seen_failed/
+  );
+
+  await verifyWorkspaceBrowserUi({
+    workspaceUrl: "https://workspace.medopl.cn/w/ws-browser001/?token=share_browser",
+    runId: "browser-run",
+    checks: [],
+    browserFactory: fakeWorkspaceBrowserFactory([], options),
+    screenshotDir: ""
+  });
 });
 
 test("production verifier uses one-person-lab-app guid DOM contract for assistant send", async () => {

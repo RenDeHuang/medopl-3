@@ -958,11 +958,14 @@ export async function verifyWorkspaceBrowserUi({
           visible(element) && /^Processing(?:\.\.\.|…)?$/i.test((element.textContent || "").trim())
         );
         const guidSend = document.querySelector('[data-testid="guid-send-btn"]');
-        const composerInput = guidSend ? null : document.querySelector(
-          '[data-testid="guid-input"] textarea, [data-testid="guid-input"], textarea, [contenteditable="true"], [role="textbox"]'
-        );
+        const composerInput = guidSend ? null : Array.from(document.querySelectorAll(
+          '[data-testid="guid-input"] textarea, [data-testid="guid-input"], textarea, input[type="text"], [contenteditable="true"], [role="textbox"]'
+        )).reverse().find((element) => {
+          const value = element.value || element.textContent || element.innerText || "";
+          return visible(element) && value.trim() === submittedPrompt;
+        });
         const composer = composerInput?.closest("form, [data-testid*='composer'], [class*='composer']");
-        const send = guidSend || composer?.querySelector('button[type="submit"]');
+        const send = guidSend || composer?.querySelector('button[type="submit"]:not(:disabled):not([aria-disabled="true"])');
         return Boolean(
           reply &&
           !processing &&
