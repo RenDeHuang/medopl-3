@@ -1888,7 +1888,7 @@ func providerTruthRequest() Request {
 		AccountId: "pi-alpha",
 		Pool:      ComputePoolInput{ClusterId: "cls-123", NodePoolId: "np-basic"},
 		Allocation: ComputeAllocationInput{
-			Id: "compute-alpha", MachineName: "node-basic-1", InstanceId: "ins-basic-1", NodeName: "node-alpha", PrivateIp: "10.0.0.11",
+			Id: "compute-alpha", MachineName: "node-basic-1", InstanceId: "ins-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.11",
 		},
 	}
 }
@@ -1901,13 +1901,13 @@ func assertProviderTruthReadOnly(t *testing.T, tkeAPI *fakeNativeTkeAPI, cvmAPI 
 }
 
 func TestTencentSDKProviderTruthReturnsExactPresentIdentityWithoutMutation(t *testing.T) {
-	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-alpha"}
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-basic-1"}
 	cvmAPI := &fakeNativeCvmAPI{instanceName: "compute-alpha"}
 	client := &tencentSDKClient{region: "ap-guangzhou", clusterId: "cls-123", nativeTkeClient: tkeAPI, nativeCvmClient: cvmAPI}
 
 	response := client.ProviderTruth(providerTruthRequest(), nil)
 
-	if !response.Ok || response.Status != "present" || response.MachineType != "NativeCVM" || response.InstanceId != "ins-basic-1" || response.NodeName != "node-alpha" || response.PrivateIp != "10.0.0.11" || response.MachinePresent == nil || !*response.MachinePresent || response.CVMStatus != "RUNNING" || response.TKEStatus != "RUNNING" {
+	if !response.Ok || response.Status != "present" || response.MachineType != "NativeCVM" || response.InstanceId != "ins-basic-1" || response.NodeName != "" || response.PrivateIp != "10.0.0.11" || response.MachinePresent == nil || !*response.MachinePresent || response.CVMStatus != "RUNNING" || response.TKEStatus != "RUNNING" {
 		t.Fatalf("unexpected present truth: %#v", response)
 	}
 	if response.ProviderData["accountId"] != "" || response.ProviderData["requestedAccountId"] != "" || response.ProviderData["resourceId"] != "compute-alpha" || response.ProviderData["machineName"] != "node-basic-1" {
@@ -1929,7 +1929,7 @@ func TestTencentSDKProviderTruthReturnsAbsentOnlyWhenEveryExactIdentityIsAbsent(
 
 	response := client.ProviderTruth(providerTruthRequest(), nil)
 
-	if !response.Ok || response.Status != "absent" || response.MachinePresent == nil || *response.MachinePresent || response.CVMStatus != "NOT_FOUND" || response.TKEStatus != "NOT_FOUND" || response.PrivateIp != "10.0.0.11" {
+	if !response.Ok || response.Status != "absent" || response.MachinePresent == nil || *response.MachinePresent || response.CVMStatus != "NOT_FOUND" || response.TKEStatus != "NOT_FOUND" || response.NodeName != "" || response.PrivateIp != "10.0.0.11" {
 		t.Fatalf("unexpected absent truth: %#v", response)
 	}
 	assertProviderTruthDescribeOnly(t, tkeAPI.calls)
@@ -1937,7 +1937,7 @@ func TestTencentSDKProviderTruthReturnsAbsentOnlyWhenEveryExactIdentityIsAbsent(
 }
 
 func TestTencentSDKProviderTruthTreatsAccountAsCorrelationOnly(t *testing.T) {
-	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-alpha"}
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-basic-1"}
 	cvmAPI := &fakeNativeCvmAPI{instanceName: "compute-alpha"}
 	client := &tencentSDKClient{region: "ap-guangzhou", clusterId: "cls-123", nativeTkeClient: tkeAPI, nativeCvmClient: cvmAPI}
 	request := providerTruthRequest()
@@ -1947,6 +1947,21 @@ func TestTencentSDKProviderTruthTreatsAccountAsCorrelationOnly(t *testing.T) {
 
 	if !response.Ok || response.Status != "present" || response.ProviderData["accountId"] != "" || response.ProviderData["requestedAccountId"] != "" {
 		t.Fatalf("Tencent truth must not claim account ownership: %#v", response)
+	}
+	assertProviderTruthReadOnly(t, tkeAPI, cvmAPI)
+}
+
+func TestTencentSDKProviderTruthDoesNotRequireOrVerifyKubernetesNodeName(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-basic-1"}
+	cvmAPI := &fakeNativeCvmAPI{instanceName: "compute-alpha"}
+	client := &tencentSDKClient{region: "ap-guangzhou", clusterId: "cls-123", nativeTkeClient: tkeAPI, nativeCvmClient: cvmAPI}
+	request := providerTruthRequest()
+	request.Allocation.NodeName = ""
+
+	response := client.ProviderTruth(request, nil)
+
+	if !response.Ok || response.Status != "present" || response.NodeName != "" {
+		t.Fatalf("Tencent truth must leave Kubernetes node verification to kubectl: %#v", response)
 	}
 	assertProviderTruthReadOnly(t, tkeAPI, cvmAPI)
 }
@@ -1966,7 +1981,6 @@ func TestTencentSDKProviderTruthFailsClosedOnMissingOrMismatchedIdentity(t *test
 			request.Allocation.InstanceId = "np-native-1"
 			return request
 		}},
-		{name: "missing node", request: func() Request { request := providerTruthRequest(); request.Allocation.NodeName = ""; return request }},
 		{name: "missing private IP", request: func() Request { request := providerTruthRequest(); request.Allocation.PrivateIp = ""; return request }},
 		{name: "wrong cluster", request: func() Request {
 			request := providerTruthRequest()
@@ -1980,11 +1994,6 @@ func TestTencentSDKProviderTruthFailsClosedOnMissingOrMismatchedIdentity(t *test
 			request.Allocation.MachineName = "node-other"
 			return request
 		}},
-		{name: "node mismatch", request: func() Request {
-			request := providerTruthRequest()
-			request.Allocation.NodeName = "node-other"
-			return request
-		}},
 		{name: "private IP mismatch", request: func() Request {
 			request := providerTruthRequest()
 			request.Allocation.PrivateIp = "10.0.0.99"
@@ -1994,7 +2003,7 @@ func TestTencentSDKProviderTruthFailsClosedOnMissingOrMismatchedIdentity(t *test
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-alpha"}
+			tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-basic-1"}
 			cvmAPI := &fakeNativeCvmAPI{instanceName: "compute-alpha"}
 			if testCase.configure != nil {
 				testCase.configure(tkeAPI, cvmAPI)
@@ -2030,7 +2039,7 @@ func TestTencentSDKProviderTruthFailsClosedOnPartialAbsenceOrProbeError(t *testi
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-alpha"}
+			tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-basic-1"}
 			cvmAPI := &fakeNativeCvmAPI{instanceName: "compute-alpha"}
 			testCase.configure(tkeAPI, cvmAPI)
 			client := &tencentSDKClient{region: "ap-guangzhou", clusterId: "cls-123", nativeTkeClient: tkeAPI, nativeCvmClient: cvmAPI}

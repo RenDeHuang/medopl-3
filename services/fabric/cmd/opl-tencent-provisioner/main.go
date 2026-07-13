@@ -1025,7 +1025,7 @@ func (client *tencentSDKClient) ProviderTruth(request Request, _ map[string]stri
 	for field, value := range map[string]string{
 		"accountId": request.AccountId, "resourceId": request.Allocation.Id, "clusterId": request.Pool.ClusterId,
 		"nodePoolId": request.Pool.NodePoolId, "machineName": request.Allocation.MachineName,
-		"instanceId": request.Allocation.InstanceId, "nodeName": request.Allocation.NodeName, "privateIp": request.Allocation.PrivateIp,
+		"instanceId": request.Allocation.InstanceId, "privateIp": request.Allocation.PrivateIp,
 	} {
 		if strings.TrimSpace(value) == "" {
 			return Response{Ok: false, ErrorCode: "provider_truth_identity_required", Message: field + " is required for exact provider truth.", Retryable: false}
@@ -1090,13 +1090,13 @@ func (client *tencentSDKClient) ProviderTruth(request Request, _ map[string]stri
 	if !machinePresent && !tkePresent && !cvmPresent {
 		providerData["tkeStatus"] = "NOT_FOUND"
 		providerData["cvmStatus"] = "NOT_FOUND"
-		return Response{Ok: true, PoolId: request.Pool.Id, NodePoolId: request.Pool.NodePoolId, InstanceId: request.Allocation.InstanceId, NodeName: request.Allocation.NodeName, PrivateIp: request.Allocation.PrivateIp, MachinePresent: &machinePresent, CVMStatus: "NOT_FOUND", TKEStatus: "NOT_FOUND", Status: "absent", MachineType: "NativeCVM", ProviderRequestId: firstNonEmpty(cvmRequestID, tkeRequestID, machineRequestID), ProviderData: providerData}
+		return Response{Ok: true, PoolId: request.Pool.Id, NodePoolId: request.Pool.NodePoolId, InstanceId: request.Allocation.InstanceId, PrivateIp: request.Allocation.PrivateIp, MachinePresent: &machinePresent, CVMStatus: "NOT_FOUND", TKEStatus: "NOT_FOUND", Status: "absent", MachineType: "NativeCVM", ProviderRequestId: firstNonEmpty(cvmRequestID, tkeRequestID, machineRequestID), ProviderData: providerData}
 	}
 	if !machinePresent || !tkePresent || !cvmPresent {
 		return Response{Ok: false, ErrorCode: "provider_truth_partial_identity", Message: "Tencent provider identity is only partially present.", ProviderRequestId: firstNonEmpty(cvmRequestID, tkeRequestID, machineRequestID), ProviderData: providerData, Retryable: true}
 	}
-	if stringValue(tkeInstance.InstanceId) != request.Allocation.NodeName {
-		return Response{Ok: false, ErrorCode: "provider_truth_node_mismatch", Message: "The supplied node does not identify the TKE cluster instance at the private IP.", ProviderRequestId: tkeRequestID, ProviderData: providerData, Retryable: false}
+	if stringValue(tkeInstance.InstanceId) != request.Allocation.MachineName {
+		return Response{Ok: false, ErrorCode: "provider_truth_node_mismatch", Message: "The supplied machine does not identify the TKE cluster instance at the private IP.", ProviderRequestId: tkeRequestID, ProviderData: providerData, Retryable: false}
 	}
 	if stringValue(cvmInstance.InstanceId) != request.Allocation.InstanceId || stringValue(cvmInstance.InstanceName) != request.Allocation.Id ||
 		!containsString(cvmInstance.PrivateIpAddresses, request.Allocation.PrivateIp) {
@@ -1109,7 +1109,7 @@ func (client *tencentSDKClient) ProviderTruth(request Request, _ map[string]stri
 	}
 	providerData["tkeStatus"] = tkeStatus
 	providerData["cvmStatus"] = cvmStatus
-	return Response{Ok: true, PoolId: request.Pool.Id, NodePoolId: request.Pool.NodePoolId, InstanceId: request.Allocation.InstanceId, NodeName: request.Allocation.NodeName, PrivateIp: request.Allocation.PrivateIp, MachinePresent: &machinePresent, CVMStatus: cvmStatus, TKEStatus: tkeStatus, Status: "present", MachineType: "NativeCVM", ProviderRequestId: cvmRequestID, ProviderData: providerData}
+	return Response{Ok: true, PoolId: request.Pool.Id, NodePoolId: request.Pool.NodePoolId, InstanceId: request.Allocation.InstanceId, PrivateIp: request.Allocation.PrivateIp, MachinePresent: &machinePresent, CVMStatus: cvmStatus, TKEStatus: tkeStatus, Status: "present", MachineType: "NativeCVM", ProviderRequestId: cvmRequestID, ProviderData: providerData}
 }
 
 func (client *tencentSDKClient) describeClusterMachines(nodePoolId string) ([]*tke2022.Machine, string, error) {
