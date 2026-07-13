@@ -72,7 +72,8 @@ function jsonResponse(payload) {
 function fakeConsoleBrowserFactory({
   stages, screenshots, mutations, visibleTexts = [], readiness = true,
   delayCreateProjection = false, partialIdentityProjection = false, replayStages = [], duplicateMachineIdentity = false,
-  failCookieRefresh = false, cookieReads = [], closeEvents = [], contextCloseError = "", browserCloseError = "", failAt = ""
+  failCookieRefresh = false, cookieReads = [], closeEvents = [], contextCloseError = "", browserCloseError = "", failAt = "",
+  nestedConsoleRoute = false
 }) {
   const state = stateFixture();
   let routeHandler = null;
@@ -199,7 +200,7 @@ function fakeConsoleBrowserFactory({
     async click() {
       const label = String(this.name || "");
       if (label === "登录") {
-        path = "/console";
+        path = nestedConsoleRoute ? "/console/overview" : "/console";
         return;
       }
       if (label === "确认") {
@@ -227,7 +228,14 @@ function fakeConsoleBrowserFactory({
   const page = {
     async route(_pattern, handler) { routeHandler = handler; },
     async goto(url) { path = new URL(url).pathname; },
-    async waitForURL() {},
+    async waitForURL(matcher) {
+      const url = new URL(`https://cloud.medopl.cn${path}`);
+      if (typeof matcher === "function") {
+        if (!matcher(url)) throw new Error("wait_for_url_timeout");
+        return;
+      }
+      if (matcher === "**/console*" && path.startsWith("/console/")) throw new Error("wait_for_url_timeout");
+    },
     url() { return `https://cloud.medopl.cn${path}`; },
     getByLabel(name) { return new FakeLocator(name); },
     getByRole(_role, options = {}) { return new FakeLocator(options.name); },
@@ -313,7 +321,8 @@ test("production Console drives the paid lifecycle and returns the opened Worksp
     manifestPath: join(artifactDir, "manifest.json"),
     screenshotDir: join(artifactDir, "screenshots"),
     browserFactory: fakeConsoleBrowserFactory({
-      stages, screenshots, mutations, visibleTexts, delayCreateProjection: true, replayStages: ["create-compute"]
+      stages, screenshots, mutations, visibleTexts, delayCreateProjection: true, replayStages: ["create-compute"],
+      nestedConsoleRoute: true
     }),
     workspaceVerifier: async ({ workspaceUrl: url, workspaceAuth }) => {
       workspaceVerified = url;
@@ -368,7 +377,7 @@ test("production Console drives the paid lifecycle and returns the opened Worksp
     "billing.png", "detached.png", "compute-destroyed.png", "storage-destroyed.png"
   ]);
   assert.deepEqual(screenshots.map(({ path }) => path), [
-    "/console", "/console/compute/new", "/console/compute", "/console/storage/new",
+    "/console/overview", "/console/compute/new", "/console/compute", "/console/storage/new",
     "/console/storage", "/console/attachments", "/console/workspaces", "/console/workspaces",
     "/console/billing", "/console/attachments/attachment-7", "/console/compute/compute-7", "/console/storage/storage-7"
   ]);
