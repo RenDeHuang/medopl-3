@@ -18,10 +18,12 @@ import (
 )
 
 type controlPlaneServer struct {
-	mu            sync.Mutex
-	resourceLocks sync.Map
-	store         StateStore
-	tables        controlPlaneTableStore
+	mu                     sync.Mutex
+	resourceLocks          sync.Map
+	// ponytail: process-local dedup matches one replica; CLS remains the durable alert history.
+	operationalAlertStates sync.Map
+	store                  StateStore
+	tables                 controlPlaneTableStore
 	// ponytail: per-process limiter; move to Redis when login traffic spans multiple replicas.
 	loginRateLimits map[string]loginFailure
 }

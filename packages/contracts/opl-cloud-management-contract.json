@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "owner": "OPL Console",
   "purpose": "Console identity, organization, membership, role, Sub2API account mapping, and management API contract.",
   "state": "current",
@@ -84,5 +84,25 @@
     "machineTokenTransport": "x-opl-operator-token header only",
     "queryTokenAllowed": false,
     "adminSessionAllowed": true
+  },
+  "operatorNotifications": {
+    "source": "Derived from current Control Plane compute and storage state; no alert table or second source of truth.",
+    "activeCodes": [
+      "manual_review",
+      "past_due",
+      "ledger_receipt_pending",
+      "cleanup_failed"
+    ],
+    "severity": {
+      "error": [
+        "manual_review",
+        "cleanup_failed"
+      ],
+      "warning": [
+        "past_due",
+        "ledger_receipt_pending"
+      ]
+    },
+    "logPolicy": "State transitions use stable codes and hashed resource references; account IDs, resource IDs, redeem codes, balances, credentials, and provider errors are excluded."
   }
 }

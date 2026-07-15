@@ -60,11 +60,13 @@ func (app *controlPlaneServer) runMonthlyBillingOnce(ctx context.Context, servic
 	}
 	var errs []error
 	for _, row := range computes {
+		app.observeMonthlyOperationalAlerts("compute", row)
 		if err := app.processMonthlyResource(ctx, service, "compute", row, now.UTC()); err != nil && !monthlyBusinessOutcome(err) {
 			errs = append(errs, fmt.Errorf("compute %s: %w", stringValue(row["id"]), err))
 		}
 	}
 	for _, row := range storages {
+		app.observeMonthlyOperationalAlerts("storage", row)
 		if err := app.processMonthlyResource(ctx, service, "storage", row, now.UTC()); err != nil && !monthlyBusinessOutcome(err) {
 			errs = append(errs, fmt.Errorf("storage %s: %w", stringValue(row["id"]), err))
 		}

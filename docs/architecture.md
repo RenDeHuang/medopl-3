@@ -67,3 +67,8 @@ Production runs Control Plane, Fabric, and Ledger as separate Kubernetes
 Deployments. Secrets are Kubernetes Secret references, configuration is a shared
 ConfigMap, and the deploy workflow waits for all three rollouts. The single paid
 production verifier uses the public Console product chain.
+
+Infrastructure alarms remain in Tencent Cloud Monitor. Business alarms are a
+projection of current Control Plane compute and storage rows in Operator Summary;
+there is no alert table. `manual_review`, `past_due`, `ledger_receipt_pending`, and
+`cleanup_failed` transitions emit stable, redacted log codes for CLS alerting.
