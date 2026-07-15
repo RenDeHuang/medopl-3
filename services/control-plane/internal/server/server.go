@@ -77,7 +77,7 @@ func (app *controlPlaneServer) consoleStatic(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	if r.URL.Path == "/opl-app-icon.png" {
-		if !serveConsoleFile(w, r, filepath.Join(dist, "opl-app-icon.png"), "no-cache") {
+		if !serveConsoleFile(w, r, filepath.Join(dist, "opl-app-icon.png"), "public,max-age=86400") {
 			http.NotFound(w, r)
 		}
 		return

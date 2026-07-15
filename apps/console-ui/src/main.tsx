@@ -1,6 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import "antd/dist/reset.css";
 import "./styles.css";
 import { currentSession } from "./api/auth-api.ts";
 import { findRoute, navigate, routeTo } from "./consoleRoutes.ts";

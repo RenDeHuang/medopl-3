@@ -1,3 +1,4 @@
+import "antd/dist/reset.css";
 import { ProLayout } from "@ant-design/pro-components";
 import { Button, Tag } from "antd";
 import { LogOut, UserRound } from "lucide-react";
