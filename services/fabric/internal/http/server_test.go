@@ -441,8 +441,12 @@ func TestSyncStorageVolumeHTTPRefreshesProviderState(t *testing.T) {
 	if createRec.Code != http.StatusAccepted {
 		t.Fatalf("create status = %d, want %d: %s", createRec.Code, http.StatusAccepted, createRec.Body.String())
 	}
+	var created fabric.StorageVolume
+	if err := json.NewDecoder(createRec.Body).Decode(&created); err != nil || created.ID == "" {
+		t.Fatalf("decode created storage: volume=%#v err=%v", created, err)
+	}
 
-	req := testRequest(http.MethodPost, "/fabric/storage-volumes/vol-test/sync", bytes.NewBufferString(`{}`))
+	req := testRequest(http.MethodPost, "/fabric/storage-volumes/"+created.ID+"/sync", bytes.NewBufferString(`{}`))
 	rec := httptest.NewRecorder()
 	server.ServeHTTP(rec, req)
 

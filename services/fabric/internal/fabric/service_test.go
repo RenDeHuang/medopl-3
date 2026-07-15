@@ -382,23 +382,50 @@ func TestExpiredJobCanRetryAndFail(t *testing.T) {
 	}
 }
 
-func TestCatalogExposesWorkspacePackages(t *testing.T) {
-	service := NewService(testProvider{})
-	catalog := service.Catalog(context.Background())
+func TestCatalogExposesConfiguredWorkspacePackagesIndependently(t *testing.T) {
+	for _, tc := range []struct {
+		name           string
+		basicPool      string
+		proPool        string
+		basicAvailable bool
+		proAvailable   bool
+	}{
+		{name: "neither configured"},
+		{name: "basic only", basicPool: "np-basic", basicAvailable: true},
+		{name: "pro only", proPool: "np-pro", proAvailable: true},
+		{name: "both configured", basicPool: "np-basic", proPool: "np-pro", basicAvailable: true, proAvailable: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OPL_BASIC_COMPUTE_NODE_POOL_ID", tc.basicPool)
+			t.Setenv("OPL_PRO_COMPUTE_NODE_POOL_ID", tc.proPool)
+			provider := NewTencentProvider()
+			provider.provision = func(context.Context, provisionerRequest) (provisionerResponse, error) {
+				t.Fatal("catalog availability must not call Tencent provisioner")
+				return provisionerResponse{}, nil
+			}
+			provider.kubectl = func(context.Context, []string, []byte) ([]byte, error) {
+				t.Fatal("catalog availability must not call Kubernetes")
+				return nil, nil
+			}
 
-	if len(catalog.WorkspacePackages) != 2 {
-		t.Fatalf("workspace packages = %#v, want Basic and Pro", catalog.WorkspacePackages)
-	}
-	if catalog.WorkspacePackages[0].ID != "basic" || catalog.WorkspacePackages[0].CPU != 2 || catalog.WorkspacePackages[0].MemoryGB != 4 || catalog.WorkspacePackages[0].DiskGB != 10 ||
-		catalog.WorkspacePackages[1].ID != "pro" || catalog.WorkspacePackages[1].CPU != 8 || catalog.WorkspacePackages[1].MemoryGB != 16 || catalog.WorkspacePackages[1].DiskGB != 100 {
-		t.Fatalf("unexpected commercial catalog: %#v", catalog.WorkspacePackages)
+			catalog := NewService(provider).Catalog(context.Background())
+			if len(catalog.WorkspacePackages) != 2 {
+				t.Fatalf("workspace packages = %#v, want Basic and Pro", catalog.WorkspacePackages)
+			}
+			basic, pro := catalog.WorkspacePackages[0], catalog.WorkspacePackages[1]
+			if basic.ID != "basic" || basic.CPU != 2 || basic.MemoryGB != 4 || basic.DiskGB != 10 || basic.Available != tc.basicAvailable ||
+				pro.ID != "pro" || pro.CPU != 8 || pro.MemoryGB != 16 || pro.DiskGB != 100 || pro.Available != tc.proAvailable {
+				t.Fatalf("unexpected commercial catalog: %#v", catalog.WorkspacePackages)
+			}
+		})
 	}
 }
 
 type resourceBoundaryProvider struct {
 	testProvider
-	computeCalls int
-	storageCalls int
+	computeCalls  int
+	storageCalls  int
+	storageInputs []StorageVolumeInput
 }
 
 func (p *resourceBoundaryProvider) ReconcileComputePool(ctx context.Context, input ComputePoolDemand) (ComputePoolState, error) {
@@ -408,6 +435,7 @@ func (p *resourceBoundaryProvider) ReconcileComputePool(ctx context.Context, inp
 
 func (p *resourceBoundaryProvider) CreateStorageVolume(ctx context.Context, input StorageVolumeInput) (StorageVolume, error) {
 	p.storageCalls++
+	p.storageInputs = append(p.storageInputs, input)
 	return p.testProvider.CreateStorageVolume(ctx, input)
 }
 
@@ -468,6 +496,27 @@ func TestStorageCreationRequiresMatchingClaimedComputeZoneBeforeProvider(t *test
 	}
 }
 
+func TestStorageCreationWithoutIDReplaysStableIdentity(t *testing.T) {
+	provider := &resourceBoundaryProvider{}
+	service := NewServiceWithOperationStore(provider, NewMemoryOperationStore())
+	service.computes["compute-alpha"] = ComputeAllocation{
+		ID: "compute-alpha", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", Status: "running", ProviderData: map[string]string{"zone": "ap-guangzhou-3"},
+	}
+	input := StorageVolumeInput{AccountID: "acct-alpha", WorkspaceID: "ws-alpha", ComputeID: "compute-alpha", Zone: "ap-guangzhou-3", SizeGB: 10, IdempotencyKey: "storage-without-id"}
+
+	first, err := service.CreateStorageVolume(context.Background(), input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := service.CreateStorageVolume(context.Background(), input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.ID == "" || !strings.HasPrefix(first.ID, "vol_") || second.ID != first.ID || provider.storageCalls != 1 || len(provider.storageInputs) != 1 || provider.storageInputs[0].ID != first.ID {
+		t.Fatalf("unstable storage replay: first=%#v second=%#v calls=%d inputs=%#v", first, second, provider.storageCalls, provider.storageInputs)
+	}
+}
+
 type partialStorageProvider struct{ testProvider }
 
 func (*partialStorageProvider) CreateStorageVolume(_ context.Context, input StorageVolumeInput) (StorageVolume, error) {
@@ -498,6 +547,37 @@ func TestStorageCreateFailureRecordsPartialCBSIdentity(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("failed operation lost partial CBS identity: %#v", operations)
+	}
+}
+
+type failingStorageSyncProvider struct{ testProvider }
+
+func (*failingStorageSyncProvider) SyncStorageVolume(context.Context, StorageVolume) (StorageVolume, error) {
+	return StorageVolume{}, errors.New("provider readback unavailable")
+}
+
+func TestStorageSyncFailurePreservesKnownIdentity(t *testing.T) {
+	store := NewMemoryOperationStore()
+	service := NewServiceWithOperationStore(&failingStorageSyncProvider{}, store)
+	existing := StorageVolume{ID: "storage-alpha", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", Provider: "tencent-tke", ProviderResourceID: "disk-storage-alpha", ProviderRequestID: "req-create-cbs", Status: "pending"}
+	service.volumes[existing.ID] = existing
+
+	volume, err := service.SyncStorageVolume(context.Background(), existing.ID)
+	if err == nil || volume.ID != existing.ID || volume.ProviderResourceID != existing.ProviderResourceID || volume.ProviderRequestID != existing.ProviderRequestID {
+		t.Fatalf("sync failure lost known volume: volume=%#v err=%v", volume, err)
+	}
+	operations, listErr := service.ListOperations(context.Background())
+	if listErr != nil {
+		t.Fatal(listErr)
+	}
+	found := false
+	for _, operation := range operations {
+		if operation.Action == "sync_storage_volume" && operation.Status == "failed" && strings.Contains(fmt.Sprint(operation.RedactedProviderPayload), existing.ProviderResourceID) {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("failed sync operation lost known volume: %#v", operations)
 	}
 }
 
@@ -883,6 +963,16 @@ func TestFabricRejectsIllegalResourceMutationsWithOperationFacts(t *testing.T) {
 	assertOperationFact(t, operations, "destroy_compute_allocation", "compute_allocation", "missing-compute", "rejected")
 	assertOperationFact(t, operations, "create_storage_attachment", "storage_attachment", "reject-missing-attach", "rejected")
 	assertOperationFact(t, operations, "create_storage_attachment", "storage_attachment", "reject-cross-account-attach", "rejected")
+}
+
+func TestStorageAttachmentRejectsRetainedOrReleasedVolume(t *testing.T) {
+	compute := ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", Status: "running"}
+	for _, status := range []string{"retained", "released"} {
+		volume := StorageVolume{ID: "storage-alpha", AccountID: "acct-alpha", Status: status}
+		if err := validateAttachmentInput(StorageAttachmentInput{}, compute, volume); err == nil || errorCode(err) != "resource_status_invalid" {
+			t.Fatalf("storage status %q err=%v, want resource_status_invalid", status, err)
+		}
+	}
 }
 
 func TestServiceReplaysResourceStateFromOperationStore(t *testing.T) {

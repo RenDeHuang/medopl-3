@@ -174,7 +174,7 @@ func (s *Service) reconcileComputePoolOnce(ctx context.Context, packageID string
 	}
 	machines := make([]ProviderMachine, 0, len(state.Machines))
 	for _, machine := range state.Machines {
-		if machine.Ready && machine.MachineID != "" && !ownedMachines[machine.MachineID] && (machine.InstanceType == "" || machine.InstanceType == plan.InstanceType) &&
+		if machine.Ready && machine.MachineID != "" && !ownedMachines[machine.MachineID] && machine.InstanceType == plan.InstanceType &&
 			machine.Zone != "" && machine.ChargeType == "PREPAID" && machine.RenewFlag == "NOTIFY_AND_MANUAL_RENEW" && machine.Deadline != "" {
 			machines = append(machines, machine)
 		}
@@ -231,18 +231,34 @@ func (s *Service) reconcileComputePoolOnce(ctx context.Context, packageID string
 		resource.ProviderData = map[string]string{"instanceType": machine.InstanceType, "zone": machine.Zone, "chargeType": machine.ChargeType, "renewFlag": machine.RenewFlag, "deadline": machine.Deadline, "machineName": machine.MachineID}
 		resource.CreatedAt = firstTime(resource.CreatedAt, s.now())
 		verified, verifyErr := s.provider.SyncComputeAllocation(ctx, resource)
-		if verifyErr != nil || !isReadyResourceStatus(verified.Status) || verified.ChargeType != "PREPAID" || verified.RenewFlag != "NOTIFY_AND_MANUAL_RENEW" || verified.Deadline == "" || verified.ProviderData["zone"] == "" {
-			if deleteErr := s.provider.DeleteComputeMachine(ctx, machine, claimed); deleteErr == nil {
-				now := s.now()
-				claimed.Status = "released"
-				claimed.ReleasedAt = &now
-			} else {
-				claimed.Status = "quarantined"
+		if verified.ID != "" {
+			resource = verified
+		}
+		if verifyErr == nil && !isExternallyDeletedComputeStatus(resource.Status) &&
+			(!isReadyResourceStatus(resource.Status) || resource.ChargeType != "PREPAID" || resource.RenewFlag != "NOTIFY_AND_MANUAL_RENEW" || resource.Deadline == "" || resource.ProviderData["zone"] == "" || resource.ProviderData["instanceType"] != plan.InstanceType) {
+			verifyErr = fmt.Errorf("compute_provider_readback_mismatch")
+		}
+		if verifyErr != nil {
+			resource.Status = "quarantined"
+			claimed.Status = "quarantined"
+			if err := s.operations.SaveMachineOwnership(ctx, claimed); err != nil {
+				return false, i > 0, err
 			}
+			if err := s.recordOperation(ctx, operation, "failed", resource, verifyErr); err != nil {
+				return false, i > 0, err
+			}
+			s.mu.Lock()
+			s.computes[resource.ID] = resource
+			s.mu.Unlock()
+			continue
+		}
+		if isExternallyDeletedComputeStatus(resource.Status) {
+			now := s.now()
+			claimed.Status = "released"
+			claimed.ReleasedAt = &now
 			_ = s.operations.SaveMachineOwnership(ctx, claimed)
 			continue
 		}
-		resource = verified
 		claimed.Status = "active"
 		if err := s.operations.SaveMachineOwnership(ctx, claimed); err != nil {
 			continue

@@ -76,8 +76,8 @@ func (s *Service) Catalog(_ context.Context) Catalog {
 		SchemaVersion: 1,
 		Owner:         "OPL Fabric",
 		WorkspacePackages: []WorkspacePackage{
-			{ID: "basic", Name: "Basic Workspace", ComputeProfileID: "cpu-basic", CPU: 2, MemoryGB: 4, DiskGB: 10, Provider: "tencent-tke", Available: true},
-			{ID: "pro", Name: "Pro Workspace", ComputeProfileID: "cpu-pro", CPU: 8, MemoryGB: 16, DiskGB: 100, Provider: "tencent-tke", Available: true},
+			{ID: "basic", Name: "Basic Workspace", ComputeProfileID: "cpu-basic", CPU: 2, MemoryGB: 4, DiskGB: 10, Provider: "tencent-tke", Available: strings.TrimSpace(packagePlan("basic").NodePoolID) != ""},
+			{ID: "pro", Name: "Pro Workspace", ComputeProfileID: "cpu-pro", CPU: 8, MemoryGB: 16, DiskGB: 100, Provider: "tencent-tke", Available: strings.TrimSpace(packagePlan("pro").NodePoolID) != ""},
 		},
 		StorageClasses: []StorageClass{{ID: "workspace-cbs", StorageClassName: "cbs", Provider: "tencent-tke", Available: true}},
 		IngressDomains: []IngressDomain{{ID: "workspace", Host: "workspace.medopl.cn", PathPattern: "/w/<workspaceId>/", Available: true}},
@@ -434,6 +434,12 @@ func (s *Service) CreateStorageVolume(ctx context.Context, input StorageVolumeIn
 	if input.SizeGB < 10 || input.SizeGB%10 != 0 {
 		return StorageVolume{}, ErrInvalidStorageSize
 	}
+	if input.ID == "" {
+		if strings.TrimSpace(input.IdempotencyKey) == "" {
+			return StorageVolume{}, fmt.Errorf("storage_idempotency_key_required")
+		}
+		input.ID = "vol_" + stableSuffix("create_storage_volume", input.IdempotencyKey)[:16]
+	}
 	s.mu.Lock()
 	compute := s.computes[input.ComputeID]
 	s.mu.Unlock()
@@ -442,27 +448,46 @@ func (s *Service) CreateStorageVolume(ctx context.Context, input StorageVolumeIn
 		!isReadyResourceStatus(compute.Status) || computeZone == "" || strings.TrimSpace(input.Zone) != computeZone {
 		return StorageVolume{}, fmt.Errorf("storage_compute_zone_mismatch")
 	}
-	operation := newOperation("create_storage_volume", "storage_volume", firstNonEmpty(input.ID, "pending"), input.AccountID, input.WorkspaceID, input.IdempotencyKey, hashInput(input), time.Now().UTC())
-	input.OperationID = operation.OperationID
-	if err := s.recordOperation(ctx, operation, "started", StorageVolume{ID: operation.ResourceID, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, Provider: "tencent-tke", ProviderRequestID: providerRequestID("storage", input.IdempotencyKey)}, nil); err != nil {
-		return StorageVolume{}, err
-	}
-	volume, err := s.provider.CreateStorageVolume(ctx, input)
-	if err != nil {
-		_ = s.recordOperation(ctx, operation, "failed", volume, err)
-		return volume, err
-	}
-	if input.ID != "" {
+	requestHash := hashInput(input)
+	var volume StorageVolume
+	err := s.operations.WithPoolLock(ctx, "storage-create:"+firstNonEmpty(input.IdempotencyKey, input.ID), func(lockCtx context.Context) error {
+		operations, err := s.operations.List(lockCtx)
+		if err != nil {
+			return err
+		}
+		for index := len(operations) - 1; index >= 0; index-- {
+			candidate := operations[index]
+			if candidate.Action != "create_storage_volume" || candidate.IdempotencyKey != input.IdempotencyKey || candidate.ResourceID != input.ID {
+				continue
+			}
+			if candidate.RequestHash != requestHash {
+				return fmt.Errorf("storage_create_idempotency_conflict")
+			}
+			if candidate.Status == "succeeded" && decodeOperationResource(candidate, &volume) {
+				return nil
+			}
+			break
+		}
+		operation := newOperation("create_storage_volume", "storage_volume", input.ID, input.AccountID, input.WorkspaceID, input.IdempotencyKey, requestHash, s.now())
+		input.OperationID = operation.OperationID
+		if err := s.recordOperation(lockCtx, operation, "started", StorageVolume{ID: input.ID, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, Provider: "tencent-tke", ProviderRequestID: providerRequestID("storage", input.IdempotencyKey)}, nil); err != nil {
+			return err
+		}
+		volume, err = s.provider.CreateStorageVolume(lockCtx, input)
 		volume.ID = input.ID
-	}
-	operation.ResourceID = volume.ID
-	if err := s.recordOperation(ctx, operation, "succeeded", volume, nil); err != nil {
-		return volume, err
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.volumes[volume.ID] = volume
-	return volume, nil
+		if err != nil {
+			_ = s.recordOperation(lockCtx, operation, "failed", volume, err)
+			return err
+		}
+		if err := s.recordOperation(lockCtx, operation, "succeeded", volume, nil); err != nil {
+			return err
+		}
+		s.mu.Lock()
+		s.volumes[volume.ID] = volume
+		s.mu.Unlock()
+		return nil
+	})
+	return volume, err
 }
 
 func (s *Service) GetStorageVolume(_ context.Context, volumeID string) (StorageVolume, bool) {
@@ -655,10 +680,6 @@ func (s *Service) SyncStorageVolume(ctx context.Context, volumeID string) (Stora
 		return StorageVolume{}, err
 	}
 	volume, err := s.provider.SyncStorageVolume(ctx, existing)
-	if err != nil {
-		_ = s.recordOperation(ctx, operation, "failed", volume, err)
-		return volume, err
-	}
 	if volume.ID == "" {
 		volume.ID = existing.ID
 	}
@@ -670,6 +691,16 @@ func (s *Service) SyncStorageVolume(ctx context.Context, volumeID string) (Stora
 	}
 	if volume.Provider == "" {
 		volume.Provider = firstNonEmpty(existing.Provider, "tencent-tke")
+	}
+	if volume.ProviderResourceID == "" {
+		volume.ProviderResourceID = existing.ProviderResourceID
+	}
+	if volume.ProviderRequestID == "" {
+		volume.ProviderRequestID = existing.ProviderRequestID
+	}
+	if err != nil {
+		_ = s.recordOperation(ctx, operation, "failed", volume, err)
+		return volume, err
 	}
 	if volume.Status == "pending" && !existing.CreatedAt.IsZero() && s.now().Sub(existing.CreatedAt) >= storageProvisionTimeout {
 		cleaned, cleanupErr := s.provider.DestroyStorageVolume(ctx, volume)
@@ -1445,7 +1476,7 @@ func isReadyResourceStatus(status string) bool {
 
 func isTerminalResourceStatus(status string) bool {
 	switch strings.ToLower(strings.TrimSpace(status)) {
-	case "destroyed", "deleted", "failed", "detached", "unrecoverable":
+	case "destroyed", "deleted", "failed", "detached", "unrecoverable", "retained", "released":
 		return true
 	default:
 		return false

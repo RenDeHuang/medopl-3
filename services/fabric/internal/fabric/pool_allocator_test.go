@@ -54,6 +54,14 @@ type invalidInitialBillingPoolProvider struct {
 	syncCalls int
 }
 
+type unverifiedSyncPoolProvider struct {
+	testProvider
+	syncErr      error
+	partial      bool
+	instanceType string
+	deleteCalls  int
+}
+
 func (p *invalidInitialBillingPoolProvider) ReconcileComputePool(_ context.Context, input ComputePoolDemand) (ComputePoolState, error) {
 	return ComputePoolState{
 		PoolID: input.PoolID, NodePoolID: "np-basic", DesiredReplicas: input.DesiredReplicas, CurrentReplicas: 1,
@@ -65,6 +73,24 @@ func (p *invalidInitialBillingPoolProvider) SyncComputeAllocation(_ context.Cont
 	p.syncCalls++
 	allocation.Status = "running"
 	return allocation, nil
+}
+
+func (p *unverifiedSyncPoolProvider) SyncComputeAllocation(_ context.Context, allocation ComputeAllocation) (ComputeAllocation, error) {
+	if p.syncErr != nil {
+		return allocation, p.syncErr
+	}
+	allocation.Status = "running"
+	if p.partial {
+		allocation.ProviderData = map[string]string{"instanceType": "SA5.MEDIUM4"}
+	} else {
+		allocation.ProviderData["instanceType"] = p.instanceType
+	}
+	return allocation, nil
+}
+
+func (p *unverifiedSyncPoolProvider) DeleteComputeMachine(context.Context, ProviderMachine, MachineOwnership) error {
+	p.deleteCalls++
+	return nil
 }
 
 func (*evidencePoolProvider) ReconcileComputePool(_ context.Context, input ComputePoolDemand) (ComputePoolState, error) {
@@ -118,16 +144,19 @@ func TestPoolAllocatorPersistsPoolEvidence(t *testing.T) {
 
 func TestPoolAllocatorNeverClaimsInitialMachineWithoutExactPrepaidBilling(t *testing.T) {
 	for _, tc := range []struct {
-		name      string
-		renewFlag string
-		deadline  string
+		name         string
+		instanceType string
+		renewFlag    string
+		deadline     string
 	}{
-		{name: "deadline missing", renewFlag: "NOTIFY_AND_MANUAL_RENEW"},
-		{name: "automatic renewal", renewFlag: "NOTIFY_AND_AUTO_RENEW", deadline: "2026-08-16T00:00:00Z"},
+		{name: "instance type missing", renewFlag: "NOTIFY_AND_MANUAL_RENEW", deadline: "2026-08-16T00:00:00Z"},
+		{name: "wrong instance type", instanceType: "SA5.2XLARGE16", renewFlag: "NOTIFY_AND_MANUAL_RENEW", deadline: "2026-08-16T00:00:00Z"},
+		{name: "deadline missing", instanceType: "SA5.MEDIUM4", renewFlag: "NOTIFY_AND_MANUAL_RENEW"},
+		{name: "automatic renewal", instanceType: "SA5.MEDIUM4", renewFlag: "NOTIFY_AND_AUTO_RENEW", deadline: "2026-08-16T00:00:00Z"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			provider := &invalidInitialBillingPoolProvider{machine: ProviderMachine{
-				MachineID: "machine-alpha", InstanceID: "ins-alpha", NodeName: "node-alpha", InstanceType: "SA5.MEDIUM4", Zone: "na-siliconvalley-1",
+				MachineID: "machine-alpha", InstanceID: "ins-alpha", NodeName: "node-alpha", InstanceType: tc.instanceType, Zone: "na-siliconvalley-1",
 				ChargeType: "PREPAID", RenewFlag: tc.renewFlag, Deadline: tc.deadline, Ready: true,
 			}}
 			store := NewMemoryOperationStore()
@@ -144,6 +173,54 @@ func TestPoolAllocatorNeverClaimsInitialMachineWithoutExactPrepaidBilling(t *tes
 			_, ownershipErr := store.MachineOwnership(context.Background(), resource.ID)
 			if err != nil || current.Status != "provisioning" || provider.syncCalls != 0 || !errors.Is(ownershipErr, ErrMachineOwnershipNotFound) {
 				t.Fatalf("compute=%#v err=%v syncCalls=%d ownershipErr=%v", current, err, provider.syncCalls, ownershipErr)
+			}
+		})
+	}
+}
+
+func TestPoolAllocatorQuarantinesUnverifiedPrepaidMachineWithoutDeleting(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		syncErr      error
+		partial      bool
+		instanceType string
+		wantError    string
+	}{
+		{name: "timeout", syncErr: errors.New("provider_timeout"), wantError: "provider_timeout"},
+		{name: "partial readback", partial: true, wantError: "compute_provider_readback_mismatch"},
+		{name: "wrong self-consistent SKU", instanceType: "SA5.2XLARGE16", wantError: "compute_provider_readback_mismatch"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OPL_BASIC_COMPUTE_INSTANCE_TYPE", "SA5.MEDIUM4")
+			provider := &unverifiedSyncPoolProvider{syncErr: tc.syncErr, partial: tc.partial, instanceType: tc.instanceType}
+			store := NewMemoryOperationStore()
+			service := NewServiceWithOperationStore(provider, store)
+			resource := ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", PackageID: "basic", Status: "provisioning"}
+			operation := newOperation("create_compute_allocation", "compute_allocation", resource.ID, resource.AccountID, resource.WorkspaceID, "request-alpha", hashInput(resource), time.Now().UTC())
+			if err := service.recordOperation(context.Background(), operation, "started", resource, nil); err != nil {
+				t.Fatal(err)
+			}
+			service.computes[resource.ID] = resource
+
+			if _, _, err := service.reconcileComputePoolOnce(context.Background(), "basic", false); err != nil {
+				t.Fatal(err)
+			}
+			ownership, err := store.MachineOwnership(context.Background(), resource.ID)
+			if err != nil || ownership.Status != "quarantined" || ownership.ReleasedAt != nil || provider.deleteCalls != 0 {
+				t.Fatalf("ownership=%#v err=%v deletes=%d", ownership, err, provider.deleteCalls)
+			}
+			current, ok := service.GetComputeAllocation(context.Background(), resource.ID)
+			if !ok || current.Status != "quarantined" || current.MachineName == "" || current.InstanceID == "" || current.NodePoolID == "" || current.Deadline == "" {
+				t.Fatalf("unverified paid compute identity was lost: %#v ok=%v", current, ok)
+			}
+			operations, err := store.List(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			latest := operations[len(operations)-1]
+			var recorded ComputeAllocation
+			if latest.Status != "failed" || latest.ErrorCode != tc.wantError || !decodeOperationResource(latest, &recorded) || recorded.Status != "quarantined" || recorded.InstanceID != current.InstanceID {
+				t.Fatalf("failed operation did not preserve unknown provider identity: %#v resource=%#v", latest, recorded)
 			}
 		})
 	}

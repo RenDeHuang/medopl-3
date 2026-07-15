@@ -496,6 +496,7 @@ type fakeNativeTkeAPI struct {
 	labelPackageId              string
 	labelInstanceType           string
 	instanceTypes               []string
+	subnetIds                   []string
 	enableAutoscaling           bool
 	autoRepair                  bool
 	rejectMachinePoolFilter     bool
@@ -504,6 +505,7 @@ type fakeNativeTkeAPI struct {
 	omitInstanceNodePool        bool
 	omitMachineLanIP            bool
 	machineInstanceIDsMatch     bool
+	machineInstanceType         string
 	duplicateMachineName        bool
 	deletedMachineNames         map[string]bool
 	retainDeletedMachines       bool
@@ -530,6 +532,7 @@ type fakeNativeCvmAPI struct {
 	modifyInstancesRequest       []*cvm2017.ModifyInstancesAttributeRequest
 	renewInstancesRequests       []*cvm2017.RenewInstancesRequest
 	instanceName                 string
+	instanceType                 string
 	returnedInstanceID           string
 	instanceChargeType           string
 	renewFlag                    string
@@ -689,7 +692,7 @@ func TestTencentSDKCreateStorageVolumeUsesOneMonthPrepaidCBSAndStableToken(t *te
 	first := client.CreateStorageVolume(request, map[string]string{"TENCENT_CBS_DISK_TYPE": "CLOUD_BSSD"})
 	second := client.CreateStorageVolume(request, map[string]string{"TENCENT_CBS_DISK_TYPE": "CLOUD_BSSD"})
 
-	if !first.Ok || first.StorageVolumeId != "disk-storage-alpha" || first.CBSStatus != "ATTACHED" || first.Status != "provider_ready" {
+	if !first.Ok || first.StorageVolumeId != "disk-storage-alpha" || first.CBSStatus != "ATTACHED" || first.Status != "provider_ready" || first.ProviderData["deadline"] != "2026-08-16T00:00:00Z" {
 		t.Fatalf("unexpected create response: %#v", first)
 	}
 	if !second.Ok || len(api.createDisksRequests) != 2 {
@@ -718,6 +721,29 @@ func TestTencentSDKCreateStorageVolumeUsesOneMonthPrepaidCBSAndStableToken(t *te
 	}
 }
 
+func TestTencentSDKCreateStorageVolumePreservesDiskIdentityWhenReadbackFails(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		configure func(*fakeNativeCbsAPI)
+	}{
+		{name: "timeout", configure: func(api *fakeNativeCbsAPI) { api.err = errors.New("describe timed out") }},
+		{name: "partial", configure: func(api *fakeNativeCbsAPI) { api.omitDeadline = true }},
+		{name: "mismatch", configure: func(api *fakeNativeCbsAPI) { api.duplicate = true }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			api := &fakeNativeCbsAPI{}
+			tc.configure(api)
+			response := (&tencentSDKClient{nativeCbsClient: api}).CreateStorageVolume(Request{
+				AccountId: "acct-alpha", Tags: map[string]string{"opl_operation_id": "op-storage-alpha"},
+				Storage: StorageInput{Id: "storage-alpha", SizeGB: 10, Zone: "ap-guangzhou-3", DiskType: "CLOUD_BSSD"},
+			}, nil)
+			if response.Ok || response.StorageVolumeId != "disk-storage-alpha" || response.ProviderRequestId == "" {
+				t.Fatalf("post-create readback failure lost CBS identity: %#v", response)
+			}
+		})
+	}
+}
+
 func TestTencentSDKStorageVolumeReadbackFailsClosedOnBillingOrIdentityMismatch(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
@@ -731,6 +757,7 @@ func TestTencentSDKStorageVolumeReadbackFailsClosedOnBillingOrIdentityMismatch(t
 		{name: "wrong size", configure: func(api *fakeNativeCbsAPI) { api.diskSize = 20 }},
 		{name: "wrong zone", configure: func(api *fakeNativeCbsAPI) { api.zone = "ap-guangzhou-4" }},
 		{name: "deadline missing", configure: func(api *fakeNativeCbsAPI) { api.omitDeadline = true }},
+		{name: "deadline invalid", configure: func(api *fakeNativeCbsAPI) { api.deadline = "not-a-deadline" }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			api := &fakeNativeCbsAPI{}
@@ -741,6 +768,15 @@ func TestTencentSDKStorageVolumeReadbackFailsClosedOnBillingOrIdentityMismatch(t
 				t.Fatalf("mismatched CBS readback must fail closed: %#v", response)
 			}
 		})
+	}
+}
+
+func TestTencentSDKSyncStorageVolumeNormalizesTencentDeadline(t *testing.T) {
+	response := (&tencentSDKClient{nativeCbsClient: &fakeNativeCbsAPI{deadline: "2026-08-16 00:00:00"}}).SyncStorageVolume(Request{
+		Storage: StorageInput{Id: "disk-storage-alpha", SizeGB: 10, Zone: "ap-guangzhou-3", DiskType: "CLOUD_BSSD"},
+	}, nil)
+	if !response.Ok || response.ProviderData["deadline"] != "2026-08-16T00:00:00Z" {
+		t.Fatalf("CBS sync deadline was not normalized: %#v", response)
 	}
 }
 
@@ -765,7 +801,7 @@ func TestTencentSDKSyncStorageVolumeReturnsOnlyExactConfirmedAbsence(t *testing.
 func TestTencentSDKRenewStorageVolumeIsManualAndIdempotentAcrossLostResponse(t *testing.T) {
 	api := &fakeNativeCbsAPI{deadline: "2026-08-16 00:00:00"}
 	client := &tencentSDKClient{nativeCbsClient: api}
-	request := Request{Storage: StorageInput{Id: "disk-storage-alpha", SizeGB: 10, Zone: "ap-guangzhou-3", DiskType: "CLOUD_BSSD", Deadline: "2026-08-16 00:00:00"}}
+	request := Request{Storage: StorageInput{Id: "disk-storage-alpha", SizeGB: 10, Zone: "ap-guangzhou-3", DiskType: "CLOUD_BSSD", Deadline: "2026-08-16T00:00:00Z"}}
 
 	first := client.RenewStorageVolume(request, nil)
 	second := client.RenewStorageVolume(request, nil)
@@ -777,13 +813,13 @@ func TestTencentSDKRenewStorageVolumeIsManualAndIdempotentAcrossLostResponse(t *
 	if stringValue(renewed.DiskId) != "disk-storage-alpha" || renewed.DiskChargePrepaid == nil || renewed.DiskChargePrepaid.Period == nil || *renewed.DiskChargePrepaid.Period != 1 || stringValue(renewed.DiskChargePrepaid.RenewFlag) != "NOTIFY_AND_MANUAL_RENEW" {
 		t.Fatalf("unexpected CBS renewal request: %#v", renewed)
 	}
-	if second.ProviderData["renewalResult"] != "already_renewed" || second.ProviderData["deadline"] != "2026-09-16 00:00:00" {
+	if second.ProviderData["renewalResult"] != "already_renewed" || second.ProviderData["deadline"] != "2026-09-16T00:00:00Z" {
 		t.Fatalf("renew replay must return exact current deadline: %#v", second)
 	}
 }
 
 func TestTencentSDKRenewComputeAllocationIsManualAndIdempotentAcrossLostResponse(t *testing.T) {
-	api := &fakeNativeCvmAPI{instanceName: "compute-alpha", expiredTime: "2026-08-16T00:00:00Z"}
+	api := &fakeNativeCvmAPI{instanceName: "compute-alpha", expiredTime: "2026-08-16T08:00:00+08:00", renewedExpiredTime: "2026-09-16T08:00:00+08:00"}
 	client := &tencentSDKClient{nativeCvmClient: api}
 	request := Request{Allocation: ComputeAllocationInput{Id: "compute-alpha", InstanceId: "ins-basic-1", Deadline: "2026-08-16T00:00:00Z"}}
 
@@ -815,6 +851,7 @@ func TestTencentSDKRenewComputeAllocationReadbackFailsClosed(t *testing.T) {
 		{name: "postpaid", configure: func(api *fakeNativeCvmAPI) { api.instanceChargeType = "POSTPAID_BY_HOUR" }},
 		{name: "auto renew", configure: func(api *fakeNativeCvmAPI) { api.renewFlag = "NOTIFY_AND_AUTO_RENEW" }},
 		{name: "deadline missing", configure: func(api *fakeNativeCvmAPI) { api.omitExpiredTime = true }},
+		{name: "deadline invalid", configure: func(api *fakeNativeCvmAPI) { api.expiredTime = "not-a-deadline" }},
 		{name: "malformed", configure: func(api *fakeNativeCvmAPI) { api.nilEnvelope = true }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -870,17 +907,23 @@ type fakeNativeVpcAPI struct {
 	omitSubnetZone          bool
 	availableIpCount        uint64
 	zone                    string
+	zones                   []string
 }
 
 func (api *fakeNativeVpcAPI) DescribeSubnets(request *vpc2017.DescribeSubnetsRequest) (*vpc2017.DescribeSubnetsResponse, error) {
 	api.describeSubnetsRequests = append(api.describeSubnetsRequests, request)
-	zone := common.StringPtr(firstNonEmpty(api.zone, "na-siliconvalley-1"))
-	if api.omitSubnetZone {
-		zone = nil
+	subnets := make([]*vpc2017.Subnet, 0, len(request.SubnetIds))
+	for index, rawID := range request.SubnetIds {
+		zoneName := firstNonEmpty(api.zone, "na-siliconvalley-1")
+		if index < len(api.zones) {
+			zoneName = api.zones[index]
+		}
+		zone := common.StringPtr(zoneName)
+		if api.omitSubnetZone {
+			zone = nil
+		}
+		subnets = append(subnets, &vpc2017.Subnet{SubnetId: rawID, Zone: zone, AvailableIpAddressCount: common.Uint64Ptr(firstNonZeroUint(api.availableIpCount, 8))})
 	}
-	subnets := []*vpc2017.Subnet{{
-		SubnetId: common.StringPtr("subnet-basic"), Zone: zone, AvailableIpAddressCount: common.Uint64Ptr(firstNonZeroUint(api.availableIpCount, 8)),
-	}}
 	if api.omitSubnet {
 		subnets = nil
 	}
@@ -964,7 +1007,7 @@ func (api *fakeNativeCvmAPI) DescribeInstances(request *cvm2017.DescribeInstance
 			expiredTime = nil
 		}
 		return &cvm2017.DescribeInstancesResponse{Response: &cvm2017.DescribeInstancesResponseParams{InstanceSet: []*cvm2017.Instance{{
-			InstanceId: common.StringPtr(firstNonEmpty(api.returnedInstanceID, stringValue(request.InstanceIds[0]))), InstanceName: common.StringPtr(firstNonEmpty(api.instanceName, "compute-alpha")),
+			InstanceId: common.StringPtr(firstNonEmpty(api.returnedInstanceID, stringValue(request.InstanceIds[0]))), InstanceName: common.StringPtr(firstNonEmpty(api.instanceName, "compute-alpha")), InstanceType: common.StringPtr(firstNonEmpty(api.instanceType, "SA5.LARGE4")),
 			PrivateIpAddresses: []*string{common.StringPtr("10.0.0.11")}, InstanceState: common.StringPtr("RUNNING"), Placement: &cvm2017.Placement{Zone: common.StringPtr(firstNonEmpty(api.zone, "ap-guangzhou-3"))},
 			InstanceChargeType: common.StringPtr(firstNonEmpty(api.instanceChargeType, "PREPAID")), RenewFlag: common.StringPtr(firstNonEmpty(api.renewFlag, "NOTIFY_AND_MANUAL_RENEW")), ExpiredTime: expiredTime,
 		}}, TotalCount: common.Int64Ptr(1), RequestId: common.StringPtr("req-verify-cvm")}}, nil
@@ -987,6 +1030,7 @@ func (api *fakeNativeCvmAPI) DescribeInstances(request *cvm2017.DescribeInstance
 			InstanceSet: []*cvm2017.Instance{{
 				InstanceId:         common.StringPtr(fmt.Sprintf("ins-basic-%d", instanceIndex)),
 				InstanceName:       common.StringPtr(fmt.Sprintf("node-basic-%d", instanceIndex)),
+				InstanceType:       common.StringPtr(firstNonEmpty(api.instanceType, "SA5.LARGE4")),
 				PrivateIpAddresses: []*string{common.StringPtr(privateIp)},
 				PublicIpAddresses:  []*string{common.StringPtr(publicIp)},
 				Placement:          &cvm2017.Placement{Zone: common.StringPtr(firstNonEmpty(api.zone, "ap-guangzhou-3"))},
@@ -1120,6 +1164,10 @@ func fakeNativeNodePoolInfo(api *fakeNativeTkeAPI) *tke2022.NativeNodePoolInfo {
 	if len(instanceTypes) == 0 {
 		instanceTypes = []string{"SA5.LARGE4"}
 	}
+	subnetIds := api.subnetIds
+	if len(subnetIds) == 0 {
+		subnetIds = []string{"subnet-basic"}
+	}
 	prepaid := &tke2022.InstanceChargePrepaid{
 		Period: common.Uint64Ptr(1), RenewFlag: common.StringPtr(firstNonEmpty(api.prepaidRenewFlag, "NOTIFY_AND_MANUAL_RENEW")),
 	}
@@ -1130,7 +1178,7 @@ func fakeNativeNodePoolInfo(api *fakeNativeTkeAPI) *tke2022.NativeNodePoolInfo {
 		prepaid = nil
 	}
 	return &tke2022.NativeNodePoolInfo{
-		Scaling: scaling, SubnetIds: []*string{common.StringPtr("subnet-basic")}, InstanceTypes: stringsToPtrs(instanceTypes), Replicas: replicas, ReadyReplicas: readyReplicas,
+		Scaling: scaling, SubnetIds: stringsToPtrs(subnetIds), InstanceTypes: stringsToPtrs(instanceTypes), Replicas: replicas, ReadyReplicas: readyReplicas,
 		EnableAutoscaling: common.BoolPtr(api.enableAutoscaling), AutoRepair: common.BoolPtr(api.autoRepair),
 		MachineType: common.StringPtr(firstNonEmpty(api.machineType, "NativeCVM")), InstanceChargeType: common.StringPtr(firstNonEmpty(api.instanceChargeType, "PREPAID")),
 		InstanceChargePrepaid: prepaid,
@@ -1170,6 +1218,37 @@ func TestTencentSDKCapacityIsReadOnlyAndFailsClosedAcrossAllThreeSignals(t *test
 	}
 	if tkeAPI.scaleNodePoolRequest != nil || tkeAPI.createNodePoolRequest != nil || tkeAPI.modifyNodePoolRequest != nil {
 		t.Fatalf("capacity probe must never mutate Tencent resources: %#v", tkeAPI)
+	}
+}
+
+func TestTencentSDKCapacityRequiresExactSingleSKUAndZone(t *testing.T) {
+	ready := int64(2)
+	for _, tc := range []struct {
+		name string
+		tke  *fakeNativeTkeAPI
+		vpc  *fakeNativeVpcAPI
+	}{
+		{
+			name: "multiple SKUs",
+			tke:  &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready, instanceTypes: []string{"SA5.LARGE4", "SA5.2XLARGE16"}},
+			vpc:  &fakeNativeVpcAPI{},
+		},
+		{
+			name: "multiple Zones",
+			tke:  &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 2, maxReplicas: 10, readyReplicas: &ready, subnetIds: []string{"subnet-a", "subnet-b"}},
+			vpc:  &fakeNativeVpcAPI{zones: []string{"na-siliconvalley-1", "na-siliconvalley-2"}},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			client := &tencentSDKClient{region: "na-siliconvalley", clusterId: "cls-123", nativeTkeClient: tc.tke, nativeCvmClient: &fakeNativeCvmAPI{}, nativeVpcClient: tc.vpc}
+			response := client.Capacity(Request{
+				Action: "capacity_preflight", PackageId: "basic", Zone: "na-siliconvalley-1",
+				Pool: ComputePoolInput{Id: "pool-basic-2c4g", InstanceType: "SA5.LARGE4", NodePoolId: "np-basic", DesiredReplicas: 5},
+			}, nil)
+			if response.Ok {
+				t.Fatalf("non-exact pool must fail closed: %#v", response)
+			}
+		})
 	}
 }
 
@@ -1317,7 +1396,7 @@ func (api *fakeNativeTkeAPI) DescribeClusterMachines(request *tke2022.DescribeCl
 			MachineName:  common.StringPtr(machineName),
 			MachineState: common.StringPtr("Running"),
 			LanIP:        common.StringPtr(lanIP),
-			InstanceType: common.StringPtr("SA5.LARGE4"),
+			InstanceType: common.StringPtr(firstNonEmpty(api.machineInstanceType, "SA5.LARGE4")),
 		})
 	}
 	if api.duplicateMachineName && clusterMachineNodePoolIdFilterValue(request) == "" && len(machines) > 0 {
@@ -1492,6 +1571,25 @@ func TestTencentSDKClientCreateAllocationScalesExistingPackageNodePool(t *testin
 	}
 }
 
+func TestTencentSDKClientCreateAllocationUsesExactProPoolAndSKU(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{
+		nodePoolId: "np-pro", replicas: 1, labelPoolId: "pool-pro-8c16g", labelPackageId: "pro", labelInstanceType: "SA5.2XLARGE16",
+		instanceTypes: []string{"SA5.2XLARGE16"}, machineInstanceType: "SA5.2XLARGE16",
+	}
+	client := newFakeTencentSDKClient(tkeAPI)
+	client.nativeCvmClient = &fakeNativeCvmAPI{instanceType: "SA5.2XLARGE16", expiredTime: "2026-08-16T08:00:00+08:00"}
+
+	response := client.CreateComputeAllocation(Request{
+		AccountId: "pi-pro", UserId: "usr-pro", PackageId: "pro",
+		Pool:       ComputePoolInput{Id: "pool-pro-8c16g", InstanceType: "SA5.2XLARGE16", NodePoolId: "np-pro"},
+		Allocation: ComputeAllocationInput{Id: "compute-pro"},
+	}, map[string]string{})
+
+	if !response.Ok || response.NodePoolId != "np-pro" || response.ProviderData["instanceType"] != "SA5.2XLARGE16" || response.ProviderData["deadline"] != "2026-08-16T00:00:00Z" || tkeAPI.scaleNodePoolRequest == nil || stringValue(tkeAPI.scaleNodePoolRequest.NodePoolId) != "np-pro" {
+		t.Fatalf("Pro create did not preserve exact pool/SKU: response=%#v scale=%#v", response, tkeAPI.scaleNodePoolRequest)
+	}
+}
+
 func TestTencentSDKClientCreateAllocationRequiresCvmIdentityWithoutTkeFallback(t *testing.T) {
 	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1}
 	client := newFakeTencentSDKClient(tkeAPI)
@@ -1605,13 +1703,13 @@ func TestTencentSDKClientReconcileRejectsIncompleteCvmBillingFacts(t *testing.T)
 }
 
 func TestTencentSDKClientSyncRequiresOwnedPrepaidCvmBillingFacts(t *testing.T) {
-	request := Request{AccountId: "acct-alpha", Pool: ComputePoolInput{Id: "basic", NodePoolId: "np-basic"}, Allocation: ComputeAllocationInput{
+	request := Request{AccountId: "acct-alpha", Pool: ComputePoolInput{Id: "basic", NodePoolId: "np-basic", InstanceType: "SA5.LARGE4"}, Allocation: ComputeAllocationInput{
 		Id: "compute-alpha", InstanceId: "ins-basic-1", MachineName: "node-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.11",
 	}}
 	client := newFakeTencentSDKClient(&fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1})
-	client.nativeCvmClient = &fakeNativeCvmAPI{instanceName: "compute-alpha"}
+	client.nativeCvmClient = &fakeNativeCvmAPI{instanceName: "compute-alpha", expiredTime: "2026-08-16T08:00:00+08:00"}
 	response := client.SyncComputeAllocation(request, nil)
-	if !response.Ok || response.ProviderData["chargeType"] != "PREPAID" || response.ProviderData["renewFlag"] != "NOTIFY_AND_MANUAL_RENEW" || response.ProviderData["deadline"] == "" || response.ProviderData["zone"] != "ap-guangzhou-3" {
+	if !response.Ok || response.InstanceType != "SA5.LARGE4" || response.ProviderData["instanceType"] != "SA5.LARGE4" || response.ProviderData["chargeType"] != "PREPAID" || response.ProviderData["renewFlag"] != "NOTIFY_AND_MANUAL_RENEW" || response.ProviderData["deadline"] != "2026-08-16T00:00:00Z" || response.ProviderData["zone"] != "ap-guangzhou-3" {
 		t.Fatalf("sync must return exact owned CVM billing facts: %#v", response)
 	}
 	for _, tc := range []struct {
@@ -1632,6 +1730,19 @@ func TestTencentSDKClientSyncRequiresOwnedPrepaidCvmBillingFacts(t *testing.T) {
 				t.Fatalf("invalid CVM sync must fail closed: %#v", got)
 			}
 		})
+	}
+}
+
+func TestTencentSDKClientSyncRejectsWrongSelfConsistentInstanceType(t *testing.T) {
+	request := Request{AccountId: "acct-alpha", Pool: ComputePoolInput{Id: "basic", NodePoolId: "np-basic", InstanceType: "SA5.LARGE4"}, Allocation: ComputeAllocationInput{
+		Id: "compute-alpha", InstanceId: "ins-basic-1", MachineName: "node-basic-1", NodeName: "10.0.0.11", PrivateIp: "10.0.0.11",
+	}}
+	client := newFakeTencentSDKClient(&fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, machineInstanceType: "SA5.2XLARGE16"})
+	client.nativeCvmClient = &fakeNativeCvmAPI{instanceName: "compute-alpha", instanceType: "SA5.2XLARGE16"}
+
+	response := client.SyncComputeAllocation(request, nil)
+	if response.Ok || response.ErrorCode != "compute_instance_type_mismatch" {
+		t.Fatalf("wrong but self-consistent SKU must fail exact package claim: %#v", response)
 	}
 }
 
@@ -1841,6 +1952,7 @@ func TestTencentSDKTagComputeMachineRejectsMalformedCVMReadback(t *testing.T) {
 func TestTencentSDKClientReconcileEvidence(t *testing.T) {
 	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", labelPoolId: "basic"}
 	client := newFakeTencentSDKClient(tkeAPI)
+	client.nativeCvmClient = &fakeNativeCvmAPI{expiredTime: "2026-08-16T08:00:00+08:00"}
 
 	response := client.ReconcileComputePool(Request{
 		PackageId: "basic",
@@ -1862,6 +1974,9 @@ func TestTencentSDKClientReconcileEvidence(t *testing.T) {
 		if response.ProviderData[key] != value {
 			t.Fatalf("providerData[%q] = %q, want %q: %#v", key, response.ProviderData[key], value, response.ProviderData)
 		}
+	}
+	if len(response.Machines) != 1 || response.Machines[0].Deadline != "2026-08-16T00:00:00Z" {
+		t.Fatalf("reconcile deadline was not normalized: %#v", response.Machines)
 	}
 }
 
@@ -2427,7 +2542,7 @@ func assertProviderTruthReadOnly(t *testing.T, tkeAPI *fakeNativeTkeAPI, cvmAPI 
 
 func TestTencentSDKProviderTruthReturnsExactPresentIdentityWithoutMutation(t *testing.T) {
 	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 1, clusterInstanceID: "node-basic-1"}
-	cvmAPI := &fakeNativeCvmAPI{instanceName: "compute-alpha"}
+	cvmAPI := &fakeNativeCvmAPI{instanceName: "compute-alpha", expiredTime: "2026-08-16T08:00:00+08:00"}
 	cbsAPI := &fakeNativeCbsAPI{}
 	client := newProviderTruthClient(tkeAPI, cvmAPI)
 	client.nativeCbsClient = cbsAPI
@@ -2443,7 +2558,7 @@ func TestTencentSDKProviderTruthReturnsExactPresentIdentityWithoutMutation(t *te
 	if response.StoragePresent == nil || !*response.StoragePresent || response.CBSStatus != "ATTACHED" || response.ProviderData["storagePresent"] != "true" || response.ProviderData["cbsStatus"] != "ATTACHED" {
 		t.Fatalf("present truth lost exact CBS state: %#v", response)
 	}
-	if response.ProviderData["chargeType"] != "PREPAID" || response.ProviderData["renewFlag"] != "NOTIFY_AND_MANUAL_RENEW" || response.ProviderData["deadline"] == "" || response.ProviderData["zone"] != "ap-guangzhou-3" {
+	if response.ProviderData["chargeType"] != "PREPAID" || response.ProviderData["renewFlag"] != "NOTIFY_AND_MANUAL_RENEW" || response.ProviderData["deadline"] != "2026-08-16T00:00:00Z" || response.ProviderData["zone"] != "ap-guangzhou-3" || response.ProviderData["storageDeadline"] != "2026-08-16T00:00:00Z" {
 		t.Fatalf("provider truth lost exact CVM billing facts: %#v", response.ProviderData)
 	}
 	if len(cbsAPI.describeDisksRequests) != 1 || len(cbsAPI.describeDisksRequests[0].DiskIds) != 1 || stringValue(cbsAPI.describeDisksRequests[0].DiskIds[0]) != "disk-storage-alpha" {
@@ -2462,6 +2577,7 @@ func TestTencentSDKProviderTruthReturnsAbsentOnlyWhenEveryExactIdentityIsAbsent(
 	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 0}
 	cvmAPI := &fakeNativeCvmAPI{empty: true}
 	client := newProviderTruthClient(tkeAPI, cvmAPI)
+	client.nativeCbsClient = &fakeNativeCbsAPI{empty: true}
 
 	response := client.ProviderTruth(providerTruthRequest(), nil)
 
@@ -2470,6 +2586,18 @@ func TestTencentSDKProviderTruthReturnsAbsentOnlyWhenEveryExactIdentityIsAbsent(
 	}
 	assertProviderTruthDescribeOnly(t, tkeAPI.calls)
 	assertProviderTruthReadOnly(t, tkeAPI, cvmAPI)
+}
+
+func TestTencentSDKProviderTruthDoesNotReturnAbsentWhileCBSExists(t *testing.T) {
+	tkeAPI := &fakeNativeTkeAPI{nodePoolId: "np-basic", replicas: 0}
+	cvmAPI := &fakeNativeCvmAPI{empty: true}
+	client := newProviderTruthClient(tkeAPI, cvmAPI)
+
+	response := client.ProviderTruth(providerTruthRequest(), nil)
+
+	if response.Ok || response.Status == "absent" || response.ProviderData["storagePresent"] != "true" || response.ErrorCode != "provider_truth_partial_identity" {
+		t.Fatalf("attached CBS must prevent confirmed absence: %#v", response)
+	}
 }
 
 func TestTencentSDKProviderTruthTreatsAccountAsCorrelationOnly(t *testing.T) {

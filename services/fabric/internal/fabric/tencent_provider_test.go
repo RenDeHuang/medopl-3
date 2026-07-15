@@ -31,6 +31,7 @@ func TestTKENodeSelectorPrefersClaimedNodeHostname(t *testing.T) {
 
 func TestTencentProviderMonthlyPreflightUsesExplicitReadOnlyProviderPaths(t *testing.T) {
 	t.Setenv("OPL_BASIC_COMPUTE_NODE_POOL_ID", "np-basic")
+	t.Setenv("OPL_PRO_COMPUTE_NODE_POOL_ID", "np-pro")
 	for _, tc := range []struct {
 		name  string
 		input MonthlyPreflightInput
@@ -47,6 +48,19 @@ func TestTencentProviderMonthlyPreflightUsesExplicitReadOnlyProviderPaths(t *tes
 			reply: provisionerResponse{
 				OK: true, Status: "ready", NodePoolID: "np-basic", InstanceType: "SA5.MEDIUM4", InstanceAvailable: true, Zones: []string{"na-siliconvalley-1"},
 				ProviderPriceCNY: 142.91, ProviderRequestIDs: map[string]string{"nodePool": "req-pool", "subnets": "req-subnets", "availability": "req-capacity"},
+				ProviderData: map[string]string{"chargeType": "PREPAID", "periodMonths": "1", "renewFlag": "NOTIFY_AND_MANUAL_RENEW", "zone": "na-siliconvalley-1"},
+			},
+		},
+		{
+			name: "pro compute", input: MonthlyPreflightInput{ResourceType: "compute", PackageID: "pro", Zone: "na-siliconvalley-1"},
+			check: func(t *testing.T, request provisionerRequest) {
+				if request.Action != "capacity_preflight" || request.PackageID != "pro" || request.Zone != "na-siliconvalley-1" || request.Pool.ID != "pro" || request.Pool.NodePoolID != "np-pro" || request.Pool.InstanceType != "SA5.2XLARGE16" || request.Pool.DesiredReplicas != 1 {
+					t.Fatalf("Pro compute preflight request = %#v", request)
+				}
+			},
+			reply: provisionerResponse{
+				OK: true, Status: "ready", NodePoolID: "np-pro", InstanceType: "SA5.2XLARGE16", InstanceAvailable: true, Zones: []string{"na-siliconvalley-1"},
+				ProviderPriceCNY: 571.64, ProviderRequestIDs: map[string]string{"nodePool": "req-pro-pool", "subnets": "req-pro-subnets", "availability": "req-pro-capacity"},
 				ProviderData: map[string]string{"chargeType": "PREPAID", "periodMonths": "1", "renewFlag": "NOTIFY_AND_MANUAL_RENEW", "zone": "na-siliconvalley-1"},
 			},
 		},
@@ -84,9 +98,12 @@ func TestTencentProviderMonthlyPreflightUsesExplicitReadOnlyProviderPaths(t *tes
 func TestSyncComputeAllocationRestoresClaimedMachineSelector(t *testing.T) {
 	provider := NewTencentProvider()
 	provider.provision = func(_ context.Context, request provisionerRequest) (provisionerResponse, error) {
+		if request.Pool.InstanceType != "SA5.MEDIUM4" {
+			t.Fatalf("sync request missing exact package SKU: %#v", request.Pool)
+		}
 		return provisionerResponse{
 			OK: true, Status: "running", InstanceID: "np-basic-2", NodeName: "10.0.0.8",
-			ProviderData: map[string]string{"machineName": "np-basic-2"},
+			InstanceType: "SA5.MEDIUM4", ProviderData: map[string]string{"machineName": "np-basic-2", "instanceType": "SA5.MEDIUM4"},
 		}, nil
 	}
 
@@ -94,8 +111,24 @@ func TestSyncComputeAllocationRestoresClaimedMachineSelector(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if allocation.NodeSelector["kubernetes.io/hostname"] != "10.0.0.8" {
+	if allocation.NodeSelector["kubernetes.io/hostname"] != "10.0.0.8" || allocation.ProviderData["instanceType"] != "SA5.MEDIUM4" {
 		t.Fatalf("synced selector = %#v", allocation.NodeSelector)
+	}
+}
+
+func TestSyncComputeAllocationPreservesPaidIdentityWhenProviderReadbackFails(t *testing.T) {
+	provider := NewTencentProvider()
+	provider.provision = func(_ context.Context, request provisionerRequest) (provisionerResponse, error) {
+		if request.Pool.InstanceType != "SA5.MEDIUM4" {
+			t.Fatalf("sync request missing exact package SKU: %#v", request.Pool)
+		}
+		return provisionerResponse{OK: false, ErrorCode: "compute_provider_partial_identity", ProviderRequestID: "req-sync", ProviderData: map[string]string{"instanceType": "SA5.MEDIUM4"}}, nil
+	}
+	input := ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", PackageID: "basic", NodePoolID: "np-basic", MachineName: "machine-alpha", InstanceID: "ins-alpha", CVMInstanceID: "ins-alpha", NodeName: "node-alpha", Deadline: "2026-08-16T00:00:00Z"}
+
+	allocation, err := provider.SyncComputeAllocation(context.Background(), input)
+	if err == nil || allocation.ID != input.ID || allocation.InstanceID != input.InstanceID || allocation.MachineName != input.MachineName || allocation.Deadline != input.Deadline || allocation.ProviderRequestID != "req-sync" {
+		t.Fatalf("failed sync lost paid identity: allocation=%#v err=%v", allocation, err)
 	}
 }
 
@@ -755,6 +788,20 @@ func TestTencentProviderPreservesCBSFactsWhenStaticBindingFails(t *testing.T) {
 	volume, err := provider.CreateStorageVolume(context.Background(), StorageVolumeInput{ID: "storage-alpha", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", Zone: "ap-guangzhou-3", SizeGB: 10})
 	if err == nil || volume.ProviderResourceID != "disk-storage-alpha" || volume.ProviderData["diskChargeType"] != "PREPAID" || volume.RenewFlag != "NOTIFY_AND_MANUAL_RENEW" || volume.Deadline == "" || volume.Zone != "ap-guangzhou-3" {
 		t.Fatalf("partial CBS result lost provider facts: volume=%#v err=%v", volume, err)
+	}
+}
+
+func TestTencentProviderPreservesCBSIdentityFromFailedCreateReadback(t *testing.T) {
+	provider := NewTencentProvider()
+	provider.provision = func(context.Context, provisionerRequest) (provisionerResponse, error) {
+		return provisionerResponse{OK: false, StorageVolumeID: "disk-storage-alpha", ProviderRequestID: "req-create-cbs", ErrorCode: "tencent_cbs_readback_mismatch"}, nil
+	}
+
+	volume, err := provider.CreateStorageVolume(context.Background(), StorageVolumeInput{
+		ID: "storage-alpha", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", Zone: "ap-guangzhou-3", SizeGB: 10,
+	})
+	if err == nil || volume.ID != "storage-alpha" || volume.ProviderResourceID != "disk-storage-alpha" || volume.ProviderRequestID != "req-create-cbs" {
+		t.Fatalf("failed create readback lost CBS identity: volume=%#v err=%v", volume, err)
 	}
 }
 

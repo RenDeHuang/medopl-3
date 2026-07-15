@@ -250,11 +250,12 @@ func (p *TencentProvider) SyncComputeAllocation(ctx context.Context, allocation 
 	if allocation.ID == "" {
 		return ComputeAllocation{}, fmt.Errorf("compute_allocation_id_required")
 	}
+	plan := packagePlan(firstNonEmpty(allocation.PackageID, "basic"))
 	response, err := p.provision(ctx, provisionerRequest{
 		Action:    "sync_compute_allocation",
 		AccountID: allocation.AccountID,
 		PackageID: allocation.PackageID,
-		Pool:      provisionerPool{ID: allocation.PoolID, NodePoolID: allocation.NodePoolID},
+		Pool:      provisionerPool{ID: allocation.PoolID, NodePoolID: allocation.NodePoolID, InstanceType: plan.InstanceType},
 		Allocation: provisionerAllocation{
 			ID:          allocation.ID,
 			InstanceID:  firstNonEmpty(allocation.InstanceID, allocation.CVMInstanceID),
@@ -265,10 +266,7 @@ func (p *TencentProvider) SyncComputeAllocation(ctx context.Context, allocation 
 		},
 	})
 	if err != nil {
-		return ComputeAllocation{}, err
-	}
-	if !response.OK {
-		return ComputeAllocation{}, provisionerError(response)
+		return allocation, err
 	}
 	allocation.Status = firstNonEmpty(response.Status, allocation.Status)
 	allocation.Provider = firstNonEmpty(allocation.Provider, "tencent-tke")
@@ -286,10 +284,17 @@ func (p *TencentProvider) SyncComputeAllocation(ctx context.Context, allocation 
 	for key, value := range response.ProviderData {
 		allocation.ProviderData[key] = value
 	}
+	allocation.ProviderData["instanceType"] = firstNonEmpty(response.InstanceType, allocation.ProviderData["instanceType"])
 	allocation.ChargeType = firstNonEmpty(response.ProviderData["chargeType"], allocation.ChargeType)
 	allocation.RenewFlag = firstNonEmpty(response.ProviderData["renewFlag"], allocation.RenewFlag)
 	allocation.Deadline = firstNonEmpty(response.ProviderData["deadline"], allocation.Deadline)
 	allocation.NodeSelector = tkeNodeSelector(allocation.ProviderData, allocation.NodeName)
+	if !response.OK {
+		return allocation, provisionerError(response)
+	}
+	if response.InstanceType != plan.InstanceType || response.ProviderData["instanceType"] != plan.InstanceType {
+		return allocation, fmt.Errorf("compute_instance_type_mismatch")
+	}
 	return allocation, nil
 }
 
@@ -383,26 +388,29 @@ func (p *TencentProvider) CreateStorageVolume(ctx context.Context, input Storage
 	name := k8sName(id)
 	tags := oplCostTags(input.AccountID, input.WorkspaceID, id, input.OperationID)
 	diskType := firstNonEmpty(os.Getenv("TENCENT_CBS_DISK_TYPE"), "CLOUD_BSSD")
+	volume := StorageVolume{
+		ID: id, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, Status: "pending", Provider: "tencent-tke",
+		SizeGB: input.SizeGB, DiskType: diskType, Zone: input.Zone, CostTags: tags, CreatedAt: now,
+		ProviderData: map[string]string{"pvName": name + "-pv", "pvcName": name + "-data"},
+	}
 	response, err := p.provision(ctx, provisionerRequest{
 		Action: "create_storage_volume", AccountID: input.AccountID, Tags: tags,
 		Storage: provisionerStorage{ID: id, SizeGB: uint64(input.SizeGB), Zone: input.Zone, DiskType: diskType},
 	})
 	if err != nil {
-		return StorageVolume{}, err
+		return volume, err
 	}
-	if !response.OK {
-		return StorageVolume{}, provisionerError(response)
-	}
-	if !strings.HasPrefix(response.StorageVolumeID, "disk-") {
-		return StorageVolume{}, fmt.Errorf("storage_cbs_identity_required")
-	}
-	volume := StorageVolume{
-		ID: id, AccountID: input.AccountID, WorkspaceID: input.WorkspaceID, Status: "pending", Provider: "tencent-tke",
-		ProviderResourceID: response.StorageVolumeID, ProviderRequestID: response.ProviderRequestID, SizeGB: input.SizeGB,
-		DiskType: diskType, Zone: input.Zone, CostTags: tags, CreatedAt: now,
-		ProviderData: map[string]string{"pvName": name + "-pv", "pvcName": name + "-data"},
+	volume.ProviderRequestID = response.ProviderRequestID
+	if strings.HasPrefix(response.StorageVolumeID, "disk-") {
+		volume.ProviderResourceID = response.StorageVolumeID
 	}
 	applyStorageReadback(&volume, response)
+	if !response.OK {
+		return volume, provisionerError(response)
+	}
+	if volume.ProviderResourceID == "" {
+		return volume, fmt.Errorf("storage_cbs_identity_required")
+	}
 	if isCBSProviderReady(volume.CBSStatus) {
 		if _, err := p.kubectl(ctx, []string{"apply", "-f", "-"}, staticCBSManifest(volume)); err != nil {
 			return volume, err
@@ -419,12 +427,15 @@ func (p *TencentProvider) SyncStorageVolume(ctx context.Context, volume StorageV
 		ID: volume.ProviderResourceID, SizeGB: uint64(volume.SizeGB), Zone: volume.Zone, DiskType: volume.DiskType, Deadline: volume.Deadline,
 	}})
 	if err != nil {
-		return StorageVolume{}, err
+		return volume, err
 	}
-	if !response.OK {
-		return StorageVolume{}, provisionerError(response)
+	if strings.HasPrefix(response.StorageVolumeID, "disk-") {
+		volume.ProviderResourceID = response.StorageVolumeID
 	}
 	applyStorageReadback(&volume, response)
+	if !response.OK {
+		return volume, provisionerError(response)
+	}
 	if response.Status == "external_deleted" {
 		volume.Status = "external_deleted"
 		return volume, nil
@@ -434,7 +445,7 @@ func (p *TencentProvider) SyncStorageVolume(ctx context.Context, volume StorageV
 		return volume, nil
 	}
 	if _, err := p.kubectl(ctx, []string{"apply", "-f", "-"}, staticCBSManifest(volume)); err != nil {
-		return StorageVolume{}, err
+		return volume, err
 	}
 	pvc := storagePVCName(volume)
 	raw, err := p.kubectl(ctx, []string{"get", "pvc/" + pvc, "-o", "json"}, nil)
@@ -443,7 +454,7 @@ func (p *TencentProvider) SyncStorageVolume(ctx context.Context, volume StorageV
 			volume.Status = "pending"
 			return volume, nil
 		}
-		return StorageVolume{}, err
+		return volume, err
 	}
 	items := kubectlItems(raw)
 	pvcResource := findK8s(items, "PersistentVolumeClaim", pvc)
