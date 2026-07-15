@@ -1,9 +1,9 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "owner": "OPL Fabric",
-  "purpose": "Deployment workflow, production image, TKE handoff, and paid production verification contract.",
+  "purpose": "Deployment workflow, production image, TKE handoff, and the status of production verification.",
   "state": "current",
-  "machineBoundary": "GitHub workflow structure, runner isolation, deploy-time env sources, secret handling, image release, and one paid verifier.",
+  "machineBoundary": "GitHub workflow structure, runner isolation, deploy-time env sources, secret handling, image release, and the blocked legacy paid verifier.",
   "lifecycle": {
     "type": "long_term_contract",
     "removalCondition": "Replace only with a newer current contract for the same boundary."
@@ -165,6 +165,10 @@
   "productionVerificationWorkflow": {
     "file": ".github/workflows/verify-production-chain.yml",
     "job": "verify",
+    "launchStatus": "blocked",
+    "releaseGate": false,
+    "replacement": "reusable_prepaid_verification_slot",
+    "blockedReason": "The legacy workflow charges a real monthly product and creates then deletes Tencent resources on every run.",
     "runner": [
       "ubuntu-latest"
     ],

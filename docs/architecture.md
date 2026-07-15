@@ -52,10 +52,15 @@ dual write, historical billing schema, or old-state importer.
 
 ## Resource And Billing State
 
-Fabric preparation happens before the external charge. Control Plane persists a
-stable billing operation and redeem code before side effects. Only a confirmed
-Sub2API adjustment activates the monthly entitlement. Ledger receipt failure is
-retryable and does not reverse a confirmed charge.
+The approved launch path must reserve the exact monthly amount in Sub2API before
+Fabric mutates provider resources, then claim every prepaid resource and capture
+the reservation before activating the entitlement. Partial or ambiguous provider
+results keep the reservation frozen for operator review. Ledger receipt failure
+is retryable and never repeats a financial or provider side effect.
+
+The current implementation still prepares Fabric before a direct Sub2API balance
+adjustment. That path is an explicit delivery gap, not an approved settlement
+protocol; `docs/invariants.md` and the launch freeze contract define its replacement.
 
 All attachment and Workspace runtime operations require an active entitlement.
 Compute expiration destroys compute; storage expiration retains data but blocks
@@ -116,8 +121,9 @@ security-model change is authorized by this document.
 
 Production runs Control Plane, Fabric, and Ledger as separate Kubernetes
 Deployments. Secrets are Kubernetes Secret references, configuration is a shared
-ConfigMap, and the deploy workflow waits for all three rollouts. The single paid
-production verifier uses the public Console product chain.
+ConfigMap, and the deploy workflow waits for all three rollouts. The legacy paid
+production verifier is blocked by `docs/invariants.md` and is not a release gate;
+its approved replacement reuses a fixed prepaid Verification Slot.
 
 Control Plane remains one Pod. Its opt-in PostgreSQL capacity gate covers 1,000
 accounts/resources, 100 concurrent Console requests, 20 concurrent resource

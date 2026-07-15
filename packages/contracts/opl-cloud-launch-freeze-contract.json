@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 1,
+  "owner": "OPL Platform Architecture",
+  "purpose": "Freeze the approved launch business, billing, provider-procurement, verification, and evidence boundaries without claiming unfinished slides are delivered.",
+  "state": "current",
+  "machineBoundary": "Four product owners, customer products, monthly settlement, prepaid Tencent procurement, reusable verification, and per-slide completion evidence.",
+  "lifecycle": {
+    "type": "long_term_contract",
+    "removalCondition": "Replace only with a newer approved launch freeze and matching contract tests."
+  },
+  "architectureAuthority": {
+    "repository": "https://github.com/gaofeng21cn/one-person-lab-cloud",
+    "branch": "main",
+    "reviewedRevision": "fdeb0e4df3e4905fb1c3551337b9dfda65bb2119",
+    "rule": "The upstream repository owns target product boundaries; this contract owns the current implementation choices and delivery gaps."
+  },
+  "layers": {
+    "console": {
+      "product": "OPL Console",
+      "owns": [
+        "account-to-Sub2API mapping",
+        "service plans and quotes",
+        "monthly settlement orchestration",
+        "entitlements, renewal, expiry, and operator review"
+      ],
+      "localWalletForbidden": true,
+      "doesNotOwn": [
+        "Sub2API keys or request usage",
+        "Tencent provider resources",
+        "append-only evidence truth"
+      ]
+    },
+    "fabric": {
+      "product": "OPL Fabric",
+      "owns": [
+        "prepaid CVM and CBS procurement",
+        "provider capacity and resource facts",
+        "resource claim, attachment, and Workspace runtime"
+      ],
+      "billingStateOwner": false,
+      "doesNotOwn": [
+        "spendable balance",
+        "monthly settlement",
+        "Ledger evidence"
+      ]
+    },
+    "ledger": {
+      "product": "OPL Ledger",
+      "owns": [
+        "reservation, fulfillment, capture, release, renewal, and verification receipts",
+        "provider and Gateway evidence references",
+        "review and continuation references"
+      ],
+      "spendableBalanceOwner": false,
+      "secretValuesForbidden": true
+    },
+    "gateway": {
+      "product": "OPL Gateway",
+      "backend": "Sub2API",
+      "owns": [
+        "spendable USD balance",
+        "balance reservation, capture, and release",
+        "API keys, model routing, and request usage"
+      ],
+      "spendableBalanceOwner": true,
+      "deployment": "external CVM",
+      "requestUsageBilling": "native Sub2API metering"
+    }
+  },
+  "customerProducts": {
+    "basic": {
+      "name": "Basic",
+      "resources": {
+        "cpu": 2,
+        "memoryGb": 4
+      },
+      "billingUnit": "calendar_month",
+      "currentAvailability": "available"
+    },
+    "pro": {
+      "name": "Pro",
+      "resources": {
+        "cpu": 8,
+        "memoryGb": 16
+      },
+      "billingUnit": "calendar_month",
+      "currentAvailability": "implementation_required"
+    }
+  },
+  "monthlySettlement": {
+    "balanceOwner": "Sub2API",
+    "reservationOwner": "Sub2API",
+    "controlPlaneLocalHoldForbidden": true,
+    "protocol": [
+      "reserve",
+      "provision",
+      "claim",
+      "capture"
+    ],
+    "captureRule": "Capture exactly once only after Fabric reads back every required provider resource ID, PREPAID charge type, billing period, and ownership tag.",
+    "failureBeforeProviderCost": "release",
+    "releaseRule": "Release only after Fabric proves that no billable provider resource exists or that cancellation and provider refund completed.",
+    "partialOrUnknownProviderResult": "keep_reserved_and_manual_review",
+    "ambiguousProviderResult": "keep_reserved_and_manual_review",
+    "retryRule": "Reserve, provider mutation, claim, capture, and release each use stable operation-scoped idempotency identities.",
+    "doubleDebitForbidden": true,
+    "currentImplementation": "Direct negative Sub2API adjustment after Fabric prepare; hold, capture, and release APIs are not integrated."
+  },
+  "providerProcurement": {
+    "provider": "Tencent Cloud",
+    "resources": [
+      "CVM",
+      "CBS"
+    ],
+    "chargeType": "PREPAID",
+    "periodMonths": 1,
+    "renewFlag": "NOTIFY_AND_MANUAL_RENEW",
+    "forbiddenChargeTypes": [
+      "POSTPAID_BY_HOUR"
+    ],
+    "capacityCheck": "Read-only prepaid inventory and quota check before reservation; it must not create a resource.",
+    "renewalOrder": [
+      "capacity_preflight",
+      "reserve",
+      "provider_renew",
+      "claim",
+      "capture",
+      "extend_entitlement"
+    ],
+    "customerProductRule": "Provider SKU may vary by approved environment, but it must satisfy the customer product CPU and memory contract.",
+    "currentImplementation": "Fabric currently requires POSTPAID_BY_HOUR CVM pools and does not prove prepaid CBS."
+  },
+  "verification": {
+    "slot": {
+      "id": "verification-slot-01",
+      "computeInstanceType": "SA5.MEDIUM2",
+      "resources": {
+        "cpu": 2,
+        "memoryGb": 2,
+        "cbsGb": 10
+      },
+      "customerProduct": false,
+      "chargeType": "PREPAID",
+      "periodMonths": 1,
+      "renewFlag": "NOTIFY_AND_MANUAL_RENEW",
+      "reuseForBillingPeriod": true,
+      "concurrency": 1
+    },
+    "perRunTencentPurchase": false,
+    "monthlyBillingBackend": "fake",
+    "gatewayRequest": "real_dedicated_test_key",
+    "providerResourcesDeletedPerRun": [],
+    "perRunCleanup": [
+      "test Workspace Deployment, Service, and Secret",
+      "test-only data under the verification path",
+      "isolated Control Plane, Fabric, and Ledger rows"
+    ],
+    "providerAcceptance": "Explicit manual run only when the slot is first purchased, renewed, or prepaid procurement code changes.",
+    "productionSmoke": "Read-only service and existing-resource checks; no monthly charge and no provider mutation.",
+    "currentImplementation": "The production verifier spends real monthly balance and creates then deletes provider resources; it is forbidden for launch verification."
+  },
+  "slides": [
+    {
+      "id": "offer_identity",
+      "business": "A mapped customer signs in and sees the approved Basic and Pro service-plan definitions without exposing an internal verification SKU.",
+      "owners": ["console", "gateway"],
+      "currentState": "Basic login and mapping are implemented; Pro was removed from the active catalog and requires restoration and evidence.",
+      "requiredDeliverables": ["account mapping contract", "Basic 2c4g definition", "Pro 8c16g definition", "role and tenant isolation"],
+      "completionEvidence": ["contract tests", "tenant tests", "deployed login and mapped-account readback"]
+    },
+    {
+      "id": "wallet_quote",
+      "business": "The customer sees the live Sub2API wallet and an exact monthly resource quote before any reservation or provider mutation.",
+      "owners": ["console", "gateway"],
+      "currentState": "Live balance, unavailable-state degradation, Basic quote, and integer pricing exist; Pro quote is not active.",
+      "requiredDeliverables": ["live balance projection", "integer quote", "billing period and retention disclosure", "no local wallet"],
+      "completionEvidence": ["Sub2API read contract test", "quote contract test", "Console unavailable-balance UI test"]
+    },
+    {
+      "id": "balance_reservation",
+      "business": "The monthly amount is atomically reserved in Sub2API so concurrent Gateway usage cannot spend it while resources open.",
+      "owners": ["console", "gateway", "ledger"],
+      "currentState": "Missing: OPL Cloud integrates only direct balance adjustment; no generic Sub2API reserve/capture/release client exists.",
+      "requiredDeliverables": ["Sub2API reserve API", "stable reservation ID", "reserved balance readback", "reservation receipt"],
+      "completionEvidence": ["concurrency test", "same-key replay test", "insufficient-balance test", "live test-account hold and release readback"]
+    },
+    {
+      "id": "prepaid_fulfillment",
+      "business": "Fabric opens one-month prepaid CVM and CBS resources after reservation without exposing provider billing details as customer products.",
+      "owners": ["fabric", "console"],
+      "currentState": "Blocked: CVM creation, capacity checks, and tests require POSTPAID_BY_HOUR; prepaid CBS is unproven.",
+      "requiredDeliverables": ["PREPAID CVM period 1", "PREPAID CBS period 1", "manual renew flag", "prepaid capacity preflight", "stable provider operation ID"],
+      "completionEvidence": ["Tencent request-shape tests", "provider readback", "CVM and CBS billing-type evidence", "no duplicate provider purchase under replay"]
+    },
+    {
+      "id": "claim_and_capture",
+      "business": "The reserved amount settles only after all prepaid resources are identified and assigned to the customer purchase.",
+      "owners": ["fabric", "console", "gateway", "ledger"],
+      "currentState": "Missing: direct adjustment activates entitlement without a provider claim and capture protocol.",
+      "requiredDeliverables": ["resource claim", "capture API", "partial-fulfillment state", "release gate", "purchase receipt"],
+      "completionEvidence": ["claim identity test", "capture replay test", "confirmed-zero-resource release test", "partial provider failure manual-review test"]
+    },
+    {
+      "id": "workspace_access",
+      "business": "The customer opens the assigned Workspace only after active entitlement and real runtime readiness, then authenticates to the workbench.",
+      "owners": ["console", "fabric", "ledger"],
+      "currentState": "Runtime readiness gating and password access are implemented; production authenticated browser and WebSocket evidence remain required.",
+      "requiredDeliverables": ["runtime readiness", "password authentication", "secret rotation", "WebSocket proxy", "immutable Workspace image"],
+      "completionEvidence": ["authenticated browser screenshot", "post-login assertion", "WebSocket 101 evidence", "image digest readback"]
+    },
+    {
+      "id": "gateway_usage",
+      "business": "The Workspace uses a dedicated Sub2API test or customer key for model requests while Sub2API remains usage and key truth.",
+      "owners": ["gateway", "console", "ledger"],
+      "currentState": "Sub2API balance and external portal are connected; a Workspace model request and attributed usage readback are not proven.",
+      "requiredDeliverables": ["secret-file key delivery", "Sub2API model endpoint configuration", "request ID", "usage owner reference"],
+      "completionEvidence": ["real dedicated-key model response", "Sub2API usage readback", "no key in Console or Ledger evidence"]
+    },
+    {
+      "id": "renewal_expiry_recovery",
+      "business": "Customer renewal reserves funds before manual Tencent renewal; failure never double-charges, double-renews, or silently releases an ambiguous reservation.",
+      "owners": ["console", "fabric", "gateway", "ledger"],
+      "currentState": "Customer entitlement renewal and expiry exist; provider prepaid renewal and reservation settlement do not.",
+      "requiredDeliverables": ["renewal reservation", "manual provider renewal", "renewal claim and capture", "expiry and retained-storage policy", "operator recovery"],
+      "completionEvidence": ["time-bound renewal tests", "same-operation replay", "provider renewal readback", "manual-review and release receipts"]
+    },
+    {
+      "id": "reusable_verification",
+      "business": "Every release proves the real Workspace and Gateway path without buying or deleting monthly CVM/CBS resources per run.",
+      "owners": ["console", "fabric", "ledger", "gateway"],
+      "currentState": "Blocked: the current paid verifier charges a real monthly product and creates then destroys resources on every run.",
+      "requiredDeliverables": ["SA5.MEDIUM2 monthly slot", "10GB prepaid CBS", "fake monthly settlement", "runtime reset", "real dedicated-key Gateway request"],
+      "completionEvidence": ["stable provider IDs before and after", "no Tencent purchase or deletion in run log", "Workspace and Gateway assertions", "Ledger verification receipt"]
+    },
+    {
+      "id": "production_release",
+      "business": "A release is declared ready only from merged code, immutable images, runtime checks, recovery evidence, and a passing reusable verification run.",
+      "owners": ["console", "fabric", "ledger", "gateway"],
+      "currentState": "CI and rollout workflows exist; production readiness checks, backup recovery, CLB/WebSocket, prepaid quota, and safe verification evidence are incomplete.",
+      "requiredDeliverables": ["immutable image digests", "real production readiness checks", "database restore evidence", "CLB and WebSocket evidence", "prepaid quota and cost evidence", "verification manifest"],
+      "completionEvidence": ["CI run", "rollout readback", "restore receipt", "Cloud Monitor evidence", "read-only production smoke", "reusable verification receipt"]
+    }
+  ]
+}

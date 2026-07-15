@@ -43,17 +43,19 @@ charges use exact integer USD micros at `1 USD = 7 CNY`.
 Storage must be at least 10 GB and divisible by 10 GB. Unknown compute plans and
 invalid storage sizes are rejected at both Control Plane and Fabric boundaries.
 
-Purchase follows one persisted operation:
+The approved launch settlement follows one persisted operation:
 
 ```text
-validate -> Fabric prepare -> confirm balance -> Sub2API charge
+validate -> prepaid capacity preflight -> Sub2API reserve
+         -> Fabric provision and claim -> Sub2API capture
          -> activate monthly entitlement -> Ledger receipt
 ```
 
-A stable redeem code makes retries safe. An ambiguous charge response enters
-manual review instead of guessing. Renewal extends from the current
-`paidThrough`; expired compute is destroyed, while expired storage is retained
-but cannot be attached until reactivated.
+Stable operation identities make reserve, provider mutation, claim, capture,
+release, and receipt retries safe. A partial or ambiguous provider result keeps
+the balance reserved and enters manual review instead of guessing. The current
+implementation still uses a direct balance adjustment and postpaid CVM; see
+`docs/invariants.md` for the frozen target and per-slide delivery gaps.
 
 ## Workspace Model
 
@@ -68,12 +70,12 @@ but cannot be attached until reactivated.
 Workspace URLs use:
 
 ```text
-https://workspace.medopl.cn/w/<workspaceId>/?token=<share-token>
+https://workspace.medopl.cn/w/<workspaceId>/
 ```
 
-Opening a shared URL does not require Console login. One account can create
-multiple Workspaces and share their URLs; no separate organization resource-pool
-abstraction is required for that behavior.
+Opening a Workspace requires the Runtime password. One account can create
+multiple Workspaces; no separate organization resource-pool abstraction is
+required for that behavior.
 
 Destroying compute does not delete storage. Storage deletion always requires an
 explicit destructive command.
@@ -85,7 +87,7 @@ explicit destructive command.
 - `services/fabric`: cloud resource and runtime owner.
 - `services/ledger`: evidence owner.
 - `packages/contracts`: current machine-readable product contracts.
-- `deploy` and `.github/workflows`: TKE deployment and the single paid verifier.
+- `deploy` and `.github/workflows`: TKE deployment and verification workflow definitions.
 - `docs`: current architecture, invariants, status, and operations only.
 
 ## Local Verification
@@ -131,19 +133,11 @@ The `Deploy TKE Production` workflow installs database, internal-service,
 Console auth, Sub2API, Tencent, image-pull, and Workspace secrets; renders the
 manifest; restarts Control Plane, Fabric, and Ledger; and waits for each rollout.
 
-Production E2E spends real Sub2API balance and creates real Tencent resources.
-It fails closed without the exact confirmation value:
-
-```bash
-OPL_CONSOLE_ORIGIN=https://cloud.medopl.cn \
-OPL_VERIFY_AUTH_USERS_JSON='<secret auth seed>' \
-OPL_VERIFY_PAID_CONFIRMATION=I_UNDERSTAND_THIS_SPENDS_REAL_BALANCE \
-npm run verify:production -- --browser-e2e
-```
-
-The verifier proves exact balance delta, stable redeem codes, compute and
-storage readiness, attachment, Workspace access, two Ledger receipts, and exact
-cleanup of only the resources created by that run.
+The legacy production verifier is blocked by the launch freeze and is not a
+release gate. It charges a real monthly product and creates then deletes Tencent
+resources on every run. Its replacement must reuse the fixed prepaid
+`SA5.MEDIUM2` and 10GB CBS Verification Slot, use fake monthly settlement, and
+pay only for a dedicated test-key Gateway request.
 
 See [docs/runtime/production-runbook.md](./docs/runtime/production-runbook.md)
 for rollout and recovery commands.
