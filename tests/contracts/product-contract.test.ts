@@ -4,6 +4,7 @@ import test from "node:test";
 
 const productContractPath = new URL("../../packages/contracts/opl-cloud-product-contract.json", import.meta.url);
 const businessObjectContractPath = new URL("../../packages/contracts/opl-cloud-business-object-contract.json", import.meta.url);
+const fabricCatalogContractPath = new URL("../../packages/contracts/opl-cloud-fabric-resource-catalog-contract.json", import.meta.url);
 
 async function readJson(path) {
   return JSON.parse(await readFile(path, "utf8"));
@@ -40,4 +41,12 @@ test("business object contract keeps runtime template out of billing ownership",
 
   assert.equal(runtimeTemplate, undefined, "RuntimeTemplate must not be an active business object");
   assert.ok(contract.principles.includes("RuntimeTemplate/ImageRef is deployable runtime configuration only; it is not a billing object, storage owner, or Workspace identity."));
+});
+
+test("Fabric catalog exposes both saleable monthly packages", async () => {
+  const catalog = await readJson(fabricCatalogContractPath);
+
+  assert.deepEqual(catalog.supportedPackages, ["basic", "pro"]);
+  assert.equal(catalog.availabilityAuthority, "GET /fabric/catalog workspacePackages[].available");
+  assert.equal("currentAvailablePackages" in catalog, false);
 });
