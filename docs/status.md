@@ -27,7 +27,7 @@ Not ready:
 - prepaid Tencent CVM/CBS procurement and renewal;
 - account-owned `opl-workspace` Key projection and Fabric Secret injection;
 - immutable deployment of the verified `one-person-lab-webui:26.7.13` source digest;
-- the reusable `SA5.MEDIUM2` plus 10GB CBS Verification Slot;
+- the reusable `SA5.MEDIUM4` plus 10GB CBS Verification Slot;
 - safe refund/manual-review verification; the legacy paid verifier is blocked and is not a release gate;
 - GPU packages;
 - public self-registration or a reusable unified identity system;

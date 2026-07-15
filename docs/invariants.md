@@ -106,7 +106,7 @@ validate account and quote
 
 | Property | Frozen value |
 | --- | --- |
-| CVM | `SA5.MEDIUM2` (`2c2g`) |
+| CVM | `SA5.MEDIUM4` (`2c4g`) |
 | CBS | `10GB` minimum prepaid volume |
 | Provider billing | `PREPAID`, one month |
 | Renewal | `NOTIFY_AND_MANUAL_RENEW` |

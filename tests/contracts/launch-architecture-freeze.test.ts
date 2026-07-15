@@ -52,7 +52,8 @@ test("launch freeze fixes the V2 products, owner lanes, settlement, and verifica
   assert.equal(freeze.gateway.keyName, "opl-workspace");
   assert.equal(freeze.gateway.adminUsageEndpointAllowed, false);
 
-  assert.equal(freeze.verification.slot.computeInstanceType, "SA5.MEDIUM2");
+  assert.equal(freeze.verification.slot.computeInstanceType, "SA5.MEDIUM4");
+  assert.equal(freeze.verification.slot.resources.memoryGb, 4);
   assert.equal(freeze.verification.slot.customerProduct, false);
   assert.equal(freeze.verification.slot.reuseForBillingPeriod, true);
   assert.equal(freeze.verification.purchaseBudget, 1);
@@ -97,7 +98,7 @@ test("human invariants reject paid per-run resource verification", async () => {
   for (const heading of ["Console", "Fabric", "Ledger", "Gateway", "Launch Stages", "Verification Slot"]) {
     assert.match(invariants, new RegExp(`## ${heading}`));
   }
-  assert.match(invariants, /SA5\.MEDIUM2/);
+  assert.match(invariants, /SA5\.MEDIUM4/);
   assert.match(invariants, /debit.*provision.*claim.*activate/is);
   assert.match(invariants, /confirmed.*no billable resource.*refund/is);
   assert.match(invariants, /POSTPAID_BY_HOUR.*forbidden/is);

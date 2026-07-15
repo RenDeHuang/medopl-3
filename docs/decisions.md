@@ -34,6 +34,6 @@ replace Control Plane commercial fields.
 
 The legacy paid verifier is blocked and is not a release gate. Ordinary CI and
 commercial E2E use fake monthly settlement and provider mutations. Runtime E2E
-reuses one prepaid `SA5.MEDIUM2` plus 10GB CBS Verification Slot for its paid
+reuses one prepaid `SA5.MEDIUM4` plus 10GB CBS Verification Slot for its paid
 period and deletes only temporary workloads and test data. A real provider
 purchase or renewal requires a separate explicit Provider Acceptance run.

@@ -139,7 +139,7 @@ manifest; restarts Control Plane, Fabric, and Ledger; and waits for each rollout
 The legacy production verifier is blocked by the launch freeze and is not a
 release gate. It charges a real monthly product and creates then deletes Tencent
 resources on every run. Its replacement must reuse the fixed prepaid
-`SA5.MEDIUM2` and 10GB CBS Verification Slot, use fake monthly settlement, and
+`SA5.MEDIUM4` and 10GB CBS Verification Slot, use fake monthly settlement, and
 pay only for a dedicated test-key Gateway request.
 
 See [docs/runtime/production-runbook.md](./docs/runtime/production-runbook.md)

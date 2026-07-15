@@ -123,8 +123,8 @@
     "purchaseBudgetRemaining": 1,
     "slot": {
       "id": "verification-slot-01",
-      "computeInstanceType": "SA5.MEDIUM2",
-      "resources": { "cpu": 2, "memoryGb": 2, "cbsGb": 10 },
+      "computeInstanceType": "SA5.MEDIUM4",
+      "resources": { "cpu": 2, "memoryGb": 4, "cbsGb": 10 },
       "customerProduct": false,
       "chargeType": "PREPAID",
       "periodMonths": 1,

@@ -365,7 +365,7 @@ release gate.
 The approved replacement must:
 
 1. use fake Sub2API debit/refund and fake provider mutation for the monthly commercial path;
-2. reuse `verification-slot-01`, a prepaid `SA5.MEDIUM2` plus 10GB CBS Slot;
+2. reuse `verification-slot-01`, a prepaid `SA5.MEDIUM4` plus 10GB CBS Slot;
 3. deploy and authenticate to the candidate Workspace image on that Slot;
 4. prove WebSocket behavior and one real model request with a dedicated test key;
 5. record Ledger verification evidence;
