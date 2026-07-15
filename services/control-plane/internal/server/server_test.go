@@ -2,11 +2,15 @@ package server
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
@@ -89,6 +93,146 @@ func TestConsoleStaticEntryServesLoginAndHome(t *testing.T) {
 			t.Fatalf("%s did not serve Console HTML: %s", path, rec.Body.String())
 		}
 	}
+}
+
+func TestConsoleStaticDelivery(t *testing.T) {
+	dist := t.TempDir()
+	asset := []byte(`console.log("hashed asset")`)
+	index := []byte(`<!doctype html><html><body><div id="root"></div></body></html>`)
+	icon := []byte("\x89PNG\r\n\x1a\nfixture")
+	if err := os.MkdirAll(filepath.Join(dist, "assets"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for path, content := range map[string][]byte{
+		"assets/hash.js":   asset,
+		"index.html":       index,
+		"opl-app-icon.png": icon,
+	} {
+		if err := os.WriteFile(filepath.Join(dist, path), content, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("OPL_CONSOLE_DIST_DIR", dist)
+	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
+	request := func(method, path string, headers map[string]string) *httptest.ResponseRecorder {
+		t.Helper()
+		req := httptest.NewRequest(method, path, nil)
+		for name, value := range headers {
+			req.Header.Set(name, value)
+		}
+		rec := httptest.NewRecorder()
+		server.ServeHTTP(rec, req)
+		return rec
+	}
+
+	t.Run("gzip hashed asset", func(t *testing.T) {
+		rec := request(http.MethodGet, "/assets/hash.js", map[string]string{"Accept-Encoding": "gzip"})
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+		}
+		if got := rec.Header().Get("Content-Encoding"); got != "gzip" {
+			t.Fatalf("Content-Encoding = %q, want gzip", got)
+		}
+		if got := rec.Header().Get("Vary"); !strings.Contains(got, "Accept-Encoding") {
+			t.Fatalf("Vary = %q, want Accept-Encoding", got)
+		}
+		if got := rec.Header().Get("Cache-Control"); got != "public,max-age=31536000,immutable" {
+			t.Fatalf("Cache-Control = %q", got)
+		}
+		reader, err := gzip.NewReader(rec.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		decoded, err := io.ReadAll(reader)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := reader.Close(); err != nil {
+			t.Fatal(err)
+		}
+		if !bytes.Equal(decoded, asset) {
+			t.Fatalf("decoded asset = %q, want %q", decoded, asset)
+		}
+	})
+
+	t.Run("index is revalidated", func(t *testing.T) {
+		rec := request(http.MethodGet, "/login", nil)
+		if rec.Code != http.StatusOK || !bytes.Equal(rec.Body.Bytes(), index) {
+			t.Fatalf("index response = %d %q", rec.Code, rec.Body.Bytes())
+		}
+		if got := rec.Header().Get("Cache-Control"); got != "no-cache" {
+			t.Fatalf("Cache-Control = %q, want no-cache", got)
+		}
+	})
+
+	t.Run("app icon is PNG", func(t *testing.T) {
+		rec := request(http.MethodGet, "/opl-app-icon.png", nil)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+		}
+		if got := rec.Header().Get("Content-Type"); got != "image/png" {
+			t.Fatalf("Content-Type = %q, want image/png", got)
+		}
+		if !bytes.HasPrefix(rec.Body.Bytes(), []byte("\x89PNG\r\n\x1a\n")) {
+			t.Fatalf("icon does not have PNG magic: %x", rec.Body.Bytes())
+		}
+	})
+
+	t.Run("HEAD has no body", func(t *testing.T) {
+		rec := request(http.MethodHead, "/assets/hash.js", map[string]string{"Accept-Encoding": "gzip"})
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+		}
+		if rec.Body.Len() != 0 {
+			t.Fatalf("HEAD body length = %d, want 0", rec.Body.Len())
+		}
+	})
+
+	t.Run("Range is not dynamically compressed", func(t *testing.T) {
+		rec := request(http.MethodGet, "/assets/hash.js", map[string]string{
+			"Accept-Encoding": "gzip",
+			"Range":           "bytes=0-6",
+		})
+		if rec.Code != http.StatusPartialContent {
+			t.Fatalf("status = %d, want 206: %s", rec.Code, rec.Body.String())
+		}
+		if got := rec.Header().Get("Content-Encoding"); got != "" {
+			t.Fatalf("Content-Encoding = %q, want empty", got)
+		}
+		if !bytes.Equal(rec.Body.Bytes(), asset[:7]) {
+			t.Fatalf("range body = %q, want %q", rec.Body.Bytes(), asset[:7])
+		}
+	})
+
+	t.Run("gzip quality zero is respected", func(t *testing.T) {
+		rec := request(http.MethodGet, "/assets/hash.js", map[string]string{"Accept-Encoding": "br, gzip;q=0"})
+		if rec.Code != http.StatusOK || rec.Header().Get("Content-Encoding") != "" {
+			t.Fatalf("response = %d Content-Encoding %q", rec.Code, rec.Header().Get("Content-Encoding"))
+		}
+		if !bytes.Equal(rec.Body.Bytes(), asset) {
+			t.Fatalf("asset body = %q, want %q", rec.Body.Bytes(), asset)
+		}
+	})
+
+	t.Run("API is not compressed", func(t *testing.T) {
+		rec := request(http.MethodGet, "/api/healthz", map[string]string{"Accept-Encoding": "gzip"})
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body.String())
+		}
+		if got := rec.Header().Get("Content-Encoding"); got != "" {
+			t.Fatalf("Content-Encoding = %q, want empty", got)
+		}
+	})
+
+	t.Run("path traversal is rejected", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/assets/hash.js", nil)
+		req.URL.Path = "/assets/../index.html"
+		rec := httptest.NewRecorder()
+		new(controlPlaneServer).consoleStatic(rec, req)
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("status = %d, want 404: %s", rec.Code, rec.Body.String())
+		}
+	})
 }
 
 func TestUncontractedAdminDiagnosticsAPIRouteDoesNotReturnFakeEvidence(t *testing.T) {

@@ -2,15 +2,18 @@ package server
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"log"
+	"mime"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -67,15 +70,92 @@ func (app *controlPlaneServer) consoleStatic(w http.ResponseWriter, r *http.Requ
 	}
 	dist := consoleDistDir()
 	if strings.HasPrefix(r.URL.Path, "/assets/") {
-		http.FileServer(http.Dir(dist)).ServeHTTP(w, r)
+		rel := strings.TrimPrefix(r.URL.Path, "/assets/")
+		if !filepath.IsLocal(rel) || !serveConsoleFile(w, r, filepath.Join(dist, "assets", rel), "public,max-age=31536000,immutable") {
+			http.NotFound(w, r)
+		}
 		return
 	}
+	if r.URL.Path == "/opl-app-icon.png" {
+		if !serveConsoleFile(w, r, filepath.Join(dist, "opl-app-icon.png"), "no-cache") {
+			http.NotFound(w, r)
+		}
+		return
+	}
+	if serveConsoleFile(w, r, filepath.Join(dist, "index.html"), "no-cache") {
+		return
+	}
+	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if data, err := os.ReadFile(filepath.Join(dist, "index.html")); err == nil {
-		_, _ = w.Write(data)
-		return
+	fallback := []byte(`<!doctype html><html><head><title>OPL Console</title></head><body><div id="root"></div></body></html>`)
+	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(fallback))
+}
+
+func serveConsoleFile(w http.ResponseWriter, r *http.Request, path string, cacheControl string) bool {
+	file, err := os.Open(path)
+	if err != nil {
+		return false
 	}
-	_, _ = w.Write([]byte(`<!doctype html><html><head><title>OPL Console</title></head><body><div id="root"></div></body></html>`))
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil || !info.Mode().IsRegular() {
+		return false
+	}
+	w.Header().Set("Cache-Control", cacheControl)
+	if contentType := mime.TypeByExtension(filepath.Ext(path)); contentType != "" {
+		w.Header().Set("Content-Type", contentType)
+	}
+	if !compressibleConsoleAsset(path) {
+		http.ServeContent(w, r, info.Name(), info.ModTime(), file)
+		return true
+	}
+	w.Header().Add("Vary", "Accept-Encoding")
+	if r.Header.Get("Range") != "" || !acceptsGzip(r.Header.Get("Accept-Encoding")) {
+		http.ServeContent(w, r, info.Name(), info.ModTime(), file)
+		return true
+	}
+	var compressed bytes.Buffer
+	zipper := gzip.NewWriter(&compressed)
+	if _, err := io.Copy(zipper, file); err != nil {
+		_ = zipper.Close()
+		http.Error(w, "static asset read failed", http.StatusInternalServerError)
+		return true
+	}
+	if err := zipper.Close(); err != nil {
+		http.Error(w, "static asset compression failed", http.StatusInternalServerError)
+		return true
+	}
+	w.Header().Set("Content-Encoding", "gzip")
+	http.ServeContent(w, r, info.Name(), info.ModTime(), bytes.NewReader(compressed.Bytes()))
+	return true
+}
+
+func compressibleConsoleAsset(path string) bool {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".css", ".js", ".json", ".map", ".mjs", ".svg", ".txt", ".webmanifest", ".xml":
+		return true
+	default:
+		return false
+	}
+}
+
+func acceptsGzip(value string) bool {
+	for _, item := range strings.Split(value, ",") {
+		parts := strings.Split(item, ";")
+		if !strings.EqualFold(strings.TrimSpace(parts[0]), "gzip") {
+			continue
+		}
+		for _, part := range parts[1:] {
+			name, raw, ok := strings.Cut(part, "=")
+			if !ok || !strings.EqualFold(strings.TrimSpace(name), "q") {
+				continue
+			}
+			quality, err := strconv.ParseFloat(strings.TrimSpace(raw), 64)
+			return err == nil && quality > 0
+		}
+		return true
+	}
+	return false
 }
 
 func consoleDistDir() string {
