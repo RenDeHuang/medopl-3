@@ -173,6 +173,9 @@ func TestConsoleStaticDelivery(t *testing.T) {
 		if got := rec.Header().Get("Content-Type"); got != "image/png" {
 			t.Fatalf("Content-Type = %q, want image/png", got)
 		}
+		if got := rec.Header().Get("Cache-Control"); got != "public,max-age=86400" {
+			t.Fatalf("Cache-Control = %q, want one-day public caching without immutable", got)
+		}
 		if !bytes.HasPrefix(rec.Body.Bytes(), []byte("\x89PNG\r\n\x1a\n")) {
 			t.Fatalf("icon does not have PNG magic: %x", rec.Body.Bytes())
 		}

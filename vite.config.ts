@@ -6,7 +6,6 @@ const consoleApiOrigin = process.env.OPL_CONSOLE_API_ORIGIN || "http://127.0.0.1
 export default defineConfig({
   plugins: [react()],
   build: {
-    modulePreload: false,
     chunkSizeWarningLimit: 1500,
     rollupOptions: {
       output: {
