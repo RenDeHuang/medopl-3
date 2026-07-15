@@ -154,7 +154,8 @@
         "opl-cloud-ledger:ledger",
         "opl-cloud-fabric:fabric",
         "workspace-images.tsv",
-        "get deployment -l 'oplcloud.cn/workspace-id' -o json"
+        "source tools/tke-image-rollout.sh",
+        "list_workspace_images"
       ],
       "Upload rollback image set": [
         "actions/upload-artifact@v4",

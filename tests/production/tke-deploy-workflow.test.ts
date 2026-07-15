@@ -13,6 +13,7 @@ const repoFile = (path) => new URL(`../../${path}`, import.meta.url);
 const deploymentContractPath = repoFile("packages/contracts/opl-cloud-deployment-contract.json");
 const digestA = `sha256:${"a".repeat(64)}`;
 const digestB = `sha256:${"b".repeat(64)}`;
+const supportedSub2apiVersions = "0.1.156,0.1.155";
 const primaryWorkspaceSource = "ghcr.io/gaofeng21cn/one-person-lab-webui@sha256:9d867fe0fc9db48b6efa27371d77770e46fc8cd97d26ef85a81fbdac7e96ca76";
 const fallbackWorkspaceSource = "ghcr.io/gaofeng21cn/one-person-lab-webui@sha256:6e1491a3693a820a37b81ab9a26f8efc4262fb9581f981641c6de084b0fa654f";
 const primaryWorkspaceTagCommit = "faeb0d6f9d1fe18ac6ea1433168c5696fd7d7918";
@@ -118,7 +119,7 @@ async function manifestFixture() {
       OPL_IMAGE_PULL_SECRET_NAME: "pull-test",
       OPL_TENCENT_ZONE: "ap-guangzhou-3",
       OPL_SUB2API_BASE_URL: "https://wallet.example.test",
-      OPL_SUB2API_SUPPORTED_VERSIONS: "0.1.156,0.1.155",
+      OPL_SUB2API_SUPPORTED_VERSIONS: supportedSub2apiVersions,
       OPL_SUB2API_REQUEST_TIMEOUT_MS: "7000",
       OPL_MONTHLY_BILLING_WORKER_ENABLED: "1",
       OPL_MONTHLY_BILLING_INTERVAL_MS: "60000"
@@ -264,7 +265,7 @@ test("TKE deploy installs Sub2API credentials and validates account mappings", a
   assert.match(install, /--from-file=OPL_SUB2API_ADMIN_PASSWORD/);
   assert.match(install, /Number\.isSafeInteger\(user\.sub2apiUserId\)/);
   assert.match(install, /user\.sub2apiUserId > 0/);
-  assert.equal(currentJob.env.OPL_SUB2API_SUPPORTED_VERSIONS, "${{ vars.OPL_SUB2API_SUPPORTED_VERSIONS || '0.1.156,0.1.155' }}");
+  assert.equal(currentJob.env.OPL_SUB2API_SUPPORTED_VERSIONS, supportedSub2apiVersions);
   assert.equal(currentJob.env.OPL_TENCENT_ZONE, "${{ vars.OPL_TENCENT_ZONE || 'na-siliconvalley-1' }}");
   assert.equal(Object.hasOwn(currentJob.env, "OPL_CODEX_API_KEY"), false);
   assert.doesNotMatch(install, /OPL_CODEX_API_KEY|opl-cloud-workspace-codex/);
@@ -339,6 +340,16 @@ test("TKE manifest renderer rejects another whitespace-only required value befor
   );
 });
 
+test("TKE manifest renderer rejects every non-frozen Sub2API version set", async () => {
+  const { manifest, values } = await manifestFixture();
+  for (const versions of ["0.1.157", "0.1.155,0.1.156", "0.1.156"]) {
+    assert.throws(
+      () => renderTkeManifest({ manifest, values: { ...values, OPL_SUB2API_SUPPORTED_VERSIONS: versions } }),
+      /unsupported_sub2api_versions/
+    );
+  }
+});
+
 test("TKE manifest renderer can leave shared Ingress ownership untouched", async () => {
   const { manifest, values } = await manifestFixture();
   const rendered = renderTkeManifest({ manifest, values, skipSharedIngress: true });
@@ -353,6 +364,7 @@ test("TKE deploy requires image digests and rolls back the complete Cloud and Ap
   const capture = serializedStep(stepsByName(currentJob).get("Capture rollback image set"));
   const upload = stepsByName(currentJob).get("Upload rollback image set");
   const apply = serializedStep(stepsByName(currentJob).get("Render and apply manifest"));
+  const rolloutHelper = await readFile(repoFile("tools/tke-image-rollout.sh"), "utf8");
   const stepNames = [...stepsByName(currentJob).keys()];
 
   assert.equal(inputs.includes("exercise_rollback"), true);
@@ -370,9 +382,11 @@ test("TKE deploy requires image digests and rolls back the complete Cloud and Ap
     assert.match(capture, new RegExp(deployment));
   }
   assert.match(capture, /previous.*OPL_WORKSPACE_IMAGE/is);
-  assert.match(capture, /get deployment -l ['"]oplcloud\.cn\/workspace-id['"] -o json/);
   assert.match(capture, /workspace-images\.tsv/);
-  assert.match(capture, /container\.name === "workspace"/);
+  assert.match(capture, /source tools\/tke-image-rollout\.sh/);
+  assert.match(capture, /list_workspace_images/);
+  assert.match(rolloutHelper, /get deployment -l ['"]oplcloud\.cn\/workspace-id['"] -o json/);
+  assert.match(rolloutHelper, /container\.name === "workspace"/);
   assert.match(apply, /source tools\/tke-image-rollout\.sh/);
   assert.match(apply, /apply_candidate_images/);
   assert.match(apply, /restore_previous_images/);
@@ -427,6 +441,7 @@ test("TKE rollback functions restore, read back, and reapply every Cloud and App
         [opl-cloud-ledger]="$OPL_CLOUD_IMAGE"
         [opl-cloud-fabric]="$OPL_CLOUD_IMAGE"
         [workspace-slot-1]="$OPL_WORKSPACE_IMAGE"
+        [workspace-late]="$OPL_WORKSPACE_IMAGE"
       )
       : > "$TEST_ROOT/kubectl.log"
       kubectl() {
@@ -441,10 +456,24 @@ test("TKE rollback functions restore, read back, and reapply every Cloud and App
           esac
         done
         case "$command" in
-          get) printf '%s' "\${images[$target]}" ;;
+          get)
+            if [[ " $* " == *" deployment -l oplcloud.cn/workspace-id -o json "* ]]; then
+              if [ "\${EMPTY_WORKSPACES:-0}" = "1" ]; then
+                printf '{"items":[]}'
+              else
+                printf '{"items":[{"metadata":{"name":"workspace-slot-1","labels":{"oplcloud.cn/workspace-id":"slot-1"}},"spec":{"template":{"spec":{"containers":[{"name":"workspace","image":"%s"}]}}}},{"metadata":{"name":"workspace-late","labels":{"oplcloud.cn/workspace-id":"late"}},"spec":{"template":{"spec":{"containers":[{"name":"workspace","image":"%s"}]}}}}]}' "\${images[workspace-slot-1]}" "\${images[workspace-late]}"
+              fi
+            elif [[ " $* " == *" configmap opl-cloud-config "* ]]; then
+              printf '%s' "$config_image"
+            else
+              printf '%s' "\${images[$target]}"
+            fi
+            ;;
           patch)
             last="\${!#}"
-            config_image="$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).data.OPL_WORKSPACE_IMAGE)' "$last")"
+            if [ "\${IGNORE_CONFIG_PATCH:-0}" != "1" ]; then
+              config_image="$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).data.OPL_WORKSPACE_IMAGE)' "$last")"
+            fi
             ;;
           set)
             if [ "$target" = "\${FAIL_TARGET:-}" ]; then
@@ -463,9 +492,9 @@ ${functions}
         exit 0
       fi
       restore_previous_images
-      printf '%s\n' "$config_image" "\${images[opl-cloud-control-plane]}" "\${images[opl-cloud-ledger]}" "\${images[opl-cloud-fabric]}" "\${images[workspace-slot-1]}" > "$TEST_ROOT/restored.txt"
+      printf '%s\n' "$config_image" "\${images[opl-cloud-control-plane]}" "\${images[opl-cloud-ledger]}" "\${images[opl-cloud-fabric]}" "\${images[workspace-slot-1]}" "\${images[workspace-late]}" > "$TEST_ROOT/restored.txt"
       apply_candidate_images
-      printf '%s\n' "$config_image" "\${images[opl-cloud-control-plane]}" "\${images[opl-cloud-ledger]}" "\${images[opl-cloud-fabric]}" "\${images[workspace-slot-1]}" > "$TEST_ROOT/candidate.txt"
+      printf '%s\n' "$config_image" "\${images[opl-cloud-control-plane]}" "\${images[opl-cloud-ledger]}" "\${images[opl-cloud-fabric]}" "\${images[workspace-slot-1]}" "\${images[workspace-late]}" > "$TEST_ROOT/candidate.txt"
     `;
     const result = spawnSync("bash", ["-c", harness], {
       cwd: fileURLToPath(repoFile(".")),
@@ -480,13 +509,14 @@ ${functions}
       }
     });
     assert.equal(result.status, 0, result.stderr);
-    assert.deepEqual((await readFile(join(root, "restored.txt"), "utf8")).trim().split("\n"), [oldWorkspace, oldCloud, oldCloud, oldCloud, oldWorkspace]);
-    assert.deepEqual((await readFile(join(root, "candidate.txt"), "utf8")).trim().split("\n"), [candidateWorkspace, candidateCloud, candidateCloud, candidateCloud, candidateWorkspace]);
+    assert.deepEqual((await readFile(join(root, "restored.txt"), "utf8")).trim().split("\n"), [oldWorkspace, oldCloud, oldCloud, oldCloud, oldWorkspace, oldWorkspace]);
+    assert.deepEqual((await readFile(join(root, "candidate.txt"), "utf8")).trim().split("\n"), [candidateWorkspace, candidateCloud, candidateCloud, candidateCloud, candidateWorkspace, candidateWorkspace]);
 
     const log = await readFile(join(root, "kubectl.log"), "utf8");
-    for (const deployment of ["opl-cloud-control-plane", "opl-cloud-ledger", "opl-cloud-fabric", "workspace-slot-1"]) {
+    for (const deployment of ["opl-cloud-control-plane", "opl-cloud-ledger", "opl-cloud-fabric", "workspace-slot-1", "workspace-late"]) {
       assert.equal(log.match(new RegExp(`get deployment/${deployment}`, "g"))?.length, 2, `${deployment} must be read back after restore and reapply`);
     }
+    assert.equal(log.match(/get configmap opl-cloud-config/g)?.length, 2, "candidate and previous ConfigMap values must both be read back");
 
     const failedRestore = spawnSync("bash", ["-c", harness], {
       cwd: fileURLToPath(repoFile(".")),
@@ -505,9 +535,45 @@ ${functions}
     assert.equal(failedRestore.status, 0, failedRestore.stderr);
     assert.equal((await readFile(join(root, "failure-status.txt"), "utf8")).trim(), "1");
     const failedLog = await readFile(join(root, "kubectl.log"), "utf8");
-    for (const deployment of ["opl-cloud-control-plane", "opl-cloud-ledger", "opl-cloud-fabric", "workspace-slot-1"]) {
+    for (const deployment of ["opl-cloud-control-plane", "opl-cloud-ledger", "opl-cloud-fabric", "workspace-slot-1", "workspace-late"]) {
       assert.match(failedLog, new RegExp(`set image deployment/${deployment}`), `${deployment} restore must be attempted after a sibling failure`);
     }
+
+    const ignoredConfigPatch = spawnSync("bash", ["-c", harness], {
+      cwd: fileURLToPath(repoFile(".")),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        IGNORE_CONFIG_PATCH: "1",
+        KUBECONFIG: "/dev/null",
+        OPL_CLOUD_IMAGE: candidateCloud,
+        OPL_K8S_NAMESPACE: "opl-test",
+        OPL_WORKSPACE_IMAGE: candidateWorkspace,
+        TEST_FAILURE_MODE: "1",
+        TEST_ROOT: root
+      }
+    });
+    assert.equal(ignoredConfigPatch.status, 0, ignoredConfigPatch.stderr);
+    assert.equal((await readFile(join(root, "failure-status.txt"), "utf8")).trim(), "1");
+
+    await writeFile(join(rollbackDir, "workspace-images.tsv"), "");
+    const emptyWorkspaces = spawnSync("bash", ["-c", harness], {
+      cwd: fileURLToPath(repoFile(".")),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        EMPTY_WORKSPACES: "1",
+        KUBECONFIG: "/dev/null",
+        OPL_CLOUD_IMAGE: candidateCloud,
+        OPL_K8S_NAMESPACE: "opl-test",
+        OPL_WORKSPACE_IMAGE: candidateWorkspace,
+        TEST_ROOT: root
+      }
+    });
+    assert.equal(emptyWorkspaces.status, 0, emptyWorkspaces.stderr);
+    const emptyLog = await readFile(join(root, "kubectl.log"), "utf8");
+    assert.equal(emptyLog.match(/get configmap opl-cloud-config/g)?.length, 2);
+    assert.doesNotMatch(emptyLog, /set image deployment\/workspace-/);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

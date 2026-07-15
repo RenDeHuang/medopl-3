@@ -1,12 +1,14 @@
 const PROVIDERS = {
   TENCENT_TKE: "tencent-tke"
 };
+const SUPPORTED_SUB2API_VERSIONS = "0.1.156,0.1.155";
 
 const REQUIRED_COMMON_ENV = [
   "OPL_RUNTIME_PROVIDER",
   "DATABASE_URL",
   "OPL_INTERNAL_SERVICE_TOKEN",
   "OPL_CONSOLE_USERS_JSON",
+  "OPL_SUB2API_SUPPORTED_VERSIONS",
   "OPL_WORKSPACE_DOMAIN",
   "OPL_WORKSPACE_IMAGE"
 ];
@@ -108,6 +110,7 @@ export function validateProductionManifest({ env = {} } = {}) {
         looksLikeRegistryImage({ image: values.OPL_WORKSPACE_IMAGE, registry: values.TENCENT_TCR_REGISTRY }),
       "OPL_CLOUD_IMAGE and OPL_WORKSPACE_IMAGE must use TCR repository@sha256 references"
     ),
+    check("sub2api_versions", values.OPL_SUB2API_SUPPORTED_VERSIONS === SUPPORTED_SUB2API_VERSIONS, "OPL_SUB2API_SUPPORTED_VERSIONS must match the frozen current and fallback versions"),
     check("workspace_domain", looksLikeProductionDomain(values.OPL_WORKSPACE_DOMAIN), "OPL_WORKSPACE_DOMAIN must be a production wildcard domain")
   ];
   const failedChecks = checks.filter((item) => !item.ok).map((item) => item.id);

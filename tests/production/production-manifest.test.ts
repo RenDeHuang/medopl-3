@@ -5,6 +5,7 @@ import { validateProductionManifest } from "../../services/control-plane/ops/pro
 
 const cloudImage = `registry.example.com/opl/opl-cloud@sha256:${"a".repeat(64)}`;
 const workspaceImage = `registry.example.com/opl/one-person-lab-app@sha256:${"b".repeat(64)}`;
+const supportedSub2apiVersions = "0.1.156,0.1.155";
 
 test("production manifest requires deployment secret refs for every launch variable", () => {
   const report = validateProductionManifest({
@@ -23,6 +24,7 @@ test("production manifest requires deployment secret refs for every launch varia
       OPL_IMAGE_PULL_SECRET_NAME: { value: "tcr-pull-secret" },
       OPL_WORKSPACE_STORAGE_CLASS: { value: "cbs" },
       OPL_TENCENT_ZONE: { value: "na-siliconvalley-1" },
+      OPL_SUB2API_SUPPORTED_VERSIONS: { value: supportedSub2apiVersions },
       TENCENT_DEPLOY_KUBECONFIG_REF: { secretRef: "opl-cloud/tencent-deploy-kubeconfig-ref" },
       TENCENT_DEPLOY_CLUSTER_ID: { value: "cls-123" },
       TENCENT_TCR_REGISTRY: { value: "registry.example.com" },
@@ -39,6 +41,7 @@ test("production manifest requires deployment secret refs for every launch varia
     "secret_refs:true",
     "runtime_provider:true",
     "registry_images:true",
+    "sub2api_versions:true",
     "workspace_domain:true"
   ]);
 });
@@ -60,6 +63,7 @@ test("production manifest validates Tencent TKE fields only", () => {
       OPL_IMAGE_PULL_SECRET_NAME: { value: "tcr-pull-secret" },
       OPL_WORKSPACE_STORAGE_CLASS: { value: "cbs" },
       OPL_TENCENT_ZONE: { value: "na-siliconvalley-1" },
+      OPL_SUB2API_SUPPORTED_VERSIONS: { value: supportedSub2apiVersions },
       TENCENT_DEPLOY_KUBECONFIG_REF: { secretRef: "opl-cloud/tencent-deploy-kubeconfig-ref" },
       TENCENT_DEPLOY_CLUSTER_ID: { value: "cls-123" },
       TENCENT_TCR_REGISTRY: { value: "registry.example.com" },
@@ -76,6 +80,7 @@ test("production manifest validates Tencent TKE fields only", () => {
     "secret_refs:true",
     "runtime_provider:true",
     "registry_images:true",
+    "sub2api_versions:true",
     "workspace_domain:true"
   ]);
 });
@@ -96,6 +101,7 @@ test("production manifest fails closed on missing env and inline secret values",
   assert.ok(report.missingEnv.includes("OPL_INTERNAL_SERVICE_TOKEN"));
   assert.ok(report.missingEnv.includes("OPL_WORKSPACE_STORAGE_CLASS"));
   assert.ok(report.missingEnv.includes("OPL_TENCENT_ZONE"));
+  assert.ok(report.missingEnv.includes("OPL_SUB2API_SUPPORTED_VERSIONS"));
   assert.deepEqual(report.inlineSecretEnv.sort(), ["DATABASE_URL"]);
   assert.ok(report.failedChecks.includes("required_env"));
   assert.ok(report.failedChecks.includes("secret_refs"));
@@ -116,6 +122,19 @@ test("production manifest treats an empty service-side launch zone as missing", 
   assert.ok(report.missingEnv.includes("OPL_TENCENT_ZONE"));
 });
 
+test("production manifest accepts only the frozen Sub2API version set", () => {
+  for (const versions of ["0.1.157", "0.1.155,0.1.156", "0.1.156"]) {
+    const report = validateProductionManifest({
+      env: {
+        OPL_RUNTIME_PROVIDER: { value: "tencent-tke" },
+        OPL_SUB2API_SUPPORTED_VERSIONS: { value: versions }
+      }
+    });
+
+    assert.ok(report.failedChecks.includes("sub2api_versions"));
+  }
+});
+
 test("production manifest rejects empty container image tags", () => {
   const report = validateProductionManifest({
     env: {
@@ -132,6 +151,7 @@ test("production manifest rejects empty container image tags", () => {
       OPL_IMAGE_PULL_SECRET_NAME: { value: "tcr-pull-secret" },
       OPL_WORKSPACE_STORAGE_CLASS: { value: "cbs" },
       OPL_TENCENT_ZONE: { value: "na-siliconvalley-1" },
+      OPL_SUB2API_SUPPORTED_VERSIONS: { value: supportedSub2apiVersions },
       TENCENT_DEPLOY_KUBECONFIG_REF: { secretRef: "opl-cloud/tencent-deploy-kubeconfig-ref" },
       TENCENT_DEPLOY_CLUSTER_ID: { value: "cls-123" },
       TENCENT_TCR_REGISTRY: { value: "registry.example.com" },
@@ -165,6 +185,7 @@ test("production manifest rejects latest and every tag-only production image", (
         OPL_IMAGE_PULL_SECRET_NAME: { value: "tcr-pull-secret" },
         OPL_WORKSPACE_STORAGE_CLASS: { value: "cbs" },
         OPL_TENCENT_ZONE: { value: "na-siliconvalley-1" },
+        OPL_SUB2API_SUPPORTED_VERSIONS: { value: supportedSub2apiVersions },
         TENCENT_DEPLOY_KUBECONFIG_REF: { secretRef: "opl-cloud/tencent-deploy-kubeconfig-ref" },
         TENCENT_DEPLOY_CLUSTER_ID: { value: "cls-123" },
         TENCENT_TCR_REGISTRY: { value: "registry.example.com" },
