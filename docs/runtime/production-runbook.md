@@ -180,6 +180,42 @@ These TencentDB backup, restore, sizing, and Cloud Monitor steps are operator
 actions. Repository tests cannot establish that they happened; retain console
 screenshots or exported metric evidence in the operations system, not in Git.
 
+## Single-Pod Capacity Gate
+
+Run the opt-in load test against a local or isolated PostgreSQL instance. It uses
+fake Sub2API, Fabric, and Ledger clients and never creates cloud resources or a
+real charge:
+
+```bash
+cd services/control-plane
+OPL_CAPACITY_TESTS=1 go test ./internal/server \
+  -run '^TestSinglePodCapacity$' -count=1 -v -timeout=15m
+```
+
+The gate creates an isolated schema, seeds 1,000 accounts and 1,000 compute
+records, sends 100 concurrent tenant Console requests, sends 20 concurrent
+resource commands and replays their idempotency keys, then scans 1,000 due
+renewals twice. It requires zero request errors, one charge, resource claim, and
+receipt per operation, request P95 below five seconds, and renewal completion
+within five minutes.
+
+The accepted local baseline used Go 1.22.2, PostgreSQL 16.14, and an i7-8700 host:
+
+| Workload | P50 | P95 | Error rate | Completion |
+| --- | ---: | ---: | ---: | ---: |
+| 100 concurrent Console requests | 1.903 s | 2.064 s | 0% | 2.098 s |
+| 20 concurrent resource commands | 643 ms | 710 ms | 0% | 710 ms |
+| 20 same-key replays | 401 ms | 402 ms | 0% | 402 ms |
+| 1,000 renewal scan | n/a | n/a | 0% | 97.38 s |
+
+The measured process used 96.99 seconds of CPU, grew from 1.0 MiB to 13.6 MiB
+heap, reported 158.8 MiB Go system memory, and opened at most 20 application
+database connections. The host could not enforce the production `500m` CPU
+limit, so these are local capacity facts rather than a production-quota claim.
+Keep one Control Plane Pod while this gate and production alarms pass. A breach
+requires profiling and query correction first; it is not automatic approval for
+additional replicas.
+
 ## Operational Alerts
 
 `GET /api/operator/summary` derives `notifications` from current compute and
