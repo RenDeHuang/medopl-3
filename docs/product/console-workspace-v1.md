@@ -4,11 +4,12 @@
 
 ```text
 sign in -> buy compute -> buy/select storage -> attach -> create Workspace URL
-        -> open/copy/share URL
+        -> open/copy URL -> sign in with the Runtime password
 ```
 
-The owner can repeat this flow for multiple Workspaces. Sharing is the Workspace
-URL capability itself; it does not require an organization resource-pool model.
+The owner can repeat this flow for multiple Workspaces. A shared URL still
+requires the separately delivered Runtime password; it does not grant access by
+itself or require an organization resource-pool model.
 
 ## Owner Surface
 

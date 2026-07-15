@@ -351,9 +351,8 @@ func workspaceIDFromGatewayRequest(r *http.Request) string {
 	return ""
 }
 
-func setWorkspaceGatewayCookies(w http.ResponseWriter, workspaceID string, token string) {
+func setWorkspaceGatewayRouteCookie(w http.ResponseWriter, workspaceID string) {
 	http.SetCookie(w, &http.Cookie{Name: "opl_ws_active", Value: workspaceID, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode})
-	http.SetCookie(w, &http.Cookie{Name: "opl_ws_" + workspaceID, Value: token, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode})
 }
 
 func isWorkspaceRequest(r *http.Request) bool {
@@ -673,16 +672,6 @@ func countStatus(input controlPlaneRecordSet, status string) int {
 	count := 0
 	for _, item := range input {
 		if item["status"] == status || item["state"] == status {
-			count++
-		}
-	}
-	return count
-}
-
-func countActiveURLs(input controlPlaneRecordSet) int {
-	count := 0
-	for _, item := range input {
-		if nested(item, "access", "tokenStatus") == "active" {
 			count++
 		}
 	}

@@ -436,13 +436,11 @@ var (
 		textField("RuntimeServiceName", "SetRuntimeServiceName", "runtime", "serviceName"),
 		textField("RuntimeServiceNameRoot", "SetRuntimeServiceNameRoot", "runtimeServiceName"),
 		textField("ServiceName", "SetServiceName", "serviceName"),
-		textField("AccessTokenStatus", "SetAccessTokenStatus", "access", "tokenStatus"),
 		textField("AccessAccount", "SetAccessAccount", "access", "account"),
 		textField("AccessUsername", "SetAccessUsername", "access", "username"),
 		textField("CredentialStatus", "SetCredentialStatus", "access", "credentialStatus"),
 		textField("CredentialVersion", "SetCredentialVersion", "access", "credentialVersion"),
 		textField("CredentialSecretRef", "SetCredentialSecretRef", "access", "secretRef"),
-		boolField("AccessRequiresLogin", "SetAccessRequiresLogin", "access", "requiresLogin"),
 	}
 	workspaceBackupEntFields = []entRecordField{
 		textField("AccountID", "SetAccountID", "accountId"),

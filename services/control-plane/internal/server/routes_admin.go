@@ -93,23 +93,6 @@ func registerAdminRoutes(mux *http.ServeMux, app *controlPlaneServer, service *c
 		}
 		writeJSON(w, http.StatusOK, body)
 	}))
-	mux.HandleFunc("POST /api/operator/cleanup-workspace-access", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
-		input := decodeJSON(r)
-		if !confirmed(input, "confirm") {
-			writeError(w, http.StatusBadRequest, "confirmation_required")
-			return
-		}
-		result, err := app.cleanupWorkspaceAccess(input)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		if err := app.appendAuditEvent(r, "operator.cleanup_workspace_access", "workspace_access_cleanup", "", "", nil, result, "succeeded"); err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		writeJSON(w, http.StatusOK, result)
-	}))
 	mux.HandleFunc("GET /api/operator/archive", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		result, err := app.archiveState(r.Context())
 		if err != nil {

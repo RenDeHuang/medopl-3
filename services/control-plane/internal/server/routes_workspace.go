@@ -16,52 +16,6 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 		}
 		writeJSON(w, http.StatusOK, app.state(accountID, nil)["workspaces"])
 	}))
-	mux.HandleFunc("POST /api/workspaces/reset-token", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
-		input := decodeJSON(r)
-		workspaceID := stringField(input, "workspaceId", "")
-		before, exists := app.getWorkspace(workspaceID)
-		if exists && !app.canAccessResource(r, before) {
-			writeError(w, http.StatusForbidden, "account_scope_forbidden")
-			return
-		}
-		workspace, ok, err := app.setWorkspaceAccess(workspaceID, "active")
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		if !ok {
-			writeError(w, http.StatusNotFound, "workspace_not_found")
-			return
-		}
-		if err := app.appendAuditEvent(r, "workspace.reset_token", "workspace", workspaceID, stringValue(workspace["accountId"]), before, workspace, "succeeded"); err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		writeJSON(w, http.StatusOK, map[string]any{"id": workspace["id"], "tokenStatus": nested(workspace, "access", "tokenStatus"), "access": workspace["access"]})
-	}))
-	mux.HandleFunc("POST /api/workspaces/delete-token", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
-		input := decodeJSON(r)
-		workspaceID := stringField(input, "workspaceId", "")
-		before, exists := app.getWorkspace(workspaceID)
-		if exists && !app.canAccessResource(r, before) {
-			writeError(w, http.StatusForbidden, "account_scope_forbidden")
-			return
-		}
-		workspace, ok, err := app.setWorkspaceAccess(workspaceID, "disabled")
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		if !ok {
-			writeError(w, http.StatusNotFound, "workspace_not_found")
-			return
-		}
-		if err := app.appendAuditEvent(r, "workspace.delete_token", "workspace", workspaceID, stringValue(workspace["accountId"]), before, workspace, "succeeded"); err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		writeJSON(w, http.StatusOK, map[string]any{"id": workspace["id"], "tokenStatus": nested(workspace, "access", "tokenStatus"), "access": workspace["access"]})
-	}))
 	mux.HandleFunc("POST /api/workspaces/runtime-status", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		workspaceID := stringField(input, "workspaceId", "")
@@ -74,9 +28,66 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 			writeError(w, http.StatusForbidden, "account_scope_forbidden")
 			return
 		}
+		unlock := app.lockEntitlementResources(
+			firstNonEmpty(stringValue(workspace["currentComputeAllocationId"]), stringValue(workspace["computeAllocationId"])),
+			stringValue(workspace["storageId"]),
+			firstNonEmpty(stringValue(workspace["currentAttachmentId"]), stringValue(workspace["attachmentId"])),
+		)
+		defer unlock()
+		workspace, ok = app.getWorkspace(workspaceID)
+		if !ok {
+			writeError(w, http.StatusNotFound, "workspace_not_found")
+			return
+		}
+		if !app.canAccessResource(r, workspace) {
+			writeError(w, http.StatusForbidden, "account_scope_forbidden")
+			return
+		}
+		switch stringValue(workspace["state"]) {
+		case "suspended", "stopped":
+			writeError(w, http.StatusConflict, "workspace_suspended")
+			return
+		case "data_deleted", "unrecoverable", "storage_missing", "destroyed":
+			writeError(w, http.StatusGone, "workspace_storage_destroyed")
+			return
+		}
 		runtime, err := service.WorkspaceRuntimeStatus(r.Context(), workspaceID)
 		if err != nil {
 			writeUpstreamError(w)
+			return
+		}
+		status := runtime.Status
+		if !runtime.Ready && (status == "" || status == "running") {
+			status = "unready"
+		} else if runtime.Ready && status == "" {
+			status = "running"
+		}
+		workspace["state"], workspace["status"] = status, status
+		workspace["url"] = firstNonEmpty(runtime.URL, stringValue(workspace["url"]))
+		workspace["runtimeId"] = firstNonEmpty(runtime.ID, stringValue(workspace["runtimeId"]))
+		runtimeProjection := cloneMap(mapField(workspace, "runtime"))
+		runtimeProjection["serviceName"] = firstNonEmpty(runtime.ServiceName, stringValue(runtimeProjection["serviceName"]))
+		runtimeProjection["status"], runtimeProjection["ready"] = status, runtime.Ready
+		workspace["runtime"] = runtimeProjection
+		access := cloneMap(mapField(workspace, "access"))
+		delete(access, "password")
+		delete(access, "tokenStatus")
+		delete(access, "requiresLogin")
+		if runtime.Access.Username != "" {
+			access["account"], access["username"] = runtime.Access.Username, runtime.Access.Username
+		}
+		if runtime.Access.CredentialStatus != "" {
+			access["credentialStatus"] = runtime.Access.CredentialStatus
+		}
+		if runtime.Access.CredentialVersion != "" {
+			access["credentialVersion"] = runtime.Access.CredentialVersion
+		}
+		if runtime.Access.SecretRef != "" {
+			access["secretRef"] = runtime.Access.SecretRef
+		}
+		workspace["access"] = access
+		if err := app.tables.SaveWorkspace(r.Context(), workspace); err != nil {
+			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}
 		writeJSON(w, http.StatusOK, workspaceRuntimeStatusResponse(runtime))
@@ -201,18 +212,13 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 		workspace["computeAllocationId"], workspace["currentComputeAllocationId"] = resumed.ComputeID, resumed.ComputeID
 		workspace["attachmentId"], workspace["currentAttachmentId"] = resumed.AttachmentID, resumed.AttachmentID
 		workspace["runtimeId"] = resumed.RuntimeID
-		workspace["runtime"] = map[string]any{"serviceName": resumed.RuntimeServiceName}
+		workspace["runtime"] = map[string]any{"serviceName": resumed.RuntimeServiceName, "status": resumed.Status, "ready": resumed.RuntimeReady}
 		workspace["runtimeServiceName"], workspace["serviceName"] = resumed.RuntimeServiceName, resumed.RuntimeServiceName
 		workspace["receiptId"] = resumed.ReceiptID
 		workspace["url"] = resumed.URL
 		access := cloneMap(mapField(workspace, "access"))
-		credentialsReady := resumed.RuntimeReady && resumed.RuntimeUsername != "" && resumed.CredentialStatus == "configured" && resumed.CredentialSecretRef != ""
-		if credentialsReady {
-			access["tokenStatus"] = "active"
-		} else {
-			access["tokenStatus"] = "suspended"
-		}
-		access["requiresLogin"] = false
+		delete(access, "tokenStatus")
+		delete(access, "requiresLogin")
 		if resumed.RuntimeUsername != "" {
 			access["account"], access["username"] = resumed.RuntimeUsername, resumed.RuntimeUsername
 		}

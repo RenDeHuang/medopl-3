@@ -465,16 +465,22 @@ func workspaceResponse(row map[string]any) map[string]any {
 	row["state"] = firstNonEmpty(stringValue(row["state"]), stringValue(row["status"]))
 	row["currentComputeAllocationId"] = firstNonEmpty(stringValue(row["currentComputeAllocationId"]), stringValue(row["computeAllocationId"]))
 	row["currentAttachmentId"] = firstNonEmpty(stringValue(row["currentAttachmentId"]), stringValue(row["attachmentId"]))
+	runtime := cloneMap(mapField(row, "runtime"))
 	if serviceName := stringValue(row["runtimeServiceName"]); serviceName != "" {
-		row["runtime"] = map[string]any{"serviceName": serviceName}
+		runtime["serviceName"] = serviceName
 	}
-	runtimeStatus := firstNonEmpty(stringValue(nested(row, "runtime", "status")), stringValue(row["runtimeStatus"]), stringValue(row["state"]))
+	runtimeStatus := firstNonEmpty(stringValue(runtime["status"]), stringValue(row["runtimeStatus"]), stringValue(row["state"]))
+	runtime["status"] = runtimeStatus
+	if ready, ok := row["runtimeReady"].(bool); ok {
+		runtime["ready"] = ready
+	}
+	row["runtime"] = runtime
 	row["runtimeStatus"] = runtimeStatus
 	access, _ := row["access"].(map[string]any)
 	access = cloneMap(access)
 	delete(access, "password")
-	access["tokenStatus"] = firstNonEmpty(stringValue(access["tokenStatus"]), "active")
-	access["requiresLogin"] = false
+	delete(access, "tokenStatus")
+	delete(access, "requiresLogin")
 	if username := stringValue(row["runtimeUsername"]); username != "" {
 		access["account"] = username
 		access["username"] = username
@@ -488,18 +494,22 @@ func workspaceResponse(row map[string]any) map[string]any {
 	if secretRef := stringValue(row["credentialSecretRef"]); secretRef != "" {
 		access["secretRef"] = secretRef
 	}
-	openable := access["tokenStatus"] == "active" && (runtimeStatus == "running" || runtimeStatus == "ready" || runtimeStatus == "available" || runtimeStatus == "active")
-	if state := stringValue(row["state"]); state == "suspended" || state == "data_deleted" || state == "storage_missing" || state == "destroyed" {
+	state := stringValue(row["state"])
+	openable := state == "running" || state == "ready" || state == "available" || state == "active"
+	if ready, ok := runtime["ready"].(bool); ok && !ready {
+		openable = false
+	}
+	if state == "suspended" || state == "data_deleted" || state == "unrecoverable" || state == "storage_missing" || state == "destroyed" {
 		openable = false
 	}
 	row["openable"] = openable
 	switch {
 	case openable:
 		row["accessState"] = "available"
-	case access["tokenStatus"] == "active" && stringValue(row["state"]) != "data_deleted":
-		row["accessState"] = "distributing"
-	default:
+	case stringValue(row["state"]) == "suspended" || stringValue(row["state"]) == "data_deleted" || stringValue(row["state"]) == "unrecoverable" || stringValue(row["state"]) == "destroyed":
 		row["accessState"] = "disabled"
+	default:
+		row["accessState"] = "distributing"
 	}
 	row["access"] = access
 	return row
@@ -568,7 +578,6 @@ func workspaceRuntimeStatusResponse(runtime clients.WorkspaceRuntime) map[string
 	ready := runtime.Ready
 	checks := runtime.Checks
 	if len(checks) == 0 {
-		ready = runtime.Status == "running"
 		checks = []any{map[string]any{"name": "fabric_runtime_running", "ok": ready}}
 	}
 	body := map[string]any{

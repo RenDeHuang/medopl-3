@@ -50,14 +50,14 @@ test("workspace and support click targets are route/action registry backed", () 
     "workspace.create",
     "workspace.detail",
     "workspace.openUrl",
-    "workspace.resetUrl",
-    "workspace.enableUrl",
-    "workspace.deleteUrl",
     "billing.overview",
     "support.create",
     "support.detail",
     "admin.userCreate"
   ]) {
     assert.ok(actionsById.has(id), `missing action ${id}`);
+  }
+  for (const id of ["workspace.resetUrl", "workspace.enableUrl", "workspace.deleteUrl"]) {
+    assert.equal(actionsById.has(id), false, `retired fake URL action ${id} must not return`);
   }
 });

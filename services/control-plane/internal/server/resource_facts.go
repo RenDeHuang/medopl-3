@@ -22,9 +22,6 @@ func (app *controlPlaneServer) cleanupComputeResource(ctx context.Context, servi
 		workspace["currentComputeAllocationId"], workspace["computeAllocationId"] = "", ""
 		workspace["runtimeId"], workspace["runtimeServiceName"], workspace["serviceName"] = "", "", ""
 		workspace["runtime"] = map[string]any{}
-		access := cloneMap(mapField(workspace, "access"))
-		access["tokenStatus"], access["requiresLogin"] = "suspended", false
-		workspace["access"] = access
 		if err := app.tables.SaveWorkspace(ctx, workspace); err != nil {
 			return clients.ComputeAllocation{}, err
 		}

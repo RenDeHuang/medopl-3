@@ -116,7 +116,6 @@ func (app *controlPlaneServer) managementState(includeDeleted bool, computePools
 		"runtimeOperations":      rowsAsAnyFromMaps(app.listRuntimeOperations()),
 		"auditEvents":            rowsAsAnyFromMaps(app.listAuditEvents("")),
 		"billingReconciliation":  app.reconciliationProjectionLocked(),
-		"workspaceAccessCleanup": app.workspaceAccessCleanupSummaryLocked(),
 		"archive":                app.archiveStateLocked(),
 		"retentionPolicy":        currentRetentionPolicy().dto(),
 	}
@@ -143,7 +142,7 @@ func (app *controlPlaneServer) operatorSummary() map[string]any {
 		"generatedAt":            time.Now().UTC().Format(time.RFC3339),
 		"accountScope":           "all",
 		"accounts":               map[string]any{"total": len(accounts)},
-		"workspaces":             map[string]any{"total": len(workspaces), "running": countStatus(workspaces, "running"), "urlActive": countActiveURLs(workspaces), "destroyed": countStatus(workspaces, "destroyed"), "needsAttention": 0},
+		"workspaces":             map[string]any{"total": len(workspaces), "running": countStatus(workspaces, "running"), "destroyed": countStatus(workspaces, "destroyed"), "needsAttention": 0},
 		"computeAllocations":     map[string]any{"total": len(computes), "running": running, "failed": countStatus(computes, "failed")},
 		"notifications":          operationalNotificationSummary(computes, storages),
 		"runtimeOperations":      runtimeOperationSummary(runtimeOperations),
@@ -293,37 +292,6 @@ func (app *controlPlaneServer) accountsLocked(accountID string) []any {
 	return rows
 }
 
-func (app *controlPlaneServer) cleanupWorkspaceAccess(input map[string]any) (map[string]any, error) {
-	requested := stringSet(stringSliceField(input, "workspaceIds"))
-	cleaned := []any{}
-	skipped := []any{}
-	for _, workspace := range app.listWorkspaces("") {
-		id := stringValue(workspace["id"])
-		if len(requested) > 0 && !requested[id] {
-			continue
-		}
-		if nested(workspace, "access", "tokenStatus") != "active" {
-			skipped = append(skipped, map[string]any{"id": id, "reason": "url_not_active"})
-			continue
-		}
-		reason := app.workspaceCleanupReasonLocked(workspace)
-		if reason == "" && len(requested) == 0 {
-			skipped = append(skipped, map[string]any{"id": id, "reason": "resource_chain_active"})
-			continue
-		}
-		access, _ := workspace["access"].(map[string]any)
-		access = cloneMap(access)
-		access["tokenStatus"] = "disabled"
-		access["requiresLogin"] = false
-		workspace["access"] = access
-		cleaned = append(cleaned, map[string]any{"id": id, "reason": firstNonEmpty(reason, "operator_requested")})
-		if err := app.tables.SaveWorkspace(context.Background(), workspace); err != nil {
-			return nil, err
-		}
-	}
-	return map[string]any{"cleaned": cleaned, "skipped": skipped}, nil
-}
-
 type terminalArchiveStore interface {
 	ArchiveTerminalResources(ctx context.Context, reason string) (map[string]any, error)
 }
@@ -406,7 +374,7 @@ func (app *controlPlaneServer) removeTerminalResourcesLocked() int {
 	return removed
 }
 
-func (app *controlPlaneServer) workspaceCleanupReasonLocked(workspace map[string]any) string {
+func (app *controlPlaneServer) workspaceResourceAnomaly(workspace map[string]any) string {
 	if stringValue(workspace["ownerAccountId"]) == "" && stringValue(workspace["accountId"]) == "" {
 		return "missing_owner"
 	}
@@ -431,36 +399,12 @@ func (app *controlPlaneServer) workspaceCleanupReasonLocked(workspace map[string
 	return ""
 }
 
-func (app *controlPlaneServer) workspaceAccessCleanupSummaryLocked() map[string]any {
-	active := 0
-	candidates := []any{}
-	for _, workspace := range app.listWorkspaces("") {
-		id := stringValue(workspace["id"])
-		if nested(workspace, "access", "tokenStatus") != "active" {
-			continue
-		}
-		active++
-		if reason := app.workspaceCleanupReasonLocked(workspace); reason != "" {
-			candidates = append(candidates, map[string]any{"id": id, "workspaceId": id, "accountId": firstNonEmpty(stringValue(workspace["ownerAccountId"]), stringValue(workspace["accountId"])), "reason": reason})
-		}
-	}
-	return map[string]any{
-		"activeUrlCount":          active,
-		"cleanupCandidateCount":   len(candidates),
-		"destroyedComputeCount":   countStatus(app.computeRecordSet(""), "destroyed"),
-		"destroyedStorageCount":   countStatus(app.storageRecordSet(""), "destroyed"),
-		"detachedAttachmentCount": countStatus(app.attachmentRecordSet(""), "detached"),
-		"candidates":              candidates,
-	}
-}
-
 func (app *controlPlaneServer) resourceAnomaliesLocked() []any {
 	rows := []any{}
-	for _, candidate := range app.workspaceAccessCleanupSummaryLocked()["candidates"].([]any) {
-		row := cloneMap(candidate.(map[string]any))
-		row["type"] = "workspace_access"
-		row["status"] = row["reason"]
-		rows = append(rows, row)
+	for _, workspace := range app.listWorkspaces("") {
+		if reason := app.workspaceResourceAnomaly(workspace); reason != "" {
+			rows = append(rows, map[string]any{"type": "workspace", "workspaceId": workspace["id"], "accountId": firstNonEmpty(stringValue(workspace["ownerAccountId"]), stringValue(workspace["accountId"])), "status": reason})
+		}
 	}
 	for _, compute := range app.listComputes("") {
 		if stringValue(compute["status"]) == "failed" {

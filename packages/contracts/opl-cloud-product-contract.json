@@ -23,7 +23,6 @@
     "computeAllocation": 1,
     "storageVolume": 1,
     "storageAttachment": 1,
-    "urlToken": 1,
     "runtimeTemplate": 1,
     "runtimeImageRef": "default:one-person-lab-app"
   },
@@ -33,11 +32,9 @@
     "ownershipRule": "Runtime templates never own accounts, compute allocations, storage volumes, storage attachments, Workspace URL entries, monthly entitlements, charges, or lifecycle records."
   },
   "access": {
-    "urlPattern": "https://workspace.medopl.cn/w/<workspaceId>/?token=<share-token>",
-    "mode": "long_lived_url_token",
-    "requiresLogin": false,
-    "tokenLifetime": "permanent_until_owner_reset_or_delete",
-    "rotationPolicy": "reset_or_delete_on_leak"
+    "urlPattern": "https://workspace.medopl.cn/w/<workspaceId>/",
+    "mode": "runtime_password",
+    "requiresLogin": true
   },
   "defaultPackages": [
     {
