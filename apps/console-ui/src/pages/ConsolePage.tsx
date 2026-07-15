@@ -40,7 +40,7 @@ export default function ConsolePage({ route, session, onLogout }: any) {
     );
   }
 
-  if (!consoleState.state) return <div className="loading">Loading OPL Console...</div>;
+  if (!consoleState.state) return <div className="loading" role="status" aria-live="polite">正在加载账号数据...</div>;
 
   const ctx = {
     route,
