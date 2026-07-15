@@ -126,11 +126,18 @@ func (app *controlPlaneServer) operatorSummary() map[string]any {
 	app.mu.Lock()
 	defer app.mu.Unlock()
 	computes := app.computeRecordSet("")
+	storages := app.storageRecordSet("")
 	workspaces := app.workspaceRecordSet("")
 	evidence := app.resourceLedgerEvidenceLocked()
 	runtimeOperations := app.listRuntimeOperations()
 	running := countStatus(computes, "running")
 	accounts := app.accountsLocked()
+	for _, row := range computes {
+		app.observeMonthlyOperationalAlerts("compute", row)
+	}
+	for _, row := range storages {
+		app.observeMonthlyOperationalAlerts("storage", row)
+	}
 	return map[string]any{
 		"product":                "OPL Console",
 		"generatedAt":            time.Now().UTC().Format(time.RFC3339),
@@ -138,7 +145,7 @@ func (app *controlPlaneServer) operatorSummary() map[string]any {
 		"accounts":               map[string]any{"total": len(accounts)},
 		"workspaces":             map[string]any{"total": len(workspaces), "running": countStatus(workspaces, "running"), "urlActive": countActiveURLs(workspaces), "destroyed": countStatus(workspaces, "destroyed"), "needsAttention": 0},
 		"computeAllocations":     map[string]any{"total": len(computes), "running": running, "failed": countStatus(computes, "failed")},
-		"notifications":          map[string]any{"total": 0, "error": 0, "warning": 0, "recent": []any{}},
+		"notifications":          operationalNotificationSummary(computes, storages),
 		"runtimeOperations":      runtimeOperationSummary(runtimeOperations),
 		"failedOperations":       failedRuntimeOperations(runtimeOperations),
 		"resourceAnomalies":      app.resourceAnomaliesLocked(),

@@ -287,10 +287,16 @@ func (app *controlPlaneServer) cleanupMonthlyResource(ctx context.Context, servi
 }
 
 func (app *controlPlaneServer) saveMonthlyResource(ctx context.Context, resourceType string, row map[string]any) error {
+	var err error
 	if resourceType == "storage" {
-		return app.tables.SaveStorage(ctx, row)
+		err = app.tables.SaveStorage(ctx, row)
+	} else {
+		err = app.tables.SaveCompute(ctx, row)
 	}
-	return app.tables.SaveCompute(ctx, row)
+	if err == nil {
+		app.observeMonthlyOperationalAlerts(resourceType, row)
+	}
+	return err
 }
 
 func (app *controlPlaneServer) monthlyResource(resourceType, id string) (map[string]any, bool) {
