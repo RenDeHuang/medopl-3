@@ -24,8 +24,10 @@ npm run validate:production-manifest -- \
 - Tencent mutation credentials, region, cluster, subnet, and security groups;
 - internal service token and AionUI password seed.
 
-Secrets must be GitHub/Kubernetes secrets. Never place credentials in the
-manifest, command arguments, logs, or verifier artifacts.
+Secrets must be GitHub/Kubernetes secrets. Customer Workspace Gateway Keys are
+account-scoped Kubernetes Secrets written by Fabric, not a global deployment
+environment variable. Never place credentials in the manifest, command
+arguments, logs, or verifier artifacts.
 
 ## Database Startup Migrations
 
@@ -362,7 +364,7 @@ release gate.
 
 The approved replacement must:
 
-1. use fake Sub2API reserve/capture/release for the monthly commercial path;
+1. use fake Sub2API debit/refund and fake provider mutation for the monthly commercial path;
 2. reuse `verification-slot-01`, a prepaid `SA5.MEDIUM2` plus 10GB CBS Slot;
 3. deploy and authenticate to the candidate Workspace image on that Slot;
 4. prove WebSocket behavior and one real model request with a dedicated test key;
@@ -376,10 +378,13 @@ production verification remains blocked.
 
 ## Billing Recovery
 
-- `preparing`: inspect the Fabric operation; no charge is expected yet.
-- `charge_pending`: replay the same persisted redeem code; never create a new code.
-- `manual_review`: compare the exact Sub2API adjustment and balance snapshots
-  before changing entitlement state.
+- `preflight`: read-only checks only; no debit or provider write is allowed.
+- `debit_pending`: replay the same persisted Redeem Code and Idempotency-Key;
+  never create a new identity.
+- debit succeeded with confirmed no billable resource: replay the one deterministic
+  refund identity and verify its readback.
+- debit succeeded with partial or unknown provider result: enter `manual_review`
+  without refund, cleanup, or repurchase.
 - `active` with missing receipt: retry only the Ledger receipt write.
 - expired compute: confirm provider deletion.
 - expired storage: preserve data and block attachment until reactivation.

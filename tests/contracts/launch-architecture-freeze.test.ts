@@ -20,46 +20,58 @@ test("root agent instructions require the launch invariants", async () => {
   assert.match(gitignore, /^\.codegraph\/$/m);
 });
 
-test("launch freeze fixes the four owners, products, settlement, and verification slot", async () => {
+test("launch freeze fixes the V2 products, owner lanes, settlement, and verification slot", async () => {
   const freeze = await json("packages/contracts/opl-cloud-launch-freeze-contract.json");
 
   assert.equal(freeze.architectureAuthority.repository, "https://github.com/gaofeng21cn/one-person-lab-cloud");
   assert.equal(freeze.architectureAuthority.reviewedRevision, "fdeb0e4df3e4905fb1c3551337b9dfda65bb2119");
-  assert.deepEqual(Object.keys(freeze.layers), ["console", "fabric", "ledger", "gateway"]);
-  assert.equal(freeze.layers.gateway.backend, "Sub2API");
-  assert.equal(freeze.layers.gateway.spendableBalanceOwner, true);
-  assert.equal(freeze.layers.console.localWalletForbidden, true);
+  assert.deepEqual(Object.keys(freeze.productSurfaces), ["gateway", "workspace", "console", "fabric", "ledger"]);
+  assert.deepEqual(Object.keys(freeze.ownerLanes), ["console", "fabric", "gateway", "ledger"]);
+  assert.deepEqual(freeze.customerProducts.basic, {
+    compute: { cpu: 2, memoryGb: 4, cnyCents: 35000, usdMicros: 50000000 },
+    storage: { sizeGb: 10, cnyCents: 1800, usdMicros: 2571429 },
+    targetSaleable: true
+  });
+  assert.deepEqual(freeze.customerProducts.pro, {
+    compute: { cpu: 8, memoryGb: 16, cnyCents: 150000, usdMicros: 214285715 },
+    storage: { sizeGb: 100, cnyCents: 18000, usdMicros: 25714286 },
+    targetSaleable: true
+  });
 
-  assert.deepEqual(freeze.customerProducts.basic.resources, { cpu: 2, memoryGb: 4 });
-  assert.deepEqual(freeze.customerProducts.pro.resources, { cpu: 8, memoryGb: 16 });
-  assert.equal(freeze.customerProducts.basic.currentAvailability, "available");
-  assert.equal(freeze.customerProducts.pro.currentAvailability, "implementation_required");
-
-  assert.deepEqual(freeze.monthlySettlement.protocol, ["reserve", "provision", "claim", "capture"]);
-  assert.equal(freeze.monthlySettlement.failureBeforeProviderCost, "release");
-  assert.equal(freeze.monthlySettlement.ambiguousProviderResult, "keep_reserved_and_manual_review");
+  assert.deepEqual(freeze.monthlySettlement.protocol, ["debit", "provision", "claim", "activate"]);
+  assert.equal(freeze.monthlySettlement.confirmedNoResourceAfterDebit, "idempotent_refund");
+  assert.equal(freeze.monthlySettlement.partialOrUnknownProviderResult, "manual_review_without_refund");
   assert.equal(freeze.providerProcurement.chargeType, "PREPAID");
   assert.equal(freeze.providerProcurement.periodMonths, 1);
   assert.equal(freeze.providerProcurement.renewFlag, "NOTIFY_AND_MANUAL_RENEW");
   assert.deepEqual(freeze.providerProcurement.forbiddenChargeTypes, ["POSTPAID_BY_HOUR"]);
+  assert.equal(freeze.workspaceRuntime.sourceImage.digest, "sha256:9d867fe0fc9db48b6efa27371d77770e46fc8cd97d26ef85a81fbdac7e96ca76");
+  assert.equal(freeze.gateway.sub2apiMutable, false);
+  assert.equal(freeze.gateway.keyName, "opl-workspace");
+  assert.equal(freeze.gateway.adminUsageEndpointAllowed, false);
 
   assert.equal(freeze.verification.slot.computeInstanceType, "SA5.MEDIUM2");
   assert.equal(freeze.verification.slot.customerProduct, false);
   assert.equal(freeze.verification.slot.reuseForBillingPeriod, true);
+  assert.equal(freeze.verification.purchaseBudget, 1);
+  assert.equal(freeze.verification.purchaseBudgetRemaining, 1);
   assert.equal(freeze.verification.perRunTencentPurchase, false);
   assert.equal(freeze.verification.monthlyBillingBackend, "fake");
   assert.equal(freeze.verification.gatewayRequest, "real_dedicated_test_key");
   assert.deepEqual(freeze.verification.providerResourcesDeletedPerRun, []);
+  assert.equal(freeze.launchStages.length, 10);
+  assert.equal("slides" in freeze, false);
+  assert.equal(freeze.deliveryPhases.length, 6);
 });
 
-test("every launch slide declares business, current state, deliverables, and evidence", async () => {
+test("every launch stage declares business, current state, deliverables, and evidence", async () => {
   const freeze = await json("packages/contracts/opl-cloud-launch-freeze-contract.json");
   const expected = [
     "offer_identity",
     "wallet_quote",
-    "balance_reservation",
+    "balance_debit",
     "prepaid_fulfillment",
-    "claim_and_capture",
+    "claim_and_activate",
     "workspace_access",
     "gateway_usage",
     "renewal_expiry_recovery",
@@ -67,25 +79,27 @@ test("every launch slide declares business, current state, deliverables, and evi
     "production_release"
   ];
 
-  assert.deepEqual(freeze.slides.map((slide) => slide.id), expected);
-  for (const slide of freeze.slides) {
-    assert.ok(slide.business, `${slide.id} business`);
-    assert.ok(Array.isArray(slide.owners) && slide.owners.length > 0, `${slide.id} owners`);
-    assert.ok(slide.currentState, `${slide.id} currentState`);
-    assert.ok(Array.isArray(slide.requiredDeliverables) && slide.requiredDeliverables.length > 0, `${slide.id} requiredDeliverables`);
-    assert.ok(Array.isArray(slide.completionEvidence) && slide.completionEvidence.length > 0, `${slide.id} completionEvidence`);
+  assert.deepEqual(freeze.launchStages.map((stage) => stage.id), expected);
+  for (const stage of freeze.launchStages) {
+    assert.ok(stage.business, `${stage.id} business`);
+    assert.ok(Array.isArray(stage.owners) && stage.owners.length > 0, `${stage.id} owners`);
+    assert.ok(stage.currentState, `${stage.id} currentState`);
+    assert.ok(Array.isArray(stage.requiredDeliverables) && stage.requiredDeliverables.length > 0, `${stage.id} requiredDeliverables`);
+    assert.ok(Array.isArray(stage.completionEvidence) && stage.completionEvidence.length > 0, `${stage.id} completionEvidence`);
   }
 });
 
 test("human invariants reject paid per-run resource verification", async () => {
   const invariants = await text("docs/invariants.md");
 
-  for (const heading of ["Console", "Fabric", "Ledger", "Gateway", "Launch Slides", "Verification Slot"]) {
+  for (const heading of ["Console", "Fabric", "Ledger", "Gateway", "Launch Stages", "Verification Slot"]) {
     assert.match(invariants, new RegExp(`## ${heading}`));
   }
   assert.match(invariants, /SA5\.MEDIUM2/);
-  assert.match(invariants, /reserve.*capture.*release/is);
+  assert.match(invariants, /debit.*provision.*claim.*activate/is);
+  assert.match(invariants, /confirmed.*no billable resource.*refund/is);
   assert.match(invariants, /POSTPAID_BY_HOUR.*forbidden/is);
+  assert.doesNotMatch(invariants, /monthly settlement requires Sub2API-owned `reserve`/i);
   assert.doesNotMatch(invariants, /Production E2E requires explicit confirmation that it spends real balance/);
   assert.doesNotMatch(invariants, /Fabric prepares before charge/);
 });
@@ -104,8 +118,10 @@ test("legacy paid verifier is blocked and removed from the release gate", async 
   assert.equal(deployment.productionVerificationWorkflow.launchStatus, "blocked");
   assert.equal(deployment.productionVerificationWorkflow.releaseGate, false);
   assert.equal(deployment.productionVerificationWorkflow.replacement, "reusable_prepaid_verification_slot");
+  assert.equal(deployment.workspaceImage.sourceDigest, "sha256:9d867fe0fc9db48b6efa27371d77770e46fc8cd97d26ef85a81fbdac7e96ca76");
+  assert.equal(deployment.workspaceImage.productionReference, "repository@sha256");
   assert.match(runbook, /Do not run the legacy paid verifier/);
-  assert.match(architecture, /reserve.*before\s+Fabric.*capture/is);
+  assert.match(architecture, /debit.*before\s+Fabric.*activate/is);
   assert.doesNotMatch(architecture, /Fabric preparation happens before the external charge/);
   for (const document of [architecture, decisions, project, readme, status]) {
     assert.doesNotMatch(document, /single paid verifier|one paid production verifier|explicitly confirmed paid E2E/i);

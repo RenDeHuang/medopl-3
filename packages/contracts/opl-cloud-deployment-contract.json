@@ -1,9 +1,9 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "owner": "OPL Fabric",
-  "purpose": "Deployment workflow, production image, TKE handoff, and the status of production verification.",
+  "purpose": "Deployment workflow, immutable Cloud and Workspace images, TKE handoff, and production-verification safety.",
   "state": "current",
-  "machineBoundary": "GitHub workflow structure, runner isolation, deploy-time env sources, secret handling, image release, and the blocked legacy paid verifier.",
+  "machineBoundary": "GitHub workflow structure, runner isolation, deploy-time env sources, secret handling, immutable image release, grouped rollback, and the blocked legacy paid verifier.",
   "lifecycle": {
     "type": "long_term_contract",
     "removalCondition": "Replace only with a newer current contract for the same boundary."
@@ -76,7 +76,6 @@
       "OPL_INTERNAL_SERVICE_TOKEN",
       "OPL_CONSOLE_USERS_JSON",
       "OPL_OPERATOR_SUMMARY_TOKEN",
-      "OPL_CODEX_API_KEY",
       "OPL_SUB2API_ADMIN_EMAIL",
       "OPL_SUB2API_ADMIN_PASSWORD",
       "TENCENTCLOUD_SECRET_ID",
@@ -127,7 +126,6 @@
         "--from-file=DATABASE_URL=\"$secret_dir/database-url\"",
         "--from-file=OPL_INTERNAL_SERVICE_TOKEN=\"$secret_dir/internal-service-token\"",
         "--from-file=OPL_CONSOLE_USERS_JSON=\"$secret_dir/auth-users-json\"",
-        "--from-file=OPL_CODEX_API_KEY=\"$secret_dir/codex-api-key\"",
         "--from-file=OPL_SUB2API_ADMIN_EMAIL=\"$secret_dir/sub2api-admin-email\"",
         "--from-file=OPL_SUB2API_ADMIN_PASSWORD=\"$secret_dir/sub2api-admin-password\"",
         "--from-file=TENCENTCLOUD_SECRET_ID=\"$secret_dir/tencentcloud-secret-id\"",
@@ -249,6 +247,15 @@
         "docker buildx imagetools create -t \"$OPL_WORKSPACE_IMAGE_REF\" \"$WORKSPACE_SOURCE_IMAGE\""
       ]
     }
+  },
+  "workspaceImage": {
+    "sourceRepository": "ghcr.io/gaofeng21cn/one-person-lab-webui",
+    "sourceTag": "26.7.13",
+    "sourceDigest": "sha256:9d867fe0fc9db48b6efa27371d77770e46fc8cd97d26ef85a81fbdac7e96ca76",
+    "targetRepository": "uswccr.ccs.tencentyun.com/oplcloud/one-person-lab-app",
+    "targetTag": "26.7.13",
+    "productionReference": "repository@sha256",
+    "mutableTagsForbidden": ["latest", "stable"]
   },
   "controlPlaneImage": {
     "file": "Dockerfile",

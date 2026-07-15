@@ -20,20 +20,24 @@ Implemented:
 
 Not ready:
 
-- Pro purchase and provider evidence, although its `8c16g` product definition is approved;
-- Sub2API reserve/capture/release integration for monthly resource settlement;
+- Pro purchase and provider evidence, although its `8c16g`, CNY 1,500 compute,
+  and CNY 180/100GB storage definition is approved;
+- debit-before-provider ordering, confirmed-absence refund, and ambiguous-result
+  manual review for monthly resource settlement;
 - prepaid Tencent CVM/CBS procurement and renewal;
+- account-owned `opl-workspace` Key projection and Fabric Secret injection;
+- immutable deployment of the verified `one-person-lab-webui:26.7.13` source digest;
 - the reusable `SA5.MEDIUM2` plus 10GB CBS Verification Slot;
-- safe release verification; the legacy paid verifier is blocked and is not a release gate;
+- safe refund/manual-review verification; the legacy paid verifier is blocked and is not a release gate;
 - GPU packages;
 - public self-registration or a reusable unified identity system;
 - production backup/restore, because the current TKE snapshot installation does
   not expose the required GA `snapshot.storage.k8s.io/v1` API;
 - public GA operational evidence.
 
-Sub2API source, API keys, routing, request usage, and balance remain outside this
-repository. Console links to the external Gateway and never mirrors its key or
-usage database.
+Sub2API source, deployment, API keys, routing, request usage, and balance remain
+outside this repository. Console may read the signed-in account's single active
+`opl-workspace` Key and Key DTO usage on demand, but never mirrors them.
 
 ## Completion Gate
 

@@ -38,24 +38,27 @@ charges use exact integer USD micros at `1 USD = 7 CNY`.
 | --- | ---: | ---: |
 | Basic compute, 2 CPU / 4 GB | CNY 350/month | 50,000,000 USD micros |
 | Pro compute, 8 CPU / 16 GB | CNY 1,500/month | 214,285,715 USD micros |
-| Storage, each 10 GB block | CNY 18/month | 2,571,429 USD micros |
+| Basic default storage, 10 GB | CNY 18/month | 2,571,429 USD micros |
+| Pro default storage, 100 GB | CNY 180/month | 25,714,286 USD micros |
 
 Storage must be at least 10 GB and divisible by 10 GB. Unknown compute plans and
 invalid storage sizes are rejected at both Control Plane and Fabric boundaries.
 
-The approved launch settlement follows one persisted operation:
+The approved launch settlement reuses the deployed Sub2API v0.1.153 deterministic
+Redeem Code and Idempotency-Key path:
 
 ```text
-validate -> prepaid capacity preflight -> Sub2API reserve
-         -> Fabric provision and claim -> Sub2API capture
-         -> activate monthly entitlement -> Ledger receipt
+validate -> read-only prepaid capacity/price preflight -> confirm balance
+         -> Sub2API debit -> Fabric provision and claim
+         -> activate monthly entitlements -> Ledger receipt
 ```
 
-Stable operation identities make reserve, provider mutation, claim, capture,
-release, and receipt retries safe. A partial or ambiguous provider result keeps
-the balance reserved and enters manual review instead of guessing. The current
-implementation still uses a direct balance adjustment and postpaid CVM; see
-`docs/invariants.md` for the frozen target and per-slide delivery gaps.
+Stable operation identities make debit, provider mutation, claim, activation,
+refund, and receipt retries safe. A confirmed no-resource result permits one
+idempotent refund; a partial or ambiguous provider result enters manual review
+without refund or repurchase. The current implementation still prepares Fabric
+before debit and uses postpaid CVM; see `docs/invariants.md` for the frozen target
+and per-stage delivery gaps.
 
 ## Workspace Model
 
