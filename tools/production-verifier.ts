@@ -8,12 +8,14 @@ const FIXED_VERIFICATION_SLOT_DESCRIPTOR = {
   id: FIXED_VERIFICATION_SLOT_ID,
   customerProduct: false,
   instanceType: "SA5.MEDIUM4",
+  server: "2c4g",
+  cpu: 2,
+  memoryGb: 4,
+  cbsGb: 10,
   chargeType: "PREPAID",
   periodMonths: 1,
-  renewFlag: "NOTIFY_AND_MANUAL_RENEW",
-  storageSizeGb: 10
+  renewFlag: "NOTIFY_AND_MANUAL_RENEW"
 };
-const DEFAULT_PURCHASE_BUDGET_REMAINING = 1;
 const DEFAULT_URL_ATTEMPTS = 3;
 const DEFAULT_RETRY_DELAY_MS = 10_000;
 
@@ -167,7 +169,7 @@ function verificationSlotDescriptor(raw) {
       throw new Error("verification_slot_descriptor_invalid");
     }
   }
-  if (!descriptor || typeof descriptor !== "object" || Array.isArray(descriptor) || Object.entries(FIXED_VERIFICATION_SLOT_DESCRIPTOR).some(([key, value]) => !Object.hasOwn(descriptor, key) || descriptor[key] !== value)) {
+  if (!descriptor || typeof descriptor !== "object" || Array.isArray(descriptor) || Object.keys(descriptor).length !== Object.keys(FIXED_VERIFICATION_SLOT_DESCRIPTOR).length || Object.entries(FIXED_VERIFICATION_SLOT_DESCRIPTOR).some(([key, value]) => !Object.hasOwn(descriptor, key) || descriptor[key] !== value)) {
     throw new Error("verification_slot_descriptor_invalid");
   }
   return FIXED_VERIFICATION_SLOT_DESCRIPTOR;
@@ -244,7 +246,7 @@ function fixedSlotFromState(state, { slotId, slotDescriptor, purchaseBudgetRemai
     storageRenewFlag.ok && storageRenewFlag.value === slotDescriptor.renewFlag &&
     computeDeadline.ok && deadlineAfter(computeDeadline.value, nowMs) &&
     storageDeadline.ok && deadlineAfter(storageDeadline.value, nowMs) &&
-    storageSize.ok && Number(storageSize.value) === slotDescriptor.storageSizeGb;
+    storageSize.ok && Number(storageSize.value) === slotDescriptor.cbsGb;
   if (!compliant) throw new Error("verification_slot_ambiguous");
 
   return {
@@ -302,7 +304,7 @@ export async function verifyProductionChain(options = {}) {
     runId = new Date().toISOString().replace(/[^0-9TZ]/g, ""),
     slotId = FIXED_VERIFICATION_SLOT_ID,
     slotDescriptor: rawSlotDescriptor,
-    purchaseBudgetRemaining = DEFAULT_PURCHASE_BUDGET_REMAINING,
+    purchaseBudgetRemaining,
     now = new Date(),
     workspaceUrlAttempts = DEFAULT_URL_ATTEMPTS,
     retryDelayMs = DEFAULT_RETRY_DELAY_MS,
@@ -314,6 +316,7 @@ export async function verifyProductionChain(options = {}) {
   } = options;
   const slotDescriptor = verificationSlotDescriptor(rawSlotDescriptor);
   if (slotId !== FIXED_VERIFICATION_SLOT_ID) throw new Error("verification_slot_id_fixed");
+  if (purchaseBudgetRemaining === undefined) throw new Error("verification_slot_purchase_budget_required");
   if (!Number.isInteger(purchaseBudgetRemaining) || purchaseBudgetRemaining < 0 || purchaseBudgetRemaining > 1) throw new Error("verification_slot_purchase_budget_invalid");
   if (!Number.isInteger(workspaceUrlAttempts) || workspaceUrlAttempts < 1 || !Number.isFinite(retryDelayMs) || retryDelayMs < 0) throw new Error("verification_retry_config_invalid");
   const nowMs = new Date(now).getTime();
@@ -392,6 +395,7 @@ function verifierOptionsFromArgs({ argv, env, fetchImpl }) {
   if (["paid-confirmation", "package", "workspace"].some((key) => Object.hasOwn(args, key)) || env.OPL_VERIFY_PAID_CONFIRMATION || env.OPL_VERIFY_MODEL_ACCESS_KEY) {
     throw new Error("production_verifier_read_only");
   }
+  if (!String(env.OPL_VERIFY_PURCHASE_BUDGET_REMAINING ?? "").trim()) throw new Error("verification_slot_purchase_budget_required");
   return {
     origin: args.origin || env.OPL_CONSOLE_ORIGIN,
     authUsersJson: env.OPL_VERIFY_AUTH_USERS_JSON,
@@ -399,7 +403,7 @@ function verifierOptionsFromArgs({ argv, env, fetchImpl }) {
     runId: args["run-id"] || env.OPL_VERIFY_RUN_ID || defaultRunId(),
     slotId: args.slot || env.OPL_VERIFY_SLOT_ID || FIXED_VERIFICATION_SLOT_ID,
     slotDescriptor: env.OPL_VERIFY_SLOT_DESCRIPTOR_JSON,
-    purchaseBudgetRemaining: Number(env.OPL_VERIFY_PURCHASE_BUDGET_REMAINING ?? DEFAULT_PURCHASE_BUDGET_REMAINING),
+    purchaseBudgetRemaining: Number(env.OPL_VERIFY_PURCHASE_BUDGET_REMAINING),
     workspaceUrlAttempts: Number(args["url-attempts"] || env.OPL_VERIFY_URL_ATTEMPTS || DEFAULT_URL_ATTEMPTS),
     retryDelayMs: Number(args["retry-delay-ms"] || env.OPL_VERIFY_RETRY_DELAY_MS || DEFAULT_RETRY_DELAY_MS),
     manifestPath: args["manifest-path"] || env.OPL_VERIFY_MANIFEST_PATH || "",
@@ -421,7 +425,7 @@ export async function runProductionVerifierCli({
   fetchImpl = globalThis.fetch
 } = {}) {
   if (argv.includes("--help") || argv.includes("-h")) {
-    stdout.write(`Usage: npm run verify:production -- --origin <https-url> [--account <id>] [--run-id <id>] [--browser-e2e]\nRequires OPL_VERIFY_SLOT_DESCRIPTOR_JSON; read-only smoke reuses ${FIXED_VERIFICATION_SLOT_ID}.\n`);
+    stdout.write(`Usage: npm run verify:production -- --origin <https-url> [--account <id>] [--run-id <id>] [--browser-e2e]\nRequires OPL_VERIFY_SLOT_DESCRIPTOR_JSON and OPL_VERIFY_PURCHASE_BUDGET_REMAINING; read-only smoke reuses ${FIXED_VERIFICATION_SLOT_ID}.\n`);
     return 0;
   }
   try {

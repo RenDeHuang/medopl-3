@@ -15,14 +15,23 @@ const digestA = `sha256:${"a".repeat(64)}`;
 const digestB = `sha256:${"b".repeat(64)}`;
 const primaryWorkspaceSource = "ghcr.io/gaofeng21cn/one-person-lab-webui@sha256:9d867fe0fc9db48b6efa27371d77770e46fc8cd97d26ef85a81fbdac7e96ca76";
 const fallbackWorkspaceSource = "ghcr.io/gaofeng21cn/one-person-lab-webui@sha256:6e1491a3693a820a37b81ab9a26f8efc4262fb9581f981641c6de084b0fa654f";
+const primaryWorkspaceTagCommit = "faeb0d6f9d1fe18ac6ea1433168c5696fd7d7918";
+const primaryWorkspaceConfigDigest = "sha256:5a5335ffa7e03303b8d57019dcbe8dfdea329d11481bfa4dd152f629666c14b9";
+const primaryWorkspaceRevision = "0d45e6c9f954ec63b029b678db5d7929a049a958";
+const fallbackWorkspaceTagCommit = "6339a48dee84cf290173b2efbb34f62647abdfe6";
+const fallbackWorkspaceConfigDigest = "sha256:4d89f20226b140c99102ba5fdc757755f954bed990b2f842ebb3e4d2410e8f05";
+const fallbackWorkspaceRevision = "35a9584f92d3fa2acad0d459a10a7caffaa04c0e";
 const fixedSlotDescriptor = {
   id: "verification-slot-01",
   customerProduct: false,
   instanceType: "SA5.MEDIUM4",
+  server: "2c4g",
+  cpu: 2,
+  memoryGb: 4,
+  cbsGb: 10,
   chargeType: "PREPAID",
   periodMonths: 1,
-  renewFlag: "NOTIFY_AND_MANUAL_RENEW",
-  storageSizeGb: 10
+  renewFlag: "NOTIFY_AND_MANUAL_RENEW"
 };
 
 async function readJson(path) {
@@ -107,9 +116,9 @@ async function manifestFixture() {
       OPL_CLOUD_IMAGE: `registry.example.test/opl/cloud@${digestA}`,
       OPL_WORKSPACE_IMAGE: `registry.example.test/opl/workspace@${digestB}`,
       OPL_IMAGE_PULL_SECRET_NAME: "pull-test",
-      OPL_TENCENT_ZONE: "na-siliconvalley-1",
+      OPL_TENCENT_ZONE: "ap-guangzhou-3",
       OPL_SUB2API_BASE_URL: "https://wallet.example.test",
-      OPL_SUB2API_SUPPORTED_VERSIONS: "0.1.155",
+      OPL_SUB2API_SUPPORTED_VERSIONS: "0.1.156,0.1.155",
       OPL_SUB2API_REQUEST_TIMEOUT_MS: "7000",
       OPL_MONTHLY_BILLING_WORKER_ENABLED: "1",
       OPL_MONTHLY_BILLING_INTERVAL_MS: "60000"
@@ -119,10 +128,20 @@ async function manifestFixture() {
 
 test("TKE deploy workflow matches the current deployment contract", async () => {
   const contract = await readJson(deploymentContractPath);
-  assertWorkflowContract(await readWorkflow(contract.deployWorkflow.file), contract.deployWorkflow, contract);
+  const deployWorkflow = await readWorkflow(contract.deployWorkflow.file);
+  assertWorkflowContract(deployWorkflow, contract.deployWorkflow, contract);
   assert.ok(contract.deployWorkflow.requiredEnv.includes("OPL_TENCENT_ZONE"));
-  assert.equal(contract.productionVerificationWorkflow.launchStatus, "blocked");
-  assert.equal(contract.productionVerificationWorkflow.replacement, "reusable_prepaid_verification_slot");
+  assert.equal(contract.productionVerificationWorkflow.launchStatus, "active");
+  assert.equal(contract.productionVerificationWorkflow.mode, "read_only_fixed_slot");
+  assert.deepEqual(contract.productionVerificationWorkflow.slotDescriptor, fixedSlotDescriptor);
+  assertWorkflowContract(await readWorkflow(contract.productionVerificationWorkflow.file), contract.productionVerificationWorkflow, contract);
+  assert.equal(contract.productionLiveQaJob.releaseGate, true);
+  assert.equal(contract.productionLiveQaJob.mode, "one_model_request_no_provider_mutation");
+  assert.deepEqual(contract.productionLiveQaJob.slotDescriptor, fixedSlotDescriptor);
+  assertWorkflowContract(deployWorkflow, contract.productionLiveQaJob, contract);
+  assert.equal(contract.productionRollbackJob.trigger, "post_snapshot_deploy_or_live_qa_not_successful");
+  assertWorkflowContract(deployWorkflow, contract.productionRollbackJob, contract);
+  assert.doesNotMatch(JSON.stringify(contract), /paid_confirmation|OPL_VERIFY_PAID_CONFIRMATION|OPL_VERIFY_MODEL_ACCESS_KEY/);
 });
 
 test("production verification is read only and fixed to the reusable prepaid slot", async () => {
@@ -140,6 +159,7 @@ test("production verification is read only and fixed to the reusable prepaid slo
   assert.equal(currentJob.env.OPL_VERIFY_AUTH_USERS_JSON, "${{ secrets.OPL_VERIFY_AUTH_USERS_JSON || secrets.OPL_CONSOLE_USERS_JSON }}");
   assert.equal(currentJob.env.OPL_VERIFY_SLOT_ID, "verification-slot-01");
   assert.deepEqual(JSON.parse(currentJob.env.OPL_VERIFY_SLOT_DESCRIPTOR_JSON), fixedSlotDescriptor);
+  assert.equal(currentJob.env.OPL_VERIFY_PURCHASE_BUDGET_REMAINING, "${{ vars.OPL_VERIFY_PURCHASE_BUDGET_REMAINING }}");
   assert.match(runs, /node tools\/production-verifier\.ts --browser-e2e/);
   assert.doesNotMatch(runs, /paid.confirmation|compute-allocations|storage-volumes|destroy|detach/i);
 
@@ -159,8 +179,7 @@ test("TKE deploy runs separately gated real Workspace QA only after rollout", as
   assert.equal(liveQa.env.OPL_VERIFY_AUTH_USERS_JSON, "${{ secrets.OPL_VERIFY_AUTH_USERS_JSON || secrets.OPL_CONSOLE_USERS_JSON }}");
   assert.equal(liveQa.env.OPL_VERIFY_SLOT_ID, "verification-slot-01");
   assert.deepEqual(JSON.parse(liveQa.env.OPL_VERIFY_SLOT_DESCRIPTOR_JSON), fixedSlotDescriptor);
-  assert.notEqual(liveQa.env.OPL_VERIFY_PURCHASE_BUDGET_REMAINING, "0");
-  assert.match(String(liveQa.env.OPL_VERIFY_PURCHASE_BUDGET_REMAINING), /OPL_VERIFY_PURCHASE_BUDGET_REMAINING|'1'/);
+  assert.equal(liveQa.env.OPL_VERIFY_PURCHASE_BUDGET_REMAINING, "${{ vars.OPL_VERIFY_PURCHASE_BUDGET_REMAINING }}");
   assert.equal(liveQa.env.OPL_VERIFY_LIVE_QA_CONFIRMATION, "I_UNDERSTAND_THIS_SENDS_ONE_REAL_MODEL_REQUEST");
   assert.equal(Object.hasOwn(liveQa.env, "OPL_VERIFY_MODEL_ACCESS_KEY"), false);
   assert.match(runs, /npm ci/);
@@ -178,11 +197,33 @@ test("image release pins and verifies both source and target digests", async () 
   const runs = serializedRuns(currentJob);
 
   assert.doesNotMatch(metadata, /\$\{\{\s*inputs\./);
-  for (const value of [primaryWorkspaceSource, fallbackWorkspaceSource, "26.7.13", "26.7.12"]) {
+  for (const value of [
+    primaryWorkspaceSource,
+    fallbackWorkspaceSource,
+    primaryWorkspaceTagCommit,
+    primaryWorkspaceConfigDigest,
+    primaryWorkspaceRevision,
+    fallbackWorkspaceTagCommit,
+    fallbackWorkspaceConfigDigest,
+    fallbackWorkspaceRevision,
+    "26.7.13",
+    "26.7.12"
+  ]) {
     assert.match(source, new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   }
+  assert.notEqual(primaryWorkspaceTagCommit, primaryWorkspaceRevision);
+  assert.notEqual(fallbackWorkspaceTagCommit, fallbackWorkspaceRevision);
   assert.match(runs, /docker buildx imagetools inspect/);
   assert.match(runs, /docker buildx imagetools create --prefer-index=false/);
+  assert.match(runs, /git ls-remote .*one-person-lab-app\.git.*refs\/tags\/v/);
+  assert.match(runs, /ghcr\.io\/token.*one-person-lab-webui:pull/);
+  assert.match(runs, /manifests\/\$\{WORKSPACE_SOURCE_IMAGE##\*@\}/);
+  assert.match(runs, /blobs\/\$source_config_digest/);
+  assert.match(runs, /org\.opencontainers\.image\.revision/);
+  assert.match(runs, /tag_commit.*EXPECTED_WORKSPACE_TAG_COMMIT/s);
+  assert.match(runs, /source_config_digest.*EXPECTED_WORKSPACE_CONFIG_DIGEST/s);
+  assert.match(runs, /source_revision.*EXPECTED_WORKSPACE_OCI_REVISION/s);
+  assert.match(runs, /GITHUB_STEP_SUMMARY/);
   assert.match(runs, /sha256:\[0-9a-f\]\{64\}/);
   assert.match(runs, /OPL_CLOUD_IMAGE=.*@\$\{cloud_digest\}/);
   assert.match(runs, /OPL_WORKSPACE_IMAGE=.*@\$\{workspace_digest\}/);
@@ -223,7 +264,7 @@ test("TKE deploy installs Sub2API credentials and validates account mappings", a
   assert.match(install, /--from-file=OPL_SUB2API_ADMIN_PASSWORD/);
   assert.match(install, /Number\.isSafeInteger\(user\.sub2apiUserId\)/);
   assert.match(install, /user\.sub2apiUserId > 0/);
-  assert.equal(currentJob.env.OPL_SUB2API_SUPPORTED_VERSIONS.includes("0.1.155"), true);
+  assert.equal(currentJob.env.OPL_SUB2API_SUPPORTED_VERSIONS, "${{ vars.OPL_SUB2API_SUPPORTED_VERSIONS || '0.1.156,0.1.155' }}");
   assert.equal(currentJob.env.OPL_TENCENT_ZONE, "${{ vars.OPL_TENCENT_ZONE || 'na-siliconvalley-1' }}");
   assert.equal(Object.hasOwn(currentJob.env, "OPL_CODEX_API_KEY"), false);
   assert.doesNotMatch(install, /OPL_CODEX_API_KEY|opl-cloud-workspace-codex/);
@@ -266,8 +307,9 @@ test("TKE manifest renderer replaces current values and never renders secrets", 
   assert.equal(rendered.items[0].metadata.name, "opl-test");
   assert.equal(config.data.OPL_CLOUD_IMAGE, values.OPL_CLOUD_IMAGE);
   assert.equal(config.data.OPL_SUB2API_BASE_URL, values.OPL_SUB2API_BASE_URL);
+  assert.equal(config.data.OPL_SUB2API_SUPPORTED_VERSIONS, "0.1.156,0.1.155");
   assert.equal(config.data.OPL_SUB2API_REQUEST_TIMEOUT_MS, "7000");
-  assert.equal(config.data.OPL_TENCENT_ZONE, "na-siliconvalley-1");
+  assert.equal(config.data.OPL_TENCENT_ZONE, "ap-guangzhou-3");
   assert.equal(config.data.OPL_MONTHLY_BILLING_INTERVAL_MS, "60000");
   assert.doesNotMatch(source, /postgresql:\/\//i);
   const controlPlane = rendered.items.find((item) => item.kind === "Deployment" && item.metadata.name === "opl-cloud-control-plane");
@@ -281,6 +323,22 @@ test("TKE manifest renderer replaces current values and never renders secrets", 
   }
 });
 
+test("TKE manifest renderer rejects a whitespace-only launch zone before rendering", async () => {
+  const { manifest, values } = await manifestFixture();
+  assert.throws(
+    () => renderTkeManifest({ manifest, values: { ...values, OPL_TENCENT_ZONE: "   " } }),
+    /missing_tke_manifest_values:.*OPL_TENCENT_ZONE/
+  );
+});
+
+test("TKE manifest renderer rejects another whitespace-only required value before rendering", async () => {
+  const { manifest, values } = await manifestFixture();
+  assert.throws(
+    () => renderTkeManifest({ manifest, values: { ...values, OPL_PUBLIC_URL: "   " } }),
+    /missing_tke_manifest_values:.*OPL_PUBLIC_URL/
+  );
+});
+
 test("TKE manifest renderer can leave shared Ingress ownership untouched", async () => {
   const { manifest, values } = await manifestFixture();
   const rendered = renderTkeManifest({ manifest, values, skipSharedIngress: true });
@@ -292,7 +350,10 @@ test("TKE deploy requires image digests and rolls back the complete Cloud and Ap
   const currentJob = workflowJob(workflow, "deploy");
   const inputs = Object.keys(workflow.on.workflow_dispatch.inputs || {});
   const checks = serializedStep(stepsByName(currentJob).get("Check deployment inputs"));
+  const capture = serializedStep(stepsByName(currentJob).get("Capture rollback image set"));
+  const upload = stepsByName(currentJob).get("Upload rollback image set");
   const apply = serializedStep(stepsByName(currentJob).get("Render and apply manifest"));
+  const stepNames = [...stepsByName(currentJob).keys()];
 
   assert.equal(inputs.includes("exercise_rollback"), true);
   assert.match(String(currentJob.env.OPL_EXERCISE_ROLLBACK), /inputs\.exercise_rollback/);
@@ -300,35 +361,48 @@ test("TKE deploy requires image digests and rolls back the complete Cloud and Ap
   assert.match(checks, /OPL_TENCENT_ZONE/);
   assert.match(checks, /sha256:\[0-9a-f\]\{64\}/);
   assert.doesNotMatch(checks, /must include a non-empty container tag/);
+  assert.ok(stepNames.indexOf("Capture rollback image set") < stepNames.indexOf("Upload rollback image set"));
+  assert.ok(stepNames.indexOf("Upload rollback image set") < stepNames.indexOf("Render and apply manifest"));
+  assert.equal(upload?.uses, "actions/upload-artifact@v4");
+  assert.match(String(upload?.with?.name), /production-rollback-images/);
+  assert.match(String(upload?.with?.path), /previous-images/);
   for (const deployment of ["opl-cloud-control-plane", "opl-cloud-ledger", "opl-cloud-fabric"]) {
-    assert.match(apply, new RegExp(deployment));
+    assert.match(capture, new RegExp(deployment));
   }
-  assert.match(apply, /previous.*OPL_WORKSPACE_IMAGE/is);
-  assert.match(apply, /get deployment -l ['"]oplcloud\.cn\/workspace-id['"] -o json/);
-  assert.match(apply, /workspace-images\.tsv/);
-  assert.match(apply, /container\.name === "workspace"/);
-  assert.match(apply, /apply_candidate_images\(\)/);
-  assert.match(apply, /restore_previous_images\(\)/);
-  assert.match(apply, /\$container=\$OPL_WORKSPACE_IMAGE/);
-  assert.match(apply, /\$container=\$previous_image/);
-  assert.match(apply, /rollout status "deployment\/\$deployment" --timeout=300s/);
+  assert.match(capture, /previous.*OPL_WORKSPACE_IMAGE/is);
+  assert.match(capture, /get deployment -l ['"]oplcloud\.cn\/workspace-id['"] -o json/);
+  assert.match(capture, /workspace-images\.tsv/);
+  assert.match(capture, /container\.name === "workspace"/);
+  assert.match(apply, /source tools\/tke-image-rollout\.sh/);
+  assert.match(apply, /apply_candidate_images/);
+  assert.match(apply, /restore_previous_images/);
   assert.match(apply, /if \[ "\$OPL_EXERCISE_ROLLBACK" = "true" \]/);
   assert.match(apply, /restore_previous_images[\s\S]*apply_candidate_images/);
-  assert.match(apply, /kubectl[^\n]*set image/);
-  assert.match(apply, /kubectl[^\n]*patch configmap opl-cloud-config/);
-  assert.match(apply, /JSON\.stringify\(\{ data: \{ OPL_WORKSPACE_IMAGE:/);
   assert.match(apply, /trap .*rollback.* ERR/);
-  assert.match(apply, /rollout restart/);
-  assert.match(apply, /rollout status/);
+  assert.doesNotMatch(apply, /set \+e/);
+});
+
+test("TKE live QA failure schedules a self-hosted rollback from the captured image set", async () => {
+  const workflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
+  const deploy = workflowJob(workflow, "deploy");
+  const rollback = workflowJob(workflow, "rollback-live-qa");
+  const steps = stepsByName(rollback);
+  const restore = serializedStep(steps.get("Restore previous Cloud and App images"));
+
+  assert.match(String(deploy.outputs?.rollback_image_set), /rollback_snapshot\.outputs\.artifact-id/);
+  assert.equal(stepsByName(deploy).get("Upload rollback image set")?.id, "rollback_snapshot");
+  assert.deepEqual(rollback.needs, ["deploy", "live-qa"]);
+  assert.match(String(rollback.if), /always\(\).*needs\.deploy\.outputs\.rollback_image_set != ''.*needs\.deploy\.result != 'success'.*needs\.live-qa\.result != 'success'/);
+  assert.deepEqual(rollback["runs-on"], ["self-hosted", "tencent-cloud", "opl-cloud", "tke-vpc"]);
+  assert.equal(steps.get("Download rollback image set")?.uses, "actions/download-artifact@v4");
+  assert.match(restore, /source tools\/tke-image-rollout\.sh/);
+  assert.match(restore, /restore_previous_images/);
+  assert.doesNotMatch(restore, /set \+e/);
 });
 
 test("TKE rollback functions restore, read back, and reapply every Cloud and App image", async () => {
-  const workflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
-  const apply = stepsByName(workflowJob(workflow, "deploy")).get("Render and apply manifest").run;
-  const functionStart = apply.indexOf("patch_workspace_image() {");
-  const functionEnd = apply.indexOf("\ntrap rollback_images ERR");
-  assert.ok(functionStart >= 0 && functionEnd > functionStart);
-  const functions = apply.slice(functionStart, functionEnd);
+  const functions = await readFile(repoFile("tools/tke-image-rollout.sh"), "utf8");
+  assert.doesNotMatch(functions, /set \+e/);
   const root = await mkdtemp(join(tmpdir(), "opl-rollback-test-"));
   const rollbackDir = join(root, "previous-images");
   const oldCloud = `registry.example.test/opl/cloud@sha256:${"a".repeat(64)}`;
@@ -372,11 +446,22 @@ test("TKE rollback functions restore, read back, and reapply every Cloud and App
             last="\${!#}"
             config_image="$(node -e 'process.stdout.write(JSON.parse(process.argv[1]).data.OPL_WORKSPACE_IMAGE)' "$last")"
             ;;
-          set) images[$target]="\${assignment#*=}" ;;
+          set)
+            if [ "$target" = "\${FAIL_TARGET:-}" ]; then
+              return 42
+            fi
+            images[$target]="\${assignment#*=}"
+            ;;
           rollout) ;;
         esac
       }
 ${functions}
+      if [ "\${TEST_FAILURE_MODE:-0}" = "1" ]; then
+        set +e
+        restore_previous_images
+        printf '%s\n' "$?" > "$TEST_ROOT/failure-status.txt"
+        exit 0
+      fi
       restore_previous_images
       printf '%s\n' "$config_image" "\${images[opl-cloud-control-plane]}" "\${images[opl-cloud-ledger]}" "\${images[opl-cloud-fabric]}" "\${images[workspace-slot-1]}" > "$TEST_ROOT/restored.txt"
       apply_candidate_images
@@ -401,6 +486,27 @@ ${functions}
     const log = await readFile(join(root, "kubectl.log"), "utf8");
     for (const deployment of ["opl-cloud-control-plane", "opl-cloud-ledger", "opl-cloud-fabric", "workspace-slot-1"]) {
       assert.equal(log.match(new RegExp(`get deployment/${deployment}`, "g"))?.length, 2, `${deployment} must be read back after restore and reapply`);
+    }
+
+    const failedRestore = spawnSync("bash", ["-c", harness], {
+      cwd: fileURLToPath(repoFile(".")),
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        FAIL_TARGET: "opl-cloud-control-plane",
+        KUBECONFIG: "/dev/null",
+        OPL_CLOUD_IMAGE: candidateCloud,
+        OPL_K8S_NAMESPACE: "opl-test",
+        OPL_WORKSPACE_IMAGE: candidateWorkspace,
+        TEST_FAILURE_MODE: "1",
+        TEST_ROOT: root
+      }
+    });
+    assert.equal(failedRestore.status, 0, failedRestore.stderr);
+    assert.equal((await readFile(join(root, "failure-status.txt"), "utf8")).trim(), "1");
+    const failedLog = await readFile(join(root, "kubectl.log"), "utf8");
+    for (const deployment of ["opl-cloud-control-plane", "opl-cloud-ledger", "opl-cloud-fabric", "workspace-slot-1"]) {
+      assert.match(failedLog, new RegExp(`set image deployment/${deployment}`), `${deployment} restore must be attempted after a sibling failure`);
     }
   } finally {
     await rm(root, { recursive: true, force: true });

@@ -69,7 +69,7 @@
         "OPL_CODEX_REASONING_EFFORT": "xhigh",
         "OPL_CODEX_BASE_URL": "https://gflabtoken.cn/v1",
         "OPL_SUB2API_BASE_URL": "https://gflabtoken.cn",
-        "OPL_SUB2API_SUPPORTED_VERSIONS": "0.1.155",
+        "OPL_SUB2API_SUPPORTED_VERSIONS": "0.1.156,0.1.155",
         "OPL_SUB2API_REQUEST_TIMEOUT_MS": "5000",
         "OPL_TENCENT_PROVISIONER_BIN": "/usr/local/bin/opl-tencent-provisioner",
         "OPL_TENCENT_ZONE": "na-siliconvalley-1",

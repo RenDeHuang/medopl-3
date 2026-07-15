@@ -19,7 +19,7 @@
       "secretRef": "opl-cloud/sub2api-admin-password"
     },
     "OPL_SUB2API_SUPPORTED_VERSIONS": {
-      "value": "0.1.155"
+      "value": "0.1.156,0.1.155"
     },
     "OPL_SUB2API_REQUEST_TIMEOUT_MS": {
       "value": "5000"

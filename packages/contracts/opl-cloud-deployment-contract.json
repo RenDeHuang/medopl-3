@@ -3,7 +3,7 @@
   "owner": "OPL Fabric",
   "purpose": "Deployment workflow, immutable Cloud and Workspace images, TKE handoff, and production-verification safety.",
   "state": "current",
-  "machineBoundary": "GitHub workflow structure, runner isolation, deploy-time env sources, secret handling, immutable image release, grouped rollback, and the blocked legacy paid verifier.",
+  "machineBoundary": "GitHub workflow structure, runner isolation, deploy-time env sources, secret handling, immutable image release, grouped rollback, read-only fixed-slot verification, and post-rollout live QA.",
   "lifecycle": {
     "type": "long_term_contract",
     "removalCondition": "Replace only with a newer current contract for the same boundary."
@@ -95,6 +95,8 @@
       "Check TLS certificate inputs",
       "Install Kubernetes secrets",
       "Install and verify TLS secret",
+      "Capture rollback image set",
+      "Upload rollback image set",
       "Render and apply manifest",
       "Show ingress target",
       "Remove deployment secrets"
@@ -103,6 +105,14 @@
       [
         "Check TLS certificate inputs",
         "Install Kubernetes secrets"
+      ],
+      [
+        "Capture rollback image set",
+        "Upload rollback image set"
+      ],
+      [
+        "Upload rollback image set",
+        "Render and apply manifest"
       ],
       [
         "Render and apply manifest",
@@ -139,13 +149,25 @@
         "verify_qcloud_cert_secret",
         "qcloud_cert_id"
       ],
+      "Capture rollback image set": [
+        "opl-cloud-control-plane:control-plane",
+        "opl-cloud-ledger:ledger",
+        "opl-cloud-fabric:fabric",
+        "workspace-images.tsv",
+        "get deployment -l 'oplcloud.cn/workspace-id' -o json"
+      ],
+      "Upload rollback image set": [
+        "actions/upload-artifact@v4",
+        "production-rollback-images",
+        "previous-images"
+      ],
       "Render and apply manifest": [
         "node tools/render-tke-manifest.ts --manifest deploy/tke/opl-cloud.k8s.json --out \"$OPL_DEPLOY_SECRET_DIR/opl-cloud.ingress-bootstrap.json\"",
         "node tools/render-tke-manifest.ts --manifest deploy/tke/opl-cloud.k8s.json --skip-shared-ingress --out \"$OPL_DEPLOY_SECRET_DIR/opl-cloud.rendered.json\"",
         "kubectl --kubeconfig \"$KUBECONFIG\" apply -f \"$OPL_DEPLOY_SECRET_DIR/opl-cloud.rendered.json\"",
-        "opl-cloud-control-plane opl-cloud-ledger opl-cloud-fabric",
-        "rollout restart \"deployment/$deployment\"",
-        "rollout status \"deployment/$deployment\""
+        "source tools/tke-image-rollout.sh",
+        "apply_candidate_images",
+        "restore_previous_images"
       ],
       "Remove deployment secrets": [
         "always()",
@@ -164,10 +186,21 @@
   "productionVerificationWorkflow": {
     "file": ".github/workflows/verify-production-chain.yml",
     "job": "verify",
-    "launchStatus": "blocked",
+    "launchStatus": "active",
     "releaseGate": false,
-    "replacement": "reusable_prepaid_verification_slot",
-    "blockedReason": "The legacy workflow charges a real monthly product and creates then deletes Tencent resources on every run.",
+    "mode": "read_only_fixed_slot",
+    "slotDescriptor": {
+      "id": "verification-slot-01",
+      "customerProduct": false,
+      "instanceType": "SA5.MEDIUM4",
+      "server": "2c4g",
+      "cpu": 2,
+      "memoryGb": 4,
+      "cbsGb": 10,
+      "chargeType": "PREPAID",
+      "periodMonths": 1,
+      "renewFlag": "NOTIFY_AND_MANUAL_RENEW"
+    },
     "runner": [
       "ubuntu-latest"
     ],
@@ -175,32 +208,30 @@
       "run_id",
       "account_id",
       "url_attempts",
-      "retry_delay_ms",
-      "paid_confirmation"
+      "retry_delay_ms"
     ],
     "requiredEnv": [
       "OPL_CONSOLE_ORIGIN",
       "OPL_VERIFY_AUTH_USERS_JSON",
-      "OPL_VERIFY_PAID_CONFIRMATION",
       "OPL_VERIFY_ACCOUNT_ID",
-      "OPL_VERIFY_PACKAGE_ID",
+      "OPL_VERIFY_SLOT_ID",
+      "OPL_VERIFY_SLOT_DESCRIPTOR_JSON",
+      "OPL_VERIFY_PURCHASE_BUDGET_REMAINING",
       "OPL_VERIFY_URL_ATTEMPTS",
       "OPL_VERIFY_RETRY_DELAY_MS",
       "OPL_VERIFY_RUN_ID",
       "OPL_VERIFY_SCREENSHOT_DIR",
-      "OPL_VERIFY_MANIFEST_PATH",
-      "OPL_VERIFY_MODEL_ACCESS_KEY"
+      "OPL_VERIFY_MANIFEST_PATH"
     ],
     "secretEnv": [
-      "OPL_VERIFY_AUTH_USERS_JSON",
-      "OPL_VERIFY_MODEL_ACCESS_KEY"
+      "OPL_VERIFY_AUTH_USERS_JSON"
     ],
     "steps": [
       "Checkout",
       "Set up Node",
       "Install dependencies",
       "Install browser",
-      "Verify production monthly billing chain",
+      "Verify reusable production slot",
       "Upload browser E2E screenshots and manifest"
     ],
     "requiredCommandsByStep": {
@@ -214,13 +245,133 @@
       "Install browser": [
         "playwright install --with-deps chromium"
       ],
-      "Verify production monthly billing chain": [
+      "Verify reusable production slot": [
         "node tools/production-verifier.ts --browser-e2e",
         "workspace_id=",
         "workspace_url="
       ]
     },
+    "forbiddenRunTokens": [
+      "compute-allocations",
+      "storage-volumes"
+    ]
+  },
+  "productionLiveQaJob": {
+    "file": ".github/workflows/deploy-tke-production.yml",
+    "job": "live-qa",
+    "releaseGate": true,
+    "mode": "one_model_request_no_provider_mutation",
+    "slotDescriptor": {
+      "id": "verification-slot-01",
+      "customerProduct": false,
+      "instanceType": "SA5.MEDIUM4",
+      "server": "2c4g",
+      "cpu": 2,
+      "memoryGb": 4,
+      "cbsGb": 10,
+      "chargeType": "PREPAID",
+      "periodMonths": 1,
+      "renewFlag": "NOTIFY_AND_MANUAL_RENEW"
+    },
+    "runner": [
+      "ubuntu-latest"
+    ],
+    "requiredEnv": [
+      "OPL_CONSOLE_ORIGIN",
+      "OPL_VERIFY_AUTH_USERS_JSON",
+      "OPL_VERIFY_ACCOUNT_ID",
+      "OPL_VERIFY_SLOT_ID",
+      "OPL_VERIFY_SLOT_DESCRIPTOR_JSON",
+      "OPL_VERIFY_PURCHASE_BUDGET_REMAINING",
+      "OPL_VERIFY_URL_ATTEMPTS",
+      "OPL_VERIFY_RETRY_DELAY_MS",
+      "OPL_VERIFY_USAGE_ATTEMPTS",
+      "OPL_VERIFY_USAGE_RETRY_DELAY_MS",
+      "OPL_VERIFY_BROWSER_TIMEOUT_MS",
+      "OPL_VERIFY_MODEL_TIMEOUT_MS",
+      "OPL_VERIFY_RUN_ID",
+      "OPL_VERIFY_LIVE_QA_CONFIRMATION",
+      "OPL_VERIFY_MANIFEST_PATH"
+    ],
+    "secretEnv": [
+      "OPL_VERIFY_AUTH_USERS_JSON"
+    ],
+    "steps": [
+      "Checkout",
+      "Set up Node",
+      "Install dependencies",
+      "Install browser",
+      "Verify rollout with one Workspace model request",
+      "Upload rollout QA manifest"
+    ],
+    "requiredCommandsByStep": {
+      "Set up Node": [
+        "node-version",
+        "22"
+      ],
+      "Install dependencies": [
+        "npm ci"
+      ],
+      "Install browser": [
+        "playwright install --with-deps chromium"
+      ],
+      "Verify rollout with one Workspace model request": [
+        "node tools/production-live-qa.ts"
+      ]
+    },
     "forbiddenRunTokens": []
+  },
+  "productionRollbackJob": {
+    "file": ".github/workflows/deploy-tke-production.yml",
+    "job": "rollback-live-qa",
+    "trigger": "post_snapshot_deploy_or_live_qa_not_successful",
+    "runner": [
+      "self-hosted",
+      "tencent-cloud",
+      "opl-cloud",
+      "tke-vpc"
+    ],
+    "requiredEnv": [
+      "OPL_K8S_NAMESPACE",
+      "TENCENT_DEPLOY_KUBECONFIG_PATH",
+      "TENCENT_DEPLOY_KUBECONFIG_B64",
+      "TENCENT_DEPLOY_KUBECONFIG"
+    ],
+    "secretEnv": [
+      "TENCENT_DEPLOY_KUBECONFIG_B64",
+      "TENCENT_DEPLOY_KUBECONFIG"
+    ],
+    "steps": [
+      "Checkout",
+      "Prepare rollback kubeconfig",
+      "Download rollback image set",
+      "Restore previous Cloud and App images",
+      "Remove rollback kubeconfig"
+    ],
+    "requiredCommandsByStep": {
+      "Prepare rollback kubeconfig": [
+        "TENCENT_DEPLOY_KUBECONFIG_PATH",
+        "TENCENT_DEPLOY_KUBECONFIG_B64",
+        "TENCENT_DEPLOY_KUBECONFIG"
+      ],
+      "Download rollback image set": [
+        "actions/download-artifact@v4",
+        "production-rollback-images"
+      ],
+      "Restore previous Cloud and App images": [
+        "source tools/tke-image-rollout.sh",
+        "restore_previous_images",
+        "complete previous Cloud/App image set"
+      ],
+      "Remove rollback kubeconfig": [
+        "always()",
+        "find \"$secret_dir\" -mindepth 1 -delete",
+        "rmdir \"$secret_dir\""
+      ]
+    },
+    "forbiddenRunTokens": [
+      "set +e"
+    ]
   },
   "imageReleaseWorkflow": {
     "file": ".github/workflows/release-opl-cloud-image.yml",
@@ -244,6 +395,10 @@
       "Build and push images": [
         "docker login uswccr.ccs.tencentyun.com --username \"$TCR_ID\" --password-stdin",
         "docker login ghcr.io --username \"$GHCR_USERNAME\" --password-stdin",
+        "git ls-remote https://github.com/gaofeng21cn/one-person-lab-app.git",
+        "org.opencontainers.image.revision",
+        "EXPECTED_WORKSPACE_CONFIG_DIGEST",
+        "EXPECTED_WORKSPACE_OCI_REVISION",
         "docker buildx build --push -f Dockerfile -t \"$OPL_CLOUD_IMAGE_REF\" \"$OPL_CLOUD_IMAGE_CONTEXT\"",
         "docker buildx imagetools create --prefer-index=false -t \"$OPL_WORKSPACE_IMAGE_REF\" \"$WORKSPACE_SOURCE_IMAGE\""
       ]
@@ -253,6 +408,16 @@
     "sourceRepository": "ghcr.io/gaofeng21cn/one-person-lab-webui",
     "sourceTag": "26.7.13",
     "sourceDigest": "sha256:9d867fe0fc9db48b6efa27371d77770e46fc8cd97d26ef85a81fbdac7e96ca76",
+    "sourceTagCommit": "faeb0d6f9d1fe18ac6ea1433168c5696fd7d7918",
+    "sourceConfigDigest": "sha256:5a5335ffa7e03303b8d57019dcbe8dfdea329d11481bfa4dd152f629666c14b9",
+    "sourceOciRevision": "0d45e6c9f954ec63b029b678db5d7929a049a958",
+    "fallback": {
+      "sourceTag": "26.7.12",
+      "sourceDigest": "sha256:6e1491a3693a820a37b81ab9a26f8efc4262fb9581f981641c6de084b0fa654f",
+      "sourceTagCommit": "6339a48dee84cf290173b2efbb34f62647abdfe6",
+      "sourceConfigDigest": "sha256:4d89f20226b140c99102ba5fdc757755f954bed990b2f842ebb3e4d2410e8f05",
+      "sourceOciRevision": "35a9584f92d3fa2acad0d459a10a7caffaa04c0e"
+    },
     "targetRepository": "uswccr.ccs.tencentyun.com/oplcloud/one-person-lab-app",
     "targetTag": "26.7.13",
     "productionReference": "repository@sha256",

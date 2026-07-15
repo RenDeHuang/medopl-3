@@ -14,10 +14,13 @@ const fixedSlotDescriptor = {
   id: FIXED_VERIFICATION_SLOT_ID,
   customerProduct: false,
   instanceType: "SA5.MEDIUM4",
+  server: "2c4g",
+  cpu: 2,
+  memoryGb: 4,
+  cbsGb: 10,
   chargeType: "PREPAID",
   periodMonths: 1,
-  renewFlag: "NOTIFY_AND_MANUAL_RENEW",
-  storageSizeGb: 10
+  renewFlag: "NOTIFY_AND_MANUAL_RENEW"
 };
 const ownerSeed = JSON.stringify([{
   id: "usr-verifier",
@@ -167,22 +170,30 @@ test("production verifier rejects a non-production Console host before network a
     authUsersJson: ownerSeed,
     slotDescriptor: fixedSlotDescriptor,
     runId: "wrong-console-host",
+    purchaseBudgetRemaining: 0,
     fetchImpl: async () => { calls += 1; return json({}); }
   }), /public_console_origin_required/);
   assert.equal(calls, 0);
 });
 
 test("production verifier requires an exact controlled slot descriptor before network access", async () => {
+  const missingServer = { ...fixedSlotDescriptor };
+  delete missingServer.server;
   const invalidDescriptors = [
     undefined,
     "{",
+    missingServer,
     { ...fixedSlotDescriptor, id: "verification-slot-02" },
     { ...fixedSlotDescriptor, customerProduct: true },
     { ...fixedSlotDescriptor, instanceType: "SA5.LARGE4" },
+    { ...fixedSlotDescriptor, server: "2c2g" },
+    { ...fixedSlotDescriptor, cpu: 4 },
+    { ...fixedSlotDescriptor, memoryGb: 2 },
+    { ...fixedSlotDescriptor, cbsGb: 20 },
     { ...fixedSlotDescriptor, chargeType: "POSTPAID_BY_HOUR" },
     { ...fixedSlotDescriptor, periodMonths: 2 },
     { ...fixedSlotDescriptor, renewFlag: "NOTIFY_AND_AUTO_RENEW" },
-    { ...fixedSlotDescriptor, storageSizeGb: 20 }
+    { ...fixedSlotDescriptor, unexpected: true }
   ];
 
   for (const slotDescriptor of invalidDescriptors) {
@@ -196,6 +207,18 @@ test("production verifier requires an exact controlled slot descriptor before ne
     }), /verification_slot_descriptor_(?:required|invalid)/);
     assert.equal(calls, 0);
   }
+});
+
+test("production verifier requires an explicit purchase budget before network access", async () => {
+  let calls = 0;
+  await assert.rejects(() => verifyProductionChain({
+    origin: "https://cloud.medopl.cn",
+    authUsersJson: ownerSeed,
+    slotDescriptor: fixedSlotDescriptor,
+    runId: "missing-purchase-budget",
+    fetchImpl: async () => { calls += 1; return json({}); }
+  }), /verification_slot_purchase_budget_required/);
+  assert.equal(calls, 0);
 });
 
 test("ordinary production verifier reuses exactly one fixed slot without resource mutations", async () => {
@@ -340,6 +363,25 @@ test("production verifier CLI rejects legacy paid flags before network access", 
 
   assert.equal(code, 1);
   assert.match(stderr, /production_verifier_read_only/);
+  assert.equal(calls, 0);
+});
+
+test("production verifier CLI requires an explicit purchase budget before network access", async () => {
+  let stderr = "";
+  let calls = 0;
+  const code = await runProductionVerifierCli({
+    env: {
+      OPL_CONSOLE_ORIGIN: "https://cloud.medopl.cn",
+      OPL_VERIFY_AUTH_USERS_JSON: ownerSeed,
+      OPL_VERIFY_SLOT_DESCRIPTOR_JSON: JSON.stringify(fixedSlotDescriptor)
+    },
+    stdout: { write: () => {} },
+    stderr: { write: (chunk) => { stderr += chunk; } },
+    fetchImpl: async () => { calls += 1; return json({}); }
+  });
+
+  assert.equal(code, 1);
+  assert.match(stderr, /verification_slot_purchase_budget_required/);
   assert.equal(calls, 0);
 });
 

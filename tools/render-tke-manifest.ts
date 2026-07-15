@@ -10,6 +10,7 @@ const DEPLOY_VALUE_KEYS = [
   "OPL_IMAGE_PULL_SECRET_NAME",
   "OPL_WORKSPACE_STORAGE_CLASS",
   "OPL_TENCENT_PROVISIONER_BIN",
+  "OPL_TENCENT_ZONE",
   "OPL_WORKSPACE_WEBUI_PORT",
   "OPL_WORKSPACE_DATA_DIR",
   "OPL_WORKSPACE_PROJECTS_DIR",
@@ -45,7 +46,7 @@ const OPTIONAL_DEPLOY_VALUE_KEYS = [
 ];
 
 function requiredValues(values) {
-  const missing = DEPLOY_VALUE_KEYS.filter((key) => !values[key]);
+  const missing = DEPLOY_VALUE_KEYS.filter((key) => !String(values?.[key] ?? "").trim());
   if (missing.length) throw new Error(`missing_tke_manifest_values:${missing.join(",")}`);
 }
 

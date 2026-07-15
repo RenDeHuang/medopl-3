@@ -11,10 +11,13 @@ const fixedSlotDescriptor = {
   id: "verification-slot-01",
   customerProduct: false,
   instanceType: "SA5.MEDIUM4",
+  server: "2c4g",
+  cpu: 2,
+  memoryGb: 4,
+  cbsGb: 10,
   chargeType: "PREPAID",
   periodMonths: 1,
-  renewFlag: "NOTIFY_AND_MANUAL_RENEW",
-  storageSizeGb: 10
+  renewFlag: "NOTIFY_AND_MANUAL_RENEW"
 };
 const ownerSeed = JSON.stringify([{
   id: "usr-verifier",
@@ -299,7 +302,8 @@ test("rollout QA CLI rejects an invalid slot descriptor before network access", 
       OPL_CONSOLE_ORIGIN: "https://cloud.medopl.cn",
       OPL_VERIFY_AUTH_USERS_JSON: ownerSeed,
       OPL_VERIFY_LIVE_QA_CONFIRMATION: LIVE_QA_CONFIRMATION,
-      OPL_VERIFY_SLOT_DESCRIPTOR_JSON: "{"
+      OPL_VERIFY_SLOT_DESCRIPTOR_JSON: "{",
+      OPL_VERIFY_PURCHASE_BUDGET_REMAINING: "0"
     },
     stdout: { write: () => {} },
     stderr: { write: (chunk) => { stderr += chunk; } },
@@ -307,5 +311,25 @@ test("rollout QA CLI rejects an invalid slot descriptor before network access", 
   });
   assert.equal(code, 1);
   assert.match(stderr, /verification_slot_descriptor_invalid/);
+  assert.equal(calls, 0);
+});
+
+test("rollout QA CLI requires an explicit purchase budget before network access", async () => {
+  let stderr = "";
+  let calls = 0;
+  const code = await runProductionLiveQaCli({
+    env: {
+      OPL_CONSOLE_ORIGIN: "https://cloud.medopl.cn",
+      OPL_VERIFY_AUTH_USERS_JSON: ownerSeed,
+      OPL_VERIFY_LIVE_QA_CONFIRMATION: LIVE_QA_CONFIRMATION,
+      OPL_VERIFY_SLOT_DESCRIPTOR_JSON: JSON.stringify(fixedSlotDescriptor)
+    },
+    stdout: { write: () => {} },
+    stderr: { write: (chunk) => { stderr += chunk; } },
+    fetchImpl: async () => { calls += 1; return json({}); }
+  });
+
+  assert.equal(code, 1);
+  assert.match(stderr, /verification_slot_purchase_budget_required/);
   assert.equal(calls, 0);
 });

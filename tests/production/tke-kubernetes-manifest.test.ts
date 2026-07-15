@@ -19,7 +19,7 @@ test("OPL Cloud TKE manifest declares three decoupled services and monthly Sub2A
   assert.equal(config.data.OPL_MONTHLY_BILLING_WORKER_ENABLED, "1");
   assert.equal(config.data.OPL_MONTHLY_BILLING_INTERVAL_MS, "3600000");
   assert.equal(config.data.OPL_SUB2API_BASE_URL, "https://gflabtoken.cn");
-  assert.equal(config.data.OPL_SUB2API_SUPPORTED_VERSIONS, "0.1.155");
+  assert.equal(config.data.OPL_SUB2API_SUPPORTED_VERSIONS, "0.1.156,0.1.155");
   assert.equal(config.data.OPL_SUB2API_REQUEST_TIMEOUT_MS, "5000");
   assert.equal(config.data.OPL_TENCENT_ZONE, "na-siliconvalley-1");
   assert.match(config.data.OPL_CLOUD_IMAGE, /^[^:@]+(?:\/[^:@]+)+@sha256:[0-9a-f]{64}$/);
@@ -59,12 +59,19 @@ test("OPL Cloud TKE manifest declares three decoupled services and monthly Sub2A
   assert.deepEqual(ingress.spec.rules.map((rule) => rule.host), ["cloud.medopl.cn", "workspace.medopl.cn"]);
 });
 
-test("Tencent launch-zone examples use the one production default", async () => {
+test("production env examples use the frozen Sub2API versions and launch zone", async () => {
   for (const path of [
     ".env.example",
     "deploy/tke/opl-cloud-production.env.example",
     "deploy/tke/opl-cloud-staging.local.env.example"
   ]) {
-    assert.match(await readFile(path, "utf8"), /^OPL_TENCENT_ZONE=na-siliconvalley-1$/m, path);
+    const source = await readFile(path, "utf8");
+    assert.match(source, /^OPL_SUB2API_SUPPORTED_VERSIONS=0\.1\.156,0\.1\.155$/m, path);
+    assert.match(source, /^OPL_TENCENT_ZONE=na-siliconvalley-1$/m, path);
   }
+});
+
+test("production manifest example uses the frozen Sub2API versions", async () => {
+  const manifest = JSON.parse(await readFile("deploy/production-manifest.example.json", "utf8"));
+  assert.equal(manifest.env.OPL_SUB2API_SUPPORTED_VERSIONS.value, "0.1.156,0.1.155");
 });
