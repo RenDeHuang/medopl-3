@@ -67,6 +67,24 @@ export function workspaceUrlReady(workspace: any = {}) {
   return Boolean(workspace.openable);
 }
 
+export function mergeWorkspaceRuntime(workspace: any = {}, runtime: any = null) {
+  if (!runtime || runtime.workspaceId !== workspace.id) return workspace;
+  const status = runtime.status || workspace.state;
+  const ready = runtime.ready === true && ["running", "ready", "available", "active"].includes(status);
+  const disabled = ["suspended", "data_deleted", "unrecoverable", "storage_missing", "destroyed"].includes(status);
+  return {
+    ...workspace,
+    url: runtime.url || workspace.url,
+    state: status,
+    status,
+    runtimeStatus: status,
+    runtime: { ...workspace.runtime, status, ready: runtime.ready === true, serviceName: runtime.serviceName || workspace.runtime?.serviceName },
+    access: { ...workspace.access, ...runtime.access },
+    openable: ready,
+    accessState: ready ? "available" : disabled ? "disabled" : "distributing"
+  };
+}
+
 export function workspaceAccessLabel(workspace: any = {}) {
   if (workspace.accessState === "available") return "可打开";
   if (workspace.accessState === "distributing") return "分发中";

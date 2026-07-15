@@ -19,21 +19,8 @@ func (app *controlPlaneServer) workspaceStateRowsLocked(accountID string) []any 
 	return output
 }
 
-func (app *controlPlaneServer) setWorkspaceAccess(workspaceID string, tokenStatus string) (map[string]any, bool, error) {
-	workspace, ok := app.getWorkspace(workspaceID)
-	if !ok {
-		return nil, false, nil
-	}
-	access, _ := workspace["access"].(map[string]any)
-	access = cloneMap(access)
-	access["tokenStatus"] = tokenStatus
-	access["requiresLogin"] = false
-	workspace["access"] = access
-	return cloneMap(workspace), true, app.tables.SaveWorkspace(context.Background(), workspace)
-}
-
 func (app *controlPlaneServer) saveWorkspaceProjection(workspace domain.WorkspaceProjection) error {
-	access := map[string]any{"tokenStatus": "active", "requiresLogin": false}
+	access := map[string]any{}
 	if workspace.RuntimeUsername != "" {
 		access["account"] = workspace.RuntimeUsername
 		access["username"] = workspace.RuntimeUsername
@@ -64,7 +51,7 @@ func (app *controlPlaneServer) saveWorkspaceProjection(workspace domain.Workspac
 		"attachmentId":               workspace.AttachmentID,
 		"currentAttachmentId":        workspace.AttachmentID,
 		"runtimeId":                  workspace.RuntimeID,
-		"runtime":                    map[string]any{"serviceName": workspace.RuntimeServiceName},
+		"runtime":                    map[string]any{"serviceName": workspace.RuntimeServiceName, "status": workspace.Status, "ready": workspace.RuntimeReady},
 		"receiptId":                  workspace.ReceiptID,
 		"access":                     access,
 	}
@@ -78,11 +65,6 @@ func (app *controlPlaneServer) suspendWorkspacesForCompute(computeID string) err
 			workspace["computeAllocationId"] = ""
 			workspace["state"] = "suspended"
 			workspace["status"] = "suspended"
-			access, _ := workspace["access"].(map[string]any)
-			access = cloneMap(access)
-			access["tokenStatus"] = "suspended"
-			access["requiresLogin"] = false
-			workspace["access"] = access
 			if err := app.tables.SaveWorkspace(context.Background(), workspace); err != nil {
 				return err
 			}
@@ -117,11 +99,6 @@ func (app *controlPlaneServer) markWorkspacesStorageDestroyed(storageID string) 
 			workspace["computeAllocationId"] = ""
 			workspace["currentAttachmentId"] = ""
 			workspace["attachmentId"] = ""
-			access, _ := workspace["access"].(map[string]any)
-			access = cloneMap(access)
-			access["tokenStatus"] = "disabled"
-			access["requiresLogin"] = false
-			workspace["access"] = access
 			if err := app.tables.SaveWorkspace(context.Background(), workspace); err != nil {
 				return err
 			}
@@ -145,15 +122,6 @@ func (app *controlPlaneServer) proxyWorkspace(w http.ResponseWriter, r *http.Req
 		http.NotFound(w, r)
 		return
 	}
-	if token := r.URL.Query().Get("token"); token != "" {
-		setWorkspaceGatewayCookies(w, workspaceID, token)
-		cleanURL := *r.URL
-		query := cleanURL.Query()
-		query.Del("token")
-		cleanURL.RawQuery = query.Encode()
-		http.Redirect(w, r, cleanURL.String(), http.StatusFound)
-		return
-	}
 	suffix := strings.TrimPrefix(r.URL.Path, "/w/"+workspaceID)
 	app.proxyWorkspaceTo(w, r, workspaceID, suffix)
 }
@@ -172,19 +140,30 @@ func (app *controlPlaneServer) proxyWorkspaceRoot(w http.ResponseWriter, r *http
 }
 
 func (app *controlPlaneServer) proxyWorkspaceTo(w http.ResponseWriter, r *http.Request, workspaceID string, proxyPath string) {
-	workspace, _ := app.getWorkspace(workspaceID)
-	if stringValue(workspace["state"]) == "data_deleted" || stringValue(nested(workspace, "access", "tokenStatus")) == "disabled" {
+	workspace, ok := app.getWorkspace(workspaceID)
+	if !ok {
+		http.NotFound(w, r)
+		return
+	}
+	if state := stringValue(workspace["state"]); state == "data_deleted" || state == "unrecoverable" || state == "storage_missing" || state == "destroyed" {
 		writeError(w, http.StatusGone, "workspace_storage_destroyed")
 		return
 	}
-	if stringValue(workspace["state"]) == "suspended" || stringValue(nested(workspace, "access", "tokenStatus")) == "suspended" {
+	if stringValue(workspace["state"]) == "suspended" {
 		writeError(w, http.StatusConflict, "workspace_suspended")
+		return
+	}
+	if workspaceResponse(cloneMap(workspace))["openable"] != true {
+		writeError(w, http.StatusConflict, "workspace_runtime_not_ready")
 		return
 	}
 	serviceName := stringValue(nested(workspace, "runtime", "serviceName"))
 	if serviceName == "" {
 		http.NotFound(w, r)
 		return
+	}
+	if strings.HasPrefix(r.URL.Path, "/w/"+workspaceID) {
+		setWorkspaceGatewayRouteCookie(w, workspaceID)
 	}
 	target, err := workspaceServiceTarget(serviceName)
 	if err != nil {

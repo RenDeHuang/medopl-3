@@ -99,7 +99,7 @@ function monthlyChainFixture({ failWorkspaceUrl = false, runtimeReadyAfter = 1 }
       return json(state.attachment, 202);
     }
     if (method === "POST" && url.pathname === "/api/workspaces") {
-      state.workspace ||= { id: "workspace-alpha", accountId: "acct-alpha", currentComputeAllocationId: "compute-alpha", currentAttachmentId: "attachment-alpha", storageId: "storage-alpha", state: "running", url: "https://workspace.medopl.cn/w/workspace-alpha/?token=share-secret" };
+      state.workspace ||= { id: "workspace-alpha", accountId: "acct-alpha", currentComputeAllocationId: "compute-alpha", currentAttachmentId: "attachment-alpha", storageId: "storage-alpha", state: "running", url: "https://workspace.medopl.cn/w/workspace-alpha/" };
       return json(state.workspace, 201);
     }
     if (url.pathname === "/api/workspaces/runtime-status") {

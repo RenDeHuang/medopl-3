@@ -253,8 +253,8 @@
       "dockerId",
       "storageId",
       "storageMountPath",
-      "urlTokenMode",
-      "tokenStatus"
+      "runtimeStatus",
+      "credentialStatus"
     ],
     "billingRefs": [
       "billing.resource_purchased.v1",
@@ -265,27 +265,9 @@
       "action": "open_workspace_url",
       "requiredFields": [
         "workspaceId",
-        "tokenVersion",
         "redactedUrl"
       ],
       "forbiddenContent": [
-        "token=",
-        "workspace.access.password",
-        "full workspace.url"
-      ]
-    }
-  },
-  "workspaceTokenResetReceipt": {
-    "type": "workspace.access_token_reset",
-    "continuation": {
-      "action": "open_workspace_url",
-      "requiredFields": [
-        "workspaceId",
-        "tokenVersion",
-        "redactedUrl"
-      ],
-      "forbiddenContent": [
-        "token=",
         "workspace.access.password",
         "full workspace.url"
       ]

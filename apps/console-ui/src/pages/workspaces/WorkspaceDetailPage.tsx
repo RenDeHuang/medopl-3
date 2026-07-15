@@ -1,10 +1,7 @@
 import React from "react";
 import { Alert, Button, Empty, Typography } from "antd";
-import { Ban, Eye, EyeOff, Headphones, Link as LinkIcon, RefreshCw, WalletCards } from "lucide-react";
-import {
-  deleteWorkspaceToken,
-  resetWorkspaceToken
-} from "../../api/workspaces-api.ts";
+import { Eye, EyeOff, Headphones, Link as LinkIcon, WalletCards } from "lucide-react";
+import { getWorkspaceRuntimeStatus } from "../../api/workspaces-api.ts";
 import { navigate, routeTo } from "../../consoleRoutes.ts";
 import {
   ActionGroup,
@@ -13,7 +10,7 @@ import {
   ResourceSplit,
   StatusPill
 } from "../shared/commercial-console.tsx";
-import { moneyCents, packageText, paidThrough, statusColor, statusLabel, usdMicros, valueLabel, workspaceAccessLabel, workspaceAccessTone, workspaceOpenActionLabel, workspaceUrlReady } from "../shared/formatters.ts";
+import { mergeWorkspaceRuntime, moneyCents, packageText, paidThrough, statusColor, statusLabel, usdMicros, valueLabel, workspaceAccessLabel, workspaceAccessTone, workspaceOpenActionLabel, workspaceUrlReady } from "../shared/formatters.ts";
 
 type AnyRecord = Record<string, any>;
 
@@ -37,7 +34,34 @@ function workspaceCredential(workspace: AnyRecord = {}) {
   };
 }
 
-export function WorkspaceDetailPage({ selected, selectedPlan, state, session, runAction }: any) {
+export function WorkspaceDetailPage({ selected, selectedPlan, state, session }: any) {
+  const [runtimeStatus, setRuntimeStatus] = React.useState<AnyRecord | null>(null);
+  const [showPassword, setShowPassword] = React.useState(false);
+  React.useEffect(() => {
+    let active = true;
+    let timer: number | undefined;
+    setRuntimeStatus(null);
+    setShowPassword(false);
+    if (!selected?.id || ["suspended", "data_deleted", "unrecoverable", "storage_missing", "destroyed"].includes(selected.state)) {
+      return () => { active = false; };
+    }
+    const poll = async () => {
+      try {
+        const current = await getWorkspaceRuntimeStatus({ workspaceId: selected.id }, session.csrfToken);
+        if (!active) return;
+        setRuntimeStatus(current);
+        if (!current.ready) timer = window.setTimeout(poll, 10_000);
+      } catch {
+        if (active) timer = window.setTimeout(poll, 10_000);
+      }
+    };
+    void poll();
+    return () => {
+      active = false;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [selected?.id, selected?.state, session.csrfToken]);
+
   if (!selected) {
     return (
       <ConsoleSurface title="OPL Workspace" eyebrow="工作区">
@@ -45,16 +69,15 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
       </ConsoleSurface>
     );
   }
-  const credential = workspaceCredential(selected);
-  const computeId = selected.currentComputeAllocationId || selected.computeAllocationId;
+  const workspace = mergeWorkspaceRuntime(selected, runtimeStatus);
+  const credential = workspaceCredential(workspace);
+  const computeId = workspace.currentComputeAllocationId || workspace.computeAllocationId;
   const compute = (state.computeAllocations || []).find((item) => item.id === computeId) || {};
-  const storage = (state.storageVolumes || []).find((item) => item.id === selected.storageId) || {};
-  const supportPath = `${routeTo("support.create")}?category=Workspace&resourceId=${encodeURIComponent(selected.id)}&operationId=${encodeURIComponent(selected.currentAttachmentId || selected.currentComputeAllocationId || "")}`;
-  const [showPassword, setShowPassword] = React.useState(false);
-  const accessActive = selected.access?.tokenStatus === "active";
+  const storage = (state.storageVolumes || []).find((item) => item.id === workspace.storageId) || {};
+  const supportPath = `${routeTo("support.create")}?category=Workspace&resourceId=${encodeURIComponent(workspace.id)}&operationId=${encodeURIComponent(workspace.currentAttachmentId || workspace.currentComputeAllocationId || "")}`;
   return (
     <ConsoleSurface
-      title={selected.name}
+      title={workspace.name}
       eyebrow="OPL Workspace"
       subtitle="访问凭据、费用状态和支持"
       extra={<Button onClick={() => navigate(routeTo("workspace.list"))}>返回列表</Button>}
@@ -63,10 +86,10 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
         <InsightPanel
           title="访问凭据"
           eyebrow="URL、账号、密码"
-          actions={<StatusPill label={workspaceAccessLabel(selected)} tone={workspaceAccessTone(selected)} />}
+          actions={<StatusPill label={workspaceAccessLabel(workspace)} tone={workspaceAccessTone(workspace)} />}
         >
           <div className="stackList">
-            {!workspaceUrlReady(selected) && selected.access?.tokenStatus === "active" && (
+            {!workspaceUrlReady(workspace) && workspace.accessState === "distributing" && (
               <Alert
                 type="info"
                 showIcon
@@ -76,7 +99,7 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
             )}
             <div className="credentialStack">
               <span>URL</span>
-              <Typography.Text copyable={workspaceUrlReady(selected)} className="inlineCode">{selected.url}</Typography.Text>
+              <Typography.Text copyable={workspaceUrlReady(workspace)} className="inlineCode">{workspace.url}</Typography.Text>
             </div>
             <div className="credentialStack">
               <span>账号</span>
@@ -88,12 +111,8 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
             </div>
             <ActionGroup
               actions={[
-                { label: workspaceOpenActionLabel(selected), icon: <LinkIcon size={15} />, disabled: !workspaceUrlReady(selected), onClick: () => window.open(selected.url, "_blank", "noopener,noreferrer") },
+                { label: workspaceOpenActionLabel(workspace), icon: <LinkIcon size={15} />, disabled: !workspaceUrlReady(workspace), onClick: () => window.open(workspace.url, "_blank", "noopener,noreferrer") },
                 { label: showPassword ? "隐藏密码" : "显示密码", icon: showPassword ? <EyeOff size={15} /> : <Eye size={15} />, onClick: () => setShowPassword(!showPassword) },
-                accessActive
-                  ? { label: "重置 URL", icon: <RefreshCw size={15} />, onClick: () => runAction(() => resetWorkspaceToken({ workspaceId: selected.id }, session.csrfToken), "URL 已重置", { actionKey: `workspace-reset-${selected.id}` }) }
-                  : { label: "启用访问", type: "primary", icon: <RefreshCw size={15} />, onClick: () => runAction(() => resetWorkspaceToken({ workspaceId: selected.id }, session.csrfToken), "访问已启用", { actionKey: `workspace-reset-${selected.id}` }) },
-                { label: "停用访问", danger: true, icon: <Ban size={15} />, disabled: !accessActive, onClick: () => runAction(() => deleteWorkspaceToken({ workspaceId: selected.id }, session.csrfToken), "访问已停用", { actionKey: `workspace-delete-${selected.id}` }) },
                 { label: "提交工单", icon: <Headphones size={15} />, onClick: () => navigate(supportPath) }
               ]}
             />
@@ -108,7 +127,7 @@ export function WorkspaceDetailPage({ selected, selectedPlan, state, session, ru
               { label: "存储权益", value: valueLabel(storage.billingStatus), meta: `有效期至 ${paidThrough(storage.paidThrough)}`, status: storage.autoRenew ? "自动续费" : "到期保留", tone: storage.billingStatus === "active" ? "good" : "warn" },
               { label: "存储月价", value: moneyCents(storage.monthlyPriceCnyCents), meta: `Sub2API ${usdMicros(storage.chargeUsdMicros)}`, status: "月付", tone: "info" },
               { label: "套餐", value: selectedPlan?.name || "-", meta: packageText(selectedPlan), status: "套餐", tone: "info" },
-              { label: "状态", value: statusLabel(selected), meta: selected.state, status: "Workspace", tone: toneForStatus(selected.state) },
+              { label: "状态", value: statusLabel(workspace), meta: workspace.state, status: "Workspace", tone: toneForStatus(workspace.state) },
               { label: "费用明细", value: "账单页", meta: "查看余额与权益", status: "可查看", tone: "good" }
             ]}
           />

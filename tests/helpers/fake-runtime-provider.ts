@@ -1,8 +1,8 @@
 export function createFakeRuntimeProvider(overrides = {}) {
   const provider = {
     name: "tencent-tke",
-    workspaceUrl({ slug, token }) {
-      return `https://workspace.example.test/w/${slug}?token=${token}`;
+    workspaceUrl({ slug }) {
+      return `https://workspace.example.test/w/${slug}/`;
     },
     async createComputeAllocation({ computeAllocationId, packagePlan }) {
       const nodeName = `node-${computeAllocationId}`;
@@ -71,10 +71,10 @@ export function createFakeRuntimeProvider(overrides = {}) {
     async destroyStorageVolume() {
       return { status: "destroyed" };
     },
-    async createWorkspaceEntry({ workspaceId, slug, token, compute }) {
+    async createWorkspaceEntry({ workspaceId, slug, compute }) {
       return {
         slug,
-        url: `https://workspace.example.test/w/${slug}?token=${token}`,
+        url: `https://workspace.example.test/w/${slug}/`,
         status: "ready",
         provider: this.name,
         providerData: {

@@ -405,6 +405,7 @@ func (s *Service) CreateWorkspace(ctx context.Context, input CreateWorkspaceInpu
 		_, cleanupErr := s.fabric.DestroyWorkspaceRuntime(cleanupCtx, workspaceID, idempotencyKey+":runtime-compensation")
 		return domain.WorkspaceProjection{}, errors.Join(err, cleanupErr)
 	}
+	status := workspaceRuntimeState(runtime.Status, runtime.Ready)
 
 	return domain.WorkspaceProjection{
 		ID:                  workspaceID,
@@ -414,12 +415,13 @@ func (s *Service) CreateWorkspace(ctx context.Context, input CreateWorkspaceInpu
 		PackageID:           input.PackageID,
 		Provider:            "tencent-tke",
 		URL:                 runtime.URL,
-		Status:              "running",
+		Status:              status,
 		ComputeID:           input.ComputeID,
 		VolumeID:            input.VolumeID,
 		AttachmentID:        input.AttachmentID,
 		RuntimeID:           runtime.ID,
 		RuntimeServiceName:  runtime.ServiceName,
+		RuntimeReady:        runtime.Ready,
 		RuntimeUsername:     runtime.Access.Username,
 		CredentialStatus:    runtime.Access.CredentialStatus,
 		CredentialVersion:   runtime.Access.CredentialVersion,
@@ -441,9 +443,19 @@ func (s *Service) ResumeWorkspace(ctx context.Context, input ResumeWorkspaceInpu
 	if err != nil {
 		return domain.WorkspaceProjection{}, err
 	}
-	status := runtime.Status
-	if status == "" {
-		status = "provisioning"
-	}
+	status := workspaceRuntimeState(runtime.Status, runtime.Ready)
 	return domain.WorkspaceProjection{ID: input.WorkspaceID, AccountID: input.AccountID, OwnerID: input.OwnerID, Name: input.Name, PackageID: input.PackageID, Provider: "tencent-tke", URL: url, Status: status, ComputeID: input.ComputeID, VolumeID: input.VolumeID, AttachmentID: input.AttachmentID, RuntimeID: runtime.ID, RuntimeServiceName: runtime.ServiceName, RuntimeReady: runtime.Ready, RuntimeUsername: runtime.Access.Username, CredentialStatus: runtime.Access.CredentialStatus, CredentialVersion: runtime.Access.CredentialVersion, CredentialSecretRef: runtime.Access.SecretRef, ReceiptID: receipt.ReceiptID}, nil
+}
+
+func workspaceRuntimeState(status string, ready bool) string {
+	if ready {
+		if status == "" {
+			return "running"
+		}
+		return status
+	}
+	if status == "" || status == "running" {
+		return "unready"
+	}
+	return status
 }

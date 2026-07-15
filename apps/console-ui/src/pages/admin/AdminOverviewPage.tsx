@@ -1,10 +1,9 @@
 import React from "react";
 import { Alert, Button, Drawer, Form, Input, InputNumber, Select, Typography } from "antd";
 import { Plus } from "lucide-react";
-import { addOrganizationMember, archiveTerminalResources, cleanupWorkspaceAccess, createOrganization, createUser, deleteUser, disableUser } from "../../api/console-read-api.ts";
+import { addOrganizationMember, archiveTerminalResources, createOrganization, createUser, deleteUser, disableUser } from "../../api/console-read-api.ts";
 import {
   ActionGroup,
-  CleanupResourceTable,
   ConsoleSurface,
   DataRetentionPolicyPanel,
   InsightPanel,
@@ -542,55 +541,14 @@ export function AdminE2EPage({ adminOps, managementState = {} }: any) {
 }
 
 export function AdminCleanupPage({ managementState, session, runAction }: any) {
-  const cleanupSummary = managementState.workspaceAccessCleanup || {};
   const archive = managementState.archive || {};
   const archiveResources = archive.resources || [];
   const archiveJobs = archive.jobs || [];
-  const cleanupCandidateCount = Number(cleanupSummary.cleanupCandidateCount || 0);
-  const activeUrlCount = Number(cleanupSummary.activeUrlCount || 0);
-  const destroyedCompute = Number(cleanupSummary.destroyedComputeCount || 0);
-  const destroyedStorage = Number(cleanupSummary.destroyedStorageCount || 0);
-  const detachedAttachments = Number(cleanupSummary.detachedAttachmentCount || 0);
+  const destroyedCompute = (managementState.computeAllocations || []).filter((item) => item.status === "destroyed").length;
+  const destroyedStorage = (managementState.storageVolumes || []).filter((item) => item.status === "destroyed").length;
+  const detachedAttachments = (managementState.storageAttachments || []).filter((item) => item.status === "detached").length;
   return (
-    <ConsoleSurface title="入口清理" eyebrow="管理" subtitle="清理已失效资源对应的访问 URL">
-      <MetricStrip
-        items={[
-          { label: "可用 URL", value: activeUrlCount, caption: "候选工作区入口", tone: activeUrlCount ? "warn" : "good" },
-          { label: "已销毁计算", value: destroyedCompute, caption: "已停止分配", tone: destroyedCompute ? "info" : "neutral" },
-          { label: "已销毁存储", value: destroyedStorage, caption: "已释放数据盘", tone: destroyedStorage ? "info" : "neutral" },
-          { label: "已解除挂载", value: detachedAttachments, caption: "非活跃挂载", tone: detachedAttachments ? "info" : "neutral" }
-        ]}
-      />
-      <InsightPanel
-        title="访问 URL 清理"
-        eyebrow="运营清理"
-        actions={(
-          <OperationConfirmButton
-            label="清理全部无效 URL"
-            title="确认清理全部无效 URL"
-            description={`预计 ${cleanupCandidateCount} 个候选入口会被标记为不可用；只清理 URL 状态，不删除计算、存储或账本。`}
-            danger
-            disabled={cleanupCandidateCount === 0}
-            onConfirm={() => runAction(
-              () => cleanupWorkspaceAccess({ reason: "operator_cleanup_all", confirm: true }, session.csrfToken),
-              "无效访问 URL 已清理",
-              { actionKey: "admin-cleanup-workspace-access" }
-            )}
-          />
-        )}
-      >
-        <CleanupResourceTable
-          workspaces={managementState.workspaces || []}
-          computeAllocations={managementState.computeAllocations || []}
-          storageVolumes={managementState.storageVolumes || []}
-          storageAttachments={managementState.storageAttachments || []}
-          onCleanup={(row) => runAction(
-            () => cleanupWorkspaceAccess({ workspaceIds: [row.id], reason: "operator_cleanup_single", confirm: true }, session.csrfToken),
-            "访问 URL 已清理",
-            { actionKey: `admin-cleanup-workspace-${row.id}` }
-          )}
-        />
-      </InsightPanel>
+    <ConsoleSurface title="终态归档" eyebrow="管理" subtitle="归档已结束的资源事实">
       <InsightPanel title="归档记录" eyebrow="后端归档">
         <MetricStrip
           items={[
@@ -615,12 +573,12 @@ export function AdminCleanupPage({ managementState, session, runAction }: any) {
           ]}
         />
       </InsightPanel>
-      <InsightPanel title="清理边界" eyebrow="安全">
+      <InsightPanel title="归档边界" eyebrow="安全">
         <ResourceSplit
           items={[
-            { label: "不删除", value: "计算 / 存储 / 账本", meta: "只处理访问状态", status: "已保护", tone: "good" },
-            { label: "清理条件", value: "资源已销毁或挂载已解除", meta: "可用 URL 变为不可用", status: "当前", tone: "info" },
-            { label: "证据", value: "workspace_access_cleaned", meta: "账本金额 0", status: "审计", tone: "info" }
+            { label: "不归档", value: "Ledger 收据", meta: "账本事实持续保留", status: "已保护", tone: "good" },
+            { label: "归档条件", value: "资源已销毁或挂载已解除", meta: "只移出当前态", status: "当前", tone: "info" },
+            { label: "操作", value: "archive-terminal-resources", meta: "记录管理员审计", status: "审计", tone: "info" }
           ]}
         />
         <OperationConfirmButton

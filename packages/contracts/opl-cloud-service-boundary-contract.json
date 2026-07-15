@@ -155,7 +155,6 @@
       "reviewId",
       "receiptId",
       "continuationId",
-      "tokenVersion",
       "redactedUrl",
       "providerRequestId",
       "operationId",

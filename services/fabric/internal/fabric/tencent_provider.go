@@ -418,9 +418,9 @@ func (p *TencentProvider) CreateWorkspaceRuntime(ctx context.Context, input Work
 	}
 	now := time.Now().UTC()
 	serviceName := firstNonEmpty(compute.ServiceName, k8sName(compute.ID))
-	token := stableID(input.WorkspaceID, input.IdempotencyKey)[:24]
+	credentialSeed := stableID(input.WorkspaceID, input.IdempotencyKey)[:24]
 	tags := oplCostTags(compute.AccountID, input.WorkspaceID, input.WorkspaceID, input.OperationID)
-	if _, err := p.kubectl(ctx, []string{"apply", "-f", "-"}, workspaceManifest(input.WorkspaceID, input.WorkspaceID, token, serviceName, compute, volume, tags)); err != nil {
+	if _, err := p.kubectl(ctx, []string{"apply", "-f", "-"}, workspaceManifest(input.WorkspaceID, input.WorkspaceID, credentialSeed, serviceName, compute, volume, tags)); err != nil {
 		return WorkspaceRuntime{}, err
 	}
 	runtime, err := p.WorkspaceRuntimeStatus(ctx, input.WorkspaceID)
@@ -654,13 +654,13 @@ func restoredPVCManifest(name, storageID, accountID string, sizeGB int, snapshot
 	})
 }
 
-func workspaceManifest(workspaceID string, workspaceName string, token string, serviceName string, compute ComputeAllocation, storage StorageVolume, tags map[string]string) []byte {
+func workspaceManifest(workspaceID string, workspaceName string, credentialSeed string, serviceName string, compute ComputeAllocation, storage StorageVolume, tags map[string]string) []byte {
 	selectorLabels := stringAnyMap(runtimeSelectorLabels(serviceName, compute))
 	labels := stringAnyMap(mergeStringMaps(runtimeSelectorLabels(serviceName, compute), map[string]string{"oplcloud.cn/account-id": compute.AccountID, "oplcloud.cn/workspace-id": workspaceID}, k8sCostLabels(tags)))
 	pvcName := resourceName(storage.ProviderResourceID)
 	plan := packagePlan(compute.PackageID)
-	password := deriveAionUIAdminPassword(os.Getenv("OPL_AIONUI_ADMIN_PASSWORD_SEED"), workspaceID, token)
-	secretData := map[string]any{"webui_password": b64(password), "webui_session_secret": b64(deriveWebUISessionSecret(os.Getenv("OPL_AIONUI_ADMIN_PASSWORD_SEED"), workspaceID, token))}
+	password := deriveAionUIAdminPassword(os.Getenv("OPL_AIONUI_ADMIN_PASSWORD_SEED"), workspaceID, credentialSeed)
+	secretData := map[string]any{"webui_password": b64(password), "webui_session_secret": b64(deriveWebUISessionSecret(os.Getenv("OPL_AIONUI_ADMIN_PASSWORD_SEED"), workspaceID, credentialSeed))}
 	secretItems := []any{map[string]any{"key": "webui_password", "path": "opl_webui_password"}, map[string]any{"key": "webui_session_secret", "path": "webui_session_secret"}}
 	if gatewayAPIKey := os.Getenv("OPL_CODEX_API_KEY"); gatewayAPIKey != "" {
 		secretData["gateway_api_key"] = b64(gatewayAPIKey)
@@ -678,7 +678,6 @@ func workspaceManifest(workspaceID string, workspaceName string, token string, s
 		map[string]any{"name": "OPL_CODEX_PROVIDER_NAME", "value": os.Getenv("OPL_CODEX_PROVIDER_NAME")},
 		map[string]any{"name": "OPL_WORKSPACE_ID", "value": workspaceID},
 		map[string]any{"name": "OPL_WORKSPACE_NAME", "value": workspaceName},
-		map[string]any{"name": "OPL_SHARE_TOKEN", "value": token},
 		map[string]any{"name": "OPL_COMPUTE_ALLOCATION_ID", "value": compute.ID},
 		map[string]any{"name": "OPL_OWNER_ACCOUNT_ID", "value": compute.AccountID},
 		map[string]any{"name": "OPL_PACKAGE_ID", "value": plan.ID},

@@ -17,11 +17,17 @@ test("product contract treats app image as runtime template, not commercial reso
   assert.equal(product.resourceMapping.storageVolume, 1);
   assert.equal(product.resourceMapping.storageAttachment, 1);
   assert.equal(product.resourceMapping.runtimeTemplate, 1);
+  assert.equal(product.resourceMapping.urlToken, undefined);
   assert.equal(product.resourceMapping.onePersonLabAppDocker, undefined);
   assert.equal(product.runtimeTemplatePolicy.defaultTemplateId, "one-person-lab-app");
   assert.equal(product.runtimeTemplatePolicy.billingObject, false);
   assert.match(product.runtimeTemplatePolicy.ownershipRule, /never own accounts/);
   assert.deepEqual(product.defaultPackages.map((plan) => plan.id), ["basic"]);
+  assert.equal(product.access.urlPattern, "https://workspace.medopl.cn/w/<workspaceId>/");
+  assert.equal(product.access.mode, "runtime_password");
+  assert.equal(product.access.requiresLogin, true);
+  assert.equal(product.access.tokenLifetime, undefined);
+  assert.equal(product.access.rotationPolicy, undefined);
 });
 
 test("business object contract keeps runtime template out of billing ownership", async () => {

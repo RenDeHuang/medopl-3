@@ -37,8 +37,9 @@
 
 ## Access And Secrets
 
-- Workspace share URLs remain valid until reset or deletion and do not require Console login.
-- Public and evidence responses never expose raw credentials or share tokens.
+- Workspace URLs are stable and require the Runtime password login.
+- The Workspace routing cookie selects a Runtime Service and is never an authentication credential.
+- Persisted Workspace, list, public, and evidence responses never expose raw credentials; only the authorized runtime-status command returns the password transiently.
 - Production manifests contain secret references only.
 - Every production Console account has one positive integer `sub2apiUserId`.
 

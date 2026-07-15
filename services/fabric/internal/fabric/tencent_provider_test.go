@@ -237,6 +237,9 @@ func TestWorkspaceManifestUsesHostNetworkOnDedicatedTKENode(t *testing.T) {
 		t.Fatalf("workspace limits must preserve the package shape: %#v", limits)
 	}
 	env := envMap(container["env"].([]any))
+	if _, ok := env["OPL_SHARE_TOKEN"]; ok {
+		t.Fatalf("workspace must not receive a fake URL authentication token: %#v", env)
+	}
 	if env["AIONUI_ALLOW_REMOTE"] != "true" {
 		t.Fatalf("workspace must allow remote AionUI access: %#v", env)
 	}

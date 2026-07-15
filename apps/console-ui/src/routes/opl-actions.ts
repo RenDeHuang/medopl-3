@@ -25,7 +25,7 @@ export const consoleActions = Object.freeze([
     type: "external",
     role: "lab_owner",
     objectKind: "Workspace",
-    requires: ["workspace.url.active"]
+    requires: ["workspace.runtime.ready"]
   },
   {
     id: "workspace.copyUrl",
@@ -33,49 +33,7 @@ export const consoleActions = Object.freeze([
     type: "copy",
     role: "lab_owner",
     objectKind: "Workspace",
-    requires: ["workspace.url.active"]
-  },
-  {
-    id: "workspace.resetUrl",
-    label: "重置工作区入口",
-    type: "api",
-    role: "lab_owner",
-    objectKind: "Workspace",
-    apiClient: "apps/console-ui/src/api/workspaces-api.ts",
-    apiName: "resetWorkspaceToken",
-    requires: ["workspace.url.active"],
-    mutation: true,
-    confirmation: "normal",
-    operationTimeline: true,
-    failureVisible: true
-  },
-  {
-    id: "workspace.enableUrl",
-    label: "启用工作区入口",
-    type: "api",
-    role: "lab_owner",
-    objectKind: "Workspace",
-    apiClient: "apps/console-ui/src/api/workspaces-api.ts",
-    apiName: "resetWorkspaceToken",
-    requires: ["workspace.url.disabled"],
-    mutation: true,
-    confirmation: "normal",
-    operationTimeline: true,
-    failureVisible: true
-  },
-  {
-    id: "workspace.deleteUrl",
-    label: "停用工作区入口",
-    type: "api",
-    role: "lab_owner",
-    objectKind: "Workspace",
-    apiClient: "apps/console-ui/src/api/workspaces-api.ts",
-    apiName: "deleteWorkspaceToken",
-    requires: ["workspace.url.active"],
-    mutation: true,
-    confirmation: "normal",
-    operationTimeline: true,
-    failureVisible: true
+    requires: ["workspace.runtime.ready"]
   },
   {
     id: "compute-allocations.create",
