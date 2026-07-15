@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 	"sync"
 	"time"
@@ -16,13 +17,16 @@ import (
 const storageProvisionTimeout = 10 * time.Minute
 
 type Provider interface {
+	MonthlyPreflight(ctx context.Context, input MonthlyPreflightInput) (MonthlyPreflight, error)
 	ReconcileComputePool(ctx context.Context, input ComputePoolDemand) (ComputePoolState, error)
 	TagComputeMachine(ctx context.Context, machine ProviderMachine, ownership MachineOwnership) error
 	DeleteComputeMachine(ctx context.Context, machine ProviderMachine, ownership MachineOwnership) error
 	SyncComputeAllocation(ctx context.Context, allocation ComputeAllocation) (ComputeAllocation, error)
+	RenewComputeAllocation(ctx context.Context, allocation ComputeAllocation) (ComputeAllocation, error)
 	DestroyComputeAllocation(ctx context.Context, allocation ComputeAllocation) (ComputeAllocation, error)
 	CreateStorageVolume(ctx context.Context, input StorageVolumeInput) (StorageVolume, error)
 	SyncStorageVolume(ctx context.Context, volume StorageVolume) (StorageVolume, error)
+	RenewStorageVolume(ctx context.Context, volume StorageVolume) (StorageVolume, error)
 	DestroyStorageVolume(ctx context.Context, volume StorageVolume) (StorageVolume, error)
 	CreateStorageSnapshot(ctx context.Context, input StorageSnapshotInput, volume StorageVolume) (StorageSnapshot, error)
 	SyncStorageSnapshot(ctx context.Context, snapshot StorageSnapshot) (StorageSnapshot, error)
@@ -33,6 +37,7 @@ type Provider interface {
 	CreateWorkspaceRuntime(ctx context.Context, input WorkspaceRuntimeInput, compute ComputeAllocation, volume StorageVolume) (WorkspaceRuntime, error)
 	DestroyWorkspaceRuntime(ctx context.Context, workspaceID string) (WorkspaceRuntime, error)
 	WorkspaceRuntimeStatus(ctx context.Context, workspaceID string) (WorkspaceRuntime, error)
+	UpsertGatewaySecret(ctx context.Context, input GatewaySecretInput) (GatewaySecret, error)
 	Readiness(ctx context.Context) (map[string]any, error)
 }
 
@@ -72,10 +77,36 @@ func (s *Service) Catalog(_ context.Context) Catalog {
 		Owner:         "OPL Fabric",
 		WorkspacePackages: []WorkspacePackage{
 			{ID: "basic", Name: "Basic Workspace", ComputeProfileID: "cpu-basic", CPU: 2, MemoryGB: 4, DiskGB: 10, Provider: "tencent-tke", Available: true},
+			{ID: "pro", Name: "Pro Workspace", ComputeProfileID: "cpu-pro", CPU: 8, MemoryGB: 16, DiskGB: 100, Provider: "tencent-tke", Available: true},
 		},
 		StorageClasses: []StorageClass{{ID: "workspace-cbs", StorageClassName: "cbs", Provider: "tencent-tke", Available: true}},
 		IngressDomains: []IngressDomain{{ID: "workspace", Host: "workspace.medopl.cn", PathPattern: "/w/<workspaceId>/", Available: true}},
 	}
+}
+
+func (s *Service) MonthlyPreflight(ctx context.Context, input MonthlyPreflightInput) (MonthlyPreflight, error) {
+	if (input.ResourceType != "compute" && input.ResourceType != "storage") || (input.PackageID != "basic" && input.PackageID != "pro") || input.Zone == "" || input.Zone != strings.TrimSpace(input.Zone) ||
+		(input.ResourceType == "compute" && input.SizeGB != 0) || (input.ResourceType == "storage" && (input.SizeGB < 10 || input.SizeGB%10 != 0)) {
+		return MonthlyPreflight{}, ErrInvalidMonthlyPreflight
+	}
+	result, err := s.provider.MonthlyPreflight(ctx, input)
+	if err != nil {
+		return MonthlyPreflight{}, fmt.Errorf("%w: %v", ErrMonthlyPreflightUnavailable, err)
+	}
+	requiredRequestIDs := []string{"nodePool", "subnets", "availability"}
+	if input.ResourceType == "storage" {
+		requiredRequestIDs = []string{"quota", "price"}
+	}
+	validRequestIDs := len(result.ProviderRequestIDs) > 0
+	for _, key := range requiredRequestIDs {
+		validRequestIDs = validRequestIDs && strings.TrimSpace(result.ProviderRequestIDs[key]) != ""
+	}
+	if result.ResourceType != input.ResourceType || result.PackageID != input.PackageID || result.SizeGB != input.SizeGB || result.Zone != input.Zone || !result.Available ||
+		result.ChargeType != "PREPAID" || result.PeriodMonths != 1 || result.RenewFlag != "NOTIFY_AND_MANUAL_RENEW" || result.ProviderPriceCNY <= 0 ||
+		math.IsNaN(result.ProviderPriceCNY) || math.IsInf(result.ProviderPriceCNY, 0) || !validRequestIDs {
+		return MonthlyPreflight{}, ErrMonthlyPreflightUnavailable
+	}
+	return result, nil
 }
 
 func (s *Service) MachineOwnership(ctx context.Context, resourceID string) (MachineOwnership, error) {
@@ -83,7 +114,7 @@ func (s *Service) MachineOwnership(ctx context.Context, resourceID string) (Mach
 }
 
 func (s *Service) CreateComputeAllocation(ctx context.Context, input ComputeAllocationInput) (ComputeAllocation, error) {
-	if input.PackageID != "basic" {
+	if input.PackageID != "basic" && input.PackageID != "pro" {
 		return ComputeAllocation{}, ErrUnsupportedComputePackage
 	}
 	now := time.Now().UTC()
@@ -194,6 +225,59 @@ func (s *Service) SyncComputeAllocation(ctx context.Context, allocationID string
 	s.computes[allocationID] = allocation
 	s.mu.Unlock()
 	return allocation, nil
+}
+
+func (s *Service) RenewComputeAllocation(ctx context.Context, allocationID, idempotencyKey string) (ComputeAllocation, error) {
+	if strings.TrimSpace(allocationID) == "" || strings.TrimSpace(idempotencyKey) == "" {
+		return ComputeAllocation{}, fmt.Errorf("compute_renew_identity_required")
+	}
+	var result ComputeAllocation
+	err := s.operations.WithPoolLock(ctx, "compute-renew:"+allocationID, func(lockCtx context.Context) error {
+		s.mu.Lock()
+		existing := s.computes[allocationID]
+		s.mu.Unlock()
+		if existing.ID == "" || !strings.HasPrefix(firstNonEmpty(existing.InstanceID, existing.CVMInstanceID), "ins-") || strings.TrimSpace(existing.Deadline) == "" {
+			return fmt.Errorf("compute_allocation_renew_identity_required")
+		}
+		requestHash := hashInput(map[string]string{"id": allocationID})
+		operations, err := s.operations.List(lockCtx)
+		if err != nil {
+			return err
+		}
+		operation := newOperation("renew_compute_allocation", "compute_allocation", allocationID, existing.AccountID, existing.WorkspaceID, idempotencyKey, requestHash, s.now())
+		started := false
+		for _, candidate := range operations {
+			if candidate.Action != operation.Action || candidate.IdempotencyKey != idempotencyKey {
+				continue
+			}
+			if candidate.RequestHash != requestHash {
+				return fmt.Errorf("compute_renew_idempotency_conflict")
+			}
+			if candidate.Status == "succeeded" && decodeOperationResource(candidate, &result) {
+				return nil
+			}
+			operation = candidate
+			started = true
+		}
+		if !started {
+			if err := s.recordOperation(lockCtx, operation, "started", existing, nil); err != nil {
+				return err
+			}
+		}
+		result, err = s.provider.RenewComputeAllocation(lockCtx, existing)
+		if err != nil {
+			_ = s.recordOperation(lockCtx, operation, "failed", result, err)
+			return err
+		}
+		if err := s.recordOperation(lockCtx, operation, "succeeded", result, nil); err != nil {
+			return err
+		}
+		s.mu.Lock()
+		s.computes[allocationID] = result
+		s.mu.Unlock()
+		return nil
+	})
+	return result, err
 }
 
 func (s *Service) DestroyComputeAllocation(ctx context.Context, allocationID string) (ComputeAllocation, error) {
@@ -349,6 +433,14 @@ func (s *Service) cancelPendingComputeCreation(ctx context.Context, allocationID
 func (s *Service) CreateStorageVolume(ctx context.Context, input StorageVolumeInput) (StorageVolume, error) {
 	if input.SizeGB < 10 || input.SizeGB%10 != 0 {
 		return StorageVolume{}, ErrInvalidStorageSize
+	}
+	s.mu.Lock()
+	compute := s.computes[input.ComputeID]
+	s.mu.Unlock()
+	computeZone := strings.TrimSpace(compute.ProviderData["zone"])
+	if compute.ID == "" || compute.AccountID != input.AccountID || compute.WorkspaceID != input.WorkspaceID ||
+		!isReadyResourceStatus(compute.Status) || computeZone == "" || strings.TrimSpace(input.Zone) != computeZone {
+		return StorageVolume{}, fmt.Errorf("storage_compute_zone_mismatch")
 	}
 	operation := newOperation("create_storage_volume", "storage_volume", firstNonEmpty(input.ID, "pending"), input.AccountID, input.WorkspaceID, input.IdempotencyKey, hashInput(input), time.Now().UTC())
 	input.OperationID = operation.OperationID
@@ -592,7 +684,6 @@ func (s *Service) SyncStorageVolume(ctx context.Context, volumeID string) (Stora
 			return volume, nil
 		}
 		volume = cleaned
-		volume.Status = "failed"
 	}
 	if err := s.recordOperation(ctx, operation, "succeeded", volume, nil); err != nil {
 		return volume, err
@@ -601,6 +692,59 @@ func (s *Service) SyncStorageVolume(ctx context.Context, volumeID string) (Stora
 	s.volumes[volumeID] = volume
 	s.mu.Unlock()
 	return volume, nil
+}
+
+func (s *Service) RenewStorageVolume(ctx context.Context, volumeID, idempotencyKey string) (StorageVolume, error) {
+	if strings.TrimSpace(volumeID) == "" || strings.TrimSpace(idempotencyKey) == "" {
+		return StorageVolume{}, fmt.Errorf("storage_renew_identity_required")
+	}
+	var result StorageVolume
+	err := s.operations.WithPoolLock(ctx, "storage-renew:"+volumeID, func(lockCtx context.Context) error {
+		s.mu.Lock()
+		existing := s.volumes[volumeID]
+		s.mu.Unlock()
+		if existing.ID == "" || !strings.HasPrefix(existing.ProviderResourceID, "disk-") || strings.TrimSpace(existing.Deadline) == "" {
+			return fmt.Errorf("storage_volume_renew_identity_required")
+		}
+		requestHash := hashInput(map[string]string{"id": volumeID})
+		operations, err := s.operations.List(lockCtx)
+		if err != nil {
+			return err
+		}
+		operation := newOperation("renew_storage_volume", "storage_volume", volumeID, existing.AccountID, existing.WorkspaceID, idempotencyKey, requestHash, s.now())
+		started := false
+		for _, candidate := range operations {
+			if candidate.Action != operation.Action || candidate.IdempotencyKey != idempotencyKey {
+				continue
+			}
+			if candidate.RequestHash != requestHash {
+				return fmt.Errorf("storage_renew_idempotency_conflict")
+			}
+			if candidate.Status == "succeeded" && decodeOperationResource(candidate, &result) {
+				return nil
+			}
+			operation = candidate
+			started = true
+		}
+		if !started {
+			if err := s.recordOperation(lockCtx, operation, "started", existing, nil); err != nil {
+				return err
+			}
+		}
+		result, err = s.provider.RenewStorageVolume(lockCtx, existing)
+		if err != nil {
+			_ = s.recordOperation(lockCtx, operation, "failed", result, err)
+			return err
+		}
+		if err := s.recordOperation(lockCtx, operation, "succeeded", result, nil); err != nil {
+			return err
+		}
+		s.mu.Lock()
+		s.volumes[volumeID] = result
+		s.mu.Unlock()
+		return nil
+	})
+	return result, err
 }
 
 func (s *Service) CreateStorageAttachment(ctx context.Context, input StorageAttachmentInput) (StorageAttachment, error) {
@@ -766,6 +910,13 @@ func (s *Service) WorkspaceRuntimeStatus(ctx context.Context, workspaceID string
 		return runtime, err
 	}
 	return runtime, nil
+}
+
+func (s *Service) UpsertGatewaySecret(ctx context.Context, input GatewaySecretInput) (GatewaySecret, error) {
+	if strings.TrimSpace(input.AccountID) == "" || strings.TrimSpace(input.GatewayAPIKey) == "" || strings.TrimSpace(input.IdempotencyKey) == "" {
+		return GatewaySecret{}, fmt.Errorf("gateway_secret_input_required")
+	}
+	return s.provider.UpsertGatewaySecret(ctx, input)
 }
 
 func (s *Service) Readiness(ctx context.Context) (map[string]any, error) {
@@ -1274,10 +1425,22 @@ func validateRuntimeInput(input WorkspaceRuntimeInput, compute ComputeAllocation
 	if compute.AccountID == "" || volume.AccountID == "" || compute.AccountID != volume.AccountID {
 		return fmt.Errorf("resource_account_mismatch")
 	}
-	if isTerminalResourceStatus(compute.Status) || isTerminalResourceStatus(volume.Status) {
+	if !isReadyResourceStatus(compute.Status) || volume.Status != "ready" {
 		return fmt.Errorf("resource_status_invalid")
 	}
+	if strings.TrimSpace(input.GatewaySecretRef) == "" || input.GatewaySecretRef != gatewaySecretName(compute.AccountID) {
+		return fmt.Errorf("gateway_secret_ref_mismatch")
+	}
 	return nil
+}
+
+func isReadyResourceStatus(status string) bool {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "running", "ready", "active":
+		return true
+	default:
+		return false
+	}
 }
 
 func isTerminalResourceStatus(status string) bool {

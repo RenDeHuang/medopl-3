@@ -174,7 +174,8 @@ func (s *Service) reconcileComputePoolOnce(ctx context.Context, packageID string
 	}
 	machines := make([]ProviderMachine, 0, len(state.Machines))
 	for _, machine := range state.Machines {
-		if machine.Ready && machine.MachineID != "" && !ownedMachines[machine.MachineID] && (machine.InstanceType == "" || machine.InstanceType == plan.InstanceType) {
+		if machine.Ready && machine.MachineID != "" && !ownedMachines[machine.MachineID] && (machine.InstanceType == "" || machine.InstanceType == plan.InstanceType) &&
+			machine.Zone != "" && machine.ChargeType == "PREPAID" && machine.RenewFlag == "NOTIFY_AND_MANUAL_RENEW" && machine.Deadline != "" {
 			machines = append(machines, machine)
 		}
 	}
@@ -212,11 +213,7 @@ func (s *Service) reconcileComputePoolOnce(ctx context.Context, packageID string
 			_ = s.operations.SaveMachineOwnership(ctx, claimed)
 			continue
 		}
-		claimed.Status = "active"
-		if err := s.operations.SaveMachineOwnership(ctx, claimed); err != nil {
-			continue
-		}
-		resource.Status = "running"
+		resource.Status = "provisioning"
 		resource.Provider = "tencent-tke"
 		resource.ProviderRequestID = state.ProviderRequestID
 		resource.ProviderResourceID = "machine/" + machine.MachineID
@@ -228,7 +225,28 @@ func (s *Service) reconcileComputePoolOnce(ctx context.Context, packageID string
 		resource.NodeName = machine.NodeName
 		resource.PrivateIP = machine.PrivateIP
 		resource.PublicIP = machine.PublicIP
+		resource.ChargeType = machine.ChargeType
+		resource.RenewFlag = machine.RenewFlag
+		resource.Deadline = machine.Deadline
+		resource.ProviderData = map[string]string{"instanceType": machine.InstanceType, "zone": machine.Zone, "chargeType": machine.ChargeType, "renewFlag": machine.RenewFlag, "deadline": machine.Deadline, "machineName": machine.MachineID}
 		resource.CreatedAt = firstTime(resource.CreatedAt, s.now())
+		verified, verifyErr := s.provider.SyncComputeAllocation(ctx, resource)
+		if verifyErr != nil || !isReadyResourceStatus(verified.Status) || verified.ChargeType != "PREPAID" || verified.RenewFlag != "NOTIFY_AND_MANUAL_RENEW" || verified.Deadline == "" || verified.ProviderData["zone"] == "" {
+			if deleteErr := s.provider.DeleteComputeMachine(ctx, machine, claimed); deleteErr == nil {
+				now := s.now()
+				claimed.Status = "released"
+				claimed.ReleasedAt = &now
+			} else {
+				claimed.Status = "quarantined"
+			}
+			_ = s.operations.SaveMachineOwnership(ctx, claimed)
+			continue
+		}
+		resource = verified
+		claimed.Status = "active"
+		if err := s.operations.SaveMachineOwnership(ctx, claimed); err != nil {
+			continue
+		}
 		if err := s.recordOperation(ctx, operation, "succeeded", resource, nil); err != nil {
 			return false, i > 0, err
 		}

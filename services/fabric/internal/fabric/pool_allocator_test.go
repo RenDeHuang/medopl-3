@@ -2,6 +2,7 @@ package fabric
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -46,6 +47,25 @@ type transientProviderError struct {
 }
 
 type evidencePoolProvider struct{ testProvider }
+
+type invalidInitialBillingPoolProvider struct {
+	testProvider
+	machine   ProviderMachine
+	syncCalls int
+}
+
+func (p *invalidInitialBillingPoolProvider) ReconcileComputePool(_ context.Context, input ComputePoolDemand) (ComputePoolState, error) {
+	return ComputePoolState{
+		PoolID: input.PoolID, NodePoolID: "np-basic", DesiredReplicas: input.DesiredReplicas, CurrentReplicas: 1,
+		ProviderRequestID: "req-machines", Machines: []ProviderMachine{p.machine},
+	}, nil
+}
+
+func (p *invalidInitialBillingPoolProvider) SyncComputeAllocation(_ context.Context, allocation ComputeAllocation) (ComputeAllocation, error) {
+	p.syncCalls++
+	allocation.Status = "running"
+	return allocation, nil
+}
 
 func (*evidencePoolProvider) ReconcileComputePool(_ context.Context, input ComputePoolDemand) (ComputePoolState, error) {
 	return ComputePoolState{
@@ -93,6 +113,39 @@ func TestPoolAllocatorPersistsPoolEvidence(t *testing.T) {
 	}
 	if latest.ProviderData["poolReconcileAttempt"] != "1" || latest.ProviderData["desiredReplicas"] != "1" || latest.ProviderData["currentReplicas"] != "0" || latest.ProviderData["describeMachinesRequestId"] != "req-describe-machines" {
 		t.Fatalf("pool evidence not persisted: %#v", latest.ProviderData)
+	}
+}
+
+func TestPoolAllocatorNeverClaimsInitialMachineWithoutExactPrepaidBilling(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		renewFlag string
+		deadline  string
+	}{
+		{name: "deadline missing", renewFlag: "NOTIFY_AND_MANUAL_RENEW"},
+		{name: "automatic renewal", renewFlag: "NOTIFY_AND_AUTO_RENEW", deadline: "2026-08-16T00:00:00Z"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			provider := &invalidInitialBillingPoolProvider{machine: ProviderMachine{
+				MachineID: "machine-alpha", InstanceID: "ins-alpha", NodeName: "node-alpha", InstanceType: "SA5.MEDIUM4", Zone: "na-siliconvalley-1",
+				ChargeType: "PREPAID", RenewFlag: tc.renewFlag, Deadline: tc.deadline, Ready: true,
+			}}
+			store := NewMemoryOperationStore()
+			service := NewServiceWithOperationStore(provider, store)
+			resource := ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", PackageID: "basic", Status: "provisioning"}
+			operation := newOperation("create_compute_allocation", "compute_allocation", resource.ID, resource.AccountID, resource.WorkspaceID, "request-alpha", hashInput(resource), time.Now().UTC())
+			if err := service.recordOperation(context.Background(), operation, "started", resource, nil); err != nil {
+				t.Fatal(err)
+			}
+			service.computes[resource.ID] = resource
+
+			_, _, err := service.reconcileComputePoolOnce(context.Background(), "basic", false)
+			current, _ := service.GetComputeAllocation(context.Background(), resource.ID)
+			_, ownershipErr := store.MachineOwnership(context.Background(), resource.ID)
+			if err != nil || current.Status != "provisioning" || provider.syncCalls != 0 || !errors.Is(ownershipErr, ErrMachineOwnershipNotFound) {
+				t.Fatalf("compute=%#v err=%v syncCalls=%d ownershipErr=%v", current, err, provider.syncCalls, ownershipErr)
+			}
+		})
 	}
 }
 
