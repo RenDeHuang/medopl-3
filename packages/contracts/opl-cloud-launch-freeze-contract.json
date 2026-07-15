@@ -17,7 +17,7 @@
   "productSurfaces": {
     "gateway": {
       "product": "OPL Gateway",
-      "backend": "Sub2API v0.1.153",
+      "backend": "Sub2API v0.1.155",
       "owns": ["spendable USD balance", "API keys", "model routing", "request usage"]
     },
     "workspace": {
@@ -107,7 +107,7 @@
     "globalGatewayKeyForbidden": true
   },
   "gateway": {
-    "backend": "Sub2API v0.1.153",
+    "backend": "Sub2API v0.1.155",
     "sub2apiMutable": false,
     "accountMapping": "sub2apiUserId",
     "keyName": "opl-workspace",
