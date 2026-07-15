@@ -13,7 +13,7 @@ import (
 func (app *controlPlaneServer) createOrganization(input map[string]any) (map[string]any, error) {
 	name := stringField(input, "name", "Organization")
 	accountID := stringField(input, "billingAccountId", "acct-admin")
-	accounts, err := app.tables.ListAccounts(context.Background())
+	accounts, err := app.tables.ListAccounts(context.Background(), "")
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (app *controlPlaneServer) createMembership(input map[string]any) (map[strin
 		return nil, errMembershipUserNotFound
 	}
 	accountID := stringField(input, "accountId", stringValue(organization["billingAccountId"]))
-	accounts, err := app.tables.ListAccounts(context.Background())
+	accounts, err := app.tables.ListAccounts(context.Background(), "")
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (app *controlPlaneServer) managementState(includeDeleted bool, computePools
 		"users":                  sanitizedUserValues(app.userRecordSet(includeDeleted), includeDeleted),
 		"memberships":            rowsAsAnyFromMaps(app.listMemberships()),
 		"supportTickets":         rowsAsAnyFromMaps(app.listSupportMappings("")),
-		"accounts":               app.accountsLocked(),
+		"accounts":               app.accountsLocked(""),
 		"packages":               packageList(),
 		"computePools":           computePools,
 		"workspaces":             rowsAsAnyFromMaps(app.listWorkspaces("")),
@@ -131,7 +131,7 @@ func (app *controlPlaneServer) operatorSummary() map[string]any {
 	evidence := app.resourceLedgerEvidenceLocked()
 	runtimeOperations := app.listRuntimeOperations()
 	running := countStatus(computes, "running")
-	accounts := app.accountsLocked()
+	accounts := app.accountsLocked("")
 	for _, row := range computes {
 		app.observeMonthlyOperationalAlerts("compute", row)
 	}
@@ -272,8 +272,8 @@ func runtimeOperationSummary(operations []map[string]any) map[string]any {
 	return map[string]any{"total": len(operations), "failed": len(failed), "recentFailed": failed}
 }
 
-func (app *controlPlaneServer) accountsLocked() []any {
-	accounts, err := app.tables.ListAccounts(context.Background())
+func (app *controlPlaneServer) accountsLocked(accountID string) []any {
+	accounts, err := app.tables.ListAccounts(context.Background(), accountID)
 	if err != nil {
 		return []any{}
 	}

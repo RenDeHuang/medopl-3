@@ -11,6 +11,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -532,7 +533,6 @@ func TestPostgresLegacyMembershipMigrationIsLosslessAndFailClosed(t *testing.T) 
 
 func TestPostgresStoreStartsFromFreshDatabase(t *testing.T) {
 	admin := openControlPlaneTestPostgres(t)
-	defer admin.Close()
 	database := fmt.Sprintf("control_plane_fresh_%d", time.Now().UnixNano())
 	if _, err := admin.Exec(`CREATE DATABASE ` + database); err != nil {
 		t.Fatal(err)
@@ -540,6 +540,7 @@ func TestPostgresStoreStartsFromFreshDatabase(t *testing.T) {
 	t.Cleanup(func() {
 		_, _ = admin.Exec(`SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1`, database)
 		_, _ = admin.Exec(`DROP DATABASE ` + database)
+		_ = admin.Close()
 	})
 	databaseURL := controlPlaneTestPostgresURL(database, "")
 	legacy, err := sql.Open("postgres", databaseURL)
@@ -556,7 +557,7 @@ func TestPostgresStoreStartsFromFreshDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatalf("start store on fresh database: %v", err)
 	}
-	accounts, err := store.ListAccounts(context.Background())
+	accounts, err := store.ListAccounts(context.Background(), "")
 	if err != nil || len(accounts) != 0 {
 		t.Fatalf("fresh account table = %v, err=%v", accounts, err)
 	}
@@ -606,6 +607,55 @@ func TestPostgresStoreStartsFromFreshDatabase(t *testing.T) {
 	}
 }
 
+func TestPostgresRuntimeOperationConcurrentUpsert(t *testing.T) {
+	admin := openControlPlaneTestPostgres(t)
+	schema := fmt.Sprintf("control_plane_runtime_operation_%d", time.Now().UnixNano())
+	if _, err := admin.Exec(`CREATE SCHEMA ` + schema); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = admin.Exec(`DROP SCHEMA ` + schema + ` CASCADE`)
+		_ = admin.Close()
+	})
+	stateStore, err := NewPostgresEntStateStore(controlPlaneTestPostgresURL("postgres", schema))
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := stateStore.(*postgresEntStateStore)
+	t.Cleanup(func() { _ = store.client.Close() })
+	operation := map[string]any{
+		"id": "operation-capacity", "operationId": "operation-capacity", "accountId": "acct-capacity",
+		"resourceId": "compute-capacity", "resourceKind": "compute_allocation", "action": "create_compute_allocation", "status": "succeeded",
+	}
+	if err := store.SaveRuntimeOperation(context.Background(), operation); err != nil {
+		t.Fatal(err)
+	}
+
+	start := make(chan struct{})
+	errors := make(chan error, 20)
+	var wait sync.WaitGroup
+	wait.Add(20)
+	for range 20 {
+		go func() {
+			defer wait.Done()
+			<-start
+			errors <- store.SaveRuntimeOperation(context.Background(), operation)
+		}()
+	}
+	close(start)
+	wait.Wait()
+	close(errors)
+	for err := range errors {
+		if err != nil {
+			t.Fatalf("concurrent runtime operation upsert: %v", err)
+		}
+	}
+	rows, err := store.ListRuntimeOperations(context.Background())
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("runtime operations=%#v err=%v", rows, err)
+	}
+}
+
 func openControlPlaneTestPostgres(t *testing.T) *sql.DB {
 	t.Helper()
 	db, err := sql.Open("postgres", controlPlaneTestPostgresURL("postgres", ""))
@@ -614,7 +664,7 @@ func openControlPlaneTestPostgres(t *testing.T) *sql.DB {
 	}
 	if err := db.Ping(); err != nil {
 		_ = db.Close()
-		if os.Getenv("OPL_POSTGRES_TESTS") != "1" {
+		if os.Getenv("OPL_POSTGRES_TESTS") != "1" && os.Getenv("OPL_CAPACITY_TESTS") != "1" {
 			t.Skipf("local PostgreSQL unavailable: %v", err)
 		}
 		t.Fatal(err)

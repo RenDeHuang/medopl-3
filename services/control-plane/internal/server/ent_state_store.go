@@ -16,6 +16,7 @@ import (
 	_ "github.com/lib/pq"
 
 	controlplaneent "opl-cloud/services/control-plane/ent"
+	"opl-cloud/services/control-plane/ent/account"
 	"opl-cloud/services/control-plane/ent/adminauditevent"
 	"opl-cloud/services/control-plane/ent/billingreconciliation"
 	"opl-cloud/services/control-plane/ent/computeallocation"
@@ -31,7 +32,10 @@ import (
 	"opl-cloud/services/internal/postgresmigrate"
 )
 
-const singletonFactID = "default"
+const (
+	singletonFactID                  = "default"
+	controlPlaneMaxOpenDBConnections = 20
+)
 
 var errIdempotencyConflict = errors.New("idempotency_conflict")
 
@@ -58,6 +62,8 @@ func NewPostgresEntStateStore(databaseURL string) (StateStore, error) {
 	if err != nil {
 		return nil, err
 	}
+	// ponytail: fixed for the single Pod; revisit only with measured DB and replica capacity.
+	db.SetMaxOpenConns(controlPlaneMaxOpenDBConnections)
 	driver := entsql.OpenDB(dialect.Postgres, db)
 	client := controlplaneent.NewClient(controlplaneent.Driver(driver))
 	ctx := context.Background()
@@ -607,8 +613,12 @@ func (s *postgresEntStateStore) DeleteSession(ctx context.Context, id string) er
 	return err
 }
 
-func (s *postgresEntStateStore) ListAccounts(ctx context.Context) ([]map[string]any, error) {
-	rows, err := loadRecordSet(ctx, s.client.Account.Query().All, accountEntFields)
+func (s *postgresEntStateStore) ListAccounts(ctx context.Context, accountID string) ([]map[string]any, error) {
+	query := s.client.Account.Query()
+	if accountID != "" {
+		query.Where(account.ID(accountID))
+	}
+	rows, err := loadRecordSet(ctx, query.All, accountEntFields)
 	if err != nil {
 		return nil, err
 	}
@@ -844,7 +854,11 @@ func (s *postgresEntStateStore) SaveExecutionRequest(ctx context.Context, row ma
 }
 
 func (s *postgresEntStateStore) ListComputes(ctx context.Context, accountID string) ([]map[string]any, error) {
-	rows, err := loadRecordSet(ctx, s.client.ComputeAllocation.Query().All, computeEntFields)
+	query := s.client.ComputeAllocation.Query()
+	if accountID != "" {
+		query.Where(computeallocation.AccountID(accountID))
+	}
+	rows, err := loadRecordSet(ctx, query.All, computeEntFields)
 	if err != nil {
 		return nil, err
 	}
@@ -871,7 +885,11 @@ func (s *postgresEntStateStore) DeleteCompute(ctx context.Context, id string) er
 }
 
 func (s *postgresEntStateStore) ListStorages(ctx context.Context, accountID string) ([]map[string]any, error) {
-	rows, err := loadRecordSet(ctx, s.client.StorageVolume.Query().All, storageEntFields)
+	query := s.client.StorageVolume.Query()
+	if accountID != "" {
+		query.Where(storagevolume.AccountID(accountID))
+	}
+	rows, err := loadRecordSet(ctx, query.All, storageEntFields)
 	if err != nil {
 		return nil, err
 	}
@@ -984,7 +1002,11 @@ func (s *postgresEntStateStore) DeleteStorage(ctx context.Context, id string) er
 }
 
 func (s *postgresEntStateStore) ListAttachments(ctx context.Context, accountID string) ([]map[string]any, error) {
-	rows, err := loadRecordSet(ctx, s.client.StorageAttachment.Query().All, attachmentEntFields)
+	query := s.client.StorageAttachment.Query()
+	if accountID != "" {
+		query.Where(storageattachment.AccountID(accountID))
+	}
+	rows, err := loadRecordSet(ctx, query.All, attachmentEntFields)
 	if err != nil {
 		return nil, err
 	}
@@ -1004,7 +1026,11 @@ func (s *postgresEntStateStore) DeleteAttachment(ctx context.Context, id string)
 }
 
 func (s *postgresEntStateStore) ListWorkspaces(ctx context.Context, accountID string) ([]map[string]any, error) {
-	rows, err := loadRecordSet(ctx, s.client.Workspace.Query().All, workspaceEntFields)
+	query := s.client.Workspace.Query()
+	if accountID != "" {
+		query.Where(workspace.Or(workspace.AccountID(accountID), workspace.And(workspace.AccountID(""), workspace.OwnerAccountID(accountID))))
+	}
+	rows, err := loadRecordSet(ctx, query.All, workspaceEntFields)
 	if err != nil {
 		return nil, err
 	}
@@ -1180,7 +1206,11 @@ func (s *postgresEntStateStore) SaveWorkspaceBackup(ctx context.Context, row map
 }
 
 func (s *postgresEntStateStore) ListAuditEvents(ctx context.Context, accountID string) ([]map[string]any, error) {
-	rows, err := loadEventRows(ctx, s.client.AdminAuditEvent.Query().Order(controlplaneent.Asc(adminauditevent.FieldCreatedAt, adminauditevent.FieldID)).All, auditEntFields)
+	query := s.client.AdminAuditEvent.Query().Order(controlplaneent.Asc(adminauditevent.FieldCreatedAt, adminauditevent.FieldID))
+	if accountID != "" {
+		query.Where(adminauditevent.Or(adminauditevent.TargetAccountID(accountID), adminauditevent.And(adminauditevent.TargetAccountID(""), adminauditevent.ActorAccountID(accountID))))
+	}
+	rows, err := loadEventRows(ctx, query.All, auditEntFields)
 	return filteredEvents(rows, accountID), err
 }
 
@@ -1189,7 +1219,11 @@ func (s *postgresEntStateStore) SaveAuditEvent(ctx context.Context, row map[stri
 }
 
 func (s *postgresEntStateStore) ListSupportMappings(ctx context.Context, accountID string) ([]map[string]any, error) {
-	rows, err := loadRecordSet(ctx, s.client.SupportTicketMapping.Query().All, supportEntFields)
+	query := s.client.SupportTicketMapping.Query()
+	if accountID != "" {
+		query.Where(supportticketmapping.AccountID(accountID))
+	}
+	rows, err := loadRecordSet(ctx, query.All, supportEntFields)
 	if err != nil {
 		return nil, err
 	}
@@ -1206,7 +1240,14 @@ func (s *postgresEntStateStore) ListRuntimeOperations(ctx context.Context) ([]ma
 }
 
 func (s *postgresEntStateStore) SaveRuntimeOperation(ctx context.Context, row map[string]any) error {
-	return s.replaceRecord(ctx, row, func(id string) error { return s.client.RuntimeOperation.DeleteOneID(id).Exec(ctx) }, func() any { return s.client.RuntimeOperation.Create() }, runtimeOpEntFields)
+	return s.upsertRecord(ctx, row,
+		func(id string) (any, error) { return s.client.RuntimeOperation.Get(ctx, id) },
+		runtimeOperationIdentityMatches,
+		func() any { return s.client.RuntimeOperation.Create() },
+		func(id string) any { return s.client.RuntimeOperation.UpdateOneID(id) },
+		runtimeOpEntFields,
+		true,
+	)
 }
 
 func (s *postgresEntStateStore) BillingReconciliation(ctx context.Context) (map[string]any, bool, error) {
@@ -1590,6 +1631,11 @@ func computeResourceIdentityMatches(existing any, row map[string]any) bool {
 func storageResourceIdentityMatches(existing any, row map[string]any) bool {
 	entity, ok := existing.(*controlplaneent.StorageVolume)
 	return ok && entity.AccountID == stringValue(row["accountId"])
+}
+
+func runtimeOperationIdentityMatches(existing any, row map[string]any) bool {
+	entity, ok := existing.(*controlplaneent.RuntimeOperation)
+	return ok && entity.OperationID == stringValue(row["operationId"]) && entity.AccountID == stringValue(row["accountId"]) && entity.WorkspaceID == stringValue(row["workspaceId"]) && entity.ResourceID == stringValue(row["resourceId"]) && entity.ResourceKind == stringValue(row["resourceKind"]) && entity.Action == stringValue(row["action"])
 }
 
 func (s *postgresEntStateStore) replaceRecord(ctx context.Context, row map[string]any, deleteOne func(string) error, create func() any, fields []entRecordField) error {

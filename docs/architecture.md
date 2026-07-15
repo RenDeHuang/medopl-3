@@ -68,6 +68,14 @@ Deployments. Secrets are Kubernetes Secret references, configuration is a shared
 ConfigMap, and the deploy workflow waits for all three rollouts. The single paid
 production verifier uses the public Console product chain.
 
+Control Plane remains one Pod. Its opt-in PostgreSQL capacity gate covers 1,000
+accounts/resources, 100 concurrent Console requests, 20 concurrent resource
+commands with same-key replay, and a 1,000-resource renewal scan. The current
+local baseline passes its five-second request gate with no duplicate charge,
+claim, or receipt. Additional replicas remain out of scope unless production
+measurements breach the gate after query-level fixes; process-local resource
+locks must be replaced with database coordination before any replica increase.
+
 Infrastructure alarms remain in Tencent Cloud Monitor. Business alarms are a
 projection of current Control Plane compute and storage rows in Operator Summary;
 there is no alert table. `manual_review`, `past_due`, `ledger_receipt_pending`, and

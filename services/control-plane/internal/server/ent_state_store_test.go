@@ -26,7 +26,7 @@ func TestEntStateStoreSub2APIMappingAndMonthlyEntitlementRoundTrip(t *testing.T)
 	if err := store.SaveAccount(ctx, map[string]any{"id": "acct-monthly", "status": "active", "sub2apiUserId": int64(41)}); err != nil {
 		t.Fatalf("save account mapping: %v", err)
 	}
-	accounts, err := store.ListAccounts(ctx)
+	accounts, err := store.ListAccounts(ctx, "acct-monthly")
 	if err != nil {
 		t.Fatalf("list accounts: %v", err)
 	}

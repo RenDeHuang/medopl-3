@@ -32,7 +32,7 @@ func encodeWorkspaceResumeOperation(result workspaceResumeOperationResult) strin
 }
 
 type controlPlaneTableStore interface {
-	ListAccounts(ctx context.Context) ([]map[string]any, error)
+	ListAccounts(ctx context.Context, accountID string) ([]map[string]any, error)
 	SaveAccount(ctx context.Context, row map[string]any) error
 	ListUsers(ctx context.Context, includeDeleted bool) ([]map[string]any, error)
 	SaveUser(ctx context.Context, row map[string]any) error
