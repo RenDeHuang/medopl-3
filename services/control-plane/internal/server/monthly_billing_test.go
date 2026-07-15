@@ -451,7 +451,7 @@ func TestCreateUserRequiresAndPersistsSub2APIUserMapping(t *testing.T) {
 	if _, err := app.createUser(input); err != nil {
 		t.Fatalf("create mapped user: %v", err)
 	}
-	accounts, err := app.tables.ListAccounts(context.Background())
+	accounts, err := app.tables.ListAccounts(context.Background(), "")
 	if err != nil {
 		t.Fatal(err)
 	}

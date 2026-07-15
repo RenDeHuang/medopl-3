@@ -47,9 +47,15 @@ func newMemoryTableStore() *memoryTableStore {
 	}
 }
 
-func (s *memoryTableStore) ListAccounts(_ context.Context) ([]map[string]any, error) {
+func (s *memoryTableStore) ListAccounts(_ context.Context, accountID string) ([]map[string]any, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if accountID != "" {
+		if account := s.accounts[accountID]; account != nil {
+			return []map[string]any{cloneMap(account)}, nil
+		}
+		return []map[string]any{}, nil
+	}
 	return filteredRecords(s.accounts, "")
 }
 

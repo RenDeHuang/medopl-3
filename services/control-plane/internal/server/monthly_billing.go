@@ -307,7 +307,7 @@ func (app *controlPlaneServer) monthlyResource(resourceType, id string) (map[str
 }
 
 func (app *controlPlaneServer) sub2APIUserID(ctx context.Context, accountID string) (int64, error) {
-	accounts, err := app.tables.ListAccounts(ctx)
+	accounts, err := app.tables.ListAccounts(ctx, accountID)
 	if err != nil {
 		return 0, err
 	}

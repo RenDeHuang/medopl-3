@@ -18,8 +18,8 @@ import (
 )
 
 type controlPlaneServer struct {
-	mu                     sync.Mutex
-	resourceLocks          sync.Map
+	mu            sync.Mutex
+	resourceLocks sync.Map
 	// ponytail: process-local dedup matches one replica; CLS remains the durable alert history.
 	operationalAlertStates sync.Map
 	store                  StateStore
@@ -121,7 +121,7 @@ func (app *controlPlaneServer) state(accountID string, computePools []any) map[s
 	defer app.mu.Unlock()
 	workspaces := app.workspaceStateRowsLocked(accountID)
 	accounts := []any{}
-	for _, account := range app.accountsLocked() {
+	for _, account := range app.accountsLocked(accountID) {
 		if stringValue(account.(map[string]any)["accountId"]) == accountID {
 			accounts = append(accounts, account)
 		}

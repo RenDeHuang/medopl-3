@@ -54,7 +54,7 @@ func positiveIntegerField(input map[string]any, key string) (int64, bool) {
 }
 
 func (app *controlPlaneServer) ensureMappedAccount(ctx context.Context, accountID string, sub2APIUserID int64) error {
-	accounts, err := app.tables.ListAccounts(ctx)
+	accounts, err := app.tables.ListAccounts(ctx, accountID)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (app *controlPlaneServer) ensureMappedAccount(ctx context.Context, accountI
 }
 
 func (app *controlPlaneServer) ensureAccount(ctx context.Context, accountID string) error {
-	accounts, err := app.tables.ListAccounts(ctx)
+	accounts, err := app.tables.ListAccounts(ctx, accountID)
 	if err != nil {
 		return err
 	}
@@ -396,7 +396,7 @@ func isOperatorUser(user map[string]any) bool {
 
 func (app *controlPlaneServer) hasActiveCustomerMembership(ctx context.Context, user map[string]any) (bool, error) {
 	accountID := stringValue(user["accountId"])
-	accounts, err := app.tables.ListAccounts(ctx)
+	accounts, err := app.tables.ListAccounts(ctx, accountID)
 	if err != nil {
 		return false, err
 	}
