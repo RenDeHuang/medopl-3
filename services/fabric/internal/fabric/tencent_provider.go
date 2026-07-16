@@ -14,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -631,7 +632,8 @@ func (p *TencentProvider) CreateStorageAttachment(ctx context.Context, input Sto
 	pvName, pvcName := storageBindingNames(volume)
 	if input.ComputeID == "" || input.ComputeID != compute.ID || input.VolumeID == "" || input.VolumeID != volume.ID ||
 		compute.AccountID == "" || compute.AccountID != volume.AccountID || strings.TrimSpace(input.WorkspaceID) == "" ||
-		input.WorkspaceID != compute.WorkspaceID || input.WorkspaceID != volume.WorkspaceID || !strings.HasPrefix(volume.ProviderResourceID, "disk-") || pvName == "" || pvcName == "" {
+		input.WorkspaceID != compute.WorkspaceID || input.WorkspaceID != volume.WorkspaceID || !strings.HasPrefix(volume.ProviderResourceID, "disk-") ||
+		volume.SizeGB <= 0 || strings.TrimSpace(volume.Zone) == "" || pvName == "" || pvcName == "" {
 		return StorageAttachment{}, fmt.Errorf("storage_attachment_provider_identity_required")
 	}
 	if !isReadyResourceStatus(compute.Status) || volume.Status != "ready" {
@@ -666,9 +668,16 @@ func (p *TencentProvider) CreateStorageAttachment(ctx context.Context, input Sto
 	pvcSpec, _ := pvc["spec"].(map[string]any)
 	pvStorageClass := pvSpec["storageClassName"]
 	pvcStorageClass, pvcStorageClassSet := pvcSpec["storageClassName"]
+	pvAccessModes, _ := pvSpec["accessModes"].([]any)
+	pvcAccessModes, _ := pvcSpec["accessModes"].([]any)
+	expectedCapacity := fmt.Sprintf("%dGi", volume.SizeGB)
+	expectedNodeAffinity := map[string]any{"required": map[string]any{"nodeSelectorTerms": []any{map[string]any{"matchExpressions": []any{map[string]any{"key": "topology.kubernetes.io/zone", "operator": "In", "values": []any{volume.Zone}}}}}}}
 	if stringValue(nested(pvc, "status", "phase")) != "Bound" || stringValue(pvcSpec["volumeName"]) != pvName ||
 		stringValue(nested(pv, "spec", "csi", "driver")) != "com.tencent.cloud.csi.cbs" || stringValue(nested(pv, "spec", "csi", "volumeHandle")) != volume.ProviderResourceID ||
-		stringValue(pvSpec["persistentVolumeReclaimPolicy"]) != "Retain" || stringValue(pvStorageClass) != "" || !pvcStorageClassSet || stringValue(pvcStorageClass) != "" {
+		stringValue(pvSpec["persistentVolumeReclaimPolicy"]) != "Retain" || stringValue(pvStorageClass) != "" || !pvcStorageClassSet || stringValue(pvcStorageClass) != "" ||
+		len(pvAccessModes) != 1 || stringValue(pvAccessModes[0]) != "ReadWriteOnce" || len(pvcAccessModes) != 1 || stringValue(pvcAccessModes[0]) != "ReadWriteOnce" ||
+		stringValue(nested(pv, "spec", "capacity", "storage")) != expectedCapacity || stringValue(nested(pvc, "spec", "resources", "requests", "storage")) != expectedCapacity ||
+		!reflect.DeepEqual(pvSpec["nodeAffinity"], expectedNodeAffinity) {
 		return StorageAttachment{}, fmt.Errorf("storage_attachment_static_binding_unverified")
 	}
 	now := time.Now().UTC()

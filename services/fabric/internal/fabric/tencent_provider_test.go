@@ -462,17 +462,21 @@ func TestTencentStorageAttachmentVerifiesBoundStaticVolumeBeforeRuntime(t *testi
 		labels := map[string]any{"oplcloud.cn/account-id": "acct-alpha", "oplcloud.cn/workspace-id": "ws-alpha", "oplcloud.cn/storage-id": "storage-alpha"}
 		pv := map[string]any{
 			"kind": "PersistentVolume", "metadata": map[string]any{"name": "opl-storage-alpha-pv", "labels": labels},
-			"spec": map[string]any{"persistentVolumeReclaimPolicy": "Retain", "storageClassName": "", "csi": map[string]any{"driver": "com.tencent.cloud.csi.cbs", "volumeHandle": "disk-storage-alpha"}},
+			"spec": map[string]any{
+				"capacity": map[string]any{"storage": "10Gi"}, "accessModes": []any{"ReadWriteOnce"}, "persistentVolumeReclaimPolicy": "Retain", "storageClassName": "",
+				"csi":          map[string]any{"driver": "com.tencent.cloud.csi.cbs", "volumeHandle": "disk-storage-alpha"},
+				"nodeAffinity": map[string]any{"required": map[string]any{"nodeSelectorTerms": []any{map[string]any{"matchExpressions": []any{map[string]any{"key": "topology.kubernetes.io/zone", "operator": "In", "values": []any{"ap-guangzhou-3"}}}}}}},
+			},
 		}
 		pvc := map[string]any{
 			"kind": "PersistentVolumeClaim", "metadata": map[string]any{"name": "opl-storage-alpha-data", "labels": labels},
-			"spec": map[string]any{"storageClassName": "", "volumeName": "opl-storage-alpha-pv"}, "status": map[string]any{"phase": "Bound"},
+			"spec": map[string]any{"accessModes": []any{"ReadWriteOnce"}, "storageClassName": "", "volumeName": "opl-storage-alpha-pv", "resources": map[string]any{"requests": map[string]any{"storage": "10Gi"}}}, "status": map[string]any{"phase": "Bound"},
 		}
 		return fixture{
 			input:   StorageAttachmentInput{WorkspaceID: "ws-alpha", ComputeID: "compute-alpha", VolumeID: "storage-alpha", IdempotencyKey: "attach-alpha", OperationID: "op-attach-alpha"},
 			compute: ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", Status: "running"},
 			volume: StorageVolume{
-				ID: "storage-alpha", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", Status: "ready", ProviderResourceID: "disk-storage-alpha",
+				ID: "storage-alpha", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", Status: "ready", ProviderResourceID: "disk-storage-alpha", SizeGB: 10, Zone: "ap-guangzhou-3",
 				ProviderData: map[string]string{"pvName": "opl-storage-alpha-pv", "pvcName": "opl-storage-alpha-data"},
 			},
 			items: []any{pv, pvc},
@@ -522,6 +526,21 @@ func TestTencentStorageAttachmentVerifiesBoundStaticVolumeBeforeRuntime(t *testi
 		}},
 		{name: "PV wrong disk", configure: func(current *fixture) {
 			current.items[0].(map[string]any)["spec"].(map[string]any)["csi"].(map[string]any)["volumeHandle"] = "disk-other"
+		}},
+		{name: "PV wrong zone", configure: func(current *fixture) {
+			current.items[0].(map[string]any)["spec"].(map[string]any)["nodeAffinity"].(map[string]any)["required"].(map[string]any)["nodeSelectorTerms"].([]any)[0].(map[string]any)["matchExpressions"].([]any)[0].(map[string]any)["values"] = []any{"ap-guangzhou-4"}
+		}},
+		{name: "PV not RWO", configure: func(current *fixture) {
+			current.items[0].(map[string]any)["spec"].(map[string]any)["accessModes"] = []any{"ReadWriteMany"}
+		}},
+		{name: "PVC not RWO", configure: func(current *fixture) {
+			current.items[1].(map[string]any)["spec"].(map[string]any)["accessModes"] = []any{"ReadWriteMany"}
+		}},
+		{name: "PV wrong capacity", configure: func(current *fixture) {
+			current.items[0].(map[string]any)["spec"].(map[string]any)["capacity"] = map[string]any{"storage": "20Gi"}
+		}},
+		{name: "PVC wrong capacity", configure: func(current *fixture) {
+			current.items[1].(map[string]any)["spec"].(map[string]any)["resources"].(map[string]any)["requests"] = map[string]any{"storage": "20Gi"}
 		}},
 		{name: "PVC wrong owner", configure: func(current *fixture) {
 			current.items[1].(map[string]any)["metadata"].(map[string]any)["labels"].(map[string]any)["oplcloud.cn/workspace-id"] = "ws-other"
