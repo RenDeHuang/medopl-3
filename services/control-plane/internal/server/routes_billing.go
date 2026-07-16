@@ -86,13 +86,18 @@ func registerBillingRoutes(mux *http.ServeMux, app *controlPlaneServer, service 
 			writeError(w, http.StatusBadRequest, "confirmation_required")
 			return
 		}
-		report, _ := input["report"].(map[string]any)
-		if report == nil {
-			report = map[string]any{}
+		if _, supplied := input["report"]; supplied {
+			writeError(w, http.StatusBadRequest, "reconciliation_report_server_computed")
+			return
 		}
-		idempotencyKey := firstNonEmpty(r.Header.Get("Idempotency-Key"), stringField(input, "idempotencyKey", ""), stringField(report, "id", ""))
+		idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 		if idempotencyKey == "" {
 			writeError(w, http.StatusBadRequest, "missing Idempotency-Key")
+			return
+		}
+		report, err := app.billingReconciliationReport(r.Context(), service, idempotencyKey)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "state_read_failed")
 			return
 		}
 		result, err := service.RecordReconciliation(r.Context(), controlplane.ReconciliationInput{Report: report}, idempotencyKey)
@@ -104,7 +109,7 @@ func registerBillingRoutes(mux *http.ServeMux, app *controlPlaneServer, service 
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}
-		if err := app.appendAuditEvent(r, "billing.reconciliation", "billing_reconciliation", stringField(report, "id", ""), "", nil, result, "succeeded"); err != nil {
+		if err := app.appendAuditEvent(r, "billing.reconciliation", "billing_reconciliation", result.ID, "", nil, result, "succeeded"); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}

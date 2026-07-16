@@ -229,6 +229,14 @@ func (s *Service) GatewayUsageStats(ctx context.Context, userID int64, period st
 	return client.UsageStats(ctx, clients.Sub2APIUsageStatsQuery{UserID: userID, APIKeyID: key.ID, Period: period})
 }
 
+func (s *Service) Sub2APIBalanceHistory(ctx context.Context, userID int64) ([]clients.Sub2APIBalanceHistoryEntry, error) {
+	client, ok := s.sub2API.(clients.Sub2APIUsageClient)
+	if !ok {
+		return nil, errors.New("sub2api_balance_history_unavailable")
+	}
+	return client.BalanceHistory(ctx, userID)
+}
+
 func (s *Service) BillingReceipt(ctx context.Context, receiptID string) (clients.Receipt, error) {
 	if receiptID == "" {
 		return clients.Receipt{}, fmt.Errorf("receipt_id_required")
