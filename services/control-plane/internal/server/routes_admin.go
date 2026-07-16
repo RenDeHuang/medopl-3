@@ -3,10 +3,13 @@ package server
 import (
 	"errors"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"opl-cloud/services/control-plane/internal/controlplane"
 )
+
+var billingReviewEvidenceRefPattern = regexp.MustCompile(`^case-[0-9]{8}-[a-z0-9]{3,16}$`)
 
 func registerAdminRoutes(mux *http.ServeMux, app *controlPlaneServer, service *controlplane.Service) {
 	mux.HandleFunc("POST /api/organizations", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
@@ -135,7 +138,7 @@ func registerAdminRoutes(mux *http.ServeMux, app *controlPlaneServer, service *c
 			return
 		}
 		evidenceRef := strings.TrimSpace(stringValue(input["evidenceRef"]))
-		if !validBillingReviewOpaqueID(evidenceRef) {
+		if !validBillingReviewEvidenceRef(evidenceRef) {
 			writeError(w, http.StatusBadRequest, "invalid_evidence_ref")
 			return
 		}
@@ -167,6 +170,10 @@ func billingReviewRequestShapeValid(input map[string]any) bool {
 		}
 	}
 	return true
+}
+
+func validBillingReviewEvidenceRef(value string) bool {
+	return billingReviewEvidenceRefPattern.MatchString(value)
 }
 
 func validBillingReviewOpaqueID(value string) bool {

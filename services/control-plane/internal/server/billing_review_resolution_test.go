@@ -71,7 +71,8 @@ func billingReviewRow() map[string]any {
 		"chargeUsdMicros": int64(50000000), "periodStart": "2026-07-16T00:00:00Z", "paidThrough": "2026-08-16T00:00:00Z",
 		"billingAnchorDay": int64(16), "sub2apiRedeemCode": "opl:purchase-review-charge", "sub2apiRefundCode": "opl:purchase-review-refund",
 		"postChargeBalanceKnown": true, "postChargeBalanceUsdMicros": int64(150000000), "manualReviewReason": "fabric_prepare_partial",
-		"lastReceiptId": "receipt-review-required", "zone": "ap-shanghai-2",
+		"sub2apiChargeConfirmation": map[string]any{"code": "opl:purchase-review-charge", "userId": int64(41), "chargeUsdMicros": int64(50000000), "status": "used"},
+		"lastReceiptId":             "receipt-review-required", "zone": "ap-shanghai-2",
 	}
 }
 
@@ -193,6 +194,57 @@ func TestBillingReviewResolutionRefundsOnlyConfirmedChargedAbsentResource(t *tes
 	}
 }
 
+func TestBillingReviewResolutionRetriesRefundWithStableDecisionAndKey(t *testing.T) {
+	absent := confirmedBillingReviewCompute("external_deleted")
+	absent.ProviderResourceID, absent.InstanceID, absent.CVMInstanceID = "", "", ""
+	h := newBillingReviewHarness(t, billingReviewRow(), absent)
+	h.sub2API.refundErrors = []error{errors.New("refund unavailable"), nil}
+
+	first := billingReviewRequest(t, h, h.operator, "review-resolution-refund-retry", "refund_charged_absent", "case-20260716-retry")
+	row := billingReviewStoredRow(t, h.store)
+	if first.Code != http.StatusBadGateway || !strings.Contains(first.Body.String(), `"error":"billing_review_refund_pending"`) || len(h.sub2API.refunds) != 1 ||
+		row["reviewResolutionDecision"] != "refund_charged_absent" || row["reviewResolutionPhase"] != "refund_pending" {
+		t.Fatalf("first refund = %d %s row=%#v refunds=%#v", first.Code, first.Body.String(), row, h.sub2API.refunds)
+	}
+	switched := billingReviewRequest(t, h, h.operator, "review-resolution-refund-retry", "activate_charged_resource", "case-20260716-retry")
+	if switched.Code != http.StatusConflict || len(h.sub2API.refunds) != 1 || billingReviewStoredRow(t, h.store)["reviewResolutionDecision"] != "refund_charged_absent" {
+		t.Fatalf("decision switch = %d %s refunds=%#v", switched.Code, switched.Body.String(), h.sub2API.refunds)
+	}
+	second := billingReviewRequest(t, h, h.operator, "review-resolution-refund-retry", "refund_charged_absent", "case-20260716-retry")
+	row = billingReviewStoredRow(t, h.store)
+	if second.Code != http.StatusOK || len(h.sub2API.refunds) != 2 || h.sub2API.refunds[0] != h.sub2API.refunds[1] ||
+		h.sub2API.refunds[0].Code != "opl:purchase-review-refund" || row["reviewResolutionDecision"] != "refund_charged_absent" || row["billingStatus"] != "refunded" {
+		t.Fatalf("refund retry = %d %s row=%#v refunds=%#v", second.Code, second.Body.String(), row, h.sub2API.refunds)
+	}
+}
+
+func TestBillingReviewResolutionAuditIDIncludesFullOperationIdentity(t *testing.T) {
+	app := newControlPlaneAppEmpty()
+	request := httptest.NewRequest(http.MethodPost, billingReviewResolvePath, nil)
+	results := []map[string]any{
+		{"resourceType": "compute", "resourceId": "compute-one", "accountId": "acct-alpha", "billingOperationId": "purchase-one", "resolvedAt": "2026-07-16T00:00:00Z"},
+		{"resourceType": "storage", "resourceId": "storage-two", "accountId": "acct-alpha", "billingOperationId": "purchase-two", "resolvedAt": "2026-07-16T00:00:00Z"},
+	}
+	for _, result := range results {
+		if err := app.appendBillingReviewResolutionAudit(request, "shared-resolution-key", result); err != nil {
+			t.Fatal(err)
+		}
+	}
+	audits, err := app.tables.ListAuditEvents(context.Background(), "acct-alpha")
+	if err != nil || len(audits) != 2 {
+		t.Fatalf("audits=%#v err=%v", audits, err)
+	}
+	wants := map[string]bool{
+		"audit-" + stableID("billing.review.resolve", "compute", "compute-one", "purchase-one", "shared-resolution-key")[:12]: true,
+		"audit-" + stableID("billing.review.resolve", "storage", "storage-two", "purchase-two", "shared-resolution-key")[:12]: true,
+	}
+	for _, audit := range audits {
+		if !wants[stringValue(audit["id"])] {
+			t.Fatalf("unexpected audit ID: %#v", audits)
+		}
+	}
+}
+
 func TestBillingReviewResolutionRejectsUnknownFactsAndRawEvidence(t *testing.T) {
 	t.Run("invalid resource type", func(t *testing.T) {
 		h := newBillingReviewHarness(t, billingReviewRow(), confirmedBillingReviewCompute("running"))
@@ -214,6 +266,27 @@ func TestBillingReviewResolutionRejectsUnknownFactsAndRawEvidence(t *testing.T) 
 		}
 	})
 
+	for _, tc := range []struct {
+		name   string
+		mutate func(map[string]any)
+	}{
+		{name: "missing charge confirmation", mutate: func(row map[string]any) { delete(row, "sub2apiChargeConfirmation") }},
+		{name: "wrong charge confirmation", mutate: func(row map[string]any) {
+			row["sub2apiChargeConfirmation"] = map[string]any{"code": "opl:purchase-review-charge", "userId": int64(42), "chargeUsdMicros": int64(50000000), "status": "used"}
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			row := billingReviewRow()
+			tc.mutate(row)
+			h := newBillingReviewHarness(t, row, confirmedBillingReviewCompute("running"))
+			rec := billingReviewRequest(t, h, h.operator, "review-resolution-charge-confirmation", "activate_charged_resource", "case-20260716-fact")
+			if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), `"error":"billing_review_charge_fact_unconfirmed"`) ||
+				billingReviewStoredRow(t, h.store)["billingStatus"] != "manual_review" || len(h.ledger.inputs) != 0 {
+				t.Fatalf("charge confirmation = %d %s receipts=%#v", rec.Code, rec.Body.String(), h.ledger.inputs)
+			}
+		})
+	}
+
 	t.Run("partial provider", func(t *testing.T) {
 		partial := confirmedBillingReviewCompute("provisioning")
 		partial.ProviderResourceID, partial.InstanceID, partial.CVMInstanceID = "", "", ""
@@ -224,13 +297,22 @@ func TestBillingReviewResolutionRejectsUnknownFactsAndRawEvidence(t *testing.T) 
 		}
 	})
 
-	t.Run("raw evidence", func(t *testing.T) {
-		h := newBillingReviewHarness(t, billingReviewRow(), confirmedBillingReviewCompute("running"))
-		rec := billingReviewRequest(t, h, h.operator, "review-resolution-evidence", "activate_charged_resource", "https://evidence.example/raw")
-		if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"error":"invalid_evidence_ref"`) || len(*h.events) != 0 || len(h.ledger.inputs) != 0 {
-			t.Fatalf("raw evidence resolution = %d %s events=%#v", rec.Code, rec.Body.String(), *h.events)
-		}
-	})
+	for _, evidenceRef := range []string{
+		"https://evidence.example/raw",
+		"case-20260716-ab",
+		"case-20260716-abcdefghijklmnopq",
+		"case-20260716-ab-c",
+		"case-2026716-abc",
+		"case-20260716-Abc",
+	} {
+		t.Run("invalid evidence "+evidenceRef, func(t *testing.T) {
+			h := newBillingReviewHarness(t, billingReviewRow(), confirmedBillingReviewCompute("running"))
+			rec := billingReviewRequest(t, h, h.operator, "review-resolution-evidence", "activate_charged_resource", evidenceRef)
+			if rec.Code != http.StatusBadRequest || !strings.Contains(rec.Body.String(), `"error":"invalid_evidence_ref"`) || len(*h.events) != 0 || len(h.ledger.inputs) != 0 {
+				t.Fatalf("invalid evidence %q = %d %s events=%#v", evidenceRef, rec.Code, rec.Body.String(), *h.events)
+			}
+		})
+	}
 }
 
 func TestBillingReviewResolutionRecoversAfterLedgerFailure(t *testing.T) {
@@ -252,6 +334,8 @@ func TestBillingReviewResolutionRecoversAfterLedgerFailure(t *testing.T) {
 func TestBillingReviewResolutionActivatesConfirmedChargedRenewal(t *testing.T) {
 	row := billingReviewRow()
 	row["billingOperationId"] = "renewal-compute-review-001"
+	row["sub2apiRedeemCode"] = "opl:renewal-review-charge"
+	row["sub2apiChargeConfirmation"] = map[string]any{"code": "opl:renewal-review-charge", "userId": int64(41), "chargeUsdMicros": int64(50000000), "status": "used"}
 	row["manualReviewReason"] = "fabric_renewal_unconfirmed"
 	provider := confirmedBillingReviewCompute("running")
 	provider.Deadline = "2026-09-16T00:00:00Z"
@@ -270,6 +354,7 @@ func TestBillingReviewResolutionTerminatesKnownUnchargedAbsentRenewal(t *testing
 	row["billingOperationId"] = "renewal-compute-review-001"
 	row["postChargeBalanceKnown"] = false
 	row["manualReviewReason"] = "fabric_renewal_provider_truth_invalid"
+	delete(row, "sub2apiChargeConfirmation")
 	absent := confirmedBillingReviewCompute("external_deleted")
 	h := newBillingReviewHarness(t, row, absent)
 	body := `{"accountId":"acct-alpha","billingOperationId":"renewal-compute-review-001","decision":"terminate_uncharged_absent","evidenceRef":"case-20260716-006"}`

@@ -249,7 +249,7 @@ func (app *controlPlaneServer) resumeMonthlyPurchase(ctx context.Context, servic
 func (app *controlPlaneServer) chargeMonthlyOperation(ctx context.Context, service *controlplane.Service, row map[string]any, sub2APIUserID, preChargeBalance int64) (map[string]any, error) {
 	chargeUSDMicros := int64(numberField(row, "chargeUsdMicros", 0))
 	verifyDelta := stringValue(row["lastBillingError"]) != "sub2api_charge_unconfirmed"
-	_, err := service.ChargeSub2API(ctx, clients.Sub2APIChargeInput{
+	charge, err := service.ChargeSub2API(ctx, clients.Sub2APIChargeInput{
 		UserID: sub2APIUserID, Code: stringValue(row["sub2apiRedeemCode"]), ChargeUSDMicros: chargeUSDMicros,
 		Notes: "OPL monthly " + stringValue(row["id"]),
 	})
@@ -261,6 +261,19 @@ func (app *controlPlaneServer) chargeMonthlyOperation(ctx context.Context, servi
 		if saveErr := app.saveMonthlyResource(ctx, monthlyResourceType(row), row); saveErr != nil {
 			return row, saveErr
 		}
+		return row, err
+	}
+	confirmation := map[string]any{"code": charge.Code, "userId": charge.UserID, "chargeUsdMicros": charge.ChargeUSDMicros, "status": charge.Status}
+	if !monthlyChargeConfirmationMatches(confirmation, stringValue(row["sub2apiRedeemCode"]), sub2APIUserID, chargeUSDMicros) {
+		row["billingStatus"], row["lastBillingError"] = "manual_review", "sub2api_charge_confirmation_invalid"
+		delete(row, "sub2apiChargeConfirmation")
+		if err := app.saveMonthlyResource(ctx, monthlyResourceType(row), row); err != nil {
+			return row, err
+		}
+		return row, errMonthlyChargeNeedsReview
+	}
+	row["sub2apiChargeConfirmation"] = confirmation
+	if err := app.saveMonthlyResource(ctx, monthlyResourceType(row), row); err != nil {
 		return row, err
 	}
 	postCharge, err := service.Sub2APIBalance(ctx, sub2APIUserID)
@@ -353,7 +366,11 @@ func (app *controlPlaneServer) resolveMonthlyBillingReview(ctx context.Context, 
 	if stringValue(row["billingStatus"]) != "manual_review" {
 		return nil, errBillingReviewNotPending
 	}
-	charged := monthlyReviewChargeConfirmed(row)
+	userID, err := app.sub2APIUserID(ctx, input.AccountID)
+	if err != nil {
+		return nil, err
+	}
+	charged := monthlyReviewChargeConfirmed(row, userID)
 	uncharged := monthlyReviewChargeNotAttempted(row)
 	if (input.Decision == billingReviewActivateCharged || input.Decision == billingReviewRefundCharged) && !charged || input.Decision == billingReviewTerminateFree && !uncharged {
 		return nil, errBillingReviewChargeFact
@@ -380,10 +397,6 @@ func (app *controlPlaneServer) resolveMonthlyBillingReview(ctx context.Context, 
 		return nil, errBillingReviewProviderFact
 	}
 
-	userID, err := app.sub2APIUserID(ctx, input.AccountID)
-	if err != nil {
-		return nil, err
-	}
 	if stringValue(row["reviewResolutionKey"]) == "" {
 		row, err = app.ensureMonthlyReceipt(ctx, service, row, userID, "billing.charge_review_required.v1")
 		if err != nil || stringValue(row["lastReceiptId"]) == "" {
@@ -448,9 +461,17 @@ func validBillingReviewDecision(decision string) bool {
 	return decision == billingReviewActivateCharged || decision == billingReviewTerminateFree || decision == billingReviewRefundCharged
 }
 
-func monthlyReviewChargeConfirmed(row map[string]any) bool {
+func monthlyReviewChargeConfirmed(row map[string]any, sub2APIUserID int64) bool {
 	known, _ := row["postChargeBalanceKnown"].(bool)
-	return known && numberField(row, "postChargeBalanceUsdMicros", -1) >= 0 && numberField(row, "chargeUsdMicros", 0) > 0 && stringValue(row["sub2apiRedeemCode"]) != ""
+	chargeUSDMicros := int64(numberField(row, "chargeUsdMicros", 0))
+	return known && numberField(row, "postChargeBalanceUsdMicros", -1) >= 0 && stringValue(row["billingOperationId"]) != "" &&
+		monthlyChargeConfirmationMatches(mapField(row, "sub2apiChargeConfirmation"), stringValue(row["sub2apiRedeemCode"]), sub2APIUserID, chargeUSDMicros)
+}
+
+func monthlyChargeConfirmationMatches(confirmation map[string]any, code string, userID, chargeUSDMicros int64) bool {
+	return len(confirmation) == 4 && code != "" && chargeUSDMicros > 0 && stringValue(confirmation["code"]) == code &&
+		numberField(confirmation, "userId", -1) == float64(userID) && numberField(confirmation, "chargeUsdMicros", -1) == float64(chargeUSDMicros) &&
+		stringValue(confirmation["status"]) == "used"
 }
 
 func monthlyReviewChargeNotAttempted(row map[string]any) bool {

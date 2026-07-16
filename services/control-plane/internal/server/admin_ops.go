@@ -160,8 +160,9 @@ func (app *controlPlaneServer) appendAuditEvent(r *http.Request, action string, 
 }
 
 func (app *controlPlaneServer) appendBillingReviewResolutionAudit(r *http.Request, key string, result map[string]any) error {
-	event := app.auditEvent(r, "billing.review.resolve", monthlyResourceType(result), stringValue(result["resourceId"]), stringValue(result["accountId"]), nil, result, "succeeded")
-	event["id"] = "audit-" + stableID("billing.review.resolve", key)[:12]
+	action, resourceType, resourceID := "billing.review.resolve", monthlyResourceType(result), stringValue(result["resourceId"])
+	event := app.auditEvent(r, action, resourceType, resourceID, stringValue(result["accountId"]), nil, result, "succeeded")
+	event["id"] = "audit-" + stableID(action, resourceType, resourceID, stringValue(result["billingOperationId"]), key)[:12]
 	event["createdAt"] = result["resolvedAt"]
 	return app.tables.SaveAuditEvent(r.Context(), event)
 }

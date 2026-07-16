@@ -324,6 +324,7 @@ var monthlyBillingStateKeys = []string{
 	"lastBillingError",
 	"manualReviewReason",
 	"lastReceiptId",
+	"sub2apiChargeConfirmation",
 	"postChargeBalanceUsdMicros",
 	"postChargeBalanceKnown",
 	"computeAllocationId",

@@ -16,13 +16,14 @@ import (
 )
 
 type monthlySub2API struct {
-	events       *[]string
-	balances     []int64
-	balanceErr   error
-	chargeErrors []error
-	charges      []clients.Sub2APIChargeInput
-	refundErrors []error
-	refunds      []clients.Sub2APIRefundInput
+	events        *[]string
+	balances      []int64
+	balanceErr    error
+	chargeErrors  []error
+	chargeResults []clients.Sub2APICharge
+	charges       []clients.Sub2APIChargeInput
+	refundErrors  []error
+	refunds       []clients.Sub2APIRefundInput
 }
 
 func (s *monthlySub2API) Version(context.Context) (string, error) { return "0.1.155", nil }
@@ -49,6 +50,11 @@ func (s *monthlySub2API) Charge(_ context.Context, input clients.Sub2APIChargeIn
 		if err != nil {
 			return clients.Sub2APICharge{}, err
 		}
+	}
+	if len(s.chargeResults) > 0 {
+		result := s.chargeResults[0]
+		s.chargeResults = s.chargeResults[1:]
+		return result, nil
 	}
 	return clients.Sub2APICharge{Code: input.Code, UserID: input.UserID, ChargeUSDMicros: input.ChargeUSDMicros, Status: "used"}, nil
 }
@@ -472,6 +478,54 @@ func TestMonthlyPurchaseDebitFailureDoesNotMutateFabric(t *testing.T) {
 	}
 	if strings.Join(*events, ",") != "fabric.monthly.preflight,sub2api.balance,sub2api.charge" {
 		t.Fatalf("debit failure events = %#v", *events)
+	}
+}
+
+func TestMonthlyPurchasePersistsStrictChargeConfirmation(t *testing.T) {
+	app, service, _, _, _, _ := newMonthlyBillingTest(t, []int64{100_000_000, 50_000_000})
+	result, err := app.purchaseMonthlyResource(context.Background(), service, monthlyPurchaseInput{
+		ResourceType: "compute", ResourceID: "compute-charge-confirmed", BillingOperationID: "billing-charge-confirmed",
+		AccountID: "acct-monthly", PackageID: "basic", Environment: "test", Now: time.Date(2026, 7, 16, 0, 0, 0, 0, time.UTC),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored, ok := app.getCompute("compute-charge-confirmed")
+	confirmation := mapField(stored, "sub2apiChargeConfirmation")
+	if !ok || len(confirmation) != 4 || stringValue(confirmation["code"]) != monthlyRedeemCode("test", "billing-charge-confirmed") ||
+		int64(numberField(confirmation, "userId", 0)) != 41 || int64(numberField(confirmation, "chargeUsdMicros", 0)) != 50_000_000 || stringValue(confirmation["status"]) != "used" ||
+		len(mapField(result, "sub2apiChargeConfirmation")) != 4 {
+		t.Fatalf("result=%#v stored confirmation=%#v", result, confirmation)
+	}
+}
+
+func TestMonthlyPurchaseRejectsMismatchedChargeConfirmation(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(*clients.Sub2APICharge)
+	}{
+		{name: "code", mutate: func(result *clients.Sub2APICharge) { result.Code = "opl:different" }},
+		{name: "user", mutate: func(result *clients.Sub2APICharge) { result.UserID++ }},
+		{name: "amount", mutate: func(result *clients.Sub2APICharge) { result.ChargeUSDMicros-- }},
+		{name: "status", mutate: func(result *clients.Sub2APICharge) { result.Status = "pending" }},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			app, service, sub2API, fabric, ledger, _ := newMonthlyBillingTest(t, []int64{100_000_000, 50_000_000})
+			operationID := "billing-charge-confirmation-" + tc.name
+			charge := clients.Sub2APICharge{Code: monthlyRedeemCode("test", operationID), UserID: 41, ChargeUSDMicros: 50_000_000, Status: "used"}
+			tc.mutate(&charge)
+			sub2API.chargeResults = []clients.Sub2APICharge{charge}
+
+			result, err := app.purchaseMonthlyResource(context.Background(), service, monthlyPurchaseInput{
+				ResourceType: "compute", ResourceID: "compute-charge-confirmation-" + tc.name, BillingOperationID: operationID,
+				AccountID: "acct-monthly", PackageID: "basic", Environment: "test", Now: time.Date(2026, 7, 16, 0, 0, 0, 0, time.UTC),
+			})
+			if !errors.Is(err, errMonthlyChargeNeedsReview) || result["billingStatus"] != "manual_review" || len(sub2API.balances) != 1 || len(fabric.computeIDs) != 0 ||
+				len(ledger.receipts) != 1 || ledger.receipts[0].Type != "billing.charge_review_required.v1" {
+				t.Fatalf("result=%#v balances=%#v creates=%#v receipts=%#v err=%v", result, sub2API.balances, fabric.computeIDs, ledger.receipts, err)
+			}
+		})
 	}
 }
 
