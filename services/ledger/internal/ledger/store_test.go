@@ -41,14 +41,37 @@ func testBillingReceiptSchema(t *testing.T, store Store) {
 	t.Helper()
 	ctx := context.Background()
 	required := []string{"pricingVersion", "monthlyPriceCnyCents", "chargeUsdMicros", "sub2apiUserId", "sub2apiRedeemCode", "periodStart", "paidThrough", "resourceType", "resourceId"}
-	for _, field := range required {
-		t.Run("missing "+field, func(t *testing.T) {
+	receiptTypes := []string{
+		"billing.resource_purchased.v1",
+		"billing.resource_renewed.v1",
+		"billing.resource_expired.v1",
+		"billing.resource_refunded.v1",
+		"billing.charge_review_required.v1",
+		"billing.reconciliation.v1",
+	}
+	for _, receiptType := range receiptTypes {
+		t.Run(receiptType, func(t *testing.T) {
+			for _, field := range required {
+				t.Run("missing "+field, func(t *testing.T) {
+					input := validBillingReceiptInput()
+					input.Type = receiptType
+					delete(input.Cost, field)
+					if _, err := store.RecordReceipt(ctx, input); !errors.Is(err, ErrInvalidReceiptInput) {
+						t.Fatalf("error = %v, want ErrInvalidReceiptInput", err)
+					}
+				})
+			}
 			input := validBillingReceiptInput()
-			delete(input.Cost, field)
-			if _, err := store.RecordReceipt(ctx, input); !errors.Is(err, ErrInvalidReceiptInput) {
-				t.Fatalf("error = %v, want ErrInvalidReceiptInput", err)
+			input.Type = receiptType
+			if receiptType != "billing.resource_purchased.v1" {
+				input.IdempotencyKey += "-" + receiptType
+			}
+			if _, err := store.RecordReceipt(ctx, input); err != nil {
+				t.Fatalf("valid billing receipt: %v", err)
 			}
 		})
+	}
+	for _, field := range required {
 		t.Run("wrong type "+field, func(t *testing.T) {
 			input := validBillingReceiptInput()
 			input.Cost[field] = true
@@ -93,10 +116,6 @@ func testBillingReceiptSchema(t *testing.T, store Store) {
 		t.Fatalf("future billing receipt error = %v, want ErrInvalidReceiptInput", err)
 	}
 	valid := validBillingReceiptInput()
-	if _, err := store.RecordReceipt(ctx, valid); err != nil {
-		t.Fatalf("valid billing receipt after rejected inputs: %v", err)
-	}
-	valid = validBillingReceiptInput()
 	valid.IdempotencyKey = "billing-schema-json-numbers"
 	valid.Cost["monthlyPriceCnyCents"], valid.Cost["chargeUsdMicros"], valid.Cost["sub2apiUserId"] = float64(35_000), float64(50_000_000), float64(41)
 	if _, err := store.RecordReceipt(ctx, valid); err != nil {
