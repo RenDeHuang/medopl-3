@@ -41,7 +41,6 @@ func TestSub2APIConfigRequiredAndBoundedInProduction(t *testing.T) {
 		"OPL_SUB2API_BASE_URL":           "https://gflabtoken.cn",
 		"OPL_SUB2API_ADMIN_EMAIL":        "opl-control-plane@example.test",
 		"OPL_SUB2API_ADMIN_PASSWORD":     "secret",
-		"OPL_SUB2API_SUPPORTED_VERSIONS": "0.1.151,0.1.152",
 		"OPL_SUB2API_REQUEST_TIMEOUT_MS": "5000",
 	}
 	getenv := func(key string) string { return values[key] }
@@ -50,11 +49,11 @@ func TestSub2APIConfigRequiredAndBoundedInProduction(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read complete Sub2API config: %v", err)
 	}
-	if config.BaseURL != "https://gflabtoken.cn" || len(config.SupportedVersions) != 2 || config.Timeout != 5*time.Second {
+	if config.BaseURL != "https://gflabtoken.cn" || config.Timeout != 5*time.Second {
 		t.Fatalf("Sub2API config = %#v", config)
 	}
 
-	for _, key := range []string{"OPL_SUB2API_BASE_URL", "OPL_SUB2API_ADMIN_EMAIL", "OPL_SUB2API_ADMIN_PASSWORD", "OPL_SUB2API_SUPPORTED_VERSIONS"} {
+	for _, key := range []string{"OPL_SUB2API_BASE_URL", "OPL_SUB2API_ADMIN_EMAIL", "OPL_SUB2API_ADMIN_PASSWORD"} {
 		t.Run(key, func(t *testing.T) {
 			missing := func(candidate string) string {
 				if candidate == key {

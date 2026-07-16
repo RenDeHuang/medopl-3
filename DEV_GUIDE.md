@@ -91,7 +91,6 @@ unit/contract tests pass
 - `DATABASE_URL`: required for durable shared staging state.
 - `OPL_SUB2API_BASE_URL`: Sub2API management origin.
 - `OPL_SUB2API_ADMIN_EMAIL` and `OPL_SUB2API_ADMIN_PASSWORD`: secret-backed management credentials.
-- `OPL_SUB2API_SUPPORTED_VERSIONS`: versions approved by the Gateway update gate.
 - `OPL_MONTHLY_BILLING_WORKER_ENABLED`: enables renewal and expiration processing.
 
 ## Route Registry Rules

@@ -13,7 +13,6 @@ const repoFile = (path) => new URL(`../../${path}`, import.meta.url);
 const deploymentContractPath = repoFile("packages/contracts/opl-cloud-deployment-contract.json");
 const digestA = `sha256:${"a".repeat(64)}`;
 const digestB = `sha256:${"b".repeat(64)}`;
-const supportedSub2apiVersions = "0.1.156,0.1.155";
 const primaryWorkspaceSource = "ghcr.io/gaofeng21cn/one-person-lab-webui@sha256:9d867fe0fc9db48b6efa27371d77770e46fc8cd97d26ef85a81fbdac7e96ca76";
 const fallbackWorkspaceSource = "ghcr.io/gaofeng21cn/one-person-lab-webui@sha256:6e1491a3693a820a37b81ab9a26f8efc4262fb9581f981641c6de084b0fa654f";
 const primaryWorkspaceTagCommit = "faeb0d6f9d1fe18ac6ea1433168c5696fd7d7918";
@@ -202,7 +201,6 @@ async function manifestFixture() {
       OPL_TENCENT_ZONE: "ap-guangzhou-3",
       TENCENTCLOUD_REGION: "ap-guangzhou",
       OPL_SUB2API_BASE_URL: "https://wallet.example.test",
-      OPL_SUB2API_SUPPORTED_VERSIONS: supportedSub2apiVersions,
       OPL_SUB2API_REQUEST_TIMEOUT_MS: "7000",
       OPL_MONTHLY_BILLING_WORKER_ENABLED: "1",
       OPL_MONTHLY_BILLING_INTERVAL_MS: "60000"
@@ -401,7 +399,6 @@ test("TKE deploy installs Sub2API credentials and validates account mappings", a
   assert.match(install, /--from-file=OPL_SUB2API_ADMIN_PASSWORD/);
   assert.match(install, /Number\.isSafeInteger\(user\.sub2apiUserId\)/);
   assert.match(install, /user\.sub2apiUserId > 0/);
-  assert.equal(currentJob.env.OPL_SUB2API_SUPPORTED_VERSIONS, supportedSub2apiVersions);
   assert.equal(currentJob.env.OPL_TENCENT_ZONE, "${{ vars.OPL_TENCENT_ZONE || 'na-siliconvalley-1' }}");
   assert.equal(currentJob.env.TENCENTCLOUD_REGION, "${{ vars.TENCENTCLOUD_REGION || 'na-siliconvalley' }}");
   assert.equal(Object.hasOwn(currentJob.env, "OPL_CODEX_API_KEY"), false);
@@ -429,16 +426,12 @@ test("deployment inputs contain monthly and Sub2API config without retired billi
     "OPL_MONTHLY_BILLING_WORKER_ENABLED",
     "OPL_MONTHLY_BILLING_INTERVAL_MS",
     "OPL_SUB2API_BASE_URL",
-    "OPL_SUB2API_SUPPORTED_VERSIONS",
     "OPL_SUB2API_REQUEST_TIMEOUT_MS",
     "OPL_TENCENT_ZONE"
   ]) assert.match(joined, new RegExp(key));
   assert.match(joined, /OPL_TENCENT_ZONE/);
   assert.doesNotMatch(joined, /OPL_(?:BASIC|PRO)_COMPUTE_HOURLY_CNY|OPL_STORAGE_GB_MONTH_CNY|OPL_RESOURCE_BILLING_/);
   assert.doesNotMatch(joined, /OPL_COMPUTE_LAUNCH_ZONE/);
-
-  const workflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
-  assert.equal(workflowJob(workflow, "deploy").env.OPL_SUB2API_SUPPORTED_VERSIONS, "0.1.156,0.1.155");
 });
 
 test("TKE manifest renderer replaces current values and never renders secrets", async () => {
@@ -450,7 +443,6 @@ test("TKE manifest renderer replaces current values and never renders secrets", 
   assert.equal(rendered.items[0].metadata.name, "opl-test");
   assert.equal(config.data.OPL_CLOUD_IMAGE, values.OPL_CLOUD_IMAGE);
   assert.equal(config.data.OPL_SUB2API_BASE_URL, values.OPL_SUB2API_BASE_URL);
-  assert.equal(config.data.OPL_SUB2API_SUPPORTED_VERSIONS, "0.1.156,0.1.155");
   assert.equal(config.data.OPL_SUB2API_REQUEST_TIMEOUT_MS, "7000");
   assert.equal(config.data.OPL_TENCENT_ZONE, "ap-guangzhou-3");
   assert.equal(config.data.OPL_MONTHLY_BILLING_INTERVAL_MS, "60000");
@@ -535,16 +527,6 @@ test("TKE manifest renderer rejects another whitespace-only required value befor
     () => renderTkeManifest({ manifest, values: { ...values, OPL_PUBLIC_URL: "   " } }),
     /missing_tke_manifest_values:.*OPL_PUBLIC_URL/
   );
-});
-
-test("TKE manifest renderer rejects every non-frozen Sub2API version set", async () => {
-  const { manifest, values } = await manifestFixture();
-  for (const versions of ["0.1.157", "0.1.155,0.1.156", "0.1.156"]) {
-    assert.throws(
-      () => renderTkeManifest({ manifest, values: { ...values, OPL_SUB2API_SUPPORTED_VERSIONS: versions } }),
-      /unsupported_sub2api_versions/
-    );
-  }
 });
 
 test("TKE manifest renderer can leave shared Ingress ownership untouched", async () => {

@@ -25,7 +25,6 @@ const (
 )
 
 var (
-	ErrSub2APIUnsupportedVersion    = errors.New("sub2api unsupported version")
 	ErrSub2APIChargeConflict        = errors.New("sub2api charge conflict")
 	ErrSub2APIChargeUnknown         = errors.New("sub2api charge result unknown")
 	ErrSub2APIResponseTooLarge      = errors.New("sub2api response too large")
@@ -48,11 +47,10 @@ type Sub2APIRefundClient interface {
 }
 
 type Sub2APIConfig struct {
-	BaseURL           string
-	AdminEmail        string
-	AdminPassword     string
-	SupportedVersions []string
-	Timeout           time.Duration
+	BaseURL       string
+	AdminEmail    string
+	AdminPassword string
+	Timeout       time.Duration
 }
 
 type Sub2APIBalance struct {
@@ -112,12 +110,11 @@ func (e *Sub2APIHTTPError) Error() string {
 }
 
 type Sub2APIHTTPClient struct {
-	baseURL           string
-	adminEmail        string
-	adminPassword     string
-	supportedVersions map[string]struct{}
-	timeout           time.Duration
-	client            *http.Client
+	baseURL       string
+	adminEmail    string
+	adminPassword string
+	timeout       time.Duration
+	client        *http.Client
 
 	authMu       sync.Mutex
 	accessToken  string
@@ -136,25 +133,15 @@ func NewSub2APIHTTPClient(config Sub2APIConfig, client *http.Client) (*Sub2APIHT
 	if config.Timeout <= 0 || config.Timeout > maxSub2APIRequestTimeout {
 		return nil, fmt.Errorf("Sub2API timeout must be between 1ns and %s", maxSub2APIRequestTimeout)
 	}
-	supported := make(map[string]struct{}, len(config.SupportedVersions))
-	for _, version := range config.SupportedVersions {
-		if version = strings.TrimSpace(version); version != "" {
-			supported[version] = struct{}{}
-		}
-	}
-	if len(supported) == 0 {
-		return nil, errors.New("at least one Sub2API version is required")
-	}
 	if client == nil {
 		client = http.DefaultClient
 	}
 	return &Sub2APIHTTPClient{
-		baseURL:           normalizedBaseURL,
-		adminEmail:        config.AdminEmail,
-		adminPassword:     config.AdminPassword,
-		supportedVersions: supported,
-		timeout:           config.Timeout,
-		client:            client,
+		baseURL:       normalizedBaseURL,
+		adminEmail:    config.AdminEmail,
+		adminPassword: config.AdminPassword,
+		timeout:       config.Timeout,
+		client:        client,
 	}, nil
 }
 
@@ -178,9 +165,6 @@ func (c *Sub2APIHTTPClient) Version(ctx context.Context) (string, error) {
 func (c *Sub2APIHTTPClient) Balance(ctx context.Context, userID int64) (Sub2APIBalance, error) {
 	if userID <= 0 {
 		return Sub2APIBalance{}, errors.New("sub2api user ID must be positive")
-	}
-	if err := c.ensureSupportedVersion(ctx); err != nil {
-		return Sub2APIBalance{}, err
 	}
 	body, err := c.doAuthenticated(ctx, http.MethodGet, "/api/v1/admin/users/"+strconv.FormatInt(userID, 10), nil, "")
 	if err != nil {
@@ -207,9 +191,6 @@ func (c *Sub2APIHTTPClient) Balance(ctx context.Context, userID int64) (Sub2APIB
 func (c *Sub2APIHTTPClient) WorkspaceKey(ctx context.Context, userID int64) (Sub2APIWorkspaceKey, error) {
 	if userID <= 0 {
 		return Sub2APIWorkspaceKey{}, errors.New("sub2api user ID must be positive")
-	}
-	if err := c.ensureSupportedVersion(ctx); err != nil {
-		return Sub2APIWorkspaceKey{}, err
 	}
 	matches := make([]Sub2APIWorkspaceKey, 0, 1)
 	for page := 1; page <= maxSub2APIKeyPages; page++ {
@@ -306,9 +287,6 @@ func (c *Sub2APIHTTPClient) Refund(ctx context.Context, input Sub2APIRefundInput
 }
 
 func (c *Sub2APIHTTPClient) redeemBalance(ctx context.Context, userID int64, code string, valueUSDMicros int64, notes string) (string, error) {
-	if err := c.ensureSupportedVersion(ctx); err != nil {
-		return "", err
-	}
 	payload := struct {
 		Code   string          `json:"code"`
 		Type   string          `json:"type"`
@@ -349,17 +327,6 @@ func (c *Sub2APIHTTPClient) redeemBalance(ctx context.Context, userID int64, cod
 		return "", fmt.Errorf("%w: redeem record differs from requested balance adjustment", ErrSub2APIChargeConflict)
 	}
 	return data.RedeemCode.Status, nil
-}
-
-func (c *Sub2APIHTTPClient) ensureSupportedVersion(ctx context.Context) error {
-	version, err := c.Version(ctx)
-	if err != nil {
-		return err
-	}
-	if _, ok := c.supportedVersions[version]; !ok {
-		return fmt.Errorf("%w: %s", ErrSub2APIUnsupportedVersion, version)
-	}
-	return nil
 }
 
 func (c *Sub2APIHTTPClient) doAuthenticated(ctx context.Context, method, path string, input any, idempotencyKey string) ([]byte, error) {

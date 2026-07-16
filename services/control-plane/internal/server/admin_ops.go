@@ -159,6 +159,14 @@ func (app *controlPlaneServer) appendAuditEvent(r *http.Request, action string, 
 	return app.tables.SaveAuditEvent(r.Context(), app.auditEvent(r, action, resourceKind, resourceID, targetAccountID, before, after, result))
 }
 
+func (app *controlPlaneServer) appendBillingReviewResolutionAudit(r *http.Request, key string, result map[string]any) error {
+	action, resourceType, resourceID := "billing.review.resolve", monthlyResourceType(result), stringValue(result["resourceId"])
+	event := app.auditEvent(r, action, resourceType, resourceID, stringValue(result["accountId"]), nil, result, "succeeded")
+	event["id"] = "audit-" + stableID(action, resourceType, resourceID, stringValue(result["billingOperationId"]), key)[:12]
+	event["createdAt"] = result["resolvedAt"]
+	return app.tables.SaveAuditEvent(r.Context(), event)
+}
+
 func (app *controlPlaneServer) auditEvent(r *http.Request, action string, resourceKind string, resourceID string, targetAccountID string, before any, after any, result string) map[string]any {
 	user, _ := app.sessionUserContext(r)
 	now := time.Now().UTC().Format(time.RFC3339)

@@ -322,7 +322,9 @@ var monthlyBillingStateKeys = []string{
 	"autoRenew",
 	"lastRenewalAttemptAt",
 	"lastBillingError",
+	"manualReviewReason",
 	"lastReceiptId",
+	"sub2apiChargeConfirmation",
 	"postChargeBalanceUsdMicros",
 	"postChargeBalanceKnown",
 	"computeAllocationId",
@@ -342,6 +344,16 @@ var monthlyBillingStateKeys = []string{
 	"customerProduct",
 	"pvName",
 	"persistentVolumeName",
+	"reviewResolutionKey",
+	"reviewResolutionFingerprint",
+	"reviewResolutionDecision",
+	"reviewResolutionEvidenceRef",
+	"reviewResolutionReviewer",
+	"reviewResolutionPhase",
+	"reviewResolutionReceiptId",
+	"reviewOriginalReceiptId",
+	"reviewResolutionResolvedAt",
+	"reviewResolutionResult",
 }
 
 var (
