@@ -47,6 +47,7 @@ func NewPersistentServer(service *controlplane.Service, store StateStore) (http.
 	registerCoreRoutes(mux, app, service)
 	registerAuthRoutes(mux, app)
 	registerStateRoutes(mux, app, service)
+	registerGatewayRoutes(mux, app, service)
 	registerWorkspaceRoutes(mux, app, service)
 	registerBillingRoutes(mux, app, service)
 	registerResourceRoutes(mux, app, service)
@@ -242,6 +243,11 @@ func writeUpstreamError(w http.ResponseWriter, causes ...error) {
 	for _, cause := range causes {
 		if cause != nil {
 			log.Printf("upstream request failed: %v", cause)
+		}
+		var fabricErr *clients.FabricHTTPError
+		if errors.As(cause, &fabricErr) && fabricErr.StatusCode == http.StatusConflict {
+			writeError(w, http.StatusConflict, "upstream_conflict")
+			return
 		}
 	}
 	writeError(w, http.StatusBadGateway, "upstream_unavailable")
