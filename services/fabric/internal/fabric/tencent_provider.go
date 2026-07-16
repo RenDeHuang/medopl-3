@@ -781,6 +781,7 @@ func (p *TencentProvider) WorkspaceRuntimeStatus(ctx context.Context, workspaceI
 		{Name: "ready_pod_uses_retained_pvc", OK: readyPodUsesPVC, Details: podDetails},
 		{Name: "service_targets_workspace", OK: selectorMatches(service, deployment)},
 		{Name: "workspace_network_policy", OK: workspaceNetworkPolicyReady(networkPolicy, deployment)},
+		{Name: "workspace_runtime_isolation", OK: workspaceRuntimeIsolationReady(deployment, pods)},
 		{Name: "service_endpoints_ready", OK: readyAddresses > 0, Details: mergeDetails(map[string]any{"readyAddresses": readyAddresses}, podDetails)},
 		{Name: "ingress_routes_workspace_gateway", OK: ingressRoutesGateway(ingress)},
 		credentialCheck,
@@ -1420,6 +1421,11 @@ func workspaceNetworkPolicyReady(policy map[string]any, deployment map[string]an
 	if len(podSelector) != 1 || len(selector) == 0 || !reflect.DeepEqual(selector, deploymentSelector) || len(policyTypes) != 1 || stringValue(policyTypes[0]) != "Ingress" || len(ingress) != 1 {
 		return false
 	}
+	deploymentName := stringValue(nested(deployment, "metadata", "name"))
+	computeID := stringValue(selector["oplcloud.cn/compute-allocation-id"])
+	if len(selector) != 3 || stringValue(selector["app.kubernetes.io/name"]) != "opl-compute-allocation" || stringValue(selector["app.kubernetes.io/instance"]) != deploymentName || computeID == "" || stringValue(nested(deployment, "metadata", "labels", "oplcloud.cn/compute-allocation-id")) != computeID {
+		return false
+	}
 	rule, _ := ingress[0].(map[string]any)
 	from, _ := rule["from"].([]any)
 	ports, _ := rule["ports"].([]any)
@@ -1435,6 +1441,53 @@ func workspaceNetworkPolicyReady(policy map[string]any, deployment map[string]an
 	}
 	port, _ := ports[0].(map[string]any)
 	return len(port) == 2 && stringValue(port["protocol"]) == "TCP" && number(port["port"]) == 3000
+}
+
+func workspaceRuntimeIsolationReady(deployment map[string]any, pods []any) bool {
+	generation := number(nested(deployment, "metadata", "generation"))
+	desiredReplicas := number(nested(deployment, "spec", "replicas"))
+	if generation <= 0 || number(nested(deployment, "status", "observedGeneration")) != generation || desiredReplicas <= 0 || number(nested(deployment, "status", "updatedReplicas")) < desiredReplicas {
+		return false
+	}
+	templateSpec, _ := nested(deployment, "spec", "template", "spec").(map[string]any)
+	if !workspaceRuntimeSpecIsolated(templateSpec) {
+		return false
+	}
+	readyPods := 0
+	for _, item := range pods {
+		pod, _ := item.(map[string]any)
+		if conditionStatuses(nested(pod, "status", "conditions"))["Ready"] != "True" {
+			continue
+		}
+		readyPods++
+		spec, _ := pod["spec"].(map[string]any)
+		if !workspaceRuntimeSpecIsolated(spec) {
+			return false
+		}
+	}
+	return readyPods > 0
+}
+
+func workspaceRuntimeSpecIsolated(spec map[string]any) bool {
+	if len(spec) == 0 || spec["hostNetwork"] == true || stringValue(spec["dnsPolicy"]) != "ClusterFirst" || spec["automountServiceAccountToken"] != false || stringValue(nested(spec, "securityContext", "seccompProfile", "type")) != "RuntimeDefault" {
+		return false
+	}
+	containers, _ := spec["containers"].([]any)
+	workspaceContainers := 0
+	for _, item := range containers {
+		container, _ := item.(map[string]any)
+		if stringValue(container["name"]) != "workspace" {
+			continue
+		}
+		workspaceContainers++
+		security, _ := container["securityContext"].(map[string]any)
+		capabilities, _ := security["capabilities"].(map[string]any)
+		containerSeccomp := stringValue(nested(security, "seccompProfile", "type"))
+		if security["allowPrivilegeEscalation"] != false || security["privileged"] == true || len(capabilities) != 1 || !reflect.DeepEqual(capabilities["drop"], []any{"ALL"}) || (containerSeccomp != "" && containerSeccomp != "RuntimeDefault") {
+			return false
+		}
+	}
+	return workspaceContainers == 1
 }
 
 func endpointReadyAddresses(endpoints map[string]any) int {

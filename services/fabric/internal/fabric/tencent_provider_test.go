@@ -409,10 +409,18 @@ func TestWorkspaceManifestIsolatesTenantRuntime(t *testing.T) {
 }
 
 func TestWorkspaceNetworkPolicyReadinessRejectsBroaderSelectors(t *testing.T) {
-	deployment := map[string]any{"spec": map[string]any{"selector": map[string]any{"matchLabels": map[string]any{"app": "workspace"}}}}
-	newPolicy := func() map[string]any {
+	runtimeLabels := func() map[string]any {
+		return map[string]any{"app.kubernetes.io/name": "opl-compute-allocation", "app.kubernetes.io/instance": "opl-compute-alpha", "oplcloud.cn/compute-allocation-id": "compute-alpha"}
+	}
+	newDeployment := func(labels map[string]any) map[string]any {
+		return map[string]any{
+			"metadata": map[string]any{"name": "opl-compute-alpha", "labels": map[string]any{"oplcloud.cn/compute-allocation-id": "compute-alpha"}},
+			"spec":     map[string]any{"selector": map[string]any{"matchLabels": labels}},
+		}
+	}
+	newPolicy := func(labels map[string]any) map[string]any {
 		return map[string]any{"spec": map[string]any{
-			"podSelector": map[string]any{"matchLabels": map[string]any{"app": "workspace"}},
+			"podSelector": map[string]any{"matchLabels": labels},
 			"policyTypes": []any{"Ingress"},
 			"ingress": []any{map[string]any{
 				"from":  []any{map[string]any{"podSelector": map[string]any{"matchLabels": map[string]any{"app.kubernetes.io/name": "opl-cloud", "app.kubernetes.io/component": "control-plane"}}}},
@@ -435,10 +443,33 @@ func TestWorkspaceNetworkPolicyReadinessRejectsBroaderSelectors(t *testing.T) {
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			policy := newPolicy()
+			labels := runtimeLabels()
+			deployment := newDeployment(labels)
+			policy := newPolicy(labels)
 			tc.configure(policy)
 			if workspaceNetworkPolicyReady(policy, deployment) {
 				t.Fatalf("broader NetworkPolicy accepted: %#v", policy)
+			}
+		})
+	}
+	for _, tc := range []struct {
+		name      string
+		labels    map[string]any
+		configure func(map[string]any)
+	}{
+		{name: "wide workload selector", labels: map[string]any{"app": "workspace"}},
+		{name: "empty compute allocation", labels: map[string]any{"app.kubernetes.io/name": "opl-compute-allocation", "app.kubernetes.io/instance": "opl-compute-alpha", "oplcloud.cn/compute-allocation-id": ""}},
+		{name: "deployment compute label mismatch", labels: runtimeLabels(), configure: func(deployment map[string]any) {
+			deployment["metadata"].(map[string]any)["labels"].(map[string]any)["oplcloud.cn/compute-allocation-id"] = "compute-other"
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			deployment := newDeployment(tc.labels)
+			if tc.configure != nil {
+				tc.configure(deployment)
+			}
+			if workspaceNetworkPolicyReady(newPolicy(tc.labels), deployment) {
+				t.Fatalf("invalid runtime selector accepted: deployment=%#v labels=%#v", deployment, tc.labels)
 			}
 		})
 	}
@@ -644,25 +675,27 @@ func TestTencentStorageAttachmentVerifiesBoundStaticVolumeBeforeRuntime(t *testi
 func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) {
 	t.Setenv("OPL_WORKSPACE_IMAGE", "workspace-image:test")
 	provider := NewTencentProvider()
+	runtimeSelector := map[string]any{"app.kubernetes.io/name": "opl-compute-allocation", "app.kubernetes.io/instance": "opl-compute-alpha", "oplcloud.cn/compute-allocation-id": "compute-alpha"}
 	deployment := map[string]any{
 		"kind":     "Deployment",
-		"metadata": map[string]any{"name": "opl-compute-alpha", "labels": map[string]any{"oplcloud.cn/workspace-id": "ws-alpha"}},
-		"spec": map[string]any{"selector": map[string]any{"matchLabels": map[string]any{"app": "workspace"}}, "template": map[string]any{"metadata": map[string]any{"labels": map[string]any{"app": "workspace"}}, "spec": map[string]any{
-			"containers": []any{map[string]any{"name": "workspace", "image": "workspace-image:test", "volumeMounts": workspaceDataMounts()}},
+		"metadata": map[string]any{"name": "opl-compute-alpha", "generation": 2, "labels": map[string]any{"app.kubernetes.io/name": "opl-compute-allocation", "app.kubernetes.io/instance": "opl-compute-alpha", "oplcloud.cn/compute-allocation-id": "compute-alpha", "oplcloud.cn/workspace-id": "ws-alpha"}},
+		"spec": map[string]any{"replicas": 1, "selector": map[string]any{"matchLabels": runtimeSelector}, "template": map[string]any{"metadata": map[string]any{"labels": runtimeSelector}, "spec": map[string]any{
+			"automountServiceAccountToken": false, "dnsPolicy": "ClusterFirst", "securityContext": map[string]any{"seccompProfile": map[string]any{"type": "RuntimeDefault"}},
+			"containers": []any{map[string]any{"name": "workspace", "image": "workspace-image:test", "securityContext": map[string]any{"allowPrivilegeEscalation": false, "capabilities": map[string]any{"drop": []any{"ALL"}}}, "volumeMounts": workspaceDataMounts()}},
 			"volumes":    []any{map[string]any{"name": "workspace-data", "persistentVolumeClaim": map[string]any{"claimName": "opl-storage-alpha-data"}}},
 		}}},
-		"status": map[string]any{"readyReplicas": 1, "availableReplicas": 1},
+		"status": map[string]any{"observedGeneration": 2, "updatedReplicas": 1, "readyReplicas": 1, "availableReplicas": 1},
 	}
 	service := map[string]any{
 		"kind":     "Service",
 		"metadata": map[string]any{"name": "opl-compute-alpha", "labels": map[string]any{"oplcloud.cn/workspace-id": "ws-alpha"}},
-		"spec":     map[string]any{"selector": map[string]any{"app": "workspace"}},
+		"spec":     map[string]any{"selector": runtimeSelector},
 	}
 	networkPolicy := map[string]any{
 		"kind":     "NetworkPolicy",
 		"metadata": map[string]any{"name": "opl-compute-alpha", "labels": map[string]any{"oplcloud.cn/workspace-id": "ws-alpha"}},
 		"spec": map[string]any{
-			"podSelector": map[string]any{"matchLabels": map[string]any{"app": "workspace"}},
+			"podSelector": map[string]any{"matchLabels": runtimeSelector},
 			"policyTypes": []any{"Ingress"},
 			"ingress": []any{map[string]any{
 				"from":  []any{map[string]any{"podSelector": map[string]any{"matchLabels": map[string]any{"app.kubernetes.io/name": "opl-cloud", "app.kubernetes.io/component": "control-plane"}}}},
@@ -673,11 +706,12 @@ func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) 
 	pod := map[string]any{
 		"kind": "Pod",
 		"metadata": map[string]any{"name": "opl-compute-alpha-7d6c", "labels": map[string]any{
-			"oplcloud.cn/workspace-id": "ws-alpha",
+			"app.kubernetes.io/name": "opl-compute-allocation", "app.kubernetes.io/instance": "opl-compute-alpha", "oplcloud.cn/compute-allocation-id": "compute-alpha", "oplcloud.cn/workspace-id": "ws-alpha",
 		}},
 		"spec": map[string]any{
-			"nodeName": "10.0.0.8", "containers": []any{map[string]any{"name": "workspace", "volumeMounts": workspaceDataMounts()}},
-			"volumes": []any{map[string]any{"name": "workspace-data", "persistentVolumeClaim": map[string]any{"claimName": "opl-storage-alpha-data"}}},
+			"nodeName": "10.0.0.8", "automountServiceAccountToken": false, "dnsPolicy": "ClusterFirst", "securityContext": map[string]any{"seccompProfile": map[string]any{"type": "RuntimeDefault"}},
+			"containers": []any{map[string]any{"name": "workspace", "securityContext": map[string]any{"allowPrivilegeEscalation": false, "capabilities": map[string]any{"drop": []any{"ALL"}}}, "volumeMounts": workspaceDataMounts()}},
+			"volumes":    []any{map[string]any{"name": "workspace-data", "persistentVolumeClaim": map[string]any{"claimName": "opl-storage-alpha-data"}}},
 		},
 		"status": map[string]any{
 			"phase": "Running",
@@ -722,7 +756,7 @@ func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) 
 	for _, check := range status.Checks {
 		verified[check.Name] = check.OK
 	}
-	for _, name := range []string{"pvc_bound", "deployment_uses_retained_pvc", "deployment_ready", "workspace_network_policy"} {
+	for _, name := range []string{"pvc_bound", "deployment_uses_retained_pvc", "deployment_ready", "workspace_network_policy", "workspace_runtime_isolation"} {
 		if !verified[name] {
 			t.Fatalf("runtime must own final mount/readiness proof %q: %#v", name, status.Checks)
 		}
@@ -762,6 +796,15 @@ func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) 
 	networkPolicy["spec"].(map[string]any)["ingress"].([]any)[0].(map[string]any)["ports"].([]any)[0].(map[string]any)["port"] = 3000
 	networkPolicy["spec"].(map[string]any)["ingress"].([]any)[0].(map[string]any)["from"].([]any)[0].(map[string]any)["podSelector"].(map[string]any)["matchLabels"].(map[string]any)["app.kubernetes.io/component"] = "fabric"
 	assertUnready("NetworkPolicy source mismatch")
+	networkPolicy["spec"].(map[string]any)["ingress"].([]any)[0].(map[string]any)["from"].([]any)[0].(map[string]any)["podSelector"].(map[string]any)["matchLabels"].(map[string]any)["app.kubernetes.io/component"] = "control-plane"
+	pod["spec"].(map[string]any)["hostNetwork"] = true
+	assertUnready("old host-network Ready Pod")
+	delete(pod["spec"].(map[string]any), "hostNetwork")
+	deployment["status"].(map[string]any)["observedGeneration"] = 1
+	assertUnready("Deployment generation not observed")
+	deployment["status"].(map[string]any)["observedGeneration"] = 2
+	deployment["status"].(map[string]any)["updatedReplicas"] = 0
+	assertUnready("Deployment update incomplete")
 	if !verified["ready_pod_uses_retained_pvc"] {
 		t.Fatalf("runtime must verify Ready Pod retained mount: %#v", status.Checks)
 	}
