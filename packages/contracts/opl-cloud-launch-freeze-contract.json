@@ -120,7 +120,20 @@
     "mounts": ["/data", "/projects"],
     "gatewaySecret": "account-scoped Kubernetes Secret",
     "gatewaySecretPersistence": "Kubernetes Secret only",
-    "globalGatewayKeyForbidden": true
+    "globalGatewayKeyForbidden": true,
+    "authenticationMode": "runtime_password",
+    "statusApi": "POST /api/workspaces/runtime-status",
+    "statusContainsPassword": false,
+    "runtimeRequestIdentityBinding": "not_in_pilot_requires_sso",
+    "credentialCommands": {
+      "reveal": "POST /api/workspaces/{workspaceId}/runtime-credentials/reveal",
+      "rotate": "POST /api/workspaces/{workspaceId}/runtime-credentials/rotate",
+      "authorization": "workspace.ownerUserId_equals_session_user.id",
+      "cacheControl": "private, no-store",
+      "passwordPersistence": "none",
+      "rotationReceiptType": "workspace.access_token_reset"
+    },
+    "currentImplementation": "Non-secret status, owner-user-only reveal and idempotent rotation, credential revision rollout, and redacted reset receipts are CI-verified; Runtime SSO, identity-bound Runtime requests, browser, WebSocket, and deployed rotation evidence remain pending."
   },
   "gateway": {
     "backend": "Sub2API",
@@ -239,9 +252,9 @@
       "id": "workspace_access",
       "business": "The customer authenticates to a ready Workspace backed by owned compute, CBS, and an account-scoped Gateway Secret.",
       "owners": ["console", "fabric", "ledger"],
-      "currentState": "Attachment, account Secret, readiness, and runtime isolation are CI-verified; browser, WebSocket, and live model evidence are pending.",
-      "requiredDeliverables": ["runtime readiness", "password login", "static CBS mounts", "secret rotation", "immutable image"],
-      "completionEvidence": ["post-login assertion", "WebSocket 101", "Secret fingerprint", "image digest readback"]
+      "currentState": "Attachment, account Secret, readiness, non-secret status, owner-user-only password reveal/rotation, credential rollout, and redacted reset receipts are CI-verified; Runtime SSO is outside the Pilot, while browser, WebSocket, live model, and deployed rotation evidence remain pending.",
+      "requiredDeliverables": ["runtime readiness", "password login", "owner-only Runtime credential reveal and rotation", "static CBS mounts", "secret rotation", "immutable image"],
+      "completionEvidence": ["owner isolation tests", "post-login assertion", "WebSocket 101", "Secret fingerprint", "credential revision readback", "image digest readback"]
     },
     {
       "id": "gateway_usage",
