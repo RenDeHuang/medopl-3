@@ -18,6 +18,7 @@ const FIXED_VERIFICATION_SLOT_DESCRIPTOR = {
 };
 const DEFAULT_URL_ATTEMPTS = 3;
 const DEFAULT_RETRY_DELAY_MS = 10_000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 
 function sleep(ms) {
   return ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
@@ -25,6 +26,12 @@ function sleep(ms) {
 
 function assertIdentity(value, pattern, error) {
   if (!pattern.test(String(value || ""))) throw new Error(error);
+}
+
+function boundedRequestSignal(signal, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS) {
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 300_000) throw new Error("verification_request_timeout_invalid");
+  const timeout = AbortSignal.timeout(timeoutMs);
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
 }
 
 function privateIpv4(hostname) {
@@ -106,7 +113,7 @@ function responseCookie(headers) {
   return values.map((value) => value.split(";", 1)[0]).join("; ");
 }
 
-export async function requestJson({ fetchImpl, origin, path, method = "GET", auth, body }) {
+export async function requestJson({ fetchImpl, origin, path, method = "GET", auth, body, signal, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS }) {
   const response = await fetchImpl(`${origin}${path}`, {
     method,
     headers: {
@@ -114,7 +121,8 @@ export async function requestJson({ fetchImpl, origin, path, method = "GET", aut
       ...(auth?.cookie ? { cookie: auth.cookie } : {}),
       ...(auth?.csrfToken ? { "x-opl-csrf": auth.csrfToken } : {})
     },
-    body: body !== undefined ? JSON.stringify(body) : undefined
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+    signal: boundedRequestSignal(signal, timeoutMs)
   });
   const text = await response.text();
   let payload = {};
@@ -127,8 +135,8 @@ export async function requestJson({ fetchImpl, origin, path, method = "GET", aut
   return { payload, response };
 }
 
-export async function login({ fetchImpl, origin, email, password }) {
-  const { payload, response } = await requestJson({ fetchImpl, origin, path: "/api/auth/login", method: "POST", body: { email, password } });
+export async function login({ fetchImpl, origin, email, password, signal, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS }) {
+  const { payload, response } = await requestJson({ fetchImpl, origin, path: "/api/auth/login", method: "POST", body: { email, password }, signal, timeoutMs });
   const cookie = responseCookie(response.headers);
   if (!cookie || payload?.user?.accountId === undefined) throw new Error("verification_login_failed");
   return { cookie, csrfToken: response.headers.get("x-opl-csrf-token") || "", user: payload.user };
@@ -176,7 +184,7 @@ function verificationSlotDescriptor(raw) {
 }
 
 function fixedSlotFromState(state, { slotId, slotDescriptor, purchaseBudgetRemaining, accountId, nowMs }) {
-  const workspaces = (state?.workspaces || []).filter((row) => row?.verificationSlotId === slotId || row?.id === slotId || row?.name === slotId);
+  const workspaces = (state?.workspaces || []).filter((row) => row?.verificationSlotId === slotId);
   if (workspaces.length === 0) {
     if (purchaseBudgetRemaining === 0) throw new Error("verification_slot_purchase_budget_exhausted");
     return null;
@@ -216,6 +224,8 @@ function fixedSlotFromState(state, { slotId, slotDescriptor, purchaseBudgetRemai
   const storageTags = storage.costTags || {};
 
   const compliant =
+    workspace.verificationSlotId === slotId &&
+    workspace.customerProduct === false &&
     workspace.accountId === accountId &&
     workspace.ownerAccountId === accountId &&
     compute.accountId === accountId &&
@@ -261,11 +271,11 @@ function fixedSlotFromState(state, { slotId, slotDescriptor, purchaseBudgetRemai
   };
 }
 
-async function requestWorkspaceUrl({ fetchImpl, url, attempts, retryDelayMs }) {
+async function requestWorkspaceUrl({ fetchImpl, url, attempts, retryDelayMs, signal, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS }) {
   const parsed = assertPublicHttpsUrl(url, "public_workspace_url_required", { hostname: "workspace.medopl.cn" });
   let lastStatus = 0;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    const response = await fetchImpl(parsed.toString(), { method: "GET", redirect: "follow" });
+    const response = await fetchImpl(parsed.toString(), { method: "GET", redirect: "follow", signal: boundedRequestSignal(signal, timeoutMs) });
     lastStatus = response.status;
     const body = response.ok ? await response.text() : "";
     if (response.ok && body.trim()) return { attempts: attempt, status: response.status };
@@ -312,6 +322,8 @@ export async function verifyProductionChain(options = {}) {
     browserE2E = false,
     screenshotDir = "",
     browserFactory,
+    requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+    signal,
     fetchImpl = globalThis.fetch
   } = options;
   const slotDescriptor = verificationSlotDescriptor(rawSlotDescriptor);
@@ -319,24 +331,28 @@ export async function verifyProductionChain(options = {}) {
   if (purchaseBudgetRemaining === undefined) throw new Error("verification_slot_purchase_budget_required");
   if (!Number.isInteger(purchaseBudgetRemaining) || purchaseBudgetRemaining < 0 || purchaseBudgetRemaining > 1) throw new Error("verification_slot_purchase_budget_invalid");
   if (!Number.isInteger(workspaceUrlAttempts) || workspaceUrlAttempts < 1 || !Number.isFinite(retryDelayMs) || retryDelayMs < 0) throw new Error("verification_retry_config_invalid");
+  boundedRequestSignal(signal, requestTimeoutMs);
   const nowMs = new Date(now).getTime();
   if (!Number.isFinite(nowMs)) throw new Error("verification_time_invalid");
   assertIdentity(runId, /^[A-Za-z0-9._-]{1,80}$/, "production_verification_run_id_invalid");
+  if (!String(accountId).trim()) throw new Error("verification_account_id_required");
+  assertIdentity(accountId, /^[A-Za-z0-9._:-]{1,128}$/, "verification_account_id_invalid");
 
   const owner = verificationOwnerFromSeed(authUsersJson, accountId);
   const normalizedOrigin = assertPublicHttpsUrl(origin, "public_console_origin_required", { hostname: "cloud.medopl.cn" }).origin;
+  const requestOptions = { fetchImpl, origin: normalizedOrigin, signal, timeoutMs: requestTimeoutMs };
   const checks = [];
-  const readiness = await requestJson({ fetchImpl, origin: normalizedOrigin, path: "/api/production/readiness" });
+  const readiness = await requestJson({ ...requestOptions, path: "/api/production/readiness" });
   addCheck(checks, "production_readiness", readiness.payload?.ready === true);
 
-  const auth = await login({ fetchImpl, origin: normalizedOrigin, email: owner.email, password: owner.password });
+  const auth = await login({ ...requestOptions, email: owner.email, password: owner.password });
   addCheck(checks, "console_login", auth.user?.accountId === owner.accountId);
 
-  const catalog = (await requestJson({ fetchImpl, origin: normalizedOrigin, auth, path: "/api/pricing/catalog" })).payload;
+  const catalog = (await requestJson({ ...requestOptions, auth, path: "/api/pricing/catalog" })).payload;
   verifyCatalog(checks, catalog);
-  const state = (await requestJson({ fetchImpl, origin: normalizedOrigin, auth, path: "/api/state" })).payload;
+  const state = (await requestJson({ ...requestOptions, auth, path: "/api/state" })).payload;
   addCheck(checks, "live_sub2api_balance", state?.balance?.source === "sub2api" && state?.balance?.currency === "USD" && state?.balance?.userId === owner.sub2apiUserId && Number.isSafeInteger(state?.balance?.usdMicros));
-  const gateway = (await requestJson({ fetchImpl, origin: normalizedOrigin, auth, path: "/api/gateway/summary" })).payload;
+  const gateway = (await requestJson({ ...requestOptions, auth, path: "/api/gateway/summary" })).payload;
   addCheck(checks, "gateway_key_masked", gateway?.apiKey?.revealed !== true && gateway?.apiKey?.value === undefined && Boolean(gateway?.apiKey?.maskedValue));
 
   const slot = fixedSlotFromState(state, { slotId, slotDescriptor, purchaseBudgetRemaining, accountId: owner.accountId, nowMs });
@@ -346,7 +362,7 @@ export async function verifyProductionChain(options = {}) {
     return result;
   }
 
-  const workspaceAccess = await requestWorkspaceUrl({ fetchImpl, url: slot.workspace.url, attempts: workspaceUrlAttempts, retryDelayMs });
+  const workspaceAccess = await requestWorkspaceUrl({ fetchImpl, url: slot.workspace.url, attempts: workspaceUrlAttempts, retryDelayMs, signal, timeoutMs: requestTimeoutMs });
   addCheck(checks, "verification_slot_workspace_ready", workspaceAccess.status >= 200 && workspaceAccess.status < 300, { attempts: workspaceAccess.attempts });
   if (browserE2E) {
     await verifyWorkspaceBrowser({ url: slot.workspace.url, screenshotDir, browserFactory });
@@ -406,6 +422,7 @@ function verifierOptionsFromArgs({ argv, env, fetchImpl }) {
     purchaseBudgetRemaining: Number(env.OPL_VERIFY_PURCHASE_BUDGET_REMAINING),
     workspaceUrlAttempts: Number(args["url-attempts"] || env.OPL_VERIFY_URL_ATTEMPTS || DEFAULT_URL_ATTEMPTS),
     retryDelayMs: Number(args["retry-delay-ms"] || env.OPL_VERIFY_RETRY_DELAY_MS || DEFAULT_RETRY_DELAY_MS),
+    requestTimeoutMs: Number(args["request-timeout-ms"] || env.OPL_VERIFY_REQUEST_TIMEOUT_MS || DEFAULT_REQUEST_TIMEOUT_MS),
     manifestPath: args["manifest-path"] || env.OPL_VERIFY_MANIFEST_PATH || "",
     browserE2E: ["1", "true", "yes"].includes(String(args["browser-e2e"] || env.OPL_VERIFY_BROWSER_E2E || "").toLowerCase()),
     screenshotDir: args["screenshot-dir"] || env.OPL_VERIFY_SCREENSHOT_DIR || "",
@@ -425,7 +442,7 @@ export async function runProductionVerifierCli({
   fetchImpl = globalThis.fetch
 } = {}) {
   if (argv.includes("--help") || argv.includes("-h")) {
-    stdout.write(`Usage: npm run verify:production -- --origin <https-url> [--account <id>] [--run-id <id>] [--browser-e2e]\nRequires OPL_VERIFY_SLOT_DESCRIPTOR_JSON and OPL_VERIFY_PURCHASE_BUDGET_REMAINING; read-only smoke reuses ${FIXED_VERIFICATION_SLOT_ID}.\n`);
+    stdout.write(`Usage: npm run verify:production -- --origin <https-url> --account <id> [--run-id <id>] [--request-timeout-ms <ms>] [--browser-e2e]\nRequires OPL_VERIFY_SLOT_DESCRIPTOR_JSON and OPL_VERIFY_PURCHASE_BUDGET_REMAINING; read-only smoke reuses ${FIXED_VERIFICATION_SLOT_ID}.\n`);
     return 0;
   }
   try {

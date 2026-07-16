@@ -11,6 +11,7 @@ import {
   StatusPill
 } from "../shared/commercial-console.tsx";
 import { paidThrough, usdBalance, usdMicros } from "../shared/formatters.ts";
+import { createGatewayRequestLifecycle, maskGatewaySummary } from "./gateway-request.ts";
 
 export function GatewayPage({ state = {} }: any) {
   const [summary, setSummary] = React.useState<any>(null);
@@ -18,44 +19,61 @@ export function GatewayPage({ state = {} }: any) {
   const [loading, setLoading] = React.useState(true);
   const [revealing, setRevealing] = React.useState(false);
   const [reloadRun, setReloadRun] = React.useState(0);
+  const requestLifecycle = React.useRef(createGatewayRequestLifecycle());
+  const summaryRef = React.useRef<any>(null);
   const gatewayUrl = state.gateway?.url || "https://gflabtoken.cn";
 
+  React.useEffect(() => () => {
+    requestLifecycle.current.dispose();
+    summaryRef.current = null;
+  }, []);
+
   React.useEffect(() => {
-    let active = true;
+    const controller = requestLifecycle.current.start();
+    summaryRef.current = null;
     setSummary(null);
     setError("");
     setLoading(true);
-    getGatewaySummary(false)
+    setRevealing(false);
+    getGatewaySummary(false, controller.signal)
       .then((payload) => {
-        if (active) setSummary(payload);
+        if (!requestLifecycle.current.isCurrent(controller)) return;
+        summaryRef.current = payload;
+        setSummary(payload);
       })
       .catch((err) => {
-        if (active) setError(err.message);
+        if (requestLifecycle.current.isCurrent(controller)) setError(err.message);
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (requestLifecycle.current.isCurrent(controller)) setLoading(false);
       });
-    return () => { active = false; };
+    return () => {
+      requestLifecycle.current.cancel(controller);
+      summaryRef.current = null;
+    };
   }, [reloadRun]);
 
   async function revealKey() {
+    const controller = requestLifecycle.current.start();
     setRevealing(true);
     setError("");
     try {
-      setSummary(await getGatewaySummary(true));
+      const payload = await getGatewaySummary(true, controller.signal);
+      if (!requestLifecycle.current.isCurrent(controller)) return;
+      summaryRef.current = payload;
+      setSummary(payload);
     } catch (err) {
-      setError(err.message);
+      if (requestLifecycle.current.isCurrent(controller)) setError(err.message);
     } finally {
-      setRevealing(false);
+      if (requestLifecycle.current.isCurrent(controller)) setRevealing(false);
     }
   }
 
   function hideKey() {
     setSummary((current) => {
-      if (!current?.apiKey) return current;
-      const apiKey = { ...current.apiKey, revealed: false };
-      delete apiKey.value;
-      return { ...current, apiKey };
+      const masked = maskGatewaySummary(current);
+      summaryRef.current = masked;
+      return masked;
     });
   }
 

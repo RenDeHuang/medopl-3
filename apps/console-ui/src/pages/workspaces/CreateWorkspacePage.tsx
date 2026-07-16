@@ -1,8 +1,8 @@
 import React from "react";
 import { Alert, Button, Form, Input, Select, Steps } from "antd";
-import { Cable, HardDrive, Link as LinkIcon, Plus, Server } from "lucide-react";
+import { Cable, HardDrive, Link as LinkIcon, Plus, RefreshCw, Server } from "lucide-react";
 import { getPricingCatalog } from "../../api/console-read-api.ts";
-import { createWorkspace } from "../../api/workspaces-api.ts";
+import { createWorkspace, createWorkspaceIntent } from "../../api/workspaces-api.ts";
 import { navigate, routeTo } from "../../consoleRoutes.ts";
 import { ActionGroup, ConsoleSurface, InsightPanel, OperationResultPanel, ResourceSplit, StatusPill } from "../shared/commercial-console.tsx";
 import { moneyCents } from "../shared/formatters.ts";
@@ -13,6 +13,7 @@ export function CreateWorkspacePage({ state, session, runAction }: any) {
   const [catalog, setCatalog] = React.useState<any>(null);
   const [catalogError, setCatalogError] = React.useState("");
   const [catalogRun, setCatalogRun] = React.useState(0);
+  const createIntent = React.useRef<any>(null);
 
   React.useEffect(() => {
     let active = true;
@@ -109,22 +110,26 @@ export function CreateWorkspacePage({ state, session, runAction }: any) {
             layout="vertical"
             initialValues={{ attachmentId: attachment.id }}
             onFinish={async (values) => {
+              const input = { workspaceName: values.workspaceName, attachmentId: values.attachmentId };
+              const intent = operationResult?.status === "unknown" ? createIntent.current : createWorkspaceIntent(input);
+              createIntent.current = intent;
               setOperationPending(true);
               setOperationResult({ ok: true, status: "submitted", nextStepMessage: "Workspace 创建请求已提交，正在准备 Runtime。" });
               const created = await runAction(
-                () => createWorkspace({ workspaceName: values.workspaceName, attachmentId: values.attachmentId }, session.csrfToken),
+                () => createWorkspace(intent, session.csrfToken),
                 "Workspace 创建请求已提交",
                 { returnFailure: true }
               );
+              if (created?.status !== "unknown") createIntent.current = null;
               setOperationPending(false);
               setOperationResult(created && { ...created, status: created.status || "submitted", nextStepMessage: "Runtime 正在启动；详情页会自动等待最多 5 分钟。" });
             }}
           >
             <Form.Item name="workspaceName" label="名称" rules={[{ required: true, message: "请输入 Workspace 名称" }]}>
-              <Input placeholder="输入 Workspace 名称" />
+              <Input placeholder="输入 Workspace 名称" disabled={operationPending || operationResult?.status === "unknown"} />
             </Form.Item>
             <Form.Item name="attachmentId" label="计算与存储" rules={[{ required: true, message: "请选择挂载关系" }]}>
-              <Select options={attachments.map((item) => ({ label: `${item.computeAllocationId} + ${item.storageId}`, value: item.id }))} />
+              <Select disabled={operationPending || operationResult?.status === "unknown"} options={attachments.map((item) => ({ label: `${item.computeAllocationId} + ${item.storageId}`, value: item.id }))} />
             </Form.Item>
             <OperationResultPanel pending={operationPending} result={operationResult} />
             {operationResult && operationResult.ok !== false && (
@@ -133,8 +138,8 @@ export function CreateWorkspacePage({ state, session, runAction }: any) {
                 { label: "费用明细", onClick: () => navigate(routeTo("billing.overview")) }
               ]} />
             )}
-            <Button className="formSubmit" type="primary" htmlType="submit" icon={<Plus size={15} />} loading={operationPending}>
-              创建 Workspace
+            <Button className="formSubmit" type="primary" htmlType="submit" icon={operationResult?.status === "unknown" ? <RefreshCw size={15} /> : <Plus size={15} />} loading={operationPending}>
+              {operationResult?.status === "unknown" ? "重试并确认结果" : "创建 Workspace"}
             </Button>
           </Form>
         )}

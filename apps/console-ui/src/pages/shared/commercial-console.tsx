@@ -189,14 +189,15 @@ export function OperationResultPanel({ result, pending = false }: any) {
     );
   }
   if (!result) return null;
-  const failed = result.ok === false || result.status === "failed" || Boolean(result.failureReason);
+  const unknown = result.status === "unknown";
+  const failed = !unknown && (result.ok === false || result.status === "failed" || Boolean(result.failureReason));
   const submitted = ["submitted", "provisioning", "creating", "attaching", "pending"].includes(result.status);
   return (
     <Alert
-      type={failed ? "error" : submitted ? "info" : "success"}
+      type={unknown ? "warning" : failed ? "error" : submitted ? "info" : "success"}
       showIcon
-      message={failed ? "操作失败" : submitted ? "操作已提交" : "操作完成"}
-      description={failed
+      message={unknown ? "结果待确认" : failed ? "操作失败" : submitted ? "操作已提交" : "操作完成"}
+      description={unknown || failed
         ? customerSafeMessage(result.failureReason, "请查看失败原因后重试。")
         : result.nextStepMessage || `资源 ${result.resourceId || result.id || "-"} 已更新。`}
     />

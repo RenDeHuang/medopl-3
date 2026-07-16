@@ -54,8 +54,9 @@ export function operationEnvelope(payload: JsonRecord = {}, defaults: JsonRecord
   };
 }
 
-export async function getJson(path: string) {
-  const response = await fetch(path, { signal: AbortSignal.timeout(10_000) });
+export async function getJson(path: string, { signal }: { signal?: AbortSignal } = {}) {
+  const timeout = AbortSignal.timeout(10_000);
+  const response = await fetch(path, { signal: signal ? AbortSignal.any([signal, timeout]) : timeout });
   const payload = await response.json();
   if (!response.ok || payload.ok === false) {
     const error: ApiError = new Error(customerSafeMessage(payload));

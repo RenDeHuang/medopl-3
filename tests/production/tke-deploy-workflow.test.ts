@@ -73,9 +73,88 @@ function runImageMetadata(step, workspaceImageTag, workspaceSourceImage) {
       OPL_WORKSPACE_IMAGE_REPOSITORY: "registry.example.test/opl/workspace",
       REQUESTED_IMAGE_TAG: "cloud-test",
       REQUESTED_WORKSPACE_IMAGE_TAG: workspaceImageTag,
-      REQUESTED_WORKSPACE_SOURCE_IMAGE: workspaceSourceImage
+      REQUESTED_WORKSPACE_SOURCE_IMAGE: workspaceSourceImage,
+      PUBLISH_CLOUD_IMAGE: "true",
+      MIRROR_WORKSPACE_IMAGE: "true"
     }
   });
+}
+
+async function runImageReleaseStep(step, publishCloudImage, mirrorWorkspaceImage) {
+  const root = await mkdtemp(join(tmpdir(), "opl-image-release-"));
+  const commandLog = join(root, "commands.log");
+  const githubOutput = join(root, "output");
+  const githubEnv = join(root, "env");
+  const githubSummary = join(root, "summary");
+  await Promise.all([commandLog, githubOutput, githubEnv, githubSummary].map((path) => writeFile(path, "")));
+  const cloudDigest = `sha256:${"c".repeat(64)}`;
+  const harness = `
+docker() {
+  printf 'docker %s\\n' "$*" >> "$COMMAND_LOG"
+  case "$*" in
+    *"imagetools inspect $OPL_CLOUD_IMAGE_REF"*) printf '%s\\n' "$CLOUD_DIGEST" ;;
+    *"imagetools inspect "*) printf '%s\\n' "$WORKSPACE_DIGEST" ;;
+  esac
+}
+git() {
+  printf 'git %s\\n' "$*" >> "$COMMAND_LOG"
+  printf '%s\\trefs/tags/v%s\\n' "$EXPECTED_WORKSPACE_TAG_COMMIT" "$REQUESTED_WORKSPACE_IMAGE_TAG"
+}
+curl() {
+  printf 'curl %s\\n' "$*" >> "$COMMAND_LOG"
+  case "$*" in
+    *"ghcr.io/token"*) printf '{"token":"registry-token"}' ;;
+    *"/manifests/"*) printf '{"config":{"digest":"%s"}}' "$EXPECTED_WORKSPACE_CONFIG_DIGEST" ;;
+    *"/blobs/"*) printf '{"config":{"Labels":{"org.opencontainers.image.revision":"%s"}}}' "$EXPECTED_WORKSPACE_OCI_REVISION" ;;
+  esac
+}
+jq() {
+  command cat >/dev/null
+  case "$*" in
+    *".token"*) printf 'registry-token\\n' ;;
+    *".config.digest"*) printf '%s\\n' "$EXPECTED_WORKSPACE_CONFIG_DIGEST" ;;
+    *"org.opencontainers.image.revision"*) printf '%s\\n' "$EXPECTED_WORKSPACE_OCI_REVISION" ;;
+  esac
+}
+${step.run}
+`;
+  const result = spawnSync("bash", ["-c", harness], {
+    cwd: fileURLToPath(repoFile(".")),
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      COMMAND_LOG: commandLog,
+      GITHUB_OUTPUT: githubOutput,
+      GITHUB_ENV: githubEnv,
+      GITHUB_STEP_SUMMARY: githubSummary,
+      PUBLISH_CLOUD_IMAGE: publishCloudImage ? "true" : "false",
+      MIRROR_WORKSPACE_IMAGE: mirrorWorkspaceImage ? "true" : "false",
+      TCR_ID: "test-user",
+      TCR_SECRET: "test-password",
+      GHCR_USERNAME: "test-user",
+      GHCR_TOKEN: "test-token",
+      OPL_CLOUD_IMAGE_CONTEXT: ".",
+      OPL_CLOUD_IMAGE_REPOSITORY: "registry.example.test/opl/cloud",
+      OPL_CLOUD_IMAGE_REF: "registry.example.test/opl/cloud:cloud-test",
+      OPL_WORKSPACE_IMAGE_REPOSITORY: "registry.example.test/opl/workspace",
+      OPL_WORKSPACE_IMAGE_REF: "registry.example.test/opl/workspace:26.7.13",
+      WORKSPACE_SOURCE_IMAGE: primaryWorkspaceSource,
+      REQUESTED_WORKSPACE_IMAGE_TAG: "26.7.13",
+      EXPECTED_WORKSPACE_TAG_COMMIT: primaryWorkspaceTagCommit,
+      EXPECTED_WORKSPACE_CONFIG_DIGEST: primaryWorkspaceConfigDigest,
+      EXPECTED_WORKSPACE_OCI_REVISION: primaryWorkspaceRevision,
+      CLOUD_DIGEST: cloudDigest,
+      WORKSPACE_DIGEST: primaryWorkspaceSource.split("@")[1]
+    }
+  });
+  const outputs = Object.fromEntries((await readFile(githubOutput, "utf8"))
+    .trim().split("\n").filter(Boolean).map((line) => {
+      const separator = line.indexOf("=");
+      return [line.slice(0, separator), line.slice(separator + 1)];
+    }));
+  const commands = await readFile(commandLog, "utf8");
+  await rm(root, { recursive: true, force: true });
+  return { ...result, commands, outputs, cloudDigest };
 }
 
 function assertWorkflowContract(workflow, spec, rootContract) {
@@ -135,10 +214,14 @@ test("TKE deploy workflow matches the current deployment contract", async () => 
   assert.ok(contract.deployWorkflow.requiredEnv.includes("OPL_TENCENT_ZONE"));
   assert.equal(contract.productionVerificationWorkflow.launchStatus, "active");
   assert.equal(contract.productionVerificationWorkflow.mode, "read_only_fixed_slot");
+  assert.deepEqual(contract.productionVerificationWorkflow.requiredInputs, ["account_id"]);
+  assert.equal(contract.productionVerificationWorkflow.requestTimeoutMsDefault, 30_000);
+  assert.equal(contract.productionVerificationWorkflow.timeoutMinutes, 15);
   assert.deepEqual(contract.productionVerificationWorkflow.slotDescriptor, fixedSlotDescriptor);
   assertWorkflowContract(await readWorkflow(contract.productionVerificationWorkflow.file), contract.productionVerificationWorkflow, contract);
   assert.equal(contract.productionLiveQaJob.releaseGate, true);
   assert.equal(contract.productionLiveQaJob.mode, "one_model_request_no_provider_mutation");
+  assert.equal(contract.productionLiveQaJob.requestTimeoutMsDefault, 30_000);
   assert.deepEqual(contract.productionLiveQaJob.slotDescriptor, fixedSlotDescriptor);
   assertWorkflowContract(deployWorkflow, contract.productionLiveQaJob, contract);
   assert.ok(contract.productionLegacySecretCleanupJob);
@@ -149,6 +232,8 @@ test("TKE deploy workflow matches the current deployment contract", async () => 
   assertWorkflowContract(deployWorkflow, contract.productionLegacySecretCleanupJob, contract);
   assert.equal(contract.productionRollbackJob.trigger, "post_snapshot_deploy_or_live_qa_not_successful");
   assertWorkflowContract(deployWorkflow, contract.productionRollbackJob, contract);
+  assert.deepEqual(contract.imageReleaseWorkflow.outputs, ["cloud_image", "workspace_image"]);
+  assert.equal(contract.imageReleaseWorkflow.skippedOutput, "empty");
   assert.doesNotMatch(JSON.stringify(contract), /paid_confirmation|OPL_VERIFY_PAID_CONFIRMATION|OPL_VERIFY_MODEL_ACCESS_KEY/);
 });
 
@@ -161,6 +246,11 @@ test("production verification is read only and fixed to the reusable prepaid slo
 
   assert.equal(workflow.concurrency.group, "production-resource-verification");
   assert.equal(workflow.concurrency["cancel-in-progress"], false);
+  assert.equal(currentJob["timeout-minutes"], 15);
+  assert.equal(workflow.on.workflow_dispatch.inputs.account_id.required, true);
+  assert.equal(Object.hasOwn(workflow.on.workflow_dispatch.inputs.account_id, "default"), false);
+  assert.equal(workflow.on.workflow_dispatch.inputs.request_timeout_ms.default, "30000");
+  assert.equal(currentJob.env.OPL_VERIFY_REQUEST_TIMEOUT_MS, "${{ inputs.request_timeout_ms }}");
   assert.equal(inputs.includes("paid_confirmation"), false);
   assert.equal(Object.hasOwn(currentJob.env, "OPL_VERIFY_PAID_CONFIRMATION"), false);
   assert.equal(Object.hasOwn(currentJob.env, "OPL_VERIFY_MODEL_ACCESS_KEY"), false);
@@ -237,6 +327,42 @@ test("image release pins and verifies both source and target digests", async () 
   assert.match(runs, /OPL_WORKSPACE_IMAGE=.*@\$\{workspace_digest\}/);
   assert.match(runs, /workspace_digest.*\$\{WORKSPACE_SOURCE_IMAGE##\*@\}/s);
   assert.doesNotMatch(runs, /:latest\b|:stable\b/);
+});
+
+test("image release switches isolate publication commands and leave skipped outputs empty", async () => {
+  const workflow = await readWorkflow(".github/workflows/release-opl-cloud-image.yml");
+  const currentJob = workflowJob(workflow, "build-push");
+  const release = stepsByName(currentJob).get("Build and push images");
+
+  const disabled = await runImageReleaseStep(release, false, false);
+  assert.equal(disabled.status, 0, disabled.stderr);
+  assert.equal(disabled.commands, "");
+  assert.deepEqual(disabled.outputs, { cloud_image: "", workspace_image: "" });
+
+  const cloudOnly = await runImageReleaseStep(release, true, false);
+  assert.equal(cloudOnly.status, 0, cloudOnly.stderr);
+  assert.match(cloudOnly.commands, /docker buildx build --push/);
+  assert.match(cloudOnly.commands, /imagetools inspect registry\.example\.test\/opl\/cloud:cloud-test/);
+  assert.doesNotMatch(cloudOnly.commands, /ghcr\.io|one-person-lab|imagetools create|git ls-remote|curl /);
+  assert.deepEqual(cloudOnly.outputs, {
+    cloud_image: `registry.example.test/opl/cloud@${cloudOnly.cloudDigest}`,
+    workspace_image: ""
+  });
+
+  const workspaceOnly = await runImageReleaseStep(release, false, true);
+  assert.equal(workspaceOnly.status, 0, workspaceOnly.stderr);
+  assert.doesNotMatch(workspaceOnly.commands, /docker buildx build --push|imagetools inspect registry\.example\.test\/opl\/cloud/);
+  assert.match(workspaceOnly.commands, /git ls-remote/);
+  assert.match(workspaceOnly.commands, /curl .*ghcr\.io/);
+  assert.match(workspaceOnly.commands, /imagetools create --prefer-index=false/);
+  assert.match(workspaceOnly.commands, /imagetools inspect registry\.example\.test\/opl\/workspace:26\.7\.13/);
+  assert.deepEqual(workspaceOnly.outputs, {
+    cloud_image: "",
+    workspace_image: `registry.example.test/opl/workspace@${primaryWorkspaceSource.split("@")[1]}`
+  });
+
+  assert.equal(currentJob.outputs.cloud_image, "${{ steps.images.outputs.cloud_image }}");
+  assert.equal(currentJob.outputs.workspace_image, "${{ steps.images.outputs.workspace_image }}");
 });
 
 test("image release accepts only the exact primary and fallback tag-digest pairs", async () => {

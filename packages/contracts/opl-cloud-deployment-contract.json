@@ -209,8 +209,12 @@
       "run_id",
       "account_id",
       "url_attempts",
-      "retry_delay_ms"
+      "retry_delay_ms",
+      "request_timeout_ms"
     ],
+    "requiredInputs": ["account_id"],
+    "requestTimeoutMsDefault": 30000,
+    "timeoutMinutes": 15,
     "requiredEnv": [
       "OPL_CONSOLE_ORIGIN",
       "OPL_VERIFY_AUTH_USERS_JSON",
@@ -220,6 +224,7 @@
       "OPL_VERIFY_PURCHASE_BUDGET_REMAINING",
       "OPL_VERIFY_URL_ATTEMPTS",
       "OPL_VERIFY_RETRY_DELAY_MS",
+      "OPL_VERIFY_REQUEST_TIMEOUT_MS",
       "OPL_VERIFY_RUN_ID",
       "OPL_VERIFY_SCREENSHOT_DIR",
       "OPL_VERIFY_MANIFEST_PATH"
@@ -262,6 +267,7 @@
     "job": "live-qa",
     "releaseGate": true,
     "mode": "one_model_request_no_provider_mutation",
+    "requestTimeoutMsDefault": 30000,
     "slotDescriptor": {
       "id": "verification-slot-01",
       "customerProduct": false,
@@ -286,6 +292,7 @@
       "OPL_VERIFY_PURCHASE_BUDGET_REMAINING",
       "OPL_VERIFY_URL_ATTEMPTS",
       "OPL_VERIFY_RETRY_DELAY_MS",
+      "OPL_VERIFY_REQUEST_TIMEOUT_MS",
       "OPL_VERIFY_USAGE_ATTEMPTS",
       "OPL_VERIFY_USAGE_RETRY_DELAY_MS",
       "OPL_VERIFY_BROWSER_TIMEOUT_MS",
@@ -442,6 +449,8 @@
       "workspace_source_image",
       "workspace_image_tag"
     ],
+    "outputs": ["cloud_image", "workspace_image"],
+    "skippedOutput": "empty",
     "env": {
       "OPL_CLOUD_IMAGE_REPOSITORY": "uswccr.ccs.tencentyun.com/oplcloud/opl-cloud",
       "OPL_WORKSPACE_IMAGE_REPOSITORY": "uswccr.ccs.tencentyun.com/oplcloud/one-person-lab-app"

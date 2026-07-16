@@ -16,3 +16,9 @@ export function login(credentials) {
 export function logout(csrfToken) {
   return postJson("/api/auth/logout", {}, csrfToken);
 }
+
+export async function logoutLocalFirst(csrfToken, clearLocalSession, redirect) {
+  clearLocalSession();
+  redirect();
+  await logout(csrfToken);
+}

@@ -146,6 +146,7 @@ function liveFixture({ changedResourceIds = false, frames = true, responseSuffix
         accountId: "acct-alpha",
         ownerAccountId: "acct-alpha",
         verificationSlotId: "verification-slot-01",
+        customerProduct: false,
         currentComputeAllocationId: "compute-slot-1",
         storageId: "storage-slot-1",
         state: "running",
@@ -165,7 +166,7 @@ function liveFixture({ changedResourceIds = false, frames = true, responseSuffix
     const url = new URL(String(input));
     const method = init.method || "GET";
     const headers = new Headers(init.headers);
-    calls.push({ method, path: url.pathname });
+    calls.push({ method, path: url.pathname, signal: init.signal });
     if (url.hostname === "workspace.medopl.cn") return new Response("<main>workspace</main>", { status: 200 });
     if (url.pathname === "/api/production/readiness") return json({ ready: true });
     if (url.pathname === "/api/auth/login") {
@@ -245,6 +246,7 @@ test("rollout QA proves Workspace login, WebSocket frames, one model response, u
   assert.equal(fixture.state.modelRequests, 1);
   assert.doesNotMatch(JSON.stringify(result), /console-password|workspace-password|sk-\*\*\*\*|OPL_QA_/);
   assert.equal(fixture.calls.some((call) => /create|destroy|detach|renew/i.test(call.path)), false);
+  assert.equal(fixture.calls.every((call) => call.signal instanceof AbortSignal), true);
 });
 
 test("rollout QA fails before the model request when WebSocket frames are missing", async () => {
@@ -301,6 +303,7 @@ test("rollout QA CLI rejects an invalid slot descriptor before network access", 
     env: {
       OPL_CONSOLE_ORIGIN: "https://cloud.medopl.cn",
       OPL_VERIFY_AUTH_USERS_JSON: ownerSeed,
+      OPL_VERIFY_ACCOUNT_ID: "acct-alpha",
       OPL_VERIFY_LIVE_QA_CONFIRMATION: LIVE_QA_CONFIRMATION,
       OPL_VERIFY_SLOT_DESCRIPTOR_JSON: "{",
       OPL_VERIFY_PURCHASE_BUDGET_REMAINING: "0"
@@ -321,6 +324,7 @@ test("rollout QA CLI requires an explicit purchase budget before network access"
     env: {
       OPL_CONSOLE_ORIGIN: "https://cloud.medopl.cn",
       OPL_VERIFY_AUTH_USERS_JSON: ownerSeed,
+      OPL_VERIFY_ACCOUNT_ID: "acct-alpha",
       OPL_VERIFY_LIVE_QA_CONFIRMATION: LIVE_QA_CONFIRMATION,
       OPL_VERIFY_SLOT_DESCRIPTOR_JSON: JSON.stringify(fixedSlotDescriptor)
     },

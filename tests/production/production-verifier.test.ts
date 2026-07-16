@@ -4,6 +4,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 import {
+  requestJson,
   runProductionVerifierCli,
   verificationOwnerFromSeed,
   verifyProductionChain
@@ -38,7 +39,7 @@ function json(payload, status = 200, headers = {}) {
   });
 }
 
-function fixedSlotFixture({ slotCount = 1, ambiguous = false, inactive = false, nameOnly = false, mutate } = {}) {
+function fixedSlotFixture({ slotCount = 1, ambiguous = false, inactive = false, nameOnly = false, customerProduct = false, mutate } = {}) {
   const calls = [];
   const computeAllocations = [];
   const storageVolumes = [];
@@ -91,6 +92,7 @@ function fixedSlotFixture({ slotCount = 1, ambiguous = false, inactive = false, 
       ownerAccountId: "acct-alpha",
       name: FIXED_VERIFICATION_SLOT_ID,
       ...(nameOnly ? {} : { verificationSlotId: FIXED_VERIFICATION_SLOT_ID }),
+      customerProduct,
       currentComputeAllocationId: `compute-slot-${suffix}`,
       storageId: `storage-slot-${suffix}`,
       state: "running",
@@ -103,7 +105,7 @@ function fixedSlotFixture({ slotCount = 1, ambiguous = false, inactive = false, 
   const fetchImpl = async (input, init = {}) => {
     const url = new URL(String(input));
     const method = init.method || "GET";
-    calls.push({ method, path: url.pathname, search: url.search });
+    calls.push({ method, path: url.pathname, search: url.search, signal: init.signal });
 
     if (url.hostname === "workspace.medopl.cn") {
       return new Response("<!doctype html><main>verification slot ready</main>", { status: 200 });
@@ -163,11 +165,54 @@ test("production verifier requires one mapped owner", () => {
   ])), /verification_owner_credentials_required/);
 });
 
+test("production verifier fetches have a bounded timeout and preserve caller aborts", async () => {
+  const signals: AbortSignal[] = [];
+  const delayedFetch = async (_input, init = {}) => new Promise<Response>((resolve, reject) => {
+    if (init.signal) {
+      signals.push(init.signal);
+      init.signal.addEventListener("abort", () => reject(init.signal.reason), { once: true });
+    }
+    setTimeout(() => resolve(json({ ok: true })), 30);
+  });
+
+  await assert.rejects(
+    requestJson({ fetchImpl: delayedFetch, origin: "https://cloud.medopl.cn", path: "/api/production/readiness", timeoutMs: 5 }),
+    (error: any) => error?.name === "TimeoutError"
+  );
+
+  const caller = new AbortController();
+  const pending = requestJson({
+    fetchImpl: delayedFetch,
+    origin: "https://cloud.medopl.cn",
+    path: "/api/production/readiness",
+    timeoutMs: 1_000,
+    signal: caller.signal
+  });
+  caller.abort(new Error("caller_abort"));
+  await assert.rejects(pending, /caller_abort/);
+  assert.equal(signals.length, 2);
+  assert.equal(signals.every((signal) => signal.aborted), true);
+});
+
+test("production verifier requires the dedicated account id before network access", async () => {
+  let calls = 0;
+  await assert.rejects(() => verifyProductionChain({
+    origin: "https://cloud.medopl.cn",
+    authUsersJson: ownerSeed,
+    slotDescriptor: fixedSlotDescriptor,
+    runId: "missing-account",
+    purchaseBudgetRemaining: 0,
+    fetchImpl: async () => { calls += 1; return json({}); }
+  }), /verification_account_id_required/);
+  assert.equal(calls, 0);
+});
+
 test("production verifier rejects a non-production Console host before network access", async () => {
   let calls = 0;
   await assert.rejects(() => verifyProductionChain({
     origin: "https://attacker.example",
     authUsersJson: ownerSeed,
+    accountId: "acct-alpha",
     slotDescriptor: fixedSlotDescriptor,
     runId: "wrong-console-host",
     purchaseBudgetRemaining: 0,
@@ -201,6 +246,7 @@ test("production verifier requires an exact controlled slot descriptor before ne
     await assert.rejects(() => verifyProductionChain({
       origin: "https://cloud.medopl.cn",
       authUsersJson: ownerSeed,
+      accountId: "acct-alpha",
       slotDescriptor,
       runId: "slot-descriptor-guard",
       fetchImpl: async () => { calls += 1; return json({}); }
@@ -245,9 +291,10 @@ test("ordinary production verifier reuses exactly one fixed slot without resourc
   assert.equal(result.workspaceId, "workspace-slot-1");
   assert.doesNotMatch(JSON.stringify(result), /correct horse|session-alpha|sk-\*\*\*\*/);
   assert.deepEqual(fixture.calls.filter((call) => call.method !== "GET"), [
-    { method: "POST", path: "/api/auth/login", search: "" }
+    { method: "POST", path: "/api/auth/login", search: "", signal: fixture.calls[1].signal }
   ]);
   assert.equal(fixture.calls.some((call) => /create|destroy|detach|sync/i.test(call.path)), false);
+  assert.equal(fixture.calls.every((call) => call.signal instanceof AbortSignal), true);
 });
 
 test("zero slots only reports that independent Provider Acceptance is required", async () => {
@@ -255,6 +302,7 @@ test("zero slots only reports that independent Provider Acceptance is required",
   const result = await verifyProductionChain({
     origin: "https://cloud.medopl.cn",
     authUsersJson: ownerSeed,
+    accountId: "acct-alpha",
     slotDescriptor: fixedSlotDescriptor,
     runId: "slot-missing",
     purchaseBudgetRemaining: 1,
@@ -268,25 +316,28 @@ test("zero slots only reports that independent Provider Acceptance is required",
   assert.equal(fixture.calls.some((call) => call.path.includes("compute-allocations") || call.path.includes("storage-volumes")), false);
 });
 
-test("the fixed slot can use the existing exact Workspace name as its marker", async () => {
-  const fixture = fixedSlotFixture({ nameOnly: true });
-  const result = await verifyProductionChain({
-    origin: "https://cloud.medopl.cn",
-    authUsersJson: ownerSeed,
-    slotDescriptor: fixedSlotDescriptor,
-    runId: "named-slot",
-    purchaseBudgetRemaining: 0,
-    fetchImpl: fixture.fetchImpl
-  });
-
-  assert.equal(result.ok, true);
-  assert.equal(result.slot.id, FIXED_VERIFICATION_SLOT_ID);
+test("same-name customer Workspaces cannot stand in for the server-marked fixed slot", async () => {
+  for (const fixture of [
+    fixedSlotFixture({ nameOnly: true }),
+    fixedSlotFixture({ customerProduct: true })
+  ]) {
+    await assert.rejects(() => verifyProductionChain({
+      origin: "https://cloud.medopl.cn",
+      authUsersJson: ownerSeed,
+      accountId: "acct-alpha",
+      slotDescriptor: fixedSlotDescriptor,
+      runId: "customer-workspace-rejected",
+      purchaseBudgetRemaining: 0,
+      fetchImpl: fixture.fetchImpl
+    }), /verification_slot_(?:purchase_budget_exhausted|ambiguous)/);
+  }
 });
 
 test("fixed-slot selection fails closed on exhausted budget, duplicates, or ambiguity", async () => {
   const options = (fixture, purchaseBudgetRemaining = 1) => ({
     origin: "https://cloud.medopl.cn",
     authUsersJson: ownerSeed,
+    accountId: "acct-alpha",
     slotDescriptor: fixedSlotDescriptor,
     runId: "slot-guard",
     purchaseBudgetRemaining,
@@ -315,7 +366,9 @@ test("fixed-slot reuse requires prepaid shape, live deadlines, one zone, and acc
     ({ storageVolumes }) => { delete storageVolumes[0].providerData.pvName; },
     ({ storageVolumes }) => { storageVolumes[0].sizeGb = 20; },
     ({ storageVolumes }) => { storageVolumes[0].workspaceId = "workspace-other"; },
-    ({ workspaces }) => { workspaces[0].accountId = "acct-other"; }
+    ({ workspaces }) => { workspaces[0].accountId = "acct-other"; },
+    ({ workspaces }) => { workspaces[0].customerProduct = true; },
+    ({ workspaces }) => { delete workspaces[0].customerProduct; }
   ];
 
   for (const mutate of mutations) {
@@ -323,6 +376,7 @@ test("fixed-slot reuse requires prepaid shape, live deadlines, one zone, and acc
     await assert.rejects(() => verifyProductionChain({
       origin: "https://cloud.medopl.cn",
       authUsersJson: ownerSeed,
+      accountId: "acct-alpha",
       slotDescriptor: fixedSlotDescriptor,
       runId: "slot-compliance",
       purchaseBudgetRemaining: 0,
@@ -342,6 +396,7 @@ test("fixed-slot reuse requires exact one-month provider periods from resource s
     await assert.rejects(() => verifyProductionChain({
       origin: "https://cloud.medopl.cn",
       authUsersJson: ownerSeed,
+      accountId: "acct-alpha",
       slotDescriptor: fixedSlotDescriptor,
       runId: "slot-internal-one-month",
       purchaseBudgetRemaining: 0,

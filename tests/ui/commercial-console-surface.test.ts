@@ -31,11 +31,8 @@ test("Gateway loads on page entry and reveals or copies only on explicit action"
   assert.match(apiSource, /\/api\/gateway\/summary/);
   assert.match(apiSource, /reveal=true/);
   assert.match(gatewaySource, /React\.useEffect/);
-  assert.match(gatewaySource, /getGatewaySummary\(false\)/);
-  assert.match(gatewaySource, /getGatewaySummary\(true\)/);
   assert.match(gatewaySource, /maskedValue/);
   assert.match(gatewaySource, /navigator\.clipboard\.writeText/);
-  assert.match(gatewaySource, /active = false/);
   assert.doesNotMatch(gatewaySource, /localStorage|sessionStorage/);
   assert.doesNotMatch(gatewaySource, /职责边界|Control Plane|Fabric|Ledger/);
 });

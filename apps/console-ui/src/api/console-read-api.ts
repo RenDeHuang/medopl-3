@@ -27,8 +27,8 @@ export function getPricingCatalog() {
   return getJson("/api/pricing/catalog");
 }
 
-export function getGatewaySummary(reveal = false) {
-  return getJson(`/api/gateway/summary${reveal ? "?reveal=true" : ""}`);
+export function getGatewaySummary(reveal = false, signal?: AbortSignal) {
+  return getJson(`/api/gateway/summary${reveal ? "?reveal=true" : ""}`, { signal });
 }
 
 export function getManagementState(organizationId = "", includeDeleted = false) {

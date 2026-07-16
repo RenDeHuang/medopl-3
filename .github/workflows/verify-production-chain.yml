@@ -9,8 +9,7 @@ on:
         type: string
       account_id:
         description: Account id that owns the reusable verification slot.
-        required: false
-        default: ""
+        required: true
         type: string
       url_attempts:
         description: Workspace URL readiness attempts.
@@ -21,6 +20,11 @@ on:
         description: Delay between Workspace readiness attempts.
         required: false
         default: "10000"
+        type: string
+      request_timeout_ms:
+        description: Maximum duration of each verifier HTTP request.
+        required: false
+        default: "30000"
         type: string
 
 permissions:
@@ -34,6 +38,7 @@ jobs:
   verify:
     name: Verify live OPL business chain
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     environment: production
     outputs:
       workspace_id: ${{ steps.verify.outputs.workspace_id }}
@@ -47,6 +52,7 @@ jobs:
       OPL_VERIFY_PURCHASE_BUDGET_REMAINING: ${{ vars.OPL_VERIFY_PURCHASE_BUDGET_REMAINING }}
       OPL_VERIFY_URL_ATTEMPTS: ${{ inputs.url_attempts }}
       OPL_VERIFY_RETRY_DELAY_MS: ${{ inputs.retry_delay_ms }}
+      OPL_VERIFY_REQUEST_TIMEOUT_MS: ${{ inputs.request_timeout_ms }}
       OPL_VERIFY_RUN_ID: ${{ inputs.run_id || github.run_id }}
       OPL_VERIFY_SCREENSHOT_DIR: "artifacts/production-browser-e2e"
       OPL_VERIFY_MANIFEST_PATH: "artifacts/production-browser-e2e/manifest.json"

@@ -16,6 +16,7 @@ const DEFAULT_USAGE_ATTEMPTS = 24;
 const DEFAULT_USAGE_RETRY_DELAY_MS = 5_000;
 const DEFAULT_BROWSER_TIMEOUT_MS = 45_000;
 const DEFAULT_MODEL_TIMEOUT_MS = 180_000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
 
 function sleep(ms) {
   return ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
@@ -104,10 +105,10 @@ export async function verifyWorkspaceBrowserQa({
     });
     const loginPayload = await loginResponse.json();
     if (!loginResponse.ok() || loginPayload?.success !== true || !loginPayload?.user) throw new Error("workspace_password_login_failed");
-    const authUser = await page.evaluate(async () => {
-      const response = await fetch("/api/auth/user", { credentials: "include" });
+    const authUser = await page.evaluate(async (timeoutMs) => {
+      const response = await fetch("/api/auth/user", { credentials: "include", signal: AbortSignal.timeout(timeoutMs) });
       return { status: response.status, payload: await response.json() };
-    });
+    }, browserTimeoutMs);
     if (authUser?.status !== 200 || authUser?.payload?.success !== true || !authUser?.payload?.user) throw new Error("workspace_auth_user_failed");
 
     let opened = false;
@@ -183,15 +184,18 @@ export async function verifyProductionLiveQa(options = {}) {
     usageRetryDelayMs = DEFAULT_USAGE_RETRY_DELAY_MS,
     browserTimeoutMs = DEFAULT_BROWSER_TIMEOUT_MS,
     modelTimeoutMs = DEFAULT_MODEL_TIMEOUT_MS,
+    requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
     manifestPath = "",
     browserFactory,
     fetchImpl = globalThis.fetch,
+    signal,
     now = new Date()
   } = options;
   if (confirmation !== LIVE_QA_CONFIRMATION) throw new Error("production_live_qa_confirmation_required");
   if (!Number.isInteger(usageAttempts) || usageAttempts < 1 || !Number.isFinite(usageRetryDelayMs) || usageRetryDelayMs < 0 || !Number.isFinite(browserTimeoutMs) || browserTimeoutMs < 1 || !Number.isFinite(modelTimeoutMs) || modelTimeoutMs < 1) {
     throw new Error("production_live_qa_config_invalid");
   }
+  if (!String(accountId).trim()) throw new Error("verification_account_id_required");
 
   const owner = verificationOwnerFromSeed(authUsersJson, accountId);
   const normalizedOrigin = assertPublicHttpsUrl(origin, "public_console_origin_required", { hostname: "cloud.medopl.cn" }).origin;
@@ -205,7 +209,9 @@ export async function verifyProductionLiveQa(options = {}) {
     purchaseBudgetRemaining,
     workspaceUrlAttempts,
     retryDelayMs,
+    requestTimeoutMs,
     now,
+    signal,
     fetchImpl
   };
   const before = await verifyProductionChain(verifierOptions);
@@ -213,11 +219,11 @@ export async function verifyProductionLiveQa(options = {}) {
   if (!before.ok || before.status !== "reused") throw new Error("production_live_qa_reusable_slot_required");
   const beforeIds = resourceIds(before);
 
-  const auth = await login({ fetchImpl, origin: normalizedOrigin, email: owner.email, password: owner.password });
+  const requestOptions = { fetchImpl, origin: normalizedOrigin, signal, timeoutMs: requestTimeoutMs };
+  const auth = await login({ ...requestOptions, email: owner.email, password: owner.password });
   if (auth.user?.accountId !== owner.accountId || !auth.csrfToken) throw new Error("production_live_qa_console_login_failed");
   const runtime = (await requestJson({
-    fetchImpl,
-    origin: normalizedOrigin,
+    ...requestOptions,
     auth,
     path: "/api/workspaces/runtime-status",
     method: "POST",
@@ -227,7 +233,7 @@ export async function verifyProductionLiveQa(options = {}) {
     throw new Error("production_live_qa_runtime_credentials_required");
   }
 
-  const gatewayBefore = (await requestJson({ fetchImpl, origin: normalizedOrigin, auth, path: "/api/gateway/summary" })).payload;
+  const gatewayBefore = (await requestJson({ ...requestOptions, auth, path: "/api/gateway/summary" })).payload;
   const keyBefore = dedicatedKey(gatewayBefore);
   const workspace = await verifyWorkspaceBrowserQa({
     url: runtime.url || before.url,
@@ -243,7 +249,7 @@ export async function verifyProductionLiveQa(options = {}) {
   let usageReadAttempts = 0;
   for (let attempt = 1; attempt <= usageAttempts; attempt += 1) {
     usageReadAttempts = attempt;
-    const gatewayAfter = (await requestJson({ fetchImpl, origin: normalizedOrigin, auth, path: "/api/gateway/summary" })).payload;
+    const gatewayAfter = (await requestJson({ ...requestOptions, auth, path: "/api/gateway/summary" })).payload;
     keyAfter = dedicatedKey(gatewayAfter, keyBefore.id);
     if (usageIncreased(keyBefore.usage, keyAfter.usage)) break;
     if (attempt < usageAttempts) await sleep(usageRetryDelayMs);
@@ -311,6 +317,7 @@ export async function runProductionLiveQaCli({
       usageRetryDelayMs: Number(env.OPL_VERIFY_USAGE_RETRY_DELAY_MS || DEFAULT_USAGE_RETRY_DELAY_MS),
       browserTimeoutMs: Number(env.OPL_VERIFY_BROWSER_TIMEOUT_MS || DEFAULT_BROWSER_TIMEOUT_MS),
       modelTimeoutMs: Number(env.OPL_VERIFY_MODEL_TIMEOUT_MS || DEFAULT_MODEL_TIMEOUT_MS),
+      requestTimeoutMs: Number(env.OPL_VERIFY_REQUEST_TIMEOUT_MS || DEFAULT_REQUEST_TIMEOUT_MS),
       manifestPath: env.OPL_VERIFY_MANIFEST_PATH || "",
       browserFactory,
       fetchImpl
