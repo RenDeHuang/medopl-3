@@ -25,14 +25,8 @@ test("Provider Acceptance replays one fixed operator operation until the slot is
     const url = new URL(input);
     const headers = new Headers(init.headers);
     calls.push({ path: url.pathname, method: init.method || "GET", headers, body: init.body && JSON.parse(init.body) });
-    if (url.pathname === "/api/auth/operator-login") {
-      assert.equal(headers.get("x-opl-operator-token"), operatorToken);
-      return json({ isOperator: true, user: { id: "usr-operator", role: "admin", accountId: "acct-operator" } }, 200, {
-        "set-cookie": "opl_session=operator-session; Path=/; HttpOnly",
-        "x-opl-csrf-token": "csrf-operator"
-      });
-    }
     if (url.pathname === "/api/operator/provider-acceptance") {
+	  assert.equal(headers.get("x-opl-operator-token"), operatorToken);
       attempts += 1;
       return json({
         ok: true,
@@ -55,20 +49,19 @@ test("Provider Acceptance replays one fixed operator operation until the slot is
 
   assert.equal(result.status, "reused");
   assert.deepEqual(calls.map((call) => [call.method, call.path]), [
-    ["POST", "/api/auth/operator-login"],
     ["POST", "/api/operator/provider-acceptance"],
     ["POST", "/api/operator/provider-acceptance"]
   ]);
-  for (const call of calls.slice(1)) {
+  for (const call of calls) {
     assert.deepEqual(call.body, {
       accountId: "acct-verification-slot-01",
       confirmation: PROVIDER_ACCEPTANCE_CONFIRMATION,
       slotId: "verification-slot-01"
     });
-    assert.equal(call.headers.get("x-opl-csrf"), "csrf-operator");
+    assert.equal(call.headers.get("x-opl-operator-token"), operatorToken);
     assert.equal(call.headers.get("idempotency-key"), "provider-acceptance:verification-slot-01");
   }
-  assert.doesNotMatch(JSON.stringify(result), /operator-summary-token|operator-session|csrf-operator/);
+  assert.doesNotMatch(JSON.stringify(result), /operator-summary-token/);
 });
 
 test("Provider Acceptance rejects missing authority before network access and stops on manual review", async () => {
@@ -84,15 +77,8 @@ test("Provider Acceptance rejects missing authority before network access and st
 
   const fetchImpl = async (input, init = {}) => {
     calls += 1;
-    const url = new URL(input);
-    if (url.pathname === "/api/auth/operator-login") {
-      assert.equal(new Headers(init.headers).get("x-opl-operator-token"), operatorToken);
-      return json({ isOperator: true, user: { id: "usr-operator", role: "admin", accountId: "acct-operator" } }, 200, {
-        "set-cookie": "opl_session=operator-session; Path=/; HttpOnly",
-        "x-opl-csrf-token": "csrf-operator"
-      });
-    }
     assert.equal(init.method, "POST");
+	assert.equal(new Headers(init.headers).get("x-opl-operator-token"), operatorToken);
     return json({ ok: false, status: "manual_review", reason: "provider_result_unknown" });
   };
   await assert.rejects(() => runProviderAcceptance({
@@ -104,7 +90,7 @@ test("Provider Acceptance rejects missing authority before network access and st
     retryDelayMs: 0,
     fetchImpl
   }), /provider_acceptance_manual_review/);
-  assert.equal(calls, 2);
+  assert.equal(calls, 1);
 });
 
 test("Provider Acceptance workflow is manual, fixed, and cannot mutate resources directly", async () => {

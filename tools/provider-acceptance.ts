@@ -2,8 +2,6 @@ import { pathToFileURL } from "node:url";
 
 import {
   assertPublicHttpsUrl,
-  requestJson,
-  responseCookie,
   writeVerificationManifest
 } from "./production-verifier.ts";
 
@@ -15,19 +13,6 @@ function sleep(ms) {
   return ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
 }
 
-async function operatorLogin({ fetchImpl, origin, operatorToken, signal, timeoutMs }) {
-  if (!String(operatorToken || "").trim()) throw new Error("provider_acceptance_operator_token_required");
-  const { payload, response } = await requestJson({
-    fetchImpl, origin, path: "/api/auth/operator-login", method: "POST", body: {}, signal, timeoutMs,
-    headers: { "x-opl-operator-token": operatorToken }
-  });
-  const cookie = responseCookie(response.headers);
-  if (!cookie || payload?.isOperator !== true || payload?.user?.id !== "usr-operator" || payload.user.role !== "admin" || payload.user.accountId !== "acct-operator") {
-    throw new Error("provider_acceptance_operator_login_failed");
-  }
-  return { cookie, csrfToken: response.headers.get("x-opl-csrf-token") || "" };
-}
-
 function safeResult(value) {
   if (Array.isArray(value)) return value.map(safeResult);
   if (!value || typeof value !== "object") return value;
@@ -36,13 +21,12 @@ function safeResult(value) {
     .map(([key, nested]) => [key, safeResult(nested)]));
 }
 
-async function postAcceptance({ fetchImpl, origin, auth, accountId, confirmation, signal, timeoutMs }) {
+async function postAcceptance({ fetchImpl, origin, operatorToken, accountId, confirmation, signal, timeoutMs }) {
   const response = await fetchImpl(`${origin}/api/operator/provider-acceptance`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      cookie: auth.cookie,
-      "x-opl-csrf": auth.csrfToken,
+      "x-opl-operator-token": operatorToken,
       "idempotency-key": IDEMPOTENCY_KEY
     },
     body: JSON.stringify({ accountId, confirmation, slotId: SLOT_ID }),
@@ -72,15 +56,14 @@ export async function runProviderAcceptance({
   fetchImpl = globalThis.fetch
 } = {}) {
   if (confirmation !== PROVIDER_ACCEPTANCE_CONFIRMATION) throw new Error("provider_acceptance_confirmation_required");
+	if (!String(operatorToken || "").trim()) throw new Error("provider_acceptance_operator_token_required");
   if (!/^[A-Za-z0-9._:-]{1,128}$/.test(String(accountId || ""))) throw new Error("provider_acceptance_account_id_required");
   if (!Number.isInteger(attempts) || attempts < 1 || attempts > 120 || !Number.isFinite(retryDelayMs) || retryDelayMs < 0) throw new Error("provider_acceptance_retry_config_invalid");
   if (!Number.isInteger(requestTimeoutMs) || requestTimeoutMs < 1 || requestTimeoutMs > 300_000) throw new Error("provider_acceptance_request_timeout_invalid");
 
   const normalizedOrigin = assertPublicHttpsUrl(origin, "public_console_origin_required", { hostname: "cloud.medopl.cn" }).origin;
-  const auth = await operatorLogin({ fetchImpl, origin: normalizedOrigin, operatorToken, signal, timeoutMs: requestTimeoutMs });
-
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
-    const payload = await postAcceptance({ fetchImpl, origin: normalizedOrigin, auth, accountId, confirmation, signal, timeoutMs: requestTimeoutMs });
+    const payload = await postAcceptance({ fetchImpl, origin: normalizedOrigin, operatorToken, accountId, confirmation, signal, timeoutMs: requestTimeoutMs });
     const result = safeResult({ ...payload, attempt, slotId: SLOT_ID });
     if (["ready", "reused"].includes(payload.status) && payload.slot?.id === SLOT_ID) {
       await writeVerificationManifest(manifestPath, result);

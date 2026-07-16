@@ -13,10 +13,23 @@ import (
 type LedgerClient interface {
 	RecordReceipt(ctx context.Context, input ReceiptInput, idempotencyKey string) (Receipt, error)
 	Receipt(ctx context.Context, receiptID string) (Receipt, error)
+	ListReceipts(ctx context.Context, query ReceiptListQuery) (ReceiptPage, error)
 	Artifact(ctx context.Context, artifactID string) (Artifact, error)
 	Review(ctx context.Context, reviewID string) (Review, error)
 	Continuation(ctx context.Context, receiptID string) (map[string]any, error)
 	RecordReconciliation(ctx context.Context, input ReconciliationInput, idempotencyKey string) (ReconciliationResult, error)
+}
+
+type ReceiptListQuery struct {
+	AccountID string
+	Cursor    string
+	Limit     int
+}
+
+type ReceiptPage struct {
+	Receipts   []Receipt `json:"receipts"`
+	NextCursor string    `json:"nextCursor"`
+	HasMore    bool      `json:"hasMore"`
 }
 
 type ReconciliationInput struct {
@@ -117,6 +130,19 @@ func (c *ledgerHTTPClient) RecordReceipt(ctx context.Context, input ReceiptInput
 func (c *ledgerHTTPClient) Receipt(ctx context.Context, receiptID string) (Receipt, error) {
 	var result Receipt
 	err := c.get(ctx, "/ledger/receipts/"+url.PathEscape(receiptID), &result)
+	return result, err
+}
+
+func (c *ledgerHTTPClient) ListReceipts(ctx context.Context, query ReceiptListQuery) (ReceiptPage, error) {
+	values := url.Values{"accountId": {query.AccountID}}
+	if query.Cursor != "" {
+		values.Set("cursor", query.Cursor)
+	}
+	if query.Limit > 0 {
+		values.Set("limit", fmt.Sprint(query.Limit))
+	}
+	var result ReceiptPage
+	err := c.get(ctx, "/ledger/receipts?"+values.Encode(), &result)
 	return result, err
 }
 

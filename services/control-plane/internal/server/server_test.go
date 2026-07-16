@@ -1470,6 +1470,10 @@ func TestCreateUserRejectsDuplicateEmail(t *testing.T) {
 
 type fakeLedgerClient struct{}
 
+func (fakeLedgerClient) ListReceipts(context.Context, clients.ReceiptListQuery) (clients.ReceiptPage, error) {
+	return clients.ReceiptPage{}, nil
+}
+
 type testSub2APIClient struct {
 	mu                  sync.Mutex
 	balance             int64
@@ -2342,15 +2346,32 @@ func tenantSessionForTest(t *testing.T, server http.Handler, role string) *httpt
 
 func reservedOperatorSessionForTest(t *testing.T, server http.Handler) *httptest.ResponseRecorder {
 	t.Helper()
-	t.Setenv("OPL_OPERATOR_SUMMARY_TOKEN", "operator-secret")
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/operator-login", bytes.NewBufferString(`{}`))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-opl-operator-token", "operator-secret")
-	rec := httptest.NewRecorder()
-	server.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("operator login status = %d: %s", rec.Code, rec.Body.String())
+	handler, ok := server.(*controlPlaneHTTPHandler)
+	if !ok {
+		t.Fatalf("server type = %T, want *controlPlaneHTTPHandler", server)
 	}
+	users, err := handler.app.tables.ListUsers(context.Background(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var admin map[string]any
+	for _, user := range users {
+		if strings.EqualFold(stringValue(user["email"]), "admin@medopl.cn") {
+			admin = user
+			break
+		}
+	}
+	if admin == nil {
+		t.Fatal("admin@medopl.cn test user missing")
+	}
+	payload, sessionID, err := handler.app.createSession(admin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec := httptest.NewRecorder()
+	http.SetCookie(rec, sessionCookie(sessionID, 12*60*60))
+	rec.Header().Set("x-opl-csrf-token", stringValue(payload["csrfToken"]))
+	writeJSON(rec, http.StatusOK, payload)
 	return rec
 }
 
@@ -2989,57 +3010,13 @@ func TestOverviewHTTP(t *testing.T) {
 	}
 }
 
-func TestOperatorLoginUsesConfiguredToken(t *testing.T) {
-	t.Setenv("OPL_OPERATOR_SUMMARY_TOKEN", "operator-secret")
+func TestOperatorLoginRouteDoesNotCreateAUserSession(t *testing.T) {
 	server := NewServer(newTestService(nil, nil))
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/operator-login", bytes.NewBufferString(`{}`))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-opl-operator-token", "operator-secret")
 	rec := httptest.NewRecorder()
-
 	server.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
-	}
-	if rec.Header().Get("x-opl-csrf-token") == "" {
-		t.Fatalf("expected csrf response header")
-	}
-	if rec.Header().Get("Set-Cookie") == "" {
-		t.Fatalf("expected session cookie")
-	}
-}
-
-func TestOperatorLoginRejectsInvalidToken(t *testing.T) {
-	t.Setenv("OPL_OPERATOR_SUMMARY_TOKEN", "operator-secret")
-	server := NewServer(newTestService(nil, nil))
-	req := httptest.NewRequest(http.MethodPost, "/api/auth/operator-login", bytes.NewBufferString(`{}`))
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-opl-operator-token", "wrong")
-	rec := httptest.NewRecorder()
-
-	server.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusUnauthorized {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
-	}
-}
-
-func TestOperatorLoginRateLimitsInvalidToken(t *testing.T) {
-	t.Setenv("OPL_OPERATOR_SUMMARY_TOKEN", "operator-secret")
-	server := NewServer(newTestService(nil, nil))
-
-	var rec *httptest.ResponseRecorder
-	for range 6 {
-		req := httptest.NewRequest(http.MethodPost, "/api/auth/operator-login", bytes.NewBufferString(`{}`))
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("x-opl-operator-token", "wrong")
-		req.RemoteAddr = "203.0.113.10:4242"
-		rec = httptest.NewRecorder()
-		server.ServeHTTP(rec, req)
-	}
-	if rec.Code != http.StatusTooManyRequests {
-		t.Fatalf("operator login status = %d, want 429: %s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusNotFound || rec.Header().Get("Set-Cookie") != "" {
+		t.Fatalf("operator login status = %d cookie=%q", rec.Code, rec.Header().Get("Set-Cookie"))
 	}
 }
 
@@ -3365,7 +3342,7 @@ func TestUserSoftDeleteRevokesSessionsAndHidesByDefault(t *testing.T) {
 	if err := json.NewDecoder(deleteRec.Body).Decode(&deleted); err != nil {
 		t.Fatalf("decode deleted user: %v", err)
 	}
-	if deleted["status"] != "deleted" || deleted["deletedAt"] == nil || deleted["deletedBy"] != "usr-operator" || deleted["deleteReason"] != "left_lab" {
+	if deleted["status"] != "deleted" || deleted["deletedAt"] == nil || deleted["deletedBy"] != "usr-admin" || deleted["deleteReason"] != "left_lab" {
 		t.Fatalf("delete metadata incomplete: %#v", deleted)
 	}
 
@@ -3459,9 +3436,9 @@ func TestUserLifecycleProtectsLastActiveOperator(t *testing.T) {
 		{"/api/users/disable"},
 		{"/api/users/delete"},
 	} {
-		body := `{"userId":"usr-operator","reason":"test"}`
+		body := `{"userId":"usr-admin","reason":"test"}`
 		if tc.path == "/api/users/delete" {
-			body = `{"userId":"usr-operator","reason":"test","confirm":true}`
+			body = `{"userId":"usr-admin","reason":"test","confirm":true}`
 		}
 		req := httptest.NewRequest(http.MethodPost, tc.path, bytes.NewBufferString(body))
 		req.Header.Set("Content-Type", "application/json")

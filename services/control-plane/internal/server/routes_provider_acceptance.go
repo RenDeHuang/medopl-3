@@ -2,8 +2,11 @@ package server
 
 import (
 	"context"
+	"crypto/sha256"
+	"crypto/subtle"
 	"errors"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -25,7 +28,7 @@ const (
 )
 
 func registerProviderAcceptanceRoutes(mux *http.ServeMux, app *controlPlaneServer, service *controlplane.Service) {
-	mux.HandleFunc("POST /api/operator/provider-acceptance", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/operator/provider-acceptance", app.providerAcceptanceProtected(func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		key, ok := requiredMutationKey(w, r)
 		if !ok {
@@ -146,6 +149,31 @@ func registerProviderAcceptanceRoutes(mux *http.ServeMux, app *controlPlaneServe
 		}
 		writeJSON(w, http.StatusOK, providerAcceptanceResponse(status, "", slot))
 	}))
+}
+
+func (app *controlPlaneServer) providerAcceptanceProtected(next http.HandlerFunc) http.HandlerFunc {
+	admin := app.protected(true, next)
+	return func(w http.ResponseWriter, r *http.Request) {
+		if payload, ok := app.session(r); ok {
+			user, _ := payload["user"].(map[string]any)
+			if isOperatorUser(user) {
+				admin(w, r)
+				return
+			}
+		}
+		expected := strings.TrimSpace(os.Getenv("OPL_OPERATOR_SUMMARY_TOKEN"))
+		want := sha256.Sum256([]byte(expected))
+		got := sha256.Sum256([]byte(r.Header.Get("x-opl-operator-token")))
+		if expected == "" || subtle.ConstantTimeCompare(got[:], want[:]) != 1 {
+			writeError(w, http.StatusUnauthorized, "operator_token_invalid")
+			return
+		}
+		if !limitJSONBody(w, r) {
+			return
+		}
+		actor := auditActor{UserID: "system:provider-acceptance", Role: "system"}
+		next(w, r.WithContext(context.WithValue(r.Context(), auditActorContextKey{}, actor)))
+	}
 }
 
 func (app *controlPlaneServer) providerAcceptanceIdentity(ctx context.Context) (string, int64, string) {

@@ -212,6 +212,13 @@ func (s *Service) BillingReceipt(ctx context.Context, receiptID string) (clients
 	return s.ledger.Receipt(ctx, receiptID)
 }
 
+func (s *Service) BillingReceipts(ctx context.Context, query clients.ReceiptListQuery) (clients.ReceiptPage, error) {
+	if query.AccountID == "" || query.Limit < 1 || query.Limit > 100 {
+		return clients.ReceiptPage{}, fmt.Errorf("invalid_receipt_query")
+	}
+	return s.ledger.ListReceipts(ctx, query)
+}
+
 func (s *Service) Execute(ctx context.Context, input ExecuteInput, idempotencyKey string) (ExecutionResult, error) {
 	if input.OrganizationID == "" || input.WorkspaceID == "" || input.ProjectID == "" || input.TaskID == "" || input.RequestID == "" || input.ApprovalID == "" || idempotencyKey == "" {
 		return ExecutionResult{}, fmt.Errorf("execution_identity_required")

@@ -10,6 +10,14 @@ import (
 	"opl-cloud/services/control-plane/internal/clients"
 )
 
+type auditActorContextKey struct{}
+
+type auditActor struct {
+	UserID    string
+	Role      string
+	AccountID string
+}
+
 func (app *controlPlaneServer) createOrganization(input map[string]any) (map[string]any, error) {
 	name := stringField(input, "name", "Organization")
 	accountID := stringField(input, "billingAccountId", "acct-admin")
@@ -169,12 +177,16 @@ func (app *controlPlaneServer) appendBillingReviewResolutionAudit(r *http.Reques
 
 func (app *controlPlaneServer) auditEvent(r *http.Request, action string, resourceKind string, resourceID string, targetAccountID string, before any, after any, result string) map[string]any {
 	user, _ := app.sessionUserContext(r)
+	actor := auditActor{UserID: stringValue(user["id"]), Role: stringValue(user["role"]), AccountID: stringValue(user["accountId"])}
+	if systemActor, ok := r.Context().Value(auditActorContextKey{}).(auditActor); ok {
+		actor = systemActor
+	}
 	now := time.Now().UTC().Format(time.RFC3339)
 	event := map[string]any{
 		"id":              "audit-" + stableID(action, resourceKind, resourceID, now)[:12],
-		"actorUserId":     stringValue(user["id"]),
-		"actorRole":       stringValue(user["role"]),
-		"actorAccountId":  stringValue(user["accountId"]),
+		"actorUserId":     actor.UserID,
+		"actorRole":       actor.Role,
+		"actorAccountId":  actor.AccountID,
 		"targetAccountId": targetAccountID,
 		"action":          action,
 		"resourceKind":    resourceKind,

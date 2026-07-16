@@ -29,6 +29,15 @@ func NewServer(service *controlplane.Service) http.Handler {
 	return handler
 }
 
+type controlPlaneHTTPHandler struct {
+	app  *controlPlaneServer
+	next http.Handler
+}
+
+func (h *controlPlaneHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	h.next.ServeHTTP(w, r)
+}
+
 func NewPersistentServer(service *controlplane.Service, store StateStore) (http.Handler, error) {
 	app, err := newControlPlaneAppWithStore(store)
 	if err != nil {
@@ -58,7 +67,7 @@ func NewPersistentServer(service *controlplane.Service, store StateStore) (http.
 	registerSyncRoutes(mux, app)
 	registerTransferRoutes(mux, app, service)
 	registerRecoveryRoutes(mux, app, service)
-	return mux, nil
+	return &controlPlaneHTTPHandler{app: app, next: mux}, nil
 }
 
 func (app *controlPlaneServer) consoleStatic(w http.ResponseWriter, r *http.Request) {

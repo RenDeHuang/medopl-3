@@ -327,26 +327,6 @@ func loginFailureKey(r *http.Request, input map[string]any) string {
 	return email + "|" + host
 }
 
-func (app *controlPlaneServer) operatorLogin() (map[string]any, string, error) {
-	users, err := app.tables.ListUsers(context.Background(), false)
-	if err != nil {
-		return nil, "", err
-	}
-	for _, user := range users {
-		if stringValue(user["id"]) == "usr-operator" && stringValue(user["accountId"]) == "acct-operator" && stringValue(user["status"]) == "active" {
-			return app.createSession(user)
-		}
-	}
-	if err := app.ensureAccount(context.Background(), "acct-operator"); err != nil {
-		return nil, "", err
-	}
-	operator := map[string]any{"id": "usr-operator", "email": "operator@opl.local", "accountId": "acct-operator", "role": "admin", "status": "active"}
-	if err := app.tables.SaveUser(context.Background(), operator); err != nil {
-		return nil, "", err
-	}
-	return app.createSession(operator)
-}
-
 func (app *controlPlaneServer) createSession(user map[string]any) (map[string]any, string, error) {
 	sessionID, err := randomToken(32)
 	if err != nil {
@@ -397,8 +377,7 @@ func (app *controlPlaneServer) session(r *http.Request) (map[string]any, bool) {
 }
 
 func isOperatorUser(user map[string]any) bool {
-	id, accountID := stringValue(user["id"]), stringValue(user["accountId"])
-	return stringValue(user["role"]) == "admin" && id == "usr-operator" && accountID == "acct-operator"
+	return stringValue(user["role"]) == "admin" && stringValue(user["status"]) == "active" && strings.EqualFold(stringValue(user["email"]), "admin@medopl.cn")
 }
 
 func (app *controlPlaneServer) hasActiveCustomerMembership(ctx context.Context, user map[string]any) (bool, error) {

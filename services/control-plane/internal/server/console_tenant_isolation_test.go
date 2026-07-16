@@ -535,7 +535,7 @@ func TestTenantAdminRequiresMembershipAndCannotUseOperatorRoutes(t *testing.T) {
 	}
 }
 
-func TestOperatorLoginNeverAdoptsTenantAdmin(t *testing.T) {
+func TestCloudAdminSessionNeverAdoptsTenantAdmin(t *testing.T) {
 	store := newMemoryTableStore()
 	mustStore(t, store.SaveUser(context.Background(), map[string]any{"id": "usr-tenant-admin", "email": "tenant-admin@example.com", "accountId": "acct-alpha", "role": "admin", "status": "active"}))
 	server, err := NewPersistentServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}), store)
@@ -548,15 +548,15 @@ func TestOperatorLoginNeverAdoptsTenantAdmin(t *testing.T) {
 		t.Fatal(err)
 	}
 	user := payload["user"].(map[string]any)
-	if user["id"] != "usr-operator" || user["accountId"] != "acct-operator" {
-		t.Fatalf("operator login adopted non-reserved admin: %#v", user)
+	if user["email"] != "admin@medopl.cn" {
+		t.Fatalf("cloud admin session adopted another admin: %#v", user)
 	}
 	if rec := requestWithSession(t, server, operator, http.MethodGet, "/api/management/state", ""); rec.Code != http.StatusOK {
 		t.Fatalf("explicit operator management status = %d: %s", rec.Code, rec.Body.String())
 	}
 }
 
-func TestReservedOperatorSessionReportsAuthority(t *testing.T) {
+func TestCloudAdminSessionReportsAuthority(t *testing.T) {
 	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
 	session := reservedOperatorSessionForTest(t, server)
 	req := httptest.NewRequest(http.MethodGet, "/api/auth/me", nil)
@@ -575,9 +575,18 @@ func TestReservedOperatorSessionReportsAuthority(t *testing.T) {
 	}
 }
 
-func TestBootstrapAdminIsNotOperatorAuthority(t *testing.T) {
-	if isOperatorUser(map[string]any{"id": "usr-admin", "accountId": "acct-admin", "role": "admin", "status": "active"}) {
-		t.Fatal("bootstrap admin was treated as reserved operator authority")
+func TestOnlyCloudAdminEmailHasOperatorAuthority(t *testing.T) {
+	if !isOperatorUser(map[string]any{"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}) {
+		t.Fatal("admin@medopl.cn was not treated as OPL Cloud administrator")
+	}
+	for _, user := range []map[string]any{
+		{"id": "usr-tenant-admin", "email": "tenant-admin@example.com", "accountId": "acct-alpha", "role": "admin", "status": "active"},
+		{"id": "usr-operator", "email": "operator@opl.local", "accountId": "acct-operator", "role": "admin", "status": "active"},
+		{"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "owner", "status": "active"},
+	} {
+		if isOperatorUser(user) {
+			t.Fatalf("non-cloud-admin received operator authority: %#v", user)
+		}
 	}
 }
 

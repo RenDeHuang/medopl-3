@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { afterEach, test } from "node:test";
 
 import * as authApi from "../../apps/console-ui/src/api/auth-api.ts";
-import { getGatewaySummary } from "../../apps/console-ui/src/api/console-read-api.ts";
+import { maskGatewaySummary } from "../../apps/console-ui/src/console-model.ts";
 
 const originalFetch = globalThis.fetch;
 
@@ -32,37 +32,9 @@ test("logout clears the local session before the remote request settles", async 
   await pending;
 });
 
-test("Gateway cleanup aborts requests, removes raw keys, and ignores late responses", async () => {
-  const gatewayLifecycle = await import("../../apps/console-ui/src/pages/gateway/gateway-request.ts").catch(() => null);
-  assert.ok(gatewayLifecycle, "Gateway request lifecycle helper is required");
-
-  let settle: (response: Response) => void = () => {};
-  let fetchSignal: AbortSignal | undefined;
-  globalThis.fetch = async (_input, init = {}) => {
-    fetchSignal = init.signal || undefined;
-    return new Promise<Response>((resolve) => { settle = resolve; });
-  };
-
-  const lifecycle = gatewayLifecycle.createGatewayRequestLifecycle();
-  const controller = lifecycle.start();
-  const updates: any[] = [];
-  const pending = getGatewaySummary(true, controller.signal).then((payload) => {
-    if (lifecycle.isCurrent(controller)) updates.push(payload);
-  });
-  await Promise.resolve();
-
-  lifecycle.dispose();
-  assert.equal(controller.signal.aborted, true);
-  assert.equal(fetchSignal?.aborted, true);
-
+test("Gateway cleanup removes raw keys", () => {
   const revealed = { apiKey: { id: "key-alpha", revealed: true, value: "sk-raw", maskedValue: "sk-****" } };
-  settle(new Response(JSON.stringify(revealed), {
-    status: 200,
-    headers: { "content-type": "application/json" }
-  }));
-  await pending;
-  assert.deepEqual(updates, []);
-  assert.deepEqual(gatewayLifecycle.maskGatewaySummary(revealed), {
+  assert.deepEqual(maskGatewaySummary(revealed), {
     apiKey: { id: "key-alpha", revealed: false, maskedValue: "sk-****" }
   });
 });

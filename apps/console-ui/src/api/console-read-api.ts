@@ -27,8 +27,18 @@ export function getPricingCatalog() {
   return getJson("/api/pricing/catalog");
 }
 
+export function previewPricing(input, csrfToken) {
+  return postJson("/api/pricing/preview", input, csrfToken);
+}
+
 export function getGatewaySummary(reveal = false, signal?: AbortSignal) {
   return getJson(`/api/gateway/summary${reveal ? "?reveal=true" : ""}`, { signal });
+}
+
+export function getBillingReceipts(cursor = "", limit = 20, signal?: AbortSignal) {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (cursor) params.set("cursor", cursor);
+  return getJson(`/api/billing/receipts?${params}`, { signal });
 }
 
 export function getManagementState(organizationId = "", includeDeleted = false) {

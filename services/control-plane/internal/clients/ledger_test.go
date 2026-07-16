@@ -29,7 +29,7 @@ func TestLedgerHTTPClientReadsReceiptContinuationIdentity(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(Receipt{
 			ReceiptInput: ReceiptInput{Status: "completed", WorkspaceID: "workspace-alpha", ProjectID: "project-alpha", TaskID: "task-alpha", JobID: "job-alpha", Execution: map[string]any{"jobStatus": "succeeded"}},
-			ReceiptID: "receipt-alpha", ContinuationID: "continuation-alpha",
+			ReceiptID:    "receipt-alpha", ContinuationID: "continuation-alpha",
 		})
 	}))
 	defer server.Close()
@@ -72,5 +72,29 @@ func TestLedgerHTTPClientReadsReviewAndContinuation(t *testing.T) {
 	continuation, err := client.Continuation(context.Background(), "receipt-alpha")
 	if err != nil || continuation["continuationId"] != "continuation-alpha" {
 		t.Fatalf("continuation = %#v err=%v", continuation, err)
+	}
+}
+
+func TestLedgerHTTPClientListsReceiptsForOneAccount(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer internal-secret" || r.URL.Path != "/ledger/receipts" {
+			t.Fatalf("request = %s auth=%q", r.URL.Path, r.Header.Get("Authorization"))
+		}
+		query := r.URL.Query()
+		if query.Get("accountId") != "acct-alpha" || query.Get("cursor") != "cursor-alpha" || query.Get("limit") != "20" {
+			t.Fatalf("query = %v", query)
+		}
+		_ = json.NewEncoder(w).Encode(ReceiptPage{
+			Receipts:   []Receipt{{ReceiptInput: ReceiptInput{Type: "billing.resource_purchased.v1", AccountID: "acct-alpha"}, ReceiptID: "receipt-alpha"}},
+			NextCursor: "cursor-beta",
+			HasMore:    true,
+		})
+	}))
+	defer server.Close()
+
+	client := NewLedgerHTTPClient(server.URL, "internal-secret", server.Client())
+	page, err := client.ListReceipts(context.Background(), ReceiptListQuery{AccountID: "acct-alpha", Cursor: "cursor-alpha", Limit: 20})
+	if err != nil || len(page.Receipts) != 1 || page.Receipts[0].ReceiptID != "receipt-alpha" || page.NextCursor != "cursor-beta" || !page.HasMore {
+		t.Fatalf("page = %#v err=%v", page, err)
 	}
 }

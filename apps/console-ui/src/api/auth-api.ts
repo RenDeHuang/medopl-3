@@ -1,7 +1,7 @@
 import { postJson } from "./console-api.ts";
 
 export async function currentSession() {
-  const response = await fetch("/api/auth/me", { signal: AbortSignal.timeout(10_000) });
+  const response = await fetch("/api/auth/me", { signal: AbortSignal.timeout(3_000) });
   if (response.status === 401) return null;
   const payload = await response.json().catch(() => null);
   if (!response.ok) throw new Error(payload?.safeMessage || payload?.error || "session_check_failed");

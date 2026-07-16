@@ -185,6 +185,32 @@ func providerAcceptancePayload(t *testing.T, rec *httptest.ResponseRecorder) map
 	return payload
 }
 
+func TestProviderAcceptanceServiceTokenDoesNotCreateAUserSession(t *testing.T) {
+	t.Setenv("OPL_OPERATOR_SUMMARY_TOKEN", "operator-secret")
+	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
+	body := `{"accountId":"acct-verification-slot-01","confirmation":"I_UNDERSTAND_THIS_BUYS_ONE_PREPAID_CVM_AND_CBS","slotId":"verification-slot-01"}`
+
+	valid := httptest.NewRequest(http.MethodPost, "/api/operator/provider-acceptance", bytes.NewBufferString(body))
+	valid.Header.Set("Content-Type", "application/json")
+	valid.Header.Set("Idempotency-Key", providerAcceptanceKey)
+	valid.Header.Set("x-opl-operator-token", "operator-secret")
+	validRec := httptest.NewRecorder()
+	server.ServeHTTP(validRec, valid)
+	if validRec.Code == http.StatusUnauthorized || validRec.Header().Get("Set-Cookie") != "" {
+		t.Fatalf("service token status=%d cookie=%q body=%s", validRec.Code, validRec.Header().Get("Set-Cookie"), validRec.Body.String())
+	}
+
+	invalid := httptest.NewRequest(http.MethodPost, "/api/operator/provider-acceptance", bytes.NewBufferString(body))
+	invalid.Header.Set("Content-Type", "application/json")
+	invalid.Header.Set("Idempotency-Key", providerAcceptanceKey)
+	invalid.Header.Set("x-opl-operator-token", "wrong")
+	invalidRec := httptest.NewRecorder()
+	server.ServeHTTP(invalidRec, invalid)
+	if invalidRec.Code != http.StatusUnauthorized {
+		t.Fatalf("invalid service token status=%d body=%s", invalidRec.Code, invalidRec.Body.String())
+	}
+}
+
 func TestProviderAcceptanceCreatesOneFixedSlotAndReusesIt(t *testing.T) {
 	fabric := &providerAcceptanceFabric{}
 	server, store := newProviderAcceptanceTestServer(t, fabric)

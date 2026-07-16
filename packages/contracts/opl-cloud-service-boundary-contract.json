@@ -12,7 +12,7 @@
     "consoleUi": {
       "path": "apps/console-ui",
       "language": "typescript",
-      "framework": "react",
+      "framework": "vue",
       "persistence": "none",
       "calls": {
         "controlPlane": "http"
