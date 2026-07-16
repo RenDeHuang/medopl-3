@@ -113,6 +113,7 @@ test("Provider Acceptance workflow is manual, fixed, and cannot mutate resources
   const backend = await readFile("services/control-plane/internal/server/routes_provider_acceptance.go", "utf8");
   const spec = contract.providerAcceptanceWorkflow;
   const job = workflow.jobs.accept;
+  const runStep = job.steps.find((step) => step.name === "Run one-time Provider Acceptance");
   const source = JSON.stringify(workflow);
 
   assert.equal(spec.file, ".github/workflows/provider-acceptance.yml");
@@ -137,7 +138,8 @@ test("Provider Acceptance workflow is manual, fixed, and cannot mutate resources
   assert.equal(job.environment, "production");
   assert.equal(job.env.OPL_PROVIDER_ACCEPTANCE_ACCOUNT_ID, "${{ inputs.account_id }}");
   assert.equal(job.env.OPL_PROVIDER_ACCEPTANCE_CONFIRMATION, "${{ inputs.confirmation }}");
-  assert.equal(job.env.OPL_PROVIDER_ACCEPTANCE_OPERATOR_TOKEN, "${{ secrets.OPL_OPERATOR_SUMMARY_TOKEN }}");
+  assert.equal(job.env.OPL_PROVIDER_ACCEPTANCE_OPERATOR_TOKEN, undefined);
+  assert.equal(runStep.env.OPL_PROVIDER_ACCEPTANCE_OPERATOR_TOKEN, "${{ secrets.OPL_OPERATOR_SUMMARY_TOKEN }}");
   assert.equal(job.env.OPL_PROVIDER_ACCEPTANCE_AUTH_USERS_JSON, undefined);
   assert.ok(spec.requiredEnv.includes("OPL_PROVIDER_ACCEPTANCE_OPERATOR_TOKEN"));
   assert.deepEqual(spec.secretEnv, ["OPL_PROVIDER_ACCEPTANCE_OPERATOR_TOKEN"]);
