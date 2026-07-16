@@ -565,8 +565,8 @@ func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) 
 		"kind":     "Deployment",
 		"metadata": map[string]any{"name": "opl-compute-alpha", "labels": map[string]any{"oplcloud.cn/workspace-id": "ws-alpha"}},
 		"spec": map[string]any{"template": map[string]any{"metadata": map[string]any{"labels": map[string]any{"app": "workspace"}}, "spec": map[string]any{
-			"containers": []any{map[string]any{"name": "workspace", "image": "workspace-image:test"}},
-			"volumes":    []any{map[string]any{"persistentVolumeClaim": map[string]any{"claimName": "opl-storage-alpha-data"}}},
+			"containers": []any{map[string]any{"name": "workspace", "image": "workspace-image:test", "volumeMounts": workspaceDataMounts()}},
+			"volumes":    []any{map[string]any{"name": "workspace-data", "persistentVolumeClaim": map[string]any{"claimName": "opl-storage-alpha-data"}}},
 		}}},
 		"status": map[string]any{"readyReplicas": 1, "availableReplicas": 1},
 	}
@@ -575,26 +575,30 @@ func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) 
 		"metadata": map[string]any{"name": "opl-compute-alpha", "labels": map[string]any{"oplcloud.cn/workspace-id": "ws-alpha"}},
 		"spec":     map[string]any{"selector": map[string]any{"app": "workspace"}},
 	}
+	pod := map[string]any{
+		"kind": "Pod",
+		"metadata": map[string]any{"name": "opl-compute-alpha-7d6c", "labels": map[string]any{
+			"oplcloud.cn/workspace-id": "ws-alpha",
+		}},
+		"spec": map[string]any{
+			"nodeName": "10.0.0.8", "containers": []any{map[string]any{"name": "workspace", "volumeMounts": workspaceDataMounts()}},
+			"volumes": []any{map[string]any{"name": "workspace-data", "persistentVolumeClaim": map[string]any{"claimName": "opl-storage-alpha-data"}}},
+		},
+		"status": map[string]any{
+			"phase": "Running",
+			"conditions": []any{
+				map[string]any{"type": "PodScheduled", "status": "True"},
+				map[string]any{"type": "Ready", "status": "True"},
+			},
+			"containerStatuses": []any{map[string]any{"name": "workspace", "ready": true, "restartCount": 0, "state": map[string]any{"running": map[string]any{}}}},
+		},
+	}
 	provider.kubectl = func(_ context.Context, args []string, _ []byte) ([]byte, error) {
 		if len(args) == 6 && args[0] == "get" && args[1] == "deployment,service" && args[2] == "-l" && args[3] == "oplcloud.cn/workspace-id=ws-alpha" {
 			return mustJSON(map[string]any{"kind": "List", "items": []any{deployment, service}}), nil
 		}
 		if slices.Equal(args, []string{"get", "pod", "-l", "oplcloud.cn/workspace-id=ws-alpha", "-o", "json"}) {
-			return mustJSON(map[string]any{"kind": "List", "items": []any{map[string]any{
-				"kind": "Pod",
-				"metadata": map[string]any{"name": "opl-compute-alpha-7d6c", "labels": map[string]any{
-					"oplcloud.cn/workspace-id": "ws-alpha",
-				}},
-				"spec": map[string]any{"nodeName": "10.0.0.8"},
-				"status": map[string]any{
-					"phase": "Running",
-					"conditions": []any{
-						map[string]any{"type": "PodScheduled", "status": "True"},
-						map[string]any{"type": "Ready", "status": "True"},
-					},
-					"containerStatuses": []any{map[string]any{"name": "workspace", "ready": true, "restartCount": 0, "state": map[string]any{"running": map[string]any{}}}},
-				},
-			}}}), nil
+			return mustJSON(map[string]any{"kind": "List", "items": []any{pod}}), nil
 		}
 		want := []string{"get", "deployment/opl-compute-alpha", "pvc/opl-storage-alpha-data", "service/opl-compute-alpha", "ingress/opl-cloud", "endpoints/opl-compute-alpha", "secret/opl-compute-alpha-env", "--ignore-not-found", "-o", "json"}
 		if !slices.Equal(args, want) {
@@ -629,6 +633,42 @@ func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) 
 	}
 	if status.Access.Password != "secret-password" || status.Access.Username != webuiUsername || status.Access.CredentialStatus != "configured" || status.Access.SecretRef != "opl-compute-alpha-env" {
 		t.Fatalf("runtime access must come transiently from Workspace Secret: %#v", status.Access)
+	}
+	assertUnready := func(name string) {
+		t.Helper()
+		status, err := provider.WorkspaceRuntimeStatus(context.Background(), "ws-alpha")
+		if err != nil || status.Ready || status.Status != "unready" {
+			t.Fatalf("%s runtime status=%#v err=%v", name, status, err)
+		}
+	}
+	deploymentContainer := deployment["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["containers"].([]any)[0].(map[string]any)
+	podContainer := pod["spec"].(map[string]any)["containers"].([]any)[0].(map[string]any)
+	delete(deploymentContainer, "volumeMounts")
+	assertUnready("deployment mounts missing")
+	deploymentContainer["volumeMounts"] = workspaceDataMounts()
+	delete(podContainer, "volumeMounts")
+	assertUnready("pod mounts missing")
+	podContainer["volumeMounts"] = workspaceDataMounts()
+	deploymentContainer["volumeMounts"].([]any)[0].(map[string]any)["subPath"] = "projects"
+	assertUnready("deployment data subPath mismatch")
+	deploymentContainer["volumeMounts"] = workspaceDataMounts()
+	podContainer["volumeMounts"].([]any)[1].(map[string]any)["subPath"] = "data"
+	assertUnready("pod projects subPath mismatch")
+	podContainer["volumeMounts"] = workspaceDataMounts()
+	pod["spec"].(map[string]any)["volumes"].([]any)[0].(map[string]any)["persistentVolumeClaim"].(map[string]any)["claimName"] = "other-pvc"
+	assertUnready("pod PVC mismatch")
+	pod["spec"].(map[string]any)["volumes"].([]any)[0].(map[string]any)["persistentVolumeClaim"].(map[string]any)["claimName"] = "opl-storage-alpha-data"
+	pod["status"].(map[string]any)["conditions"].([]any)[1].(map[string]any)["status"] = "False"
+	assertUnready("pod not Ready")
+	if !verified["ready_pod_uses_retained_pvc"] {
+		t.Fatalf("runtime must verify Ready Pod retained mount: %#v", status.Checks)
+	}
+}
+
+func workspaceDataMounts() []any {
+	return []any{
+		map[string]any{"name": "workspace-data", "mountPath": "/data", "subPath": "data"},
+		map[string]any{"name": "workspace-data", "mountPath": "/projects", "subPath": "projects"},
 	}
 }
 

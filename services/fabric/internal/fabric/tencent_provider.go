@@ -760,6 +760,14 @@ func (p *TencentProvider) WorkspaceRuntimeStatus(ctx context.Context, workspaceI
 	access, credentialCheck := runtimeAccessFromSecret(findK8s(items, "Secret", secretRef), secretRef)
 	pods := p.workspacePods(ctx, workspaceID)
 	podDetails := podRuntimeDetails(pods)
+	readyPodUsesPVC := false
+	for _, item := range pods {
+		pod, _ := item.(map[string]any)
+		if conditionStatuses(nested(pod, "status", "conditions"))["Ready"] == "True" && workloadUsesPVC(pod, pvcName) {
+			readyPodUsesPVC = true
+			break
+		}
+	}
 	readyReplicas := number(nested(deployment, "status", "readyReplicas"))
 	availableReplicas := number(nested(deployment, "status", "availableReplicas"))
 	image := stringValue(firstContainerField(deployment, "image"))
@@ -769,6 +777,7 @@ func (p *TencentProvider) WorkspaceRuntimeStatus(ctx context.Context, workspaceI
 		{Name: "workspace_image_pulled", OK: image == os.Getenv("OPL_WORKSPACE_IMAGE")},
 		{Name: "pvc_bound", OK: stringValue(nested(pvc, "status", "phase")) == "Bound"},
 		{Name: "deployment_uses_retained_pvc", OK: workloadUsesPVC(deployment, pvcName)},
+		{Name: "ready_pod_uses_retained_pvc", OK: readyPodUsesPVC, Details: podDetails},
 		{Name: "service_targets_workspace", OK: selectorMatches(service, deployment)},
 		{Name: "service_endpoints_ready", OK: readyAddresses > 0, Details: mergeDetails(map[string]any{"readyAddresses": readyAddresses}, podDetails)},
 		{Name: "ingress_routes_workspace_gateway", OK: ingressRoutesGateway(ingress)},
@@ -1334,13 +1343,54 @@ func workloadUsesPVC(workload map[string]any, pvcName string) bool {
 	if len(volumes) == 0 {
 		volumes, _ = nested(workload, "spec", "volumes").([]any)
 	}
+	volumeName := ""
 	for _, volume := range volumes {
 		asMap, _ := volume.(map[string]any)
 		if nested(asMap, "persistentVolumeClaim", "claimName") == pvcName {
-			return true
+			name := stringValue(asMap["name"])
+			if name == "" || volumeName != "" {
+				return false
+			}
+			volumeName = name
 		}
 	}
-	return false
+	if volumeName == "" {
+		return false
+	}
+	containers, _ := nested(workload, "spec", "template", "spec", "containers").([]any)
+	if len(containers) == 0 {
+		containers, _ = nested(workload, "spec", "containers").([]any)
+	}
+	workspaceContainers := 0
+	validMounts := false
+	for _, container := range containers {
+		asMap, _ := container.(map[string]any)
+		if stringValue(asMap["name"]) != "workspace" {
+			continue
+		}
+		workspaceContainers++
+		mounts, _ := asMap["volumeMounts"].([]any)
+		dataMounted, projectsMounted, retainedMounts := false, false, 0
+		for _, mount := range mounts {
+			asMount, _ := mount.(map[string]any)
+			name, mountPath, subPath := stringValue(asMount["name"]), stringValue(asMount["mountPath"]), stringValue(asMount["subPath"])
+			if name == volumeName {
+				retainedMounts++
+				switch {
+				case mountPath == "/data" && subPath == "data":
+					dataMounted = true
+				case mountPath == "/projects" && subPath == "projects":
+					projectsMounted = true
+				default:
+					return false
+				}
+			} else if mountPath == "/data" || mountPath == "/projects" {
+				return false
+			}
+		}
+		validMounts = retainedMounts == 2 && dataMounted && projectsMounted
+	}
+	return workspaceContainers == 1 && validMounts
 }
 
 func selectorMatches(service map[string]any, deployment map[string]any) bool {
