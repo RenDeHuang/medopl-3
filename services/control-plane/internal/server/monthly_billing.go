@@ -17,7 +17,32 @@ var (
 	errMonthlyChargeNeedsReview   = errors.New("monthly_charge_needs_review")
 	errMonthlyAccountUnmapped     = errors.New("sub2api_account_mapping_required")
 	errMonthlyPurchaseRefunded    = errors.New("monthly_purchase_refunded")
+	errBillingReviewNotFound      = errors.New("billing_review_not_found")
+	errBillingReviewNotPending    = errors.New("billing_review_not_pending")
+	errBillingReviewIdentity      = errors.New("billing_review_identity_mismatch")
+	errBillingReviewChargeFact    = errors.New("billing_review_charge_fact_unconfirmed")
+	errBillingReviewProviderFact  = errors.New("billing_review_provider_fact_unconfirmed")
+	errBillingReviewReceipt       = errors.New("billing_review_receipt_pending")
+	errBillingReviewRefund        = errors.New("billing_review_refund_pending")
+	errInvalidBillingReview       = errors.New("invalid_billing_review_request")
 )
+
+const (
+	billingReviewActivateCharged = "activate_charged_resource"
+	billingReviewTerminateFree   = "terminate_uncharged_absent"
+	billingReviewRefundCharged   = "refund_charged_absent"
+)
+
+type billingReviewResolutionInput struct {
+	ResourceType       string
+	ResourceID         string
+	AccountID          string
+	BillingOperationID string
+	Decision           string
+	EvidenceRef        string
+	IdempotencyKey     string
+	Reviewer           string
+}
 
 type monthlyPurchaseInput struct {
 	ResourceType       string
@@ -296,6 +321,238 @@ func (app *controlPlaneServer) markMonthlyManualReview(ctx context.Context, serv
 		return row, err
 	}
 	return row, errMonthlyChargeNeedsReview
+}
+
+func (app *controlPlaneServer) resolveMonthlyBillingReview(ctx context.Context, service *controlplane.Service, input billingReviewResolutionInput) (map[string]any, error) {
+	if (input.ResourceType != "compute" && input.ResourceType != "storage") || !validBillingReviewDecision(input.Decision) || input.ResourceID == "" || input.AccountID == "" || input.BillingOperationID == "" || input.IdempotencyKey == "" || input.Reviewer == "" {
+		return nil, errInvalidBillingReview
+	}
+	unlock := app.lockResource(input.ResourceType, input.ResourceID)
+	defer unlock()
+
+	row, ok := app.monthlyResource(input.ResourceType, input.ResourceID)
+	if !ok {
+		return nil, errBillingReviewNotFound
+	}
+	fingerprint := stableID(input.ResourceType, input.ResourceID, input.AccountID, input.BillingOperationID, input.Decision, input.EvidenceRef, input.Reviewer)
+	if key := stringValue(row["reviewResolutionKey"]); key != "" {
+		if key != input.IdempotencyKey || stringValue(row["reviewResolutionFingerprint"]) != fingerprint {
+			return nil, errIdempotencyConflict
+		}
+		if stringValue(row["reviewResolutionPhase"]) == "completed" {
+			result := mapField(row, "reviewResolutionResult")
+			if len(result) == 0 {
+				return nil, errBillingReviewNotPending
+			}
+			return result, nil
+		}
+	}
+	if monthlyResourceType(row) != input.ResourceType || stringValue(row["accountId"]) != input.AccountID || stringValue(row["billingOperationId"]) != input.BillingOperationID {
+		return nil, errBillingReviewIdentity
+	}
+	if stringValue(row["billingStatus"]) != "manual_review" {
+		return nil, errBillingReviewNotPending
+	}
+	charged := monthlyReviewChargeConfirmed(row)
+	uncharged := monthlyReviewChargeNotAttempted(row)
+	if (input.Decision == billingReviewActivateCharged || input.Decision == billingReviewRefundCharged) && !charged || input.Decision == billingReviewTerminateFree && !uncharged {
+		return nil, errBillingReviewChargeFact
+	}
+	phase := stringValue(row["reviewResolutionPhase"])
+	if phase != "receipt_recorded" {
+		synced, err := app.syncMonthlyResource(ctx, service, row)
+		if err != nil {
+			return nil, errBillingReviewProviderFact
+		}
+		row = synced
+	}
+	present := monthlyPurchaseReadbackConfirmed(input.ResourceType, row, row)
+	if input.Decision == billingReviewActivateCharged && strings.HasPrefix(input.BillingOperationID, "renewal-") {
+		periodStart, paidThrough, ok := monthlyReviewRenewalPeriod(row)
+		expected := cloneMap(row)
+		expected["periodStart"], expected["paidThrough"] = periodStart, paidThrough
+		deadline, deadlineErr := monthlyProviderDeadline(row)
+		target, targetErr := time.Parse(time.RFC3339, paidThrough)
+		present = ok && deadlineErr == nil && targetErr == nil && !deadline.Before(target) && monthlyPurchaseReadbackConfirmed(input.ResourceType, expected, row)
+	}
+	absent := monthlyResourceConfirmedAbsent(input.ResourceType, row)
+	if input.Decision == billingReviewActivateCharged && !present || (input.Decision == billingReviewTerminateFree || input.Decision == billingReviewRefundCharged) && !absent {
+		return nil, errBillingReviewProviderFact
+	}
+
+	userID, err := app.sub2APIUserID(ctx, input.AccountID)
+	if err != nil {
+		return nil, err
+	}
+	if stringValue(row["reviewResolutionKey"]) == "" {
+		row, err = app.ensureMonthlyReceipt(ctx, service, row, userID, "billing.charge_review_required.v1")
+		if err != nil || stringValue(row["lastReceiptId"]) == "" {
+			return nil, errBillingReviewReceipt
+		}
+		row["reviewResolutionKey"] = input.IdempotencyKey
+		row["reviewResolutionFingerprint"] = fingerprint
+		row["reviewResolutionDecision"] = input.Decision
+		row["reviewResolutionEvidenceRef"] = input.EvidenceRef
+		row["reviewResolutionReviewer"] = input.Reviewer
+		row["reviewResolutionPhase"] = "claimed"
+		row["reviewResolutionResolvedAt"] = time.Now().UTC().Format(time.RFC3339Nano)
+		row["reviewOriginalReceiptId"] = row["lastReceiptId"]
+		delete(row, "providerCommercialReady")
+		if err := app.saveMonthlyResource(ctx, input.ResourceType, row); err != nil {
+			return nil, err
+		}
+	}
+
+	if input.Decision == billingReviewRefundCharged && stringValue(row["reviewResolutionPhase"]) != "receipt_pending" && stringValue(row["reviewResolutionPhase"]) != "receipt_recorded" {
+		row["reviewResolutionPhase"] = "refund_pending"
+		if err := app.saveMonthlyResource(ctx, input.ResourceType, row); err != nil {
+			return nil, err
+		}
+		_, err := service.RefundSub2API(ctx, clients.Sub2APIRefundInput{
+			UserID: userID, Code: stringValue(row["sub2apiRefundCode"]), RefundUSDMicros: int64(numberField(row, "chargeUsdMicros", 0)),
+			Notes: "OPL monthly review resolution " + input.ResourceID,
+		})
+		if err != nil {
+			row["lastBillingError"] = errBillingReviewRefund.Error()
+			_ = app.saveMonthlyResource(ctx, input.ResourceType, row)
+			return nil, errBillingReviewRefund
+		}
+		row["reviewResolutionPhase"] = "receipt_pending"
+		delete(row, "lastBillingError")
+		if err := app.saveMonthlyResource(ctx, input.ResourceType, row); err != nil {
+			return nil, err
+		}
+	}
+
+	if stringValue(row["reviewResolutionReceiptId"]) == "" {
+		receipt, err := service.RecordMonthlyReceipt(ctx, billingReviewClosingReceipt(row, userID), billingReviewReceiptKey(row))
+		if err != nil || receipt.ReceiptID == "" {
+			row["reviewResolutionPhase"], row["lastBillingError"] = "receipt_pending", errBillingReviewReceipt.Error()
+			if saveErr := app.saveMonthlyResource(ctx, input.ResourceType, row); saveErr != nil {
+				return nil, saveErr
+			}
+			return nil, errBillingReviewReceipt
+		}
+		row["reviewResolutionReceiptId"] = receipt.ReceiptID
+		row["reviewResolutionPhase"] = "receipt_recorded"
+		delete(row, "lastBillingError")
+		if err := app.saveMonthlyResource(ctx, input.ResourceType, row); err != nil {
+			return nil, err
+		}
+	}
+
+	return app.finalizeMonthlyBillingReview(ctx, row)
+}
+
+func validBillingReviewDecision(decision string) bool {
+	return decision == billingReviewActivateCharged || decision == billingReviewTerminateFree || decision == billingReviewRefundCharged
+}
+
+func monthlyReviewChargeConfirmed(row map[string]any) bool {
+	known, _ := row["postChargeBalanceKnown"].(bool)
+	return known && numberField(row, "postChargeBalanceUsdMicros", -1) >= 0 && numberField(row, "chargeUsdMicros", 0) > 0 && stringValue(row["sub2apiRedeemCode"]) != ""
+}
+
+func monthlyReviewChargeNotAttempted(row map[string]any) bool {
+	known, _ := row["postChargeBalanceKnown"].(bool)
+	return !known && strings.HasPrefix(stringValue(row["billingOperationId"]), "renewal-") && stringValue(row["manualReviewReason"]) == "fabric_renewal_provider_truth_invalid"
+}
+
+func monthlyReviewRenewalPeriod(row map[string]any) (string, string, bool) {
+	paidThrough, err := time.Parse(time.RFC3339, stringValue(row["paidThrough"]))
+	if err != nil {
+		return "", "", false
+	}
+	anchorDay := int(numberField(row, "billingAnchorDay", float64(paidThrough.Day())))
+	return paidThrough.UTC().Format(time.RFC3339), nextBillingMonth(paidThrough, anchorDay).Format(time.RFC3339), true
+}
+
+func billingReviewClosingReceipt(row map[string]any, userID int64) clients.ReceiptInput {
+	decision := stringValue(row["reviewResolutionDecision"])
+	receiptType := "billing.reconciliation.v1"
+	if decision == billingReviewActivateCharged {
+		receiptType = "billing.resource_purchased.v1"
+		if strings.HasPrefix(stringValue(row["billingOperationId"]), "renewal-") {
+			receiptType = "billing.resource_renewed.v1"
+		}
+	} else if decision == billingReviewRefundCharged {
+		receiptType = "billing.resource_refunded.v1"
+	}
+	periodStart, paidThrough := row["periodStart"], row["paidThrough"]
+	if start, end, ok := monthlyReviewRenewalPeriod(row); decision == billingReviewActivateCharged && strings.HasPrefix(stringValue(row["billingOperationId"]), "renewal-") && ok {
+		periodStart, paidThrough = start, end
+	}
+	return clients.ReceiptInput{
+		Type: receiptType, Status: "completed", Surface: "control_plane", AccountID: stringValue(row["accountId"]),
+		WorkspaceID: firstNonEmpty(stringValue(row["workspaceId"]), "account-"+stringValue(row["accountId"])), RequestID: stringValue(row["billingOperationId"]),
+		Execution: map[string]any{"resourceType": monthlyResourceType(row), "resourceId": row["id"], "billingOperationId": row["billingOperationId"], "decision": decision},
+		InputRefs: map[string]any{"evidenceRef": row["reviewResolutionEvidenceRef"], "reviewReceiptId": row["reviewOriginalReceiptId"]},
+		ReviewerChecks: map[string]any{
+			"decision": decision, "reviewer": row["reviewResolutionReviewer"], "evidenceRef": row["reviewResolutionEvidenceRef"],
+			"chargeFact": billingReviewChargeFact(decision), "providerFact": billingReviewProviderFact(decision),
+		},
+		Cost: map[string]any{
+			"pricingVersion": row["pricingVersion"], "monthlyPriceCnyCents": row["monthlyPriceCnyCents"], "chargeUsdMicros": row["chargeUsdMicros"],
+			"sub2apiUserId": userID, "sub2apiRedeemCode": row["sub2apiRedeemCode"], "periodStart": periodStart, "paidThrough": paidThrough,
+			"resourceType": monthlyResourceType(row), "resourceId": row["id"],
+		},
+		Owner: map[string]any{"accountId": row["accountId"], "workspaceId": row["workspaceId"]}, SupersedesReceiptID: stringValue(row["reviewOriginalReceiptId"]),
+	}
+}
+
+func billingReviewChargeFact(decision string) string {
+	if decision == billingReviewTerminateFree {
+		return "confirmed_not_attempted"
+	}
+	return "confirmed_charged"
+}
+
+func billingReviewProviderFact(decision string) string {
+	if decision == billingReviewActivateCharged {
+		return "confirmed_present"
+	}
+	return "confirmed_absent"
+}
+
+func billingReviewReceiptKey(row map[string]any) string {
+	return "billing-review-resolution:" + stableID(stringValue(row["billingOperationId"]), stringValue(row["reviewResolutionKey"]))
+}
+
+func (app *controlPlaneServer) finalizeMonthlyBillingReview(ctx context.Context, row map[string]any) (map[string]any, error) {
+	decision := stringValue(row["reviewResolutionDecision"])
+	switch decision {
+	case billingReviewActivateCharged:
+		if strings.HasPrefix(stringValue(row["billingOperationId"]), "renewal-") {
+			periodStart, paidThrough, ok := monthlyReviewRenewalPeriod(row)
+			if !ok {
+				return nil, errBillingReviewProviderFact
+			}
+			row["periodStart"], row["paidThrough"] = periodStart, paidThrough
+		}
+		row["billingStatus"] = "active"
+		row["desiredStatus"] = monthlyDesiredStatus(monthlyResourceType(row))
+		row["providerStatus"] = stringValue(row["status"])
+	case billingReviewTerminateFree:
+		row["billingStatus"], row["status"], row["desiredStatus"], row["providerStatus"], row["autoRenew"] = "failed", "external_deleted", "destroyed", "missing", false
+	case billingReviewRefundCharged:
+		row["billingStatus"], row["status"], row["desiredStatus"], row["providerStatus"], row["autoRenew"] = "refunded", "external_deleted", "destroyed", "missing", false
+	default:
+		return nil, errInvalidBillingReview
+	}
+	row["lastReceiptId"] = row["reviewResolutionReceiptId"]
+	row["reviewResolutionPhase"] = "completed"
+	delete(row, "lastBillingError")
+	result := map[string]any{
+		"resourceType": monthlyResourceType(row), "resourceId": row["id"], "accountId": row["accountId"],
+		"billingOperationId": row["billingOperationId"], "decision": decision, "evidenceRef": row["reviewResolutionEvidenceRef"],
+		"reviewer": row["reviewResolutionReviewer"], "billingStatus": row["billingStatus"], "status": row["status"],
+		"providerStatus": row["providerStatus"], "receiptId": row["reviewResolutionReceiptId"], "resolvedAt": row["reviewResolutionResolvedAt"],
+	}
+	row["reviewResolutionResult"] = result
+	if err := app.saveMonthlyResource(ctx, monthlyResourceType(row), row); err != nil {
+		return nil, err
+	}
+	return cloneMap(result), nil
 }
 
 func (app *controlPlaneServer) ensureMonthlyPurchaseReceipt(ctx context.Context, service *controlplane.Service, row map[string]any, sub2APIUserID int64) (map[string]any, error) {
