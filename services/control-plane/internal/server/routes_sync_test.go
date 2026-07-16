@@ -40,14 +40,14 @@ func (f *recoveryFabricClient) DestroyStorageSnapshot(_ context.Context, id, _ s
 
 func TestWorkspaceBackupRestoreCloneAndExportKeepBackendTruth(t *testing.T) {
 	server := NewServer(newTestService(fakeLedgerClient{}, &recoveryFabricClient{fakeFabricClient: &fakeFabricClient{}}))
-	admin := tenantAdminSessionForTest(t, server)
-	compute := createResourceWithSession(t, server, admin, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","packageId":"basic"}`)
-	storage := createResourceWithSession(t, server, admin, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","sizeGb":10,"computeAllocationId":"`+stringValue(compute["id"])+`"}`)
-	attachment := createResourceWithSession(t, server, admin, http.MethodPost, "/api/storage-attachments", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","computeAllocationId":"`+stringValue(compute["id"])+`","storageId":"`+stringValue(storage["id"])+`"}`)
-	workspace := createResourceWithSession(t, server, admin, http.MethodPost, "/api/workspaces", `{"accountId":"acct-alpha","ownerId":"usr-alpha","attachmentId":"`+stringValue(attachment["id"])+`","name":"Alpha"}`)
+	owner := tenantOwnerSessionForTest(t, server)
+	compute := createResourceWithSession(t, server, owner, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","packageId":"basic"}`)
+	storage := createResourceWithSession(t, server, owner, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","sizeGb":10,"computeAllocationId":"`+stringValue(compute["id"])+`"}`)
+	attachment := createResourceWithSession(t, server, owner, http.MethodPost, "/api/storage-attachments", `{"accountId":"acct-alpha","workspaceId":"ws-alpha","computeAllocationId":"`+stringValue(compute["id"])+`","storageId":"`+stringValue(storage["id"])+`"}`)
+	workspace := createResourceWithSession(t, server, owner, http.MethodPost, "/api/workspaces", `{"accountId":"acct-alpha","ownerId":"usr-alpha","attachmentId":"`+stringValue(attachment["id"])+`","name":"Alpha"}`)
 	workspaceID := stringValue(workspace["id"])
 
-	created := syncRequest(t, server, admin, http.MethodPost, "/api/workspaces/"+workspaceID+"/backups", "backup-once", `{"syncCursor":7,"projectVersions":{"project-alpha":3},"artifactIds":["artifact-alpha"],"receiptIds":["receipt-alpha"],"continuationIds":["continuation-alpha"]}`)
+	created := syncRequest(t, server, owner, http.MethodPost, "/api/workspaces/"+workspaceID+"/backups", "backup-once", `{"syncCursor":7,"projectVersions":{"project-alpha":3},"artifactIds":["artifact-alpha"],"receiptIds":["receipt-alpha"],"continuationIds":["continuation-alpha"]}`)
 	if created.Code != http.StatusCreated {
 		t.Fatalf("create backup=%d %s", created.Code, created.Body.String())
 	}
@@ -57,15 +57,15 @@ func TestWorkspaceBackupRestoreCloneAndExportKeepBackendTruth(t *testing.T) {
 		t.Fatalf("backup projection leaked provider facts: %#v", backup)
 	}
 
-	exported := syncRequest(t, server, admin, http.MethodGet, "/api/workspace-backups/"+backupID+"/export", "", "")
+	exported := syncRequest(t, server, owner, http.MethodGet, "/api/workspace-backups/"+backupID+"/export", "", "")
 	if exported.Code != http.StatusOK || strings.Contains(exported.Body.String(), "private-provider-request") || strings.Contains(exported.Body.String(), "providerSnapshot") {
 		t.Fatalf("export=%d %s", exported.Code, exported.Body.String())
 	}
-	restored := syncRequest(t, server, admin, http.MethodPost, "/api/workspace-backups/"+backupID+"/restore", "restore-once", `{"targetStorageId":"vol-restored"}`)
+	restored := syncRequest(t, server, owner, http.MethodPost, "/api/workspace-backups/"+backupID+"/restore", "restore-once", `{"targetStorageId":"vol-restored"}`)
 	if restored.Code != http.StatusAccepted || !strings.Contains(restored.Body.String(), "vol-restored") {
 		t.Fatalf("restore=%d %s", restored.Code, restored.Body.String())
 	}
-	stateRec := syncRequest(t, server, admin, http.MethodGet, "/api/state?accountId=acct-alpha", "", "")
+	stateRec := syncRequest(t, server, owner, http.MethodGet, "/api/state?accountId=acct-alpha", "", "")
 	var state map[string]any
 	if stateRec.Code != http.StatusOK || json.NewDecoder(stateRec.Body).Decode(&state) != nil {
 		t.Fatalf("state=%d %s", stateRec.Code, stateRec.Body.String())
@@ -77,7 +77,7 @@ func TestWorkspaceBackupRestoreCloneAndExportKeepBackendTruth(t *testing.T) {
 	if !foundRestored {
 		t.Fatalf("restored storage projection missing: %#v", state["storageVolumes"])
 	}
-	cloned := syncRequest(t, server, admin, http.MethodPost, "/api/workspace-backups/"+backupID+"/clone", "clone-once", `{"name":"Alpha Clone"}`)
+	cloned := syncRequest(t, server, owner, http.MethodPost, "/api/workspace-backups/"+backupID+"/clone", "clone-once", `{"name":"Alpha Clone"}`)
 	if cloned.Code != http.StatusCreated {
 		t.Fatalf("clone=%d %s", cloned.Code, cloned.Body.String())
 	}
@@ -85,11 +85,11 @@ func TestWorkspaceBackupRestoreCloneAndExportKeepBackendTruth(t *testing.T) {
 	if stringValue(clone["workspaceId"]) == workspaceID || stringValue(clone["storageId"]) == stringValue(storage["id"]) {
 		t.Fatalf("clone reused source identity: %#v", clone)
 	}
-	destroyed := syncRequest(t, server, admin, http.MethodPost, "/api/workspace-backups/"+backupID+"/destroy", "destroy-backup-once", "{}")
+	destroyed := syncRequest(t, server, owner, http.MethodPost, "/api/workspace-backups/"+backupID+"/destroy", "destroy-backup-once", "{}")
 	if destroyed.Code != http.StatusAccepted || !strings.Contains(destroyed.Body.String(), "destroyed") {
 		t.Fatalf("destroy backup=%d %s", destroyed.Code, destroyed.Body.String())
 	}
-	listed := syncRequest(t, server, admin, http.MethodGet, "/api/workspaces/"+workspaceID+"/backups", "", "")
+	listed := syncRequest(t, server, owner, http.MethodGet, "/api/workspaces/"+workspaceID+"/backups", "", "")
 	if listed.Code != http.StatusOK || !strings.Contains(listed.Body.String(), `"status":"destroyed"`) {
 		t.Fatalf("backup state not persisted=%d %s", listed.Code, listed.Body.String())
 	}

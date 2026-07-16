@@ -1209,7 +1209,7 @@ func TestMonthlyRoutesRejectInactiveEntitlementsBeforeFabric(t *testing.T) {
 	if err != nil {
 		t.Fatalf("new monthly server: %v", err)
 	}
-	session := tenantAdminSessionForTest(t, server)
+	session := tenantOwnerSessionForTest(t, server)
 	attachment := requestWithSession(t, server, session, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"workspace-monthly","computeAllocationId":"compute-inactive","storageId":"storage-active"}`)
 	if attachment.Code != http.StatusConflict || !strings.Contains(attachment.Body.String(), "monthly_entitlement_inactive") {
 		t.Fatalf("attachment status = %d: %s", attachment.Code, attachment.Body.String())

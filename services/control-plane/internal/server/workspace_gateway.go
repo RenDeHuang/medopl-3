@@ -25,7 +25,7 @@ func (app *controlPlaneServer) workspaceResponse(row map[string]any) map[string]
 	return response
 }
 
-func (app *controlPlaneServer) workspaceAccessResponse(row map[string]any, now time.Time) (map[string]any, bool) {
+func (app *controlPlaneServer) workspaceAccessResponse(row map[string]any, now time.Time) (map[string]any, string) {
 	response := workspaceResponse(row)
 	storage, ok := app.getStorage(stringValue(response["storageId"]))
 	if ok {
@@ -40,8 +40,28 @@ func (app *controlPlaneServer) workspaceAccessResponse(row map[string]any, now t
 	if !storageActive {
 		response["openable"] = false
 		response["accessState"] = "disabled"
+		return response, "workspace_storage_entitlement_inactive"
 	}
-	return response, storageActive
+
+	compute, ok := app.getCompute(firstNonEmpty(stringValue(response["currentComputeAllocationId"]), stringValue(response["computeAllocationId"])))
+	if ok {
+		switch stringValue(compute["status"]) {
+		case "running", "ready", "available", "active":
+		default:
+			ok = false
+		}
+	}
+	paidThrough, err = time.Parse(time.RFC3339, stringValue(compute["paidThrough"]))
+	computeActive := ok &&
+		app.resourceBelongsToAccount(compute, firstNonEmpty(stringValue(response["accountId"]), stringValue(response["ownerAccountId"]))) &&
+		stringValue(compute["workspaceId"]) == stringValue(response["id"]) &&
+		stringValue(compute["billingStatus"]) == "active" && err == nil && now.UTC().Before(paidThrough)
+	if !computeActive {
+		response["openable"] = false
+		response["accessState"] = "disabled"
+		return response, "workspace_compute_entitlement_inactive"
+	}
+	return response, ""
 }
 
 func (app *controlPlaneServer) saveWorkspaceProjection(workspace domain.WorkspaceProjection) error {
@@ -178,9 +198,9 @@ func (app *controlPlaneServer) proxyWorkspaceTo(w http.ResponseWriter, r *http.R
 		writeError(w, http.StatusConflict, "workspace_suspended")
 		return
 	}
-	response, storageActive := app.workspaceAccessResponse(cloneMap(workspace), time.Now().UTC())
-	if !storageActive {
-		writeError(w, http.StatusConflict, "workspace_storage_entitlement_inactive")
+	response, blockReason := app.workspaceAccessResponse(cloneMap(workspace), time.Now().UTC())
+	if blockReason != "" {
+		writeError(w, http.StatusConflict, blockReason)
 		return
 	}
 	if response["openable"] != true {

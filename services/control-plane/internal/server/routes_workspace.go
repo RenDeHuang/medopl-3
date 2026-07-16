@@ -351,6 +351,12 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 		if !ok {
 			return
 		}
+		user, ok := app.sessionUserContext(r)
+		if !ok || stringValue(user["role"]) != "owner" {
+			writeError(w, http.StatusForbidden, "workspace_owner_required")
+			return
+		}
+		ownerID := stringValue(user["id"])
 		attachmentID := stringField(input, "attachmentId", "")
 		attachment, ok := app.getAttachment(attachmentID)
 		if !ok {
@@ -385,7 +391,6 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 			writeError(w, http.StatusConflict, "compute_storage_workspace_mismatch")
 			return
 		}
-		ownerID := firstNonEmpty(stringField(input, "ownerId", ""), stringField(input, "ownerUserId", ""))
 		name := firstNonEmpty(stringField(input, "name", ""), stringField(input, "workspaceName", "Workspace"))
 		requestHash := stableID(accountID, ownerID, name, packageID, attachmentID, computeID, storageID)
 		operationID := "create-" + stableID(workspaceID)[:18]
