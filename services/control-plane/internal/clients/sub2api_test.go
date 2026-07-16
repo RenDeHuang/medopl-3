@@ -397,93 +397,133 @@ func TestSub2APIClientRefundsWithExactPositiveMicrosAndReplays(t *testing.T) {
 	}
 }
 
-func TestSub2APIClientRejectsUnsupportedVersionBeforeCharge(t *testing.T) {
-	chargeCalls := 0
-	client := newSub2APITestClient(t, func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case "/api/v1/auth/login":
-			writeSub2APISuccess(t, w, map[string]any{"access_token": "access", "refresh_token": "refresh"})
-		case "/api/v1/admin/system/version":
-			writeSub2APISuccess(t, w, map[string]any{"version": "0.1.152"})
-		case "/api/v1/admin/redeem-codes/create-and-redeem":
-			chargeCalls++
-		default:
-			http.NotFound(w, r)
-		}
-	}, []string{"0.1.151"}, time.Second)
-
-	_, err := client.Charge(context.Background(), Sub2APIChargeInput{UserID: 41, Code: "opl:test", ChargeUSDMicros: 1})
-	if !errors.Is(err, ErrSub2APIUnsupportedVersion) || chargeCalls != 0 {
-		t.Fatalf("unsupported version error = %v, charge calls = %d", err, chargeCalls)
-	}
-}
-
-func TestSub2APIClientRejectsUnsupportedVersionBeforeReadPaths(t *testing.T) {
+func TestSub2APIClientVersionIsDiagnostic(t *testing.T) {
 	for _, tc := range []struct {
-		name string
-		path string
-		call func(*Sub2APIHTTPClient) error
+		name          string
+		version       string
+		versionStatus int
 	}{
-		{name: "balance", path: "/api/v1/admin/users/41", call: func(client *Sub2APIHTTPClient) error { _, err := client.Balance(context.Background(), 41); return err }},
-		{name: "workspace key", path: "/api/v1/admin/users/41/api-keys", call: func(client *Sub2APIHTTPClient) error {
-			_, err := client.WorkspaceKey(context.Background(), 41)
-			return err
-		}},
+		{name: "deployed version", version: "0.1.153"},
+		{name: "future version", version: "99.0.0"},
+		{name: "diagnostic unavailable", versionStatus: http.StatusServiceUnavailable},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			businessCalls := 0
+			versionCalls := 0
 			client := newSub2APITestClient(t, func(w http.ResponseWriter, r *http.Request) {
 				switch r.URL.Path {
 				case "/api/v1/auth/login":
 					writeSub2APISuccess(t, w, map[string]any{"access_token": "access", "refresh_token": "refresh"})
 				case "/api/v1/admin/system/version":
-					writeSub2APISuccess(t, w, map[string]any{"version": "0.1.157"})
-				case tc.path:
-					businessCalls++
-					writeSub2APISuccess(t, w, map[string]any{})
+					versionCalls++
+					if tc.versionStatus != 0 {
+						http.Error(w, "unavailable", tc.versionStatus)
+						return
+					}
+					writeSub2APISuccess(t, w, map[string]any{"version": tc.version})
+				case "/api/v1/admin/users/41":
+					writeSub2APISuccess(t, w, map[string]any{"id": 41, "balance": 12.345678, "status": "active"})
 				default:
 					http.NotFound(w, r)
 				}
 			}, []string{"0.1.156", "0.1.155"}, time.Second)
 
-			if err := tc.call(client); !errors.Is(err, ErrSub2APIUnsupportedVersion) || businessCalls != 0 {
-				t.Fatalf("unsupported read version err=%v business calls=%d", err, businessCalls)
+			version, versionErr := client.Version(context.Background())
+			if tc.versionStatus == 0 && (versionErr != nil || version != tc.version) {
+				t.Fatalf("version = %q, err = %v", version, versionErr)
+			}
+			if tc.versionStatus != 0 && versionErr == nil {
+				t.Fatal("version diagnostic should report its own failure")
+			}
+
+			balance, err := client.Balance(context.Background(), 41)
+			if err != nil || balance.UserID != 41 || balance.USDMicros != 12_345_678 {
+				t.Fatalf("balance = %#v, err = %v", balance, err)
+			}
+			if versionCalls != 1 {
+				t.Fatalf("version calls = %d, want only the explicit diagnostic call", versionCalls)
 			}
 		})
 	}
 }
 
-func TestSub2APIClientAcceptsConfiguredCurrentAndFallbackVersions(t *testing.T) {
+func TestSub2APIClientCapabilitiesDoNotRequestVersion(t *testing.T) {
 	for _, tc := range []struct {
-		version string
-		allowed bool
+		name string
+		call func(*Sub2APIHTTPClient) error
 	}{
-		{version: "0.1.155", allowed: true},
-		{version: "0.1.156", allowed: true},
-		{version: "0.1.157", allowed: false},
+		{name: "balance", call: func(client *Sub2APIHTTPClient) error {
+			balance, err := client.Balance(context.Background(), 41)
+			if err == nil && (balance.UserID != 41 || balance.USDMicros != 12_345_678) {
+				return fmt.Errorf("unexpected balance: %#v", balance)
+			}
+			return err
+		}},
+		{name: "workspace key", call: func(client *Sub2APIHTTPClient) error {
+			key, err := client.WorkspaceKey(context.Background(), 41)
+			if err == nil && (key.ID != 9 || key.UserID != 41 || key.Key != "workspace-key-secret") {
+				return fmt.Errorf("unexpected workspace key: %#v", key)
+			}
+			return err
+		}},
+		{name: "charge", call: func(client *Sub2APIHTTPClient) error {
+			charge, err := client.Charge(context.Background(), Sub2APIChargeInput{UserID: 41, Code: "opl:capability:charge", ChargeUSDMicros: 1})
+			if err == nil && (charge.Code != "opl:capability:charge" || charge.Status != "used") {
+				return fmt.Errorf("unexpected charge: %#v", charge)
+			}
+			return err
+		}},
+		{name: "refund", call: func(client *Sub2APIHTTPClient) error {
+			refund, err := client.Refund(context.Background(), Sub2APIRefundInput{UserID: 41, Code: "opl:capability:refund", RefundUSDMicros: 1})
+			if err == nil && (refund.Code != "opl:capability:refund" || refund.Status != "used") {
+				return fmt.Errorf("unexpected refund: %#v", refund)
+			}
+			return err
+		}},
 	} {
-		t.Run(tc.version, func(t *testing.T) {
-			redeemCalls := 0
+		t.Run(tc.name, func(t *testing.T) {
+			versionCalls := 0
 			client := newSub2APITestClient(t, func(w http.ResponseWriter, r *http.Request) {
 				switch r.URL.Path {
 				case "/api/v1/auth/login":
 					writeSub2APISuccess(t, w, map[string]any{"access_token": "access", "refresh_token": "refresh"})
 				case "/api/v1/admin/system/version":
-					writeSub2APISuccess(t, w, map[string]any{"version": tc.version})
+					versionCalls++
+					http.Error(w, "unavailable", http.StatusServiceUnavailable)
+				case "/api/v1/admin/users/41":
+					writeSub2APISuccess(t, w, map[string]any{"id": 41, "balance": 12.345678, "status": "active"})
+				case "/api/v1/admin/users/41/api-keys":
+					writeSub2APISuccess(t, w, map[string]any{
+						"items": []any{map[string]any{
+							"id": 9, "user_id": 41, "name": "opl-workspace", "key": "workspace-key-secret", "status": "active",
+							"quota": 0, "quota_used": 0, "usage_5h": 0, "usage_1d": 0, "usage_7d": 0,
+						}},
+						"total": 1, "page": 1, "page_size": 1000, "pages": 1,
+					})
 				case "/api/v1/admin/redeem-codes/create-and-redeem":
-					redeemCalls++
-					writeSub2APISuccess(t, w, json.RawMessage(`{"redeem_code":{"code":"opl:version-guard","type":"balance","value":-0.000001,"status":"used","used_by":41}}`))
+					var input struct {
+						Code   string      `json:"code"`
+						Type   string      `json:"type"`
+						Value  json.Number `json:"value"`
+						UserID int64       `json:"user_id"`
+					}
+					decoder := json.NewDecoder(r.Body)
+					decoder.UseNumber()
+					if err := decoder.Decode(&input); err != nil {
+						t.Fatalf("decode balance adjustment: %v", err)
+					}
+					writeSub2APISuccess(t, w, map[string]any{"redeem_code": map[string]any{
+						"code": input.Code, "type": input.Type, "value": input.Value, "status": "used", "used_by": input.UserID,
+					}})
 				default:
 					http.NotFound(w, r)
 				}
-			}, []string{"0.1.155", "0.1.156"}, time.Second)
+			}, []string{"0.1.156", "0.1.155"}, time.Second)
 
-			_, err := client.Charge(context.Background(), Sub2APIChargeInput{UserID: 41, Code: "opl:version-guard", ChargeUSDMicros: 1})
-			if tc.allowed && (err != nil || redeemCalls != 1) {
-				t.Fatalf("configured version rejected: err=%v calls=%d", err, redeemCalls)
+			if err := tc.call(client); err != nil {
+				t.Fatalf("capability call: %v", err)
 			}
-			if !tc.allowed && (!errors.Is(err, ErrSub2APIUnsupportedVersion) || redeemCalls != 0) {
-				t.Fatalf("unconfigured version err=%v calls=%d", err, redeemCalls)
+			if versionCalls != 0 {
+				t.Fatalf("version calls = %d, want 0", versionCalls)
 			}
 		})
 	}
