@@ -15,6 +15,7 @@ import (
 var (
 	errMonthlyInsufficientBalance = errors.New("monthly_balance_insufficient")
 	errMonthlyChargeNeedsReview   = errors.New("monthly_charge_needs_review")
+	errMonthlyPreDebitGatewayKey  = errors.New("monthly_pre_debit_gateway_key_unavailable")
 	errMonthlyAccountUnmapped     = errors.New("sub2api_account_mapping_required")
 	errMonthlyPurchaseRefunded    = errors.New("monthly_purchase_refunded")
 	errBillingReviewNotFound      = errors.New("billing_review_not_found")
@@ -250,7 +251,7 @@ func (app *controlPlaneServer) resumeMonthlyPurchase(ctx context.Context, servic
 
 func (app *controlPlaneServer) chargeMonthlyOperation(ctx context.Context, service *controlplane.Service, row map[string]any, sub2APIUserID, preChargeBalance int64) (map[string]any, error) {
 	if _, err := service.Sub2APIWorkspaceKey(ctx, sub2APIUserID); err != nil {
-		return row, err
+		return row, errors.Join(errMonthlyPreDebitGatewayKey, err)
 	}
 	chargeUSDMicros := int64(numberField(row, "chargeUsdMicros", 0))
 	verifyDelta := stringValue(row["lastBillingError"]) != "sub2api_charge_unconfirmed"

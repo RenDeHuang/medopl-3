@@ -136,20 +136,45 @@ func TestMonthlyRenewalPreflightStopsBeforeFinancialAndProviderCalls(t *testing.
 	}
 }
 
-func TestMonthlyRenewalGatewayKeyFailureStopsBeforeDebitAndProviderRenewal(t *testing.T) {
-	now := time.Date(2026, 8, 30, 9, 30, 0, 0, time.UTC)
-	paidThrough := now.Add(12 * time.Hour)
-	app, service, sub2API, fabric, ledger, _ := newMonthlyBillingTest(t, []int64{100_000_000, 50_000_000})
-	sub2API.workspaceKeyErr = clients.ErrSub2APIWorkspaceKeyMissing
-	row := monthlyActiveResource("compute", "compute-key-failure", paidThrough)
-	mustStore(t, app.tables.SaveCompute(context.Background(), row))
+func TestMonthlyRenewalRetriesGatewayKeyPreDebitFailure(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		err  error
+	}{
+		{name: "missing", err: clients.ErrSub2APIWorkspaceKeyMissing},
+		{name: "temporary", err: errors.New("temporary Gateway Key failure")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			paidThrough := time.Date(2026, 8, 31, 9, 30, 0, 0, time.UTC)
+			now := paidThrough.Add(-24 * time.Hour)
+			app, service, sub2API, fabric, ledger, _ := newMonthlyBillingTest(t, []int64{100_000_000, 100_000_000, 50_000_000})
+			sub2API.workspaceKeyErr = tc.err
+			id := "compute-key-retry-" + tc.name
+			row := monthlyActiveResource("compute", id, paidThrough)
+			mustStore(t, app.tables.SaveCompute(context.Background(), row))
+			operationID := "renewal-" + stableID("compute", id, paidThrough.Format(time.RFC3339))[:18]
 
-	result, err := app.renewMonthlyResource(context.Background(), service, "compute", row, now)
-	if !errors.Is(err, errMonthlyChargeNeedsReview) || result["billingStatus"] != "manual_review" {
-		t.Fatalf("Gateway Key renewal result=%#v err=%v", result, err)
-	}
-	if len(sub2API.workspaceKeyCalls) != 1 || sub2API.workspaceKeyCalls[0] != 41 || len(sub2API.charges) != 0 || len(sub2API.refunds) != 0 || len(fabric.computeRenewKeys) != 0 || len(fabric.storageRenewKeys) != 0 || len(ledger.receipts) != 1 || ledger.receipts[0].Type != "billing.charge_review_required.v1" {
-		t.Fatalf("Gateway Key renewal caused side effects: keyCalls=%#v charges=%#v refunds=%#v computeRenew=%#v storageRenew=%#v receipts=%#v", sub2API.workspaceKeyCalls, sub2API.charges, sub2API.refunds, fabric.computeRenewKeys, fabric.storageRenewKeys, ledger.receipts)
+			firstErr := app.runMonthlyBillingOnce(context.Background(), service, now)
+			first, _ := app.getCompute(id)
+			if !errors.Is(firstErr, tc.err) || first["billingStatus"] != "renewal_pending" || first["billingOperationId"] != operationID || first["lastBillingError"] != "gateway_key_unavailable" {
+				t.Fatalf("first Gateway Key retry state=%#v err=%v", first, firstErr)
+			}
+			if len(sub2API.workspaceKeyCalls) != 1 || sub2API.workspaceKeyCalls[0] != 41 || len(sub2API.charges) != 0 || len(sub2API.refunds) != 0 || len(fabric.computeRenewKeys) != 0 || len(fabric.storageRenewKeys) != 0 || len(ledger.receipts) != 0 {
+				t.Fatalf("first Gateway Key failure caused side effects: keyCalls=%#v charges=%#v refunds=%#v computeRenew=%#v storageRenew=%#v receipts=%#v", sub2API.workspaceKeyCalls, sub2API.charges, sub2API.refunds, fabric.computeRenewKeys, fabric.storageRenewKeys, ledger.receipts)
+			}
+
+			sub2API.workspaceKeyErr = nil
+			if err := app.runMonthlyBillingOnce(context.Background(), service, now); err != nil {
+				t.Fatalf("retry Gateway Key renewal: %v", err)
+			}
+			recovered, _ := app.getCompute(id)
+			if recovered["billingStatus"] != "active" || recovered["billingOperationId"] != operationID || stringValue(recovered["lastBillingError"]) != "" {
+				t.Fatalf("recovered Gateway Key renewal=%#v", recovered)
+			}
+			if len(sub2API.workspaceKeyCalls) != 2 || len(sub2API.charges) != 1 || sub2API.charges[0].Code != stringValue(first["sub2apiRedeemCode"]) || len(sub2API.refunds) != 0 || len(fabric.computeRenewKeys) != 1 || len(fabric.storageRenewKeys) != 0 || len(ledger.receipts) != 1 || ledger.receipts[0].Type != "billing.resource_renewed.v1" {
+				t.Fatalf("recovered Gateway Key renewal side effects: keyCalls=%#v charges=%#v refunds=%#v computeRenew=%#v storageRenew=%#v receipts=%#v", sub2API.workspaceKeyCalls, sub2API.charges, sub2API.refunds, fabric.computeRenewKeys, fabric.storageRenewKeys, ledger.receipts)
+			}
+		})
 	}
 }
 

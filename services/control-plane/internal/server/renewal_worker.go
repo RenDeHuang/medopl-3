@@ -255,6 +255,14 @@ func (app *controlPlaneServer) renewMonthlyResource(ctx context.Context, service
 		}
 		row, err = app.chargeMonthlyOperation(ctx, service, row, userID, balance.USDMicros)
 		if err != nil {
+			if errors.Is(err, errMonthlyPreDebitGatewayKey) {
+				row["billingStatus"], row["lastBillingError"] = "renewal_pending", "gateway_key_unavailable"
+				delete(row, "manualReviewReason")
+				if saveErr := app.saveMonthlyResource(ctx, resourceType, row); saveErr != nil {
+					return row, saveErr
+				}
+				return row, err
+			}
 			reason := firstNonEmpty(stringValue(row["lastBillingError"]), "sub2api_renewal_charge_unconfirmed")
 			return app.markMonthlyManualReview(ctx, service, row, userID, reason)
 		}
