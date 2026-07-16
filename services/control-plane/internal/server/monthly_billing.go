@@ -167,16 +167,20 @@ func (app *controlPlaneServer) purchaseMonthlyResource(ctx context.Context, serv
 		if stringValue(row["lastBillingError"]) != "sub2api_charge_unconfirmed" {
 			delete(row, "lastBillingError")
 		}
-		balance, err := service.Sub2APIBalance(ctx, sub2APIUserID)
-		if err != nil {
-			return row, err
+		preChargeBalance := int64(0)
+		if _, confirmationExists := row["sub2apiChargeConfirmation"]; !confirmationExists {
+			balance, err := service.Sub2APIBalance(ctx, sub2APIUserID)
+			if err != nil {
+				return row, err
+			}
+			if balance.USDMicros < chargeUSDMicros {
+				row["billingStatus"], row["lastBillingError"] = "failed", errMonthlyInsufficientBalance.Error()
+				_ = app.saveMonthlyResource(ctx, input.ResourceType, row)
+				return row, errMonthlyInsufficientBalance
+			}
+			preChargeBalance = balance.USDMicros
 		}
-		if balance.USDMicros < chargeUSDMicros {
-			row["billingStatus"], row["lastBillingError"] = "failed", errMonthlyInsufficientBalance.Error()
-			_ = app.saveMonthlyResource(ctx, input.ResourceType, row)
-			return row, errMonthlyInsufficientBalance
-		}
-		row, err = app.chargeMonthlyOperation(ctx, service, row, sub2APIUserID, balance.USDMicros)
+		row, err = app.chargeMonthlyOperation(ctx, service, row, sub2APIUserID, preChargeBalance)
 		if err != nil {
 			if stringValue(row["billingStatus"]) == "manual_review" {
 				return app.markMonthlyManualReview(ctx, service, row, sub2APIUserID, firstNonEmpty(stringValue(row["lastBillingError"]), "sub2api_charge_unconfirmed"))

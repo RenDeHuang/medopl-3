@@ -610,7 +610,7 @@ func TestMonthlyPurchasePersistsStrictChargeConfirmation(t *testing.T) {
 }
 
 func TestMonthlyPurchaseResumesPersistedChargeConfirmationAfterRestart(t *testing.T) {
-	app, service, sub2API, fabric, ledger, _ := newMonthlyBillingTest(t, []int64{50_000_000, 50_000_000, 50_000_000})
+	app, service, sub2API, fabric, ledger, _ := newMonthlyBillingTest(t, []int64{0})
 	fabric.preflightErr = errors.New("fabric preflight unavailable")
 	input := monthlyPurchaseInput{
 		ResourceType: "compute", ResourceID: "compute-confirmation-restart", BillingOperationID: "billing-confirmation-restart",
@@ -641,7 +641,7 @@ func TestMonthlyPurchaseResumesPersistedChargeConfirmationAfterRestart(t *testin
 	}
 	sub2API.workspaceKeyErr = nil
 	result, err := restarted.purchaseMonthlyResource(context.Background(), service, input)
-	if err != nil || result["billingStatus"] != "active" || result["postChargeBalanceKnown"] != true || result["postChargeBalanceUsdMicros"] != int64(50_000_000) {
+	if err != nil || result["billingStatus"] != "active" || result["postChargeBalanceKnown"] != true || result["postChargeBalanceUsdMicros"] != int64(0) {
 		t.Fatalf("resumed purchase=%#v err=%v", result, err)
 	}
 	if len(sub2API.workspaceKeyCalls) != 2 || len(sub2API.charges) != 0 || len(fabric.computeIDs) != 1 || len(ledger.receipts) != 1 || ledger.receipts[0].Type != "billing.resource_purchased.v1" {
@@ -658,7 +658,7 @@ func TestMonthlyPurchaseRejectsPersistedChargeConfirmationWithoutOverwritingIt(t
 		{name: "mismatched", confirmation: map[string]any{"code": "opl:different", "userId": int64(41), "chargeUsdMicros": int64(50_000_000), "status": "used"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			app, service, sub2API, fabric, ledger, _ := newMonthlyBillingTest(t, []int64{50_000_000})
+			app, service, sub2API, fabric, ledger, _ := newMonthlyBillingTest(t, []int64{0})
 			fabric.preflightErr = errors.New("fabric preflight unavailable")
 			input := monthlyPurchaseInput{
 				ResourceType: "compute", ResourceID: "compute-persisted-confirmation-" + tc.name, BillingOperationID: "billing-persisted-confirmation-" + tc.name,

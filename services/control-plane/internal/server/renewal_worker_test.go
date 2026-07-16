@@ -319,7 +319,7 @@ func TestMonthlyRenewalConfirmsLostAdjustmentFromAuthoritativeHistory(t *testing
 func TestMonthlyRenewalResumesPersistedChargeConfirmationAfterRestart(t *testing.T) {
 	paidThrough := time.Date(2026, 8, 31, 9, 30, 0, 0, time.UTC)
 	now := paidThrough.Add(-24 * time.Hour)
-	app, service, sub2API, fabric, ledger, _ := newMonthlyBillingTest(t, []int64{50_000_000, 50_000_000})
+	app, service, sub2API, fabric, ledger, _ := newMonthlyBillingTest(t, []int64{0})
 	fabric.preflightErr = errors.New("fabric preflight unavailable")
 	id := "compute-confirmation-restart"
 	mustStore(t, app.tables.SaveCompute(context.Background(), monthlyActiveResource("compute", id, paidThrough)))
@@ -344,7 +344,7 @@ func TestMonthlyRenewalResumesPersistedChargeConfirmationAfterRestart(t *testing
 		t.Fatal(err)
 	}
 	result, _ := restarted.getCompute(id)
-	if result["billingStatus"] != "active" || result["billingOperationId"] != operationID || result["postChargeBalanceKnown"] != true || result["postChargeBalanceUsdMicros"] != int64(50_000_000) {
+	if result["billingStatus"] != "active" || result["billingOperationId"] != operationID || result["postChargeBalanceKnown"] != true || result["postChargeBalanceUsdMicros"] != int64(0) {
 		t.Fatalf("resumed renewal=%#v", result)
 	}
 	if len(sub2API.charges) != 0 || len(fabric.computeRenewKeys) != 1 || len(ledger.receipts) != 1 || ledger.receipts[0].Type != "billing.resource_renewed.v1" {

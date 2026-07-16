@@ -242,18 +242,22 @@ func (app *controlPlaneServer) renewMonthlyResource(ctx context.Context, service
 		return row, err
 	}
 	if known, _ := row["postChargeBalanceKnown"].(bool); !known {
-		balance, err := service.Sub2APIBalance(ctx, userID)
-		if err != nil {
-			row["billingStatus"], row["lastBillingError"] = "past_due", "sub2api_balance_unavailable"
-			_ = app.saveMonthlyResource(ctx, resourceType, row)
-			return row, err
+		preChargeBalance := int64(0)
+		if _, confirmationExists := row["sub2apiChargeConfirmation"]; !confirmationExists {
+			balance, err := service.Sub2APIBalance(ctx, userID)
+			if err != nil {
+				row["billingStatus"], row["lastBillingError"] = "past_due", "sub2api_balance_unavailable"
+				_ = app.saveMonthlyResource(ctx, resourceType, row)
+				return row, err
+			}
+			if balance.USDMicros < int64(numberField(row, "chargeUsdMicros", 0)) {
+				row["billingStatus"], row["lastBillingError"] = "past_due", errMonthlyInsufficientBalance.Error()
+				_ = app.saveMonthlyResource(ctx, resourceType, row)
+				return row, errMonthlyInsufficientBalance
+			}
+			preChargeBalance = balance.USDMicros
 		}
-		if balance.USDMicros < int64(numberField(row, "chargeUsdMicros", 0)) {
-			row["billingStatus"], row["lastBillingError"] = "past_due", errMonthlyInsufficientBalance.Error()
-			_ = app.saveMonthlyResource(ctx, resourceType, row)
-			return row, errMonthlyInsufficientBalance
-		}
-		row, err = app.chargeMonthlyOperation(ctx, service, row, userID, balance.USDMicros)
+		row, err = app.chargeMonthlyOperation(ctx, service, row, userID, preChargeBalance)
 		if err != nil {
 			if errors.Is(err, errMonthlyPreDebitGatewayKey) {
 				row["billingStatus"], row["lastBillingError"] = "renewal_pending", "gateway_key_unavailable"
