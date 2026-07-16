@@ -316,6 +316,42 @@ func TestMonthlyRenewalConfirmsLostAdjustmentFromAuthoritativeHistory(t *testing
 	}
 }
 
+func TestMonthlyRenewalResumesPersistedChargeConfirmationAfterRestart(t *testing.T) {
+	paidThrough := time.Date(2026, 8, 31, 9, 30, 0, 0, time.UTC)
+	now := paidThrough.Add(-24 * time.Hour)
+	app, service, sub2API, fabric, ledger, _ := newMonthlyBillingTest(t, []int64{50_000_000, 50_000_000})
+	fabric.preflightErr = errors.New("fabric preflight unavailable")
+	id := "compute-confirmation-restart"
+	mustStore(t, app.tables.SaveCompute(context.Background(), monthlyActiveResource("compute", id, paidThrough)))
+	if err := app.runMonthlyBillingOnce(context.Background(), service, now); err == nil {
+		t.Fatal("preflight failure did not persist renewal")
+	}
+	pending, _ := app.getCompute(id)
+	operationID := stringValue(pending["billingOperationId"])
+	pending["sub2apiChargeConfirmation"] = map[string]any{
+		"code": pending["sub2apiRedeemCode"], "userId": int64(41), "chargeUsdMicros": pending["chargeUsdMicros"], "status": "used",
+	}
+	pending["postChargeBalanceKnown"] = false
+	delete(pending, "lastBillingError")
+	mustStore(t, app.tables.SaveCompute(context.Background(), pending))
+
+	fabric.preflightErr = nil
+	restarted, err := newControlPlaneAppWithStore(app.tables)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := restarted.runMonthlyBillingOnce(context.Background(), service, now); err != nil {
+		t.Fatal(err)
+	}
+	result, _ := restarted.getCompute(id)
+	if result["billingStatus"] != "active" || result["billingOperationId"] != operationID || result["postChargeBalanceKnown"] != true || result["postChargeBalanceUsdMicros"] != int64(50_000_000) {
+		t.Fatalf("resumed renewal=%#v", result)
+	}
+	if len(sub2API.charges) != 0 || len(fabric.computeRenewKeys) != 1 || len(ledger.receipts) != 1 || ledger.receipts[0].Type != "billing.resource_renewed.v1" {
+		t.Fatalf("resumed renewal side effects: charges=%#v renews=%#v receipts=%#v", sub2API.charges, fabric.computeRenewKeys, ledger.receipts)
+	}
+}
+
 func TestMonthlyRenewalUnknownOrPartialProviderResultNeedsReview(t *testing.T) {
 	now := time.Date(2026, 8, 30, 9, 30, 0, 0, time.UTC)
 	paidThrough := now.Add(24 * time.Hour)

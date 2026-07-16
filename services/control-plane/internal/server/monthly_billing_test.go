@@ -609,6 +609,81 @@ func TestMonthlyPurchasePersistsStrictChargeConfirmation(t *testing.T) {
 	}
 }
 
+func TestMonthlyPurchaseResumesPersistedChargeConfirmationAfterRestart(t *testing.T) {
+	app, service, sub2API, fabric, ledger, _ := newMonthlyBillingTest(t, []int64{50_000_000, 50_000_000, 50_000_000})
+	fabric.preflightErr = errors.New("fabric preflight unavailable")
+	input := monthlyPurchaseInput{
+		ResourceType: "compute", ResourceID: "compute-confirmation-restart", BillingOperationID: "billing-confirmation-restart",
+		AccountID: "acct-monthly", WorkspaceID: "workspace-monthly", PackageID: "basic", Environment: "test", Now: time.Date(2026, 7, 16, 0, 0, 0, 0, time.UTC),
+	}
+	if _, err := app.purchaseMonthlyResource(context.Background(), service, input); err == nil {
+		t.Fatal("preflight failure did not persist purchase")
+	}
+	pending, _ := app.getCompute(input.ResourceID)
+	pending["sub2apiChargeConfirmation"] = map[string]any{
+		"code": pending["sub2apiRedeemCode"], "userId": int64(41), "chargeUsdMicros": pending["chargeUsdMicros"], "status": "used",
+	}
+	pending["postChargeBalanceKnown"] = false
+	delete(pending, "lastBillingError")
+	mustStore(t, app.tables.SaveCompute(context.Background(), pending))
+
+	fabric.preflightErr = nil
+	restarted, err := newControlPlaneAppWithStore(app.tables)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sub2API.workspaceKeyErr = clients.ErrSub2APIWorkspaceKeyMissing
+	if result, err := restarted.purchaseMonthlyResource(context.Background(), service, input); !errors.Is(err, clients.ErrSub2APIWorkspaceKeyMissing) || result["billingStatus"] != "charge_pending" {
+		t.Fatalf("persisted confirmation bypassed Gateway Key gate: result=%#v err=%v", result, err)
+	}
+	if len(sub2API.charges) != 0 || len(fabric.computeIDs) != 0 || len(ledger.receipts) != 0 {
+		t.Fatalf("Gateway Key failure caused side effects: charges=%#v creates=%#v receipts=%#v", sub2API.charges, fabric.computeIDs, ledger.receipts)
+	}
+	sub2API.workspaceKeyErr = nil
+	result, err := restarted.purchaseMonthlyResource(context.Background(), service, input)
+	if err != nil || result["billingStatus"] != "active" || result["postChargeBalanceKnown"] != true || result["postChargeBalanceUsdMicros"] != int64(50_000_000) {
+		t.Fatalf("resumed purchase=%#v err=%v", result, err)
+	}
+	if len(sub2API.workspaceKeyCalls) != 2 || len(sub2API.charges) != 0 || len(fabric.computeIDs) != 1 || len(ledger.receipts) != 1 || ledger.receipts[0].Type != "billing.resource_purchased.v1" {
+		t.Fatalf("resumed purchase side effects: key calls=%#v charges=%#v creates=%#v receipts=%#v", sub2API.workspaceKeyCalls, sub2API.charges, fabric.computeIDs, ledger.receipts)
+	}
+}
+
+func TestMonthlyPurchaseRejectsPersistedChargeConfirmationWithoutOverwritingIt(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		confirmation any
+	}{
+		{name: "malformed", confirmation: "not-a-confirmation"},
+		{name: "mismatched", confirmation: map[string]any{"code": "opl:different", "userId": int64(41), "chargeUsdMicros": int64(50_000_000), "status": "used"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			app, service, sub2API, fabric, ledger, _ := newMonthlyBillingTest(t, []int64{50_000_000})
+			fabric.preflightErr = errors.New("fabric preflight unavailable")
+			input := monthlyPurchaseInput{
+				ResourceType: "compute", ResourceID: "compute-persisted-confirmation-" + tc.name, BillingOperationID: "billing-persisted-confirmation-" + tc.name,
+				AccountID: "acct-monthly", PackageID: "basic", Environment: "test", Now: time.Date(2026, 7, 16, 0, 0, 0, 0, time.UTC),
+			}
+			if _, err := app.purchaseMonthlyResource(context.Background(), service, input); err == nil {
+				t.Fatal("preflight failure did not persist purchase")
+			}
+			pending, _ := app.getCompute(input.ResourceID)
+			pending["sub2apiChargeConfirmation"] = tc.confirmation
+			delete(pending, "lastBillingError")
+			mustStore(t, app.tables.SaveCompute(context.Background(), pending))
+
+			fabric.preflightErr = nil
+			result, err := app.purchaseMonthlyResource(context.Background(), service, input)
+			if !errors.Is(err, errMonthlyChargeNeedsReview) || result["billingStatus"] != "manual_review" || result["lastBillingError"] != "sub2api_charge_confirmation_invalid" {
+				t.Fatalf("persisted confirmation result=%#v err=%v", result, err)
+			}
+			if got, want := string(mustJSON(result["sub2apiChargeConfirmation"])), string(mustJSON(tc.confirmation)); got != want || len(sub2API.charges) != 0 || len(fabric.computeIDs) != 0 || len(ledger.receipts) != 1 || ledger.receipts[0].Type != "billing.charge_review_required.v1" {
+				t.Fatalf("persisted confirmation=%s want=%s charges=%#v creates=%#v receipts=%#v", got, want, sub2API.charges, fabric.computeIDs, ledger.receipts)
+			}
+		})
+	}
+}
+
 func TestMonthlyPurchaseRejectsMismatchedChargeConfirmation(t *testing.T) {
 	tests := []struct {
 		name   string

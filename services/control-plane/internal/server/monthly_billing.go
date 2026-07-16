@@ -255,32 +255,44 @@ func (app *controlPlaneServer) chargeMonthlyOperation(ctx context.Context, servi
 	}
 	chargeUSDMicros := int64(numberField(row, "chargeUsdMicros", 0))
 	verifyDelta := stringValue(row["lastBillingError"]) != "sub2api_charge_unconfirmed"
-	charge, err := service.ChargeSub2API(ctx, clients.Sub2APIChargeInput{
-		UserID: sub2APIUserID, Code: stringValue(row["sub2apiRedeemCode"]), ChargeUSDMicros: chargeUSDMicros,
-		Notes: "OPL monthly " + stringValue(row["id"]),
-	})
-	if err != nil {
-		row["lastBillingError"] = "sub2api_charge_unconfirmed"
-		if errors.Is(err, clients.ErrSub2APIChargeConflict) {
-			row["billingStatus"] = "manual_review"
+	_, resumingConfirmedCharge := row["sub2apiChargeConfirmation"]
+	if resumingConfirmedCharge {
+		confirmation, ok := row["sub2apiChargeConfirmation"].(map[string]any)
+		if !ok || !monthlyChargeConfirmationMatches(confirmation, stringValue(row["sub2apiRedeemCode"]), sub2APIUserID, chargeUSDMicros) {
+			row["billingStatus"], row["lastBillingError"] = "manual_review", "sub2api_charge_confirmation_invalid"
+			if err := app.saveMonthlyResource(ctx, monthlyResourceType(row), row); err != nil {
+				return row, err
+			}
+			return row, errMonthlyChargeNeedsReview
 		}
-		if saveErr := app.saveMonthlyResource(ctx, monthlyResourceType(row), row); saveErr != nil {
-			return row, saveErr
+	} else {
+		charge, err := service.ChargeSub2API(ctx, clients.Sub2APIChargeInput{
+			UserID: sub2APIUserID, Code: stringValue(row["sub2apiRedeemCode"]), ChargeUSDMicros: chargeUSDMicros,
+			Notes: "OPL monthly " + stringValue(row["id"]),
+		})
+		if err != nil {
+			row["lastBillingError"] = "sub2api_charge_unconfirmed"
+			if errors.Is(err, clients.ErrSub2APIChargeConflict) {
+				row["billingStatus"] = "manual_review"
+			}
+			if saveErr := app.saveMonthlyResource(ctx, monthlyResourceType(row), row); saveErr != nil {
+				return row, saveErr
+			}
+			return row, err
 		}
-		return row, err
-	}
-	confirmation := map[string]any{"code": charge.Code, "userId": charge.UserID, "chargeUsdMicros": charge.ChargeUSDMicros, "status": charge.Status}
-	if !monthlyChargeConfirmationMatches(confirmation, stringValue(row["sub2apiRedeemCode"]), sub2APIUserID, chargeUSDMicros) {
-		row["billingStatus"], row["lastBillingError"] = "manual_review", "sub2api_charge_confirmation_invalid"
-		delete(row, "sub2apiChargeConfirmation")
+		confirmation := map[string]any{"code": charge.Code, "userId": charge.UserID, "chargeUsdMicros": charge.ChargeUSDMicros, "status": charge.Status}
+		if !monthlyChargeConfirmationMatches(confirmation, stringValue(row["sub2apiRedeemCode"]), sub2APIUserID, chargeUSDMicros) {
+			row["billingStatus"], row["lastBillingError"] = "manual_review", "sub2api_charge_confirmation_invalid"
+			delete(row, "sub2apiChargeConfirmation")
+			if err := app.saveMonthlyResource(ctx, monthlyResourceType(row), row); err != nil {
+				return row, err
+			}
+			return row, errMonthlyChargeNeedsReview
+		}
+		row["sub2apiChargeConfirmation"] = confirmation
 		if err := app.saveMonthlyResource(ctx, monthlyResourceType(row), row); err != nil {
 			return row, err
 		}
-		return row, errMonthlyChargeNeedsReview
-	}
-	row["sub2apiChargeConfirmation"] = confirmation
-	if err := app.saveMonthlyResource(ctx, monthlyResourceType(row), row); err != nil {
-		return row, err
 	}
 	postCharge, err := service.Sub2APIBalance(ctx, sub2APIUserID)
 	if err != nil {
@@ -291,7 +303,7 @@ func (app *controlPlaneServer) chargeMonthlyOperation(ctx context.Context, servi
 		return row, errMonthlyChargeNeedsReview
 	}
 	row["postChargeBalanceKnown"], row["postChargeBalanceUsdMicros"] = true, postCharge.USDMicros
-	if postCharge.USDMicros < 0 || (verifyDelta && preChargeBalance > 0 && postCharge.USDMicros > preChargeBalance-chargeUSDMicros) {
+	if postCharge.USDMicros < 0 || (!resumingConfirmedCharge && verifyDelta && preChargeBalance > 0 && postCharge.USDMicros > preChargeBalance-chargeUSDMicros) {
 		row["billingStatus"], row["lastBillingError"] = "manual_review", errMonthlyChargeNeedsReview.Error()
 		if err := app.saveMonthlyResource(ctx, monthlyResourceType(row), row); err != nil {
 			return row, err
