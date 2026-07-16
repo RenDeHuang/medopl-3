@@ -14,16 +14,15 @@ import (
 	"time"
 )
 
-func newSub2APITestClient(t *testing.T, handler http.HandlerFunc, versions []string, timeout time.Duration) *Sub2APIHTTPClient {
+func newSub2APITestClient(t *testing.T, handler http.HandlerFunc, timeout time.Duration) *Sub2APIHTTPClient {
 	t.Helper()
 	server := httptest.NewServer(handler)
 	t.Cleanup(server.Close)
 	client, err := NewSub2APIHTTPClient(Sub2APIConfig{
-		BaseURL:           server.URL,
-		AdminEmail:        "admin@example.test",
-		AdminPassword:     "admin-secret",
-		SupportedVersions: versions,
-		Timeout:           timeout,
+		BaseURL:       server.URL,
+		AdminEmail:    "admin@example.test",
+		AdminPassword: "admin-secret",
+		Timeout:       timeout,
 	}, server.Client())
 	if err != nil {
 		t.Fatalf("new Sub2API client: %v", err)
@@ -80,7 +79,7 @@ func TestSub2APIClientLogsInRefreshesOnceAndParsesDecimalBalance(t *testing.T) {
 			t.Errorf("unexpected Sub2API route %s %s", r.Method, r.URL.Path)
 			http.NotFound(w, r)
 		}
-	}, []string{"0.1.151"}, time.Second)
+	}, time.Second)
 
 	balance, err := client.Balance(context.Background(), 41)
 	if err != nil {
@@ -129,7 +128,7 @@ func TestSub2APIClientSelectsOneActiveWorkspaceKeyAcrossPages(t *testing.T) {
 		default:
 			t.Fatalf("unexpected Sub2API route %s %s", r.Method, r.URL.Path)
 		}
-	}, []string{"0.1.155"}, time.Second)
+	}, time.Second)
 
 	key, err := client.WorkspaceKey(context.Background(), 41)
 	if err != nil {
@@ -167,7 +166,7 @@ func TestSub2APIClientWorkspaceKeyRequiresUsageFieldsAndAcceptsZero(t *testing.T
 			default:
 				t.Fatalf("unexpected route %s", r.URL.Path)
 			}
-		}, []string{"0.1.155"}, time.Second)
+		}, time.Second)
 	}
 
 	for _, field := range []string{"quota", "quota_used", "usage_5h", "usage_1d", "usage_7d"} {
@@ -215,7 +214,7 @@ func TestSub2APIClientWorkspaceKeyCardinalityFailsClosed(t *testing.T) {
 				default:
 					t.Fatalf("unexpected route %s", r.URL.Path)
 				}
-			}, []string{"0.1.155"}, time.Second)
+			}, time.Second)
 			if _, err := client.WorkspaceKey(context.Background(), 41); !errors.Is(err, tc.want) {
 				t.Fatalf("workspace key error = %v, want %v", err, tc.want)
 			}
@@ -243,7 +242,7 @@ func TestSub2APIClientWorkspaceKeyRejectsExcessivePaginationWithoutContinuing(t 
 				default:
 					t.Fatalf("unexpected route %s", r.URL.Path)
 				}
-			}, []string{"0.1.155"}, time.Second)
+			}, time.Second)
 			if _, err := client.WorkspaceKey(context.Background(), 41); err == nil || !strings.Contains(err.Error(), "pagination") {
 				t.Fatalf("workspace key pagination error = %v", err)
 			}
@@ -267,7 +266,7 @@ func TestSub2APIClientWorkspaceKeyRejectsCrossUserAndDoesNotLeakKey(t *testing.T
 		default:
 			t.Fatalf("unexpected route %s", r.URL.Path)
 		}
-	}, []string{"0.1.155"}, time.Second)
+	}, time.Second)
 	if _, err := client.WorkspaceKey(context.Background(), 41); err == nil || strings.Contains(err.Error(), secret) || !strings.Contains(err.Error(), "identity mismatch") {
 		t.Fatalf("cross-user workspace key error = %v", err)
 	}
@@ -294,7 +293,7 @@ func TestSub2APIClientWorkspaceKeyBoundsAndRedactsUpstreamResponses(t *testing.T
 					return
 				}
 				handler(w, r)
-			}, []string{"0.1.155"}, time.Second)
+			}, time.Second)
 			_, err := client.WorkspaceKey(context.Background(), 41)
 			if err == nil || strings.Contains(err.Error(), secret) {
 				t.Fatalf("workspace key error = %v", err)
@@ -336,7 +335,7 @@ func TestSub2APIClientChargesWithExactNegativeMicrosAndReplays(t *testing.T) {
 			t.Errorf("unexpected Sub2API route %s %s", r.Method, r.URL.Path)
 			http.NotFound(w, r)
 		}
-	}, []string{"0.1.151"}, time.Second)
+	}, time.Second)
 
 	input := Sub2APIChargeInput{UserID: 41, Code: "opl:production:op-41:charge:v1", ChargeUSDMicros: 50_000_000}
 	for i := 0; i < 2; i++ {
@@ -380,7 +379,7 @@ func TestSub2APIClientRefundsWithExactPositiveMicrosAndReplays(t *testing.T) {
 			t.Errorf("unexpected Sub2API route %s %s", r.Method, r.URL.Path)
 			http.NotFound(w, r)
 		}
-	}, []string{"0.1.155"}, time.Second)
+	}, time.Second)
 
 	input := Sub2APIRefundInput{UserID: 41, Code: "opl:production:op-41:refund:v1", RefundUSDMicros: 50_000_000}
 	for i := 0; i < 2; i++ {
@@ -425,7 +424,7 @@ func TestSub2APIClientVersionIsDiagnostic(t *testing.T) {
 				default:
 					http.NotFound(w, r)
 				}
-			}, []string{"0.1.156", "0.1.155"}, time.Second)
+			}, time.Second)
 
 			version, versionErr := client.Version(context.Background())
 			if tc.versionStatus == 0 && (versionErr != nil || version != tc.version) {
@@ -517,7 +516,7 @@ func TestSub2APIClientCapabilitiesDoNotRequestVersion(t *testing.T) {
 				default:
 					http.NotFound(w, r)
 				}
-			}, []string{"0.1.156", "0.1.155"}, time.Second)
+			}, time.Second)
 
 			if err := tc.call(client); err != nil {
 				t.Fatalf("capability call: %v", err)
@@ -541,7 +540,7 @@ func TestSub2APIClientDetectsSameCodeDifferentValue(t *testing.T) {
 		default:
 			http.NotFound(w, r)
 		}
-	}, []string{"0.1.151"}, time.Second)
+	}, time.Second)
 
 	_, err := client.Charge(context.Background(), Sub2APIChargeInput{UserID: 41, Code: "opl:replay", ChargeUSDMicros: 40_000_000})
 	if !errors.Is(err, ErrSub2APIChargeConflict) {
@@ -562,7 +561,7 @@ func TestSub2APIClientBoundsBodiesAndTreatsChargeTimeoutAsUnknown(t *testing.T) 
 			default:
 				http.NotFound(w, r)
 			}
-		}, []string{"0.1.151"}, time.Second)
+		}, time.Second)
 		if _, err := client.Balance(context.Background(), 41); !errors.Is(err, ErrSub2APIResponseTooLarge) {
 			t.Fatalf("oversized response error = %v", err)
 		}
@@ -581,7 +580,7 @@ func TestSub2APIClientBoundsBodiesAndTreatsChargeTimeoutAsUnknown(t *testing.T) 
 			default:
 				http.NotFound(w, r)
 			}
-		}, []string{"0.1.151"}, 20*time.Millisecond)
+		}, 20*time.Millisecond)
 
 		_, err := client.Charge(context.Background(), Sub2APIChargeInput{UserID: 41, Code: "opl:timeout", ChargeUSDMicros: 1_000_000})
 		if !errors.Is(err, ErrSub2APIChargeUnknown) {
@@ -594,7 +593,7 @@ func TestSub2APIClientErrorsDoNotLeakSecrets(t *testing.T) {
 	client := newSub2APITestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		_, _ = w.Write([]byte(`{"message":"admin-secret access-token response-secret admin@example.test"}`))
-	}, []string{"0.1.151"}, time.Second)
+	}, time.Second)
 
 	_, err := client.Balance(context.Background(), 41)
 	if err == nil {

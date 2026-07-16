@@ -1,6 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises";
 
-const SUPPORTED_SUB2API_VERSIONS = "0.1.156,0.1.155";
 const DEPLOY_VALUE_KEYS = [
   "OPL_K8S_NAMESPACE",
   "OPL_PUBLIC_URL",
@@ -18,7 +17,6 @@ const DEPLOY_VALUE_KEYS = [
   "OPL_MONTHLY_BILLING_WORKER_ENABLED",
   "OPL_MONTHLY_BILLING_INTERVAL_MS",
   "OPL_SUB2API_BASE_URL",
-  "OPL_SUB2API_SUPPORTED_VERSIONS",
   "OPL_SUB2API_REQUEST_TIMEOUT_MS",
   "OPL_TENCENT_ZONE",
   "OPL_BASIC_COMPUTE_INSTANCE_TYPE",
@@ -53,7 +51,6 @@ function requiredValues(values) {
   if (String(values.OPL_TENCENT_ZONE).match(/^(.*)-\d+$/)?.[1] !== String(values.TENCENTCLOUD_REGION)) {
     throw new Error("tencent_zone_region_mismatch");
   }
-  if (values.OPL_SUB2API_SUPPORTED_VERSIONS !== SUPPORTED_SUB2API_VERSIONS) throw new Error("unsupported_sub2api_versions");
 }
 
 function clone(value) {

@@ -47,11 +47,10 @@ type Sub2APIRefundClient interface {
 }
 
 type Sub2APIConfig struct {
-	BaseURL           string
-	AdminEmail        string
-	AdminPassword     string
-	SupportedVersions []string
-	Timeout           time.Duration
+	BaseURL       string
+	AdminEmail    string
+	AdminPassword string
+	Timeout       time.Duration
 }
 
 type Sub2APIBalance struct {

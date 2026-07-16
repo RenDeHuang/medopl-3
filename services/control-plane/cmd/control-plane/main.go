@@ -59,7 +59,6 @@ func sub2APIConfigFromEnv(getenv func(string) string) (clients.Sub2APIConfig, er
 		"OPL_SUB2API_BASE_URL",
 		"OPL_SUB2API_ADMIN_EMAIL",
 		"OPL_SUB2API_ADMIN_PASSWORD",
-		"OPL_SUB2API_SUPPORTED_VERSIONS",
 	}
 	missing := make([]string, 0, len(required))
 	configured := 0
@@ -85,11 +84,10 @@ func sub2APIConfigFromEnv(getenv func(string) string) (clients.Sub2APIConfig, er
 		timeoutMS = parsed
 	}
 	return clients.Sub2APIConfig{
-		BaseURL:           strings.TrimSpace(getenv("OPL_SUB2API_BASE_URL")),
-		AdminEmail:        strings.TrimSpace(getenv("OPL_SUB2API_ADMIN_EMAIL")),
-		AdminPassword:     getenv("OPL_SUB2API_ADMIN_PASSWORD"),
-		SupportedVersions: strings.Split(getenv("OPL_SUB2API_SUPPORTED_VERSIONS"), ","),
-		Timeout:           time.Duration(timeoutMS) * time.Millisecond,
+		BaseURL:       strings.TrimSpace(getenv("OPL_SUB2API_BASE_URL")),
+		AdminEmail:    strings.TrimSpace(getenv("OPL_SUB2API_ADMIN_EMAIL")),
+		AdminPassword: getenv("OPL_SUB2API_ADMIN_PASSWORD"),
+		Timeout:       time.Duration(timeoutMS) * time.Millisecond,
 	}, nil
 }
 
