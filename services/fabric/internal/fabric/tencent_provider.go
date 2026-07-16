@@ -628,37 +628,48 @@ func (p *TencentProvider) DestroyStorageSnapshot(ctx context.Context, snapshot S
 }
 
 func (p *TencentProvider) CreateStorageAttachment(ctx context.Context, input StorageAttachmentInput, compute ComputeAllocation, volume StorageVolume) (StorageAttachment, error) {
-	pvcName := storagePVCName(volume)
-	if input.VolumeID == "" || strings.TrimSpace(input.WorkspaceID) == "" || pvcName == "" {
+	pvName, pvcName := storageBindingNames(volume)
+	if input.ComputeID == "" || input.ComputeID != compute.ID || input.VolumeID == "" || input.VolumeID != volume.ID ||
+		compute.AccountID == "" || compute.AccountID != volume.AccountID || strings.TrimSpace(input.WorkspaceID) == "" ||
+		input.WorkspaceID != compute.WorkspaceID || input.WorkspaceID != volume.WorkspaceID || !strings.HasPrefix(volume.ProviderResourceID, "disk-") || pvName == "" || pvcName == "" {
 		return StorageAttachment{}, fmt.Errorf("storage_attachment_provider_identity_required")
 	}
-	serviceName, workloadPVCName, err := p.workspaceRuntimeResourcesStrict(ctx, input.WorkspaceID, false)
+	if !isReadyResourceStatus(compute.Status) || volume.Status != "ready" {
+		return StorageAttachment{}, fmt.Errorf("resource_status_invalid")
+	}
+	raw, err := p.kubectl(ctx, []string{"get", "pv/" + pvName, "pvc/" + pvcName, "--ignore-not-found", "-o", "json"}, nil)
 	if err != nil {
 		return StorageAttachment{}, err
 	}
-	if serviceName == "" || workloadPVCName != pvcName {
-		return StorageAttachment{}, fmt.Errorf("storage_attachment_workload_identity_required")
-	}
-	raw, err := p.kubectl(ctx, []string{"get", "deployment/" + serviceName, "pvc/" + pvcName, "--ignore-not-found", "-o", "json"}, nil)
-	if err != nil {
-		return StorageAttachment{}, err
-	}
-	items := kubectlItems(raw)
-	deployment := findK8s(items, "Deployment", serviceName)
-	pvc := findK8s(items, "PersistentVolumeClaim", pvcName)
-	if nested(deployment, "metadata", "labels", "oplcloud.cn/workspace-id") != input.WorkspaceID || stringValue(nested(pvc, "status", "phase")) != "Bound" || !workloadUsesPVC(deployment, pvcName) {
-		return StorageAttachment{}, fmt.Errorf("storage_attachment_workload_not_ready")
-	}
-	readyPod := false
-	for _, item := range p.workspacePods(ctx, input.WorkspaceID) {
-		pod, _ := item.(map[string]any)
-		if nested(pod, "metadata", "labels", "oplcloud.cn/workspace-id") == input.WorkspaceID && stringValue(nested(pod, "status", "phase")) == "Running" && conditionStatuses(nested(pod, "status", "conditions"))["Ready"] == "True" && workloadUsesPVC(pod, pvcName) {
-			readyPod = true
-			break
+	var pv, pvc map[string]any
+	pvMatches, pvcMatches := 0, 0
+	for _, item := range kubectlItems(raw) {
+		resource, _ := item.(map[string]any)
+		switch {
+		case resource["kind"] == "PersistentVolume" && nested(resource, "metadata", "name") == pvName:
+			pv, pvMatches = resource, pvMatches+1
+		case resource["kind"] == "PersistentVolumeClaim" && nested(resource, "metadata", "name") == pvcName:
+			pvc, pvcMatches = resource, pvcMatches+1
 		}
 	}
-	if !readyPod {
-		return StorageAttachment{}, fmt.Errorf("storage_attachment_workload_not_ready")
+	if pvMatches != 1 || pvcMatches != 1 {
+		return StorageAttachment{}, fmt.Errorf("storage_attachment_static_binding_unverified")
+	}
+	for _, resource := range []map[string]any{pv, pvc} {
+		if nested(resource, "metadata", "labels", "oplcloud.cn/account-id") != compute.AccountID ||
+			nested(resource, "metadata", "labels", "oplcloud.cn/workspace-id") != input.WorkspaceID ||
+			nested(resource, "metadata", "labels", "oplcloud.cn/storage-id") != volume.ID {
+			return StorageAttachment{}, fmt.Errorf("storage_attachment_static_binding_unverified")
+		}
+	}
+	pvSpec, _ := pv["spec"].(map[string]any)
+	pvcSpec, _ := pvc["spec"].(map[string]any)
+	pvStorageClass := pvSpec["storageClassName"]
+	pvcStorageClass, pvcStorageClassSet := pvcSpec["storageClassName"]
+	if stringValue(nested(pvc, "status", "phase")) != "Bound" || stringValue(pvcSpec["volumeName"]) != pvName ||
+		stringValue(nested(pv, "spec", "csi", "driver")) != "com.tencent.cloud.csi.cbs" || stringValue(nested(pv, "spec", "csi", "volumeHandle")) != volume.ProviderResourceID ||
+		stringValue(pvSpec["persistentVolumeReclaimPolicy"]) != "Retain" || stringValue(pvStorageClass) != "" || !pvcStorageClassSet || stringValue(pvcStorageClass) != "" {
+		return StorageAttachment{}, fmt.Errorf("storage_attachment_static_binding_unverified")
 	}
 	now := time.Now().UTC()
 	id := fabricID("att", input.WorkspaceID, now)
@@ -670,7 +681,7 @@ func (p *TencentProvider) CreateStorageAttachment(ctx context.Context, input Sto
 		VolumeID:             input.VolumeID,
 		Status:               "attached",
 		Provider:             "tencent-tke",
-		ProviderAttachmentID: "deployment/" + serviceName + ":pvc/" + pvcName,
+		ProviderAttachmentID: "pv/" + pvName + ":pvc/" + pvcName,
 		ProviderRequestID:    providerRequestID("storage-attach", input.IdempotencyKey),
 		CostTags:             tags,
 		CreatedAt:            now,

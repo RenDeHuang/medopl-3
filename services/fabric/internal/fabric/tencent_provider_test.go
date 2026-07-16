@@ -451,90 +451,95 @@ func TestTencentRuntimeCreationUsesActualReadinessAfterApply(t *testing.T) {
 	}
 }
 
-func TestTencentStorageAttachmentRequiresExactReadyWorkspaceWorkload(t *testing.T) {
-	newResources := func() (map[string]any, map[string]any, map[string]any) {
-		deployment := map[string]any{
-			"kind": "Deployment", "metadata": map[string]any{"name": "opl-workspace-alpha", "labels": map[string]any{"oplcloud.cn/workspace-id": "ws-alpha"}},
-			"spec": map[string]any{"template": map[string]any{"spec": map[string]any{"volumes": []any{map[string]any{"persistentVolumeClaim": map[string]any{"claimName": "opl-storage-alpha-data"}}}}}},
-		}
-		pvc := map[string]any{"kind": "PersistentVolumeClaim", "metadata": map[string]any{"name": "opl-storage-alpha-data"}, "status": map[string]any{"phase": "Bound"}}
-		pod := map[string]any{
-			"kind": "Pod", "metadata": map[string]any{"name": "opl-workspace-alpha-7d6c", "labels": map[string]any{"oplcloud.cn/workspace-id": "ws-alpha"}},
-			"spec":   map[string]any{"volumes": []any{map[string]any{"persistentVolumeClaim": map[string]any{"claimName": "opl-storage-alpha-data"}}}},
-			"status": map[string]any{"phase": "Running", "conditions": []any{map[string]any{"type": "Ready", "status": "True"}}},
-		}
-		return deployment, pvc, pod
+func TestTencentStorageAttachmentVerifiesBoundStaticVolumeBeforeRuntime(t *testing.T) {
+	type fixture struct {
+		input   StorageAttachmentInput
+		compute ComputeAllocation
+		volume  StorageVolume
+		items   []any
 	}
-	newProvider := func(deployment, pvc, pod map[string]any) (*TencentProvider, *[][]string) {
+	newFixture := func() fixture {
+		labels := map[string]any{"oplcloud.cn/account-id": "acct-alpha", "oplcloud.cn/workspace-id": "ws-alpha", "oplcloud.cn/storage-id": "storage-alpha"}
+		pv := map[string]any{
+			"kind": "PersistentVolume", "metadata": map[string]any{"name": "opl-storage-alpha-pv", "labels": labels},
+			"spec": map[string]any{"persistentVolumeReclaimPolicy": "Retain", "storageClassName": "", "csi": map[string]any{"driver": "com.tencent.cloud.csi.cbs", "volumeHandle": "disk-storage-alpha"}},
+		}
+		pvc := map[string]any{
+			"kind": "PersistentVolumeClaim", "metadata": map[string]any{"name": "opl-storage-alpha-data", "labels": labels},
+			"spec": map[string]any{"storageClassName": "", "volumeName": "opl-storage-alpha-pv"}, "status": map[string]any{"phase": "Bound"},
+		}
+		return fixture{
+			input:   StorageAttachmentInput{WorkspaceID: "ws-alpha", ComputeID: "compute-alpha", VolumeID: "storage-alpha", IdempotencyKey: "attach-alpha", OperationID: "op-attach-alpha"},
+			compute: ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", Status: "running"},
+			volume: StorageVolume{
+				ID: "storage-alpha", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", Status: "ready", ProviderResourceID: "disk-storage-alpha",
+				ProviderData: map[string]string{"pvName": "opl-storage-alpha-pv", "pvcName": "opl-storage-alpha-data"},
+			},
+			items: []any{pv, pvc},
+		}
+	}
+	create := func(current fixture) (StorageAttachment, [][]string, error) {
 		provider := NewTencentProvider()
-		calls := &[][]string{}
+		calls := [][]string{}
 		provider.kubectl = func(_ context.Context, args []string, _ []byte) ([]byte, error) {
-			*calls = append(*calls, append([]string(nil), args...))
-			switch {
-			case slices.Equal(args, []string{"get", "deployment,service", "-l", "oplcloud.cn/workspace-id=ws-alpha", "-o", "json"}):
-				items := []any{}
-				if deployment != nil {
-					items = append(items, deployment)
-				}
-				return mustJSON(map[string]any{"kind": "List", "items": items}), nil
-			case slices.Equal(args, []string{"get", "deployment/opl-workspace-alpha", "pvc/opl-storage-alpha-data", "--ignore-not-found", "-o", "json"}):
-				return mustJSON(map[string]any{"kind": "List", "items": []any{deployment, pvc}}), nil
-			case slices.Equal(args, []string{"get", "pod", "-l", "oplcloud.cn/workspace-id=ws-alpha", "-o", "json"}):
-				items := []any{}
-				if pod != nil {
-					items = append(items, pod)
-				}
-				return mustJSON(map[string]any{"kind": "List", "items": items}), nil
-			default:
-				t.Fatalf("unexpected kubectl args: %#v", args)
-				return nil, nil
+			calls = append(calls, append([]string(nil), args...))
+			if slices.Equal(args, []string{"get", "pv/opl-storage-alpha-pv", "pvc/opl-storage-alpha-data", "--ignore-not-found", "-o", "json"}) {
+				return mustJSON(map[string]any{"kind": "List", "items": current.items}), nil
 			}
+			return mustJSON(map[string]any{"kind": "List", "items": []any{}}), nil
 		}
-		return provider, calls
-	}
-	create := func(provider *TencentProvider) (StorageAttachment, error) {
-		return provider.CreateStorageAttachment(context.Background(), StorageAttachmentInput{WorkspaceID: "ws-alpha", ComputeID: "compute-alpha", VolumeID: "storage-alpha", IdempotencyKey: "attach-alpha"},
-			ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha"}, StorageVolume{ID: "storage-alpha", ProviderResourceID: "disk-storage-alpha"})
+		attachment, err := provider.CreateStorageAttachment(context.Background(), current.input, current.compute, current.volume)
+		return attachment, calls, err
 	}
 
-	t.Run("exact workload", func(t *testing.T) {
-		deployment, pvc, pod := newResources()
-		provider, calls := newProvider(deployment, pvc, pod)
-		attachment, err := create(provider)
-		if err != nil || attachment.Status != "attached" || attachment.ProviderAttachmentID != "deployment/opl-workspace-alpha:pvc/opl-storage-alpha-data" || len(*calls) != 3 {
-			t.Fatalf("attachment=%#v err=%v calls=%#v", attachment, err, *calls)
+	t.Run("pre-runtime exact binding", func(t *testing.T) {
+		attachment, calls, err := create(newFixture())
+		if err != nil || attachment.Status != "attached" || attachment.ProviderAttachmentID != "pv/opl-storage-alpha-pv:pvc/opl-storage-alpha-data" || len(calls) != 1 {
+			t.Fatalf("attachment=%#v err=%v calls=%#v", attachment, err, calls)
+		}
+	})
+	t.Run("PV omitted empty storage class", func(t *testing.T) {
+		current := newFixture()
+		delete(current.items[0].(map[string]any)["spec"].(map[string]any), "storageClassName")
+		if attachment, _, err := create(current); err != nil || attachment.Status != "attached" {
+			t.Fatalf("omitted empty PV storage class attachment=%#v err=%v", attachment, err)
 		}
 	})
 
 	for _, tc := range []struct {
 		name      string
-		configure func(*map[string]any, *map[string]any, *map[string]any)
+		configure func(*fixture)
 	}{
-		{name: "workload missing", configure: func(deployment, _, _ *map[string]any) { *deployment = nil }},
-		{name: "PVC pending", configure: func(_, pvc, _ *map[string]any) { (*pvc)["status"] = map[string]any{"phase": "Pending"} }},
-		{name: "deployment uses another PVC", configure: func(deployment, _, _ *map[string]any) {
-			(*deployment)["spec"] = map[string]any{"template": map[string]any{"spec": map[string]any{"volumes": []any{map[string]any{"persistentVolumeClaim": map[string]any{"claimName": "pvc-other"}}}}}}
+		{name: "compute identity", configure: func(current *fixture) { current.compute.ID = "compute-other" }},
+		{name: "volume identity", configure: func(current *fixture) { current.volume.ID = "storage-other" }},
+		{name: "account ownership", configure: func(current *fixture) { current.volume.AccountID = "acct-other" }},
+		{name: "workspace ownership", configure: func(current *fixture) { current.volume.WorkspaceID = "ws-other" }},
+		{name: "PVC pending", configure: func(current *fixture) {
+			current.items[1].(map[string]any)["status"] = map[string]any{"phase": "Pending"}
 		}},
-		{name: "pod missing", configure: func(_, _, pod *map[string]any) { *pod = nil }},
-		{name: "pod not ready", configure: func(_, _, pod *map[string]any) {
-			(*pod)["status"] = map[string]any{"phase": "Running", "conditions": []any{map[string]any{"type": "Ready", "status": "False"}}}
+		{name: "PVC wrong PV", configure: func(current *fixture) {
+			current.items[1].(map[string]any)["spec"].(map[string]any)["volumeName"] = "pv-other"
 		}},
-		{name: "pod uses another PVC", configure: func(_, _, pod *map[string]any) {
-			(*pod)["spec"] = map[string]any{"volumes": []any{map[string]any{"persistentVolumeClaim": map[string]any{"claimName": "pvc-other"}}}}
+		{name: "PV wrong disk", configure: func(current *fixture) {
+			current.items[0].(map[string]any)["spec"].(map[string]any)["csi"].(map[string]any)["volumeHandle"] = "disk-other"
 		}},
+		{name: "PVC wrong owner", configure: func(current *fixture) {
+			current.items[1].(map[string]any)["metadata"].(map[string]any)["labels"].(map[string]any)["oplcloud.cn/workspace-id"] = "ws-other"
+		}},
+		{name: "PV missing", configure: func(current *fixture) { current.items = current.items[1:] }},
+		{name: "PV ambiguous", configure: func(current *fixture) { current.items = append(current.items, current.items[0]) }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			deployment, pvc, pod := newResources()
-			tc.configure(&deployment, &pvc, &pod)
-			provider, _ := newProvider(deployment, pvc, pod)
-			if attachment, err := create(provider); err == nil || attachment.Status == "attached" {
-				t.Fatalf("invalid workload attached storage: attachment=%#v err=%v", attachment, err)
+			current := newFixture()
+			tc.configure(&current)
+			if attachment, _, err := create(current); err == nil || attachment.Status == "attached" {
+				t.Fatalf("invalid static binding attached storage: attachment=%#v err=%v", attachment, err)
 			}
 		})
 	}
 }
 
-func TestRuntimeStatusRecoversWorkspaceResourcesFromKubernetesLabels(t *testing.T) {
+func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) {
 	t.Setenv("OPL_WORKSPACE_IMAGE", "workspace-image:test")
 	provider := NewTencentProvider()
 	deployment := map[string]any{
@@ -593,6 +598,15 @@ func TestRuntimeStatusRecoversWorkspaceResourcesFromKubernetesLabels(t *testing.
 	}
 	if !status.Ready {
 		t.Fatalf("status = %#v, want ready", status)
+	}
+	verified := map[string]bool{}
+	for _, check := range status.Checks {
+		verified[check.Name] = check.OK
+	}
+	for _, name := range []string{"pvc_bound", "deployment_uses_retained_pvc", "deployment_ready"} {
+		if !verified[name] {
+			t.Fatalf("runtime must own final mount/readiness proof %q: %#v", name, status.Checks)
+		}
 	}
 	if status.Access.Password != "secret-password" || status.Access.Username != webuiUsername || status.Access.CredentialStatus != "configured" || status.Access.SecretRef != "opl-compute-alpha-env" {
 		t.Fatalf("runtime access must come transiently from Workspace Secret: %#v", status.Access)
