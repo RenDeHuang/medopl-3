@@ -51,6 +51,7 @@ type Service struct {
 	snapshots   map[string]StorageSnapshot
 	attachments map[string]StorageAttachment
 	destroying  map[string]bool
+	reconciling map[string]bool
 	operations  OperationStore
 	transfers   TransferStore
 	now         func() time.Time
@@ -69,7 +70,7 @@ func NewServiceWithOperationStore(provider Provider, operations OperationStore) 
 	if transferStore == nil {
 		transferStore = newMemoryTransferStore()
 	}
-	return &Service{provider: provider, computes: computes, volumes: volumes, snapshots: snapshots, attachments: attachments, destroying: map[string]bool{}, operations: operations, transfers: transferStore, now: func() time.Time { return time.Now().UTC() }}
+	return &Service{provider: provider, computes: computes, volumes: volumes, snapshots: snapshots, attachments: attachments, destroying: map[string]bool{}, reconciling: map[string]bool{}, operations: operations, transfers: transferStore, now: func() time.Time { return time.Now().UTC() }}
 }
 
 func (s *Service) Catalog(_ context.Context) Catalog {
@@ -145,15 +146,34 @@ func (s *Service) CreateComputeAllocation(ctx context.Context, input ComputeAllo
 		return ComputeAllocation{}, err
 	}
 	if !claimed {
-		return replayComputeAllocationOperation(stored, requestHash)
+		replayed, err := replayComputeAllocationOperation(stored, requestHash)
+		if err == nil && stored.Status == "started" {
+			s.startComputeReconcile(replayed, input.DryRun)
+		}
+		return replayed, err
 	}
 	input.OperationID = operation.OperationID
+	s.startComputeReconcile(allocation, input.DryRun)
+	return allocation, nil
+}
+
+func (s *Service) startComputeReconcile(allocation ComputeAllocation, dryRun bool) {
 	s.mu.Lock()
+	if s.reconciling[allocation.ID] {
+		s.mu.Unlock()
+		return
+	}
+	s.reconciling[allocation.ID] = true
 	s.computes[allocation.ID] = allocation
 	s.mu.Unlock()
-
-	go func() { _ = s.reconcileComputePool(allocation.PackageID, input.DryRun) }()
-	return allocation, nil
+	go func() {
+		defer func() {
+			s.mu.Lock()
+			delete(s.reconciling, allocation.ID)
+			s.mu.Unlock()
+		}()
+		_ = s.reconcileComputePool(allocation.PackageID, dryRun)
+	}()
 }
 
 func replayComputeAllocationOperation(operation FabricOperation, requestHash string) (ComputeAllocation, error) {

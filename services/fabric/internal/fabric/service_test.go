@@ -713,6 +713,37 @@ func TestCreateComputeAllocationReplaysStartedClaimWithoutIncreasingDemand(t *te
 	}
 }
 
+func TestServiceResumesStartedComputeClaimAfterRestart(t *testing.T) {
+	store := NewMemoryOperationStore()
+	input := ComputeAllocationInput{AccountID: "acct-alpha", WorkspaceID: "ws-alpha", PackageID: "basic", IdempotencyKey: "compute-restart"}
+	now := time.Now().UTC()
+	allocation := ComputeAllocation{
+		ID: "ca_" + stableSuffix("create_compute_allocation", input.IdempotencyKey)[:18], AccountID: input.AccountID, WorkspaceID: input.WorkspaceID,
+		PackageID: input.PackageID, Status: "provisioning", Provider: "tencent-tke", ProviderRequestID: providerRequestID("compute", input.IdempotencyKey), CreatedAt: now,
+	}
+	operation := newOperation("create_compute_allocation", "compute_allocation", allocation.ID, input.AccountID, input.WorkspaceID, input.IdempotencyKey, hashInput(input), now)
+	operation.ID = "fop_compute_claim_" + stableSuffix("create_compute_allocation", input.IdempotencyKey)
+	operation.Status = "started"
+	operation.CreatedAt = now
+	fillOperationResource(&operation, allocation)
+	if _, claimed, err := store.ClaimRuntime(context.Background(), operation); err != nil || !claimed {
+		t.Fatalf("seed started compute claim: claimed=%v err=%v", claimed, err)
+	}
+	release := make(chan struct{})
+	close(release)
+	provider := &countingBlockedPoolProvider{entered: make(chan ComputePoolDemand, 2), release: release}
+
+	restarted := NewServiceWithOperationStore(provider, store)
+	if replayed, err := restarted.CreateComputeAllocation(context.Background(), input); err != nil || replayed.ID != allocation.ID {
+		t.Fatalf("replay started compute claim: allocation=%#v err=%v", replayed, err)
+	}
+	waitForOperation(t, restarted, "create_compute_allocation", "compute_allocation", allocation.ID, "succeeded")
+	current, ok := restarted.GetComputeAllocation(context.Background(), allocation.ID)
+	if !ok || current.Status != "running" || provider.calls.Load() != 1 {
+		t.Fatalf("restarted compute=%#v ok=%v providerCalls=%d", current, ok, provider.calls.Load())
+	}
+}
+
 func TestCreateComputeAllocationRejectsSameKeyWithDifferentRequest(t *testing.T) {
 	provider := &countingBlockedPoolProvider{entered: make(chan ComputePoolDemand, 2), release: make(chan struct{})}
 	service := NewServiceWithOperationStore(provider, NewMemoryOperationStore())
