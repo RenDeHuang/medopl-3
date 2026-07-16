@@ -475,6 +475,67 @@ func TestWorkspaceNetworkPolicyReadinessRejectsBroaderSelectors(t *testing.T) {
 	}
 }
 
+func TestWorkspaceRuntimeIsolationRequiresCompleteCurrentReplicaSet(t *testing.T) {
+	isolatedSpec := func(image string) map[string]any {
+		return map[string]any{
+			"automountServiceAccountToken": false,
+			"dnsPolicy":                    "ClusterFirst",
+			"securityContext":              map[string]any{"seccompProfile": map[string]any{"type": "RuntimeDefault"}},
+			"containers": []any{map[string]any{
+				"name": "workspace", "image": image,
+				"securityContext": map[string]any{"allowPrivilegeEscalation": false, "capabilities": map[string]any{"drop": []any{"ALL"}}},
+			}},
+		}
+	}
+	deployment := func(image string) map[string]any {
+		return map[string]any{
+			"metadata": map[string]any{"generation": 2},
+			"spec":     map[string]any{"replicas": 1, "template": map[string]any{"spec": isolatedSpec(image)}},
+			"status":   map[string]any{"observedGeneration": 2, "updatedReplicas": 1, "readyReplicas": 1, "availableReplicas": 1},
+		}
+	}
+	pod := func(name string, image string, ready bool) map[string]any {
+		containerState := map[string]any{"running": map[string]any{}}
+		if !ready {
+			containerState = map[string]any{"waiting": map[string]any{"reason": "ImagePullBackOff"}}
+		}
+		return map[string]any{
+			"metadata": map[string]any{"name": name},
+			"spec":     isolatedSpec(image),
+			"status": map[string]any{
+				"conditions":        []any{map[string]any{"type": "Ready", "status": map[bool]string{true: "True", false: "False"}[ready]}},
+				"containerStatuses": []any{map[string]any{"name": "workspace", "ready": ready, "state": containerState}},
+			},
+		}
+	}
+
+	t.Run("old image remains Ready while new image cannot start", func(t *testing.T) {
+		if workspaceRuntimeIsolationReady(deployment("workspace-image:new"), []any{
+			pod("workspace-old", "workspace-image:old", true),
+			pod("workspace-new", "workspace-image:new", false),
+		}) {
+			t.Fatal("old Ready Pod must not prove the new Workspace image rollout")
+		}
+	})
+	t.Run("Ready Pods exceed desired replicas", func(t *testing.T) {
+		if workspaceRuntimeIsolationReady(deployment("workspace-image:new"), []any{
+			pod("workspace-a", "workspace-image:new", true),
+			pod("workspace-b", "workspace-image:new", true),
+		}) {
+			t.Fatal("extra Ready Workspace Pods must keep runtime unready")
+		}
+	})
+	for _, field := range []string{"updatedReplicas", "readyReplicas", "availableReplicas"} {
+		t.Run(field+" drift", func(t *testing.T) {
+			current := deployment("workspace-image:new")
+			current["status"].(map[string]any)[field] = 2
+			if workspaceRuntimeIsolationReady(current, []any{pod("workspace-new", "workspace-image:new", true)}) {
+				t.Fatalf("%s must exactly equal desired replicas", field)
+			}
+		})
+	}
+}
+
 func TestTencentProviderWritesAccountGatewaySecretWithoutReturningRawKey(t *testing.T) {
 	provider := NewTencentProvider()
 	var applied []byte
@@ -710,7 +771,7 @@ func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) 
 		}},
 		"spec": map[string]any{
 			"nodeName": "10.0.0.8", "automountServiceAccountToken": false, "dnsPolicy": "ClusterFirst", "securityContext": map[string]any{"seccompProfile": map[string]any{"type": "RuntimeDefault"}},
-			"containers": []any{map[string]any{"name": "workspace", "securityContext": map[string]any{"allowPrivilegeEscalation": false, "capabilities": map[string]any{"drop": []any{"ALL"}}}, "volumeMounts": workspaceDataMounts()}},
+			"containers": []any{map[string]any{"name": "workspace", "image": "workspace-image:test", "securityContext": map[string]any{"allowPrivilegeEscalation": false, "capabilities": map[string]any{"drop": []any{"ALL"}}}, "volumeMounts": workspaceDataMounts()}},
 			"volumes":    []any{map[string]any{"name": "workspace-data", "persistentVolumeClaim": map[string]any{"claimName": "opl-storage-alpha-data"}}},
 		},
 		"status": map[string]any{
