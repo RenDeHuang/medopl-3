@@ -1054,6 +1054,9 @@ func claimEntBillingOperation(ctx context.Context, row map[string]any, load func
 		}
 		if updated == 1 {
 			claimed := mergeMaps(existing, row)
+			if _, confirmationExists := row["sub2apiChargeConfirmation"]; !confirmationExists {
+				delete(claimed, "sub2apiChargeConfirmation")
+			}
 			if lastReceiptID, reset := row["lastReceiptId"].(string); reset && lastReceiptID == "" {
 				claimed["lastReceiptId"] = ""
 			}

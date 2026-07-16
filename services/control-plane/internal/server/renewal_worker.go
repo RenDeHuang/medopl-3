@@ -181,8 +181,12 @@ func (app *controlPlaneServer) renewMonthlyResource(ctx context.Context, service
 	if err != nil {
 		return existing, err
 	}
+	previousOperationID := stringValue(existing["billingOperationId"])
 	operationID := "renewal-" + stableID(resourceType, stringValue(existing["id"]), paidThrough.Format(time.RFC3339))[:18]
 	row := cloneMap(existing)
+	if previousOperationID != operationID {
+		delete(row, "sub2apiChargeConfirmation")
+	}
 	row["resourceType"] = resourceType
 	row["billingStatus"], row["billingOperationId"] = "renewal_pending", operationID
 	row["billingOperationStartedAt"], row["lastRenewalAttemptAt"] = now.Format(time.RFC3339), now.Format(time.RFC3339)

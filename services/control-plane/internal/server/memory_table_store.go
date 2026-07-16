@@ -320,6 +320,9 @@ func (s *memoryTableStore) ClaimResourceBillingOperation(_ context.Context, reso
 		return cloneMap(existing), false, errBillingOperationInProgress
 	}
 	claimed := mergeMaps(existing, row)
+	if _, confirmationExists := row["sub2apiChargeConfirmation"]; !confirmationExists {
+		delete(claimed, "sub2apiChargeConfirmation")
+	}
 	if lastReceiptID, reset := row["lastReceiptId"].(string); reset && lastReceiptID == "" {
 		claimed["lastReceiptId"] = ""
 	}

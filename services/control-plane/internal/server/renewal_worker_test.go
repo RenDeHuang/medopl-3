@@ -200,6 +200,10 @@ func TestMonthlyRenewalStartsAtLeadTimeAndDoesNotDuplicate(t *testing.T) {
 			app, service, sub2API, fabric, ledger, events := newMonthlyBillingTest(t, []int64{charge, 0})
 			id := resourceType + "-renew"
 			row := monthlyActiveResource(resourceType, id, paidThrough)
+			row["sub2apiRedeemCode"] = monthlyRedeemCode("test", stringValue(row["billingOperationId"]))
+			row["sub2apiChargeConfirmation"] = map[string]any{
+				"code": row["sub2apiRedeemCode"], "userId": int64(41), "chargeUsdMicros": row["chargeUsdMicros"], "status": "used",
+			}
 			row["billingAnchorDay"] = int64(31)
 			if resourceType == "storage" {
 				mustStore(t, app.tables.SaveStorage(context.Background(), row))

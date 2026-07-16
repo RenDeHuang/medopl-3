@@ -207,28 +207,45 @@ func TestStateStoreNewBillingOperationClearsPreviousReceipt(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			old := monthlyActiveResource("storage", "storage-receipt-reset", time.Date(2026, 7, 16, 0, 0, 0, 0, time.UTC))
 			old["billingStatus"] = "retained"
+			old["sub2apiChargeConfirmation"] = map[string]any{
+				"code": old["sub2apiRedeemCode"], "userId": int64(41), "chargeUsdMicros": old["chargeUsdMicros"], "status": "used",
+			}
 			if err := tc.store.SaveStorage(ctx, old); err != nil {
 				t.Fatal(err)
 			}
 			operation := cloneMap(old)
 			operation["billingStatus"], operation["billingOperationId"] = "charge_pending", "billing-reactivation"
+			operation["sub2apiRedeemCode"] = monthlyRedeemCode("test", "billing-reactivation")
 			operation["lastReceiptId"] = ""
+			delete(operation, "sub2apiChargeConfirmation")
 
 			claimed, fresh, err := tc.store.ClaimResourceBillingOperation(ctx, "storage", operation)
-			if err != nil || !fresh || stringValue(claimed["lastReceiptId"]) != "" {
+			_, confirmationExists := claimed["sub2apiChargeConfirmation"]
+			if err != nil || !fresh || stringValue(claimed["lastReceiptId"]) != "" || confirmationExists {
 				t.Fatalf("new operation fresh=%v row=%#v err=%v", fresh, claimed, err)
 			}
 			rows, err := tc.store.ListStorages(ctx, "acct-monthly")
-			if err != nil || stringValue(recordByID(rows, "storage-receipt-reset")["lastReceiptId"]) != "" {
+			persisted := recordByID(rows, "storage-receipt-reset")
+			_, confirmationExists = persisted["sub2apiChargeConfirmation"]
+			if err != nil || stringValue(persisted["lastReceiptId"]) != "" || confirmationExists {
 				t.Fatalf("persisted new operation rows=%#v err=%v", rows, err)
 			}
 
 			claimed["lastReceiptId"] = "receipt-reactivation"
+			claimed["sub2apiChargeConfirmation"] = map[string]any{
+				"code": claimed["sub2apiRedeemCode"], "userId": int64(41), "chargeUsdMicros": claimed["chargeUsdMicros"], "status": "used",
+			}
 			if err := tc.store.SaveStorage(ctx, claimed); err != nil {
 				t.Fatal(err)
 			}
+			rows, err = tc.store.ListStorages(ctx, "acct-monthly")
+			persisted = recordByID(rows, "storage-receipt-reset")
+			if err != nil || !monthlyChargeConfirmationMatches(mapField(persisted, "sub2apiChargeConfirmation"), stringValue(operation["sub2apiRedeemCode"]), 41, int64(numberField(operation, "chargeUsdMicros", 0))) {
+				t.Fatalf("persisted same operation row=%#v err=%v", persisted, err)
+			}
 			replayed, fresh, err := tc.store.ClaimResourceBillingOperation(ctx, "storage", operation)
-			if err != nil || fresh || stringValue(replayed["lastReceiptId"]) != "receipt-reactivation" {
+			if err != nil || fresh || stringValue(replayed["lastReceiptId"]) != "receipt-reactivation" ||
+				!monthlyChargeConfirmationMatches(mapField(replayed, "sub2apiChargeConfirmation"), stringValue(operation["sub2apiRedeemCode"]), 41, int64(numberField(operation, "chargeUsdMicros", 0))) {
 				t.Fatalf("same operation replay fresh=%v row=%#v err=%v", fresh, replayed, err)
 			}
 		})
