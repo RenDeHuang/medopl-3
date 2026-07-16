@@ -229,6 +229,91 @@ func TestPostgresInvitedAccountSerializesExistingAccountOrganization(t *testing.
 	}
 }
 
+func TestPostgresInvitedAccountNewAccountConcurrentOneWinner(t *testing.T) {
+	databaseURL := os.Getenv("CONTROL_PLANE_TEST_DATABASE_URL")
+	if databaseURL == "" {
+		t.Skip("CONTROL_PLANE_TEST_DATABASE_URL is not set")
+	}
+	admin, err := sql.Open("postgres", databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := admin.Ping(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = admin.Close() })
+	schema := fmt.Sprintf("control_plane_new_invite_%d", time.Now().UnixNano())
+	if _, err := admin.Exec(`CREATE SCHEMA ` + pq.QuoteIdentifier(schema)); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = admin.Exec(`DROP SCHEMA ` + pq.QuoteIdentifier(schema) + ` CASCADE`) })
+	stateStore, err := NewPostgresEntStateStore(postgresInvitedAccountTestURL(databaseURL, schema))
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := stateStore.(*postgresEntStateStore)
+	t.Cleanup(func() { _ = store.client.Close() })
+	if _, err := admin.Exec(`
+		CREATE FUNCTION ` + pq.QuoteIdentifier(schema) + `.delay_invited_account_insert() RETURNS trigger LANGUAGE plpgsql AS $$
+		BEGIN
+			PERFORM pg_sleep(0.2);
+			RETURN NEW;
+		END
+		$$;
+		CREATE TRIGGER delay_invited_account_insert BEFORE INSERT ON ` + pq.QuoteIdentifier(schema) + `.control_plane_accounts
+		FOR EACH ROW EXECUTE FUNCTION ` + pq.QuoteIdentifier(schema) + `.delay_invited_account_insert();
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	account := map[string]any{"id": "acct-new-invite", "status": "active", "sub2apiUserId": int64(74)}
+	organization := map[string]any{"id": "org-new-invite", "name": "Organization acct-new-invite", "billingAccountId": "acct-new-invite", "status": "active"}
+	firstUser := map[string]any{"id": "usr-new-invite-one", "email": "one@new-invite.example", "accountId": "acct-new-invite", "role": "owner", "status": "active", "passwordHash": "hash"}
+	secondUser := map[string]any{"id": "usr-new-invite-two", "email": "two@new-invite.example", "accountId": "acct-new-invite", "role": "owner", "status": "active", "passwordHash": "hash"}
+	firstMembership := map[string]any{"id": "mem-new-invite-one", "accountId": "acct-new-invite", "organizationId": "org-new-invite", "userId": firstUser["id"], "role": "owner", "status": "active"}
+	secondMembership := map[string]any{"id": "mem-new-invite-two", "accountId": "acct-new-invite", "organizationId": "org-new-invite", "userId": secondUser["id"], "role": "owner", "status": "active"}
+	start := make(chan struct{})
+	results := make(chan error, 2)
+	for _, invite := range [][2]map[string]any{{firstUser, firstMembership}, {secondUser, secondMembership}} {
+		go func(user, membership map[string]any) {
+			<-start
+			results <- store.CreateInvitedAccount(ctx, account, user, organization, membership)
+		}(invite[0], invite[1])
+	}
+	close(start)
+	succeeded, conflicted := 0, 0
+	for range 2 {
+		err := <-results
+		if err == nil {
+			succeeded++
+		} else if errors.Is(err, errSub2APIAccountMappingConflict) {
+			conflicted++
+		} else {
+			t.Fatalf("concurrent new account invite: %v", err)
+		}
+	}
+	accounts, _ := store.ListAccounts(ctx, "acct-new-invite")
+	organizations, _ := store.ListOrganizations(ctx)
+	users, _ := store.ListUsers(ctx, true)
+	memberships, _ := store.ListMemberships(ctx)
+	accountUsers, accountMemberships := 0, 0
+	for _, user := range users {
+		if user["accountId"] == "acct-new-invite" {
+			accountUsers++
+		}
+	}
+	for _, membership := range memberships {
+		if membership["accountId"] == "acct-new-invite" {
+			accountMemberships++
+		}
+	}
+	if succeeded != 1 || conflicted != 1 || len(accounts) != 1 || findRecord(organizations, "org-new-invite") == nil || accountUsers != 1 || accountMemberships != 1 {
+		t.Fatalf("new account race succeeded=%d conflicted=%d accounts=%#v organizations=%#v users=%#v memberships=%#v", succeeded, conflicted, accounts, organizations, users, memberships)
+	}
+}
+
 func postgresInvitedAccountTestURL(databaseURL, schema string) string {
 	if parsed, err := url.Parse(databaseURL); err == nil && parsed.Scheme != "" {
 		query := parsed.Query()

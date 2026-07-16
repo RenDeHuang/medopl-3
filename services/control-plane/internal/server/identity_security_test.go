@@ -42,6 +42,15 @@ func TestPasswordStrengthDoesNotGuessBootstrapHashLength(t *testing.T) {
 	}
 }
 
+func TestPasswordStrengthCountsUnicodeRunes(t *testing.T) {
+	if err := validatePlaintextPassword(strings.Repeat("界", 11)); err == nil || err.Error() != "weak_password" {
+		t.Fatalf("11-rune password error = %v", err)
+	}
+	if err := validatePlaintextPassword(strings.Repeat("界", 12)); err != nil {
+		t.Fatalf("12-rune password error = %v", err)
+	}
+}
+
 func TestNormalizedEmailCreateAndBootstrapReuseOneIdentity(t *testing.T) {
 	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)

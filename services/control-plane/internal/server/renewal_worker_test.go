@@ -251,6 +251,26 @@ func TestMonthlyAutoRenewDefaultsOff(t *testing.T) {
 	}
 }
 
+func TestMonthlyRenewalStaleSnapshotAfterOwnerDisableHasNoExternalEffects(t *testing.T) {
+	paidThrough := time.Date(2026, 8, 31, 9, 30, 0, 0, time.UTC)
+	app, service, sub2API, fabric, ledger, events := newMonthlyBillingTest(t, []int64{100_000_000})
+	owner := map[string]any{"id": "usr-disabled-renewal", "email": "disabled-renewal@example.com", "accountId": "acct-monthly", "role": "owner", "status": "active"}
+	mustStore(t, app.tables.SaveUser(context.Background(), owner))
+	resource := monthlyActiveResource("compute", "compute-disabled-stale", paidThrough)
+	mustStore(t, app.tables.SaveCompute(context.Background(), resource))
+	stale := cloneMap(resource)
+	owner["status"] = "disabled"
+	mustStore(t, app.tables.ApplyUserLifecycle(context.Background(), owner))
+
+	result, err := app.renewMonthlyResource(context.Background(), service, "compute", stale, paidThrough.Add(-24*time.Hour))
+	if err != nil || result["billingOperationId"] != resource["billingOperationId"] || result["autoRenew"] != false {
+		t.Fatalf("disabled stale renewal row=%#v err=%v", result, err)
+	}
+	if len(sub2API.charges) != 0 || len(fabric.computeRenewKeys) != 0 || len(ledger.receipts) != 0 || len(*events) != 0 {
+		t.Fatalf("disabled stale renewal effects: charges=%#v renewals=%#v receipts=%#v events=%#v", sub2API.charges, fabric.computeRenewKeys, ledger.receipts, *events)
+	}
+}
+
 func TestMonthlyRenewalInsufficientBalanceKeepsCurrentEntitlement(t *testing.T) {
 	now := time.Date(2026, 7, 30, 12, 0, 0, 0, time.UTC)
 	paidThrough := now.Add(12 * time.Hour)

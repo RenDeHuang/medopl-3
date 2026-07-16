@@ -185,7 +185,7 @@ func TestBillingReviewResolutionRefundsOnlyConfirmedChargedAbsentResource(t *tes
 		t.Fatalf("refund resolution = %d %s", rec.Code, rec.Body.String())
 	}
 	row := billingReviewStoredRow(t, h.store)
-	if row["billingStatus"] != "refunded" || row["status"] != "external_deleted" || len(h.sub2API.refunds) != 1 || len(h.ledger.inputs) != 1 || h.ledger.inputs[0].Type != "billing.resource_refunded.v1" {
+	if row["billingStatus"] != "refunded" || row["status"] != "external_deleted" || row["autoRenew"] != false || len(h.sub2API.refunds) != 1 || len(h.ledger.inputs) != 1 || h.ledger.inputs[0].Type != "billing.resource_refunded.v1" {
 		t.Fatalf("refund result row=%#v refunds=%#v receipts=%#v", row, h.sub2API.refunds, h.ledger.inputs)
 	}
 	refund := h.sub2API.refunds[0]
@@ -363,7 +363,7 @@ func TestBillingReviewResolutionTerminatesKnownUnchargedAbsentRenewal(t *testing
 		t.Fatalf("terminate resolution = %d %s", rec.Code, rec.Body.String())
 	}
 	resolved := billingReviewStoredRow(t, h.store)
-	if resolved["billingStatus"] != "failed" || resolved["status"] != "external_deleted" || len(h.sub2API.refunds) != 0 || len(h.ledger.inputs) != 1 || h.ledger.inputs[0].Type != "billing.reconciliation.v1" {
+	if resolved["billingStatus"] != "failed" || resolved["status"] != "external_deleted" || resolved["autoRenew"] != false || len(h.sub2API.refunds) != 0 || len(h.ledger.inputs) != 1 || h.ledger.inputs[0].Type != "billing.reconciliation.v1" {
 		t.Fatalf("terminate result row=%#v refunds=%#v receipts=%#v", resolved, h.sub2API.refunds, h.ledger.inputs)
 	}
 }

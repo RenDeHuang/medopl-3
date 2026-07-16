@@ -3163,8 +3163,8 @@ func TestResourceAutoRenewProductCommandUpdatesOnlyControlPlaneState(t *testing.
 	}
 	before := len(calls)
 	for _, resource := range resources {
-		updated := createResourceWithSession(t, server, session, http.MethodPost, "/api/resources/"+stringValue(resource["id"])+"/auto-renew", `{"autoRenew":false}`)
-		if updated["id"] != resource["id"] || updated["autoRenew"] != false {
+		updated := createResourceWithSession(t, server, session, http.MethodPost, "/api/resources/"+stringValue(resource["id"])+"/auto-renew", `{"autoRenew":true}`)
+		if updated["id"] != resource["id"] || updated["autoRenew"] != true {
 			t.Fatalf("auto-renew response = %#v", updated)
 		}
 	}

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
 	"strconv"
 	"time"
 
@@ -797,33 +798,55 @@ func (s *postgresEntStateStore) ApplyUserLifecycle(ctx context.Context, user map
 	}
 	if stringValue(user["role"]) == "owner" {
 		accountID := stringValue(user["accountId"])
-		computes, err := loadRecordSet(ctx, client.ComputeAllocation.Query().Where(computeallocation.AccountID(accountID)).All, computeEntFields)
+		computes, err := client.ComputeAllocation.Query().Where(computeallocation.AccountID(accountID)).All(ctx)
 		if err != nil {
 			return rollback(err)
 		}
-		for id, compute := range computes {
-			if compute["autoRenew"] != true {
+		sort.Slice(computes, func(i, j int) bool { return computes[i].ID < computes[j].ID })
+		for _, compute := range computes {
+			current, err := client.ComputeAllocation.UpdateOneID(compute.ID).Save(ctx)
+			if controlplaneent.IsNotFound(err) {
 				continue
 			}
-			compute["autoRenew"] = false
-			update := client.ComputeAllocation.UpdateOneID(id)
-			setRecordFieldsWithEmptyText(update, compute, computeEntFields, true)
-			if err := execCreate(ctx, update); err != nil {
+			if err != nil {
+				return rollback(err)
+			}
+			row := recordFromEnt(current, computeEntFields)
+			if row["autoRenew"] != true {
+				continue
+			}
+			row["autoRenew"] = false
+			billingState, err := encodeMonthlyBillingState(row)
+			if err != nil {
+				return rollback(err)
+			}
+			if _, err := client.ComputeAllocation.UpdateOneID(compute.ID).SetBillingStateJSON(billingState).Save(ctx); err != nil {
 				return rollback(err)
 			}
 		}
-		storages, err := loadRecordSet(ctx, client.StorageVolume.Query().Where(storagevolume.AccountID(accountID)).All, storageEntFields)
+		storages, err := client.StorageVolume.Query().Where(storagevolume.AccountID(accountID)).All(ctx)
 		if err != nil {
 			return rollback(err)
 		}
-		for id, storage := range storages {
-			if storage["autoRenew"] != true {
+		sort.Slice(storages, func(i, j int) bool { return storages[i].ID < storages[j].ID })
+		for _, storage := range storages {
+			current, err := client.StorageVolume.UpdateOneID(storage.ID).Save(ctx)
+			if controlplaneent.IsNotFound(err) {
 				continue
 			}
-			storage["autoRenew"] = false
-			update := client.StorageVolume.UpdateOneID(id)
-			setRecordFieldsWithEmptyText(update, storage, storageEntFields, true)
-			if err := execCreate(ctx, update); err != nil {
+			if err != nil {
+				return rollback(err)
+			}
+			row := recordFromEnt(current, storageEntFields)
+			if row["autoRenew"] != true {
+				continue
+			}
+			row["autoRenew"] = false
+			billingState, err := encodeMonthlyBillingState(row)
+			if err != nil {
+				return rollback(err)
+			}
+			if _, err := client.StorageVolume.UpdateOneID(storage.ID).SetBillingStateJSON(billingState).Save(ctx); err != nil {
 				return rollback(err)
 			}
 		}
@@ -1068,14 +1091,7 @@ func (s *postgresEntStateStore) ListComputes(ctx context.Context, accountID stri
 }
 
 func (s *postgresEntStateStore) SaveCompute(ctx context.Context, row map[string]any) error {
-	return s.upsertRecord(ctx, row,
-		func(id string) (any, error) { return s.client.ComputeAllocation.Get(ctx, id) },
-		computeResourceIdentityMatches,
-		func() any { return s.client.ComputeAllocation.Create() },
-		func(id string) any { return s.client.ComputeAllocation.UpdateOneID(id) },
-		computeEntFields,
-		true,
-	)
+	return s.saveResourcePreservingAutoRenew(ctx, "compute", row)
 }
 
 func (s *postgresEntStateStore) DeleteCompute(ctx context.Context, id string) error {
@@ -1099,105 +1115,220 @@ func (s *postgresEntStateStore) ListStorages(ctx context.Context, accountID stri
 }
 
 func (s *postgresEntStateStore) SaveStorage(ctx context.Context, row map[string]any) error {
-	return s.upsertRecord(ctx, row,
-		func(id string) (any, error) { return s.client.StorageVolume.Get(ctx, id) },
-		storageResourceIdentityMatches,
-		func() any { return s.client.StorageVolume.Create() },
-		func(id string) any { return s.client.StorageVolume.UpdateOneID(id) },
-		storageEntFields,
-		true,
-	)
+	return s.saveResourcePreservingAutoRenew(ctx, "storage", row)
+}
+
+func (s *postgresEntStateStore) saveResourcePreservingAutoRenew(ctx context.Context, resourceType string, row map[string]any) error {
+	id := stringValue(row["id"])
+	if id == "" {
+		return errors.New("missing_record_id")
+	}
+	if resourceType != "compute" && resourceType != "storage" {
+		return errors.New("invalid_billing_resource_type")
+	}
+	for range 4 {
+		tx, err := s.client.Tx(ctx)
+		if err != nil {
+			return err
+		}
+		rollback := func(err error) error {
+			_ = tx.Rollback()
+			return err
+		}
+		client := tx.Client()
+		var current map[string]any
+		switch resourceType {
+		case "compute":
+			entity, lockErr := client.ComputeAllocation.UpdateOneID(id).Save(ctx)
+			if lockErr == nil {
+				current = recordFromEnt(entity, computeEntFields)
+			} else if !controlplaneent.IsNotFound(lockErr) {
+				return rollback(lockErr)
+			}
+		case "storage":
+			entity, lockErr := client.StorageVolume.UpdateOneID(id).Save(ctx)
+			if lockErr == nil {
+				current = recordFromEnt(entity, storageEntFields)
+			} else if !controlplaneent.IsNotFound(lockErr) {
+				return rollback(lockErr)
+			}
+		}
+		if current == nil {
+			var createErr error
+			if resourceType == "compute" {
+				createErr = saveRecord(ctx, id, row, client.ComputeAllocation.Create(), computeEntFields)
+			} else {
+				createErr = saveRecord(ctx, id, row, client.StorageVolume.Create(), storageEntFields)
+			}
+			if controlplaneent.IsConstraintError(createErr) {
+				_ = tx.Rollback()
+				continue
+			}
+			if createErr != nil {
+				return rollback(createErr)
+			}
+			return tx.Commit()
+		}
+		if stringValue(current["accountId"]) != stringValue(row["accountId"]) {
+			return rollback(errIdempotencyConflict)
+		}
+		saved := preserveResourceAutoRenew(current, row)
+		if resourceType == "compute" {
+			builder := client.ComputeAllocation.UpdateOneID(id)
+			setRecordFieldsWithEmptyText(builder, saved, computeEntFields, true)
+			err = execCreate(ctx, builder)
+		} else {
+			builder := client.StorageVolume.UpdateOneID(id)
+			setRecordFieldsWithEmptyText(builder, saved, storageEntFields, true)
+			err = execCreate(ctx, builder)
+		}
+		if err != nil {
+			return rollback(err)
+		}
+		return tx.Commit()
+	}
+	return errors.New("resource_save_retry_exhausted")
+}
+
+func (s *postgresEntStateStore) SetResourceAutoRenew(ctx context.Context, resourceType, id, accountID string, autoRenew bool) error {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	rollback := func(err error) error {
+		_ = tx.Rollback()
+		return err
+	}
+	client := tx.Client()
+	var current map[string]any
+	switch resourceType {
+	case "compute":
+		entity, err := client.ComputeAllocation.UpdateOneID(id).Save(ctx)
+		if err != nil {
+			return rollback(err)
+		}
+		current = recordFromEnt(entity, computeEntFields)
+	case "storage":
+		entity, err := client.StorageVolume.UpdateOneID(id).Save(ctx)
+		if err != nil {
+			return rollback(err)
+		}
+		current = recordFromEnt(entity, storageEntFields)
+	default:
+		return rollback(errors.New("invalid_billing_resource_type"))
+	}
+	if stringValue(current["accountId"]) != accountID {
+		return rollback(errIdempotencyConflict)
+	}
+	current["autoRenew"] = autoRenew
+	billingState, err := encodeMonthlyBillingState(current)
+	if err != nil {
+		return rollback(err)
+	}
+	if resourceType == "compute" {
+		_, err = client.ComputeAllocation.UpdateOneID(id).SetBillingStateJSON(billingState).Save(ctx)
+	} else {
+		_, err = client.StorageVolume.UpdateOneID(id).SetBillingStateJSON(billingState).Save(ctx)
+	}
+	if err != nil {
+		return rollback(err)
+	}
+	return tx.Commit()
 }
 
 func (s *postgresEntStateStore) ClaimResourceBillingOperation(ctx context.Context, resourceType string, row map[string]any) (map[string]any, bool, error) {
-	id := stringValue(row["id"])
-	switch resourceType {
-	case "compute":
-		return claimEntBillingOperation(ctx, row,
-			func() (map[string]any, error) {
-				entity, err := s.client.ComputeAllocation.Query().Where(computeallocation.ID(id)).Only(ctx)
-				if controlplaneent.IsNotFound(err) {
-					return nil, nil
-				}
-				if err != nil {
-					return nil, err
-				}
-				return recordFromEnt(entity, computeEntFields), nil
-			},
-			func() error { return saveRecord(ctx, id, row, s.client.ComputeAllocation.Create(), computeEntFields) },
-			func(expectedOperationID string) (int, error) {
-				builder := s.client.ComputeAllocation.Update().Where(computeallocation.ID(id), computeallocation.BillingOperationID(expectedOperationID))
-				setRecordFields(builder, row, computeEntFields)
-				return builder.Save(ctx)
-			},
-		)
-	case "storage":
-		return claimEntBillingOperation(ctx, row,
-			func() (map[string]any, error) {
-				entity, err := s.client.StorageVolume.Query().Where(storagevolume.ID(id)).Only(ctx)
-				if controlplaneent.IsNotFound(err) {
-					return nil, nil
-				}
-				if err != nil {
-					return nil, err
-				}
-				return recordFromEnt(entity, storageEntFields), nil
-			},
-			func() error { return saveRecord(ctx, id, row, s.client.StorageVolume.Create(), storageEntFields) },
-			func(expectedOperationID string) (int, error) {
-				builder := s.client.StorageVolume.Update().Where(storagevolume.ID(id), storagevolume.BillingOperationID(expectedOperationID))
-				setRecordFields(builder, row, storageEntFields)
-				return builder.Save(ctx)
-			},
-		)
-	default:
-		return nil, false, errors.New("invalid_billing_resource_type")
-	}
-}
-
-func claimEntBillingOperation(ctx context.Context, row map[string]any, load func() (map[string]any, error), create func() error, update func(string) (int, error)) (map[string]any, bool, error) {
-	if stringValue(row["id"]) == "" || stringValue(row["billingOperationId"]) == "" {
+	id, operationID := stringValue(row["id"]), stringValue(row["billingOperationId"])
+	if id == "" || operationID == "" {
 		return nil, false, errors.New("billing_operation_identity_required")
 	}
+	if resourceType != "compute" && resourceType != "storage" {
+		return nil, false, errors.New("invalid_billing_resource_type")
+	}
 	for range 4 {
-		existing, err := load()
+		tx, err := s.client.Tx(ctx)
 		if err != nil {
 			return nil, false, err
 		}
+		rollback := func(err error) (map[string]any, bool, error) {
+			_ = tx.Rollback()
+			return nil, false, err
+		}
+		client := tx.Client()
+		var existing map[string]any
+		switch resourceType {
+		case "compute":
+			entity, lockErr := client.ComputeAllocation.UpdateOneID(id).Save(ctx)
+			if lockErr == nil {
+				existing = recordFromEnt(entity, computeEntFields)
+			} else if !controlplaneent.IsNotFound(lockErr) {
+				return rollback(lockErr)
+			}
+		case "storage":
+			entity, lockErr := client.StorageVolume.UpdateOneID(id).Save(ctx)
+			if lockErr == nil {
+				existing = recordFromEnt(entity, storageEntFields)
+			} else if !controlplaneent.IsNotFound(lockErr) {
+				return rollback(lockErr)
+			}
+		}
 		if existing == nil {
-			if err := create(); err != nil {
-				if controlplaneent.IsConstraintError(err) {
-					continue
-				}
+			var createErr error
+			if resourceType == "compute" {
+				createErr = saveRecord(ctx, id, row, client.ComputeAllocation.Create(), computeEntFields)
+			} else {
+				createErr = saveRecord(ctx, id, row, client.StorageVolume.Create(), storageEntFields)
+			}
+			if controlplaneent.IsConstraintError(createErr) {
+				_ = tx.Rollback()
+				continue
+			}
+			if createErr != nil {
+				return rollback(createErr)
+			}
+			if err := tx.Commit(); err != nil {
 				return nil, false, err
 			}
 			return cloneMap(row), true, nil
 		}
-		operationID := stringValue(row["billingOperationId"])
 		currentOperationID := stringValue(existing["billingOperationId"])
 		if currentOperationID == operationID {
 			if !billingOperationIdentityMatches(existing, row) {
-				return nil, false, errIdempotencyConflict
+				return rollback(errIdempotencyConflict)
 			}
-			return existing, false, nil
+			_ = tx.Rollback()
+			return cloneMap(existing), false, nil
+		}
+		if stringValue(row["billingStatus"]) == "renewal_pending" && existing["autoRenew"] != true {
+			_ = tx.Rollback()
+			return cloneMap(existing), false, nil
 		}
 		if billingOperationInProgress(stringValue(existing["billingStatus"])) {
-			return existing, false, errBillingOperationInProgress
+			_ = tx.Rollback()
+			return cloneMap(existing), false, errBillingOperationInProgress
 		}
-		updated, err := update(currentOperationID)
+		claimed := preserveResourceAutoRenew(existing, mergeMaps(existing, row))
+		if _, confirmationExists := row["sub2apiChargeConfirmation"]; !confirmationExists {
+			delete(claimed, "sub2apiChargeConfirmation")
+		}
+		if lastReceiptID, reset := row["lastReceiptId"].(string); reset && lastReceiptID == "" {
+			claimed["lastReceiptId"] = ""
+		}
+		if resourceType == "compute" {
+			builder := client.ComputeAllocation.UpdateOneID(id)
+			setRecordFields(builder, claimed, computeEntFields)
+			err = execCreate(ctx, builder)
+		} else {
+			builder := client.StorageVolume.UpdateOneID(id)
+			setRecordFields(builder, claimed, storageEntFields)
+			err = execCreate(ctx, builder)
+		}
 		if err != nil {
+			return rollback(err)
+		}
+		if err := tx.Commit(); err != nil {
 			return nil, false, err
 		}
-		if updated == 1 {
-			claimed := mergeMaps(existing, row)
-			if _, confirmationExists := row["sub2apiChargeConfirmation"]; !confirmationExists {
-				delete(claimed, "sub2apiChargeConfirmation")
-			}
-			if lastReceiptID, reset := row["lastReceiptId"].(string); reset && lastReceiptID == "" {
-				claimed["lastReceiptId"] = ""
-			}
-			return claimed, true, nil
-		}
+		return claimed, true, nil
 	}
 	return nil, false, errors.New("billing_operation_claim_retry_exhausted")
 }
@@ -1843,13 +1974,7 @@ func setRecordFieldsWithEmptyText(builder any, row controlPlaneRecord, fields []
 		case "bool":
 			callSetter(builder, field.Setter, boolValue(value))
 		case "billing_json":
-			billing := map[string]any{}
-			for _, key := range monthlyBillingStateKeys {
-				if value, ok := row[key]; ok {
-					billing[key] = value
-				}
-			}
-			if encoded, err := json.Marshal(billing); err == nil {
+			if encoded, err := encodeMonthlyBillingState(row); err == nil {
 				callSetter(builder, field.Setter, string(encoded))
 			}
 		default:
@@ -1859,6 +1984,17 @@ func setRecordFieldsWithEmptyText(builder any, row controlPlaneRecord, fields []
 			}
 		}
 	}
+}
+
+func encodeMonthlyBillingState(row map[string]any) (string, error) {
+	billing := map[string]any{}
+	for _, key := range monthlyBillingStateKeys {
+		if value, ok := row[key]; ok {
+			billing[key] = value
+		}
+	}
+	encoded, err := json.Marshal(billing)
+	return string(encoded), err
 }
 
 func (s *postgresEntStateStore) upsertRecord(ctx context.Context, row map[string]any, get func(string) (any, error), identityMatches func(any, map[string]any) bool, create func() any, update func(string) any, fields []entRecordField, includeEmptyText bool) error {
@@ -1895,16 +2031,6 @@ func projectTaskSyncHeadIdentityMatches(existing any, row map[string]any) bool {
 func executionRequestIdentityMatches(existing any, row map[string]any) bool {
 	entity, ok := existing.(*controlplaneent.ExecutionRequest)
 	return ok && entity.OrganizationID == stringValue(row["organizationId"]) && entity.WorkspaceID == stringValue(row["workspaceId"]) && entity.ProjectID == stringValue(row["projectId"]) && entity.TaskID == stringValue(row["taskId"]) && entity.ActorUserID == stringValue(row["actorUserId"]) && entity.EnvironmentRef == stringValue(row["environmentRef"]) && entity.IdempotencyKey == stringValue(row["idempotencyKey"])
-}
-
-func computeResourceIdentityMatches(existing any, row map[string]any) bool {
-	entity, ok := existing.(*controlplaneent.ComputeAllocation)
-	return ok && entity.AccountID == stringValue(row["accountId"])
-}
-
-func storageResourceIdentityMatches(existing any, row map[string]any) bool {
-	entity, ok := existing.(*controlplaneent.StorageVolume)
-	return ok && entity.AccountID == stringValue(row["accountId"])
 }
 
 func runtimeOperationIdentityMatches(existing any, row map[string]any) bool {

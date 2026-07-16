@@ -100,6 +100,7 @@ type controlPlaneTableStore interface {
 	DeleteCompute(ctx context.Context, id string) error
 	ListStorages(ctx context.Context, accountID string) ([]map[string]any, error)
 	SaveStorage(ctx context.Context, row map[string]any) error
+	SetResourceAutoRenew(ctx context.Context, resourceType, id, accountID string, autoRenew bool) error
 	ClaimResourceBillingOperation(ctx context.Context, resourceType string, row map[string]any) (map[string]any, bool, error)
 	DeleteStorage(ctx context.Context, id string) error
 	ListAttachments(ctx context.Context, accountID string) ([]map[string]any, error)
@@ -266,4 +267,14 @@ func billingOperationInProgress(status string) bool {
 	default:
 		return false
 	}
+}
+
+func preserveResourceAutoRenew(current, incoming map[string]any) controlPlaneRecord {
+	row := cloneMap(incoming)
+	if autoRenew, ok := current["autoRenew"]; ok {
+		row["autoRenew"] = autoRenew
+	} else {
+		delete(row, "autoRenew")
+	}
+	return row
 }

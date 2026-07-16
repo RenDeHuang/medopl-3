@@ -263,12 +263,13 @@ func registerResourceRoutes(mux *http.ServeMux, app *controlPlaneServer, service
 		defer unlock()
 		existing, _ = app.monthlyResource(resourceType, id)
 		before := cloneMap(existing)
-		existing["autoRenew"] = autoRenew
-		if err := app.saveMonthlyResource(r.Context(), resourceType, existing); err != nil {
+		accountID := firstNonEmpty(stringValue(existing["accountId"]), stringValue(existing["ownerAccountId"]))
+		if err := app.tables.SetResourceAutoRenew(r.Context(), resourceType, id, accountID, autoRenew); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}
-		if err := app.appendAuditEvent(r, "resource.auto_renew", resourceType, id, stringValue(existing["accountId"]), before, existing, "succeeded"); err != nil {
+		existing["autoRenew"] = autoRenew
+		if err := app.appendAuditEvent(r, "resource.auto_renew", resourceType, id, accountID, before, existing, "succeeded"); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}

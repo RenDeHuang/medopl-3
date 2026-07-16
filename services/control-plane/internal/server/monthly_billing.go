@@ -585,6 +585,11 @@ func (app *controlPlaneServer) finalizeMonthlyBillingReview(ctx context.Context,
 	row["lastReceiptId"] = row["reviewResolutionReceiptId"]
 	row["reviewResolutionPhase"] = "completed"
 	delete(row, "lastBillingError")
+	if decision == billingReviewTerminateFree || decision == billingReviewRefundCharged {
+		if err := app.tables.SetResourceAutoRenew(ctx, monthlyResourceType(row), stringValue(row["id"]), stringValue(row["accountId"]), false); err != nil {
+			return nil, err
+		}
+	}
 	result := map[string]any{
 		"resourceType": monthlyResourceType(row), "resourceId": row["id"], "accountId": row["accountId"],
 		"billingOperationId": row["billingOperationId"], "decision": decision, "evidenceRef": row["reviewResolutionEvidenceRef"],

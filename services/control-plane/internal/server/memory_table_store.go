@@ -99,7 +99,6 @@ func (s *memoryTableStore) ApplyUserLifecycle(_ context.Context, user map[string
 	sessions := cloneStateTable(s.sessions)
 	computes := cloneStateTable(s.computes)
 	storages := cloneStateTable(s.storages)
-	workspaces := cloneStateTable(s.workspaces)
 	users[userID] = cloneMap(user)
 	for id, session := range sessions {
 		if stringValue(session["userId"]) == userID {
@@ -108,7 +107,7 @@ func (s *memoryTableStore) ApplyUserLifecycle(_ context.Context, user map[string
 	}
 	if stringValue(user["role"]) == "owner" {
 		accountID := stringValue(user["accountId"])
-		for _, rows := range []controlPlaneRecordSet{computes, storages, workspaces} {
+		for _, rows := range []controlPlaneRecordSet{computes, storages} {
 			for id, row := range rows {
 				if firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"])) == accountID && row["autoRenew"] == true {
 					row = cloneMap(row)
@@ -118,7 +117,7 @@ func (s *memoryTableStore) ApplyUserLifecycle(_ context.Context, user map[string
 			}
 		}
 	}
-	s.users, s.sessions, s.computes, s.storages, s.workspaces = users, sessions, computes, storages, workspaces
+	s.users, s.sessions, s.computes, s.storages = users, sessions, computes, storages
 	return nil
 }
 
@@ -317,7 +316,11 @@ func (s *memoryTableStore) ListComputes(_ context.Context, accountID string) ([]
 func (s *memoryTableStore) SaveCompute(_ context.Context, row map[string]any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.computes[stringValue(row["id"])] = cloneMap(row)
+	id := stringValue(row["id"])
+	if current := s.computes[id]; current != nil {
+		row = preserveResourceAutoRenew(current, row)
+	}
+	s.computes[id] = cloneMap(row)
 	return nil
 }
 
@@ -337,7 +340,36 @@ func (s *memoryTableStore) ListStorages(_ context.Context, accountID string) ([]
 func (s *memoryTableStore) SaveStorage(_ context.Context, row map[string]any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.storages[stringValue(row["id"])] = cloneMap(row)
+	id := stringValue(row["id"])
+	if current := s.storages[id]; current != nil {
+		row = preserveResourceAutoRenew(current, row)
+	}
+	s.storages[id] = cloneMap(row)
+	return nil
+}
+
+func (s *memoryTableStore) SetResourceAutoRenew(_ context.Context, resourceType, id, accountID string, autoRenew bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	var records controlPlaneRecordSet
+	switch resourceType {
+	case "compute":
+		records = s.computes
+	case "storage":
+		records = s.storages
+	default:
+		return errors.New("invalid_billing_resource_type")
+	}
+	current := records[id]
+	if current == nil {
+		return errors.New("resource_not_found")
+	}
+	if firstNonEmpty(stringValue(current["accountId"]), stringValue(current["ownerAccountId"])) != accountID {
+		return errIdempotencyConflict
+	}
+	current = cloneMap(current)
+	current["autoRenew"] = autoRenew
+	records[id] = current
 	return nil
 }
 
@@ -368,10 +400,13 @@ func (s *memoryTableStore) ClaimResourceBillingOperation(_ context.Context, reso
 		}
 		return cloneMap(existing), false, nil
 	}
+	if stringValue(row["billingStatus"]) == "renewal_pending" && existing["autoRenew"] != true {
+		return cloneMap(existing), false, nil
+	}
 	if billingOperationInProgress(stringValue(existing["billingStatus"])) {
 		return cloneMap(existing), false, errBillingOperationInProgress
 	}
-	claimed := mergeMaps(existing, row)
+	claimed := preserveResourceAutoRenew(existing, mergeMaps(existing, row))
 	if _, confirmationExists := row["sub2apiChargeConfirmation"]; !confirmationExists {
 		delete(claimed, "sub2apiChargeConfirmation")
 	}
