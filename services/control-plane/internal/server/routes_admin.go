@@ -68,7 +68,7 @@ func registerAdminRoutes(mux *http.ServeMux, app *controlPlaneServer, service *c
 	mux.HandleFunc("POST /api/users/{id}/reset-password", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		body, err := app.resetUserPassword(r.Context(), r.PathValue("id"), stringField(decodeJSON(r), "password", ""))
 		if err != nil {
-			if errors.Is(err, errMissingPassword) {
+			if errors.Is(err, errMissingPassword) || errors.Is(err, errWeakPassword) {
 				writeError(w, http.StatusBadRequest, err.Error())
 				return
 			}

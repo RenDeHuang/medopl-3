@@ -489,7 +489,7 @@ func TestResumeWorkspaceValidatesRetainedResourcesBeforeFabric(t *testing.T) {
 
 	before := len(calls)
 	forbidden := requestWithSession(t, server, outsider, http.MethodPost, "/api/workspaces/workspace-alpha/resume", body)
-	if forbidden.Code != http.StatusUnauthorized || len(calls) != before {
+	if forbidden.Code != http.StatusForbidden || !strings.Contains(forbidden.Body.String(), "account_scope_forbidden") || len(calls) != before {
 		t.Fatalf("cross-account resume = %d calls=%#v body=%s", forbidden.Code, calls[before:], forbidden.Body.String())
 	}
 
@@ -1256,7 +1256,7 @@ func TestWorkspaceRuntimeStatusDoesNotReadSecretForUnknownProjection(t *testing.
 
 	before := len(calls)
 	response := requestWithSession(t, server, outsider, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"ws-unknown"}`)
-	if response.Code != http.StatusUnauthorized || !strings.Contains(response.Body.String(), "not_authenticated") {
+	if response.Code != http.StatusNotFound || !strings.Contains(response.Body.String(), "workspace_not_found") {
 		t.Fatalf("unknown runtime status = %d: %s", response.Code, response.Body.String())
 	}
 	if len(calls) != before || strings.Contains(response.Body.String(), "runtime-password-alpha") {
@@ -1278,7 +1278,7 @@ func TestWorkspaceRuntimeStatusForbidsCrossAccountSecretRead(t *testing.T) {
 
 	before := len(calls)
 	response := requestWithSession(t, server, outsider, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"`+stringValue(workspace["id"])+`"}`)
-	if response.Code != http.StatusUnauthorized || !strings.Contains(response.Body.String(), "not_authenticated") {
+	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "account_scope_forbidden") {
 		t.Fatalf("cross-account runtime status = %d: %s", response.Code, response.Body.String())
 	}
 	if len(calls) != before {
@@ -1462,7 +1462,7 @@ func TestCreateUserRejectsDuplicateEmail(t *testing.T) {
 	admin := operatorSessionForTest(t, server)
 
 	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"pi@lab.example","accountId":"acct-alpha","role":"member","password":"CorrectHorseBatteryStaple!","sub2apiUserId":41}`)
-	duplicate := requestWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"PI@lab.example","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!","sub2apiUserId":41}`)
+	duplicate := requestWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"PI@lab.example","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!","sub2apiUserId":42}`)
 	if duplicate.Code != http.StatusConflict || !strings.Contains(duplicate.Body.String(), "user_already_exists") {
 		t.Fatalf("duplicate create status=%d body=%s, want 409 user_already_exists", duplicate.Code, duplicate.Body.String())
 	}
@@ -1988,10 +1988,6 @@ func TestProjectCreationReportsMissingIdentity(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			store := newMemoryTableStore()
-			if tc.organization == nil {
-				delete(store.organizations, "org-alpha")
-				delete(store.memberships, "mem-admin-alpha")
-			}
 			if tc.organization != nil {
 				mustStore(t, store.SaveOrganization(context.Background(), tc.organization))
 				mustStore(t, store.SaveMembership(context.Background(), map[string]any{"id": "mem-admin-alpha", "organizationId": "org-alpha", "userId": "usr-admin", "accountId": "acct-alpha", "role": "admin", "status": "active"}))
@@ -2003,8 +1999,22 @@ func TestProjectCreationReportsMissingIdentity(t *testing.T) {
 			if err != nil {
 				t.Fatalf("create server: %v", err)
 			}
+			session := tenantAdminSessionForTest(t, server)
+			if tc.organization == nil {
+				users, _ := store.ListUsers(context.Background(), true)
+				var sessionUser map[string]any
+				for _, user := range users {
+					if user["id"] != "usr-admin" && user["role"] == "admin" {
+						sessionUser = user
+					}
+				}
+				mustStore(t, store.SaveOrganization(context.Background(), map[string]any{"id": "org-session", "billingAccountId": "acct-alpha", "status": "active"}))
+				mustStore(t, store.SaveMembership(context.Background(), map[string]any{"id": "mem-session", "organizationId": "org-session", "userId": stringValue(sessionUser["id"]), "accountId": "acct-alpha", "role": "admin", "status": "active"}))
+				delete(store.organizations, "org-alpha")
+				delete(store.memberships, "mem-admin-alpha")
+			}
 
-			rec := requestWithSession(t, server, tenantAdminSessionForTest(t, server), http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha"}`)
+			rec := requestWithSession(t, server, session, http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha"}`)
 			wantStatus := http.StatusNotFound
 			if tc.organization == nil {
 				wantStatus, tc.errorCode = http.StatusForbidden, "organization_membership_required"
@@ -2079,8 +2089,8 @@ func TestOrganizationMemberSyncsExecutionAndReadsContinuation(t *testing.T) {
 	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outside-continuation@example.com","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!","sub2apiUserId":42}`)
 	outsider := loginForTest(t, server, "outside-continuation@example.com", "CorrectHorseBatteryStaple!")
 	forbidden := requestWithSession(t, server, outsider, http.MethodGet, "/api/execution-requests/"+requestID+"/continuation", "")
-	if forbidden.Code != http.StatusUnauthorized {
-		t.Fatalf("outsider continuation status = %d, want %d: %s", forbidden.Code, http.StatusUnauthorized, forbidden.Body.String())
+	if forbidden.Code != http.StatusForbidden || !strings.Contains(forbidden.Body.String(), "organization_membership_required") {
+		t.Fatalf("outsider continuation status = %d, want organization_membership_required: %s", forbidden.Code, forbidden.Body.String())
 	}
 }
 
@@ -2130,8 +2140,8 @@ func TestExecutionRoutesAuthorizeActiveOrganizationMembers(t *testing.T) {
 	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"outsider@execution.example","accountId":"acct-beta","role":"member","password":"CorrectHorseBatteryStaple!","sub2apiUserId":42}`)
 	outsider := loginForTest(t, server, "outsider@execution.example", "CorrectHorseBatteryStaple!")
 	forbidden := requestWithSession(t, server, outsider, http.MethodPost, "/api/projects", `{"organizationId":"org-alpha","workspaceId":"workspace-alpha"}`)
-	if forbidden.Code != http.StatusUnauthorized || !strings.Contains(forbidden.Body.String(), "not_authenticated") {
-		t.Fatalf("outsider status = %d body=%s, want not_authenticated", forbidden.Code, forbidden.Body.String())
+	if forbidden.Code != http.StatusForbidden || !strings.Contains(forbidden.Body.String(), "organization_membership_required") {
+		t.Fatalf("outsider status = %d body=%s, want organization_membership_required", forbidden.Code, forbidden.Body.String())
 	}
 }
 
@@ -3345,6 +3355,51 @@ func TestUserSoftDeleteRevokesSessionsAndHidesByDefault(t *testing.T) {
 	assertSessionUnauthorized(t, server, loginRec)
 	assertUserAbsentFromManagement(t, server, "/api/management/state", stringValue(created["id"]))
 	assertDeletedUserPresent(t, server, stringValue(created["id"]))
+}
+
+func TestOwnerLifecycleDisablesRenewalAndRevokesSession(t *testing.T) {
+	for index, action := range []string{"disable", "delete"} {
+		t.Run(action, func(t *testing.T) {
+			server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
+			operator := operatorSessionForTest(t, server)
+			accountID := "acct-owner-" + action
+			owner := createResourceWithSession(t, server, operator, http.MethodPost, "/api/users", fmt.Sprintf(`{"email":"owner-%s@example.com","accountId":"%s","password":"CorrectHorseBatteryStaple!","sub2apiUserId":%d}`, action, accountID, 91+index))
+			member := createResourceWithSession(t, server, operator, http.MethodPost, "/api/users", fmt.Sprintf(`{"email":"member-%s@example.com","accountId":"%s","role":"member","password":"CorrectHorseBatteryStaple!","sub2apiUserId":%d}`, action, accountID, 91+index))
+			ownerSession := loginForTest(t, server, "owner-"+action+"@example.com", "CorrectHorseBatteryStaple!")
+			app := server.(*controlPlaneHTTPHandler).app
+			computeID, storageID := "compute-owner-"+action, "storage-owner-"+action
+			mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{"id": computeID, "accountId": accountID, "autoRenew": true}))
+			mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{"id": storageID, "accountId": accountID, "autoRenew": true}))
+			mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{"id": "compute-other-" + action, "accountId": "acct-other", "autoRenew": true}))
+
+			path := "/api/users/" + action
+			memberBody := `{"userId":"` + stringValue(member["id"]) + `"}`
+			ownerBody := `{"userId":"` + stringValue(owner["id"]) + `"}`
+			if action == "delete" {
+				memberBody = `{"userId":"` + stringValue(member["id"]) + `","confirm":true}`
+				ownerBody = `{"userId":"` + stringValue(owner["id"]) + `","confirm":true}`
+			}
+			if response := requestWithSession(t, server, operator, http.MethodPost, path, memberBody); response.Code != http.StatusOK {
+				t.Fatalf("member %s status=%d body=%s", action, response.Code, response.Body.String())
+			}
+			computes, _ := app.tables.ListComputes(context.Background(), accountID)
+			if recordByID(computes, computeID)["autoRenew"] != true {
+				t.Fatalf("member %s changed account renewal: %#v", action, computes)
+			}
+			if response := requestWithSession(t, server, operator, http.MethodPost, path, ownerBody); response.Code != http.StatusOK {
+				t.Fatalf("owner %s status=%d body=%s", action, response.Code, response.Body.String())
+			}
+			computes, _ = app.tables.ListComputes(context.Background(), "")
+			storages, _ := app.tables.ListStorages(context.Background(), accountID)
+			if recordByID(computes, computeID)["autoRenew"] != false || recordByID(storages, storageID)["autoRenew"] != false {
+				t.Fatalf("owner %s renewal still enabled: computes=%#v storages=%#v", action, computes, storages)
+			}
+			if recordByID(computes, "compute-other-"+action)["autoRenew"] != true {
+				t.Fatalf("owner %s changed another account: %#v", action, computes)
+			}
+			assertSessionUnauthorized(t, server, ownerSession)
+		})
+	}
 }
 
 func loginForTest(t *testing.T, server http.Handler, email string, password string) *httptest.ResponseRecorder {

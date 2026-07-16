@@ -22,6 +22,7 @@ import (
 	"opl-cloud/services/control-plane/ent/computeallocation"
 	"opl-cloud/services/control-plane/ent/productione2erecord"
 	"opl-cloud/services/control-plane/ent/runtimeoperation"
+	"opl-cloud/services/control-plane/ent/session"
 	"opl-cloud/services/control-plane/ent/storageattachment"
 	"opl-cloud/services/control-plane/ent/storagevolume"
 	"opl-cloud/services/control-plane/ent/supportticketmapping"
@@ -88,6 +89,9 @@ func NewPostgresEntStateStore(databaseURL string) (StateStore, error) {
 		}},
 		{Version: "202607160002_primary_workspace", Run: func(ctx context.Context) error {
 			return controlplanemigrations.ApplyPrimaryWorkspace(ctx, driver)
+		}},
+		{Version: "202607170001_invited_account_identity", Run: func(ctx context.Context) error {
+			return controlplanemigrations.ApplyInvitedAccountIdentity(ctx, driver)
 		}},
 	}); err != nil {
 		_ = client.Close()
@@ -691,6 +695,138 @@ func (s *postgresEntStateStore) SaveAccount(ctx context.Context, row map[string]
 	}
 	if err := saveRecord(ctx, id, row, tx.Account.Create(), accountEntFields); err != nil {
 		return rollback(err)
+	}
+	return tx.Commit()
+}
+
+func (s *postgresEntStateStore) CreateInvitedAccount(ctx context.Context, accountRow, userRow, organizationRow, membershipRow map[string]any) error {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	rollback := func(err error) error {
+		_ = tx.Rollback()
+		return err
+	}
+	client := tx.Client()
+	accountID := stringValue(accountRow["id"])
+	accountExists := true
+	if _, err := client.Account.UpdateOneID(accountID).Save(ctx); err != nil {
+		if controlplaneent.IsNotFound(err) {
+			accountExists = false
+		} else {
+			return rollback(err)
+		}
+	}
+	accounts, err := loadRecordSet(ctx, client.Account.Query().All, accountEntFields)
+	if err != nil {
+		return rollback(err)
+	}
+	users, err := loadRecordSet(ctx, client.User.Query().All, userEntFields)
+	if err != nil {
+		return rollback(err)
+	}
+	organizations, err := loadRecordSet(ctx, client.Organization.Query().All, organizationEntFields)
+	if err != nil {
+		return rollback(err)
+	}
+	memberships, err := loadRecordSet(ctx, client.Membership.Query().All, membershipEntFields)
+	if err != nil {
+		return rollback(err)
+	}
+
+	organizationID := stringValue(organizationRow["id"])
+	_, organizationExists := organizations[organizationID]
+	if err := stageInvitedAccount(accounts, users, organizations, memberships, accountRow, userRow, organizationRow, membershipRow); err != nil {
+		return rollback(err)
+	}
+
+	if accountExists {
+		if _, err := client.Account.UpdateOneID(accountID).SetSub2apiUserID(int64(numberField(accounts[accountID], "sub2apiUserId", 0))).Save(ctx); err != nil {
+			if controlplaneent.IsConstraintError(err) {
+				return rollback(errSub2APIAccountMappingConflict)
+			}
+			return rollback(err)
+		}
+	} else if err := saveRecord(ctx, accountID, accounts[accountID], client.Account.Create(), accountEntFields); err != nil {
+		if controlplaneent.IsConstraintError(err) {
+			return rollback(errSub2APIAccountMappingConflict)
+		}
+		return rollback(err)
+	}
+	userID := stringValue(userRow["id"])
+	if err := saveRecord(ctx, userID, users[userID], client.User.Create(), userEntFields); err != nil {
+		if controlplaneent.IsConstraintError(err) {
+			return rollback(errUserExists)
+		}
+		return rollback(err)
+	}
+	if !organizationExists {
+		if err := saveRecord(ctx, organizationID, organizations[organizationID], client.Organization.Create(), organizationEntFields); err != nil {
+			return rollback(err)
+		}
+	}
+	membershipID := stringValue(membershipRow["id"])
+	if err := saveRecord(ctx, membershipID, memberships[membershipID], client.Membership.Create(), membershipEntFields); err != nil {
+		return rollback(err)
+	}
+	return tx.Commit()
+}
+
+func (s *postgresEntStateStore) ApplyUserLifecycle(ctx context.Context, user map[string]any) error {
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	rollback := func(err error) error {
+		_ = tx.Rollback()
+		return err
+	}
+	client := tx.Client()
+	userID := stringValue(user["id"])
+	userUpdate := client.User.UpdateOneID(userID)
+	setRecordFieldsWithEmptyText(userUpdate, user, userEntFields, true)
+	if err := execCreate(ctx, userUpdate); err != nil {
+		if controlplaneent.IsNotFound(err) {
+			return rollback(errUserNotFound)
+		}
+		return rollback(err)
+	}
+	if _, err := client.Session.Delete().Where(session.UserID(userID)).Exec(ctx); err != nil {
+		return rollback(err)
+	}
+	if stringValue(user["role"]) == "owner" {
+		accountID := stringValue(user["accountId"])
+		computes, err := loadRecordSet(ctx, client.ComputeAllocation.Query().Where(computeallocation.AccountID(accountID)).All, computeEntFields)
+		if err != nil {
+			return rollback(err)
+		}
+		for id, compute := range computes {
+			if compute["autoRenew"] != true {
+				continue
+			}
+			compute["autoRenew"] = false
+			update := client.ComputeAllocation.UpdateOneID(id)
+			setRecordFieldsWithEmptyText(update, compute, computeEntFields, true)
+			if err := execCreate(ctx, update); err != nil {
+				return rollback(err)
+			}
+		}
+		storages, err := loadRecordSet(ctx, client.StorageVolume.Query().Where(storagevolume.AccountID(accountID)).All, storageEntFields)
+		if err != nil {
+			return rollback(err)
+		}
+		for id, storage := range storages {
+			if storage["autoRenew"] != true {
+				continue
+			}
+			storage["autoRenew"] = false
+			update := client.StorageVolume.UpdateOneID(id)
+			setRecordFieldsWithEmptyText(update, storage, storageEntFields, true)
+			if err := execCreate(ctx, update); err != nil {
+				return rollback(err)
+			}
+		}
 	}
 	return tx.Commit()
 }

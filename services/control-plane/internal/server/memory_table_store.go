@@ -70,6 +70,58 @@ func (s *memoryTableStore) SaveAccount(_ context.Context, row map[string]any) er
 	return nil
 }
 
+func (s *memoryTableStore) CreateInvitedAccount(_ context.Context, account, user, organization, membership map[string]any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	accounts := cloneStateTable(s.accounts)
+	users := cloneStateTable(s.users)
+	organizations := cloneStateTable(s.organizations)
+	memberships := cloneStateTable(s.memberships)
+
+	if err := stageInvitedAccount(accounts, users, organizations, memberships, account, user, organization, membership); err != nil {
+		return err
+	}
+
+	s.accounts, s.users, s.organizations, s.memberships = accounts, users, organizations, memberships
+	return nil
+}
+
+func (s *memoryTableStore) ApplyUserLifecycle(_ context.Context, user map[string]any) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	userID := stringValue(user["id"])
+	if s.users[userID] == nil {
+		return errUserNotFound
+	}
+	users := cloneStateTable(s.users)
+	sessions := cloneStateTable(s.sessions)
+	computes := cloneStateTable(s.computes)
+	storages := cloneStateTable(s.storages)
+	workspaces := cloneStateTable(s.workspaces)
+	users[userID] = cloneMap(user)
+	for id, session := range sessions {
+		if stringValue(session["userId"]) == userID {
+			delete(sessions, id)
+		}
+	}
+	if stringValue(user["role"]) == "owner" {
+		accountID := stringValue(user["accountId"])
+		for _, rows := range []controlPlaneRecordSet{computes, storages, workspaces} {
+			for id, row := range rows {
+				if firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"])) == accountID && row["autoRenew"] == true {
+					row = cloneMap(row)
+					row["autoRenew"] = false
+					rows[id] = row
+				}
+			}
+		}
+	}
+	s.users, s.sessions, s.computes, s.storages, s.workspaces = users, sessions, computes, storages, workspaces
+	return nil
+}
+
 func (s *memoryTableStore) ListWorkspaceBackups(_ context.Context, workspaceID string) ([]map[string]any, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

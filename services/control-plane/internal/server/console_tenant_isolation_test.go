@@ -269,7 +269,7 @@ func TestGatewaySummaryFailsClosed(t *testing.T) {
 }
 
 func TestBootstrapUsersUseOnlyFixedRoles(t *testing.T) {
-	t.Setenv("OPL_CONSOLE_USERS_JSON", `[{"email":"owner@example.com","password":"correct horse battery staple","sub2apiUserId":41}]`)
+	t.Setenv("OPL_CONSOLE_USERS_JSON", `[{"email":"owner@example.com","password":"correct horse battery staple","accountId":"acct-owner","sub2apiUserId":41}]`)
 	users, err := bootstrapUsersFromEnv()
 	if err != nil {
 		t.Fatalf("bootstrap users: %v", err)
@@ -278,7 +278,7 @@ func TestBootstrapUsersUseOnlyFixedRoles(t *testing.T) {
 		t.Fatalf("default role = %q, want owner", got)
 	}
 
-	t.Setenv("OPL_CONSOLE_USERS_JSON", `[{"email":"pi@example.com","password":"correct horse battery staple","role":"pi","sub2apiUserId":41}]`)
+	t.Setenv("OPL_CONSOLE_USERS_JSON", `[{"email":"pi@example.com","password":"correct horse battery staple","role":"pi","accountId":"acct-pi","sub2apiUserId":41}]`)
 	if _, err := bootstrapUsersFromEnv(); err == nil || !strings.Contains(err.Error(), "invalid_role") {
 		t.Fatalf("invalid explicit role error = %v, want invalid_role", err)
 	}
@@ -891,8 +891,8 @@ func TestPostgresStoreStartsFromFreshDatabase(t *testing.T) {
 	if err := check.QueryRow(`SELECT count(*) FROM opl_schema_migrations WHERE service = 'control-plane'`).Scan(&migrationCount); err != nil {
 		t.Fatalf("read control-plane migration journal: %v", err)
 	}
-	if migrationCount != 7 {
-		t.Fatalf("control-plane migration count = %d, want 7", migrationCount)
+	if migrationCount != 8 {
+		t.Fatalf("control-plane migration count = %d, want 8", migrationCount)
 	}
 	if _, err := check.Exec(`CREATE TABLE control_plane_startup_probe (id text PRIMARY KEY, probe text); INSERT INTO control_plane_startup_probe VALUES ('probe', NULL)`); err != nil {
 		t.Fatal(err)

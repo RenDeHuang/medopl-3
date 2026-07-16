@@ -13,14 +13,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/crypto/scrypt"
 )
 
 const (
-	passwordHashPrefix = "pbkdf2_sha256"
-	passwordIterations = 120000
-	sessionCookieName  = "opl_session"
+	passwordHashPrefix   = "pbkdf2_sha256"
+	passwordIterations   = 120000
+	minimumPasswordRunes = 12
+	sessionCookieName    = "opl_session"
 )
 
 type sessionRecord struct {
@@ -37,6 +39,16 @@ func hashPassword(password string) (string, error) {
 	}
 	hash := pbkdf2SHA256([]byte(password), []byte(salt), passwordIterations, 32)
 	return strings.Join([]string{passwordHashPrefix, strconv.Itoa(passwordIterations), salt, base64.RawStdEncoding.EncodeToString(hash)}, "$"), nil
+}
+
+func validatePlaintextPassword(password string) error {
+	if password == "" {
+		return errMissingPassword
+	}
+	if utf8.RuneCountInString(password) < minimumPasswordRunes {
+		return errWeakPassword
+	}
+	return nil
 }
 
 func verifyPassword(password string, encoded string) bool {
@@ -133,22 +145,40 @@ func bootstrapUsersFromEnv() ([]map[string]any, error) {
 		return nil, err
 	}
 	for _, user := range users {
+		email, err := canonicalEmail(stringValue(user["email"]))
+		if err != nil {
+			return nil, err
+		}
+		user["email"] = email
+		accountID := strings.TrimSpace(stringValue(user["accountId"]))
+		if !validAccountID(accountID) {
+			return nil, errInvalidAccountID
+		}
+		user["accountId"] = accountID
+		if _, ok := positiveIntegerField(user, "sub2apiUserId"); !ok {
+			return nil, errMonthlyAccountUnmapped
+		}
 		if stringValue(user["id"]) == "" {
-			user["id"] = "usr-" + compactID(firstNonEmpty(stringValue(user["email"]), time.Now().UTC().String()))
+			user["id"] = "usr-" + compactID(email)
 		}
 		if stringValue(user["status"]) == "" {
 			user["status"] = "active"
 		}
-		if stringValue(user["role"]) == "" {
-			user["role"] = "owner"
+		role := strings.TrimSpace(stringValue(user["role"]))
+		if role == "" {
+			role = "owner"
 		}
-		if !validRole(stringValue(user["role"])) {
+		if !validRole(role) {
 			return nil, errInvalidRole
 		}
+		user["role"] = role
 		if stringValue(user["passwordHash"]) == "" {
 			password := stringValue(user["password"])
-			if password == "" {
-				return nil, errors.New("bootstrap_user_missing_password")
+			if err := validatePlaintextPassword(password); err != nil {
+				if errors.Is(err, errMissingPassword) {
+					return nil, errors.New("bootstrap_user_missing_password")
+				}
+				return nil, err
 			}
 			hash, err := hashPassword(password)
 			if err != nil {

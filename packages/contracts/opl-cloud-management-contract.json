@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "owner": "OPL Console",
   "purpose": "Console identity, organization, membership, role, Sub2API account mapping, and management API contract.",
   "state": "current",
@@ -70,6 +70,25 @@
   "workspaceOwnership": {
     "personalWorkspace": "ownerAccountId identifies the Console owner and its Sub2API mapping.",
     "organizationWorkspace": "ownerAccountId is organization.billingAccountId and the caller must have active membership."
+  },
+  "identityProvisioning": {
+    "atomicInvite": "One successful POST /api/users atomically commits the mapped Account, normalized User, one deterministic default Organization, and the User's active Membership; any conflict commits none of the four facts.",
+    "defaultRole": "An omitted role creates an owner User and owner Membership; explicit owner, admin, and member roles remain supported and the User and Membership roles match.",
+    "existingBoundaryCompatibility": "An existing Account is accepted only when its positive Sub2API mapping matches or is not yet assigned; an existing default Organization is accepted only when its billingAccountId matches."
+  },
+  "identitySecurity": {
+    "email": "Create and bootstrap normalize email with lower(trim(email)); normalized email is unique in PostgreSQL and legacy blank or colliding values fail migration closed.",
+    "plaintextPasswordMinimumCharacters": 12,
+    "passwordPolicy": "Create, reset, and bootstrap plaintext passwords require at least 12 characters; bootstrap passwordHash values are accepted without guessing plaintext strength.",
+    "secretProjection": "Passwords and password hashes are excluded from browser responses and audit facts."
+  },
+  "bootstrapLifecycle": {
+    "userState": "A matching disabled or deleted User is never reactivated and its lifecycle metadata is preserved across startup.",
+    "membershipState": "A revoked or otherwise non-active matching Membership is never replaced with an active Membership, and a non-active User never receives an active Membership."
+  },
+  "userLifecycle": {
+    "sessionPolicy": "Disabling or deleting a User revokes that User's sessions.",
+    "ownerRenewalPolicy": "Disabling or deleting an owner turns off current Control Plane compute and storage autoRenew intent for that Account without deleting provider resources; non-owner lifecycle changes do not alter Account renewal intent."
   },
   "api": {
     "createOrganization": "POST /api/organizations",

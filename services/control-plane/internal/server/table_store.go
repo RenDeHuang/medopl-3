@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/mail"
+	"strings"
 	"time"
 
 	"opl-cloud/services/control-plane/internal/domain"
@@ -14,6 +16,9 @@ var errWorkspaceNotSuspended = errors.New("workspace_not_suspended")
 var errBillingOperationInProgress = errors.New("billing_operation_in_progress")
 var errSub2APIAccountMappingConflict = errors.New("sub2api_account_mapping_conflict")
 var errPrimaryWorkspaceExists = errors.New("primary_workspace_already_exists")
+var errInvalidAccountID = errors.New("invalid_account_id")
+var errInvalidEmail = errors.New("invalid_email")
+var errMembershipExists = errors.New("membership_already_exists")
 
 type workspaceResumeOperationResult struct {
 	RequestHash    string                      `json:"requestHash"`
@@ -77,6 +82,8 @@ func encodeWorkspaceResumeOperation(result workspaceResumeOperationResult) strin
 type controlPlaneTableStore interface {
 	ListAccounts(ctx context.Context, accountID string) ([]map[string]any, error)
 	SaveAccount(ctx context.Context, row map[string]any) error
+	CreateInvitedAccount(ctx context.Context, account, user, organization, membership map[string]any) error
+	ApplyUserLifecycle(ctx context.Context, user map[string]any) error
 	ListUsers(ctx context.Context, includeDeleted bool) ([]map[string]any, error)
 	SaveUser(ctx context.Context, row map[string]any) error
 	DeleteUser(ctx context.Context, id string) error
@@ -136,6 +143,99 @@ func validateSub2APIAccountMapping(accounts []map[string]any, row map[string]any
 		}
 	}
 	return nil
+}
+
+func stageInvitedAccount(accounts, users, organizations, memberships controlPlaneRecordSet, account, user, organization, membership map[string]any) error {
+	accountID := stringValue(account["id"])
+	sub2APIUserID, mapped := positiveIntegerField(account, "sub2apiUserId")
+	if !validAccountID(accountID) {
+		return errInvalidAccountID
+	}
+	if !mapped {
+		return errMonthlyAccountUnmapped
+	}
+	accountRows, _ := filteredRecords(accounts, "")
+	if err := validateSub2APIAccountMapping(accountRows, account); err != nil {
+		return err
+	}
+	accountRow := cloneMap(account)
+	if existing := accounts[accountID]; existing != nil {
+		existingMapping := int64(numberField(existing, "sub2apiUserId", 0))
+		if stringValue(existing["status"]) != "active" || existingMapping > 0 && existingMapping != sub2APIUserID {
+			return errSub2APIAccountMappingConflict
+		}
+		accountRow = cloneMap(existing)
+		accountRow["sub2apiUserId"] = sub2APIUserID
+	} else if stringValue(accountRow["status"]) != "active" {
+		return errInvalidAccountID
+	}
+	accounts[accountID] = accountRow
+
+	email, err := canonicalEmail(stringValue(user["email"]))
+	if err != nil {
+		return err
+	}
+	userID := stringValue(user["id"])
+	if userID == "" || stringValue(user["accountId"]) != accountID || stringValue(user["status"]) != "active" {
+		return errInvalidEmail
+	}
+	if !validRole(stringValue(user["role"])) {
+		return errInvalidRole
+	}
+	for _, existing := range users {
+		if stringValue(existing["id"]) == userID || normalizeEmail(stringValue(existing["email"])) == email {
+			return errUserExists
+		}
+	}
+	userRow := cloneMap(user)
+	userRow["email"] = email
+	users[userID] = userRow
+
+	organizationID := stringValue(organization["id"])
+	if organizationID == "" || stringValue(organization["billingAccountId"]) != accountID || stringValue(organization["status"]) != "active" {
+		return errMembershipAccountMismatch
+	}
+	organizationRow := cloneMap(organization)
+	if existing := organizations[organizationID]; existing != nil {
+		if stringValue(existing["billingAccountId"]) != accountID || stringValue(existing["status"]) != "active" {
+			return errMembershipAccountMismatch
+		}
+		organizationRow = cloneMap(existing)
+	}
+	organizations[organizationID] = organizationRow
+
+	membershipID := stringValue(membership["id"])
+	if membershipID == "" || stringValue(membership["accountId"]) != accountID || stringValue(membership["organizationId"]) != organizationID {
+		return errMembershipAccountMismatch
+	}
+	if stringValue(membership["userId"]) != userID {
+		return errMembershipUserNotFound
+	}
+	if !validRole(stringValue(membership["role"])) || stringValue(membership["role"]) != stringValue(userRow["role"]) || stringValue(membership["status"]) != "active" {
+		return errInvalidRole
+	}
+	for _, existing := range memberships {
+		if stringValue(existing["id"]) == membershipID || stringValue(existing["organizationId"]) == organizationID && stringValue(existing["userId"]) == userID {
+			return errMembershipExists
+		}
+	}
+	memberships[membershipID] = cloneMap(membership)
+	return nil
+}
+
+func normalizeEmail(value string) string { return strings.ToLower(strings.TrimSpace(value)) }
+
+func canonicalEmail(value string) (string, error) {
+	email := normalizeEmail(value)
+	address, err := mail.ParseAddress(email)
+	if err != nil || address.Address != email {
+		return "", errInvalidEmail
+	}
+	return email, nil
+}
+
+func validAccountID(value string) bool {
+	return len(value) >= 3 && len(value) <= 48 && value == compactID(value)
 }
 
 func billingOperationIdentityMatches(existing, requested map[string]any) bool {

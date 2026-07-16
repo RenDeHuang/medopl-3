@@ -472,7 +472,7 @@ var (
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
 		{Name: "account_id", Type: field.TypeString},
-		{Name: "email", Type: field.TypeString},
+		{Name: "email", Type: field.TypeString, Unique: true},
 		{Name: "role", Type: field.TypeString, Default: "owner"},
 		{Name: "status", Type: field.TypeString, Default: "active"},
 		{Name: "password_hash", Type: field.TypeString, Default: ""},

@@ -15,35 +15,29 @@ import (
 const maxJSONSafeInteger = float64(1<<53 - 1)
 
 var (
-	errMissingPassword              = errors.New("missing_password")
-	errSub2APIUserMappingUnverified = errors.New("sub2api_user_mapping_unverified")
+	errMissingPassword               = errors.New("missing_password")
+	errWeakPassword                  = errors.New("weak_password")
+	errSub2APIUserMappingUnverified  = errors.New("sub2api_user_mapping_unverified")
+	errBootstrapUserIdentityConflict = errors.New("bootstrap_user_identity_conflict")
 )
 
 func (app *controlPlaneServer) createUser(ctx context.Context, service *controlplane.Service, input map[string]any) (map[string]any, error) {
-	role := stringField(input, "role", "owner")
+	role := strings.TrimSpace(stringField(input, "role", "owner"))
 	if !validRole(role) {
 		return nil, errInvalidRole
 	}
-	email := stringField(input, "email", "admin@medopl.cn")
-	users, err := app.tables.ListUsers(ctx, true)
+	email, err := canonicalEmail(stringValue(input["email"]))
 	if err != nil {
 		return nil, err
 	}
-	for _, existing := range users {
-		if strings.EqualFold(stringValue(existing["email"]), email) {
-			return nil, errUserExists
-		}
+	accountID := strings.TrimSpace(stringValue(input["accountId"]))
+	if !validAccountID(accountID) {
+		return nil, errInvalidAccountID
 	}
-	id := "usr-" + compactID(email+"-"+time.Now().UTC().Format("20060102150405.000000000"))
 	password := stringField(input, "password", "")
-	if password == "" {
-		return nil, errMissingPassword
-	}
-	passwordHash, err := hashPassword(password)
-	if err != nil {
+	if err := validatePlaintextPassword(password); err != nil {
 		return nil, err
 	}
-	accountID := stringField(input, "accountId", "acct-admin")
 	sub2APIUserID, ok := positiveIntegerField(input, "sub2apiUserId")
 	if !ok {
 		return nil, errMonthlyAccountUnmapped
@@ -51,16 +45,25 @@ func (app *controlPlaneServer) createUser(ctx context.Context, service *controlp
 	if _, err := service.Sub2APIBalance(ctx, sub2APIUserID); err != nil {
 		return nil, errSub2APIUserMappingUnverified
 	}
-	if err := app.ensureMappedAccount(ctx, accountID, sub2APIUserID); err != nil {
+	passwordHash, err := hashPassword(password)
+	if err != nil {
 		return nil, err
 	}
+	id := "usr-" + compactID(email+"-"+time.Now().UTC().Format("20060102150405.000000000"))
+	organizationID := "org-" + compactID(strings.TrimPrefix(accountID, "acct-"))
 	user := map[string]any{"id": id, "email": email, "accountId": accountID, "role": role, "status": "active", "passwordHash": passwordHash}
-	return sanitizeUser(user), app.tables.SaveUser(ctx, user)
+	account := map[string]any{"id": accountID, "status": "active", "sub2apiUserId": sub2APIUserID}
+	organization := map[string]any{"id": organizationID, "name": "Organization " + accountID, "billingAccountId": accountID, "status": "active"}
+	membership := map[string]any{"id": "mem-" + stableID(organizationID, id)[:12], "accountId": accountID, "organizationId": organizationID, "userId": id, "role": role, "status": "active"}
+	if err := app.tables.CreateInvitedAccount(ctx, account, user, organization, membership); err != nil {
+		return nil, err
+	}
+	return sanitizeUser(user), nil
 }
 
 func (app *controlPlaneServer) resetUserPassword(ctx context.Context, userID, password string) (map[string]any, error) {
-	if password == "" {
-		return nil, errMissingPassword
+	if err := validatePlaintextPassword(password); err != nil {
+		return nil, err
 	}
 	user, err := app.findUserByID(ctx, userID)
 	if err != nil {
@@ -139,10 +142,10 @@ func (app *controlPlaneServer) disableUser(input map[string]any) (map[string]any
 	user["disabledAt"] = time.Now().UTC().Format(time.RFC3339)
 	user["disabledBy"] = firstNonEmpty(stringField(input, "operatorUserId", ""), stringField(input, "disabledBy", ""), "usr-admin")
 	user["disabledReason"] = stringField(input, "reason", "admin_disabled")
-	if err := app.revokeUserSessions(id); err != nil {
+	if err := app.tables.ApplyUserLifecycle(context.Background(), user); err != nil {
 		return nil, err
 	}
-	return sanitizeUser(user), app.tables.SaveUser(context.Background(), user)
+	return sanitizeUser(user), nil
 }
 
 func (app *controlPlaneServer) softDeleteUser(input map[string]any) (map[string]any, error) {
@@ -155,6 +158,9 @@ func (app *controlPlaneServer) softDeleteUser(input map[string]any) (map[string]
 		return nil, errUserNotFound
 	}
 	if stringValue(user["status"]) == "deleted" {
+		if err := app.tables.ApplyUserLifecycle(context.Background(), user); err != nil {
+			return nil, err
+		}
 		return sanitizeUser(user), nil
 	}
 	if isOperatorUser(user) && stringValue(user["status"]) == "active" {
@@ -164,10 +170,10 @@ func (app *controlPlaneServer) softDeleteUser(input map[string]any) (map[string]
 	user["deletedAt"] = time.Now().UTC().Format(time.RFC3339)
 	user["deletedBy"] = firstNonEmpty(stringField(input, "operatorUserId", ""), stringField(input, "deletedBy", ""), "usr-admin")
 	user["deleteReason"] = stringField(input, "reason", "admin_deleted")
-	if err := app.revokeUserSessions(id); err != nil {
+	if err := app.tables.ApplyUserLifecycle(context.Background(), user); err != nil {
 		return nil, err
 	}
-	return sanitizeUser(user), app.tables.SaveUser(context.Background(), user)
+	return sanitizeUser(user), nil
 }
 
 func (app *controlPlaneServer) revokeUserSessions(userID string) error {
@@ -211,7 +217,7 @@ func (app *controlPlaneServer) dropLegacyOwnerUser() error {
 		return err
 	}
 	for _, user := range users {
-		if strings.EqualFold(stringValue(user["email"]), "owner@example.com") {
+		if normalizeEmail(stringValue(user["email"])) == "owner@example.com" {
 			if err := app.tables.DeleteUser(context.Background(), stringValue(user["id"])); err != nil {
 				return err
 			}
@@ -225,34 +231,49 @@ func (app *controlPlaneServer) upsertBootstrapUser(seed map[string]any) (map[str
 	if !ok {
 		return nil, errMonthlyAccountUnmapped
 	}
-	if err := app.ensureMappedAccount(context.Background(), stringValue(seed["accountId"]), sub2APIUserID); err != nil {
-		return nil, err
-	}
-	delete(seed, "sub2apiUserId")
 	id := stringValue(seed["id"])
 	users, err := app.tables.ListUsers(context.Background(), true)
 	if err != nil {
 		return nil, err
 	}
+	var byID, byEmail map[string]any
 	for _, existing := range users {
-		if stringValue(existing["id"]) == id || strings.EqualFold(stringValue(existing["email"]), stringValue(seed["email"])) {
-			for key, value := range seed {
-				if key == "passwordHash" && stringValue(existing["passwordHash"]) != "" {
-					continue
-				}
-				if key == "id" {
-					continue
-				}
-				existing[key] = value
-			}
-			return cloneMap(existing), app.tables.SaveUser(context.Background(), existing)
+		if stringValue(existing["id"]) == id {
+			byID = existing
 		}
+		if normalizeEmail(stringValue(existing["email"])) == stringValue(seed["email"]) {
+			byEmail = existing
+		}
+	}
+	if byID != nil && byEmail != nil && stringValue(byID["id"]) != stringValue(byEmail["id"]) {
+		return nil, errBootstrapUserIdentityConflict
+	}
+	if err := app.ensureMappedAccount(context.Background(), stringValue(seed["accountId"]), sub2APIUserID); err != nil {
+		return nil, err
+	}
+	delete(seed, "sub2apiUserId")
+	existing := byID
+	if existing == nil {
+		existing = byEmail
+	}
+	if existing != nil {
+		inactive := stringValue(existing["status"]) != "active"
+		for key, value := range seed {
+			if key == "passwordHash" && stringValue(existing["passwordHash"]) != "" {
+				continue
+			}
+			if key == "id" || inactive && bootstrapLifecycleField(key) {
+				continue
+			}
+			existing[key] = value
+		}
+		return cloneMap(existing), app.tables.SaveUser(context.Background(), existing)
 	}
 	return cloneMap(seed), app.tables.SaveUser(context.Background(), seed)
 }
 
 func (app *controlPlaneServer) ensureBootstrapMembership(user map[string]any) error {
-	if isOperatorUser(user) {
+	if isOperatorUser(user) || stringValue(user["status"]) != "active" {
 		return nil
 	}
 	accountID := stringValue(user["accountId"])
@@ -266,10 +287,10 @@ func (app *controlPlaneServer) ensureBootstrapMembership(user map[string]any) er
 	}
 	for _, membership := range memberships {
 		organization := findRecord(organizations, stringValue(membership["organizationId"]))
-		if stringValue(membership["userId"]) == stringValue(user["id"]) &&
-			stringValue(membership["accountId"]) == accountID &&
-			stringValue(membership["status"]) == "active" &&
-			validRole(stringValue(membership["role"])) && organization != nil &&
+		if stringValue(membership["userId"]) != stringValue(user["id"]) || stringValue(membership["accountId"]) != accountID {
+			continue
+		}
+		if stringValue(membership["status"]) != "active" || validRole(stringValue(membership["role"])) && organization != nil &&
 			stringValue(organization["status"]) == "active" && stringValue(organization["billingAccountId"]) == accountID {
 			return nil
 		}
@@ -296,6 +317,15 @@ func (app *controlPlaneServer) ensureBootstrapMembership(user map[string]any) er
 	return err
 }
 
+func bootstrapLifecycleField(key string) bool {
+	switch key {
+	case "status", "disabledAt", "disabledBy", "disabledReason", "deletedAt", "deletedBy", "deleteReason":
+		return true
+	default:
+		return false
+	}
+}
+
 func (app *controlPlaneServer) login(input map[string]any) (map[string]any, string, error) {
 	email := strings.ToLower(strings.TrimSpace(stringField(input, "email", "")))
 	password := stringField(input, "password", "")
@@ -304,7 +334,7 @@ func (app *controlPlaneServer) login(input map[string]any) (map[string]any, stri
 		return nil, "", err
 	}
 	for _, user := range users {
-		if strings.ToLower(stringValue(user["email"])) != email {
+		if normalizeEmail(stringValue(user["email"])) != email {
 			continue
 		}
 		if stringValue(user["status"]) != "active" || !verifyPassword(password, stringValue(user["passwordHash"])) {

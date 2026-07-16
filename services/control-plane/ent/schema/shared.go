@@ -41,7 +41,7 @@ func organizationFields() []ent.Field {
 func userFields() []ent.Field {
 	return append(baseFields(),
 		field.String("account_id").NotEmpty(),
-		field.String("email").NotEmpty(),
+		field.String("email").NotEmpty().Unique(),
 		field.String("role").Default("owner"),
 		field.String("status").Default("active"),
 		field.String("password_hash").Default(""),

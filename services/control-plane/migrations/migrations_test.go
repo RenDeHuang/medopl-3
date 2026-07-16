@@ -13,6 +13,10 @@ type recordingDriver struct {
 	query string
 }
 
+func (d *recordingDriver) Tx(context.Context) (dialect.Tx, error) {
+	return dialect.NopTx(d), nil
+}
+
 func (d *recordingDriver) Exec(_ context.Context, query string, _ any, _ any) error {
 	d.query = query
 	return nil
