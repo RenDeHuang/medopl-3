@@ -1130,7 +1130,7 @@ func TestProviderReconcileDoesNotOverwriteManualReview(t *testing.T) {
 	}
 }
 
-func TestWorkspaceRuntimeStatusPassesFabricChecks(t *testing.T) {
+func TestWorkspaceRuntimeStatusPassesFabricChecksWithoutCredentials(t *testing.T) {
 	calls := []string{}
 	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{calls: &calls}))
 	session := tenantOwnerSessionForTest(t, server)
@@ -1157,8 +1157,8 @@ func TestWorkspaceRuntimeStatusPassesFabricChecks(t *testing.T) {
 		t.Fatalf("ready must come from Fabric runtime state: %#v", body)
 	}
 	access := body["access"].(map[string]any)
-	if access["password"] != "runtime-password-alpha" || access["secretRef"] != "opl-compute-from-fabric-env" {
-		t.Fatalf("runtime status must return transient Fabric credentials: %#v", body)
+	if access["username"] != "opl" || access["credentialStatus"] != "configured" || access["password"] != nil || access["secretRef"] != nil {
+		t.Fatalf("runtime status must return safe credential metadata only: %#v", body)
 	}
 	checks := body["checks"].([]any)
 	if len(checks) != 2 || checks[0].(map[string]any)["name"] != "deployment_ready" || checks[1].(map[string]any)["name"] != "service_endpoints_ready" {
@@ -1191,8 +1191,8 @@ func TestWorkspaceRuntimeStatusPromotesProjectionWithoutPersistingPassword(t *te
 	if err := json.NewDecoder(response.Body).Decode(&runtime); err != nil {
 		t.Fatalf("decode runtime status: %v", err)
 	}
-	if runtime["ready"] != true || nested(runtime, "access", "password") != "runtime-password-alpha" {
-		t.Fatalf("runtime status must return transient ready credentials: %#v", runtime)
+	if runtime["ready"] != true || nested(runtime, "access", "credentialStatus") != "configured" || nested(runtime, "access", "password") != nil || nested(runtime, "access", "secretRef") != nil {
+		t.Fatalf("runtime status must return ready state without credentials: %#v", runtime)
 	}
 	stored, err := store.ListWorkspaces(context.Background(), "acct-alpha")
 	if err != nil || len(stored) != 1 {

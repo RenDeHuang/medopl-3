@@ -91,6 +91,7 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}
+		w.Header().Set("Cache-Control", "private, no-store")
 		writeJSON(w, http.StatusOK, workspaceRuntimeStatusResponse(runtime))
 	}))
 	mux.HandleFunc("POST /api/workspaces/{workspaceId}/gateway-secret/rotate", app.protected(false, func(w http.ResponseWriter, r *http.Request) {

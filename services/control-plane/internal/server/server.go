@@ -602,15 +602,26 @@ func workspaceRuntimeStatusResponse(runtime clients.WorkspaceRuntime) map[string
 		"ready":       ready,
 		"checks":      checks,
 	}
-	if runtime.Access.Username != "" || runtime.Access.Password != "" {
+	if runtime.Access.Username != "" || runtime.Access.CredentialStatus != "" || runtime.Access.CredentialVersion != "" {
 		body["access"] = map[string]any{
+			"account":           runtime.Access.Username,
+			"username":          runtime.Access.Username,
+			"credentialStatus":  runtime.Access.CredentialStatus,
+			"credentialVersion": runtime.Access.CredentialVersion,
+		}
+	}
+	return body
+}
+
+func workspaceRuntimeCredentialResponse(runtime clients.WorkspaceRuntime) map[string]any {
+	return map[string]any{
+		"workspaceId": runtime.WorkspaceID,
+		"access": map[string]any{
 			"account":           runtime.Access.Username,
 			"username":          runtime.Access.Username,
 			"password":          runtime.Access.Password,
 			"credentialStatus":  runtime.Access.CredentialStatus,
 			"credentialVersion": runtime.Access.CredentialVersion,
-			"secretRef":         runtime.Access.SecretRef,
-		}
+		},
 	}
-	return body
 }
