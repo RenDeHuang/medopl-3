@@ -532,6 +532,98 @@ func TestProviderAcceptanceAmbiguousComputeOrStorageInventoryStopsBeforePrefligh
 	}
 }
 
+func TestProviderAcceptancePartialOrInvalidUnclaimedInventoryStopsBeforePreflight(t *testing.T) {
+	slot := providerAcceptanceSlots["verification-slot-basic-01"]
+	for _, test := range []struct {
+		name string
+		seed func(*testing.T, *memoryTableStore)
+	}{
+		{
+			name: "compute only",
+			seed: func(t *testing.T, store *memoryTableStore) {
+				mustStore(t, store.SaveCompute(context.Background(), map[string]any{
+					"id": providerAcceptanceComputeID(slot), "accountId": slot.AccountID, "workspaceId": primaryWorkspaceID(slot.AccountID),
+					"verificationSlotId": slot.ID, "customerProduct": false,
+				}))
+			},
+		},
+		{
+			name: "storage only",
+			seed: func(t *testing.T, store *memoryTableStore) {
+				mustStore(t, store.SaveStorage(context.Background(), map[string]any{
+					"id": providerAcceptanceStorageID(slot), "accountId": slot.AccountID, "workspaceId": primaryWorkspaceID(slot.AccountID),
+					"verificationSlotId": slot.ID, "customerProduct": false,
+				}))
+			},
+		},
+		{
+			name: "complete ids with invalid provider facts",
+			seed: func(t *testing.T, store *memoryTableStore) {
+				mustStore(t, store.SaveWorkspace(context.Background(), providerAcceptanceWorkspaceClaim("usr-"+slot.ID, slot)))
+				mustStore(t, store.SaveCompute(context.Background(), map[string]any{
+					"id": providerAcceptanceComputeID(slot), "accountId": slot.AccountID, "workspaceId": primaryWorkspaceID(slot.AccountID),
+					"verificationSlotId": slot.ID, "customerProduct": false,
+				}))
+				mustStore(t, store.SaveStorage(context.Background(), map[string]any{
+					"id": providerAcceptanceStorageID(slot), "accountId": slot.AccountID, "workspaceId": primaryWorkspaceID(slot.AccountID),
+					"verificationSlotId": slot.ID, "customerProduct": false,
+				}))
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			fabric := &providerAcceptanceFabric{}
+			server, store := newProviderAcceptanceTestServerForSlot(t, fabric, slot)
+			test.seed(t, store)
+			operator := operatorSessionForTest(t, server)
+			rec := providerAcceptanceRequest(server, operator, providerAcceptanceBodyForSlot(slot, true, 1, 20), slot.Key)
+			if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "provider_acceptance_inventory_ambiguous") {
+				t.Fatalf("unclaimed inventory = %d: %s", rec.Code, rec.Body.String())
+			}
+			fabric.mu.Lock()
+			defer fabric.mu.Unlock()
+			if fabric.preflightCalls != 0 || fabric.computeCreates != 0 || fabric.storageCreates != 0 {
+				t.Fatalf("unclaimed inventory reached provider: preflight=%d compute=%d storage=%d", fabric.preflightCalls, fabric.computeCreates, fabric.storageCreates)
+			}
+		})
+	}
+}
+
+func TestProviderAcceptanceMismatchedWorkspaceCandidateStopsBeforePreflight(t *testing.T) {
+	slot := providerAcceptanceSlots["verification-slot-pro-01"]
+	fabric := &providerAcceptanceFabric{}
+	server, store := newProviderAcceptanceTestServerForSlot(t, fabric, slot)
+	operator := operatorSessionForTest(t, server)
+	body := providerAcceptanceBodyForSlot(slot, true, 1, 20)
+	for attempt := 0; attempt < 3; attempt++ {
+		rec := providerAcceptanceRequest(server, operator, body, slot.Key)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("prepare candidate attempt %d = %d: %s", attempt+1, rec.Code, rec.Body.String())
+		}
+	}
+
+	workspaceID := primaryWorkspaceID(slot.AccountID)
+	store.mu.Lock()
+	workspace := cloneMap(store.workspaces[workspaceID])
+	workspace["packageId"] = "basic"
+	store.workspaces[workspaceID] = workspace
+	store.runtimeOps = nil
+	store.mu.Unlock()
+	fabric.mu.Lock()
+	preflights := fabric.preflightCalls
+	fabric.mu.Unlock()
+
+	rec := providerAcceptanceRequest(server, operator, body, slot.Key)
+	if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "provider_acceptance_inventory_ambiguous") {
+		t.Fatalf("mismatched Workspace candidate = %d: %s", rec.Code, rec.Body.String())
+	}
+	fabric.mu.Lock()
+	defer fabric.mu.Unlock()
+	if fabric.preflightCalls != preflights {
+		t.Fatalf("mismatched Workspace reached provider preflight: before=%d after=%d", preflights, fabric.preflightCalls)
+	}
+}
+
 func TestProviderAcceptanceGuardsFixedAuthorityAndPrimaryWorkspace(t *testing.T) {
 	fabric := &providerAcceptanceFabric{}
 	server, store := newProviderAcceptanceTestServer(t, fabric)

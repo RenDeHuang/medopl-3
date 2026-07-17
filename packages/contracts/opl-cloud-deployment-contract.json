@@ -53,6 +53,8 @@
       "OPL_SUB2API_REQUEST_TIMEOUT_MS",
       "OPL_SUB2API_ADMIN_EMAIL",
       "OPL_SUB2API_ADMIN_PASSWORD",
+      "OPL_VERIFY_BASIC_ACCOUNT_ID",
+      "OPL_VERIFY_PRO_ACCOUNT_ID",
       "TENCENTCLOUD_SECRET_ID",
       "TENCENTCLOUD_SECRET_KEY",
       "TENCENTCLOUD_REGION",
@@ -87,6 +89,7 @@
       "TENCENT_DEPLOY_KUBECONFIG"
     ],
     "steps": [
+      "Require Basic and Pro Acceptance accounts",
       "Checkout",
       "Set up Node",
       "Prepare kubeconfig",
@@ -102,6 +105,10 @@
       "Remove deployment secrets"
     ],
     "orderedSteps": [
+      [
+        "Require Basic and Pro Acceptance accounts",
+        "Checkout"
+      ],
       [
         "Check TLS certificate inputs",
         "Install Kubernetes secrets"

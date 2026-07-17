@@ -86,6 +86,8 @@ jobs:
       OPL_SUB2API_ADMIN_PASSWORD: ${{ secrets.OPL_SUB2API_ADMIN_PASSWORD }}
       OPL_INTERNAL_SERVICE_TOKEN: ${{ secrets.OPL_INTERNAL_SERVICE_TOKEN }}
       OPL_OPERATOR_SUMMARY_TOKEN: ${{ secrets.OPL_OPERATOR_SUMMARY_TOKEN }}
+      OPL_VERIFY_BASIC_ACCOUNT_ID: ${{ vars.OPL_VERIFY_BASIC_ACCOUNT_ID || '' }}
+      OPL_VERIFY_PRO_ACCOUNT_ID: ${{ vars.OPL_VERIFY_PRO_ACCOUNT_ID || '' }}
       OPL_AIONUI_ADMIN_PASSWORD_SEED: ${{ secrets.OPL_AIONUI_ADMIN_PASSWORD_SEED }}
       TCR_USERNAME: ${{ secrets.TCR_USERNAME }}
       TCR_PASSWORD: ${{ secrets.TCR_PASSWORD }}
@@ -94,6 +96,15 @@ jobs:
       OPL_WORKSPACE_TLS_CERT_ID: ${{ secrets.OPL_WORKSPACE_TLS_CERT_ID || vars.OPL_WORKSPACE_TLS_CERT_ID || '' }}
 
     steps:
+      - name: Require Basic and Pro Acceptance accounts
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${OPL_VERIFY_BASIC_ACCOUNT_ID:-}" ] || [ -z "${OPL_VERIFY_PRO_ACCOUNT_ID:-}" ]; then
+            echo "Basic and Pro Acceptance account ids are required before ordinary deployment." >&2
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 

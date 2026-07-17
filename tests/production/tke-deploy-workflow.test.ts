@@ -288,9 +288,21 @@ test("production verification is read only and requires both reusable prepaid sl
 
 test("TKE deploy requires both fixed slots before separately gated real Workspace QA", async () => {
   const deployWorkflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
+  const deploy = workflowJob(deployWorkflow, "deploy");
   const liveQa = workflowJob(deployWorkflow, "live-qa");
   const runs = serializedRuns(liveQa);
   const readOnlyWorkflow = JSON.stringify(await readWorkflow(".github/workflows/verify-production-chain.yml"));
+  const deploySteps = deploy.steps.map((step) => step.name);
+  const accountGate = stepsByName(deploy).get("Require Basic and Pro Acceptance accounts");
+
+  assert.equal(deploySteps[0], "Require Basic and Pro Acceptance accounts");
+  assert.ok(accountGate);
+  assert.match(accountGate.run, /OPL_VERIFY_BASIC_ACCOUNT_ID/);
+  assert.match(accountGate.run, /OPL_VERIFY_PRO_ACCOUNT_ID/);
+  assert.ok(deploySteps.indexOf("Require Basic and Pro Acceptance accounts") < deploySteps.indexOf("Checkout"));
+  assert.ok(deploySteps.indexOf("Require Basic and Pro Acceptance accounts") < deploySteps.indexOf("Prepare kubeconfig"));
+  assert.equal(deploy.env.OPL_VERIFY_BASIC_ACCOUNT_ID, "${{ vars.OPL_VERIFY_BASIC_ACCOUNT_ID || '' }}");
+  assert.equal(deploy.env.OPL_VERIFY_PRO_ACCOUNT_ID, "${{ vars.OPL_VERIFY_PRO_ACCOUNT_ID || '' }}");
 
   assert.equal(liveQa.needs, "deploy");
   assert.equal(liveQa.environment, "production");

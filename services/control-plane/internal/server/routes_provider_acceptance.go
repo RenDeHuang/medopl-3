@@ -87,6 +87,11 @@ func registerProviderAcceptanceRoutes(mux *http.ServeMux, app *controlPlaneServe
 			writeError(w, http.StatusConflict, errPrimaryWorkspaceExists.Error())
 			return
 		}
+		operation, operationExists, err := app.providerAcceptanceOperation(r.Context(), slot)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "state_read_failed")
+			return
+		}
 		computes, err := app.tables.ListComputes(r.Context(), slot.AccountID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "state_read_failed")
@@ -97,14 +102,16 @@ func registerProviderAcceptanceRoutes(mux *http.ServeMux, app *controlPlaneServe
 			writeError(w, http.StatusInternalServerError, "state_read_failed")
 			return
 		}
-		if !providerAcceptanceResourceInventoryValid(computes, slot, providerAcceptanceComputeID(slot)) || !providerAcceptanceResourceInventoryValid(storages, slot, providerAcceptanceStorageID(slot)) {
+		identitiesValid := providerAcceptanceResourceInventoryValid(computes, slot, providerAcceptanceComputeID(slot)) &&
+			providerAcceptanceResourceInventoryValid(storages, slot, providerAcceptanceStorageID(slot))
+		emptyInventory := workspace == nil && len(computes) == 0 && len(storages) == 0
+		now := time.Now().UTC()
+		completeInventory := providerAcceptanceWorkspaceCandidateValid(workspace, slot) && len(computes) == 1 && len(storages) == 1 &&
+			providerAcceptanceComputeValid(computes[0], slot, now) && providerAcceptanceStorageValid(storages[0], slot, now)
+		invalidOperation := operationExists && !providerAcceptanceOperationValid(operation, slot)
+		unclaimedAmbiguousInventory := !operationExists && !emptyInventory && !completeInventory
+		if !identitiesValid || invalidOperation || unclaimedAmbiguousInventory {
 			writeError(w, http.StatusConflict, "provider_acceptance_inventory_ambiguous")
-			return
-		}
-
-		operation, operationExists, err := app.providerAcceptanceOperation(r.Context(), slot)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "state_read_failed")
 			return
 		}
 		if operationExists && stringValue(operation["status"]) == "manual_review" {
@@ -273,6 +280,14 @@ func providerAcceptanceWorkspace(rows []map[string]any, slot providerAcceptanceS
 	return row, false
 }
 
+func providerAcceptanceWorkspaceCandidateValid(row map[string]any, slot providerAcceptanceSlot) bool {
+	return row != nil && stringValue(row["id"]) == primaryWorkspaceID(slot.AccountID) && stringValue(row["accountId"]) == slot.AccountID &&
+		stringValue(row["ownerAccountId"]) == slot.AccountID && stringValue(row["ownerUserId"]) != "" && stringValue(row["name"]) == slot.ID &&
+		stringValue(row["packageId"]) == slot.PackageID && stringValue(row["verificationSlotId"]) == slot.ID && row["customerProduct"] == false &&
+		stringValue(row["computeAllocationId"]) == providerAcceptanceComputeID(slot) && stringValue(row["currentComputeAllocationId"]) == providerAcceptanceComputeID(slot) &&
+		stringValue(row["storageId"]) == providerAcceptanceStorageID(slot)
+}
+
 func providerAcceptanceResourceInventoryValid(rows []map[string]any, slot providerAcceptanceSlot, resourceID string) bool {
 	if len(rows) == 0 {
 		return true
@@ -315,6 +330,16 @@ func (app *controlPlaneServer) providerAcceptanceOperation(ctx context.Context, 
 		}
 	}
 	return nil, false, nil
+}
+
+func providerAcceptanceOperationValid(operation map[string]any, slot providerAcceptanceSlot) bool {
+	status := stringValue(operation["status"])
+	return (status == "started" || status == "manual_review" || status == "succeeded") &&
+		stringValue(operation["id"]) == slot.OperationID && stringValue(operation["operationId"]) == slot.OperationID &&
+		stringValue(operation["accountId"]) == slot.AccountID && stringValue(operation["workspaceId"]) == primaryWorkspaceID(slot.AccountID) &&
+		stringValue(operation["resourceId"]) == slot.ID && stringValue(operation["resourceKind"]) == "verification_slot" &&
+		stringValue(operation["action"]) == "provider_acceptance" && stringValue(operation["computeAllocationId"]) == providerAcceptanceComputeID(slot) &&
+		stringValue(operation["storageId"]) == providerAcceptanceStorageID(slot)
 }
 
 func providerAcceptancePreflight(ctx context.Context, service *controlplane.Service, slot providerAcceptanceSlot) (clients.MonthlyPreflight, clients.MonthlyPreflight, bool) {
@@ -565,7 +590,7 @@ func providerAcceptanceWorkspaceRow(projection domain.WorkspaceProjection, slot 
 func (app *controlPlaneServer) providerAcceptanceReadySlot(slot providerAcceptanceSlot, now time.Time) (map[string]any, bool) {
 	workspaces, err := app.tables.ListWorkspaces(context.Background(), slot.AccountID)
 	workspace, conflict := providerAcceptanceWorkspace(workspaces, slot)
-	if err != nil || conflict || workspace == nil || stringValue(workspace["url"]) == "" {
+	if err != nil || conflict || !providerAcceptanceWorkspaceCandidateValid(workspace, slot) || stringValue(workspace["url"]) == "" {
 		return nil, false
 	}
 	compute, computeOK := app.getCompute(providerAcceptanceComputeID(slot))

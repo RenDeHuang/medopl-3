@@ -3,7 +3,7 @@
   "owner": "OPL Platform Architecture",
   "purpose": "Freeze the approved paid Pilot products, exact fixed USD prices, debit-first settlement, prepaid Tencent procurement, durable launch recovery, account-owned Gateway access, read-only customer financial projection, and reusable verification boundary without claiming unfinished runtime evidence.",
   "state": "current",
-  "machineBoundary": "Six product surfaces including OPL Serve planned_not_in_launch, four implementation owner lanes, two customer products, ten launch stages, six delivery phases, and one guarded production verification slot.",
+  "machineBoundary": "Six product surfaces including OPL Serve planned_not_in_launch, four implementation owner lanes, two customer products, ten launch stages, six delivery phases, and two guarded production verification slots.",
   "lifecycle": {
     "type": "long_term_contract",
     "removalCondition": "Replace only with a newer approved launch freeze and matching contract tests."
