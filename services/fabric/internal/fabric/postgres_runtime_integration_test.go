@@ -135,7 +135,7 @@ func TestPostgresRuntimeMutationReturnsOwnFenceAtomically(t *testing.T) {
 			databaseURL := fabricTestDatabaseURL(t)
 			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 			defer cancel()
-			currentStore, err := NewPostgresOperationStore(databaseURL)
+			currentStore, err := newTestPostgresOperationStore(databaseURL)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -236,12 +236,12 @@ func TestPostgresStaleRuntimeClaimConvergesAcrossServiceInstances(t *testing.T) 
 	databaseURL := fabricTestDatabaseURL(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	firstStore, err := NewPostgresOperationStore(databaseURL)
+	firstStore, err := newTestPostgresOperationStore(databaseURL)
 	if err != nil {
 		t.Fatalf("open first operation store: %v", err)
 	}
 	defer firstStore.client.Close()
-	secondStore, err := NewPostgresOperationStore(databaseURL)
+	secondStore, err := newTestPostgresOperationStore(databaseURL)
 	if err != nil {
 		t.Fatalf("open second operation store: %v", err)
 	}
@@ -333,11 +333,11 @@ func TestPostgresRuntimeClaimAcrossServiceInstances(t *testing.T) {
 	})
 
 	var err error
-	firstStore, err = NewPostgresOperationStore(databaseURL)
+	firstStore, err = newTestPostgresOperationStore(databaseURL)
 	if err != nil {
 		t.Fatalf("open first operation store: %v", err)
 	}
-	secondStore, err = NewPostgresOperationStore(databaseURL)
+	secondStore, err = newTestPostgresOperationStore(databaseURL)
 	if err != nil {
 		t.Fatalf("open second operation store: %v", err)
 	}
@@ -377,12 +377,12 @@ func TestPostgresDestroyRuntimeFailedRetryBindsWorkspaceAcrossServiceInstances(t
 	databaseURL := fabricTestDatabaseURL(t)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	firstStore, err := NewPostgresOperationStore(databaseURL)
+	firstStore, err := newTestPostgresOperationStore(databaseURL)
 	if err != nil {
 		t.Fatalf("open first operation store: %v", err)
 	}
 	defer firstStore.client.Close()
-	secondStore, err := NewPostgresOperationStore(databaseURL)
+	secondStore, err := newTestPostgresOperationStore(databaseURL)
 	if err != nil {
 		t.Fatalf("open second operation store: %v", err)
 	}
@@ -435,7 +435,7 @@ func TestPostgresDestroyRuntimeFailedRetryBindsWorkspaceAcrossServiceInstances(t
 
 func TestPostgresOperationStoreRunsEmbeddedMigrationsOnce(t *testing.T) {
 	databaseURL := fabricTestDatabaseURL(t)
-	first, err := NewPostgresOperationStore(databaseURL)
+	first, err := newTestPostgresOperationStore(databaseURL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -457,7 +457,7 @@ func TestPostgresOperationStoreRunsEmbeddedMigrationsOnce(t *testing.T) {
 	if _, err := db.Exec(`DROP TABLE machine_ownerships`); err != nil {
 		t.Fatal(err)
 	}
-	second, err := NewPostgresOperationStore(databaseURL)
+	second, err := newTestPostgresOperationStore(databaseURL)
 	if err != nil {
 		t.Fatal(err)
 	}

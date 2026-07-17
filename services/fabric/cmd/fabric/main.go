@@ -5,9 +5,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"opl-cloud/services/fabric/internal/fabric"
 	fabrichttp "opl-cloud/services/fabric/internal/http"
+	"opl-cloud/services/internal/postgresmigrate"
 )
 
 func main() {
@@ -32,10 +34,18 @@ func main() {
 		}
 		operationStore = store
 	}
-	server := fabrichttp.NewServer(fabric.NewServiceWithOperationStore(fabric.NewTencentProvider(), operationStore), token)
+	handler := fabrichttp.NewServer(fabric.NewServiceWithOperationStore(fabric.NewTencentProvider(), operationStore), token)
 	log.Printf("fabric listening on %s", addr)
-	if err := http.ListenAndServe(addr, server); err != nil {
+	if err := newHTTPServer(addr, handler).ListenAndServe(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func newHTTPServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr: addr, Handler: handler,
+		ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second,
+		WriteTimeout: 2 * time.Minute, IdleTimeout: 2 * time.Minute,
 	}
 }
 
@@ -51,6 +61,11 @@ func operationStoreDatabaseURL(getenv func(string) string) (string, error) {
 	databaseURL := getenv("DATABASE_URL")
 	if getenv("NODE_ENV") == "production" && databaseURL == "" {
 		return "", errors.New("DATABASE_URL is required for production Fabric persistence")
+	}
+	if databaseURL != "" {
+		if err := postgresmigrate.ValidateTLS(databaseURL); err != nil {
+			return "", err
+		}
 	}
 	return databaseURL, nil
 }

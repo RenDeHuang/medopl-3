@@ -11,6 +11,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -35,6 +36,11 @@ type controlPlaneHTTPHandler struct {
 }
 
 func (h *controlPlaneHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Security-Policy", "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; form-action 'self'")
+	w.Header().Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "DENY")
+	w.Header().Set("Referrer-Policy", "no-referrer")
 	h.next.ServeHTTP(w, r)
 }
 
@@ -203,6 +209,10 @@ func (app *controlPlaneServer) protected(requiresAdmin bool, next http.HandlerFu
 			writeError(w, http.StatusForbidden, "admin_required")
 			return
 		}
+		if requiresAdmin && !operatorNetworkAllowed(r) {
+			writeError(w, http.StatusForbidden, "operator_network_forbidden")
+			return
+		}
 		if !requiresAdmin && !isOperatorUser(user) {
 			active, err := app.hasActiveCustomerMembership(r.Context(), user)
 			if err != nil {
@@ -311,6 +321,157 @@ func requestIP(r *http.Request) string {
 		return host
 	}
 	return r.RemoteAddr
+}
+
+func operatorNetworkAllowed(r *http.Request) bool {
+	if os.Getenv("NODE_ENV") != "production" {
+		return true
+	}
+	allowed, ok := parseCIDRs(os.Getenv("OPL_OPERATOR_CIDRS"), true)
+	if !ok {
+		return false
+	}
+	trusted, ok := parseCIDRs(os.Getenv("OPL_TRUSTED_PROXY_CIDRS"), false)
+	if !ok {
+		return false
+	}
+	client, ok := operatorClientIP(r, trusted)
+	return ok && addressInPrefixes(client, allowed)
+}
+
+func parseCIDRs(raw string, required bool) ([]netip.Prefix, bool) {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil, !required
+	}
+	parts := strings.Split(raw, ",")
+	prefixes := make([]netip.Prefix, 0, len(parts))
+	for _, part := range parts {
+		prefix, err := netip.ParsePrefix(strings.TrimSpace(part))
+		if err != nil {
+			return nil, false
+		}
+		prefixes = append(prefixes, prefix.Masked())
+	}
+	return prefixes, true
+}
+
+func operatorClientIP(r *http.Request, trusted []netip.Prefix) (netip.Addr, bool) {
+	direct, ok := remoteIP(r.RemoteAddr)
+	if !ok {
+		return netip.Addr{}, false
+	}
+	if !addressInPrefixes(direct, trusted) {
+		return direct, true
+	}
+	xff, forwarded := r.Header.Values("X-Forwarded-For"), r.Header.Values("Forwarded")
+	if len(xff) > 0 && len(forwarded) > 0 {
+		return netip.Addr{}, false
+	}
+	var chain []netip.Addr
+	if len(xff) > 0 {
+		chain, ok = parseXForwardedFor(xff)
+	} else if len(forwarded) > 0 {
+		chain, ok = parseForwarded(forwarded)
+	} else {
+		return netip.Addr{}, false
+	}
+	if !ok {
+		return netip.Addr{}, false
+	}
+	chain = append(chain, direct)
+	for index := len(chain) - 1; index >= 0; index-- {
+		if !addressInPrefixes(chain[index], trusted) {
+			return chain[index], true
+		}
+	}
+	return netip.Addr{}, false
+}
+
+func remoteIP(remoteAddr string) (netip.Addr, bool) {
+	host, _, err := net.SplitHostPort(remoteAddr)
+	if err != nil {
+		return netip.Addr{}, false
+	}
+	addr, err := netip.ParseAddr(host)
+	return normalizedIP(addr, err)
+}
+
+func parseXForwardedFor(values []string) ([]netip.Addr, bool) {
+	var chain []netip.Addr
+	for _, value := range values {
+		for _, part := range strings.Split(value, ",") {
+			addr, err := netip.ParseAddr(strings.TrimSpace(part))
+			addr, ok := normalizedIP(addr, err)
+			if !ok {
+				return nil, false
+			}
+			chain = append(chain, addr)
+		}
+	}
+	return chain, len(chain) > 0
+}
+
+func parseForwarded(values []string) ([]netip.Addr, bool) {
+	var chain []netip.Addr
+	for _, value := range values {
+		for _, element := range strings.Split(value, ",") {
+			forValue := ""
+			for _, parameter := range strings.Split(element, ";") {
+				name, value, ok := strings.Cut(parameter, "=")
+				if !ok || strings.TrimSpace(name) == "" || strings.TrimSpace(value) == "" {
+					return nil, false
+				}
+				if strings.EqualFold(strings.TrimSpace(name), "for") {
+					if forValue != "" {
+						return nil, false
+					}
+					forValue = strings.TrimSpace(value)
+				}
+			}
+			addr, ok := parseForwardedIP(forValue)
+			if !ok {
+				return nil, false
+			}
+			chain = append(chain, addr)
+		}
+	}
+	return chain, len(chain) > 0
+}
+
+func parseForwardedIP(value string) (netip.Addr, bool) {
+	if strings.HasPrefix(value, `"`) {
+		unquoted, err := strconv.Unquote(value)
+		if err != nil {
+			return netip.Addr{}, false
+		}
+		value = unquoted
+	}
+	if addrPort, err := netip.ParseAddrPort(value); err == nil {
+		return normalizedIP(addrPort.Addr(), nil)
+	}
+	if strings.HasPrefix(value, "[") && strings.HasSuffix(value, "]") {
+		value = strings.TrimSuffix(strings.TrimPrefix(value, "["), "]")
+	}
+	addr, err := netip.ParseAddr(value)
+	return normalizedIP(addr, err)
+}
+
+func normalizedIP(addr netip.Addr, err error) (netip.Addr, bool) {
+	if err != nil || !addr.IsValid() || addr.Zone() != "" {
+		return netip.Addr{}, false
+	}
+	return addr.Unmap(), true
+}
+
+func addressInPrefixes(addr netip.Addr, prefixes []netip.Prefix) bool {
+	addr = addr.Unmap()
+	for _, prefix := range prefixes {
+		if prefix.Contains(addr) {
+			return true
+		}
+	}
+	return false
 }
 
 func withOperatorUserID(input map[string]any, userID string) {

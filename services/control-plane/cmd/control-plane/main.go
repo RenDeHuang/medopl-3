@@ -49,8 +49,16 @@ func main() {
 		log.Fatal(err)
 	}
 	log.Printf("control-plane listening on %s", addr)
-	if err := http.ListenAndServe(addr, handler); err != nil {
+	if err := newHTTPServer(addr, handler).ListenAndServe(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func newHTTPServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr: addr, Handler: handler,
+		ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second,
+		WriteTimeout: time.Hour, IdleTimeout: 2 * time.Minute,
 	}
 }
 

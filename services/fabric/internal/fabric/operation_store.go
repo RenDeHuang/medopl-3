@@ -262,6 +262,17 @@ func PostgresOperationSchemaSQL() string {
 }
 
 func NewPostgresOperationStore(databaseURL string) (*PostgresOperationStore, error) {
+	if err := postgresmigrate.ValidateTLS(databaseURL); err != nil {
+		return nil, err
+	}
+	return newPostgresOperationStore(databaseURL)
+}
+
+func newTestPostgresOperationStore(databaseURL string) (*PostgresOperationStore, error) {
+	return newPostgresOperationStore(databaseURL)
+}
+
+func newPostgresOperationStore(databaseURL string) (*PostgresOperationStore, error) {
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		return nil, err

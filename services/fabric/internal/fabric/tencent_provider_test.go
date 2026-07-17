@@ -311,7 +311,9 @@ func TestWorkspaceManifestIsolatesTenantRuntime(t *testing.T) {
 	if podSpec["dnsPolicy"] != "ClusterFirst" || podSpec["automountServiceAccountToken"] != false {
 		t.Fatalf("workspace pod must use cluster DNS without a service account token: %#v", podSpec)
 	}
-	if nested(podSpec, "securityContext", "seccompProfile", "type") != "RuntimeDefault" {
+	if nested(podSpec, "securityContext", "runAsNonRoot") != true || number(nested(podSpec, "securityContext", "runAsUser")) != 10001 ||
+		number(nested(podSpec, "securityContext", "runAsGroup")) != 10001 || number(nested(podSpec, "securityContext", "fsGroup")) != 10001 ||
+		nested(podSpec, "securityContext", "seccompProfile", "type") != "RuntimeDefault" {
 		t.Fatalf("workspace pod must use the RuntimeDefault seccomp profile: %#v", podSpec["securityContext"])
 	}
 	toleration := podSpec["tolerations"].([]any)[0].(map[string]any)
@@ -326,12 +328,6 @@ func TestWorkspaceManifestIsolatesTenantRuntime(t *testing.T) {
 	if containerSecurity["allowPrivilegeEscalation"] != false || !reflect.DeepEqual(nested(containerSecurity, "capabilities", "drop"), []any{"ALL"}) {
 		t.Fatalf("workspace container must prevent privilege escalation and drop all capabilities: %#v", containerSecurity)
 	}
-	if _, ok := containerSecurity["runAsUser"]; ok {
-		t.Fatalf("workspace container UID must not be guessed for an image whose OCI config has no User: %#v", containerSecurity)
-	}
-	if _, ok := containerSecurity["runAsNonRoot"]; ok {
-		t.Fatalf("workspace container must not claim the current root-default image runs as non-root: %#v", containerSecurity)
-	}
 	policySpec, ok := networkPolicy["spec"].(map[string]any)
 	if !ok {
 		t.Fatalf("workspace NetworkPolicy missing: %#v", manifest["items"])
@@ -340,7 +336,7 @@ func TestWorkspaceManifestIsolatesTenantRuntime(t *testing.T) {
 		nested(networkPolicy, "metadata", "labels", "oplcloud.cn/workspace-id") != "ws-alpha" ||
 		nested(networkPolicy, "metadata", "annotations", "opl_operation_id") != "op-alpha" ||
 		!reflect.DeepEqual(nested(policySpec, "podSelector", "matchLabels"), selector) ||
-		!reflect.DeepEqual(policySpec["policyTypes"], []any{"Ingress"}) {
+		!reflect.DeepEqual(policySpec["policyTypes"], []any{"Ingress", "Egress"}) {
 		t.Fatalf("workspace NetworkPolicy must select only its immutable runtime labels: %#v", networkPolicy)
 	}
 	ingress := policySpec["ingress"].([]any)
@@ -353,8 +349,8 @@ func TestWorkspaceManifestIsolatesTenantRuntime(t *testing.T) {
 	if !reflect.DeepEqual(ingressRule["from"], wantFrom) {
 		t.Fatalf("workspace NetworkPolicy must allow only same-namespace Control Plane pods: %#v", ingressRule["from"])
 	}
-	if _, ok := policySpec["egress"]; ok {
-		t.Fatalf("workspace NetworkPolicy must leave required DNS and model egress unchanged: %#v", policySpec)
+	if !bytes.Equal(mustJSON(policySpec["egress"]), mustJSON(workspaceEgressFixture())) {
+		t.Fatalf("workspace NetworkPolicy must allow only DNS and public HTTPS outside private ranges: %#v", policySpec)
 	}
 	if _, ok := podSpec["initContainers"]; ok {
 		t.Fatalf("workspace must let one-person-lab-app cloud mode configure gateway access, not run retired bootstrap init containers: %#v", podSpec["initContainers"])
@@ -405,6 +401,30 @@ func TestWorkspaceManifestIsolatesTenantRuntime(t *testing.T) {
 	if nested(sources[0].(map[string]any), "secret", "items").([]any)[0].(map[string]any)["path"] != "opl_webui_password" ||
 		nested(sources[1].(map[string]any), "secret", "items").([]any)[0].(map[string]any)["path"] != "opl_gateway_api_key" {
 		t.Fatalf("workspace password secret path must match one-person-lab-app cloud compose: %#v", secretVolume)
+	}
+}
+
+func workspaceEgressFixture() []any {
+	return []any{
+		map[string]any{
+			"to": []any{map[string]any{
+				"namespaceSelector": map[string]any{"matchLabels": map[string]any{"kubernetes.io/metadata.name": "kube-system"}},
+				"podSelector":       map[string]any{"matchLabels": map[string]any{"k8s-app": "kube-dns"}},
+			}},
+			"ports": []any{map[string]any{"protocol": "UDP", "port": 53}, map[string]any{"protocol": "TCP", "port": 53}},
+		},
+		map[string]any{
+			"to": []any{map[string]any{"ipBlock": map[string]any{
+				"cidr": "0.0.0.0/0", "except": []any{"0.0.0.0/8", "10.0.0.0/8", "100.64.0.0/10", "127.0.0.0/8", "169.254.0.0/16", "172.16.0.0/12", "192.168.0.0/16"},
+			}}},
+			"ports": []any{map[string]any{"protocol": "TCP", "port": 443}},
+		},
+		map[string]any{
+			"to": []any{map[string]any{"ipBlock": map[string]any{
+				"cidr": "::/0", "except": []any{"::1/128", "fc00::/7", "fe80::/10"},
+			}}},
+			"ports": []any{map[string]any{"protocol": "TCP", "port": 443}},
+		},
 	}
 }
 
@@ -481,12 +501,17 @@ func TestWorkspaceNetworkPolicyReadinessRejectsBroaderSelectors(t *testing.T) {
 	newPolicy := func(labels map[string]any) map[string]any {
 		return map[string]any{"spec": map[string]any{
 			"podSelector": map[string]any{"matchLabels": labels},
-			"policyTypes": []any{"Ingress"},
+			"policyTypes": []any{"Ingress", "Egress"},
 			"ingress": []any{map[string]any{
 				"from":  []any{map[string]any{"podSelector": map[string]any{"matchLabels": map[string]any{"app.kubernetes.io/name": "opl-cloud", "app.kubernetes.io/component": "control-plane"}}}},
 				"ports": []any{map[string]any{"protocol": "TCP", "port": 3000}},
 			}},
+			"egress": workspaceEgressFixture(),
 		}}
+	}
+	labels := runtimeLabels()
+	if !workspaceNetworkPolicyReady(newPolicy(labels), newDeployment(labels)) {
+		t.Fatal("strict Workspace NetworkPolicy rejected")
 	}
 	for _, tc := range []struct {
 		name      string
@@ -500,6 +525,14 @@ func TestWorkspaceNetworkPolicyReadinessRejectsBroaderSelectors(t *testing.T) {
 		}},
 		{name: "source namespace selector", configure: func(policy map[string]any) {
 			policy["spec"].(map[string]any)["ingress"].([]any)[0].(map[string]any)["from"].([]any)[0].(map[string]any)["namespaceSelector"] = map[string]any{}
+		}},
+		{name: "public HTTPS without private exceptions", configure: func(policy map[string]any) {
+			delete(policy["spec"].(map[string]any)["egress"].([]any)[1].(map[string]any)["to"].([]any)[0].(map[string]any)["ipBlock"].(map[string]any), "except")
+		}},
+		{name: "second wide HTTPS rule", configure: func(policy map[string]any) {
+			policy["spec"].(map[string]any)["egress"] = append(policy["spec"].(map[string]any)["egress"].([]any), map[string]any{
+				"to": []any{map[string]any{"ipBlock": map[string]any{"cidr": "0.0.0.0/0"}}}, "ports": []any{map[string]any{"protocol": "TCP", "port": 443}},
+			})
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -540,7 +573,7 @@ func TestWorkspaceRuntimeIsolationRequiresCompleteCurrentReplicaSet(t *testing.T
 		return map[string]any{
 			"automountServiceAccountToken": false,
 			"dnsPolicy":                    "ClusterFirst",
-			"securityContext":              map[string]any{"seccompProfile": map[string]any{"type": "RuntimeDefault"}},
+			"securityContext":              map[string]any{"runAsNonRoot": true, "runAsUser": 10001, "runAsGroup": 10001, "fsGroup": 10001, "seccompProfile": map[string]any{"type": "RuntimeDefault"}},
 			"containers": []any{map[string]any{
 				"name": "workspace", "image": image,
 				"securityContext": map[string]any{"allowPrivilegeEscalation": false, "capabilities": map[string]any{"drop": []any{"ALL"}}},
@@ -810,7 +843,7 @@ func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) 
 		"kind":     "Deployment",
 		"metadata": map[string]any{"name": "opl-compute-alpha", "generation": 2, "labels": map[string]any{"app.kubernetes.io/name": "opl-compute-allocation", "app.kubernetes.io/instance": "opl-compute-alpha", "oplcloud.cn/compute-allocation-id": "compute-alpha", "oplcloud.cn/workspace-id": "ws-alpha"}},
 		"spec": map[string]any{"replicas": 1, "selector": map[string]any{"matchLabels": runtimeSelector}, "template": map[string]any{"metadata": map[string]any{"labels": runtimeSelector, "annotations": map[string]any{"opl.medopl.cn/credential-revision": "revision-alpha"}}, "spec": map[string]any{
-			"automountServiceAccountToken": false, "dnsPolicy": "ClusterFirst", "securityContext": map[string]any{"seccompProfile": map[string]any{"type": "RuntimeDefault"}},
+			"automountServiceAccountToken": false, "dnsPolicy": "ClusterFirst", "securityContext": map[string]any{"runAsNonRoot": true, "runAsUser": 10001, "runAsGroup": 10001, "fsGroup": 10001, "seccompProfile": map[string]any{"type": "RuntimeDefault"}},
 			"containers": []any{map[string]any{"name": "workspace", "image": "workspace-image:test", "securityContext": map[string]any{"allowPrivilegeEscalation": false, "capabilities": map[string]any{"drop": []any{"ALL"}}}, "volumeMounts": workspaceDataMounts()}},
 			"volumes":    []any{map[string]any{"name": "workspace-data", "persistentVolumeClaim": map[string]any{"claimName": "opl-storage-alpha-data"}}},
 		}}},
@@ -826,11 +859,12 @@ func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) 
 		"metadata": map[string]any{"name": "opl-compute-alpha", "labels": map[string]any{"oplcloud.cn/workspace-id": "ws-alpha"}},
 		"spec": map[string]any{
 			"podSelector": map[string]any{"matchLabels": runtimeSelector},
-			"policyTypes": []any{"Ingress"},
+			"policyTypes": []any{"Ingress", "Egress"},
 			"ingress": []any{map[string]any{
 				"from":  []any{map[string]any{"podSelector": map[string]any{"matchLabels": map[string]any{"app.kubernetes.io/name": "opl-cloud", "app.kubernetes.io/component": "control-plane"}}}},
 				"ports": []any{map[string]any{"protocol": "TCP", "port": 3000}},
 			}},
+			"egress": workspaceEgressFixture(),
 		},
 	}
 	pod := map[string]any{
@@ -839,7 +873,7 @@ func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) 
 			"app.kubernetes.io/name": "opl-compute-allocation", "app.kubernetes.io/instance": "opl-compute-alpha", "oplcloud.cn/compute-allocation-id": "compute-alpha", "oplcloud.cn/workspace-id": "ws-alpha",
 		}},
 		"spec": map[string]any{
-			"nodeName": "10.0.0.8", "automountServiceAccountToken": false, "dnsPolicy": "ClusterFirst", "securityContext": map[string]any{"seccompProfile": map[string]any{"type": "RuntimeDefault"}},
+			"nodeName": "10.0.0.8", "automountServiceAccountToken": false, "dnsPolicy": "ClusterFirst", "securityContext": map[string]any{"runAsNonRoot": true, "runAsUser": 10001, "runAsGroup": 10001, "fsGroup": 10001, "seccompProfile": map[string]any{"type": "RuntimeDefault"}},
 			"containers": []any{map[string]any{"name": "workspace", "image": "workspace-image:test", "securityContext": map[string]any{"allowPrivilegeEscalation": false, "capabilities": map[string]any{"drop": []any{"ALL"}}}, "volumeMounts": workspaceDataMounts()}},
 			"volumes":    []any{map[string]any{"name": "workspace-data", "persistentVolumeClaim": map[string]any{"claimName": "opl-storage-alpha-data"}}},
 		},

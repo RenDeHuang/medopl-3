@@ -868,7 +868,7 @@ func TestPostgresStoreStartsFromFreshDatabase(t *testing.T) {
 	}
 	_ = legacy.Close()
 
-	store, err := NewPostgresEntStateStore(databaseURL)
+	store, err := newTestPostgresEntStateStore(databaseURL)
 	if err != nil {
 		t.Fatalf("start store on fresh database: %v", err)
 	}
@@ -903,7 +903,7 @@ func TestPostgresStoreStartsFromFreshDatabase(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	second, err := NewPostgresEntStateStore(databaseURL)
+	second, err := newTestPostgresEntStateStore(databaseURL)
 	if err != nil {
 		t.Fatalf("start store a second time: %v", err)
 	}
@@ -936,7 +936,7 @@ func TestPostgresRuntimeOperationConcurrentUpsert(t *testing.T) {
 		_, _ = admin.Exec(`DROP SCHEMA ` + schema + ` CASCADE`)
 		_ = admin.Close()
 	})
-	stateStore, err := NewPostgresEntStateStore(controlPlaneTestPostgresURL(t, "postgres", schema))
+	stateStore, err := newTestPostgresEntStateStore(controlPlaneTestPostgresURL(t, "postgres", schema))
 	if err != nil {
 		t.Fatal(err)
 	}

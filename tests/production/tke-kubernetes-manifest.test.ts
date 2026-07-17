@@ -39,11 +39,11 @@ test("OPL Cloud TKE manifest declares three decoupled services and monthly Sub2A
     "OPL_INTERNAL_SERVICE_TOKEN",
     "OPL_PROVIDER_ACCEPTANCE_TOKEN",
     "OPL_CONSOLE_USERS_JSON",
-    "OPL_OPERATOR_SUMMARY_TOKEN",
     "OPL_AIONUI_ADMIN_PASSWORD_SEED",
     "OPL_SUB2API_ADMIN_EMAIL",
     "OPL_SUB2API_ADMIN_PASSWORD"
   ]);
+  assert.equal(source.includes("OPL_OPERATOR_SUMMARY_TOKEN"), false);
   assert.equal(source.includes("OPL_CODEX_API_KEY"), false);
 
   const ledger = deployments.find((item) => item.metadata.name === "opl-cloud-ledger");
@@ -61,6 +61,56 @@ test("OPL Cloud TKE manifest declares three decoupled services and monthly Sub2A
   assert.deepEqual(ingress.spec.rules.map((rule) => rule.host), ["cloud.medopl.cn", "workspace.medopl.cn"]);
 });
 
+test("TKE workloads and internal services enforce native isolation", async () => {
+  const manifest = JSON.parse(await readFile("deploy/tke/opl-cloud.k8s.json", "utf8"));
+  const deployments = manifest.items.filter((item) => item.kind === "Deployment");
+  const policies = manifest.items.filter((item) => item.kind === "NetworkPolicy");
+
+  for (const deployment of deployments) {
+    const pod = deployment.spec.template.spec;
+    assert.equal(pod.securityContext.runAsNonRoot, true, deployment.metadata.name);
+    assert.equal(pod.securityContext.seccompProfile.type, "RuntimeDefault", deployment.metadata.name);
+    for (const container of [...(pod.initContainers || []), ...pod.containers]) {
+      assert.equal(container.securityContext.allowPrivilegeEscalation, false, container.name);
+      assert.deepEqual(container.securityContext.capabilities.drop, ["ALL"], container.name);
+      assert.equal(container.env?.some((entry) => entry.name === "PGSSLMODE"), false, container.name);
+    }
+  }
+
+  for (const [component, port] of [["ledger", 8081], ["fabric", 8082]]) {
+    const policy = policies.find((item) => item.spec.podSelector?.matchLabels?.["app.kubernetes.io/component"] === component);
+    assert.ok(policy, `${component} NetworkPolicy missing`);
+    assert.deepEqual(policy.spec.policyTypes, ["Ingress"]);
+    assert.deepEqual(policy.spec.ingress, [{
+      from: [{ podSelector: { matchLabels: {
+        "app.kubernetes.io/name": "opl-cloud",
+        "app.kubernetes.io/component": "control-plane"
+      } } }],
+      ports: [{ protocol: "TCP", port }]
+    }]);
+  }
+});
+
+test("operator CIDRs are required deploy values and rendered into the Control Plane ConfigMap", async () => {
+  const [manifest, deployment, management, renderer, workflow] = await Promise.all([
+    readFile("deploy/tke/opl-cloud.k8s.json", "utf8").then(JSON.parse),
+    readFile("packages/contracts/opl-cloud-deployment-contract.json", "utf8").then(JSON.parse),
+    readFile("packages/contracts/opl-cloud-management-contract.json", "utf8").then(JSON.parse),
+    readFile("tools/render-tke-manifest.ts", "utf8"),
+    readFile(".github/workflows/deploy-tke-production.yml", "utf8")
+  ]);
+  const config = manifest.items.find((item) => item.kind === "ConfigMap");
+  for (const key of ["OPL_OPERATOR_CIDRS", "OPL_TRUSTED_PROXY_CIDRS"]) {
+    assert.equal(typeof config.data[key], "string");
+    assert.ok(deployment.deployWorkflow.requiredEnv.includes(key));
+    assert.match(renderer, new RegExp(`"${key}"`));
+    assert.match(workflow, new RegExp(`${key}:.*vars\\.${key}`));
+  }
+  assert.equal(management.operatorAuthPolicy.productionNetworkGate.allowlistEnv, "OPL_OPERATOR_CIDRS");
+  assert.equal(management.operatorAuthPolicy.productionNetworkGate.trustedProxyEnv, "OPL_TRUSTED_PROXY_CIDRS");
+  assert.equal(management.operatorAuthPolicy.productionNetworkGate.invalidConfiguration, "fail_closed");
+});
+
 test("production env examples use the launch zone and pinned images", async () => {
   const paths = [
     ".env.example",
@@ -74,7 +124,12 @@ test("production env examples use the launch zone and pinned images", async () =
     assert.doesNotMatch(source, /^OPL_WORKSPACE_IMAGE=.*(?::latest|:<tag>)$/m, path);
   }
   for (const path of paths.slice(1)) {
-    assert.match(await readFile(path, "utf8"), /^TENCENTCLOUD_REGION=na-siliconvalley$/m, path);
+    const source = await readFile(path, "utf8");
+    assert.match(source, /^TENCENTCLOUD_REGION=na-siliconvalley$/m, path);
+    assert.match(source, /^DATABASE_URL=.*sslmode=verify-full$/m, path);
+    assert.match(source, /^OPL_OPERATOR_CIDRS=.+$/m, path);
+    assert.match(source, /^OPL_TRUSTED_PROXY_CIDRS=.+$/m, path);
+    assert.doesNotMatch(source, /^OPL_OPERATOR_SUMMARY_TOKEN=/m, path);
   }
   assert.match(
     await readFile(".env.example", "utf8"),

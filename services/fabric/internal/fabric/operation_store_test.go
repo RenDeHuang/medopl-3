@@ -13,6 +13,13 @@ import (
 	"opl-cloud/services/fabric/ent/contenttransferchunk"
 )
 
+func TestProductionPostgresOperationStoreRejectsUnsafeTLSBeforeConnecting(t *testing.T) {
+	_, err := NewPostgresOperationStore("host=/does-not-exist dbname=opl sslmode=disable")
+	if err == nil || !strings.Contains(err.Error(), "sslmode=verify-full") {
+		t.Fatalf("unsafe PostgreSQL error = %v", err)
+	}
+}
+
 func TestMemoryOperationStoreReclaimRuntimeFencesOldOwner(t *testing.T) {
 	ctx := context.Background()
 	store := NewMemoryOperationStore()

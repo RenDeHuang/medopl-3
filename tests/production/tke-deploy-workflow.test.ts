@@ -215,7 +215,9 @@ async function manifestFixture() {
       OPL_SUB2API_BASE_URL: "https://wallet.example.test",
       OPL_SUB2API_REQUEST_TIMEOUT_MS: "7000",
       OPL_MONTHLY_BILLING_WORKER_ENABLED: "1",
-      OPL_MONTHLY_BILLING_INTERVAL_MS: "60000"
+      OPL_MONTHLY_BILLING_INTERVAL_MS: "60000",
+      OPL_OPERATOR_CIDRS: "203.0.113.0/24",
+      OPL_TRUSTED_PROXY_CIDRS: "10.0.0.0/8"
     }
   };
 }
@@ -225,6 +227,8 @@ test("TKE deploy workflow matches the current deployment contract", async () => 
   const deployWorkflow = await readWorkflow(contract.deployWorkflow.file);
   assertWorkflowContract(deployWorkflow, contract.deployWorkflow, contract);
   assert.ok(contract.deployWorkflow.requiredEnv.includes("OPL_TENCENT_ZONE"));
+  assert.ok(contract.deployWorkflow.requiredEnv.includes("OPL_OPERATOR_CIDRS"));
+  assert.ok(contract.deployWorkflow.requiredEnv.includes("OPL_TRUSTED_PROXY_CIDRS"));
   assert.equal(contract.productionVerificationWorkflow.launchStatus, "active");
   assert.equal(contract.productionVerificationWorkflow.mode, "read_only_dual_fixed_slots");
   assert.deepEqual(contract.productionVerificationWorkflow.requiredInputs, []);
@@ -486,6 +490,8 @@ test("TKE manifest renderer replaces current values and never renders secrets", 
   assert.equal(config.data.OPL_SUB2API_REQUEST_TIMEOUT_MS, "7000");
   assert.equal(config.data.OPL_TENCENT_ZONE, "ap-guangzhou-3");
   assert.equal(config.data.OPL_MONTHLY_BILLING_INTERVAL_MS, "60000");
+  assert.equal(config.data.OPL_OPERATOR_CIDRS, values.OPL_OPERATOR_CIDRS);
+  assert.equal(config.data.OPL_TRUSTED_PROXY_CIDRS, values.OPL_TRUSTED_PROXY_CIDRS);
   assert.doesNotMatch(source, /postgresql:\/\//i);
   const controlPlane = rendered.items.find((item) => item.kind === "Deployment" && item.metadata.name === "opl-cloud-control-plane");
   assert.deepEqual(controlPlane.spec.template.spec.containers[0].envFrom, [{ configMapRef: { name: "opl-cloud-config" } }]);

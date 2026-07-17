@@ -37,6 +37,126 @@ func mustStore(t *testing.T, err error) {
 	}
 }
 
+func TestPublicResponsesSetSecurityHeaders(t *testing.T) {
+	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
+	want := map[string]string{
+		"Content-Security-Policy":   "default-src 'self'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; form-action 'self'",
+		"Strict-Transport-Security": "max-age=63072000; includeSubDomains; preload",
+		"X-Content-Type-Options":    "nosniff",
+		"X-Frame-Options":           "DENY",
+		"Referrer-Policy":           "no-referrer",
+	}
+	for _, test := range []struct {
+		name, path string
+		status     int
+	}{
+		{name: "success", path: "/api/healthz", status: http.StatusOK},
+		{name: "error", path: "/api/auth/me", status: http.StatusUnauthorized},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			server.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, test.path, nil))
+			if rec.Code != test.status {
+				t.Fatalf("status = %d, want %d: %s", rec.Code, test.status, rec.Body.String())
+			}
+			for name, value := range want {
+				if got := rec.Header().Get(name); got != value {
+					t.Fatalf("%s = %q, want %q", name, got, value)
+				}
+			}
+		})
+	}
+}
+
+func TestProductionOperatorRoutesRequireAllowedClientNetwork(t *testing.T) {
+	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
+	operator := reservedOperatorSessionForTest(t, server)
+
+	for _, test := range []struct {
+		name, operatorCIDRs, trustedProxyCIDRs, remoteAddr, xForwardedFor, forwarded string
+		wantStatus                                                                   int
+	}{
+		{name: "missing allowlist", remoteAddr: "203.0.113.7:1234", wantStatus: http.StatusForbidden},
+		{name: "invalid allowlist", operatorCIDRs: "203.0.113.0/24,invalid", remoteAddr: "203.0.113.7:1234", wantStatus: http.StatusForbidden},
+		{name: "allowed direct", operatorCIDRs: "203.0.113.0/24", remoteAddr: "203.0.113.7:1234", wantStatus: http.StatusOK},
+		{name: "allowed direct ipv6", operatorCIDRs: "2001:db8::/32", remoteAddr: "[2001:db8::7]:1234", wantStatus: http.StatusOK},
+		{name: "untrusted peer spoof", operatorCIDRs: "203.0.113.0/24", trustedProxyCIDRs: "10.0.0.0/8", remoteAddr: "198.51.100.9:1234", xForwardedFor: "203.0.113.7", wantStatus: http.StatusForbidden},
+		{name: "trusted proxy chain", operatorCIDRs: "203.0.113.0/24", trustedProxyCIDRs: "10.0.0.0/8", remoteAddr: "10.2.2.2:1234", xForwardedFor: "203.0.113.7, 10.1.1.1", wantStatus: http.StatusOK},
+		{name: "rightmost untrusted hop wins", operatorCIDRs: "203.0.113.0/24", trustedProxyCIDRs: "10.0.0.0/8", remoteAddr: "10.2.2.2:1234", xForwardedFor: "203.0.113.7, 198.51.100.9", wantStatus: http.StatusForbidden},
+		{name: "strict malformed forwarded chain", operatorCIDRs: "203.0.113.0/24", trustedProxyCIDRs: "10.0.0.0/8", remoteAddr: "10.2.2.2:1234", xForwardedFor: "203.0.113.7, unknown", wantStatus: http.StatusForbidden},
+		{name: "standard Forwarded chain", operatorCIDRs: "203.0.113.0/24", trustedProxyCIDRs: "10.0.0.0/8", remoteAddr: "10.2.2.2:1234", forwarded: "for=203.0.113.7;proto=https, for=10.1.1.1", wantStatus: http.StatusOK},
+		{name: "ambiguous forwarding headers", operatorCIDRs: "203.0.113.0/24", trustedProxyCIDRs: "10.0.0.0/8", remoteAddr: "10.2.2.2:1234", xForwardedFor: "203.0.113.7", forwarded: "for=203.0.113.7", wantStatus: http.StatusForbidden},
+		{name: "all hops are proxies", operatorCIDRs: "10.0.0.0/8", trustedProxyCIDRs: "10.0.0.0/8", remoteAddr: "10.2.2.2:1234", xForwardedFor: "10.1.1.1", wantStatus: http.StatusForbidden},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			t.Setenv("NODE_ENV", "production")
+			t.Setenv("OPL_OPERATOR_CIDRS", test.operatorCIDRs)
+			t.Setenv("OPL_TRUSTED_PROXY_CIDRS", test.trustedProxyCIDRs)
+			req := httptest.NewRequest(http.MethodGet, "/api/operator/summary", nil)
+			req.RemoteAddr = test.remoteAddr
+			if test.xForwardedFor != "" {
+				req.Header.Set("X-Forwarded-For", test.xForwardedFor)
+			}
+			if test.forwarded != "" {
+				req.Header.Set("Forwarded", test.forwarded)
+			}
+			addSessionCookies(req, operator)
+			rec := httptest.NewRecorder()
+			server.ServeHTTP(rec, req)
+			if rec.Code != test.wantStatus {
+				t.Fatalf("status = %d, want %d: %s", rec.Code, test.wantStatus, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestProductionOperatorNetworkGateCoversReviewAndProviderAcceptance(t *testing.T) {
+	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
+	operator := reservedOperatorSessionForTest(t, server)
+	t.Setenv("NODE_ENV", "production")
+	t.Setenv("OPL_OPERATOR_CIDRS", "203.0.113.0/24")
+	t.Setenv("OPL_TRUSTED_PROXY_CIDRS", "")
+
+	review := httptest.NewRequest(http.MethodPost, "/api/operator/billing-reviews/compute/compute-review/resolve", bytes.NewBufferString(`{"accountId":"acct-alpha","billingOperationId":"billing-alpha","decision":"retry","evidenceRef":"case-20260718-abc"}`))
+	review.RemoteAddr = "198.51.100.9:1234"
+	review.Header.Set("Content-Type", "application/json")
+	review.Header.Set("Idempotency-Key", "review-alpha")
+	addAuth(review, operator)
+	reviewRec := httptest.NewRecorder()
+	server.ServeHTTP(reviewRec, review)
+	if reviewRec.Code != http.StatusForbidden || !strings.Contains(reviewRec.Body.String(), "operator_network_forbidden") {
+		t.Fatalf("review outside operator network = %d %s", reviewRec.Code, reviewRec.Body.String())
+	}
+
+	t.Setenv("OPL_PROVIDER_ACCEPTANCE_TOKEN", testProviderAcceptanceToken)
+	called := false
+	protected := newControlPlaneApp().providerAcceptanceProtected(func(w http.ResponseWriter, _ *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusNoContent)
+	})
+	acceptance := httptest.NewRequest(http.MethodPost, "/api/operator/provider-acceptance", bytes.NewBufferString(`{}`))
+	acceptance.RemoteAddr = "198.51.100.9:1234"
+	acceptance.Header.Set("x-opl-provider-acceptance-token", testProviderAcceptanceToken)
+	acceptanceRec := httptest.NewRecorder()
+	protected(acceptanceRec, acceptance)
+	if acceptanceRec.Code != http.StatusForbidden || called {
+		t.Fatalf("Provider Acceptance outside operator network = %d called=%v", acceptanceRec.Code, called)
+	}
+}
+
+func TestOperatorNetworkGateIsProductionOnly(t *testing.T) {
+	t.Setenv("NODE_ENV", "test")
+	t.Setenv("OPL_OPERATOR_CIDRS", "")
+	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
+	req := httptest.NewRequest(http.MethodGet, "/api/operator/summary", nil)
+	addSessionCookies(req, reservedOperatorSessionForTest(t, server))
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("non-production operator status = %d, want 200: %s", rec.Code, rec.Body.String())
+	}
+}
+
 func newExecutionTestServer(t *testing.T, service *controlplane.Service) http.Handler {
 	t.Helper()
 	store := newMemoryTableStore()

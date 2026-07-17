@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "owner": "OPL Console",
   "purpose": "Console identity, organization, membership, role, Sub2API account mapping, and management API contract.",
   "state": "current",
@@ -101,9 +101,16 @@
   },
   "operatorAuthPolicy": {
     "operatorSummary": "GET /api/operator/summary",
-    "machineTokenTransport": "x-opl-operator-token header only",
+    "genericOperatorTokenAccepted": false,
+    "providerAcceptanceCredential": "x-opl-provider-acceptance-token header only",
     "queryTokenAllowed": false,
-    "adminSessionAllowed": true
+    "adminSessionAllowed": true,
+    "productionNetworkGate": {
+      "allowlistEnv": "OPL_OPERATOR_CIDRS",
+      "trustedProxyEnv": "OPL_TRUSTED_PROXY_CIDRS",
+      "forwardedHeaderPolicy": "trust_only_from_direct_trusted_proxy_then_strip_right_to_left_to_first_untrusted_client",
+      "invalidConfiguration": "fail_closed"
+    }
   },
   "operatorNotifications": {
     "source": "Derived from current Workspace renewal operations plus current compute and storage compatibility state; no alert table or second source of truth.",

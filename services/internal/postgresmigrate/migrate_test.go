@@ -15,6 +15,39 @@ import (
 	"github.com/lib/pq"
 )
 
+func TestValidateTLSRequiresExplicitVerifyFull(t *testing.T) {
+	for _, databaseURL := range []string{
+		"postgresql://user:pass@db.example/opl",
+		"postgresql://user:pass@db.example/opl?sslmode=disable",
+		"postgresql://user:pass@db.example/opl?sslmode=allow",
+		"postgresql://user:pass@db.example/opl?sslmode=prefer",
+		"postgresql://user:pass@db.example/opl?sslmode=require",
+		"postgresql://user:pass@db.example/opl?sslmode=verify-ca",
+		"postgresql://user:pass@db.example/opl?sslmode=verify-full&sslmode=disable",
+		"host=db.example dbname=opl user=opl",
+		"host=db.example dbname=opl sslmode=disable",
+		"host=db.example application_name='sslmode=verify-full'",
+		"host=db.example sslmode=verify-full sslmode=disable",
+	} {
+		t.Run(databaseURL, func(t *testing.T) {
+			if err := ValidateTLS(databaseURL); err == nil {
+				t.Fatalf("ValidateTLS(%q) succeeded", databaseURL)
+			}
+		})
+	}
+
+	for _, databaseURL := range []string{
+		"postgresql://user:pass@db.example/opl?application_name=opl&sslmode=verify-full",
+		"host=db.example dbname=opl user=opl sslmode=verify-full application_name='opl cloud'",
+	} {
+		t.Run(databaseURL, func(t *testing.T) {
+			if err := ValidateTLS(databaseURL); err != nil {
+				t.Fatalf("ValidateTLS(%q): %v", databaseURL, err)
+			}
+		})
+	}
+}
+
 func TestApplyRunsMigrationOnlyOnce(t *testing.T) {
 	db := openIsolatedPostgres(t)
 	var calls atomic.Int32

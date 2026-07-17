@@ -1,9 +1,20 @@
 package main
 
 import (
+	"net/http"
 	"testing"
 	"time"
 )
+
+func TestHTTPServerHasFiniteTimeoutsAndPreservesWorkspaceConnections(t *testing.T) {
+	server := newHTTPServer(":8787", http.NotFoundHandler())
+	if server.ReadHeaderTimeout <= 0 || server.ReadTimeout <= 0 || server.WriteTimeout <= 0 || server.IdleTimeout <= 0 {
+		t.Fatalf("HTTP timeouts must all be finite: %#v", server)
+	}
+	if server.WriteTimeout < time.Hour {
+		t.Fatalf("WriteTimeout = %s, want at least one hour for Workspace WebSocket upgrades", server.WriteTimeout)
+	}
+}
 
 func TestControlPlaneAddrMatchesProductionPortContract(t *testing.T) {
 	t.Setenv("CONTROL_PLANE_ADDR", "")

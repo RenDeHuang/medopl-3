@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -22,6 +23,116 @@ CREATE TABLE opl_schema_migrations (
 type Migration struct {
 	Version string
 	Run     func(context.Context) error
+}
+
+func ValidateTLS(databaseURL string) error {
+	mode, err := postgresSSLMode(strings.TrimSpace(databaseURL))
+	if err != nil || mode != "verify-full" {
+		return errors.New("PostgreSQL DATABASE_URL must set sslmode=verify-full")
+	}
+	return nil
+}
+
+func postgresSSLMode(databaseURL string) (string, error) {
+	if databaseURL == "" {
+		return "", errors.New("empty PostgreSQL DSN")
+	}
+	parsed, err := url.Parse(databaseURL)
+	if err != nil {
+		return "", err
+	}
+	if parsed.Scheme != "" {
+		if parsed.Scheme != "postgres" && parsed.Scheme != "postgresql" {
+			return "", errors.New("invalid PostgreSQL URL scheme")
+		}
+		query, err := url.ParseQuery(parsed.RawQuery)
+		if err != nil || len(query["sslmode"]) != 1 {
+			return "", errors.New("PostgreSQL URL requires one sslmode")
+		}
+		return query["sslmode"][0], nil
+	}
+	values, err := parseKeywordDSN(databaseURL)
+	if err != nil || len(values["sslmode"]) != 1 {
+		return "", errors.New("PostgreSQL DSN requires one sslmode")
+	}
+	return values["sslmode"][0], nil
+}
+
+func parseKeywordDSN(databaseURL string) (map[string][]string, error) {
+	values := map[string][]string{}
+	for index := 0; index < len(databaseURL); {
+		for index < len(databaseURL) && dsnSpace(databaseURL[index]) {
+			index++
+		}
+		if index == len(databaseURL) {
+			break
+		}
+		start := index
+		for index < len(databaseURL) && dsnKeyByte(databaseURL[index]) {
+			index++
+		}
+		if start == index {
+			return nil, errors.New("invalid PostgreSQL DSN key")
+		}
+		key := databaseURL[start:index]
+		for index < len(databaseURL) && dsnSpace(databaseURL[index]) {
+			index++
+		}
+		if index == len(databaseURL) || databaseURL[index] != '=' {
+			return nil, errors.New("invalid PostgreSQL DSN assignment")
+		}
+		index++
+		for index < len(databaseURL) && dsnSpace(databaseURL[index]) {
+			index++
+		}
+		var value strings.Builder
+		if index < len(databaseURL) && databaseURL[index] == '\'' {
+			index++
+			closed := false
+			for index < len(databaseURL) {
+				if databaseURL[index] == '\\' {
+					index++
+					if index == len(databaseURL) {
+						return nil, errors.New("invalid PostgreSQL DSN escape")
+					}
+					value.WriteByte(databaseURL[index])
+					index++
+					continue
+				}
+				if databaseURL[index] == '\'' {
+					index++
+					closed = true
+					break
+				}
+				value.WriteByte(databaseURL[index])
+				index++
+			}
+			if !closed || (index < len(databaseURL) && !dsnSpace(databaseURL[index])) {
+				return nil, errors.New("invalid PostgreSQL DSN quoted value")
+			}
+		} else {
+			for index < len(databaseURL) && !dsnSpace(databaseURL[index]) {
+				if databaseURL[index] == '\\' {
+					index++
+					if index == len(databaseURL) {
+						return nil, errors.New("invalid PostgreSQL DSN escape")
+					}
+				}
+				value.WriteByte(databaseURL[index])
+				index++
+			}
+		}
+		values[key] = append(values[key], value.String())
+	}
+	return values, nil
+}
+
+func dsnSpace(value byte) bool {
+	return value == ' ' || value == '\t' || value == '\r' || value == '\n'
+}
+
+func dsnKeyByte(value byte) bool {
+	return value >= 'a' && value <= 'z' || value >= 'A' && value <= 'Z' || value >= '0' && value <= '9' || value == '_'
 }
 
 func Apply(ctx context.Context, db *sql.DB, service string, migrations []Migration) error {

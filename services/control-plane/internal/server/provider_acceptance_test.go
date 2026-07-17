@@ -253,7 +253,7 @@ func TestPostgresProviderAcceptanceReplaySurvivesServerReload(t *testing.T) {
 	if err := store.client.Close(); err != nil {
 		t.Fatal(err)
 	}
-	reloadedState, err := NewPostgresEntStateStore(controlPlaneTestPostgresURL(t, "postgres", schema))
+	reloadedState, err := newTestPostgresEntStateStore(controlPlaneTestPostgresURL(t, "postgres", schema))
 	if err != nil {
 		t.Fatal(err)
 	}

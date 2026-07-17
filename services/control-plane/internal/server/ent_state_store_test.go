@@ -27,6 +27,13 @@ func NewTestEntStateStore(t *testing.T, path string) StateStore {
 	return &postgresEntStateStore{client: client}
 }
 
+func TestProductionPostgresStateStoreRejectsUnsafeTLSBeforeConnecting(t *testing.T) {
+	_, err := NewPostgresEntStateStore("host=/does-not-exist dbname=opl sslmode=disable")
+	if err == nil || !strings.Contains(err.Error(), "sslmode=verify-full") {
+		t.Fatalf("unsafe PostgreSQL error = %v", err)
+	}
+}
+
 func TestWorkspaceRenewalStateRoundTrips(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -1056,7 +1063,7 @@ func TestPostgresWorkspaceRenewalPersistAndOwnerDisableUseSameLockOrder(t *testi
 		t.Fatal(err)
 	}
 	newStore := func(applicationName string) *postgresEntStateStore {
-		stateStore, err := NewPostgresEntStateStore(controlPlaneTestPostgresURL(t, "postgres", schema) + " application_name=" + applicationName)
+		stateStore, err := newTestPostgresEntStateStore(controlPlaneTestPostgresURL(t, "postgres", schema) + " application_name=" + applicationName)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1365,7 +1372,7 @@ func newPostgresWorkspaceRenewalStoreWithDB(t *testing.T) (*postgresEntStateStor
 		_, _ = admin.Exec(`DROP SCHEMA ` + schema + ` CASCADE`)
 		_ = admin.Close()
 	})
-	stateStore, err := NewPostgresEntStateStore(controlPlaneTestPostgresURL(t, "postgres", schema))
+	stateStore, err := newTestPostgresEntStateStore(controlPlaneTestPostgresURL(t, "postgres", schema))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2143,7 +2150,7 @@ func TestPostgresPrimaryWorkspaceAndVerifierFactsSurviveRestart(t *testing.T) {
 	})
 	databaseURL := controlPlaneTestPostgresURL(t, "postgres", schema)
 
-	stateStore, err := NewPostgresEntStateStore(databaseURL)
+	stateStore, err := newTestPostgresEntStateStore(databaseURL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2172,7 +2179,7 @@ func TestPostgresPrimaryWorkspaceAndVerifierFactsSurviveRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	restartedState, err := NewPostgresEntStateStore(databaseURL)
+	restartedState, err := newTestPostgresEntStateStore(databaseURL)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -110,7 +110,7 @@ test("receipt contract exposes monthly product behavior only", async () => {
 	assert.deepEqual(evidence.reconciliationReportV1.exceptions.resourceTypes, ["compute", "storage", "workspace"]);
 	assert.deepEqual(evidence.reconciliationReportV1.workspaceRenewalAuthority, billing.reconciliationPolicy.workspaceRenewalAuthority);
 	const management = await readJson("opl-cloud-management-contract.json");
-	assert.equal(management.schemaVersion, 6);
+	assert.equal(management.schemaVersion, 7);
 	assert.equal(
 		management.operatorNotifications.source,
 		"Derived from current Workspace renewal operations plus current compute and storage compatibility state; no alert table or second source of truth."

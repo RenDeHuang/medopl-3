@@ -234,7 +234,7 @@ func TestPostgresInvitedAccountSerializesExistingAccountOrganization(t *testing.
 	}
 	t.Cleanup(func() { _, _ = admin.Exec(`DROP SCHEMA ` + pq.QuoteIdentifier(schema) + ` CASCADE`) })
 
-	stateStore, err := NewPostgresEntStateStore(postgresInvitedAccountTestURL(databaseURL, schema))
+	stateStore, err := newTestPostgresEntStateStore(postgresInvitedAccountTestURL(databaseURL, schema))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -301,7 +301,7 @@ func TestPostgresInvitedAccountNewAccountConcurrentOneWinner(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _, _ = admin.Exec(`DROP SCHEMA ` + pq.QuoteIdentifier(schema) + ` CASCADE`) })
-	stateStore, err := NewPostgresEntStateStore(postgresInvitedAccountTestURL(databaseURL, schema))
+	stateStore, err := newTestPostgresEntStateStore(postgresInvitedAccountTestURL(databaseURL, schema))
 	if err != nil {
 		t.Fatal(err)
 	}

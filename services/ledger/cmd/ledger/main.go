@@ -11,6 +11,7 @@ import (
 
 	_ "github.com/lib/pq"
 
+	"opl-cloud/services/internal/postgresmigrate"
 	ledgerhttp "opl-cloud/services/ledger/internal/http"
 	"opl-cloud/services/ledger/internal/ledger"
 )
@@ -44,10 +45,18 @@ func main() {
 		store = postgresStore
 	}
 
-	server := ledgerhttp.NewServer(store, token)
+	handler := ledgerhttp.NewServer(store, token)
 	log.Printf("ledger listening on %s", addr)
-	if err := http.ListenAndServe(addr, server); err != nil {
+	if err := newHTTPServer(addr, handler).ListenAndServe(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func newHTTPServer(addr string, handler http.Handler) *http.Server {
+	return &http.Server{
+		Addr: addr, Handler: handler,
+		ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 30 * time.Second,
+		WriteTimeout: 2 * time.Minute, IdleTimeout: 2 * time.Minute,
 	}
 }
 
@@ -63,6 +72,11 @@ func storeDatabaseURL(getenv func(string) string) (string, error) {
 	databaseURL := getenv("DATABASE_URL")
 	if getenv("NODE_ENV") == "production" && databaseURL == "" {
 		return "", errors.New("DATABASE_URL is required for production Ledger persistence")
+	}
+	if databaseURL != "" {
+		if err := postgresmigrate.ValidateTLS(databaseURL); err != nil {
+			return "", err
+		}
 	}
 	return databaseURL, nil
 }

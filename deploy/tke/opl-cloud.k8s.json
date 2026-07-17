@@ -41,6 +41,8 @@
         "OPL_PUBLIC_URL": "https://cloud.medopl.cn",
         "OPL_CONSOLE_DOMAIN": "cloud.medopl.cn",
         "OPL_WORKSPACE_DOMAIN": "workspace.medopl.cn",
+        "OPL_OPERATOR_CIDRS": "192.0.2.0/24",
+        "OPL_TRUSTED_PROXY_CIDRS": "192.0.2.0/24",
         "OPL_CLOUD_IMAGE": "registry.example.com/opl/opl-cloud@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         "OPL_WORKSPACE_IMAGE": "registry.example.com/opl/one-person-lab-app@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
         "OPL_K8S_NAMESPACE": "opl-cloud",
@@ -148,10 +150,6 @@
                 ],
                 "env": [
                   {
-                    "name": "PGSSLMODE",
-                    "value": "disable"
-                  },
-                  {
                     "name": "DATABASE_URL",
                     "valueFrom": {
                       "secretKeyRef": {
@@ -184,16 +182,6 @@
                       "secretKeyRef": {
                         "name": "opl-cloud-auth",
                         "key": "OPL_CONSOLE_USERS_JSON"
-                      }
-                    }
-                  },
-                  {
-                    "name": "OPL_OPERATOR_SUMMARY_TOKEN",
-                    "valueFrom": {
-                      "secretKeyRef": {
-                        "name": "opl-cloud-operator",
-                        "key": "OPL_OPERATOR_SUMMARY_TOKEN",
-                        "optional": true
                       }
                     }
                   },
@@ -404,10 +392,6 @@
                 ],
                 "env": [
                   {
-                    "name": "PGSSLMODE",
-                    "value": "disable"
-                  },
-                  {
                     "name": "DATABASE_URL",
                     "valueFrom": {
                       "secretKeyRef": {
@@ -499,6 +483,45 @@
       }
     },
     {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {
+        "name": "opl-cloud-ledger-ingress",
+        "namespace": "opl-cloud"
+      },
+      "spec": {
+        "podSelector": {
+          "matchLabels": {
+            "app.kubernetes.io/name": "opl-cloud",
+            "app.kubernetes.io/component": "ledger"
+          }
+        },
+        "policyTypes": [
+          "Ingress"
+        ],
+        "ingress": [
+          {
+            "from": [
+              {
+                "podSelector": {
+                  "matchLabels": {
+                    "app.kubernetes.io/name": "opl-cloud",
+                    "app.kubernetes.io/component": "control-plane"
+                  }
+                }
+              }
+            ],
+            "ports": [
+              {
+                "protocol": "TCP",
+                "port": 8081
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "apiVersion": "apps/v1",
       "kind": "Deployment",
       "metadata": {
@@ -560,10 +583,6 @@
                   }
                 ],
                 "env": [
-                  {
-                    "name": "PGSSLMODE",
-                    "value": "disable"
-                  },
                   {
                     "name": "DATABASE_URL",
                     "valueFrom": {
@@ -691,6 +710,45 @@
             "name": "fabric",
             "port": 8082,
             "targetPort": "fabric"
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "networking.k8s.io/v1",
+      "kind": "NetworkPolicy",
+      "metadata": {
+        "name": "opl-cloud-fabric-ingress",
+        "namespace": "opl-cloud"
+      },
+      "spec": {
+        "podSelector": {
+          "matchLabels": {
+            "app.kubernetes.io/name": "opl-cloud",
+            "app.kubernetes.io/component": "fabric"
+          }
+        },
+        "policyTypes": [
+          "Ingress"
+        ],
+        "ingress": [
+          {
+            "from": [
+              {
+                "podSelector": {
+                  "matchLabels": {
+                    "app.kubernetes.io/name": "opl-cloud",
+                    "app.kubernetes.io/component": "control-plane"
+                  }
+                }
+              }
+            ],
+            "ports": [
+              {
+                "protocol": "TCP",
+                "port": 8082
+              }
+            ]
           }
         ]
       }

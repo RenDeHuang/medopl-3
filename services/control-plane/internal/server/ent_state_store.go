@@ -64,6 +64,17 @@ type postgresEntStateStore struct {
 }
 
 func NewPostgresEntStateStore(databaseURL string) (StateStore, error) {
+	if err := postgresmigrate.ValidateTLS(databaseURL); err != nil {
+		return nil, err
+	}
+	return newPostgresEntStateStore(databaseURL)
+}
+
+func newTestPostgresEntStateStore(databaseURL string) (StateStore, error) {
+	return newPostgresEntStateStore(databaseURL)
+}
+
+func newPostgresEntStateStore(databaseURL string) (StateStore, error) {
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		return nil, err
