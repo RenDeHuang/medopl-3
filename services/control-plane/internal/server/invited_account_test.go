@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -38,6 +39,59 @@ func TestInvitedAccountCreatesAccountUserOrganizationAndOwnerMembership(t *testi
 	membership := findRecord(memberships, "mem-"+stableID("org-invite", stringValue(user["id"]))[:12])
 	if membership == nil || membership["accountId"] != "acct-invite" || membership["userId"] != user["id"] || membership["role"] != "owner" || membership["status"] != "active" {
 		t.Fatalf("invited membership = %#v", membership)
+	}
+}
+
+func TestInvitedAccountDefaultsRoleOnlyWhenOmitted(t *testing.T) {
+	for index, test := range []struct {
+		name string
+		role string
+	}{
+		{name: "null", role: "null"},
+		{name: "number", role: "7"},
+		{name: "blank", role: `"   "`},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
+			admin := operatorSessionForTest(t, server)
+			accountID := fmt.Sprintf("acct-role-%d", index)
+			body := fmt.Sprintf(`{"email":"role-%d@invite.example","accountId":%q,"password":"CorrectHorseBatteryStaple!","sub2apiUserId":%d,"role":%s}`,
+				index, accountID, 180+index, test.role)
+
+			response := requestWithSession(t, server, admin, http.MethodPost, "/api/users", body)
+
+			if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), errInvalidRole.Error()) {
+				t.Fatalf("status=%d body=%s, want invalid role", response.Code, response.Body.String())
+			}
+			accounts, _ := server.(*controlPlaneHTTPHandler).app.tables.ListAccounts(context.Background(), accountID)
+			if len(accounts) != 0 {
+				t.Fatalf("invalid role created account: %#v", accounts)
+			}
+		})
+	}
+}
+
+func TestInvitedAccountsUseDistinctDefaultOrganizations(t *testing.T) {
+	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
+	admin := operatorSessionForTest(t, server)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"prefixed@invite.example","accountId":"acct-team","password":"CorrectHorseBatteryStaple!","sub2apiUserId":181}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"plain@invite.example","accountId":"team","password":"CorrectHorseBatteryStaple!","sub2apiUserId":182}`)
+
+	organizations, err := server.(*controlPlaneHTTPHandler).app.tables.ListOrganizations(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var prefixed, plain map[string]any
+	for _, organization := range organizations {
+		switch organization["billingAccountId"] {
+		case "acct-team":
+			prefixed = organization
+		case "team":
+			plain = organization
+		}
+	}
+	if prefixed == nil || plain == nil || prefixed["id"] == plain["id"] {
+		t.Fatalf("default Organizations collided: prefixed=%#v plain=%#v all=%#v", prefixed, plain, organizations)
 	}
 }
 

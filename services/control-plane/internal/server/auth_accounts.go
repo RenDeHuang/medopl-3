@@ -22,7 +22,14 @@ var (
 )
 
 func (app *controlPlaneServer) createUser(ctx context.Context, service *controlplane.Service, input map[string]any) (map[string]any, error) {
-	role := strings.TrimSpace(stringField(input, "role", "owner"))
+	role := "owner"
+	if rawRole, exists := input["role"]; exists {
+		value, ok := rawRole.(string)
+		if !ok {
+			return nil, errInvalidRole
+		}
+		role = strings.TrimSpace(value)
+	}
 	if !validRole(role) {
 		return nil, errInvalidRole
 	}
@@ -50,7 +57,10 @@ func (app *controlPlaneServer) createUser(ctx context.Context, service *controlp
 		return nil, err
 	}
 	id := "usr-" + compactID(email+"-"+time.Now().UTC().Format("20060102150405.000000000"))
-	organizationID := "org-" + compactID(strings.TrimPrefix(accountID, "acct-"))
+	organizationID := "organization-" + accountID
+	if strings.HasPrefix(accountID, "acct-") {
+		organizationID = "org-" + strings.TrimPrefix(accountID, "acct-")
+	}
 	user := map[string]any{"id": id, "email": email, "accountId": accountID, "role": role, "status": "active", "passwordHash": passwordHash}
 	account := map[string]any{"id": accountID, "status": "active", "sub2apiUserId": sub2APIUserID}
 	organization := map[string]any{"id": organizationID, "name": "Organization " + accountID, "billingAccountId": accountID, "status": "active"}
