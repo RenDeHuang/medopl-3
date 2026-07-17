@@ -99,7 +99,7 @@
     "submissionOrder": ["workspace_quote", "compute_read_only_preflight", "storage_read_only_preflight", "workspace_key_preflight", "sub2api_total_balance_preflight", "persist_launch"],
     "totalBalanceSemantics": "read_only_preflight_not_hold_or_reservation",
     "backgroundProgression": "The existing provider reconciliation worker resumes stable compute, storage, attachment, Gateway Secret, Runtime, and receipt sub-operations after browser close or process restart.",
-    "currentImplementation": "Quote composition, one-submit persistence, total balance preflight, tenant polling, phase recovery, and replay tests exist locally; deployed browser, live Sub2API, and live Tencent evidence remain pending."
+    "currentImplementation": "Quote composition, one-submit persistence, total balance preflight, tenant polling, phase recovery, and replay tests, including fenced stale Attachment, Gateway Secret, and Runtime apply convergence, exist locally; deployed browser, live Sub2API, and live Tencent evidence remain pending."
   },
   "providerProcurement": {
     "provider": "Tencent Cloud",

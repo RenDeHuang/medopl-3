@@ -622,6 +622,10 @@ func TestTencentProviderWritesAccountGatewaySecretWithoutReturningRawKey(t *test
 	if manifest["kind"] != "Secret" || nested(manifest, "metadata", "name") != secret.SecretRef || nested(manifest, "stringData", "opl_gateway_api_key") != "raw-gateway-key" {
 		t.Fatalf("account Gateway Secret manifest = %#v", manifest)
 	}
+	replayed, err := provider.UpsertGatewaySecret(context.Background(), GatewaySecretInput{AccountID: "acct-alpha", GatewayAPIKey: "raw-gateway-key", IdempotencyKey: "gateway-once"})
+	if err != nil || replayed != secret {
+		t.Fatalf("replayed Gateway Secret=%#v original=%#v err=%v", replayed, secret, err)
+	}
 	rotated, err := provider.UpsertGatewaySecret(context.Background(), GatewaySecretInput{AccountID: "acct-alpha", GatewayAPIKey: "rotated-gateway-key", IdempotencyKey: "gateway-rotate"})
 	if err != nil || rotated.SecretRef != secret.SecretRef || rotated.Version == secret.Version || rotated.Fingerprint == secret.Fingerprint {
 		t.Fatalf("rotated Gateway Secret=%#v original=%#v err=%v", rotated, secret, err)
@@ -662,7 +666,7 @@ func TestWorkspaceManifestSkipsGatewaySecretWhenCodexKeyMissing(t *testing.T) {
 	}
 }
 
-func TestTencentRuntimeCreationUsesActualReadinessAfterApply(t *testing.T) {
+func TestTencentRuntimeCreationIsDeterministicAndUsesActualReadinessAfterApply(t *testing.T) {
 	t.Setenv("OPL_AIONUI_ADMIN_PASSWORD_SEED", "workspace-secret-2026-very-long")
 	provider := NewTencentProvider()
 	var calls [][]string
@@ -681,8 +685,9 @@ func TestTencentRuntimeCreationUsesActualReadinessAfterApply(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create runtime: %v", err)
 	}
-	if runtime.Ready || runtime.Status != "not_found" || runtime.Access.CredentialStatus == "configured" || len(calls) != 2 {
-		t.Fatalf("apply must be followed by actual readiness: runtime=%#v calls=%#v", runtime, calls)
+	replayed, replayErr := provider.CreateWorkspaceRuntime(context.Background(), WorkspaceRuntimeInput{WorkspaceID: "ws-alpha", GatewaySecretRef: "opl-gateway-acct-alpha", IdempotencyKey: "runtime-unready"}, ComputeAllocation{ID: "compute-alpha", AccountID: "acct-alpha", ServiceName: "opl-compute-alpha"}, StorageVolume{ID: "storage-alpha", ProviderResourceID: "pvc/opl-storage-alpha-data"})
+	if runtime.Ready || runtime.Status != "not_found" || runtime.Access.CredentialStatus == "configured" || replayErr != nil || replayed.ID != runtime.ID || len(calls) != 4 {
+		t.Fatalf("apply must be deterministic and followed by actual readiness: runtime=%#v replayed=%#v replayErr=%v calls=%#v", runtime, replayed, replayErr, calls)
 	}
 }
 
@@ -732,9 +737,13 @@ func TestTencentStorageAttachmentVerifiesBoundStaticVolumeBeforeRuntime(t *testi
 	}
 
 	t.Run("pre-runtime exact binding", func(t *testing.T) {
-		attachment, calls, err := create(newFixture())
-		if err != nil || attachment.Status != "attached" || attachment.ProviderAttachmentID != "pv/opl-storage-alpha-pv:pvc/opl-storage-alpha-data" || len(calls) != 1 {
-			t.Fatalf("attachment=%#v err=%v calls=%#v", attachment, err, calls)
+		current := newFixture()
+		attachment, calls, err := create(current)
+		replayed, replayCalls, replayErr := create(current)
+		expectedID := "att_" + stableSuffix(current.input.OperationID)[:18]
+		if err != nil || replayErr != nil || attachment.ID != expectedID || replayed.ID != expectedID || attachment.Status != "attached" ||
+			attachment.ProviderAttachmentID != "pv/opl-storage-alpha-pv:pvc/opl-storage-alpha-data" || replayed.ProviderAttachmentID != attachment.ProviderAttachmentID || len(calls) != 1 || len(replayCalls) != 1 {
+			t.Fatalf("attachment=%#v err=%v replayed=%#v replayErr=%v calls=%#v replayCalls=%#v", attachment, err, replayed, replayErr, calls, replayCalls)
 		}
 	})
 	t.Run("PV omitted empty storage class", func(t *testing.T) {

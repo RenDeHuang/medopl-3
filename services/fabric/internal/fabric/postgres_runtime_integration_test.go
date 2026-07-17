@@ -5,11 +5,114 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"net/url"
 	"os"
+	"sync/atomic"
 	"testing"
 	"time"
 )
+
+type stalePostgresRuntimeProvider struct {
+	testProvider
+	calls        atomic.Int32
+	firstEntered chan struct{}
+	releaseFirst chan struct{}
+}
+
+func (p *stalePostgresRuntimeProvider) CreateWorkspaceRuntime(ctx context.Context, input WorkspaceRuntimeInput, _ ComputeAllocation, _ StorageVolume) (WorkspaceRuntime, error) {
+	if p.calls.Add(1) == 1 {
+		close(p.firstEntered)
+		select {
+		case <-p.releaseFirst:
+		case <-ctx.Done():
+			return WorkspaceRuntime{}, ctx.Err()
+		}
+	}
+	return WorkspaceRuntime{ID: "runtime-alpha", WorkspaceID: input.WorkspaceID, Status: "running", Ready: true, ProviderRequestID: providerRequestID("runtime", input.IdempotencyKey)}, nil
+}
+
+func TestPostgresStaleRuntimeClaimConvergesAcrossServiceInstances(t *testing.T) {
+	databaseURL := fabricTestDatabaseURL(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	firstStore, err := NewPostgresOperationStore(databaseURL)
+	if err != nil {
+		t.Fatalf("open first operation store: %v", err)
+	}
+	defer firstStore.client.Close()
+	secondStore, err := NewPostgresOperationStore(databaseURL)
+	if err != nil {
+		t.Fatalf("open second operation store: %v", err)
+	}
+	defer secondStore.client.Close()
+
+	provider := &stalePostgresRuntimeProvider{firstEntered: make(chan struct{}), releaseFirst: make(chan struct{})}
+	firstService := runtimeTestService(provider, firstStore)
+	secondService := runtimeTestService(provider, secondStore)
+	startedAt := time.Date(2026, 7, 17, 0, 0, 0, 123456000, time.UTC)
+	var clock atomic.Int64
+	clock.Store(startedAt.UnixNano())
+	now := func() time.Time { return time.Unix(0, clock.Load()).UTC() }
+	firstService.now = now
+	secondService.now = now
+	input := runtimeTestInput("postgres-runtime-stale")
+
+	oldOwnerDone := make(chan error, 1)
+	go func() {
+		_, err := firstService.CreateWorkspaceRuntime(ctx, input)
+		oldOwnerDone <- err
+	}()
+	select {
+	case <-provider.firstEntered:
+	case <-ctx.Done():
+		t.Fatal("old owner provider call did not start")
+	}
+	operations, err := firstStore.List(ctx)
+	if err != nil || len(operations) != 1 || operations[0].Status != "started" {
+		t.Fatalf("persisted old claim=%#v err=%v", operations, err)
+	}
+	clock.Store(operations[0].StartedAt.Add(3 * time.Minute).UnixNano())
+
+	type callResult struct {
+		runtime WorkspaceRuntime
+		err     error
+	}
+	start := make(chan struct{})
+	results := make(chan callResult, 2)
+	for _, service := range []*Service{firstService, secondService} {
+		service := service
+		go func() {
+			<-start
+			runtime, err := service.CreateWorkspaceRuntime(ctx, input)
+			results <- callResult{runtime: runtime, err: err}
+		}()
+	}
+	close(start)
+	firstResult, secondResult := <-results, <-results
+	for _, result := range []callResult{firstResult, secondResult} {
+		if result.err != nil && !errors.Is(result.err, ErrRuntimeOperationInProgress) {
+			t.Fatalf("stale caller result=%#v err=%v", result.runtime, result.err)
+		}
+	}
+	if provider.calls.Load() != 2 {
+		t.Fatalf("provider calls after stale race=%d, want old owner plus one reclaim", provider.calls.Load())
+	}
+
+	close(provider.releaseFirst)
+	if err := <-oldOwnerDone; !errors.Is(err, ErrRuntimeOperationNotCurrent) {
+		t.Fatalf("old owner completion error=%v, want ErrRuntimeOperationNotCurrent", err)
+	}
+	firstReplay, firstErr := firstService.CreateWorkspaceRuntime(ctx, input)
+	secondReplay, secondErr := secondService.CreateWorkspaceRuntime(ctx, input)
+	if firstErr != nil || secondErr != nil || firstReplay.ID != "runtime-alpha" || secondReplay.ID != firstReplay.ID || secondReplay.Status != firstReplay.Status || provider.calls.Load() != 2 {
+		t.Fatalf("final replays first=%#v err=%v second=%#v err=%v providerCalls=%d", firstReplay, firstErr, secondReplay, secondErr, provider.calls.Load())
+	}
+	operations, err = secondStore.List(ctx)
+	if err != nil || len(operations) != 1 || operations[0].Status != "succeeded" {
+		t.Fatalf("final operations=%#v err=%v", operations, err)
+	}
+}
 
 func TestPostgresRuntimeClaimAcrossServiceInstances(t *testing.T) {
 	databaseURL := fabricTestDatabaseURL(t)

@@ -2,13 +2,63 @@ package fabric
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"opl-cloud/services/fabric/ent/contenttransfer"
 	"opl-cloud/services/fabric/ent/contenttransferchunk"
 )
+
+func TestMemoryOperationStoreReclaimRuntimeFencesOldOwner(t *testing.T) {
+	ctx := context.Background()
+	store := NewMemoryOperationStore()
+	oldStartedAt := time.Date(2026, 7, 17, 0, 0, 0, 123456000, time.UTC)
+	operation := newOperation("create_workspace_runtime", "workspace_runtime", "workspace-alpha", "acct-alpha", "workspace-alpha", "runtime-fence", "request-hash", oldStartedAt)
+	operation.ID = "fop-runtime-fence"
+	operation.Status = "started"
+	operation.ErrorCode = "stale_error"
+	operation.FinishedAt = oldStartedAt.Add(time.Second)
+	operation.CreatedAt = oldStartedAt
+	oldOwner, claimed, err := store.ClaimRuntime(ctx, operation)
+	if err != nil || !claimed {
+		t.Fatalf("claim old owner=%#v claimed=%v err=%v", oldOwner, claimed, err)
+	}
+
+	newStartedAt := oldStartedAt.Add(3 * time.Minute)
+	newOwner, won, err := store.ReclaimRuntime(ctx, oldOwner.ID, oldOwner.StartedAt, newStartedAt)
+	if err != nil || !won || !newOwner.StartedAt.Equal(newStartedAt) || !newOwner.FinishedAt.IsZero() || newOwner.ErrorCode != "" {
+		t.Fatalf("reclaim new owner=%#v won=%v err=%v", newOwner, won, err)
+	}
+	current, won, err := store.ReclaimRuntime(ctx, oldOwner.ID, oldOwner.StartedAt, newStartedAt.Add(time.Second))
+	if err != nil || won || !current.StartedAt.Equal(newStartedAt) {
+		t.Fatalf("losing reclaim current=%#v won=%v err=%v", current, won, err)
+	}
+
+	oldOwner.Status = "succeeded"
+	oldOwner.FinishedAt = newStartedAt.Add(time.Second)
+	oldOwner.RedactedProviderPayload = map[string]any{"resource": WorkspaceRuntime{ID: "runtime-old", WorkspaceID: "workspace-alpha"}}
+	if err := store.SaveRuntime(ctx, oldOwner); !errors.Is(err, ErrRuntimeOperationNotCurrent) {
+		t.Fatalf("old owner save error=%v, want ErrRuntimeOperationNotCurrent", err)
+	}
+	newOwner.Status = "succeeded"
+	newOwner.FinishedAt = newStartedAt.Add(2 * time.Second)
+	newOwner.RedactedProviderPayload = map[string]any{"resource": WorkspaceRuntime{ID: "runtime-current", WorkspaceID: "workspace-alpha"}}
+	if err := store.SaveRuntime(ctx, newOwner); err != nil {
+		t.Fatalf("new owner save: %v", err)
+	}
+	operations, err := store.List(ctx)
+	if err != nil || len(operations) != 1 || operations[0].Status != "succeeded" || !operations[0].StartedAt.Equal(newStartedAt) {
+		t.Fatalf("final operations=%#v err=%v", operations, err)
+	}
+	var runtime WorkspaceRuntime
+	if !decodeOperationResource(operations[0], &runtime) || runtime.ID != "runtime-current" {
+		t.Fatalf("old owner overwrote current result: runtime=%#v operation=%#v", runtime, operations[0])
+	}
+}
 
 func TestPostgresOperationSchemaDefinesFabricOperationsAuditTable(t *testing.T) {
 	schema := PostgresOperationSchemaSQL()

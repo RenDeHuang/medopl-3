@@ -1003,6 +1003,18 @@ type countingGatewayProvider struct {
 	calls atomic.Int32
 }
 
+type failFirstRuntimeSaveStore struct {
+	OperationStore
+	failed atomic.Bool
+}
+
+func (s *failFirstRuntimeSaveStore) SaveRuntime(ctx context.Context, operation FabricOperation) error {
+	if s.failed.CompareAndSwap(false, true) {
+		return errors.New("injected runtime save failure")
+	}
+	return s.OperationStore.SaveRuntime(ctx, operation)
+}
+
 func (p *countingGatewayProvider) UpsertGatewaySecret(ctx context.Context, input GatewaySecretInput) (GatewaySecret, error) {
 	p.calls.Add(1)
 	return p.testProvider.UpsertGatewaySecret(ctx, input)
@@ -1040,6 +1052,50 @@ func TestGatewaySecretWriteReplaysOneRedactedOperation(t *testing.T) {
 	var recorded GatewaySecret
 	if !decodeOperationResource(operation, &recorded) || recorded != secret {
 		t.Fatalf("recorded Gateway secret=%#v operation=%#v", recorded, operation)
+	}
+}
+
+func TestUpsertGatewaySecretReclaimsStaleOperationAfterSaveFailure(t *testing.T) {
+	provider := &countingGatewayProvider{}
+	store := &failFirstRuntimeSaveStore{OperationStore: NewMemoryOperationStore()}
+	input := GatewaySecretInput{AccountID: "acct-alpha", GatewayAPIKey: "raw-gateway-key", IdempotencyKey: "gateway-stale"}
+	startedAt := time.Date(2026, 7, 17, 0, 0, 0, 0, time.UTC)
+
+	first := NewServiceWithOperationStore(provider, store)
+	first.now = func() time.Time { return startedAt }
+	if _, err := first.UpsertGatewaySecret(context.Background(), input); err == nil || err.Error() != "injected runtime save failure" {
+		t.Fatalf("first Gateway Secret save error=%v", err)
+	}
+	if provider.calls.Load() != 1 {
+		t.Fatalf("first Gateway Secret provider calls=%d, want 1", provider.calls.Load())
+	}
+
+	fresh := NewServiceWithOperationStore(provider, store)
+	fresh.now = func() time.Time { return startedAt.Add(time.Minute) }
+	if _, err := fresh.UpsertGatewaySecret(context.Background(), input); err == nil || err.Error() != "gateway_secret_operation_started" {
+		t.Fatalf("fresh Gateway Secret replay error=%v", err)
+	}
+	changed := input
+	changed.GatewayAPIKey = "rotated-gateway-key"
+	stale := NewServiceWithOperationStore(provider, store)
+	stale.now = func() time.Time { return startedAt.Add(3 * time.Minute) }
+	if _, err := stale.UpsertGatewaySecret(context.Background(), changed); !errors.Is(err, ErrGatewaySecretIdempotencyConflict) {
+		t.Fatalf("changed stale Gateway Secret replay error=%v", err)
+	}
+
+	secret, err := stale.UpsertGatewaySecret(context.Background(), input)
+	if err != nil || secret.SecretRef != gatewaySecretName(input.AccountID) || provider.calls.Load() != 2 {
+		t.Fatalf("stale Gateway Secret=%#v err=%v providerCalls=%d", secret, err, provider.calls.Load())
+	}
+	replayed, err := NewServiceWithOperationStore(provider, store).UpsertGatewaySecret(context.Background(), input)
+	if err != nil || replayed != secret || provider.calls.Load() != 2 {
+		t.Fatalf("converged Gateway Secret replay=%#v err=%v providerCalls=%d", replayed, err, provider.calls.Load())
+	}
+	operations, err := store.List(context.Background())
+	serialized := fmt.Sprint(operations)
+	if err != nil || len(operations) != 1 || operations[0].Status != "succeeded" || operations[0].RedactedProviderPayload["keyDigest"] == "" ||
+		strings.Contains(serialized, input.GatewayAPIKey) || strings.Contains(serialized, changed.GatewayAPIKey) {
+		t.Fatalf("converged Gateway Secret operation=%#v err=%v", operations, err)
 	}
 }
 
@@ -1536,12 +1592,50 @@ func TestCreateStorageAttachmentClaimsAcrossServiceInstances(t *testing.T) {
 	}
 }
 
-func TestCreateStorageAttachmentDoesNotReapplyPersistedIncompleteOperation(t *testing.T) {
+func TestCreateStorageAttachmentReclaimsStaleOperationAfterSaveFailure(t *testing.T) {
+	provider := &countingAttachmentProvider{}
+	store := &failFirstRuntimeSaveStore{OperationStore: NewMemoryOperationStore()}
+	input := attachmentTestInput("attachment-stale")
+	startedAt := time.Date(2026, 7, 17, 0, 0, 0, 0, time.UTC)
+
+	first := attachmentTestService(provider, store)
+	first.now = func() time.Time { return startedAt }
+	firstResult, err := first.CreateStorageAttachment(context.Background(), input)
+	if err == nil || err.Error() != "injected runtime save failure" || firstResult.ID != "attachment-alpha" || provider.calls.Load() != 1 {
+		t.Fatalf("first attachment=%#v err=%v providerCalls=%d", firstResult, err, provider.calls.Load())
+	}
+	fresh := attachmentTestService(provider, store)
+	fresh.now = func() time.Time { return startedAt.Add(time.Minute) }
+	if _, err := fresh.CreateStorageAttachment(context.Background(), input); !errors.Is(err, ErrStorageAttachmentOperationInProgress) {
+		t.Fatalf("fresh attachment replay error=%v", err)
+	}
+
+	stale := attachmentTestService(provider, store)
+	stale.now = func() time.Time { return startedAt.Add(3 * time.Minute) }
+	changed := input
+	changed.VolumeID = "storage-other"
+	if _, err := stale.CreateStorageAttachment(context.Background(), changed); !errors.Is(err, ErrStorageAttachmentIdempotencyConflict) {
+		t.Fatalf("changed stale attachment replay error=%v", err)
+	}
+	recovered, err := stale.CreateStorageAttachment(context.Background(), input)
+	if err != nil || recovered.ID != firstResult.ID || provider.calls.Load() != 2 {
+		t.Fatalf("stale attachment=%#v err=%v providerCalls=%d", recovered, err, provider.calls.Load())
+	}
+	replayed, err := attachmentTestService(provider, store).CreateStorageAttachment(context.Background(), input)
+	if err != nil || replayed.ID != recovered.ID || provider.calls.Load() != 2 {
+		t.Fatalf("converged attachment replay=%#v err=%v providerCalls=%d", replayed, err, provider.calls.Load())
+	}
+	operations, err := store.List(context.Background())
+	if err != nil || len(operations) != 1 || operations[0].Status != "succeeded" {
+		t.Fatalf("converged attachment operations=%#v err=%v", operations, err)
+	}
+}
+
+func TestCreateStorageAttachmentDoesNotReapplyUnsafePersistedOperation(t *testing.T) {
 	for _, tc := range []struct {
 		status string
 		want   string
 	}{
-		{status: "started", want: "storage_attachment_operation_in_progress"},
 		{status: "failed", want: "storage_attachment_operation_failed"},
 		{status: "succeeded", want: "storage_attachment_operation_failed"},
 	} {
@@ -1671,38 +1765,66 @@ func TestCreateWorkspaceRuntimeClaimsAcrossServiceInstances(t *testing.T) {
 	}
 }
 
-func TestCreateWorkspaceRuntimeDoesNotReapplyPersistedIncompleteOperation(t *testing.T) {
-	for _, status := range []string{"started", "failed"} {
-		t.Run(status, func(t *testing.T) {
-			provider := &countingRuntimeProvider{}
-			store := NewMemoryOperationStore()
-			input := runtimeTestInput("runtime-" + status)
-			now := time.Now().UTC()
-			operation := newOperation("create_workspace_runtime", "workspace_runtime", input.WorkspaceID, "acct-alpha", input.WorkspaceID, input.IdempotencyKey, hashInput(input), now)
-			operation.ID = "persisted-" + status
-			operation.Status = status
-			operation.CreatedAt = now
-			if status == "failed" {
-				operation.FinishedAt = now
-				operation.ErrorCode = "provider_error"
-			}
-			if err := store.Append(context.Background(), operation); err != nil {
-				t.Fatalf("seed operation: %v", err)
-			}
+func TestCreateWorkspaceRuntimeReclaimsStaleOperationAfterSaveFailure(t *testing.T) {
+	provider := &countingRuntimeProvider{}
+	store := &failFirstRuntimeSaveStore{OperationStore: NewMemoryOperationStore()}
+	input := runtimeTestInput("runtime-stale")
+	startedAt := time.Date(2026, 7, 17, 0, 0, 0, 0, time.UTC)
 
-			service := runtimeTestService(provider, store)
-			_, err := service.CreateWorkspaceRuntime(context.Background(), input)
-			want := "runtime_operation_in_progress"
-			if status == "failed" {
-				want = "runtime_operation_failed"
-			}
-			if err == nil || err.Error() != want {
-				t.Fatalf("persisted %s error = %v, want %s", status, err, want)
-			}
-			if calls := provider.calls.Load(); calls != 0 {
-				t.Fatalf("provider calls = %d, want 0", calls)
-			}
-		})
+	first := runtimeTestService(provider, store)
+	first.now = func() time.Time { return startedAt }
+	firstResult, err := first.CreateWorkspaceRuntime(context.Background(), input)
+	if err == nil || err.Error() != "injected runtime save failure" || firstResult.ID != "runtime-alpha" || provider.calls.Load() != 1 {
+		t.Fatalf("first runtime=%#v err=%v providerCalls=%d", firstResult, err, provider.calls.Load())
+	}
+	fresh := runtimeTestService(provider, store)
+	fresh.now = func() time.Time { return startedAt.Add(time.Minute) }
+	if _, err := fresh.CreateWorkspaceRuntime(context.Background(), input); !errors.Is(err, ErrRuntimeOperationInProgress) {
+		t.Fatalf("fresh runtime replay error=%v", err)
+	}
+
+	stale := runtimeTestService(provider, store)
+	stale.now = func() time.Time { return startedAt.Add(3 * time.Minute) }
+	changed := input
+	changed.ImageID = "changed-image"
+	if _, err := stale.CreateWorkspaceRuntime(context.Background(), changed); !errors.Is(err, ErrRuntimeIdempotencyConflict) {
+		t.Fatalf("changed stale runtime replay error=%v", err)
+	}
+	recovered, err := stale.CreateWorkspaceRuntime(context.Background(), input)
+	if err != nil || recovered.ID != firstResult.ID || provider.calls.Load() != 2 {
+		t.Fatalf("stale runtime=%#v err=%v providerCalls=%d", recovered, err, provider.calls.Load())
+	}
+	replayed, err := NewServiceWithOperationStore(provider, store).CreateWorkspaceRuntime(context.Background(), input)
+	if err != nil || replayed.ID != recovered.ID || provider.calls.Load() != 2 {
+		t.Fatalf("converged runtime replay=%#v err=%v providerCalls=%d", replayed, err, provider.calls.Load())
+	}
+	operations, err := store.List(context.Background())
+	if err != nil || len(operations) != 1 || operations[0].Status != "succeeded" {
+		t.Fatalf("converged runtime operations=%#v err=%v", operations, err)
+	}
+}
+
+func TestCreateWorkspaceRuntimeDoesNotReapplyFailedOperation(t *testing.T) {
+	provider := &countingRuntimeProvider{}
+	store := NewMemoryOperationStore()
+	input := runtimeTestInput("runtime-failed")
+	now := time.Now().UTC()
+	operation := newOperation("create_workspace_runtime", "workspace_runtime", input.WorkspaceID, "acct-alpha", input.WorkspaceID, input.IdempotencyKey, hashInput(input), now)
+	operation.ID = "persisted-failed"
+	operation.Status = "failed"
+	operation.CreatedAt = now
+	operation.FinishedAt = now
+	operation.ErrorCode = "provider_error"
+	if err := store.Append(context.Background(), operation); err != nil {
+		t.Fatalf("seed operation: %v", err)
+	}
+
+	service := runtimeTestService(provider, store)
+	if _, err := service.CreateWorkspaceRuntime(context.Background(), input); !errors.Is(err, ErrRuntimeOperationFailed) {
+		t.Fatalf("persisted failed runtime error=%v", err)
+	}
+	if calls := provider.calls.Load(); calls != 0 {
+		t.Fatalf("provider calls=%d, want 0", calls)
 	}
 }
 

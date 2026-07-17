@@ -57,6 +57,22 @@ type Service struct {
 	now         func() time.Time
 }
 
+const runtimeClaimStaleAfter = 2 * time.Minute
+
+func (s *Service) claimRuntimeOperation(ctx context.Context, operation FabricOperation) (FabricOperation, bool, error) {
+	stored, claimed, err := s.operations.ClaimRuntime(ctx, operation)
+	if err != nil || claimed || stored.RequestHash != operation.RequestHash || stored.Status != "started" ||
+		operation.StartedAt.Sub(stored.StartedAt) < runtimeClaimStaleAfter {
+		return stored, claimed, err
+	}
+	switch stored.Action {
+	case "create_storage_attachment", "create_workspace_runtime", "upsert_gateway_secret":
+		return s.operations.ReclaimRuntime(ctx, stored.ID, stored.StartedAt, operation.StartedAt)
+	default:
+		return stored, false, nil
+	}
+}
+
 func NewService(provider Provider) *Service {
 	return NewServiceWithOperationStore(provider, NewMemoryOperationStore())
 }
@@ -909,7 +925,7 @@ func (s *Service) CreateStorageAttachment(ctx context.Context, input StorageAtta
 	operation.CreatedAt = now
 	fillOperationResource(&operation, StorageAttachment{ID: operation.ResourceID, WorkspaceID: input.WorkspaceID, ComputeID: input.ComputeID, VolumeID: input.VolumeID, Provider: "tencent-tke", ProviderRequestID: providerRequestID("storage-attach", input.IdempotencyKey)})
 	input.OperationID = operation.OperationID
-	stored, claimed, err := s.operations.ClaimRuntime(ctx, operation)
+	stored, claimed, err := s.claimRuntimeOperation(ctx, operation)
 	if err != nil {
 		return StorageAttachment{}, err
 	}
@@ -1001,7 +1017,7 @@ func (s *Service) CreateWorkspaceRuntime(ctx context.Context, input WorkspaceRun
 	operation.CreatedAt = now
 	fillOperationResource(&operation, WorkspaceRuntime{WorkspaceID: input.WorkspaceID, ProviderRequestID: providerRequestID("runtime", input.IdempotencyKey)})
 	input.OperationID = operation.OperationID
-	stored, claimed, err := s.operations.ClaimRuntime(ctx, operation)
+	stored, claimed, err := s.claimRuntimeOperation(ctx, operation)
 	if err != nil {
 		return WorkspaceRuntime{}, err
 	}
@@ -1105,7 +1121,7 @@ func (s *Service) UpsertGatewaySecret(ctx context.Context, input GatewaySecretIn
 	operation.CreatedAt = now
 	operation.ProviderRequestID = providerRequestID("gateway-secret", input.IdempotencyKey)
 	operation.RedactedProviderPayload = map[string]any{"resource": GatewaySecret{SecretRef: secretRef}, "keyDigest": keyDigest}
-	stored, claimed, err := s.operations.ClaimRuntime(ctx, operation)
+	stored, claimed, err := s.claimRuntimeOperation(ctx, operation)
 	if err != nil {
 		return GatewaySecret{}, err
 	}

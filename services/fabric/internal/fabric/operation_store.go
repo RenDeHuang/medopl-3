@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	"entgo.io/ent/dialect"
 	entsql "entgo.io/ent/dialect/sql"
@@ -24,6 +25,7 @@ import (
 type OperationStore interface {
 	Append(ctx context.Context, operation FabricOperation) error
 	ClaimRuntime(ctx context.Context, operation FabricOperation) (FabricOperation, bool, error)
+	ReclaimRuntime(ctx context.Context, id string, priorStartedAt, startedAt time.Time) (FabricOperation, bool, error)
 	SaveRuntime(ctx context.Context, operation FabricOperation) error
 	List(ctx context.Context) ([]FabricOperation, error)
 	ClaimMachine(ctx context.Context, ownership MachineOwnership) (MachineOwnership, bool, error)
@@ -154,11 +156,35 @@ func (s *MemoryOperationStore) ClaimRuntime(_ context.Context, operation FabricO
 	return operation, true, nil
 }
 
+func (s *MemoryOperationStore) ReclaimRuntime(_ context.Context, id string, priorStartedAt, startedAt time.Time) (FabricOperation, bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for index := range s.operation {
+		operation := s.operation[index]
+		if operation.ID != id {
+			continue
+		}
+		if operation.Status == "started" && operation.StartedAt.Equal(priorStartedAt) {
+			operation.StartedAt = startedAt
+			operation.FinishedAt = time.Time{}
+			operation.ErrorCode = ""
+			operation.Retryable = false
+			s.operation[index] = operation
+			return operation, true, nil
+		}
+		return operation, false, nil
+	}
+	return FabricOperation{}, false, fmt.Errorf("runtime_operation_not_found")
+}
+
 func (s *MemoryOperationStore) SaveRuntime(_ context.Context, operation FabricOperation) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	for index := range s.operation {
 		if s.operation[index].ID == operation.ID {
+			if s.operation[index].Status != "started" || !s.operation[index].StartedAt.Equal(operation.StartedAt) {
+				return ErrRuntimeOperationNotCurrent
+			}
 			s.operation[index] = operation
 			return nil
 		}
@@ -545,8 +571,11 @@ func (s *PostgresOperationStore) ClaimRuntime(ctx context.Context, operation Fab
 				return FabricOperation{}, false, updateErr
 			}
 			if updated == 1 {
-				operation.ID = existing.ID
-				return operation, true, nil
+				current, getErr := s.client.FabricOperation.Get(ctx, existing.ID)
+				if getErr != nil {
+					return FabricOperation{}, false, getErr
+				}
+				return fabricOperationFromEnt(current), true, nil
 			}
 			existing, err = s.client.FabricOperation.Get(ctx, existing.ID)
 			if err != nil {
@@ -559,7 +588,11 @@ func (s *PostgresOperationStore) ClaimRuntime(ctx context.Context, operation Fab
 		return FabricOperation{}, false, err
 	}
 	if err := s.Append(ctx, operation); err == nil {
-		return operation, true, nil
+		created, getErr := s.client.FabricOperation.Get(ctx, operation.ID)
+		if getErr != nil {
+			return FabricOperation{}, false, getErr
+		}
+		return fabricOperationFromEnt(created), true, nil
 	}
 	concurrent, queryErr := s.client.FabricOperation.Get(ctx, operation.ID)
 	if queryErr != nil {
@@ -568,12 +601,34 @@ func (s *PostgresOperationStore) ClaimRuntime(ctx context.Context, operation Fab
 	return fabricOperationFromEnt(concurrent), false, nil
 }
 
+func (s *PostgresOperationStore) ReclaimRuntime(ctx context.Context, id string, priorStartedAt, startedAt time.Time) (FabricOperation, bool, error) {
+	updated, err := s.client.FabricOperation.Update().
+		Where(fabricoperation.ID(id), fabricoperation.Status("started"), fabricoperation.StartedAt(priorStartedAt)).
+		SetStartedAt(startedAt).
+		SetErrorCode("").
+		SetRetryable(false).
+		ClearFinishedAt().
+		Save(ctx)
+	if err != nil {
+		return FabricOperation{}, false, err
+	}
+	current, err := s.client.FabricOperation.Get(ctx, id)
+	if fabricent.IsNotFound(err) {
+		return FabricOperation{}, false, fmt.Errorf("runtime_operation_not_found")
+	}
+	if err != nil {
+		return FabricOperation{}, false, err
+	}
+	return fabricOperationFromEnt(current), updated == 1, nil
+}
+
 func (s *PostgresOperationStore) SaveRuntime(ctx context.Context, operation FabricOperation) error {
 	payloadJSON, err := operationPayloadJSON(operation)
 	if err != nil {
 		return err
 	}
-	update := s.client.FabricOperation.UpdateOneID(operation.ID).
+	update := s.client.FabricOperation.Update().
+		Where(fabricoperation.ID(operation.ID), fabricoperation.Status("started"), fabricoperation.StartedAt(operation.StartedAt)).
 		SetResourceID(operation.ResourceID).
 		SetWorkspaceID(operation.WorkspaceID).
 		SetProvider(operation.Provider).
@@ -587,11 +642,21 @@ func (s *PostgresOperationStore) SaveRuntime(ctx context.Context, operation Fabr
 	} else {
 		update.SetFinishedAt(operation.FinishedAt)
 	}
-	_, err = update.Save(ctx)
+	updated, err := update.Save(ctx)
+	if err != nil {
+		return err
+	}
+	if updated == 1 {
+		return nil
+	}
+	_, err = s.client.FabricOperation.Get(ctx, operation.ID)
 	if fabricent.IsNotFound(err) {
 		return fmt.Errorf("runtime_operation_not_found")
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	return ErrRuntimeOperationNotCurrent
 }
 
 func operationPayloadJSON(operation FabricOperation) (string, error) {

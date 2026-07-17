@@ -681,7 +681,7 @@ func (p *TencentProvider) CreateStorageAttachment(ctx context.Context, input Sto
 		return StorageAttachment{}, fmt.Errorf("storage_attachment_static_binding_unverified")
 	}
 	now := time.Now().UTC()
-	id := fabricID("att", input.WorkspaceID, now)
+	id := "att_" + stableSuffix(firstNonEmpty(input.OperationID, input.IdempotencyKey))[:18]
 	tags := oplCostTags(compute.AccountID, input.WorkspaceID, id, input.OperationID)
 	return StorageAttachment{
 		ID:                   id,
