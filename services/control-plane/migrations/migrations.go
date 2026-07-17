@@ -19,6 +19,9 @@ var primaryWorkspace string
 //go:embed 202607170001_invited_account_identity.sql
 var invitedAccountIdentity string
 
+//go:embed 202607170002_workspace_renewal.sql
+var workspaceRenewal string
+
 func Apply(ctx context.Context, driver dialect.Driver) error {
 	return driver.Exec(ctx, monthlyHardCut, []any{}, nil)
 }
@@ -37,6 +40,18 @@ func ApplyInvitedAccountIdentity(ctx context.Context, driver dialect.Driver) err
 		return err
 	}
 	if err := tx.Exec(ctx, invitedAccountIdentity, []any{}, nil); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	return tx.Commit()
+}
+
+func ApplyWorkspaceRenewal(ctx context.Context, driver dialect.Driver) error {
+	tx, err := driver.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	if err := tx.Exec(ctx, workspaceRenewal, []any{}, nil); err != nil {
 		_ = tx.Rollback()
 		return err
 	}

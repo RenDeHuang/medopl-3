@@ -502,6 +502,7 @@ var (
 		{Name: "url", Type: field.TypeString, Default: ""},
 		{Name: "state", Type: field.TypeString, Default: ""},
 		{Name: "status", Type: field.TypeString, Default: ""},
+		{Name: "billing_state_json", Type: field.TypeString, Default: "{}"},
 		{Name: "storage_id", Type: field.TypeString, Default: ""},
 		{Name: "current_compute_allocation_id", Type: field.TypeString, Default: ""},
 		{Name: "current_attachment_id", Type: field.TypeString, Default: ""},

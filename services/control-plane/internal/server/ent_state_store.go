@@ -6,10 +6,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"entgo.io/ent/dialect"
@@ -40,6 +42,7 @@ const (
 )
 
 var errIdempotencyConflict = errors.New("idempotency_conflict")
+var errInvalidWorkspaceBillingState = errors.New("invalid_workspace_billing_state")
 
 type controlPlaneRecord = map[string]any
 type controlPlaneRecordSet = map[string]controlPlaneRecord
@@ -93,6 +96,9 @@ func NewPostgresEntStateStore(databaseURL string) (StateStore, error) {
 		}},
 		{Version: "202607170001_invited_account_identity", Run: func(ctx context.Context) error {
 			return controlplanemigrations.ApplyInvitedAccountIdentity(ctx, driver)
+		}},
+		{Version: "202607170002_workspace_renewal", Run: func(ctx context.Context) error {
+			return controlplanemigrations.ApplyWorkspaceRenewal(ctx, driver)
 		}},
 	}); err != nil {
 		_ = client.Close()
@@ -312,6 +318,249 @@ func billingJSONField(entityField, setter string) entRecordField {
 	return entRecordField{EntityField: entityField, Setter: setter, Kind: "billing_json"}
 }
 
+func workspaceBillingJSONField(entityField, setter string) entRecordField {
+	return entRecordField{EntityField: entityField, Setter: setter, Kind: "workspace_billing_json"}
+}
+
+type workspaceBillingState struct {
+	AutoRenew           bool   `json:"autoRenew"`
+	AuthorizedBy        string `json:"authorizedBy"`
+	AuthorizedAt        string `json:"authorizedAt"`
+	PackageID           string `json:"packageId"`
+	StorageGB           int64  `json:"storageGb"`
+	PriceVersion        string `json:"priceVersion"`
+	Currency            string `json:"currency"`
+	BillingUnit         string `json:"billingUnit"`
+	ComputeUSDMicros    int64  `json:"computeUsdMicros"`
+	StorageUSDMicros    int64  `json:"storageUsdMicros"`
+	TotalUSDMicros      int64  `json:"totalUsdMicros"`
+	PeriodStart         string `json:"periodStart"`
+	PaidThrough         string `json:"paidThrough"`
+	NextRenewalAt       string `json:"nextRenewalAt"`
+	BillingAnchorDay    int64  `json:"billingAnchorDay"`
+	RenewalStatus       string `json:"renewalStatus"`
+	ComputeAllocationID string `json:"computeAllocationId"`
+	StorageID           string `json:"storageId"`
+	ManualReviewReason  string `json:"-"`
+}
+
+var workspaceBillingStateRequiredKeys = []string{
+	"autoRenew", "authorizedBy", "authorizedAt", "packageId", "storageGb", "priceVersion", "currency", "billingUnit",
+	"computeUsdMicros", "storageUsdMicros", "totalUsdMicros", "periodStart", "paidThrough",
+	"nextRenewalAt", "billingAnchorDay", "renewalStatus", "computeAllocationId", "storageId",
+}
+
+var workspaceBillingStateExclusiveKeys = []string{
+	"authorizedBy", "authorizedAt", "storageGb", "priceVersion", "currency", "billingUnit",
+	"computeUsdMicros", "storageUsdMicros", "totalUsdMicros", "periodStart", "paidThrough", "nextRenewalAt", "billingAnchorDay",
+}
+
+const workspaceBillingLegacyMismatch = "legacy_billing_state_mismatch"
+
+func validateWorkspaceBillingState(row map[string]any) error {
+	_, _, err := normalizeWorkspaceBillingStateForWorkspace(row, row)
+	return err
+}
+
+func normalizeWorkspaceBillingStateForWorkspace(row, workspace map[string]any) (workspaceBillingState, bool, error) {
+	currentComputeID := stringValue(workspace["currentComputeAllocationId"])
+	state, present, err := normalizeWorkspaceBillingState(row, currentComputeID, stringValue(workspace["storageId"]), stringValue(workspace["ownerUserId"]))
+	if err != nil || !present || state.RenewalStatus != "active" || currentComputeID != "" {
+		return state, present, err
+	}
+	switch firstNonEmpty(stringValue(workspace["state"]), stringValue(workspace["status"])) {
+	case "suspended", "data_deleted", "unrecoverable":
+		return state, present, nil
+	default:
+		return workspaceBillingState{}, false, errInvalidWorkspaceBillingState
+	}
+}
+
+func normalizeWorkspaceBillingState(row map[string]any, expectedComputeID, expectedStorageID, expectedOwnerID string) (workspaceBillingState, bool, error) {
+	_, hasRenewalStatus := row["renewalStatus"]
+	_, hasAutoRenew := row["autoRenew"]
+	_, hasPriceVersion := row["priceVersion"]
+	if !hasRenewalStatus && !hasAutoRenew && !hasPriceVersion {
+		return workspaceBillingState{}, false, nil
+	}
+	if row["renewalStatus"] == "manual_review" {
+		for _, key := range workspaceBillingStateExclusiveKeys {
+			if _, ok := row[key]; ok {
+				return workspaceBillingState{}, false, errInvalidWorkspaceBillingState
+			}
+		}
+		autoRenew, validAutoRenew := row["autoRenew"].(bool)
+		reason, validReason := row["manualReviewReason"].(string)
+		if !validAutoRenew || autoRenew || !validReason || reason != workspaceBillingLegacyMismatch {
+			return workspaceBillingState{}, false, errInvalidWorkspaceBillingState
+		}
+		return workspaceBillingState{RenewalStatus: "manual_review", ManualReviewReason: reason}, true, nil
+	}
+	for _, key := range workspaceBillingStateRequiredKeys {
+		if _, ok := row[key]; !ok {
+			return workspaceBillingState{}, false, fmt.Errorf("%w: missing %s", errInvalidWorkspaceBillingState, key)
+		}
+	}
+	autoRenew, validAutoRenew := row["autoRenew"].(bool)
+	authorizedBy, validAuthorizedBy := row["authorizedBy"].(string)
+	authorizedAt, validAuthorizedAt := row["authorizedAt"].(string)
+	packageID, validPackageID := row["packageId"].(string)
+	priceVersion, validPriceVersion := row["priceVersion"].(string)
+	currency, validCurrency := row["currency"].(string)
+	billingUnit, validBillingUnit := row["billingUnit"].(string)
+	periodStartText, validPeriodStart := row["periodStart"].(string)
+	paidThroughText, validPaidThrough := row["paidThrough"].(string)
+	nextRenewalText, validNextRenewal := row["nextRenewalAt"].(string)
+	renewalStatus, validRenewalStatus := row["renewalStatus"].(string)
+	computeID, validComputeID := row["computeAllocationId"].(string)
+	storageID, validStorageID := row["storageId"].(string)
+	if !validAutoRenew || !validAuthorizedBy || !validAuthorizedAt || !validPackageID || !validPriceVersion || !validCurrency || !validBillingUnit ||
+		!validPeriodStart || !validPaidThrough || !validNextRenewal || !validRenewalStatus || !validComputeID || !validStorageID {
+		return workspaceBillingState{}, false, errInvalidWorkspaceBillingState
+	}
+	storageGB, validStorageGB := requiredPositiveInteger(row, "storageGb")
+	computeUSDMicros, validComputePrice := requiredPositiveInteger(row, "computeUsdMicros")
+	storageUSDMicros, validStoragePrice := requiredPositiveInteger(row, "storageUsdMicros")
+	totalUSDMicros, validTotal := requiredPositiveInteger(row, "totalUsdMicros")
+	billingAnchorDay, validAnchor := requiredPositiveInteger(row, "billingAnchorDay")
+	if !validStorageGB || !validComputePrice || !validStoragePrice || !validTotal || !validAnchor || billingAnchorDay > 31 {
+		return workspaceBillingState{}, false, errInvalidWorkspaceBillingState
+	}
+	quote, err := workspacePricingPreview(defaultPricingCatalog(), map[string]any{"packageId": packageID, "sizeGb": storageGB})
+	if err != nil {
+		return workspaceBillingState{}, false, errInvalidWorkspaceBillingState
+	}
+	expectedCompute, computeOK := requiredPositiveInteger(mapField(quote, "compute"), "chargeUsdMicros")
+	expectedStorage, storageOK := requiredPositiveInteger(mapField(quote, "storage"), "chargeUsdMicros")
+	expectedTotal, totalOK := requiredPositiveInteger(quote, "totalChargeUsdMicros")
+	checkedTotal, sumOK := checkedAddInt64(computeUSDMicros, storageUSDMicros)
+	if !computeOK || !storageOK || !totalOK || !sumOK || computeUSDMicros != expectedCompute || storageUSDMicros != expectedStorage || totalUSDMicros != expectedTotal || totalUSDMicros != checkedTotal ||
+		priceVersion != pricingCatalogVersion || currency != pricingCurrency || billingUnit != pricingBillingUnit {
+		return workspaceBillingState{}, false, errInvalidWorkspaceBillingState
+	}
+	periodStart, startErr := time.Parse(time.RFC3339, periodStartText)
+	paidThrough, paidErr := time.Parse(time.RFC3339, paidThroughText)
+	nextRenewal, nextErr := time.Parse(time.RFC3339, nextRenewalText)
+	if startErr != nil || paidErr != nil || nextErr != nil || !paidThrough.After(periodStart) || !nextRenewal.Equal(paidThrough.Add(-24*time.Hour)) {
+		return workspaceBillingState{}, false, errInvalidWorkspaceBillingState
+	}
+	if renewalStatus != "active" || strings.TrimSpace(computeID) == "" || strings.TrimSpace(storageID) == "" ||
+		expectedComputeID != "" && computeID != expectedComputeID || expectedStorageID == "" || storageID != expectedStorageID {
+		return workspaceBillingState{}, false, errInvalidWorkspaceBillingState
+	}
+	if autoRenew && (authorizedBy == "" || authorizedAt == "") || authorizedBy != "" && authorizedBy != expectedOwnerID || (authorizedBy == "") != (authorizedAt == "") {
+		return workspaceBillingState{}, false, errInvalidWorkspaceBillingState
+	}
+	if authorizedAt != "" {
+		parsed, err := time.Parse(time.RFC3339, authorizedAt)
+		if err != nil {
+			return workspaceBillingState{}, false, errInvalidWorkspaceBillingState
+		}
+		authorizedAt = parsed.UTC().Format(time.RFC3339Nano)
+	}
+	if _, ok := row["manualReviewReason"]; ok {
+		return workspaceBillingState{}, false, errInvalidWorkspaceBillingState
+	}
+	return workspaceBillingState{
+		AutoRenew: autoRenew, AuthorizedBy: authorizedBy, AuthorizedAt: authorizedAt,
+		PackageID: packageID, StorageGB: storageGB, PriceVersion: priceVersion, Currency: currency, BillingUnit: billingUnit,
+		ComputeUSDMicros: computeUSDMicros, StorageUSDMicros: storageUSDMicros, TotalUSDMicros: totalUSDMicros,
+		PeriodStart: periodStart.UTC().Format(time.RFC3339Nano), PaidThrough: paidThrough.UTC().Format(time.RFC3339Nano), NextRenewalAt: nextRenewal.UTC().Format(time.RFC3339Nano),
+		BillingAnchorDay: billingAnchorDay, RenewalStatus: renewalStatus, ComputeAllocationID: computeID, StorageID: storageID,
+	}, true, nil
+}
+
+func (state workspaceBillingState) record() map[string]any {
+	if state.RenewalStatus == "manual_review" {
+		return map[string]any{"autoRenew": false, "renewalStatus": state.RenewalStatus, "manualReviewReason": state.ManualReviewReason}
+	}
+	row := map[string]any{
+		"autoRenew": state.AutoRenew, "authorizedBy": state.AuthorizedBy, "authorizedAt": state.AuthorizedAt,
+		"packageId": state.PackageID, "storageGb": state.StorageGB,
+		"priceVersion": state.PriceVersion, "currency": state.Currency, "billingUnit": state.BillingUnit,
+		"computeUsdMicros": state.ComputeUSDMicros, "storageUsdMicros": state.StorageUSDMicros, "totalUsdMicros": state.TotalUSDMicros,
+		"periodStart": state.PeriodStart, "paidThrough": state.PaidThrough, "nextRenewalAt": state.NextRenewalAt,
+		"billingAnchorDay": state.BillingAnchorDay, "renewalStatus": state.RenewalStatus,
+		"computeAllocationId": state.ComputeAllocationID, "storageId": state.StorageID,
+	}
+	return row
+}
+
+func encodeWorkspaceBillingState(row map[string]any) (string, error) {
+	state, present, err := normalizeWorkspaceBillingStateForWorkspace(row, row)
+	if err != nil {
+		return "", err
+	}
+	if !present {
+		return "{}", nil
+	}
+	if state.RenewalStatus == "manual_review" {
+		encoded, err := json.Marshal(state.record())
+		return string(encoded), err
+	}
+	encoded, err := json.Marshal(state)
+	return string(encoded), err
+}
+
+func decodeWorkspaceBillingState(encoded string, workspace map[string]any) (map[string]any, error) {
+	if strings.TrimSpace(encoded) == "" || strings.TrimSpace(encoded) == "{}" {
+		return nil, nil
+	}
+	var shape map[string]json.RawMessage
+	shapeDecoder := json.NewDecoder(strings.NewReader(encoded))
+	if err := shapeDecoder.Decode(&shape); err != nil {
+		return nil, err
+	}
+	if err := ensureJSONEOF(shapeDecoder); err != nil {
+		return nil, err
+	}
+	if len(shape) == 3 && shape["autoRenew"] != nil && shape["renewalStatus"] != nil && shape["manualReviewReason"] != nil {
+		var marker map[string]any
+		if err := json.Unmarshal([]byte(encoded), &marker); err != nil {
+			return nil, err
+		}
+		normalized, _, err := normalizeWorkspaceBillingState(marker, "", "", "")
+		if err != nil {
+			return nil, err
+		}
+		return normalized.record(), nil
+	}
+	allowed := map[string]bool{}
+	for _, key := range workspaceBillingStateRequiredKeys {
+		allowed[key] = true
+		if _, ok := shape[key]; !ok {
+			return nil, fmt.Errorf("%w: missing %s", errInvalidWorkspaceBillingState, key)
+		}
+	}
+	for key := range shape {
+		if !allowed[key] {
+			return nil, fmt.Errorf("%w: unknown %s", errInvalidWorkspaceBillingState, key)
+		}
+	}
+	var state workspaceBillingState
+	decoder := json.NewDecoder(strings.NewReader(encoded))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&state); err != nil {
+		return nil, err
+	}
+	if err := ensureJSONEOF(decoder); err != nil {
+		return nil, err
+	}
+	normalized, _, err := normalizeWorkspaceBillingStateForWorkspace(state.record(), workspace)
+	if err != nil {
+		return nil, err
+	}
+	return normalized.record(), nil
+}
+
+func ensureJSONEOF(decoder *json.Decoder) error {
+	var extra any
+	if err := decoder.Decode(&extra); err != io.EOF {
+		return errInvalidWorkspaceBillingState
+	}
+	return nil
+}
+
 // ponytail: keep low-cardinality monthly state in one JSON column at the current
 // scale; promote fields to indexed columns only when renewal scans become measurable.
 var monthlyBillingStateKeys = []string{
@@ -488,6 +737,7 @@ var (
 		textField("CredentialSecretRef", "SetCredentialSecretRef", "access", "secretRef"),
 		textField("VerificationSlotID", "SetVerificationSlotID", "verificationSlotId"),
 		boolField("CustomerProduct", "SetCustomerProduct", "customerProduct"),
+		workspaceBillingJSONField("BillingStateJSON", "SetBillingStateJSON"),
 	}
 	workspaceBackupEntFields = []entRecordField{
 		textField("AccountID", "SetAccountID", "accountId"),
@@ -850,6 +1100,28 @@ func (s *postgresEntStateStore) ApplyUserLifecycle(ctx context.Context, user map
 				return rollback(err)
 			}
 			if _, err := client.StorageVolume.UpdateOneID(storage.ID).SetBillingStateJSON(billingState).Save(ctx); err != nil {
+				return rollback(err)
+			}
+		}
+		workspaces, err := client.Workspace.Query().Where(workspace.OwnerUserID(userID)).All(ctx)
+		if err != nil {
+			return rollback(err)
+		}
+		sort.Slice(workspaces, func(i, j int) bool { return workspaces[i].ID < workspaces[j].ID })
+		for _, entity := range workspaces {
+			base := recordFromEnt(entity, workspaceEntFields)
+			billing, err := decodeWorkspaceBillingState(entity.BillingStateJSON, base)
+			if err != nil || billing == nil || billing["autoRenew"] != true {
+				continue
+			}
+			billing["ownerUserId"], billing["currentComputeAllocationId"] = entity.OwnerUserID, entity.CurrentComputeAllocationID
+			billing["state"], billing["status"] = entity.State, entity.Status
+			billing["autoRenew"] = false
+			billingState, err := encodeWorkspaceBillingState(billing)
+			if err != nil {
+				return rollback(err)
+			}
+			if _, err := client.Workspace.UpdateOneID(entity.ID).SetBillingStateJSON(billingState).Save(ctx); err != nil {
 				return rollback(err)
 			}
 		}
@@ -1384,6 +1656,9 @@ func (s *postgresEntStateStore) ListWorkspaces(ctx context.Context, accountID st
 }
 
 func (s *postgresEntStateStore) SaveWorkspace(ctx context.Context, row map[string]any) error {
+	if err := validateWorkspaceBillingState(row); err != nil {
+		return err
+	}
 	row = cloneMap(row)
 	if _, ok := row["customerProduct"]; !ok {
 		row["customerProduct"] = true
@@ -1406,7 +1681,7 @@ func (s *postgresEntStateStore) ClaimWorkspaceCreate(ctx context.Context, worksp
 	if err == nil {
 		current, currentErr := decodeWorkspaceCreateOperation(recordFromEnt(existing, runtimeOpEntFields))
 		claim, claimErr := decodeWorkspaceCreateOperation(operation)
-		if currentErr != nil || claimErr != nil || current.RequestHash != claim.RequestHash || current.Workspace.ID != claim.Workspace.ID || current.Workspace.AccountID != claim.Workspace.AccountID || existing.AccountID != accountID || existing.WorkspaceID != workspaceID {
+		if currentErr != nil || claimErr != nil || workspaceCreateClaimIdentity(current) != workspaceCreateClaimIdentity(claim) || current.Workspace.ID != claim.Workspace.ID || current.Workspace.AccountID != claim.Workspace.AccountID || existing.AccountID != accountID || existing.WorkspaceID != workspaceID {
 			return errPrimaryWorkspaceExists
 		}
 		if existing.Status != "retryable" && (existing.Status != "started" || current.LeaseExpiresAt != nil && current.LeaseExpiresAt.After(time.Now().UTC())) {
@@ -1906,6 +2181,7 @@ func recordFromEnt(entity any, fields []entRecordField) controlPlaneRecord {
 	if createdAt, ok := fieldValue(value, "CreatedAt").(time.Time); ok && !createdAt.IsZero() {
 		row["createdAt"] = createdAt.UTC().Format(time.RFC3339Nano)
 	}
+	var workspaceBillingJSON string
 	for _, field := range fields {
 		raw := fieldValue(value, field.EntityField)
 		if field.Kind == "billing_json" {
@@ -1917,10 +2193,19 @@ func recordFromEnt(entity any, fields []entRecordField) controlPlaneRecord {
 			}
 			continue
 		}
+		if field.Kind == "workspace_billing_json" {
+			workspaceBillingJSON = stringValue(raw)
+			continue
+		}
 		if isZero(raw) && field.Kind != "bool" {
 			continue
 		}
 		setPath(row, field.Path, raw)
+	}
+	if billing, err := decodeWorkspaceBillingState(workspaceBillingJSON, row); err == nil {
+		for key, value := range billing {
+			row[key] = value
+		}
 	}
 	return row
 }
@@ -1982,6 +2267,10 @@ func setRecordFieldsWithEmptyText(builder any, row controlPlaneRecord, fields []
 		case "billing_json":
 			if encoded, err := encodeMonthlyBillingState(row); err == nil {
 				callSetter(builder, field.Setter, string(encoded))
+			}
+		case "workspace_billing_json":
+			if encoded, err := encodeWorkspaceBillingState(row); err == nil {
+				callSetter(builder, field.Setter, encoded)
 			}
 		default:
 			text := stringValue(value)

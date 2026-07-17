@@ -239,14 +239,14 @@ func TestRuntimeCredentialRotateOwnerIdempotentAndNoLeak(t *testing.T) {
 		"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha",
 		"status": "available", "billingStatus": "active", "paidThrough": "2099-01-01T00:00:00Z",
 	}))
-	mustStore(t, store.SaveWorkspace(context.Background(), map[string]any{
+	mustStore(t, store.SaveWorkspace(context.Background(), workspaceGatewayTestRow(map[string]any{
 		"id": "ws-alpha", "accountId": "acct-alpha", "ownerAccountId": "acct-alpha", "ownerUserId": ownerID,
 		"state": "running", "status": "running", "url": "https://workspace.medopl.cn/w/ws-alpha/",
 		"computeAllocationId": "compute-alpha", "currentComputeAllocationId": "compute-alpha",
 		"storageId": "storage-alpha", "attachmentId": "attachment-alpha", "currentAttachmentId": "attachment-alpha",
 		"runtimeId": "runtime-alpha", "runtime": map[string]any{"serviceName": "opl-compute-alpha", "status": "running", "ready": true},
 		"access": map[string]any{"username": "opl", "credentialStatus": "configured", "credentialVersion": "v-before", "secretRef": "opl-compute-alpha-env"},
-	}))
+	})))
 
 	unauthorized := requestWithMutationKeyForTest(t, server, member, http.MethodPost, "/api/workspaces/ws-alpha/runtime-credentials/rotate", `{}`, "rotate-member")
 	if unauthorized.Code != http.StatusForbidden || len(sub2API.workspaceKeyUserIDs) != 0 || len(calls) != 0 || len(ledger.inputs) != 0 {

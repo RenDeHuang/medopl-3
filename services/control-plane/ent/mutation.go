@@ -20653,6 +20653,7 @@ type WorkspaceMutation struct {
 	url                           *string
 	state                         *string
 	status                        *string
+	billing_state_json            *string
 	storage_id                    *string
 	current_compute_allocation_id *string
 	current_attachment_id         *string
@@ -21137,6 +21138,42 @@ func (m *WorkspaceMutation) OldStatus(ctx context.Context) (v string, err error)
 // ResetStatus resets all changes to the "status" field.
 func (m *WorkspaceMutation) ResetStatus() {
 	m.status = nil
+}
+
+// SetBillingStateJSON sets the "billing_state_json" field.
+func (m *WorkspaceMutation) SetBillingStateJSON(s string) {
+	m.billing_state_json = &s
+}
+
+// BillingStateJSON returns the value of the "billing_state_json" field in the mutation.
+func (m *WorkspaceMutation) BillingStateJSON() (r string, exists bool) {
+	v := m.billing_state_json
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBillingStateJSON returns the old "billing_state_json" field's value of the Workspace entity.
+// If the Workspace object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WorkspaceMutation) OldBillingStateJSON(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBillingStateJSON is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBillingStateJSON requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBillingStateJSON: %w", err)
+	}
+	return oldValue.BillingStateJSON, nil
+}
+
+// ResetBillingStateJSON resets all changes to the "billing_state_json" field.
+func (m *WorkspaceMutation) ResetBillingStateJSON() {
+	m.billing_state_json = nil
 }
 
 // SetStorageID sets the "storage_id" field.
@@ -21749,7 +21786,7 @@ func (m *WorkspaceMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *WorkspaceMutation) Fields() []string {
-	fields := make([]string, 0, 26)
+	fields := make([]string, 0, 27)
 	if m.created_at != nil {
 		fields = append(fields, workspace.FieldCreatedAt)
 	}
@@ -21779,6 +21816,9 @@ func (m *WorkspaceMutation) Fields() []string {
 	}
 	if m.status != nil {
 		fields = append(fields, workspace.FieldStatus)
+	}
+	if m.billing_state_json != nil {
+		fields = append(fields, workspace.FieldBillingStateJSON)
 	}
 	if m.storage_id != nil {
 		fields = append(fields, workspace.FieldStorageID)
@@ -21856,6 +21896,8 @@ func (m *WorkspaceMutation) Field(name string) (ent.Value, bool) {
 		return m.State()
 	case workspace.FieldStatus:
 		return m.Status()
+	case workspace.FieldBillingStateJSON:
+		return m.BillingStateJSON()
 	case workspace.FieldStorageID:
 		return m.StorageID()
 	case workspace.FieldCurrentComputeAllocationID:
@@ -21917,6 +21959,8 @@ func (m *WorkspaceMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldState(ctx)
 	case workspace.FieldStatus:
 		return m.OldStatus(ctx)
+	case workspace.FieldBillingStateJSON:
+		return m.OldBillingStateJSON(ctx)
 	case workspace.FieldStorageID:
 		return m.OldStorageID(ctx)
 	case workspace.FieldCurrentComputeAllocationID:
@@ -22027,6 +22071,13 @@ func (m *WorkspaceMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStatus(v)
+		return nil
+	case workspace.FieldBillingStateJSON:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBillingStateJSON(v)
 		return nil
 	case workspace.FieldStorageID:
 		v, ok := value.(string)
@@ -22218,6 +22269,9 @@ func (m *WorkspaceMutation) ResetField(name string) error {
 		return nil
 	case workspace.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case workspace.FieldBillingStateJSON:
+		m.ResetBillingStateJSON()
 		return nil
 	case workspace.FieldStorageID:
 		m.ResetStorageID()

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"strconv"
+	"time"
 
 	"opl-cloud/services/control-plane/internal/controlplane"
 	"opl-cloud/services/control-plane/internal/domain"
@@ -18,6 +19,7 @@ var (
 type workspaceLaunchOperation struct {
 	ID                        string `json:"-"`
 	Status                    string `json:"-"`
+	CreatedAt                 string `json:"-"`
 	RequestHash               string `json:"requestHash"`
 	Phase                     string `json:"phase"`
 	AccountID                 string `json:"accountId"`
@@ -53,7 +55,7 @@ func newWorkspaceLaunchOperation(accountID, ownerUserID, name, packageID string,
 	operationID := "workspace-launch-" + stableID(accountID, key)[:18]
 	workspaceID := primaryWorkspaceID(accountID)
 	return workspaceLaunchOperation{
-		ID: operationID, Status: "preparing", Phase: "compute",
+		ID: operationID, Status: "preparing", CreatedAt: time.Now().UTC().Format(time.RFC3339Nano), Phase: "compute",
 		RequestHash: stableID("workspace-launch-v2", accountID, ownerUserID, name, packageID, strconv.Itoa(storageGB), strconv.FormatBool(autoRenew), priceVersion),
 		AccountID:   accountID, OwnerUserID: ownerUserID, WorkspaceID: workspaceID, Name: name, PackageID: packageID,
 		StorageGB: storageGB, AutoRenew: autoRenew, PriceVersion: priceVersion, TotalChargeUSDMicros: totalChargeUSDMicros,
@@ -75,6 +77,7 @@ func decodeWorkspaceLaunchOperation(row map[string]any) (workspaceLaunchOperatio
 	operation.TotalMonthlyPriceCNYCents = 0
 	operation.ID = firstNonEmpty(stringValue(row["operationId"]), stringValue(row["id"]))
 	operation.Status = stringValue(row["status"])
+	operation.CreatedAt = stringValue(row["createdAt"])
 	if operation.ID == "" || operation.Status == "" || operation.RequestHash == "" || operation.AccountID == "" || operation.WorkspaceID == "" || operation.PriceVersion == "" {
 		return workspaceLaunchOperation{}, errInvalidWorkspaceLaunchOperation
 	}
@@ -94,7 +97,7 @@ func workspaceLaunchOperationRow(operation workspaceLaunchOperation) map[string]
 		"id": operation.ID, "operationId": operation.ID, "accountId": operation.AccountID, "workspaceId": operation.WorkspaceID,
 		"resourceId": operation.WorkspaceID, "resourceKind": "workspace_launch", "action": "workspace.launch", "status": operation.Status,
 		"result": encodeWorkspaceLaunchOperation(operation), "computeAllocationId": operation.ComputeID, "storageId": operation.StorageID,
-		"attachmentId": operation.AttachmentID, "runtimeServiceName": operation.RuntimeServiceName,
+		"attachmentId": operation.AttachmentID, "runtimeServiceName": operation.RuntimeServiceName, "createdAt": operation.CreatedAt,
 	}
 }
 
@@ -234,9 +237,16 @@ func (app *controlPlaneServer) runWorkspaceLaunch(ctx context.Context, service *
 			}
 
 		case "workspace":
+			billingState, reviewCode := app.workspaceLaunchBillingState(ctx, operation)
+			if reviewCode != "" {
+				return app.manualReviewWorkspaceLaunch(ctx, operation, reviewCode)
+			}
 			if workspace, ok := app.getWorkspace(operation.WorkspaceID); ok {
 				if !workspaceMatchesLaunch(workspace, operation) {
 					return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_projection_identity_mismatch")
+				}
+				if !workspaceBillingStateMatchesLaunch(workspace, billingState) {
+					return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_billing_state_mismatch")
 				}
 				if stringValue(workspace["runtimeId"]) != "" {
 					operation.RuntimeServiceName = firstNonEmpty(stringValue(workspace["runtimeServiceName"]), stringValue(nested(workspace, "runtime", "serviceName")))
@@ -263,7 +273,11 @@ func (app *controlPlaneServer) runWorkspaceLaunch(ctx context.Context, service *
 			if !workspaceProjectionMatchesLaunch(workspace, operation) {
 				return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_runtime_identity_mismatch")
 			}
-			if err := app.saveWorkspaceProjection(workspace); err != nil {
+			workspaceRow := workspaceProjectionRow(workspace)
+			for key, value := range billingState {
+				workspaceRow[key] = value
+			}
+			if err := app.tables.SaveWorkspace(ctx, workspaceRow); err != nil {
 				return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_projection_persist_retryable")
 			}
 			operation.RuntimeServiceName, operation.URL = workspace.RuntimeServiceName, workspace.URL
@@ -297,6 +311,140 @@ func (app *controlPlaneServer) runWorkspaceLaunch(ctx context.Context, service *
 		}
 	}
 	return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_transition_limit")
+}
+
+type workspaceBillingChildIdentity struct {
+	AccountID, OwnerUserID, WorkspaceID, PackageID, ComputeID, StorageID string
+	StorageGB                                                            int64
+}
+
+func workspaceBillingStateFromChildren(compute, storage map[string]any, identity workspaceBillingChildIdentity) (map[string]any, string) {
+	if stringValue(compute["id"]) != identity.ComputeID || stringValue(storage["id"]) != identity.StorageID ||
+		stringValue(compute["accountId"]) != identity.AccountID || stringValue(storage["accountId"]) != identity.AccountID ||
+		stringValue(compute["workspaceId"]) != identity.WorkspaceID || stringValue(storage["workspaceId"]) != identity.WorkspaceID ||
+		stringValue(compute["ownerUserId"]) != identity.OwnerUserID || stringValue(storage["ownerUserId"]) != identity.OwnerUserID ||
+		stringValue(compute["packageId"]) != identity.PackageID || stringValue(storage["packageId"]) != identity.PackageID ||
+		stringValue(storage["computeAllocationId"]) != identity.ComputeID || stringValue(compute["billingStatus"]) != "active" || stringValue(storage["billingStatus"]) != "active" {
+		return nil, "workspace_launch_billing_identity_mismatch"
+	}
+	storageGB, validStorageGB := requiredPositiveInteger(storage, "sizeGb")
+	if !validStorageGB || storageGB != identity.StorageGB {
+		return nil, "workspace_launch_billing_identity_mismatch"
+	}
+	compute = cloneMap(compute)
+	storage = cloneMap(storage)
+	if !monthlyPriceSnapshotAvailable(compute) || !monthlyPriceSnapshotAvailable(storage) ||
+		stringValue(compute["priceVersion"]) != pricingCatalogVersion || stringValue(storage["priceVersion"]) != pricingCatalogVersion ||
+		compute["currency"] != pricingCurrency || storage["currency"] != pricingCurrency {
+		return nil, "workspace_launch_billing_price_mismatch"
+	}
+	quote, err := workspacePricingPreview(defaultPricingCatalog(), map[string]any{"packageId": identity.PackageID, "sizeGb": identity.StorageGB})
+	if err != nil {
+		return nil, "workspace_launch_billing_price_mismatch"
+	}
+	computePrice, validComputePrice := requiredPositiveInteger(compute, "chargeUsdMicros")
+	storagePrice, validStoragePrice := requiredPositiveInteger(storage, "chargeUsdMicros")
+	expectedCompute, expectedComputeOK := requiredPositiveInteger(mapField(quote, "compute"), "chargeUsdMicros")
+	expectedStorage, expectedStorageOK := requiredPositiveInteger(mapField(quote, "storage"), "chargeUsdMicros")
+	total, validTotal := checkedAddInt64(computePrice, storagePrice)
+	if !validComputePrice || !validStoragePrice || !expectedComputeOK || !expectedStorageOK || !validTotal ||
+		computePrice != expectedCompute || storagePrice != expectedStorage || stringValue(quote["priceVersion"]) != pricingCatalogVersion {
+		return nil, "workspace_launch_billing_price_mismatch"
+	}
+	computeStart, computeStartErr := time.Parse(time.RFC3339, stringValue(compute["periodStart"]))
+	storageStart, storageStartErr := time.Parse(time.RFC3339, stringValue(storage["periodStart"]))
+	computePaid, computePaidErr := time.Parse(time.RFC3339, stringValue(compute["paidThrough"]))
+	storagePaid, storagePaidErr := time.Parse(time.RFC3339, stringValue(storage["paidThrough"]))
+	computeAnchor, computeAnchorOK := requiredPositiveInteger(compute, "billingAnchorDay")
+	storageAnchor, storageAnchorOK := requiredPositiveInteger(storage, "billingAnchorDay")
+	if computeStartErr != nil || storageStartErr != nil || computePaidErr != nil || storagePaidErr != nil || !computeAnchorOK || !storageAnchorOK || computeAnchor > 31 || computeAnchor != storageAnchor {
+		return nil, "workspace_launch_billing_period_mismatch"
+	}
+	periodStart := computeStart
+	if storageStart.After(periodStart) {
+		periodStart = storageStart
+	}
+	paidThrough := computePaid
+	if storagePaid.Before(paidThrough) {
+		paidThrough = storagePaid
+	}
+	if !paidThrough.After(periodStart) {
+		return nil, "workspace_launch_billing_period_mismatch"
+	}
+	computeDeadline, computeDeadlineErr := monthlyProviderDeadline(compute)
+	storageDeadline, storageDeadlineErr := monthlyProviderDeadline(storage)
+	if computeDeadlineErr != nil || storageDeadlineErr != nil || computeDeadline.Before(paidThrough) || storageDeadline.Before(paidThrough) ||
+		!monthlyPurchaseReadbackConfirmed("compute", compute, compute) || !monthlyPurchaseReadbackConfirmed("storage", storage, storage) {
+		return nil, "workspace_launch_provider_deadline_invalid"
+	}
+	state := map[string]any{
+		"ownerUserId": identity.OwnerUserID, "currentComputeAllocationId": identity.ComputeID,
+		"autoRenew": false, "authorizedBy": "", "authorizedAt": "",
+		"packageId": identity.PackageID, "storageGb": identity.StorageGB,
+		"priceVersion": pricingCatalogVersion, "currency": pricingCurrency, "billingUnit": pricingBillingUnit,
+		"computeUsdMicros": computePrice, "storageUsdMicros": storagePrice, "totalUsdMicros": total,
+		"periodStart": periodStart.UTC().Format(time.RFC3339Nano), "paidThrough": paidThrough.UTC().Format(time.RFC3339Nano),
+		"nextRenewalAt": paidThrough.UTC().Add(-24 * time.Hour).Format(time.RFC3339Nano), "billingAnchorDay": computeAnchor,
+		"renewalStatus": "active", "computeAllocationId": identity.ComputeID, "storageId": identity.StorageID,
+	}
+	if err := validateWorkspaceBillingState(state); err != nil {
+		return nil, "workspace_launch_billing_state_invalid"
+	}
+	return state, ""
+}
+
+func (app *controlPlaneServer) workspaceLaunchBillingState(ctx context.Context, operation workspaceLaunchOperation) (map[string]any, string) {
+	compute, computeOK := app.getCompute(operation.ComputeID)
+	storage, storageOK := app.getStorage(operation.StorageID)
+	if !computeOK || !storageOK {
+		return nil, "workspace_launch_billing_identity_mismatch"
+	}
+	state, code := workspaceBillingStateFromChildren(compute, storage, workspaceBillingChildIdentity{
+		AccountID: operation.AccountID, OwnerUserID: operation.OwnerUserID, WorkspaceID: operation.WorkspaceID,
+		PackageID: operation.PackageID, ComputeID: operation.ComputeID, StorageID: operation.StorageID, StorageGB: int64(operation.StorageGB),
+	})
+	if code != "" {
+		return nil, code
+	}
+	if stringValue(state["priceVersion"]) != operation.PriceVersion || state["totalUsdMicros"] != operation.TotalChargeUSDMicros {
+		return nil, "workspace_launch_billing_price_mismatch"
+	}
+	autoRenew, authorizedBy, authorizedAt := operation.AutoRenew, "", ""
+	owner, ownerErr := app.findUserByID(ctx, operation.OwnerUserID)
+	if ownerErr != nil {
+		return nil, "workspace_launch_owner_state_unavailable"
+	}
+	if owner == nil || stringValue(owner["accountId"]) != operation.AccountID || stringValue(owner["status"]) != "active" || stringValue(owner["role"]) != "owner" {
+		autoRenew = false
+		if owner != nil && stringValue(owner["accountId"]) == operation.AccountID && stringValue(owner["role"]) == "owner" {
+			if err := app.tables.ApplyUserLifecycle(ctx, owner); err != nil {
+				return nil, "workspace_launch_owner_state_unavailable"
+			}
+		} else {
+			computeErr := app.tables.SetResourceAutoRenew(ctx, "compute", operation.ComputeID, operation.AccountID, false)
+			storageErr := app.tables.SetResourceAutoRenew(ctx, "storage", operation.StorageID, operation.AccountID, false)
+			if computeErr != nil || storageErr != nil {
+				return nil, "workspace_launch_owner_state_unavailable"
+			}
+		}
+	} else if autoRenew {
+		createdAt, err := time.Parse(time.RFC3339, operation.CreatedAt)
+		if err != nil {
+			return nil, "workspace_launch_authorization_invalid"
+		}
+		authorizedBy, authorizedAt = operation.OwnerUserID, createdAt.UTC().Format(time.RFC3339Nano)
+	}
+	state["autoRenew"], state["authorizedBy"], state["authorizedAt"] = autoRenew, authorizedBy, authorizedAt
+	if err := validateWorkspaceBillingState(state); err != nil {
+		return nil, "workspace_launch_billing_state_invalid"
+	}
+	return state, ""
+}
+
+func workspaceBillingStateMatchesLaunch(workspace, expected map[string]any) bool {
+	currentJSON, currentErr := encodeWorkspaceBillingState(workspace)
+	expectedJSON, expectedErr := encodeWorkspaceBillingState(expected)
+	return currentErr == nil && expectedErr == nil && currentJSON == expectedJSON
 }
 
 func terminalWorkspaceLaunchStatus(status string) bool {

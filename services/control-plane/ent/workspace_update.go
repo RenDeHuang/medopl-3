@@ -160,6 +160,20 @@ func (wu *WorkspaceUpdate) SetNillableStatus(s *string) *WorkspaceUpdate {
 	return wu
 }
 
+// SetBillingStateJSON sets the "billing_state_json" field.
+func (wu *WorkspaceUpdate) SetBillingStateJSON(s string) *WorkspaceUpdate {
+	wu.mutation.SetBillingStateJSON(s)
+	return wu
+}
+
+// SetNillableBillingStateJSON sets the "billing_state_json" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillableBillingStateJSON(s *string) *WorkspaceUpdate {
+	if s != nil {
+		wu.SetBillingStateJSON(*s)
+	}
+	return wu
+}
+
 // SetStorageID sets the "storage_id" field.
 func (wu *WorkspaceUpdate) SetStorageID(s string) *WorkspaceUpdate {
 	wu.mutation.SetStorageID(s)
@@ -464,6 +478,9 @@ func (wu *WorkspaceUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := wu.mutation.Status(); ok {
 		_spec.SetField(workspace.FieldStatus, field.TypeString, value)
 	}
+	if value, ok := wu.mutation.BillingStateJSON(); ok {
+		_spec.SetField(workspace.FieldBillingStateJSON, field.TypeString, value)
+	}
 	if value, ok := wu.mutation.StorageID(); ok {
 		_spec.SetField(workspace.FieldStorageID, field.TypeString, value)
 	}
@@ -660,6 +677,20 @@ func (wuo *WorkspaceUpdateOne) SetStatus(s string) *WorkspaceUpdateOne {
 func (wuo *WorkspaceUpdateOne) SetNillableStatus(s *string) *WorkspaceUpdateOne {
 	if s != nil {
 		wuo.SetStatus(*s)
+	}
+	return wuo
+}
+
+// SetBillingStateJSON sets the "billing_state_json" field.
+func (wuo *WorkspaceUpdateOne) SetBillingStateJSON(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetBillingStateJSON(s)
+	return wuo
+}
+
+// SetNillableBillingStateJSON sets the "billing_state_json" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillableBillingStateJSON(s *string) *WorkspaceUpdateOne {
+	if s != nil {
+		wuo.SetBillingStateJSON(*s)
 	}
 	return wuo
 }
@@ -997,6 +1028,9 @@ func (wuo *WorkspaceUpdateOne) sqlSave(ctx context.Context) (_node *Workspace, e
 	}
 	if value, ok := wuo.mutation.Status(); ok {
 		_spec.SetField(workspace.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := wuo.mutation.BillingStateJSON(); ok {
+		_spec.SetField(workspace.FieldBillingStateJSON, field.TypeString, value)
 	}
 	if value, ok := wuo.mutation.StorageID(); ok {
 		_spec.SetField(workspace.FieldStorageID, field.TypeString, value)

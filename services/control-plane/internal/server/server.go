@@ -484,7 +484,9 @@ func workspaceResponse(row map[string]any) map[string]any {
 	row["ownerAccountId"] = firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]))
 	row["ownerUserId"] = firstNonEmpty(stringValue(row["ownerUserId"]), stringValue(row["ownerId"]))
 	row["state"] = firstNonEmpty(stringValue(row["state"]), stringValue(row["status"]))
-	row["currentComputeAllocationId"] = firstNonEmpty(stringValue(row["currentComputeAllocationId"]), stringValue(row["computeAllocationId"]))
+	if _, canonicalBilling := row["renewalStatus"]; !canonicalBilling {
+		row["currentComputeAllocationId"] = firstNonEmpty(stringValue(row["currentComputeAllocationId"]), stringValue(row["computeAllocationId"]))
+	}
 	row["currentAttachmentId"] = firstNonEmpty(stringValue(row["currentAttachmentId"]), stringValue(row["attachmentId"]))
 	runtime := cloneMap(mapField(row, "runtime"))
 	if serviceName := stringValue(row["runtimeServiceName"]); serviceName != "" {

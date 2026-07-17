@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -418,6 +419,11 @@ type workspaceLaunchWorkerFixture struct {
 }
 
 func newWorkspaceLaunchWorkerFixture(t *testing.T, balances []int64, chargeErrors []error, runtimeErr error, autoRenew ...bool) workspaceLaunchWorkerFixture {
+	renew := len(autoRenew) != 0 && autoRenew[0]
+	return newWorkspaceLaunchWorkerFixtureForPlan(t, balances, chargeErrors, runtimeErr, "basic", 10, renew)
+}
+
+func newWorkspaceLaunchWorkerFixtureForPlan(t *testing.T, balances []int64, chargeErrors []error, runtimeErr error, packageID string, storageGB int, autoRenew bool) workspaceLaunchWorkerFixture {
 	t.Helper()
 	t.Setenv("OPL_MONTHLY_BILLING_WORKER_ENABLED", "false")
 	t.Setenv("OPL_PROVIDER_RECONCILE_WORKER_ENABLED", "false")
@@ -435,11 +441,7 @@ func newWorkspaceLaunchWorkerFixture(t *testing.T, balances []int64, chargeError
 		t.Fatal(err)
 	}
 	session := loginForTest(t, server, "alpha@example.com", "CorrectHorseBatteryStaple!")
-	autoRenewJSON := "false"
-	if len(autoRenew) != 0 && autoRenew[0] {
-		autoRenewJSON = "true"
-	}
-	created := requestWithMutationKeyForTest(t, server, session, http.MethodPost, "/api/workspace-launches", `{"name":"Alpha","packageId":"basic","sizeGb":10,"autoRenew":`+autoRenewJSON+`}`, "launch-alpha")
+	created := requestWithMutationKeyForTest(t, server, session, http.MethodPost, "/api/workspace-launches", fmt.Sprintf(`{"name":"Alpha","packageId":%q,"sizeGb":%d,"autoRenew":%t}`, packageID, storageGB, autoRenew), "launch-alpha")
 	if created.Code != http.StatusAccepted {
 		t.Fatalf("launch status = %d: %s", created.Code, created.Body.String())
 	}
@@ -455,6 +457,177 @@ func newWorkspaceLaunchWorkerFixture(t *testing.T, balances []int64, chargeError
 		app: app, service: service, server: server, operator: reservedOperatorSessionForTest(t, server), store: store, events: &events, sub2API: sub2API, fabric: fabric, ledger: ledger,
 		operationID: stringValue(response["operationId"]),
 	}
+}
+
+func TestWorkspaceLaunchPersistsCanonicalRenewalIntent(t *testing.T) {
+	for _, tc := range []struct {
+		name, packageID                                    string
+		storageGB                                          int
+		autoRenew                                          bool
+		computeUSDMicros, storageUSDMicros, totalUSDMicros int64
+	}{
+		{name: "basic enabled", packageID: "basic", storageGB: 10, autoRenew: true, computeUSDMicros: 50_000_000, storageUSDMicros: 2_580_000, totalUSDMicros: 52_580_000},
+		{name: "basic disabled", packageID: "basic", storageGB: 10, computeUSDMicros: 50_000_000, storageUSDMicros: 2_580_000, totalUSDMicros: 52_580_000},
+		{name: "pro enabled", packageID: "pro", storageGB: 100, autoRenew: true, computeUSDMicros: 214_280_000, storageUSDMicros: 25_800_000, totalUSDMicros: 240_080_000},
+		{name: "pro disabled", packageID: "pro", storageGB: 100, computeUSDMicros: 214_280_000, storageUSDMicros: 25_800_000, totalUSDMicros: 240_080_000},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			postCompute, postTotal := int64(1_000_000_000)-tc.computeUSDMicros, int64(1_000_000_000)-tc.totalUSDMicros
+			fixture := newWorkspaceLaunchWorkerFixtureForPlan(t, []int64{1_000_000_000, 1_000_000_000, postCompute, postCompute, postTotal}, nil, nil, tc.packageID, tc.storageGB, tc.autoRenew)
+			if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+				t.Fatal(err)
+			}
+			workspaces, err := fixture.store.ListWorkspaces(context.Background(), "acct-alpha")
+			if err != nil || len(workspaces) != 1 {
+				t.Fatalf("Workspace projection=%#v err=%v", workspaces, err)
+			}
+			workspace := workspaces[0]
+			operation := fixture.operation(t)
+			if workspace["autoRenew"] != tc.autoRenew || workspace["packageId"] != tc.packageID || workspace["storageGb"] != int64(tc.storageGB) ||
+				workspace["priceVersion"] != pricingCatalogVersion || workspace["currency"] != pricingCurrency || workspace["billingUnit"] != pricingBillingUnit ||
+				workspace["computeUsdMicros"] != tc.computeUSDMicros || workspace["storageUsdMicros"] != tc.storageUSDMicros || workspace["totalUsdMicros"] != tc.totalUSDMicros ||
+				workspace["renewalStatus"] != "active" || workspace["computeAllocationId"] != operation.ComputeID || workspace["storageId"] != operation.StorageID {
+				t.Fatalf("canonical Workspace renewal state=%#v", workspace)
+			}
+			periodStart, startErr := time.Parse(time.RFC3339, stringValue(workspace["periodStart"]))
+			paidThrough, paidErr := time.Parse(time.RFC3339, stringValue(workspace["paidThrough"]))
+			nextRenewal, nextErr := time.Parse(time.RFC3339, stringValue(workspace["nextRenewalAt"]))
+			if startErr != nil || paidErr != nil || nextErr != nil || !paidThrough.After(periodStart) || !nextRenewal.Equal(paidThrough.Add(-24*time.Hour)) || numberField(workspace, "billingAnchorDay", 0) < 1 {
+				t.Fatalf("canonical Workspace period=%#v errors=%v/%v/%v", workspace, startErr, paidErr, nextErr)
+			}
+			if tc.autoRenew && (workspace["authorizedBy"] != "usr-alpha" || stringValue(workspace["authorizedAt"]) == "") || !tc.autoRenew && (workspace["authorizedBy"] != "" || workspace["authorizedAt"] != "") {
+				t.Fatalf("canonical Workspace authorization=%#v", workspace)
+			}
+		})
+	}
+}
+
+func TestWorkspaceLaunchOwnerRaceDisablesRenewalIntent(t *testing.T) {
+	for _, status := range []string{"disabled", "deleted"} {
+		t.Run(status, func(t *testing.T) {
+			fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 950_000_000, 950_000_000, 947_420_000}, nil, nil, true)
+			owner, err := fixture.app.findUserByID(context.Background(), "usr-alpha")
+			if err != nil || owner == nil {
+				t.Fatalf("find launch owner: owner=%#v err=%v", owner, err)
+			}
+			owner["status"] = status
+			if err := fixture.store.ApplyUserLifecycle(context.Background(), owner); err != nil {
+				t.Fatal(err)
+			}
+			if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+				t.Fatal(err)
+			}
+			workspaces, _ := fixture.store.ListWorkspaces(context.Background(), "acct-alpha")
+			computes, _ := fixture.store.ListComputes(context.Background(), "acct-alpha")
+			storages, _ := fixture.store.ListStorages(context.Background(), "acct-alpha")
+			if len(workspaces) != 1 || workspaces[0]["autoRenew"] != false || workspaces[0]["authorizedBy"] != "" || workspaces[0]["authorizedAt"] != "" ||
+				len(computes) != 1 || computes[0]["autoRenew"] != false || len(storages) != 1 || storages[0]["autoRenew"] != false {
+				t.Fatalf("%s owner left renewal enabled: Workspace=%#v compute=%#v storage=%#v", status, workspaces, computes, storages)
+			}
+		})
+	}
+}
+
+func TestWorkspaceLaunchProviderDeadlineFailsClosed(t *testing.T) {
+	for _, tc := range []struct {
+		name, phase string
+		mutate      func(*monthlyFabric)
+	}{
+		{name: "compute missing", phase: "compute", mutate: func(fabric *monthlyFabric) {
+			fabric.mutateCompute = func(value *clients.ComputeAllocation) { value.Deadline = "" }
+		}},
+		{name: "compute early", phase: "compute", mutate: func(fabric *monthlyFabric) {
+			fabric.mutateCompute = func(value *clients.ComputeAllocation) { value.Deadline = "2000-01-01T00:00:00Z" }
+		}},
+		{name: "storage missing", phase: "storage", mutate: func(fabric *monthlyFabric) {
+			fabric.mutateStorage = func(value *clients.StorageVolume) { value.Deadline = "" }
+		}},
+		{name: "storage early", phase: "storage", mutate: func(fabric *monthlyFabric) {
+			fabric.mutateStorage = func(value *clients.StorageVolume) { value.Deadline = "2000-01-01T00:00:00Z" }
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 950_000_000, 950_000_000, 947_420_000}, nil, nil, true)
+			tc.mutate(fixture.fabric)
+			if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err == nil {
+				t.Fatal("invalid provider deadline did not stop launch")
+			}
+			operation := fixture.operation(t)
+			workspaces, _ := fixture.store.ListWorkspaces(context.Background(), "acct-alpha")
+			if operation.Status != "manual_review" || operation.Phase != tc.phase || len(workspaces) != 0 || countStrings(*fixture.events, "fabric.gateway-secret") != 0 || countStrings(*fixture.events, "fabric.runtime") != 0 {
+				t.Fatalf("deadline failure launch=%#v Workspaces=%#v events=%#v", operation, workspaces, *fixture.events)
+			}
+		})
+	}
+}
+
+func TestWorkspaceLaunchBillingMismatchStopsBeforeWorkspaceRuntime(t *testing.T) {
+	t.Run("parent total", func(t *testing.T) {
+		fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 950_000_000, 950_000_000, 947_420_000}, nil, nil, true)
+		operation := fixture.operation(t)
+		operation.TotalChargeUSDMicros++
+		mustStore(t, fixture.store.SaveRuntimeOperation(context.Background(), workspaceLaunchOperationRow(operation)))
+		if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err == nil {
+			t.Fatal("mismatched parent total did not stop launch")
+		}
+		operation = fixture.operation(t)
+		if operation.Status != "manual_review" || operation.ErrorCode != "workspace_launch_billing_price_mismatch" || countStrings(*fixture.events, "fabric.runtime") != 0 {
+			t.Fatalf("parent total mismatch launch=%#v events=%#v", operation, *fixture.events)
+		}
+	})
+
+	t.Run("child component", func(t *testing.T) {
+		fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 950_000_000, 950_000_000, 947_420_000}, nil, errors.New("runtime unavailable"), true)
+		if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err == nil {
+			t.Fatal("runtime failure did not pause launch")
+		}
+		operation := fixture.operation(t)
+		compute, _ := fixture.app.getCompute(operation.ComputeID)
+		compute["chargeUsdMicros"] = int64(49_000_000)
+		mustStore(t, fixture.store.SaveCompute(context.Background(), compute))
+		fixture.fabric.runtimeErr = nil
+		beforeRuntime := countStrings(*fixture.events, "fabric.runtime")
+		if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err == nil {
+			t.Fatal("mismatched child component did not stop launch")
+		}
+		operation = fixture.operation(t)
+		workspaces, _ := fixture.store.ListWorkspaces(context.Background(), "acct-alpha")
+		if operation.Status != "manual_review" || operation.ErrorCode != "workspace_launch_billing_price_mismatch" || len(workspaces) != 0 || countStrings(*fixture.events, "fabric.runtime") != beforeRuntime {
+			t.Fatalf("child mismatch launch=%#v Workspaces=%#v events=%#v", operation, workspaces, *fixture.events)
+		}
+	})
+
+	t.Run("existing canonical state", func(t *testing.T) {
+		fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 950_000_000, 950_000_000, 947_420_000}, nil, errors.New("runtime unavailable"), true)
+		if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err == nil {
+			t.Fatal("runtime failure did not pause launch")
+		}
+		operation := fixture.operation(t)
+		state, code := fixture.app.workspaceLaunchBillingState(context.Background(), operation)
+		if code != "" {
+			t.Fatalf("build expected state: %s", code)
+		}
+		state["autoRenew"], state["authorizedBy"], state["authorizedAt"] = false, "", ""
+		workspace := map[string]any{
+			"id": operation.WorkspaceID, "accountId": operation.AccountID, "ownerAccountId": operation.AccountID, "ownerUserId": operation.OwnerUserID,
+			"name": operation.Name, "packageId": operation.PackageID, "currentComputeAllocationId": operation.ComputeID, "computeAllocationId": operation.ComputeID,
+			"storageId": operation.StorageID, "currentAttachmentId": operation.AttachmentID, "attachmentId": operation.AttachmentID, "state": "preparing", "status": "preparing",
+		}
+		for key, value := range state {
+			workspace[key] = value
+		}
+		mustStore(t, fixture.store.SaveWorkspace(context.Background(), workspace))
+		fixture.fabric.runtimeErr = nil
+		beforeRuntime := countStrings(*fixture.events, "fabric.runtime")
+		if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err == nil {
+			t.Fatal("conflicting Workspace state did not stop launch")
+		}
+		operation = fixture.operation(t)
+		workspaces, _ := fixture.store.ListWorkspaces(context.Background(), "acct-alpha")
+		if operation.Status != "manual_review" || operation.ErrorCode != "workspace_launch_billing_state_mismatch" || len(workspaces) != 1 || workspaces[0]["autoRenew"] != false || countStrings(*fixture.events, "fabric.runtime") != beforeRuntime {
+			t.Fatalf("existing conflict launch=%#v Workspaces=%#v events=%#v", operation, workspaces, *fixture.events)
+		}
+	})
 }
 
 func (f workspaceLaunchWorkerFixture) operation(t *testing.T) workspaceLaunchOperation {

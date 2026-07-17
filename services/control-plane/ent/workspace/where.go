@@ -114,6 +114,11 @@ func Status(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldEQ(FieldStatus, v))
 }
 
+// BillingStateJSON applies equality check predicate on the "billing_state_json" field. It's identical to BillingStateJSONEQ.
+func BillingStateJSON(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldBillingStateJSON, v))
+}
+
 // StorageID applies equality check predicate on the "storage_id" field. It's identical to StorageIDEQ.
 func StorageID(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldEQ(FieldStorageID, v))
@@ -792,6 +797,71 @@ func StatusEqualFold(v string) predicate.Workspace {
 // StatusContainsFold applies the ContainsFold predicate on the "status" field.
 func StatusContainsFold(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldContainsFold(FieldStatus, v))
+}
+
+// BillingStateJSONEQ applies the EQ predicate on the "billing_state_json" field.
+func BillingStateJSONEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldBillingStateJSON, v))
+}
+
+// BillingStateJSONNEQ applies the NEQ predicate on the "billing_state_json" field.
+func BillingStateJSONNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldBillingStateJSON, v))
+}
+
+// BillingStateJSONIn applies the In predicate on the "billing_state_json" field.
+func BillingStateJSONIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldBillingStateJSON, vs...))
+}
+
+// BillingStateJSONNotIn applies the NotIn predicate on the "billing_state_json" field.
+func BillingStateJSONNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldBillingStateJSON, vs...))
+}
+
+// BillingStateJSONGT applies the GT predicate on the "billing_state_json" field.
+func BillingStateJSONGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldBillingStateJSON, v))
+}
+
+// BillingStateJSONGTE applies the GTE predicate on the "billing_state_json" field.
+func BillingStateJSONGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldBillingStateJSON, v))
+}
+
+// BillingStateJSONLT applies the LT predicate on the "billing_state_json" field.
+func BillingStateJSONLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldBillingStateJSON, v))
+}
+
+// BillingStateJSONLTE applies the LTE predicate on the "billing_state_json" field.
+func BillingStateJSONLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldBillingStateJSON, v))
+}
+
+// BillingStateJSONContains applies the Contains predicate on the "billing_state_json" field.
+func BillingStateJSONContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldBillingStateJSON, v))
+}
+
+// BillingStateJSONHasPrefix applies the HasPrefix predicate on the "billing_state_json" field.
+func BillingStateJSONHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldBillingStateJSON, v))
+}
+
+// BillingStateJSONHasSuffix applies the HasSuffix predicate on the "billing_state_json" field.
+func BillingStateJSONHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldBillingStateJSON, v))
+}
+
+// BillingStateJSONEqualFold applies the EqualFold predicate on the "billing_state_json" field.
+func BillingStateJSONEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldBillingStateJSON, v))
+}
+
+// BillingStateJSONContainsFold applies the ContainsFold predicate on the "billing_state_json" field.
+func BillingStateJSONContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldBillingStateJSON, v))
 }
 
 // StorageIDEQ applies the EQ predicate on the "storage_id" field.

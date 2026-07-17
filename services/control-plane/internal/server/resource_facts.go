@@ -18,8 +18,14 @@ func (app *controlPlaneServer) cleanupComputeResource(ctx context.Context, servi
 		if _, err := service.CleanupWorkspaceRuntime(ctx, workspaceID, key+":runtime:"+workspaceID); err != nil {
 			return clients.ComputeAllocation{}, err
 		}
+		canonicalBilling := workspaceAcceptedBillingState(workspace) != nil
 		workspace["state"], workspace["status"] = "suspended", "suspended"
-		workspace["currentComputeAllocationId"], workspace["computeAllocationId"] = "", ""
+		workspace["currentComputeAllocationId"] = ""
+		if canonicalBilling {
+			workspace["autoRenew"] = false
+		} else {
+			workspace["computeAllocationId"] = ""
+		}
 		workspace["runtimeId"], workspace["runtimeServiceName"], workspace["serviceName"] = "", "", ""
 		workspace["runtime"] = map[string]any{}
 		if err := app.tables.SaveWorkspace(ctx, workspace); err != nil {

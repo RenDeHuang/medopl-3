@@ -99,6 +99,7 @@ func (s *memoryTableStore) ApplyUserLifecycle(_ context.Context, user map[string
 	sessions := cloneStateTable(s.sessions)
 	computes := cloneStateTable(s.computes)
 	storages := cloneStateTable(s.storages)
+	workspaces := cloneStateTable(s.workspaces)
 	users[userID] = cloneMap(user)
 	for id, session := range sessions {
 		if stringValue(session["userId"]) == userID {
@@ -116,8 +117,16 @@ func (s *memoryTableStore) ApplyUserLifecycle(_ context.Context, user map[string
 				}
 			}
 		}
+		for id, row := range workspaces {
+			if stringValue(row["ownerUserId"]) != userID || row["autoRenew"] != true || validateWorkspaceBillingState(row) != nil {
+				continue
+			}
+			row = cloneMap(row)
+			row["autoRenew"] = false
+			workspaces[id] = row
+		}
 	}
-	s.users, s.sessions, s.computes, s.storages = users, sessions, computes, storages
+	s.users, s.sessions, s.computes, s.storages, s.workspaces = users, sessions, computes, storages, workspaces
 	return nil
 }
 
@@ -456,6 +465,9 @@ func (s *memoryTableStore) ListWorkspaces(_ context.Context, accountID string) (
 func (s *memoryTableStore) SaveWorkspace(_ context.Context, row map[string]any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if err := validateWorkspaceBillingState(row); err != nil {
+		return err
+	}
 	row = cloneMap(row)
 	if _, ok := row["customerProduct"]; !ok {
 		row["customerProduct"] = true
@@ -481,7 +493,7 @@ func (s *memoryTableStore) ClaimWorkspaceCreate(_ context.Context, workspace map
 		}
 		current, currentErr := decodeWorkspaceCreateOperation(existing)
 		claim, claimErr := decodeWorkspaceCreateOperation(operation)
-		if currentErr != nil || claimErr != nil || current.RequestHash != claim.RequestHash || current.Workspace.ID != claim.Workspace.ID || current.Workspace.AccountID != claim.Workspace.AccountID {
+		if currentErr != nil || claimErr != nil || workspaceCreateClaimIdentity(current) != workspaceCreateClaimIdentity(claim) || current.Workspace.ID != claim.Workspace.ID || current.Workspace.AccountID != claim.Workspace.AccountID {
 			return errPrimaryWorkspaceExists
 		}
 		status := stringValue(existing["status"])

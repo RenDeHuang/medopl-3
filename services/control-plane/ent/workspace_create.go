@@ -160,6 +160,20 @@ func (wc *WorkspaceCreate) SetNillableStatus(s *string) *WorkspaceCreate {
 	return wc
 }
 
+// SetBillingStateJSON sets the "billing_state_json" field.
+func (wc *WorkspaceCreate) SetBillingStateJSON(s string) *WorkspaceCreate {
+	wc.mutation.SetBillingStateJSON(s)
+	return wc
+}
+
+// SetNillableBillingStateJSON sets the "billing_state_json" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillableBillingStateJSON(s *string) *WorkspaceCreate {
+	if s != nil {
+		wc.SetBillingStateJSON(*s)
+	}
+	return wc
+}
+
 // SetStorageID sets the "storage_id" field.
 func (wc *WorkspaceCreate) SetStorageID(s string) *WorkspaceCreate {
 	wc.mutation.SetStorageID(s)
@@ -465,6 +479,10 @@ func (wc *WorkspaceCreate) defaults() {
 		v := workspace.DefaultStatus
 		wc.mutation.SetStatus(v)
 	}
+	if _, ok := wc.mutation.BillingStateJSON(); !ok {
+		v := workspace.DefaultBillingStateJSON
+		wc.mutation.SetBillingStateJSON(v)
+	}
 	if _, ok := wc.mutation.StorageID(); !ok {
 		v := workspace.DefaultStorageID
 		wc.mutation.SetStorageID(v)
@@ -562,6 +580,9 @@ func (wc *WorkspaceCreate) check() error {
 	}
 	if _, ok := wc.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Workspace.status"`)}
+	}
+	if _, ok := wc.mutation.BillingStateJSON(); !ok {
+		return &ValidationError{Name: "billing_state_json", err: errors.New(`ent: missing required field "Workspace.billing_state_json"`)}
 	}
 	if _, ok := wc.mutation.StorageID(); !ok {
 		return &ValidationError{Name: "storage_id", err: errors.New(`ent: missing required field "Workspace.storage_id"`)}
@@ -690,6 +711,10 @@ func (wc *WorkspaceCreate) createSpec() (*Workspace, *sqlgraph.CreateSpec) {
 	if value, ok := wc.mutation.Status(); ok {
 		_spec.SetField(workspace.FieldStatus, field.TypeString, value)
 		_node.Status = value
+	}
+	if value, ok := wc.mutation.BillingStateJSON(); ok {
+		_spec.SetField(workspace.FieldBillingStateJSON, field.TypeString, value)
+		_node.BillingStateJSON = value
 	}
 	if value, ok := wc.mutation.StorageID(); ok {
 		_spec.SetField(workspace.FieldStorageID, field.TypeString, value)

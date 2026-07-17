@@ -29,9 +29,10 @@ type workspaceResumeOperationResult struct {
 }
 
 type workspaceCreateOperationResult struct {
-	RequestHash    string                     `json:"requestHash"`
-	LeaseExpiresAt *time.Time                 `json:"leaseExpiresAt,omitempty"`
-	Workspace      domain.WorkspaceProjection `json:"workspace"`
+	RequestHash          string                     `json:"requestHash"`
+	LeaseExpiresAt       *time.Time                 `json:"leaseExpiresAt,omitempty"`
+	Workspace            domain.WorkspaceProjection `json:"workspace"`
+	AcceptedBillingState map[string]any             `json:"acceptedBillingState,omitempty"`
 }
 
 type workspaceGatewaySecretOperationResult struct {
@@ -51,6 +52,11 @@ func decodeWorkspaceCreateOperation(operation map[string]any) (workspaceCreateOp
 func encodeWorkspaceCreateOperation(result workspaceCreateOperationResult) string {
 	payload, _ := json.Marshal(result)
 	return string(payload)
+}
+
+func workspaceCreateClaimIdentity(result workspaceCreateOperationResult) string {
+	billingState, _ := json.Marshal(result.AcceptedBillingState)
+	return stableID(result.RequestHash, string(billingState))
 }
 
 func decodeWorkspaceGatewaySecretOperation(operation map[string]any) (workspaceGatewaySecretOperationResult, error) {

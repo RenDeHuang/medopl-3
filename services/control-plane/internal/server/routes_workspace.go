@@ -480,6 +480,7 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 			return
 		}
 		var workspace domain.WorkspaceProjection
+		var acceptedBillingState map[string]any
 		retryReceipt, retryPrepare := false, false
 		for _, operation := range operations {
 			if stringValue(operation["id"]) != operationID {
@@ -494,13 +495,22 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 				writeError(w, http.StatusConflict, errPrimaryWorkspaceExists.Error())
 				return
 			}
+			if result.AcceptedBillingState != nil {
+				acceptedBillingState = workspaceAcceptedBillingState(workspaceProjectionBillingRow(result.Workspace, result.AcceptedBillingState))
+			} else if existing, exists := app.getWorkspace(result.Workspace.ID); exists {
+				acceptedBillingState = workspaceAcceptedBillingState(existing)
+			}
+			if acceptedBillingState == nil {
+				writeError(w, http.StatusConflict, "workspace_billing_state_invalid")
+				return
+			}
 			switch stringValue(operation["status"]) {
 			case "succeeded":
-				if err := app.saveWorkspaceProjection(result.Workspace); err != nil {
+				if err := app.saveWorkspaceProjection(result.Workspace, acceptedBillingState); err != nil {
 					writeError(w, http.StatusInternalServerError, "state_persist_failed")
 					return
 				}
-				writeJSON(w, http.StatusCreated, app.workspaceResponse(structToMap(result.Workspace)))
+				writeJSON(w, http.StatusCreated, app.workspaceResponse(workspaceProjectionBillingResponseRow(result.Workspace, acceptedBillingState)))
 				return
 			case "receipt_pending":
 				workspace, retryReceipt = result.Workspace, true
@@ -519,7 +529,7 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 			break
 		}
 		if retryReceipt {
-			if err := app.saveWorkspaceProjection(workspace); err != nil {
+			if err := app.saveWorkspaceProjection(workspace, acceptedBillingState); err != nil {
 				writeError(w, http.StatusInternalServerError, "state_persist_failed")
 				return
 			}
@@ -538,7 +548,25 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 						writeError(w, http.StatusConflict, errPrimaryWorkspaceExists.Error())
 						return
 					}
+					if workspaceAcceptedBillingState(existing) == nil {
+						writeError(w, http.StatusConflict, "workspace_billing_state_invalid")
+						return
+					}
 					writeJSON(w, http.StatusCreated, app.workspaceResponse(existing))
+					return
+				}
+				storageGB, validStorageGB := requiredPositiveInteger(storage, "sizeGb")
+				billingState, billingCode := workspaceBillingStateFromChildren(compute, storage, workspaceBillingChildIdentity{
+					AccountID: accountID, OwnerUserID: ownerID, WorkspaceID: workspaceID, PackageID: packageID,
+					ComputeID: computeID, StorageID: storageID, StorageGB: storageGB,
+				})
+				if !validStorageGB || billingCode != "" {
+					writeError(w, http.StatusConflict, "workspace_billing_state_invalid")
+					return
+				}
+				acceptedBillingState = workspaceAcceptedBillingState(billingState)
+				if acceptedBillingState == nil {
+					writeError(w, http.StatusConflict, "workspace_billing_state_invalid")
 					return
 				}
 				workspace = domain.WorkspaceProjection{
@@ -547,9 +575,9 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 				}
 			}
 			leaseExpiresAt := time.Now().UTC().Add(2 * time.Minute)
-			claimResult := workspaceCreateOperationResult{RequestHash: requestHash, LeaseExpiresAt: &leaseExpiresAt, Workspace: workspace}
+			claimResult := workspaceCreateOperationResult{RequestHash: requestHash, LeaseExpiresAt: &leaseExpiresAt, Workspace: workspace, AcceptedBillingState: acceptedBillingState}
 			claimOperation := workspaceCreateOperationRow(operationID, "started", claimResult)
-			if err := app.tables.ClaimWorkspaceCreate(r.Context(), workspaceProjectionRow(workspace), claimOperation); err != nil {
+			if err := app.tables.ClaimWorkspaceCreate(r.Context(), workspaceProjectionBillingRow(workspace, acceptedBillingState), claimOperation); err != nil {
 				if errors.Is(err, errPrimaryWorkspaceExists) {
 					writeError(w, http.StatusConflict, errPrimaryWorkspaceExists.Error())
 					return
@@ -584,12 +612,12 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 				return
 			}
 			workspace = prepared
-			result := workspaceCreateOperationResult{RequestHash: requestHash, Workspace: workspace}
+			result := workspaceCreateOperationResult{RequestHash: requestHash, Workspace: workspace, AcceptedBillingState: acceptedBillingState}
 			if err := app.tables.SaveRuntimeOperation(r.Context(), workspaceCreateOperationRow(operationID, "receipt_pending", result)); err != nil {
 				writeError(w, http.StatusInternalServerError, "state_persist_failed")
 				return
 			}
-			if err := app.saveWorkspaceProjection(workspace); err != nil {
+			if err := app.saveWorkspaceProjection(workspace, acceptedBillingState); err != nil {
 				writeError(w, http.StatusInternalServerError, "state_persist_failed")
 				return
 			}
@@ -599,16 +627,16 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 				return
 			}
 		}
-		result := workspaceCreateOperationResult{RequestHash: requestHash, Workspace: workspace}
+		result := workspaceCreateOperationResult{RequestHash: requestHash, Workspace: workspace, AcceptedBillingState: acceptedBillingState}
 		if err := app.tables.SaveRuntimeOperation(r.Context(), workspaceCreateOperationRow(operationID, "succeeded", result)); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}
-		if err := app.saveWorkspaceProjection(workspace); err != nil {
+		if err := app.saveWorkspaceProjection(workspace, acceptedBillingState); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}
-		body := app.workspaceResponse(structToMap(workspace))
+		body := app.workspaceResponse(workspaceProjectionBillingResponseRow(workspace, acceptedBillingState))
 		if err := app.appendAuditEvent(r, "workspace.create", "workspace", workspace.ID, workspace.AccountID, nil, body, "succeeded"); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return

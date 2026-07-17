@@ -27,6 +27,24 @@ func (app *controlPlaneServer) workspaceResponse(row map[string]any) map[string]
 
 func (app *controlPlaneServer) workspaceAccessResponse(row map[string]any, now time.Time) (map[string]any, string) {
 	response := workspaceResponse(row)
+	canonicalPaidThrough := now.UTC()
+	if !providerAcceptanceWorkspaceBillingExempt(row) {
+		state, present, err := normalizeWorkspaceBillingStateForWorkspace(row, row)
+		if err != nil || !present {
+			response["openable"], response["accessState"] = false, "disabled"
+			return response, "workspace_billing_state_invalid"
+		}
+		if state.RenewalStatus != "active" {
+			response["openable"], response["accessState"] = false, "disabled"
+			return response, "workspace_billing_manual_review"
+		}
+		canonicalPaidThrough, _ = time.Parse(time.RFC3339, state.PaidThrough)
+		if !now.UTC().Before(canonicalPaidThrough) {
+			response["openable"], response["accessState"] = false, "disabled"
+			return response, "workspace_billing_period_expired"
+		}
+	}
+	accountID, workspaceID := firstNonEmpty(stringValue(response["accountId"]), stringValue(response["ownerAccountId"])), stringValue(response["id"])
 	storage, ok := app.getStorage(stringValue(response["storageId"]))
 	if ok {
 		switch stringValue(storage["status"]) {
@@ -36,14 +54,15 @@ func (app *controlPlaneServer) workspaceAccessResponse(row map[string]any, now t
 		}
 	}
 	paidThrough, err := time.Parse(time.RFC3339, stringValue(storage["paidThrough"]))
-	storageActive := ok && stringValue(storage["billingStatus"]) == "active" && err == nil && now.UTC().Before(paidThrough)
+	storageActive := ok && app.resourceBelongsToAccount(storage, accountID) && stringValue(storage["workspaceId"]) == workspaceID &&
+		stringValue(storage["billingStatus"]) == "active" && err == nil && now.UTC().Before(paidThrough) && !paidThrough.Before(canonicalPaidThrough)
 	if !storageActive {
 		response["openable"] = false
 		response["accessState"] = "disabled"
 		return response, "workspace_storage_entitlement_inactive"
 	}
 
-	compute, ok := app.getCompute(firstNonEmpty(stringValue(response["currentComputeAllocationId"]), stringValue(response["computeAllocationId"])))
+	compute, ok := app.getCompute(stringValue(response["currentComputeAllocationId"]))
 	if ok {
 		switch stringValue(compute["status"]) {
 		case "running", "ready", "available", "active":
@@ -53,9 +72,8 @@ func (app *controlPlaneServer) workspaceAccessResponse(row map[string]any, now t
 	}
 	paidThrough, err = time.Parse(time.RFC3339, stringValue(compute["paidThrough"]))
 	computeActive := ok &&
-		app.resourceBelongsToAccount(compute, firstNonEmpty(stringValue(response["accountId"]), stringValue(response["ownerAccountId"]))) &&
-		stringValue(compute["workspaceId"]) == stringValue(response["id"]) &&
-		stringValue(compute["billingStatus"]) == "active" && err == nil && now.UTC().Before(paidThrough)
+		app.resourceBelongsToAccount(compute, accountID) && stringValue(compute["workspaceId"]) == workspaceID &&
+		stringValue(compute["billingStatus"]) == "active" && err == nil && now.UTC().Before(paidThrough) && !paidThrough.Before(canonicalPaidThrough)
 	if !computeActive {
 		response["openable"] = false
 		response["accessState"] = "disabled"
@@ -64,8 +82,41 @@ func (app *controlPlaneServer) workspaceAccessResponse(row map[string]any, now t
 	return response, ""
 }
 
-func (app *controlPlaneServer) saveWorkspaceProjection(workspace domain.WorkspaceProjection) error {
-	return app.tables.SaveWorkspace(context.Background(), workspaceProjectionRow(workspace))
+func providerAcceptanceWorkspaceBillingExempt(row map[string]any) bool {
+	accountID := firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"]))
+	computeID := firstNonEmpty(stringValue(row["currentComputeAllocationId"]), stringValue(row["computeAllocationId"]))
+	return row["customerProduct"] == false && stringValue(row["verificationSlotId"]) == providerAcceptanceSlotID &&
+		accountID == providerAcceptanceAccountID && stringValue(row["id"]) == primaryWorkspaceID(providerAcceptanceAccountID) &&
+		computeID == providerAcceptanceComputeID() && stringValue(row["storageId"]) == providerAcceptanceStorageID()
+}
+
+func (app *controlPlaneServer) saveWorkspaceProjection(workspace domain.WorkspaceProjection, acceptedBillingState map[string]any) error {
+	return app.tables.SaveWorkspace(context.Background(), workspaceProjectionBillingRow(workspace, acceptedBillingState))
+}
+
+func workspaceProjectionBillingRow(workspace domain.WorkspaceProjection, acceptedBillingState map[string]any) map[string]any {
+	row := workspaceProjectionRow(workspace)
+	for key, value := range acceptedBillingState {
+		row[key] = value
+	}
+	return row
+}
+
+func workspaceProjectionBillingResponseRow(workspace domain.WorkspaceProjection, acceptedBillingState map[string]any) map[string]any {
+	row := structToMap(workspace)
+	row["currentComputeAllocationId"] = workspace.ComputeID
+	for key, value := range acceptedBillingState {
+		row[key] = value
+	}
+	return row
+}
+
+func workspaceAcceptedBillingState(row map[string]any) map[string]any {
+	state, present, err := normalizeWorkspaceBillingStateForWorkspace(row, row)
+	if err != nil || !present || state.RenewalStatus != "active" {
+		return nil
+	}
+	return state.record()
 }
 
 func workspaceProjectionRow(workspace domain.WorkspaceProjection) map[string]any {
@@ -110,8 +161,13 @@ func workspaceProjectionRow(workspace domain.WorkspaceProjection) map[string]any
 func (app *controlPlaneServer) suspendWorkspacesForCompute(computeID string) error {
 	for _, workspace := range app.listWorkspaces("") {
 		if stringValue(workspace["currentComputeAllocationId"]) == computeID || stringValue(workspace["computeAllocationId"]) == computeID {
+			canonicalBilling := workspaceAcceptedBillingState(workspace) != nil
 			workspace["currentComputeAllocationId"] = ""
-			workspace["computeAllocationId"] = ""
+			if canonicalBilling {
+				workspace["autoRenew"] = false
+			} else {
+				workspace["computeAllocationId"] = ""
+			}
 			workspace["state"] = "suspended"
 			workspace["status"] = "suspended"
 			if err := app.tables.SaveWorkspace(context.Background(), workspace); err != nil {
@@ -142,10 +198,15 @@ func (app *controlPlaneServer) clearWorkspacesForAttachment(attachmentID string)
 func (app *controlPlaneServer) markWorkspacesStorageDestroyed(storageID string) error {
 	for _, workspace := range app.listWorkspaces("") {
 		if stringValue(workspace["storageId"]) == storageID {
+			canonicalBilling := workspaceAcceptedBillingState(workspace) != nil
 			workspace["state"] = "data_deleted"
 			workspace["status"] = "unrecoverable"
 			workspace["currentComputeAllocationId"] = ""
-			workspace["computeAllocationId"] = ""
+			if canonicalBilling {
+				workspace["autoRenew"] = false
+			} else {
+				workspace["computeAllocationId"] = ""
+			}
 			workspace["currentAttachmentId"] = ""
 			workspace["attachmentId"] = ""
 			if err := app.tables.SaveWorkspace(context.Background(), workspace); err != nil {

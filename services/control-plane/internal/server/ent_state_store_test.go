@@ -2,8 +2,10 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -21,6 +23,511 @@ func NewTestEntStateStore(t *testing.T, path string) StateStore {
 	client := controlplaneenttest.Open(t, dialect.SQLite, path+"?_fk=1")
 	t.Cleanup(func() { _ = client.Close() })
 	return &postgresEntStateStore{client: client}
+}
+
+func TestWorkspaceRenewalStateRoundTrips(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "sqlite", new: func(t *testing.T) controlPlaneTableStore {
+			return NewTestEntStateStore(t, t.TempDir()+"/workspace-renewal.sqlite")
+		}},
+		{name: "postgres", new: newPostgresWorkspaceRenewalStore},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			store := tc.new(t)
+			row := canonicalWorkspaceRenewalRow(true)
+			if err := store.SaveWorkspace(ctx, row); err != nil {
+				t.Fatalf("save Workspace renewal state: %v", err)
+			}
+			rows, err := store.ListWorkspaces(ctx, "acct-renewal")
+			if err != nil || len(rows) != 1 {
+				t.Fatalf("list Workspace renewal state: rows=%#v err=%v", rows, err)
+			}
+			for _, key := range []string{
+				"autoRenew", "authorizedBy", "authorizedAt", "packageId", "storageGb", "priceVersion", "currency", "billingUnit",
+				"computeUsdMicros", "storageUsdMicros", "totalUsdMicros", "periodStart", "paidThrough",
+				"nextRenewalAt", "billingAnchorDay", "renewalStatus", "computeAllocationId", "storageId",
+			} {
+				if !reflect.DeepEqual(rows[0][key], row[key]) {
+					t.Fatalf("Workspace renewal %s = %#v (%T), want %#v (%T): %#v", key, rows[0][key], rows[0][key], row[key], row[key], rows[0])
+				}
+			}
+		})
+	}
+}
+
+func TestWorkspaceRenewalStateRejectsMissingField(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "sqlite", new: func(t *testing.T) controlPlaneTableStore {
+			return NewTestEntStateStore(t, t.TempDir()+"/workspace-renewal-missing.sqlite")
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := tc.new(t)
+			row := canonicalWorkspaceRenewalRow(true)
+			delete(row, "authorizedAt")
+			if err := store.SaveWorkspace(context.Background(), row); err == nil {
+				t.Fatal("Workspace renewal state missing authorizedAt was accepted")
+			}
+			rows, err := store.ListWorkspaces(context.Background(), "acct-renewal")
+			if err != nil || len(rows) != 0 {
+				t.Fatalf("invalid Workspace renewal state persisted: rows=%#v err=%v", rows, err)
+			}
+		})
+	}
+}
+
+func TestWorkspaceRenewalStateRejectsInvalidValues(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+	}{
+		{name: "auto renew type", mutate: func(row map[string]any) { row["autoRenew"] = "true" }},
+		{name: "authorized by type", mutate: func(row map[string]any) { row["authorizedBy"] = 7 }},
+		{name: "authorized actor mismatch", mutate: func(row map[string]any) { row["authorizedBy"] = "usr-other" }},
+		{name: "authorized at invalid", mutate: func(row map[string]any) { row["authorizedAt"] = "yesterday" }},
+		{name: "price version", mutate: func(row map[string]any) { row["priceVersion"] = "pilot-next" }},
+		{name: "currency", mutate: func(row map[string]any) { row["currency"] = "CNY" }},
+		{name: "billing unit", mutate: func(row map[string]any) { row["billingUnit"] = "hour" }},
+		{name: "fractional compute money", mutate: func(row map[string]any) { row["computeUsdMicros"] = 50_000_000.5 }},
+		{name: "compute price", mutate: func(row map[string]any) { row["computeUsdMicros"] = int64(49_000_000) }},
+		{name: "storage price", mutate: func(row map[string]any) { row["storageUsdMicros"] = int64(2_580_001) }},
+		{name: "total mismatch", mutate: func(row map[string]any) { row["totalUsdMicros"] = int64(52_580_001) }},
+		{name: "period start invalid", mutate: func(row map[string]any) { row["periodStart"] = "2026-07-17" }},
+		{name: "period empty", mutate: func(row map[string]any) { row["paidThrough"] = row["periodStart"] }},
+		{name: "next renewal", mutate: func(row map[string]any) { row["nextRenewalAt"] = row["paidThrough"] }},
+		{name: "anchor low", mutate: func(row map[string]any) { row["billingAnchorDay"] = int64(0) }},
+		{name: "anchor high", mutate: func(row map[string]any) { row["billingAnchorDay"] = int64(32) }},
+		{name: "renewal status", mutate: func(row map[string]any) { row["renewalStatus"] = "renewed" }},
+		{name: "full manual review", mutate: func(row map[string]any) {
+			row["renewalStatus"], row["manualReviewReason"] = "manual_review", "legacy_billing_state_mismatch"
+		}},
+		{name: "running current compute missing", mutate: func(row map[string]any) {
+			row["state"], row["status"], row["currentComputeAllocationId"] = "running", "running", ""
+		}},
+		{name: "compute pointer mismatch", mutate: func(row map[string]any) { row["computeAllocationId"] = "compute-other" }},
+		{name: "storage id empty", mutate: func(row map[string]any) { row["storageId"] = "" }},
+	}
+	for _, storeCase := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "sqlite", new: func(t *testing.T) controlPlaneTableStore {
+			return NewTestEntStateStore(t, t.TempDir()+"/workspace-renewal-invalid.sqlite")
+		}},
+	} {
+		t.Run(storeCase.name, func(t *testing.T) {
+			for _, test := range tests {
+				t.Run(test.name, func(t *testing.T) {
+					store := storeCase.new(t)
+					row := canonicalWorkspaceRenewalRow(true)
+					test.mutate(row)
+					if err := store.SaveWorkspace(context.Background(), row); err == nil {
+						t.Fatal("invalid Workspace renewal state was accepted")
+					}
+					rows, err := store.ListWorkspaces(context.Background(), "acct-renewal")
+					if err != nil || len(rows) != 0 {
+						t.Fatalf("invalid Workspace renewal state persisted: rows=%#v err=%v", rows, err)
+					}
+				})
+			}
+		})
+	}
+}
+
+func TestWorkspaceRenewalStateDecoderFailsClosed(t *testing.T) {
+	workspace := canonicalWorkspaceRenewalRow(true)
+	encoded, err := encodeWorkspaceBillingState(workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := decodeWorkspaceBillingState(encoded, workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := decoded["totalUsdMicros"].(int64); !ok {
+		t.Fatalf("decoded money did not remain int64: %#v (%T)", decoded["totalUsdMicros"], decoded["totalUsdMicros"])
+	}
+	var object map[string]any
+	if err := json.Unmarshal([]byte(encoded), &object); err != nil {
+		t.Fatal(err)
+	}
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+		suffix string
+	}{
+		{name: "unknown", mutate: func(row map[string]any) { row["providerData"] = map[string]any{"secret": "forbidden"} }},
+		{name: "missing", mutate: func(row map[string]any) { delete(row, "authorizedBy") }},
+		{name: "wrong type", mutate: func(row map[string]any) { row["autoRenew"] = "true" }},
+		{name: "fractional money", mutate: func(row map[string]any) { row["storageUsdMicros"] = 2_580_000.5 }},
+		{name: "pointer mismatch", mutate: func(row map[string]any) { row["computeAllocationId"] = "compute-other" }},
+		{name: "trailing JSON", mutate: func(map[string]any) {}, suffix: `{}`},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			invalid := cloneMap(object)
+			test.mutate(invalid)
+			payload, err := json.Marshal(invalid)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := decodeWorkspaceBillingState(string(payload)+test.suffix, workspace); err == nil {
+				t.Fatal("invalid raw Workspace renewal JSON was accepted")
+			}
+		})
+	}
+}
+
+func TestWorkspaceRenewalStateSupportsProAndDisabledIntent(t *testing.T) {
+	row := canonicalWorkspaceRenewalRow(false)
+	row["packageId"], row["storageGb"] = "pro", int64(100)
+	row["computeUsdMicros"], row["storageUsdMicros"], row["totalUsdMicros"] = int64(214_280_000), int64(25_800_000), int64(240_080_000)
+	encoded, err := encodeWorkspaceBillingState(row)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decoded, err := decodeWorkspaceBillingState(encoded, row)
+	if err != nil || decoded["autoRenew"] != false || decoded["authorizedBy"] != "" || decoded["authorizedAt"] != "" || decoded["packageId"] != "pro" || decoded["storageGb"] != int64(100) || decoded["totalUsdMicros"] != int64(240_080_000) {
+		t.Fatalf("Pro disabled canonical state=%#v err=%v", decoded, err)
+	}
+}
+
+func TestWorkspaceRenewalOwnerLifecycleDisablesCanonicalIntent(t *testing.T) {
+	for _, storeCase := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "postgres", new: newPostgresWorkspaceRenewalStore},
+	} {
+		for _, status := range []string{"disabled", "deleted"} {
+			t.Run(storeCase.name+"/"+status, func(t *testing.T) {
+				ctx := context.Background()
+				store := storeCase.new(t)
+				owner := map[string]any{"id": "usr-renewal", "email": "renewal-owner@example.com", "accountId": "acct-renewal", "role": "owner", "status": "active"}
+				if err := store.SaveUser(ctx, owner); err != nil {
+					t.Fatal(err)
+				}
+				if err := store.SaveCompute(ctx, map[string]any{"id": "compute-renewal", "accountId": "acct-renewal", "ownerUserId": "usr-renewal", "autoRenew": true}); err != nil {
+					t.Fatal(err)
+				}
+				if err := store.SaveStorage(ctx, map[string]any{"id": "storage-renewal", "accountId": "acct-renewal", "ownerUserId": "usr-renewal", "autoRenew": true}); err != nil {
+					t.Fatal(err)
+				}
+				workspace := canonicalWorkspaceRenewalRow(true)
+				if err := store.SaveWorkspace(ctx, workspace); err != nil {
+					t.Fatal(err)
+				}
+				owner["status"] = status
+				if err := store.ApplyUserLifecycle(ctx, owner); err != nil {
+					t.Fatal(err)
+				}
+				workspaces, _ := store.ListWorkspaces(ctx, "acct-renewal")
+				computes, _ := store.ListComputes(ctx, "acct-renewal")
+				storages, _ := store.ListStorages(ctx, "acct-renewal")
+				if len(workspaces) != 1 || workspaces[0]["autoRenew"] != false || workspaces[0]["authorizedBy"] != workspace["authorizedBy"] || workspaces[0]["authorizedAt"] != workspace["authorizedAt"] ||
+					workspaces[0]["periodStart"] != workspace["periodStart"] || workspaces[0]["paidThrough"] != workspace["paidThrough"] || workspaces[0]["totalUsdMicros"] != workspace["totalUsdMicros"] ||
+					len(computes) != 1 || computes[0]["autoRenew"] != false || len(storages) != 1 || storages[0]["autoRenew"] != false {
+					t.Fatalf("%s lifecycle intent state: Workspace=%#v compute=%#v storage=%#v", status, workspaces, computes, storages)
+				}
+			})
+		}
+	}
+}
+
+func TestWorkspaceRenewalOwnerLifecycleLeavesCorruptStateFailClosed(t *testing.T) {
+	t.Run("memory", func(t *testing.T) {
+		store := newMemoryTableStore()
+		owner := map[string]any{"id": "usr-corrupt", "email": "corrupt-owner@example.com", "accountId": "acct-corrupt", "role": "owner", "status": "active"}
+		if err := store.SaveUser(context.Background(), owner); err != nil {
+			t.Fatal(err)
+		}
+		store.workspaces["ws-corrupt"] = map[string]any{"id": "ws-corrupt", "accountId": "acct-corrupt", "ownerUserId": "usr-corrupt", "autoRenew": true, "renewalStatus": "active"}
+		owner["status"] = "disabled"
+		if err := store.ApplyUserLifecycle(context.Background(), owner); err != nil {
+			t.Fatal(err)
+		}
+		rows, _ := store.ListWorkspaces(context.Background(), "acct-corrupt")
+		if len(rows) != 1 || rows[0]["autoRenew"] != true || validateWorkspaceBillingState(rows[0]) == nil {
+			t.Fatalf("corrupt memory state was rewritten or accepted: %#v", rows)
+		}
+	})
+
+	t.Run("postgres", func(t *testing.T) {
+		store := newPostgresWorkspaceRenewalStore(t).(*postgresEntStateStore)
+		ctx := context.Background()
+		owner := map[string]any{"id": "usr-renewal", "email": "corrupt-pg-owner@example.com", "accountId": "acct-renewal", "role": "owner", "status": "active"}
+		if err := store.SaveUser(ctx, owner); err != nil {
+			t.Fatal(err)
+		}
+		if err := store.SaveWorkspace(ctx, canonicalWorkspaceRenewalRow(true)); err != nil {
+			t.Fatal(err)
+		}
+		const corrupt = `{"autoRenew":true`
+		if _, err := store.client.Workspace.UpdateOneID("ws-renewal").SetBillingStateJSON(corrupt).Save(ctx); err != nil {
+			t.Fatal(err)
+		}
+		owner["status"] = "disabled"
+		if err := store.ApplyUserLifecycle(ctx, owner); err != nil {
+			t.Fatal(err)
+		}
+		entity, err := store.client.Workspace.Get(ctx, "ws-renewal")
+		if err != nil || entity.BillingStateJSON != corrupt {
+			t.Fatalf("corrupt PostgreSQL state changed: state=%q err=%v", entity.BillingStateJSON, err)
+		}
+		rows, err := store.ListWorkspaces(ctx, "acct-renewal")
+		if err != nil || len(rows) != 1 || rows[0]["autoRenew"] != nil || rows[0]["renewalStatus"] != nil {
+			t.Fatalf("corrupt PostgreSQL state projected as usable: rows=%#v err=%v", rows, err)
+		}
+	})
+}
+
+func TestWorkspaceRenewalStateSurvivesComputeSuspension(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "postgres", new: newPostgresWorkspaceRenewalStore},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := tc.new(t)
+			workspace := canonicalWorkspaceRenewalRow(true)
+			workspace["state"], workspace["status"] = "running", "running"
+			if err := store.SaveWorkspace(context.Background(), workspace); err != nil {
+				t.Fatal(err)
+			}
+			rows, err := store.ListWorkspaces(context.Background(), "acct-renewal")
+			if err != nil || len(rows) != 1 {
+				t.Fatalf("load Workspace: rows=%#v err=%v", rows, err)
+			}
+			rows[0]["state"], rows[0]["status"] = "suspended", "suspended"
+			rows[0]["currentComputeAllocationId"], rows[0]["autoRenew"] = "", false
+			if err := store.SaveWorkspace(context.Background(), rows[0]); err != nil {
+				t.Fatalf("suspend Workspace: %v", err)
+			}
+			rows, err = store.ListWorkspaces(context.Background(), "acct-renewal")
+			if err != nil || len(rows) != 1 || rows[0]["currentComputeAllocationId"] != nil && rows[0]["currentComputeAllocationId"] != "" ||
+				rows[0]["computeAllocationId"] != "compute-renewal" || rows[0]["autoRenew"] != false || rows[0]["totalUsdMicros"] != int64(52_580_000) {
+				t.Fatalf("suspended canonical Workspace rows=%#v err=%v", rows, err)
+			}
+			app, err := newControlPlaneAppWithStore(store)
+			if err != nil {
+				t.Fatal(err)
+			}
+			response := app.workspaceResponse(rows[0])
+			if response["openable"] == true || stringValue(response["currentComputeAllocationId"]) != "" {
+				t.Fatalf("suspended Workspace response=%#v", response)
+			}
+		})
+	}
+}
+
+func TestWorkspaceRenewalGatewayRequiresCanonicalCoverage(t *testing.T) {
+	ctx := context.Background()
+	store := newMemoryTableStore()
+	if err := store.SaveCompute(ctx, map[string]any{
+		"id": "compute-renewal", "accountId": "acct-renewal", "workspaceId": "ws-renewal", "status": "running", "billingStatus": "active", "paidThrough": "2026-08-20T00:00:00Z",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.SaveStorage(ctx, map[string]any{
+		"id": "storage-renewal", "accountId": "acct-renewal", "workspaceId": "ws-renewal", "status": "available", "billingStatus": "active", "paidThrough": "2026-08-20T00:00:00Z",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	app, err := newControlPlaneAppWithStore(store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 7, 20, 0, 0, 0, 0, time.UTC)
+	base := canonicalWorkspaceRenewalRow(true)
+	base["state"], base["status"] = "running", "running"
+	base["runtime"] = map[string]any{"serviceName": "workspace-renewal", "status": "running", "ready": true}
+	tests := []struct {
+		name, reason string
+		open         bool
+		mutate       func(map[string]any)
+	}{
+		{name: "valid", open: true, mutate: func(map[string]any) {}},
+		{name: "missing", reason: "workspace_billing_state_invalid", mutate: func(row map[string]any) {
+			for _, key := range workspaceBillingStateRequiredKeys {
+				if key != "storageId" {
+					delete(row, key)
+				}
+			}
+		}},
+		{name: "invalid", reason: "workspace_billing_state_invalid", mutate: func(row map[string]any) { row["totalUsdMicros"] = int64(1) }},
+		{name: "manual review", reason: "workspace_billing_manual_review", mutate: func(row map[string]any) {
+			for _, key := range workspaceBillingStateRequiredKeys {
+				switch key {
+				case "autoRenew", "packageId", "renewalStatus", "computeAllocationId", "storageId":
+				default:
+					delete(row, key)
+				}
+			}
+			row["autoRenew"] = false
+			row["renewalStatus"], row["manualReviewReason"] = "manual_review", "legacy_billing_state_mismatch"
+		}},
+		{name: "expired", reason: "workspace_billing_period_expired", mutate: func(row map[string]any) {
+			row["periodStart"], row["paidThrough"], row["nextRenewalAt"] = "2026-06-19T01:02:03Z", "2026-07-19T01:02:03Z", "2026-07-18T01:02:03Z"
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			workspace := cloneMap(base)
+			test.mutate(workspace)
+			response, reason := app.workspaceAccessResponse(workspace, now)
+			if reason != test.reason || (response["openable"] == true) != test.open {
+				t.Fatalf("Workspace access openable=%#v reason=%q response=%#v", response["openable"], reason, response)
+			}
+		})
+	}
+}
+
+func TestWorkspaceRenewalManualReviewMarkerRoundTrips(t *testing.T) {
+	marker := map[string]any{
+		"autoRenew": false, "renewalStatus": "manual_review", "manualReviewReason": "legacy_billing_state_mismatch",
+	}
+	encoded, err := encodeWorkspaceBillingState(marker)
+	if err != nil {
+		t.Fatalf("encode marker: %v", err)
+	}
+	var shape map[string]any
+	if err := json.Unmarshal([]byte(encoded), &shape); err != nil || !reflect.DeepEqual(shape, marker) {
+		t.Fatalf("encoded marker=%s shape=%#v err=%v", encoded, shape, err)
+	}
+
+	for _, tc := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "sqlite", new: func(t *testing.T) controlPlaneTableStore {
+			return NewTestEntStateStore(t, t.TempDir()+"/workspace-renewal-marker.sqlite")
+		}},
+		{name: "postgres", new: newPostgresWorkspaceRenewalStore},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := tc.new(t)
+			row := map[string]any{
+				"id": "ws-marker", "accountId": "acct-marker", "ownerAccountId": "acct-marker", "ownerUserId": "usr-marker",
+				"currentComputeAllocationId": "compute-marker", "storageId": "storage-marker",
+				"autoRenew": false, "renewalStatus": "manual_review", "manualReviewReason": "legacy_billing_state_mismatch",
+			}
+			if err := store.SaveWorkspace(context.Background(), row); err != nil {
+				t.Fatalf("save marker: %v", err)
+			}
+			rows, err := store.ListWorkspaces(context.Background(), "acct-marker")
+			if err != nil || len(rows) != 1 || rows[0]["autoRenew"] != false || rows[0]["renewalStatus"] != "manual_review" || rows[0]["manualReviewReason"] != "legacy_billing_state_mismatch" {
+				t.Fatalf("marker roundtrip rows=%#v err=%v", rows, err)
+			}
+			app, err := newControlPlaneAppWithStore(store)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, reason := app.workspaceAccessResponse(rows[0], time.Now().UTC()); reason != "workspace_billing_manual_review" {
+				t.Fatalf("marker gateway reason=%q row=%#v", reason, rows[0])
+			}
+		})
+	}
+}
+
+func TestWorkspaceProviderAcceptanceBillingExceptionIsNarrow(t *testing.T) {
+	app := newControlPlaneApp()
+	workspaceID, computeID, storageID := primaryWorkspaceID(providerAcceptanceAccountID), providerAcceptanceComputeID(), providerAcceptanceStorageID()
+	mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{
+		"id": computeID, "accountId": providerAcceptanceAccountID, "workspaceId": workspaceID,
+		"status": "running", "billingStatus": "active", "paidThrough": "2099-01-01T00:00:00Z",
+	}))
+	mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{
+		"id": storageID, "accountId": providerAcceptanceAccountID, "workspaceId": workspaceID,
+		"status": "available", "billingStatus": "active", "paidThrough": "2099-01-01T00:00:00Z",
+	}))
+	base := map[string]any{
+		"id": workspaceID, "accountId": providerAcceptanceAccountID, "ownerAccountId": providerAcceptanceAccountID,
+		"ownerUserId": "usr-verification", "customerProduct": false, "verificationSlotId": providerAcceptanceSlotID,
+		"currentComputeAllocationId": computeID, "storageId": storageID, "state": "running", "status": "running",
+	}
+	response, reason := app.workspaceAccessResponse(base, time.Now().UTC())
+	if reason != "" || response["openable"] != true {
+		t.Fatalf("fixed Provider Acceptance slot openable=%#v reason=%q", response["openable"], reason)
+	}
+	for _, mutate := range []func(map[string]any){
+		func(row map[string]any) { row["customerProduct"] = true },
+		func(row map[string]any) { row["verificationSlotId"] = "verification-slot-other" },
+		func(row map[string]any) { row["accountId"], row["ownerAccountId"] = "acct-other", "acct-other" },
+		func(row map[string]any) { row["currentComputeAllocationId"] = "compute-other" },
+		func(row map[string]any) { row["storageId"] = "storage-other" },
+	} {
+		workspace := cloneMap(base)
+		mutate(workspace)
+		if response, reason := app.workspaceAccessResponse(workspace, time.Now().UTC()); reason != "workspace_billing_state_invalid" || response["openable"] == true {
+			t.Fatalf("non-slot billing exception openable=%#v reason=%q row=%#v", response["openable"], reason, workspace)
+		}
+	}
+}
+
+func TestWorkspaceRenewalManualReviewMarkerDecoderIsExact(t *testing.T) {
+	workspace := map[string]any{"ownerUserId": "usr-marker", "currentComputeAllocationId": "compute-marker", "storageId": "storage-marker"}
+	for _, encoded := range []string{
+		`{"autoRenew":false,"renewalStatus":"manual_review"}`,
+		`{"autoRenew":false,"renewalStatus":"manual_review","manualReviewReason":"legacy_billing_state_mismatch","authorizedBy":""}`,
+		`{"autoRenew":"false","renewalStatus":"manual_review","manualReviewReason":"legacy_billing_state_mismatch"}`,
+		`{"autoRenew":true,"renewalStatus":"manual_review","manualReviewReason":"legacy_billing_state_mismatch"}`,
+		`{"autoRenew":false,"renewalStatus":"active","manualReviewReason":"legacy_billing_state_mismatch"}`,
+		`{"autoRenew":false,"renewalStatus":"manual_review","manualReviewReason":"unknown"}`,
+	} {
+		if _, err := decodeWorkspaceBillingState(encoded, workspace); err == nil {
+			t.Fatalf("invalid marker accepted: %s", encoded)
+		}
+	}
+}
+
+func newPostgresWorkspaceRenewalStore(t *testing.T) controlPlaneTableStore {
+	t.Helper()
+	admin := openControlPlaneTestPostgres(t)
+	schema := fmt.Sprintf("control_plane_workspace_renewal_%d", time.Now().UnixNano())
+	if _, err := admin.Exec(`CREATE SCHEMA ` + schema); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = admin.Exec(`DROP SCHEMA ` + schema + ` CASCADE`)
+		_ = admin.Close()
+	})
+	stateStore, err := NewPostgresEntStateStore(controlPlaneTestPostgresURL("postgres", schema))
+	if err != nil {
+		t.Fatal(err)
+	}
+	store := stateStore.(*postgresEntStateStore)
+	t.Cleanup(func() { _ = store.client.Close() })
+	return store
+}
+
+func canonicalWorkspaceRenewalRow(autoRenew bool) map[string]any {
+	authorizedBy, authorizedAt := "", ""
+	if autoRenew {
+		authorizedBy, authorizedAt = "usr-renewal", "2026-07-17T01:02:03Z"
+	}
+	return map[string]any{
+		"id": "ws-renewal", "accountId": "acct-renewal", "ownerAccountId": "acct-renewal", "ownerUserId": "usr-renewal",
+		"currentComputeAllocationId": "compute-renewal", "storageId": "storage-renewal", "packageId": "basic", "storageGb": int64(10),
+		"autoRenew": autoRenew, "authorizedBy": authorizedBy, "authorizedAt": authorizedAt,
+		"priceVersion": pricingCatalogVersion, "currency": pricingCurrency, "billingUnit": pricingBillingUnit,
+		"computeUsdMicros": int64(50_000_000), "storageUsdMicros": int64(2_580_000), "totalUsdMicros": int64(52_580_000),
+		"periodStart": "2026-07-17T01:02:03Z", "paidThrough": "2026-08-17T01:02:03Z", "nextRenewalAt": "2026-08-16T01:02:03Z",
+		"billingAnchorDay": int64(17), "renewalStatus": "active", "computeAllocationId": "compute-renewal",
+	}
 }
 
 func TestEntStateStoreSub2APIMappingAndMonthlyEntitlementRoundTrip(t *testing.T) {
@@ -416,8 +923,23 @@ func TestEntWorkspaceCreateClaimSurvivesRestart(t *testing.T) {
 	}
 }
 
-func TestEntWorkspaceCreateClaimRetriesExpiredSameRequest(t *testing.T) {
-	store := NewTestEntStateStore(t, t.TempDir()+"/workspace-create-retry.sqlite")
+func TestWorkspaceCreateClaimRetriesExpiredSameAcceptedSnapshot(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "sqlite", new: func(t *testing.T) controlPlaneTableStore {
+			return NewTestEntStateStore(t, t.TempDir()+"/workspace-create-retry.sqlite")
+		}},
+		{name: "postgres", new: newPostgresWorkspaceRenewalStore},
+	} {
+		t.Run(tc.name, func(t *testing.T) { testWorkspaceCreateClaimRetriesExpiredSameAcceptedSnapshot(t, tc.new(t)) })
+	}
+}
+
+func testWorkspaceCreateClaimRetriesExpiredSameAcceptedSnapshot(t *testing.T, store controlPlaneTableStore) {
+	t.Helper()
 	workspace, operation := workspaceCreateClaimForTest("hash-first", "attachment-first")
 	expired := time.Now().UTC().Add(-time.Minute)
 	result, err := decodeWorkspaceCreateOperation(operation)
@@ -425,9 +947,21 @@ func TestEntWorkspaceCreateClaimRetriesExpiredSameRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 	result.LeaseExpiresAt = &expired
+	result.AcceptedBillingState = map[string]any{"autoRenew": false, "renewalStatus": "active"}
 	operation["result"] = encodeWorkspaceCreateOperation(result)
 	if err := store.ClaimWorkspaceCreate(context.Background(), workspace, operation); err != nil {
 		t.Fatal(err)
+	}
+
+	mismatchWorkspace, mismatchOperation := workspaceCreateClaimForTest("hash-first", "attachment-first")
+	mismatchResult, err := decodeWorkspaceCreateOperation(mismatchOperation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mismatchResult.AcceptedBillingState = map[string]any{"autoRenew": true, "renewalStatus": "active"}
+	mismatchOperation["result"] = encodeWorkspaceCreateOperation(mismatchResult)
+	if err := store.ClaimWorkspaceCreate(context.Background(), mismatchWorkspace, mismatchOperation); !errors.Is(err, errPrimaryWorkspaceExists) {
+		t.Fatalf("changed accepted billing snapshot error=%v", err)
 	}
 
 	retryWorkspace, retryOperation := workspaceCreateClaimForTest("hash-first", "attachment-first")
@@ -437,6 +971,7 @@ func TestEntWorkspaceCreateClaimRetriesExpiredSameRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 	retryResult.LeaseExpiresAt = &lease
+	retryResult.AcceptedBillingState = cloneMap(result.AcceptedBillingState)
 	retryOperation["result"] = encodeWorkspaceCreateOperation(retryResult)
 	if err := store.ClaimWorkspaceCreate(context.Background(), retryWorkspace, retryOperation); err != nil {
 		t.Fatalf("retry same expired claim: %v", err)

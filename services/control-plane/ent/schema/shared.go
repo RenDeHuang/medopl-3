@@ -165,6 +165,7 @@ func workspaceFields() []ent.Field {
 		field.String("url").Default(""),
 		field.String("state").Default(""),
 		field.String("status").Default(""),
+		field.String("billing_state_json").Default("{}"),
 		field.String("storage_id").Default(""),
 		field.String("current_compute_allocation_id").Default(""),
 		field.String("current_attachment_id").Default(""),
