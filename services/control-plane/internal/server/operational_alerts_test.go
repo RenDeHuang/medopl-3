@@ -81,6 +81,25 @@ func TestOperatorSummaryIncludesWorkspaceRenewalAlerts(t *testing.T) {
 	}
 }
 
+func TestOperatorSummaryKeepsFinancialAndExpiryAlerts(t *testing.T) {
+	fixture := newWorkspaceRenewalWorkerFixture(t, nil)
+	workspace := fixture.workspace
+	operation := workspaceRenewalOperation{
+		ID: "workspace-renewal-dual-alert", Status: "refunded", CreatedAt: "2026-07-17T00:00:00Z", RequestHash: "dual-alert-request",
+		Phase: "refund_receipt", AccountID: stringValue(workspace["accountId"]), WorkspaceID: stringValue(workspace["id"]), PaidThrough: "2026-08-17T00:00:00Z",
+		ErrorCode: "ledger_refund_receipt_pending", ExpiryStatus: "expired_unpaid", ExpiryPhase: "compute", ExpiryErrorCode: "workspace_expiry_compute_cleanup_pending",
+	}
+	mustStore(t, fixture.app.tables.SaveRuntimeOperation(context.Background(), workspaceRenewalOperationRow(operation)))
+	notifications := fixture.app.operatorSummary()["notifications"].(map[string]any)
+	codes := map[string]bool{}
+	for _, item := range notifications["recent"].([]any) {
+		codes[stringValue(item.(map[string]any)["code"])] = true
+	}
+	if notifications["total"] != 2 || !codes["refund_receipt_pending"] || !codes["cleanup_pending"] {
+		t.Fatalf("dual notifications=%#v", notifications)
+	}
+}
+
 func TestMonthlyOperationalLogsAreStableDeduplicatedAndRedacted(t *testing.T) {
 	var output bytes.Buffer
 	previousOutput, previousFlags, previousPrefix := log.Writer(), log.Flags(), log.Prefix()

@@ -139,7 +139,7 @@ func (app *controlPlaneServer) billingReconciliationReport(ctx context.Context, 
 		}
 		if facts.receiptError {
 			exceptions = append(exceptions, newBillingReconciliationException(resource, "ledger_receipts_unavailable"))
-		} else if code := ledgerReconciliationCode(resource.resourceType, row, facts.receipts); code != "" {
+		} else if code := ledgerReconciliationCode(resource.resourceType, row, facts.userID, facts.receipts); code != "" {
 			exceptions = append(exceptions, newBillingReconciliationException(resource, code))
 		}
 		if len(exceptions) == before {
@@ -276,7 +276,7 @@ func fabricComponentReconciliationCode(row map[string]any, operations []clients.
 	return ""
 }
 
-func ledgerReconciliationCode(resourceType string, row map[string]any, receipts []clients.Receipt) string {
+func ledgerReconciliationCode(resourceType string, row map[string]any, currentUserID int64, receipts []clients.Receipt) string {
 	matches := make([]clients.Receipt, 0, 1)
 	for _, receipt := range receipts {
 		if receipt.ReceiptID == stringValue(row["lastReceiptId"]) {
@@ -305,7 +305,8 @@ func ledgerReconciliationCode(resourceType string, row map[string]any, receipts 
 			receipt.AccountID != stringValue(row["accountId"]) || receipt.WorkspaceID != stringValue(row["workspaceId"]) || receipt.RequestID != stringValue(row["billingOperationId"]) ||
 			stringValue(receipt.Cost["resourceType"]) != "workspace" || stringValue(receipt.Cost["resourceId"]) != stringValue(row["id"]) ||
 			stringValue(receipt.Cost["priceVersion"]) != stringValue(row["priceVersion"]) || stringValue(receipt.Cost["currency"]) != pricingCurrency || stringValue(receipt.Cost["billingUnit"]) != pricingBillingUnit ||
-			stringValue(receipt.Cost["sub2apiRedeemCode"]) != stringValue(row["sub2apiRedeemCode"]) || !validSub2APIUserID || !validExpectedSub2APIUserID || sub2APIUserID != expectedSub2APIUserID ||
+			stringValue(receipt.Cost["sub2apiRedeemCode"]) != stringValue(row["sub2apiRedeemCode"]) || !validSub2APIUserID || !validExpectedSub2APIUserID ||
+			sub2APIUserID != expectedSub2APIUserID || sub2APIUserID != currentUserID ||
 			!validPostChargeBalance || !validExpectedPostChargeBalance || postChargeBalance != expectedPostChargeBalance ||
 			stringValue(receipt.Cost["periodStart"]) != stringValue(row["periodStart"]) || stringValue(receipt.Cost["paidThrough"]) != stringValue(row["paidThrough"]) ||
 			!validTotal || !validExpectedTotal || total != expectedTotal || !validComputeCharge || !validExpectedComputeCharge || computeCharge != expectedComputeCharge ||

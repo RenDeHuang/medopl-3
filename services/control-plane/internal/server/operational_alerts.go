@@ -16,6 +16,10 @@ func monthlyOperationalAlertCodes(row map[string]any) []string {
 	codes := make([]string, 0, len(operationalAlertCodes))
 	status, lastError := stringValue(row["billingStatus"]), stringValue(row["lastBillingError"])
 	renewalStatus, renewalError := stringValue(row["renewalStatus"]), stringValue(row["renewalErrorCode"])
+	expiryError := stringValue(row["renewalExpiryErrorCode"])
+	if expiryError == "" && renewalStatus == "expired_unpaid" {
+		expiryError = renewalError
+	}
 	if status == "manual_review" || renewalStatus == "manual_review" {
 		codes = append(codes, "manual_review")
 	}
@@ -37,10 +41,10 @@ func monthlyOperationalAlertCodes(row map[string]any) []string {
 	if strings.HasPrefix(renewalError, "ledger_refund_receipt_") {
 		codes = append(codes, "refund_receipt_pending")
 	}
-	if strings.HasPrefix(renewalError, "ledger_expiry_receipt_") {
+	if strings.HasPrefix(expiryError, "ledger_expiry_receipt_") {
 		codes = append(codes, "expiry_receipt_pending")
 	}
-	if renewalError == "workspace_expiry_compute_cleanup_pending" {
+	if expiryError == "workspace_expiry_compute_cleanup_pending" {
 		codes = append(codes, "cleanup_pending")
 	}
 	return codes
@@ -61,9 +65,11 @@ func workspaceRenewalOperationalRows(workspaces controlPlaneRecordSet, operation
 			continue
 		}
 		paidThroughByWorkspace[operation.WorkspaceID] = operation.PaidThrough
-		rows[operation.WorkspaceID]["renewalStatus"] = operation.Status
+		rows[operation.WorkspaceID]["renewalStatus"] = firstNonEmpty(operation.ExpiryStatus, operation.Status)
 		rows[operation.WorkspaceID]["renewalPhase"] = operation.Phase
 		rows[operation.WorkspaceID]["renewalErrorCode"] = operation.ErrorCode
+		rows[operation.WorkspaceID]["renewalExpiryPhase"] = operation.ExpiryPhase
+		rows[operation.WorkspaceID]["renewalExpiryErrorCode"] = operation.ExpiryErrorCode
 	}
 	return rows
 }

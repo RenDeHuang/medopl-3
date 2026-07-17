@@ -647,9 +647,9 @@ func TestWorkspaceRenewalExpiryReceiptFailureRetriesOnlyReceipt(t *testing.T) {
 	if err := fixture.app.runMonthlyBillingOnce(context.Background(), fixture.service, now); err == nil {
 		t.Fatal("expiry receipt failure did not surface")
 	}
-	operation := fixture.operation(t)
-	if operation["status"] != "expired_unpaid" || !strings.Contains(stringValue(operation["result"]), `"phase":"expiry_receipt"`) {
-		t.Fatalf("expiry receipt retry state=%#v", operation)
+	operation, err := decodeWorkspaceRenewalOperation(fixture.operation(t))
+	if err != nil || operation.Status != "expired_unpaid" || operation.ExpiryPhase != "receipt" || operation.ExpiryErrorCode != "ledger_expiry_receipt_pending" {
+		t.Fatalf("expiry receipt retry state=%#v err=%v", operation, err)
 	}
 	before := append([]string(nil), (*fixture.events)...)
 	if err := fixture.app.runMonthlyBillingOnce(context.Background(), fixture.service, now); err != nil {
@@ -695,6 +695,7 @@ type workspaceAdjustmentHistorySub2API struct {
 	*monthlySub2API
 	historyCalls      int
 	omitRefundHistory bool
+	historyErr        error
 }
 
 func (s *workspaceAdjustmentHistorySub2API) Usage(context.Context, clients.Sub2APIUsageQuery) (clients.Sub2APIUsagePage, error) {
@@ -707,6 +708,9 @@ func (s *workspaceAdjustmentHistorySub2API) UsageStats(context.Context, clients.
 
 func (s *workspaceAdjustmentHistorySub2API) BalanceHistory(context.Context, int64) ([]clients.Sub2APIBalanceHistoryEntry, error) {
 	s.historyCalls++
+	if s.historyErr != nil {
+		return nil, s.historyErr
+	}
 	usedBy := int64(41)
 	usedAt := time.Date(2026, 8, 30, 9, 30, 0, 0, time.UTC)
 	entries := make([]clients.Sub2APIBalanceHistoryEntry, 0, len(s.charges)+len(s.refunds))
@@ -743,6 +747,80 @@ func TestWorkspaceRenewalRetriesStableRefundCodeWhenAttemptHistoryMissing(t *tes
 	if len(fixture.sub2API.refunds) != 2 || fixture.sub2API.refunds[0].Code != fixture.sub2API.refunds[1].Code || gateway.historyCalls != 1 ||
 		len(fixture.sub2API.charges) != 1 || len(fixture.fabric.computeRenewKeys) != 1 || len(fixture.ledger.receipts) != 1 {
 		t.Fatalf("refund replay history=%d refunds=%#v charges=%#v compute=%#v receipts=%#v", gateway.historyCalls, fixture.sub2API.refunds, fixture.sub2API.charges, fixture.fabric.computeRenewKeys, fixture.ledger.receipts)
+	}
+}
+
+func TestWorkspaceRenewalRefundPendingCannotBlockExpiry(t *testing.T) {
+	fixture := newWorkspaceRenewalWorkerFixture(t, []int64{100_000_000, 47_420_000})
+	fixture.fabric.computeRenewErr = errors.New("provider response lost")
+	fixture.fabric.computeSync = clients.ComputeAllocation{ID: stringValue(fixture.compute["id"]), AccountID: "acct-monthly", WorkspaceID: "workspace-monthly", Status: "external_deleted"}
+	fixture.sub2API.refundErrors = []error{clients.ErrSub2APIChargeUnknown, clients.ErrSub2APIChargeUnknown, clients.ErrSub2APIChargeUnknown}
+	gateway := &workspaceAdjustmentHistorySub2API{monthlySub2API: fixture.sub2API, historyErr: errors.New("balance history unavailable")}
+	fixture.service = controlplane.NewService(fixture.ledger, fixture.fabric, gateway)
+	if err := fixture.app.runMonthlyBillingOnce(context.Background(), fixture.service, fixture.paidThrough.Add(-monthlyRenewalLead)); !errors.Is(err, clients.ErrSub2APIChargeUnknown) {
+		t.Fatalf("initial refund err=%v", err)
+	}
+	for attempt := range 2 {
+		if err := fixture.app.runMonthlyBillingOnce(context.Background(), fixture.service, fixture.paidThrough.Add(time.Duration(attempt)*time.Second)); !errors.Is(err, clients.ErrSub2APIChargeUnknown) {
+			t.Fatalf("expired retry %d err=%v", attempt, err)
+		}
+	}
+	assertWorkspaceRenewalExpiredWhileEvidencePending(t, fixture, "refund_pending", "refund")
+}
+
+func TestWorkspaceRenewalRefundReceiptCannotBlockExpiry(t *testing.T) {
+	fixture := newWorkspaceRenewalWorkerFixture(t, []int64{100_000_000, 47_420_000})
+	fixture.fabric.computeRenewErr = errors.New("provider response lost")
+	fixture.fabric.computeSync = clients.ComputeAllocation{ID: stringValue(fixture.compute["id"]), AccountID: "acct-monthly", WorkspaceID: "workspace-monthly", Status: "external_deleted"}
+	fixture.ledger.receiptErrors = []error{
+		errors.New("ledger unavailable"), errors.New("ledger unavailable"), errors.New("ledger unavailable"), errors.New("ledger unavailable"), errors.New("ledger unavailable"),
+	}
+	if err := fixture.app.runMonthlyBillingOnce(context.Background(), fixture.service, fixture.paidThrough.Add(-monthlyRenewalLead)); err == nil {
+		t.Fatal("initial refund receipt failure did not surface")
+	}
+	for attempt := range 2 {
+		if err := fixture.app.runMonthlyBillingOnce(context.Background(), fixture.service, fixture.paidThrough.Add(time.Duration(attempt)*time.Second)); err == nil {
+			t.Fatalf("expired retry %d did not surface Ledger failure", attempt)
+		}
+	}
+	assertWorkspaceRenewalExpiredWhileEvidencePending(t, fixture, "refunded", "refund_receipt")
+	if len(fixture.sub2API.refunds) != 1 {
+		t.Fatalf("refund repeated after confirmation: %#v", fixture.sub2API.refunds)
+	}
+}
+
+func TestWorkspaceRenewalRenewedReceiptCannotBlockNextPeriodExpiry(t *testing.T) {
+	fixture := newWorkspaceRenewalWorkerFixture(t, []int64{100_000_000, 47_420_000})
+	fixture.ledger.receiptErrors = []error{
+		errors.New("ledger unavailable"), errors.New("ledger unavailable"), errors.New("ledger unavailable"), errors.New("ledger unavailable"), errors.New("ledger unavailable"),
+	}
+	if err := fixture.app.runMonthlyBillingOnce(context.Background(), fixture.service, fixture.paidThrough.Add(-monthlyRenewalLead)); err == nil {
+		t.Fatal("initial renewal receipt failure did not surface")
+	}
+	for attempt := range 2 {
+		if err := fixture.app.runMonthlyBillingOnce(context.Background(), fixture.service, fixture.renewedThrough.Add(time.Duration(attempt)*time.Second)); err == nil {
+			t.Fatalf("next-period expiry retry %d did not surface Ledger failure", attempt)
+		}
+	}
+	assertWorkspaceRenewalExpiredWhileEvidencePending(t, fixture, "verifying", "receipt")
+	operation, err := decodeWorkspaceRenewalOperation(fixture.operation(t))
+	if err != nil || !operation.EntitlementCommitted || len(fixture.sub2API.charges) != 1 || len(fixture.fabric.computeRenewKeys) != 1 || len(fixture.fabric.storageRenewKeys) != 1 {
+		t.Fatalf("renewed receipt state operation=%#v charges=%#v compute=%#v storage=%#v err=%v", operation, fixture.sub2API.charges, fixture.fabric.computeRenewKeys, fixture.fabric.storageRenewKeys, err)
+	}
+}
+
+func assertWorkspaceRenewalExpiredWhileEvidencePending(t *testing.T, fixture workspaceRenewalWorkerFixture, wantStatus, wantPhase string) {
+	t.Helper()
+	workspace, _ := fixture.app.getWorkspace(stringValue(fixture.workspace["id"]))
+	operation, err := decodeWorkspaceRenewalOperation(fixture.operation(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	events := strings.Join(*fixture.events, ",")
+	if workspace["autoRenew"] != false || workspace["state"] != "suspended" || workspace["status"] != "suspended" || workspace["renewalStatus"] != "expired_unpaid" ||
+		operation.Status != wantStatus || operation.Phase != wantPhase || operation.ExpiryStatus != "expired_unpaid" ||
+		strings.Count(events, "fabric.compute.cleanup") != 1 || strings.Contains(events, "fabric.storage.cleanup") {
+		t.Fatalf("expiry convergence workspace=%#v operation=%#v events=%#v", workspace, operation, *fixture.events)
 	}
 }
 
@@ -921,6 +999,15 @@ func TestWorkspaceRenewalManualReviewExpiresAndStopsCompute(t *testing.T) {
 		operation["status"] != "expired_unpaid" || !strings.Contains(stringValue(operation["result"]), `"priorStatus":"manual_review"`) ||
 		strings.Count(events, "fabric.compute.cleanup") != 1 || strings.Contains(events, "fabric.storage.cleanup") {
 		t.Fatalf("manual-review expiry workspace=%#v operation=%#v events=%#v", workspace, operation, *fixture.events)
+	}
+	var expiryReceipt clients.ReceiptInput
+	for _, receipt := range fixture.ledger.receipts {
+		if receipt.Type == "billing.workspace_expired.v1" {
+			expiryReceipt = receipt
+		}
+	}
+	if expiryReceipt.Execution["priorStatus"] != "manual_review" || expiryReceipt.Execution["priorErrorCode"] != "fabric_compute_renewal_unconfirmed" {
+		t.Fatalf("expiry receipt prior evidence=%#v", expiryReceipt.Execution)
 	}
 }
 

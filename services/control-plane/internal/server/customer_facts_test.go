@@ -412,6 +412,19 @@ func TestBillingReconciliationTreatsWorkspaceRenewalAsOneCombinedOperation(t *te
 			assertReconciliationException(t, mismatchBody["report"].(map[string]any), "workspace", operation.WorkspaceID, "ledger_receipt_mismatch")
 		})
 	}
+	t.Run("current account mapping", func(t *testing.T) {
+		operation.ChargeConfirmation["userId"] = int64(42)
+		mustStore(t, renewal.app.tables.SaveRuntimeOperation(context.Background(), workspaceRenewalOperationRow(operation)))
+		ledger.page.Receipts[0].Cost = structToMap(originalCost)
+		ledger.page.Receipts[0].Cost["sub2apiUserId"] = int64(42)
+		mismatch := requestWithMutationKeyForTest(t, server, operatorSessionForTest(t, server), http.MethodPost, "/api/billing/reconciliation", `{"confirm":true}`, "reconcile-workspace-renewal-current-account")
+		if mismatch.Code != http.StatusCreated {
+			t.Fatalf("mismatch status=%d body=%s", mismatch.Code, mismatch.Body.String())
+		}
+		mismatchBody := decodeReconciliationResponse(t, mismatch)
+		assertReconciliationReport(t, mismatchBody, "mismatch", 1, 0, 1)
+		assertReconciliationException(t, mismatchBody["report"].(map[string]any), "workspace", operation.WorkspaceID, "ledger_receipt_mismatch")
+	})
 }
 
 func workspaceRenewalReconciliationFabricOperation(operation workspaceRenewalOperation, resourceType string, row map[string]any) clients.FabricOperation {
