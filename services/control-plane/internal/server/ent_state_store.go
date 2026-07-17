@@ -29,6 +29,7 @@ import (
 	"opl-cloud/services/control-plane/ent/storageattachment"
 	"opl-cloud/services/control-plane/ent/storagevolume"
 	"opl-cloud/services/control-plane/ent/supportticketmapping"
+	"opl-cloud/services/control-plane/ent/user"
 	"opl-cloud/services/control-plane/ent/workspace"
 	"opl-cloud/services/control-plane/ent/workspacebackup"
 	"opl-cloud/services/control-plane/ent/workspacesyncevent"
@@ -362,6 +363,12 @@ func validateWorkspaceBillingState(row map[string]any) error {
 	return err
 }
 
+func lockRowForUpdate(selector *entsql.Selector) {
+	if selector.Dialect() == dialect.Postgres {
+		selector.ForUpdate()
+	}
+}
+
 func mergeWorkspaceForSave(existing, incoming map[string]any) (map[string]any, error) {
 	row := cloneMap(incoming)
 	if existing == nil {
@@ -379,6 +386,16 @@ func mergeWorkspaceForSave(existing, incoming map[string]any) (map[string]any, e
 			if existingBilling[key] != incomingBilling[key] {
 				return nil, errIdempotencyConflict
 			}
+		}
+	}
+	existingAutoRenew, existingHasAutoRenew := existing["autoRenew"].(bool)
+	incomingAutoRenew, incomingHasAutoRenew := row["autoRenew"].(bool)
+	if existingHasAutoRenew && !existingAutoRenew && incomingHasAutoRenew && incomingAutoRenew {
+		if existingBilling == nil {
+			return nil, errIdempotencyConflict
+		}
+		for key, value := range existingBilling {
+			row[key] = value
 		}
 	}
 	if !workspaceLifecycleInactive(existing) || workspaceLifecycleInactive(row) {
@@ -1738,27 +1755,27 @@ func (s *postgresEntStateStore) ActivateWorkspace(ctx context.Context, row map[s
 		}
 		return recordFromEnt(entity, fields), nil
 	}
-	ownerEntity, ownerErr := client.User.Get(ctx, stringValue(row["ownerUserId"]))
+	ownerEntity, ownerErr := client.User.Query().Where(user.IDEQ(stringValue(row["ownerUserId"])), lockRowForUpdate).Only(ctx)
 	owner, err := load(ownerEntity, ownerErr, userEntFields)
 	if err != nil {
 		return nil, err
 	}
-	computeEntity, computeErr := client.ComputeAllocation.Get(ctx, stringValue(row["currentComputeAllocationId"]))
+	computeEntity, computeErr := client.ComputeAllocation.Query().Where(computeallocation.IDEQ(stringValue(row["currentComputeAllocationId"])), lockRowForUpdate).Only(ctx)
 	compute, err := load(computeEntity, computeErr, computeEntFields)
 	if err != nil {
 		return nil, err
 	}
-	storageEntity, storageErr := client.StorageVolume.Get(ctx, stringValue(row["storageId"]))
+	storageEntity, storageErr := client.StorageVolume.Query().Where(storagevolume.IDEQ(stringValue(row["storageId"])), lockRowForUpdate).Only(ctx)
 	storage, err := load(storageEntity, storageErr, storageEntFields)
 	if err != nil {
 		return nil, err
 	}
-	attachmentEntity, attachmentErr := client.StorageAttachment.Get(ctx, stringValue(row["currentAttachmentId"]))
+	attachmentEntity, attachmentErr := client.StorageAttachment.Query().Where(storageattachment.IDEQ(stringValue(row["currentAttachmentId"])), lockRowForUpdate).Only(ctx)
 	attachment, err := load(attachmentEntity, attachmentErr, attachmentEntFields)
 	if err != nil {
 		return nil, err
 	}
-	existingEntity, existingErr := client.Workspace.Get(ctx, stringValue(row["id"]))
+	existingEntity, existingErr := client.Workspace.Query().Where(workspace.IDEQ(stringValue(row["id"])), lockRowForUpdate).Only(ctx)
 	existing, err := load(existingEntity, existingErr, workspaceEntFields)
 	if err != nil {
 		return nil, err
@@ -1784,7 +1801,7 @@ func saveWorkspaceRecord(ctx context.Context, client *controlplaneent.Client, ro
 	if id == "" {
 		return errors.New("missing_record_id")
 	}
-	entity, err := client.Workspace.Get(ctx, id)
+	entity, err := client.Workspace.Query().Where(workspace.IDEQ(id), lockRowForUpdate).Only(ctx)
 	if err == nil {
 		row, err = mergeWorkspaceForSave(recordFromEnt(entity, workspaceEntFields), row)
 		if err != nil {
