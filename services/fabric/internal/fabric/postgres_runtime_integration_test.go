@@ -4,14 +4,213 @@ import (
 	"context"
 	"crypto/rand"
 	"database/sql"
+	"database/sql/driver"
 	"encoding/hex"
 	"errors"
 	"net/url"
 	"os"
+	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"entgo.io/ent/dialect"
+	entsql "entgo.io/ent/dialect/sql"
+	"github.com/lib/pq"
+
+	fabricent "opl-cloud/services/fabric/ent"
 )
+
+type runtimeMutationBarrier struct {
+	mutation   string
+	mutated    chan struct{}
+	release    chan struct{}
+	notifyOnce sync.Once
+	releaseOne sync.Once
+	armed      atomic.Bool
+}
+
+func newRuntimeMutationBarrier(mutation string) *runtimeMutationBarrier {
+	return &runtimeMutationBarrier{mutation: mutation, mutated: make(chan struct{}), release: make(chan struct{})}
+}
+
+func (b *runtimeMutationBarrier) matchesMutation(query string) bool {
+	query = strings.ToUpper(strings.TrimSpace(query))
+	return strings.HasPrefix(query, b.mutation) && strings.Contains(query, "FABRIC_OPERATIONS")
+}
+
+func (b *runtimeMutationBarrier) notifyMutation() {
+	b.armed.Store(true)
+	b.notifyOnce.Do(func() { close(b.mutated) })
+}
+
+func (b *runtimeMutationBarrier) waitBeforeRead(ctx context.Context, query string) error {
+	if !strings.HasPrefix(strings.ToUpper(strings.TrimSpace(query)), "SELECT") || !strings.Contains(strings.ToUpper(query), "FABRIC_OPERATIONS") || !b.armed.CompareAndSwap(true, false) {
+		return nil
+	}
+	select {
+	case <-b.release:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+func (b *runtimeMutationBarrier) releaseRead() {
+	b.releaseOne.Do(func() { close(b.release) })
+}
+
+type runtimeMutationBarrierConnector struct {
+	driver.Connector
+	barrier *runtimeMutationBarrier
+}
+
+func (c *runtimeMutationBarrierConnector) Connect(ctx context.Context) (driver.Conn, error) {
+	conn, err := c.Connector.Connect(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &runtimeMutationBarrierConn{Conn: conn, barrier: c.barrier}, nil
+}
+
+type runtimeMutationBarrierConn struct {
+	driver.Conn
+	barrier *runtimeMutationBarrier
+}
+
+func (c *runtimeMutationBarrierConn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
+	if err := c.barrier.waitBeforeRead(ctx, query); err != nil {
+		return nil, err
+	}
+	rows, err := c.Conn.(driver.QueryerContext).QueryContext(ctx, query, args)
+	if err != nil || !c.barrier.matchesMutation(query) {
+		return rows, err
+	}
+	return &runtimeMutationBarrierRows{Rows: rows, notify: c.barrier.notifyMutation}, nil
+}
+
+func (c *runtimeMutationBarrierConn) ExecContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Result, error) {
+	result, err := c.Conn.(driver.ExecerContext).ExecContext(ctx, query, args)
+	if err == nil && c.barrier.matchesMutation(query) {
+		c.barrier.notifyMutation()
+	}
+	return result, err
+}
+
+type runtimeMutationBarrierRows struct {
+	driver.Rows
+	notify func()
+	once   sync.Once
+}
+
+func (r *runtimeMutationBarrierRows) Close() error {
+	err := r.Rows.Close()
+	r.once.Do(r.notify)
+	return err
+}
+
+func newBarrierPostgresOperationStore(t *testing.T, databaseURL, mutation string) (*PostgresOperationStore, *runtimeMutationBarrier) {
+	t.Helper()
+	connector, err := pq.NewConnector(databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	barrier := newRuntimeMutationBarrier(mutation)
+	db := sql.OpenDB(&runtimeMutationBarrierConnector{Connector: connector, barrier: barrier})
+	store := &PostgresOperationStore{db: db, client: fabricent.NewClient(fabricent.Driver(entsql.OpenDB(dialect.Postgres, db)))}
+	t.Cleanup(func() {
+		barrier.releaseRead()
+		if err := store.client.Close(); err != nil {
+			t.Errorf("close barrier operation store: %v", err)
+		}
+	})
+	return store, barrier
+}
+
+func TestPostgresRuntimeMutationReturnsOwnFenceAtomically(t *testing.T) {
+	for _, mutation := range []string{"INSERT", "UPDATE"} {
+		t.Run(strings.ToLower(mutation), func(t *testing.T) {
+			databaseURL := fabricTestDatabaseURL(t)
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			currentStore, err := NewPostgresOperationStore(databaseURL)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer currentStore.client.Close()
+			barrierStore, barrier := newBarrierPostgresOperationStore(t, databaseURL, mutation)
+
+			startedAt := time.Date(2026, 7, 17, 0, 0, 0, 123456789, time.UTC)
+			operation := newOperation("create_workspace_runtime", "workspace_runtime", "workspace-atomic-fence", "acct-alpha", "workspace-atomic-fence", "runtime-atomic-fence", "request-hash", startedAt)
+			operation.ID = "fop-runtime-atomic-fence"
+			operation.Status = "started"
+			operation.CreatedAt = startedAt
+			priorStartedAt := time.Time{}
+			if mutation == "UPDATE" {
+				seeded, claimed, err := currentStore.ClaimRuntime(ctx, operation)
+				if err != nil || !claimed {
+					t.Fatalf("seed runtime claim=%#v claimed=%v err=%v", seeded, claimed, err)
+				}
+				priorStartedAt = seeded.StartedAt
+			}
+
+			type claimResult struct {
+				operation FabricOperation
+				won       bool
+				err       error
+			}
+			result := make(chan claimResult, 1)
+			requestedStartedAt := startedAt
+			go func() {
+				if mutation == "INSERT" {
+					stored, claimed, err := barrierStore.ClaimRuntime(ctx, operation)
+					result <- claimResult{operation: stored, won: claimed, err: err}
+					return
+				}
+				requestedStartedAt = priorStartedAt.Add(3*time.Minute + 789*time.Nanosecond)
+				stored, won, err := barrierStore.ReclaimRuntime(ctx, operation.ID, priorStartedAt, requestedStartedAt)
+				result <- claimResult{operation: stored, won: won, err: err}
+			}()
+
+			select {
+			case <-barrier.mutated:
+			case <-ctx.Done():
+				t.Fatal("runtime mutation did not reach the readback boundary")
+			}
+			operations, err := currentStore.List(ctx)
+			if err != nil || len(operations) != 1 {
+				t.Fatalf("read mutation fence operations=%#v err=%v", operations, err)
+			}
+			canonicalStartedAt := operations[0].StartedAt
+			if canonicalStartedAt.Equal(requestedStartedAt) {
+				t.Fatal("test input must exercise PostgreSQL timestamp canonicalization")
+			}
+			successorStartedAt := canonicalStartedAt.Add(3*time.Minute + 987*time.Nanosecond)
+			successor, won, err := currentStore.ReclaimRuntime(ctx, operation.ID, canonicalStartedAt, successorStartedAt)
+			if err != nil || !won {
+				t.Fatalf("successor reclaim=%#v won=%v err=%v", successor, won, err)
+			}
+			barrier.releaseRead()
+			owner := <-result
+			if owner.err != nil || !owner.won {
+				t.Fatalf("mutation owner=%#v won=%v err=%v", owner.operation, owner.won, owner.err)
+			}
+			if !owner.operation.StartedAt.Equal(canonicalStartedAt) {
+				t.Fatalf("mutation owner received successor fence: got=%s own=%s successor=%s", owner.operation.StartedAt, canonicalStartedAt, successor.StartedAt)
+			}
+			owner.operation.Status = "succeeded"
+			owner.operation.FinishedAt = successor.StartedAt.Add(time.Second)
+			if err := barrierStore.SaveRuntime(ctx, owner.operation); !errors.Is(err, ErrRuntimeOperationNotCurrent) {
+				t.Fatalf("superseded owner save error=%v, want ErrRuntimeOperationNotCurrent", err)
+			}
+			current, won, err := currentStore.ReclaimRuntime(ctx, operation.ID, canonicalStartedAt, successor.StartedAt.Add(time.Minute))
+			if err != nil || won || !current.StartedAt.Equal(successor.StartedAt) {
+				t.Fatalf("losing reclaim current=%#v won=%v err=%v", current, won, err)
+			}
+		})
+	}
+}
 
 type stalePostgresRuntimeProvider struct {
 	testProvider

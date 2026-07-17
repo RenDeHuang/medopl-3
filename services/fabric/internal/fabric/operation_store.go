@@ -587,12 +587,23 @@ func (s *PostgresOperationStore) ClaimRuntime(ctx context.Context, operation Fab
 	if !fabricent.IsNotFound(err) {
 		return FabricOperation{}, false, err
 	}
-	if err := s.Append(ctx, operation); err == nil {
-		created, getErr := s.client.FabricOperation.Get(ctx, operation.ID)
-		if getErr != nil {
-			return FabricOperation{}, false, getErr
-		}
-		return fabricOperationFromEnt(created), true, nil
+	payloadJSON, err := operationPayloadJSON(operation)
+	if err != nil {
+		return FabricOperation{}, false, err
+	}
+	err = s.db.QueryRowContext(ctx, `
+		INSERT INTO fabric_operations (
+			id, operation_id, caller_service, action, resource_kind, resource_id, account_id, workspace_id,
+			provider, provider_request_id, idempotency_key, request_hash, redacted_provider_payload, status,
+			error_code, retryable, started_at, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+		RETURNING started_at`,
+		operation.ID, operation.OperationID, operation.CallerService, operation.Action, operation.ResourceKind, operation.ResourceID,
+		operation.AccountID, operation.WorkspaceID, operation.Provider, operation.ProviderRequestID, operation.IdempotencyKey,
+		operation.RequestHash, payloadJSON, operation.Status, operation.ErrorCode, operation.Retryable, operation.StartedAt, operation.CreatedAt,
+	).Scan(&operation.StartedAt)
+	if err == nil {
+		return operation, true, nil
 	}
 	concurrent, queryErr := s.client.FabricOperation.Get(ctx, operation.ID)
 	if queryErr != nil {
@@ -602,14 +613,25 @@ func (s *PostgresOperationStore) ClaimRuntime(ctx context.Context, operation Fab
 }
 
 func (s *PostgresOperationStore) ReclaimRuntime(ctx context.Context, id string, priorStartedAt, startedAt time.Time) (FabricOperation, bool, error) {
-	updated, err := s.client.FabricOperation.Update().
-		Where(fabricoperation.ID(id), fabricoperation.Status("started"), fabricoperation.StartedAt(priorStartedAt)).
-		SetStartedAt(startedAt).
-		SetErrorCode("").
-		SetRetryable(false).
-		ClearFinishedAt().
-		Save(ctx)
+	existing, err := s.client.FabricOperation.Get(ctx, id)
+	if fabricent.IsNotFound(err) {
+		return FabricOperation{}, false, fmt.Errorf("runtime_operation_not_found")
+	}
 	if err != nil {
+		return FabricOperation{}, false, err
+	}
+	err = s.db.QueryRowContext(ctx, `
+		UPDATE fabric_operations
+		SET started_at = $1, finished_at = NULL, error_code = '', retryable = false
+		WHERE id = $2 AND status = 'started' AND started_at = $3
+		RETURNING started_at`, startedAt, id, priorStartedAt).Scan(&existing.StartedAt)
+	if err == nil {
+		existing.FinishedAt = nil
+		existing.ErrorCode = ""
+		existing.Retryable = false
+		return fabricOperationFromEnt(existing), true, nil
+	}
+	if err != sql.ErrNoRows {
 		return FabricOperation{}, false, err
 	}
 	current, err := s.client.FabricOperation.Get(ctx, id)
@@ -619,7 +641,7 @@ func (s *PostgresOperationStore) ReclaimRuntime(ctx context.Context, id string, 
 	if err != nil {
 		return FabricOperation{}, false, err
 	}
-	return fabricOperationFromEnt(current), updated == 1, nil
+	return fabricOperationFromEnt(current), false, nil
 }
 
 func (s *PostgresOperationStore) SaveRuntime(ctx context.Context, operation FabricOperation) error {
