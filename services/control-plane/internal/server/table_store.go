@@ -245,16 +245,14 @@ func billingOperationIdentityMatches(existing, requested map[string]any) bool {
 	if !existingPriceOK || !requestedPriceOK || existingPriceVersion != requestedPriceVersion || existingChargeUSDMicros != requestedChargeUSDMicros {
 		return false
 	}
-	for _, field := range []string{"accountId", "billingOperationId", "packageId", "periodStart", "paidThrough"} {
+	for _, field := range []string{"accountId", "billingOperationId", "packageId", "periodStart", "paidThrough", "zone"} {
 		if stringValue(existing[field]) != stringValue(requested[field]) {
 			return false
 		}
 	}
-	if numberField(existing, "sizeGb", 0) > 0 || numberField(requested, "sizeGb", 0) > 0 {
-		for _, field := range []string{"computeAllocationId", "zone"} {
-			if stringValue(existing[field]) != stringValue(requested[field]) {
-				return false
-			}
+	if stringValue(existing["resourceType"]) == "storage" || stringValue(requested["resourceType"]) == "storage" || numberField(existing, "sizeGb", 0) > 0 || numberField(requested, "sizeGb", 0) > 0 {
+		if stringValue(existing["computeAllocationId"]) != stringValue(requested["computeAllocationId"]) {
+			return false
 		}
 	}
 	for _, field := range []string{"sizeGb"} {

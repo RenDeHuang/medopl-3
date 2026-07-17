@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 
@@ -74,6 +75,38 @@ func testCanonicalMonthlyPriceSnapshotRoundTrip(t *testing.T, name string, store
 				t.Fatalf("malformed canonical claim persisted rows=%#v err=%v", rows, err)
 			}
 		})
+	}
+}
+
+func TestComputeBillingOperationReplayConflictsOnChangedZone(t *testing.T) {
+	t.Run("memory", func(t *testing.T) {
+		testComputeBillingOperationReplayConflictsOnChangedZone(t, "memory", newMemoryTableStore())
+	})
+	t.Run("postgres", func(t *testing.T) {
+		testComputeBillingOperationReplayConflictsOnChangedZone(t, "postgres", newPostgresResourceIntentStore(t, "control_plane_compute_billing_zone"))
+	})
+}
+
+func testComputeBillingOperationReplayConflictsOnChangedZone(t *testing.T, name string, store controlPlaneTableStore) {
+	t.Helper()
+	ctx := context.Background()
+	row := canonicalBillingOperation("compute", "compute-zone-"+name, "acct-compute-zone-"+name)
+	row["zone"] = "ap-shanghai-2"
+	if _, fresh, err := store.ClaimResourceBillingOperation(ctx, "compute", row); err != nil || !fresh {
+		t.Fatalf("initial claim fresh=%v err=%v", fresh, err)
+	}
+	if _, fresh, err := store.ClaimResourceBillingOperation(ctx, "compute", row); err != nil || fresh {
+		t.Fatalf("exact replay fresh=%v err=%v", fresh, err)
+	}
+	before := loadIntentResource(t, ctx, store, "compute", stringValue(row["id"]), stringValue(row["accountId"]))
+	changed := cloneMap(row)
+	changed["zone"] = "ap-shanghai-3"
+	if _, fresh, err := store.ClaimResourceBillingOperation(ctx, "compute", changed); !errors.Is(err, errIdempotencyConflict) || fresh {
+		t.Fatalf("changed zone replay fresh=%v err=%v", fresh, err)
+	}
+	after := loadIntentResource(t, ctx, store, "compute", stringValue(row["id"]), stringValue(row["accountId"]))
+	if !reflect.DeepEqual(after, before) {
+		t.Fatalf("changed zone replay mutated row: before=%#v after=%#v", before, after)
 	}
 }
 
