@@ -1830,6 +1830,17 @@ func (s *postgresEntStateStore) ClaimWorkspaceCreate(ctx context.Context, worksp
 	if accountID == "" || workspaceID == "" || operationID == "" {
 		return errors.New("invalid_workspace_create_claim")
 	}
+	if stringValue(operation["accountId"]) != accountID || stringValue(operation["workspaceId"]) != workspaceID {
+		return errPrimaryWorkspaceExists
+	}
+	var claim workspaceCreateOperationResult
+	if stringValue(operation["action"]) == "workspace.create" {
+		var claimErr error
+		claim, claimErr = decodeWorkspaceCreateOperation(operation)
+		if claimErr != nil || claim.Workspace.ID != workspaceID || claim.Workspace.AccountID != accountID {
+			return errPrimaryWorkspaceExists
+		}
+	}
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return err
@@ -1837,8 +1848,10 @@ func (s *postgresEntStateStore) ClaimWorkspaceCreate(ctx context.Context, worksp
 	defer func() { _ = tx.Rollback() }()
 	existing, err := tx.RuntimeOperation.Get(ctx, operationID)
 	if err == nil {
+		if stringValue(operation["action"]) != "workspace.create" || existing.Action != "workspace.create" {
+			return errPrimaryWorkspaceExists
+		}
 		current, currentErr := decodeWorkspaceCreateOperation(recordFromEnt(existing, runtimeOpEntFields))
-		claim, claimErr := decodeWorkspaceCreateOperation(operation)
 		persistedEntity, persistedErr := tx.Workspace.Query().Where(workspace.IDEQ(workspaceID), lockRowForUpdate).Only(ctx)
 		if controlplaneent.IsNotFound(persistedErr) {
 			return errPrimaryWorkspaceExists
@@ -1847,7 +1860,7 @@ func (s *postgresEntStateStore) ClaimWorkspaceCreate(ctx context.Context, worksp
 			return persistedErr
 		}
 		persisted := recordFromEnt(persistedEntity, workspaceEntFields)
-		if currentErr != nil || claimErr != nil || !workspaceCreateClaimCompatible(current, claim, persisted) || existing.AccountID != accountID || existing.WorkspaceID != workspaceID {
+		if currentErr != nil || !workspaceCreateClaimCompatible(current, claim, persisted) || existing.AccountID != accountID || existing.WorkspaceID != workspaceID {
 			return errPrimaryWorkspaceExists
 		}
 		if existing.Status != "retryable" && (existing.Status != "started" || current.LeaseExpiresAt != nil && current.LeaseExpiresAt.After(time.Now().UTC())) {

@@ -517,17 +517,32 @@ func (s *memoryTableStore) ClaimWorkspaceCreate(_ context.Context, workspace map
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	accountID := firstNonEmpty(stringValue(workspace["accountId"]), stringValue(workspace["ownerAccountId"]))
-	if accountID == "" || stringValue(workspace["id"]) == "" || stringValue(operation["id"]) == "" {
+	workspaceID, operationID := stringValue(workspace["id"]), stringValue(operation["id"])
+	if accountID == "" || workspaceID == "" || operationID == "" {
 		return errors.New("invalid_workspace_create_claim")
 	}
+	if stringValue(operation["accountId"]) != accountID || stringValue(operation["workspaceId"]) != workspaceID {
+		return errPrimaryWorkspaceExists
+	}
+	var claim workspaceCreateOperationResult
+	if stringValue(operation["action"]) == "workspace.create" {
+		var claimErr error
+		claim, claimErr = decodeWorkspaceCreateOperation(operation)
+		if claimErr != nil || claim.Workspace.ID != workspaceID || claim.Workspace.AccountID != accountID {
+			return errPrimaryWorkspaceExists
+		}
+	}
 	for index, existing := range s.runtimeOps {
-		if stringValue(existing["id"]) != stringValue(operation["id"]) {
+		if stringValue(existing["id"]) != operationID {
 			continue
 		}
+		if stringValue(operation["action"]) != "workspace.create" || stringValue(existing["action"]) != "workspace.create" {
+			return errPrimaryWorkspaceExists
+		}
 		current, currentErr := decodeWorkspaceCreateOperation(existing)
-		claim, claimErr := decodeWorkspaceCreateOperation(operation)
-		persisted := s.workspaces[stringValue(workspace["id"])]
-		if currentErr != nil || claimErr != nil || !workspaceCreateClaimCompatible(current, claim, persisted) {
+		persisted := s.workspaces[workspaceID]
+		if currentErr != nil || stringValue(existing["accountId"]) != accountID || stringValue(existing["workspaceId"]) != workspaceID ||
+			!workspaceCreateClaimCompatible(current, claim, persisted) {
 			return errPrimaryWorkspaceExists
 		}
 		status := stringValue(existing["status"])
@@ -549,7 +564,7 @@ func (s *memoryTableStore) ClaimWorkspaceCreate(_ context.Context, workspace map
 	if _, ok := workspace["customerProduct"]; !ok {
 		workspace["customerProduct"] = true
 	}
-	s.workspaces[stringValue(workspace["id"])] = workspace
+	s.workspaces[workspaceID] = workspace
 	s.runtimeOps = append(s.runtimeOps, cloneMap(operation))
 	return nil
 }

@@ -1458,6 +1458,175 @@ func TestWorkspaceCreateClaimRecoversLegacyMissingAcceptedSnapshot(t *testing.T)
 	}
 }
 
+func TestWorkspaceCreateClaimLegacyUpgradeRequiresActiveBillingTruth(t *testing.T) {
+	for _, storeCase := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "postgres", new: newPostgresWorkspaceRenewalStore},
+	} {
+		for _, operationCase := range []struct {
+			name   string
+			status string
+			expire bool
+		}{
+			{name: "retryable", status: "retryable"},
+			{name: "expired-started", status: "started", expire: true},
+		} {
+			for _, billingCase := range []struct {
+				name    string
+				state   map[string]any
+				persist bool
+			}{
+				{name: "empty", state: map[string]any{}},
+				{name: "manual-review", state: map[string]any{"autoRenew": false, "renewalStatus": "manual_review", "manualReviewReason": workspaceBillingLegacyMismatch}, persist: true},
+			} {
+				t.Run(storeCase.name+"/"+operationCase.name+"/"+billingCase.name, func(t *testing.T) {
+					ctx := context.Background()
+					store := storeCase.new(t)
+					workspace, legacyOperation := workspaceCreateClaimForTest("hash-legacy-invalid", "attachment-legacy-invalid")
+					legacyResult, err := decodeWorkspaceCreateOperation(legacyOperation)
+					if err != nil {
+						t.Fatal(err)
+					}
+					legacyResult.Workspace.PackageID = "basic"
+					workspace["packageId"] = legacyResult.Workspace.PackageID
+					workspace["computeAllocationId"] = legacyResult.Workspace.ComputeID
+					workspace["attachmentId"] = legacyResult.Workspace.AttachmentID
+					if operationCase.expire {
+						expired := time.Now().UTC().Add(-time.Minute)
+						legacyResult.LeaseExpiresAt = &expired
+					}
+					legacyOperation["status"] = operationCase.status
+					legacyOperation["result"] = encodeWorkspaceCreateOperation(legacyResult)
+					if err := store.ClaimWorkspaceCreate(ctx, workspace, legacyOperation); err != nil {
+						t.Fatalf("seed legacy claim: %v", err)
+					}
+					requestedWorkspace := workspaceProjectionBillingRow(legacyResult.Workspace, billingCase.state)
+					if billingCase.persist {
+						if err := store.SaveWorkspace(ctx, requestedWorkspace); err != nil {
+							t.Fatalf("persist %s Workspace truth: %v", billingCase.name, err)
+						}
+					}
+					claimResult := legacyResult
+					lease := time.Now().UTC().Add(time.Minute)
+					claimResult.LeaseExpiresAt = &lease
+					claimResult.AcceptedBillingState = cloneMap(billingCase.state)
+					claimOperation := workspaceCreateOperationRow(stringValue(legacyOperation["id"]), "started", claimResult)
+					if billingCase.name == "empty" {
+						var payload map[string]any
+						if err := json.Unmarshal([]byte(stringValue(claimOperation["result"])), &payload); err != nil {
+							t.Fatal(err)
+						}
+						payload["acceptedBillingState"] = map[string]any{}
+						encoded, err := json.Marshal(payload)
+						if err != nil {
+							t.Fatal(err)
+						}
+						claimOperation["result"] = string(encoded)
+					}
+					before, err := store.ListRuntimeOperations(ctx)
+					if err != nil {
+						t.Fatal(err)
+					}
+					claimErr := store.ClaimWorkspaceCreate(ctx, requestedWorkspace, claimOperation)
+					after, err := store.ListRuntimeOperations(ctx)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if !errors.Is(claimErr, errPrimaryWorkspaceExists) || !reflect.DeepEqual(after, before) {
+						t.Fatalf("legacy %s claim error=%v before=%#v after=%#v", billingCase.name, claimErr, before, after)
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestWorkspaceCreateClaimBindsOuterAndProjectedIdentity(t *testing.T) {
+	for _, storeCase := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "postgres", new: newPostgresWorkspaceRenewalStore},
+	} {
+		for _, attack := range []string{
+			"requested-outer-account", "requested-outer-workspace", "stored-outer-account", "stored-outer-workspace",
+			"result-workspace", "result-account",
+		} {
+			t.Run(storeCase.name+"/"+attack, func(t *testing.T) {
+				ctx := context.Background()
+				store := storeCase.new(t)
+				workspace, storedOperation := workspaceCreateClaimForTest("hash-identity", "attachment-identity")
+				storedResult, err := decodeWorkspaceCreateOperation(storedOperation)
+				if err != nil {
+					t.Fatal(err)
+				}
+				storedResult.Workspace.PackageID = "basic"
+				billingRow := canonicalWorkspaceRenewalRow(false)
+				billingRow["ownerUserId"] = storedResult.Workspace.OwnerID
+				billingRow["currentComputeAllocationId"] = storedResult.Workspace.ComputeID
+				billingRow["computeAllocationId"] = storedResult.Workspace.ComputeID
+				billingRow["storageId"] = storedResult.Workspace.VolumeID
+				acceptedBillingState := workspaceAcceptedBillingState(billingRow)
+				if acceptedBillingState == nil {
+					t.Fatal("test billing state is not canonical")
+				}
+				canonicalWorkspace := workspaceProjectionBillingRow(storedResult.Workspace, acceptedBillingState)
+				workspace = canonicalWorkspace
+				storedOperation["status"] = "retryable"
+				switch attack {
+				case "stored-outer-account":
+					storedOperation["accountId"] = "acct-other"
+				case "stored-outer-workspace":
+					storedOperation["workspaceId"] = "workspace-other"
+				case "result-workspace":
+					storedResult.Workspace.ID = "workspace-other"
+				case "result-account":
+					storedResult.Workspace.AccountID = "acct-other"
+					storedResult.AcceptedBillingState = cloneMap(acceptedBillingState)
+				}
+				storedOperation["result"] = encodeWorkspaceCreateOperation(storedResult)
+				if err := store.SaveWorkspace(ctx, workspace); err != nil {
+					t.Fatalf("seed Workspace: %v", err)
+				}
+				if err := store.SaveRuntimeOperation(ctx, storedOperation); err != nil {
+					t.Fatalf("seed mismatched operation: %v", err)
+				}
+
+				claimResult := storedResult
+				lease := time.Now().UTC().Add(time.Minute)
+				claimResult.LeaseExpiresAt = &lease
+				claimResult.AcceptedBillingState = cloneMap(acceptedBillingState)
+				claimOperation := workspaceCreateOperationRow(stringValue(storedOperation["id"]), "started", claimResult)
+				claimOperation["accountId"] = stringValue(canonicalWorkspace["accountId"])
+				claimOperation["workspaceId"] = stringValue(canonicalWorkspace["id"])
+				requestedWorkspace := canonicalWorkspace
+				switch attack {
+				case "requested-outer-account":
+					claimOperation["accountId"] = "acct-other"
+				case "requested-outer-workspace":
+					claimOperation["workspaceId"] = "workspace-other"
+				}
+				before, err := store.ListRuntimeOperations(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				claimErr := store.ClaimWorkspaceCreate(ctx, requestedWorkspace, claimOperation)
+				after, err := store.ListRuntimeOperations(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !errors.Is(claimErr, errPrimaryWorkspaceExists) || !reflect.DeepEqual(after, before) {
+					t.Fatalf("identity attack %s error=%v before=%#v after=%#v", attack, claimErr, before, after)
+				}
+			})
+		}
+	}
+}
+
 func TestPostgresPrimaryWorkspaceAndVerifierFactsSurviveRestart(t *testing.T) {
 	admin := openControlPlaneTestPostgres(t)
 	schema := fmt.Sprintf("control_plane_primary_workspace_%d", time.Now().UnixNano())

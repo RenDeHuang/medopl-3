@@ -61,15 +61,22 @@ func workspaceCreateClaimIdentity(result workspaceCreateOperationResult) string 
 }
 
 func workspaceCreateClaimCompatible(current, claim workspaceCreateOperationResult, persisted map[string]any) bool {
-	if current.Workspace.ID != claim.Workspace.ID || current.Workspace.AccountID != claim.Workspace.AccountID {
+	persistedID := stringValue(persisted["id"])
+	persistedAccountID := firstNonEmpty(stringValue(persisted["accountId"]), stringValue(persisted["ownerAccountId"]))
+	if persistedID == "" || persistedAccountID == "" ||
+		current.Workspace.ID != claim.Workspace.ID || current.Workspace.ID != persistedID ||
+		current.Workspace.AccountID != claim.Workspace.AccountID || current.Workspace.AccountID != persistedAccountID {
 		return false
 	}
 	if workspaceCreateClaimIdentity(current) == workspaceCreateClaimIdentity(claim) {
 		return true
 	}
+	persistedBillingState := workspaceAcceptedBillingState(persisted)
+	claimBillingState := workspaceAcceptedBillingState(workspaceProjectionBillingRow(claim.Workspace, claim.AcceptedBillingState))
 	return current.AcceptedBillingState == nil && claim.AcceptedBillingState != nil && current.RequestHash == claim.RequestHash &&
-		workspaceCreateProjectionCompatible(persisted, current.Workspace, claim.AcceptedBillingState, true) &&
-		workspaceCreateProjectionCompatible(persisted, claim.Workspace, claim.AcceptedBillingState, true)
+		persistedBillingState != nil && claimBillingState != nil &&
+		workspaceCreateProjectionCompatible(persisted, current.Workspace, claimBillingState, true) &&
+		workspaceCreateProjectionCompatible(persisted, claim.Workspace, claimBillingState, true)
 }
 
 func decodeWorkspaceGatewaySecretOperation(operation map[string]any) (workspaceGatewaySecretOperationResult, error) {
