@@ -16,6 +16,7 @@ import (
 var (
 	errWorkspaceReactivationRequired = errors.New("workspace_reactivation_required")
 	errWorkspaceRenewalCASConflict   = errors.New("workspace_renewal_cas_conflict")
+	errInvalidWorkspaceRenewalPatch  = errors.New("invalid_workspace_renewal_patch")
 )
 
 type workspaceRenewalIntentCAS struct {
@@ -216,10 +217,39 @@ type workspaceRenewalClaimCAS struct {
 }
 
 type workspaceRenewalPersistCAS struct {
-	OperationID             string
-	ExpectedOperationResult string
-	DesiredOperation        map[string]any
-	DesiredWorkspace        map[string]any
+	OperationID                  string
+	ExpectedOperationResult      string
+	DesiredOperation             map[string]any
+	WorkspaceID                  string
+	ExpectedWorkspacePaidThrough string
+	WorkspacePatch               map[string]any
+}
+
+var workspaceRenewalPatchFields = map[string]bool{
+	"periodStart": true, "paidThrough": true, "nextRenewalAt": true, "renewalStatus": true,
+	"autoRenew": true, "authorizedBy": true, "authorizedAt": true, "state": true, "status": true, "currentComputeAllocationId": true,
+}
+
+func mergeWorkspaceRenewalPatch(current, patch map[string]any) (map[string]any, error) {
+	if current == nil || len(patch) == 0 {
+		return nil, errInvalidWorkspaceRenewalPatch
+	}
+	merged := cloneMap(current)
+	for key, value := range patch {
+		if !workspaceRenewalPatchFields[key] {
+			return nil, errInvalidWorkspaceRenewalPatch
+		}
+		merged[key] = value
+	}
+	if err := validateWorkspaceBillingState(merged); err != nil {
+		return nil, err
+	}
+	return merged, nil
+}
+
+type workspaceRenewalWorkspacePatch struct {
+	ExpectedPaidThrough string
+	Fields              map[string]any
 }
 
 func workspaceRenewalOperationID(workspaceID string, paidThrough time.Time) string {
@@ -421,11 +451,13 @@ func (app *controlPlaneServer) processWorkspaceRenewal(ctx context.Context, serv
 	return errWorkspaceRenewalCASConflict
 }
 
-func (app *controlPlaneServer) persistWorkspaceRenewal(ctx context.Context, operation *workspaceRenewalOperation, workspace map[string]any) error {
+func (app *controlPlaneServer) persistWorkspaceRenewal(ctx context.Context, operation *workspaceRenewalOperation, workspace *workspaceRenewalWorkspacePatch) error {
 	desired := workspaceRenewalOperationRow(*operation)
-	if err := app.tables.PersistWorkspaceRenewal(ctx, workspaceRenewalPersistCAS{
-		OperationID: operation.ID, ExpectedOperationResult: operation.PersistedResult, DesiredOperation: desired, DesiredWorkspace: workspace,
-	}); err != nil {
+	update := workspaceRenewalPersistCAS{OperationID: operation.ID, ExpectedOperationResult: operation.PersistedResult, DesiredOperation: desired}
+	if workspace != nil {
+		update.WorkspaceID, update.ExpectedWorkspacePaidThrough, update.WorkspacePatch = operation.WorkspaceID, workspace.ExpectedPaidThrough, workspace.Fields
+	}
+	if err := app.tables.PersistWorkspaceRenewal(ctx, update); err != nil {
 		return err
 	}
 	operation.PersistedResult = stringValue(desired["result"])
@@ -915,10 +947,14 @@ func (app *controlPlaneServer) commitWorkspaceRenewalEntitlement(ctx context.Con
 	if err != nil {
 		return app.manualReviewWorkspaceRenewal(ctx, operation, "workspace_renewal_period_invalid")
 	}
-	workspace["periodStart"], workspace["paidThrough"] = operation.PaidThrough, operation.RenewedThrough
-	workspace["nextRenewalAt"], workspace["renewalStatus"] = renewedThrough.Add(-monthlyRenewalLead).Format(time.RFC3339Nano), "active"
 	operation.Status, operation.Phase, operation.EntitlementCommitted = "verifying", "receipt", true
-	return app.persistWorkspaceRenewal(ctx, operation, workspace)
+	return app.persistWorkspaceRenewal(ctx, operation, &workspaceRenewalWorkspacePatch{
+		ExpectedPaidThrough: operation.PaidThrough,
+		Fields: map[string]any{
+			"periodStart": operation.PaidThrough, "paidThrough": operation.RenewedThrough,
+			"nextRenewalAt": renewedThrough.Add(-monthlyRenewalLead).Format(time.RFC3339Nano), "renewalStatus": "active",
+		},
+	})
 }
 
 func workspaceRenewalReceiptCost(operation workspaceRenewalOperation, charged bool, userID int64) map[string]any {
@@ -979,15 +1015,18 @@ func (app *controlPlaneServer) progressWorkspaceRenewalExpiry(ctx context.Contex
 	for range 2 {
 		switch operation.ExpiryPhase {
 		case "suspend":
-			workspace, ok := app.getWorkspace(operation.WorkspaceID)
+			_, ok := app.getWorkspace(operation.WorkspaceID)
 			if !ok {
 				return errors.New("workspace_expiry_workspace_missing")
 			}
-			workspace["autoRenew"], workspace["authorizedBy"], workspace["authorizedAt"] = false, "", ""
-			workspace["renewalStatus"], workspace["state"], workspace["status"] = "expired_unpaid", "suspended", "suspended"
-			workspace["currentComputeAllocationId"] = ""
 			operation.ExpiryPhase, operation.ExpiryErrorCode = "compute", ""
-			if err := app.persistWorkspaceRenewal(ctx, operation, workspace); err != nil {
+			if err := app.persistWorkspaceRenewal(ctx, operation, &workspaceRenewalWorkspacePatch{
+				ExpectedPaidThrough: operation.ExpiryPaidThrough,
+				Fields: map[string]any{
+					"autoRenew": false, "authorizedBy": "", "authorizedAt": "", "renewalStatus": "expired_unpaid",
+					"state": "suspended", "status": "suspended", "currentComputeAllocationId": "",
+				},
+			}); err != nil {
 				return err
 			}
 		case "compute":

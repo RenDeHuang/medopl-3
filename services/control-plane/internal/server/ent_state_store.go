@@ -1858,11 +1858,6 @@ func (s *postgresEntStateStore) ClaimWorkspaceRenewal(ctx context.Context, claim
 }
 
 func (s *postgresEntStateStore) PersistWorkspaceRenewal(ctx context.Context, update workspaceRenewalPersistCAS) error {
-	if update.DesiredWorkspace != nil {
-		if err := validateWorkspaceBillingState(update.DesiredWorkspace); err != nil {
-			return err
-		}
-	}
 	tx, err := s.client.Tx(ctx)
 	if err != nil {
 		return err
@@ -1881,19 +1876,29 @@ func (s *postgresEntStateStore) PersistWorkspaceRenewal(ctx context.Context, upd
 		stringValue(current["action"]) != stringValue(update.DesiredOperation["action"]) {
 		return errWorkspaceRenewalCASConflict
 	}
-	if update.DesiredWorkspace != nil {
-		workspaceID := stringValue(update.DesiredWorkspace["id"])
-		if workspaceID == "" || workspaceID != stringValue(current["workspaceId"]) {
+	if update.WorkspacePatch != nil {
+		if update.WorkspaceID == "" || update.ExpectedWorkspacePaidThrough == "" || update.WorkspaceID != stringValue(current["workspaceId"]) {
 			return errWorkspaceRenewalCASConflict
 		}
-		if _, err := client.Workspace.Query().Where(workspace.IDEQ(workspaceID), lockRowForUpdate).Only(ctx); err != nil {
+		entity, err := client.Workspace.Query().Where(workspace.IDEQ(update.WorkspaceID), lockRowForUpdate).Only(ctx)
+		if err != nil {
 			return err
 		}
-		builder := client.Workspace.UpdateOneID(workspaceID)
-		setRecordFieldsWithEmptyText(builder, update.DesiredWorkspace, workspaceEntFields, true)
+		currentWorkspace := recordFromEnt(entity, workspaceEntFields)
+		if stringValue(currentWorkspace["paidThrough"]) != update.ExpectedWorkspacePaidThrough {
+			return errWorkspaceRenewalCASConflict
+		}
+		merged, err := mergeWorkspaceRenewalPatch(currentWorkspace, update.WorkspacePatch)
+		if err != nil {
+			return err
+		}
+		builder := client.Workspace.UpdateOneID(update.WorkspaceID)
+		setRecordFieldsWithEmptyText(builder, merged, workspaceEntFields, true)
 		if err := execCreate(ctx, builder); err != nil {
 			return err
 		}
+	} else if update.WorkspaceID != "" || update.ExpectedWorkspacePaidThrough != "" {
+		return errInvalidWorkspaceRenewalPatch
 	}
 	builder := client.RuntimeOperation.UpdateOneID(update.OperationID)
 	setRecordFieldsWithEmptyText(builder, update.DesiredOperation, runtimeOpEntFields, true)

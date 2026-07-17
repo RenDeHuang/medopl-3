@@ -555,18 +555,24 @@ func (s *memoryTableStore) PersistWorkspaceRenewal(_ context.Context, update wor
 			break
 		}
 	}
-	if index < 0 || stringValue(s.runtimeOps[index]["result"]) != update.ExpectedOperationResult {
+	if index < 0 || stringValue(s.runtimeOps[index]["result"]) != update.ExpectedOperationResult ||
+		stringValue(s.runtimeOps[index]["workspaceId"]) != stringValue(update.DesiredOperation["workspaceId"]) ||
+		stringValue(s.runtimeOps[index]["action"]) != stringValue(update.DesiredOperation["action"]) {
 		return errWorkspaceRenewalCASConflict
 	}
-	if update.DesiredWorkspace != nil {
-		if err := validateWorkspaceBillingState(update.DesiredWorkspace); err != nil {
+	if update.WorkspacePatch != nil {
+		current := s.workspaces[update.WorkspaceID]
+		if update.WorkspaceID == "" || update.ExpectedWorkspacePaidThrough == "" || update.WorkspaceID != stringValue(s.runtimeOps[index]["workspaceId"]) ||
+			current == nil || stringValue(current["paidThrough"]) != update.ExpectedWorkspacePaidThrough {
+			return errWorkspaceRenewalCASConflict
+		}
+		workspace, err := mergeWorkspaceRenewalPatch(current, update.WorkspacePatch)
+		if err != nil {
 			return err
 		}
-		workspace := cloneMap(update.DesiredWorkspace)
-		access := cloneMap(mapField(workspace, "access"))
-		delete(access, "password")
-		workspace["access"] = access
-		s.workspaces[stringValue(workspace["id"])] = workspace
+		s.workspaces[update.WorkspaceID] = workspace
+	} else if update.WorkspaceID != "" || update.ExpectedWorkspacePaidThrough != "" {
+		return errInvalidWorkspaceRenewalPatch
 	}
 	s.runtimeOps[index] = cloneMap(update.DesiredOperation)
 	return nil

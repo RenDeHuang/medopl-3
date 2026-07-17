@@ -714,6 +714,105 @@ func TestWorkspaceRenewalClaimIsAtomicAndRejectsDifferentRequestHash(t *testing.
 	}
 }
 
+func TestPersistWorkspaceRenewalMergesPatchWithoutOverwritingConcurrentWorkspaceState(t *testing.T) {
+	for _, storeCase := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "postgres", new: newPostgresWorkspaceRenewalStore},
+	} {
+		t.Run(storeCase.name, func(t *testing.T) {
+			ctx := context.Background()
+			store := storeCase.new(t)
+			workspace := canonicalWorkspaceRenewalRow(true)
+			workspace["state"], workspace["status"], workspace["name"] = "running", "running", "stale-name"
+			workspace["currentAttachmentId"], workspace["runtimeId"] = "attachment-stale", "runtime-stale"
+			workspace["runtime"], workspace["runtimeServiceName"], workspace["serviceName"] = map[string]any{"serviceName": "runtime-service-stale"}, "runtime-root-stale", "service-stale"
+			workspace["access"] = map[string]any{
+				"account": "account-stale", "username": "user-stale", "credentialStatus": "ready",
+				"credentialVersion": "credential-stale", "secretRef": "secret-stale",
+			}
+			mustStore(t, store.SaveWorkspace(ctx, workspace))
+
+			rows, err := store.ListWorkspaces(ctx, "acct-renewal")
+			if err != nil || len(rows) != 1 {
+				t.Fatalf("load stale Workspace: rows=%#v err=%v", rows, err)
+			}
+			stale := cloneMap(rows[0])
+			operation, err := newWorkspaceRenewalOperation(stale, time.Date(2026, 8, 16, 1, 2, 3, 0, time.UTC))
+			if err != nil {
+				t.Fatal(err)
+			}
+			operations, err := store.ListRuntimeOperations(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			claim := workspaceRenewalClaimCAS{
+				WorkspaceID: operation.WorkspaceID, AccountID: operation.AccountID, ExpectedPaidThrough: operation.PaidThrough, ExpectedAutoRenew: true,
+				ExpectedOperationsVersion: runtimeOperationsVersion(operations, operation.WorkspaceID), DesiredOperation: workspaceRenewalOperationRow(operation),
+			}
+			mustStore(t, store.ClaimWorkspaceRenewal(ctx, claim))
+			operation.PersistedResult = stringValue(claim.DesiredOperation["result"])
+
+			concurrent := cloneMap(stale)
+			concurrent["autoRenew"], concurrent["authorizedBy"], concurrent["authorizedAt"] = false, "", ""
+			concurrent["state"], concurrent["status"], concurrent["name"] = "suspended", "suspended", "concurrent-name"
+			concurrent["currentComputeAllocationId"], concurrent["currentAttachmentId"], concurrent["runtimeId"] = "", "", "runtime-concurrent"
+			concurrent["runtime"], concurrent["runtimeServiceName"], concurrent["serviceName"] = map[string]any{"serviceName": "runtime-service-concurrent"}, "runtime-root-concurrent", "service-concurrent"
+			concurrent["access"] = map[string]any{
+				"account": "account-concurrent", "username": "user-concurrent", "credentialStatus": "rotating",
+				"credentialVersion": "credential-concurrent", "secretRef": "secret-concurrent",
+			}
+			mustStore(t, store.SaveWorkspace(ctx, concurrent))
+			rows, err = store.ListWorkspaces(ctx, "acct-renewal")
+			if err != nil || len(rows) != 1 {
+				t.Fatalf("load concurrent Workspace: rows=%#v err=%v", rows, err)
+			}
+			concurrent = cloneMap(rows[0])
+
+			workspacePatch := map[string]any{
+				"periodStart": operation.PaidThrough, "paidThrough": operation.RenewedThrough,
+				"nextRenewalAt": "2026-09-16T01:02:03Z", "renewalStatus": "active",
+			}
+			operation.Status, operation.Phase, operation.EntitlementCommitted = "verifying", "receipt", true
+			update := workspaceRenewalPersistCAS{
+				OperationID: operation.ID, ExpectedOperationResult: operation.PersistedResult,
+				DesiredOperation: workspaceRenewalOperationRow(operation), WorkspaceID: operation.WorkspaceID,
+				ExpectedWorkspacePaidThrough: operation.PaidThrough, WorkspacePatch: workspacePatch,
+			}
+			conflict := update
+			conflict.ExpectedWorkspacePaidThrough = "2026-08-18T01:02:03Z"
+			if err := store.PersistWorkspaceRenewal(ctx, conflict); !errors.Is(err, errWorkspaceRenewalCASConflict) {
+				t.Fatalf("stale paidThrough error=%v, want %v", err, errWorkspaceRenewalCASConflict)
+			}
+			invalid := update
+			invalid.WorkspacePatch = map[string]any{"runtimeId": "stale-runtime"}
+			if err := store.PersistWorkspaceRenewal(ctx, invalid); !errors.Is(err, errInvalidWorkspaceRenewalPatch) {
+				t.Fatalf("invalid patch error=%v, want %v", err, errInvalidWorkspaceRenewalPatch)
+			}
+			mustStore(t, store.PersistWorkspaceRenewal(ctx, update))
+
+			rows, err = store.ListWorkspaces(ctx, "acct-renewal")
+			if err != nil || len(rows) != 1 {
+				t.Fatalf("load persisted Workspace: rows=%#v err=%v", rows, err)
+			}
+			got := rows[0]
+			if got["periodStart"] != operation.PaidThrough || got["paidThrough"] != operation.RenewedThrough || got["nextRenewalAt"] != workspacePatch["nextRenewalAt"] || got["renewalStatus"] != "active" {
+				t.Fatalf("renewal billing patch not persisted: %#v", got)
+			}
+			for _, key := range []string{"autoRenew", "authorizedBy", "authorizedAt", "state", "status", "name", "currentComputeAllocationId", "currentAttachmentId", "runtimeId", "runtimeServiceName", "serviceName"} {
+				if got[key] != concurrent[key] {
+					t.Fatalf("renewal persist overwrote concurrent %s: got=%#v want=%#v Workspace=%#v", key, got[key], concurrent[key], got)
+				}
+			}
+			if string(mustJSON(mapField(got, "runtime"))) != string(mustJSON(mapField(concurrent, "runtime"))) || string(mustJSON(mapField(got, "access"))) != string(mustJSON(mapField(concurrent, "access"))) {
+				t.Fatalf("renewal persist overwrote concurrent runtime/access: got=%#v want=%#v", got, concurrent)
+			}
+		})
+	}
+}
+
 func TestPostgresSaveWorkspaceUpdatesWithoutDeleteInsert(t *testing.T) {
 	store, db := newPostgresWorkspaceRenewalStoreWithDB(t)
 	ctx := context.Background()

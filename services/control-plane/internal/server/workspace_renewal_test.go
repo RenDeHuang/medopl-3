@@ -439,6 +439,82 @@ func TestWorkspaceRenewalConcurrentWorkersClaimOnce(t *testing.T) {
 	}
 }
 
+type disableAutoRenewBeforeEntitlementStore struct {
+	*memoryTableStore
+	now      time.Time
+	once     sync.Once
+	disabled bool
+	err      error
+}
+
+func (s *disableAutoRenewBeforeEntitlementStore) PersistWorkspaceRenewal(ctx context.Context, update workspaceRenewalPersistCAS) error {
+	operation, err := decodeWorkspaceRenewalOperation(update.DesiredOperation)
+	if err != nil {
+		return err
+	}
+	if operation.EntitlementCommitted {
+		s.once.Do(func() {
+			workspaces, listErr := s.ListWorkspaces(ctx, operation.AccountID)
+			operations, operationsErr := s.ListRuntimeOperations(ctx)
+			users, usersErr := s.ListUsers(ctx, true)
+			if listErr != nil || operationsErr != nil || usersErr != nil {
+				s.err = errors.Join(listErr, operationsErr, usersErr)
+				return
+			}
+			workspace := recordByID(workspaces, operation.WorkspaceID)
+			user := recordByID(users, operation.OwnerUserID)
+			intent, _, planErr := planWorkspaceRenewalIntent(workspace, user, operations, false, "disable-after-claim", s.now)
+			if planErr != nil {
+				s.err = planErr
+				return
+			}
+			s.err = s.ApplyWorkspaceRenewalIntent(ctx, intent)
+			s.disabled = s.err == nil
+		})
+		if s.err != nil {
+			return s.err
+		}
+	}
+	return s.memoryTableStore.PersistWorkspaceRenewal(ctx, update)
+}
+
+func TestWorkspaceRenewalDisableAfterClaimSurvivesEntitlementCommit(t *testing.T) {
+	fixture := newWorkspaceRenewalWorkerFixture(t, []int64{100_000_000, 47_420_000})
+	store := &disableAutoRenewBeforeEntitlementStore{
+		memoryTableStore: fixture.app.tables.(*memoryTableStore),
+		now:              fixture.paidThrough.Add(-time.Minute),
+	}
+	app, err := newControlPlaneAppWithStore(store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fixture.app = app
+	now := fixture.paidThrough.Add(-monthlyRenewalLead)
+	if err := fixture.app.runMonthlyBillingOnce(context.Background(), fixture.service, now); err != nil {
+		t.Fatal(err)
+	}
+	workspace, _ := fixture.app.getWorkspace(stringValue(fixture.workspace["id"]))
+	if !store.disabled || workspace["autoRenew"] != false || stringValue(workspace["authorizedBy"]) != "" || stringValue(workspace["authorizedAt"]) != "" || workspace["paidThrough"] != fixture.renewedThrough.Format(time.RFC3339Nano) {
+		t.Fatalf("claim-time disable was overwritten: disabled=%v Workspace=%#v", store.disabled, workspace)
+	}
+	if err := fixture.app.runMonthlyBillingOnce(context.Background(), fixture.service, fixture.renewedThrough.Add(-monthlyRenewalLead)); err != nil {
+		t.Fatal(err)
+	}
+	operations, err := fixture.app.tables.ListRuntimeOperations(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	renewals := 0
+	for _, operation := range operations {
+		if stringValue(operation["action"]) == "workspace.renewal" {
+			renewals++
+		}
+	}
+	if renewals != 1 || len(fixture.sub2API.charges) != 1 {
+		t.Fatalf("disabled next-period intent renewed again: renewals=%d charges=%#v operations=%#v", renewals, fixture.sub2API.charges, operations)
+	}
+}
+
 func TestWorkspaceRenewalInsufficientBalanceRetriesSamePeriodWithoutProviderCalls(t *testing.T) {
 	fixture := newWorkspaceRenewalWorkerFixture(t, []int64{40_000_000})
 	now := fixture.paidThrough.Add(-monthlyRenewalLead)
