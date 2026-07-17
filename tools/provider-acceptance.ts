@@ -17,16 +17,31 @@ export const PROVIDER_ACCEPTANCE_SLOTS = Object.freeze({
   })
 });
 
+const PROVIDER_ACCEPTANCE_SLOT_KEYS = Object.freeze([
+  "id", "accountId", "workspaceId", "workspaceUrl", "computeAllocationId", "computeProviderId",
+  "nodePoolId", "storageId", "storageProviderId", "persistentVolumeId", "attachmentId"
+]);
+const PROVIDER_ACCEPTANCE_MANUAL_REVIEW_REASONS = new Set([
+  "provider_acceptance_compute_result_unknown",
+  "provider_acceptance_compute_state_ambiguous",
+  "provider_acceptance_storage_result_unknown",
+  "provider_acceptance_storage_state_ambiguous",
+  "provider_acceptance_attachment_result_unknown",
+  "provider_acceptance_attachment_state_ambiguous",
+  "provider_acceptance_workspace_state_ambiguous",
+  "provider_acceptance_runtime_result_unknown",
+  "provider_acceptance_receipt_failed",
+  "provider_acceptance_audit_failed",
+  "provider_acceptance_state_ambiguous"
+]);
+
 function sleep(ms) {
   return ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
 }
 
-function safeResult(value) {
-  if (Array.isArray(value)) return value.map(safeResult);
-  if (!value || typeof value !== "object") return value;
-  return Object.fromEntries(Object.entries(value)
-    .filter(([key]) => !/(cookie|password|secret|csrf|apiKey)/i.test(key))
-    .map(([key, nested]) => [key, safeResult(nested)]));
+function hasExactKeys(value, keys) {
+  return value !== null && typeof value === "object" && !Array.isArray(value) &&
+    Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
 }
 
 async function postAcceptance({ fetchImpl, origin, acceptanceToken, slotId, slot, accountId, confirmation, environmentApproved, purchaseBudget, maxApprovedProviderCost, signal, timeoutMs }) {
@@ -51,14 +66,23 @@ async function postAcceptance({ fetchImpl, origin, acceptanceToken, slotId, slot
   return payload;
 }
 
-function validSuccessfulResponse(payload, slotId, accountId) {
-  const requiredIds = [
-    "workspaceId", "computeAllocationId", "computeProviderId", "nodePoolId", "storageId",
-    "storageProviderId", "persistentVolumeId", "attachmentId"
-  ];
-  return payload?.ok === true && ["ready", "reused"].includes(payload.status) &&
-    payload.slot?.id === slotId && payload.slot?.accountId === accountId &&
-    requiredIds.every((field) => typeof payload.slot[field] === "string" && payload.slot[field].trim() !== "");
+function validatedAcceptanceResponse(payload, slotId, accountId) {
+  const status = payload?.status;
+  const manualReview = status === "manual_review";
+  const responseKeys = manualReview ? ["ok", "status", "slot", "reason"] : ["ok", "status", "slot"];
+  if (!hasExactKeys(payload, responseKeys) || !hasExactKeys(payload.slot, PROVIDER_ACCEPTANCE_SLOT_KEYS)) return null;
+
+  const slot = Object.fromEntries(PROVIDER_ACCEPTANCE_SLOT_KEYS.map((key) => [key, payload.slot[key]]));
+  if (slot.id !== slotId || slot.accountId !== accountId || PROVIDER_ACCEPTANCE_SLOT_KEYS.some((key) => typeof slot[key] !== "string")) return null;
+  if (["ready", "reused"].includes(status)) {
+    if (payload.ok !== true || PROVIDER_ACCEPTANCE_SLOT_KEYS.slice(2).some((key) => slot[key].trim() === "")) return null;
+    return { ok: true, status, slot };
+  }
+  if (status === "in_progress") return payload.ok === false ? { ok: false, status, slot } : null;
+  if (manualReview && payload.ok === false && PROVIDER_ACCEPTANCE_MANUAL_REVIEW_REASONS.has(payload.reason)) {
+    return { ok: false, status, slot, reason: payload.reason };
+  }
+  return null;
 }
 
 export async function runProviderAcceptance({
@@ -91,17 +115,18 @@ export async function runProviderAcceptance({
   const normalizedOrigin = assertPublicHttpsUrl(origin, "public_console_origin_required", { hostname: "cloud.medopl.cn" }).origin;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const payload = await postAcceptance({ fetchImpl, origin: normalizedOrigin, acceptanceToken, slotId, slot, accountId, confirmation, environmentApproved, purchaseBudget, maxApprovedProviderCost, signal, timeoutMs: requestTimeoutMs });
-    const result = safeResult({ ...payload, attempt, slotId });
-    if (["ready", "reused"].includes(payload.status)) {
-      if (!validSuccessfulResponse(payload, slotId, accountId)) throw new Error("provider_acceptance_invalid_response");
+    if (!["ready", "reused", "in_progress", "manual_review"].includes(payload?.status)) throw new Error("provider_acceptance_invalid_status");
+    const response = validatedAcceptanceResponse(payload, slotId, accountId);
+    if (!response) throw new Error("provider_acceptance_invalid_response");
+    const result = { ...response, attempt, slotId };
+    if (["ready", "reused"].includes(response.status)) {
       await writeVerificationManifest(manifestPath, result);
       return result;
     }
-    if (payload.status === "manual_review") {
+    if (response.status === "manual_review") {
       await writeVerificationManifest(manifestPath, result);
       throw new Error("provider_acceptance_manual_review");
     }
-    if (payload.status !== "in_progress") throw new Error("provider_acceptance_invalid_status");
     if (attempt < attempts) await sleep(retryDelayMs);
   }
   throw new Error("provider_acceptance_timeout");

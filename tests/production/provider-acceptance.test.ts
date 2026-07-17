@@ -29,6 +29,7 @@ function acceptedSlotPayload(slotId, accountId, overrides = {}) {
       id: slotId,
       accountId,
       workspaceId: `ws-${slotId}`,
+      workspaceUrl: `https://workspace.medopl.cn/w/ws-${slotId}/`,
       computeAllocationId: `ca-${slotId}`,
       computeProviderId: `ins-${slotId}`,
       nodePoolId: `np-${slotId}`,
@@ -55,7 +56,7 @@ test("Provider Acceptance replays each fixed Basic and Pro operation with separa
       calls.push({ path: url.pathname, method: init.method || "GET", headers, body: init.body && JSON.parse(init.body) });
       attempts += 1;
       return json(attempts === 1
-        ? { ok: false, status: "in_progress", slot: { id: slotId, accountId: slot.accountId } }
+        ? { ...acceptedSlotPayload(slotId, slot.accountId), ok: false, status: "in_progress" }
         : acceptedSlotPayload(slotId, slot.accountId));
     };
 
@@ -96,8 +97,15 @@ test("Provider Acceptance rejects missing authority before network access and st
     calls += 1;
     assert.equal(init.method, "POST");
 	assert.equal(new Headers(init.headers).get("x-opl-provider-acceptance-token"), acceptanceToken);
-    return json({ ok: false, status: "manual_review", reason: "provider_result_unknown" });
+    return json({
+      ...acceptedSlotPayload("verification-slot-basic-01", "acct-verification-slot-basic-01"),
+      ok: false,
+      status: "manual_review",
+      reason: "provider_acceptance_storage_result_unknown"
+    });
   };
+  const directory = await mkdtemp(join(tmpdir(), "opl-provider-acceptance-manual-review-"));
+  const manifestPath = join(directory, "manifest.json");
   await assert.rejects(() => runProviderAcceptance({
     origin: "https://cloud.medopl.cn",
     acceptanceToken,
@@ -109,16 +117,21 @@ test("Provider Acceptance rejects missing authority before network access and st
     maxApprovedProviderCost: 100,
     attempts: 5,
     retryDelayMs: 0,
+    manifestPath,
     fetchImpl
   }), /provider_acceptance_manual_review/);
   assert.equal(calls, 1);
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  assert.equal(manifest.status, "manual_review");
+  assert.equal(manifest.reason, "provider_acceptance_storage_result_unknown");
+  await rm(directory, { recursive: true, force: true });
 });
 
 test("Provider Acceptance validates every successful response fact before writing evidence", async () => {
   const slotId = "verification-slot-basic-01";
   const accountId = PROVIDER_ACCEPTANCE_SLOTS[slotId].accountId;
   const requiredIds = [
-    "workspaceId", "computeAllocationId", "computeProviderId", "nodePoolId", "storageId",
+    "workspaceId", "workspaceUrl", "computeAllocationId", "computeProviderId", "nodePoolId", "storageId",
     "storageProviderId", "persistentVolumeId", "attachmentId"
   ];
   const invalidPayloads = [
@@ -139,6 +152,86 @@ test("Provider Acceptance validates every successful response fact before writin
     }), /provider_acceptance_invalid_response/);
     await assert.rejects(access(manifestPath), { code: "ENOENT" });
   }
+  await rm(directory, { recursive: true, force: true });
+});
+
+test("Provider Acceptance CLI rejects unknown response fields without writing evidence", async (t) => {
+  const slotId = "verification-slot-basic-01";
+  const accountId = PROVIDER_ACCEPTANCE_SLOTS[slotId].accountId;
+  const cases = [
+    ["top-level authorization", { ...acceptedSlotPayload(slotId, accountId), authorization: "opaque-authorization-field" }, "opaque-authorization-field"],
+    ["top-level unexpected", { ...acceptedSlotPayload(slotId, accountId), unexpected: "opaque-top-level-field" }, "opaque-top-level-field"],
+    ["slot unexpected", acceptedSlotPayload(slotId, accountId, { unexpected: "opaque-slot-field" }), "opaque-slot-field"]
+  ];
+
+  for (const [name, payload, marker] of cases) {
+    await t.test(name, async () => {
+      const directory = await mkdtemp(join(tmpdir(), "opl-provider-acceptance-extra-"));
+      const manifestPath = join(directory, "manifest.json");
+      let stdout = "";
+      let stderr = "";
+      const code = await runProviderAcceptanceCli({
+        env: {
+          OPL_CONSOLE_ORIGIN: "https://cloud.medopl.cn",
+          OPL_PROVIDER_ACCEPTANCE_TOKEN: acceptanceToken,
+          OPL_PROVIDER_ACCEPTANCE_SLOT_ID: slotId,
+          OPL_PROVIDER_ACCEPTANCE_ACCOUNT_ID: accountId,
+          OPL_PROVIDER_ACCEPTANCE_CONFIRMATION: PROVIDER_ACCEPTANCE_CONFIRMATION,
+          OPL_PROVIDER_ACCEPTANCE_ENVIRONMENT_APPROVED: "true",
+          OPL_PROVIDER_ACCEPTANCE_PURCHASE_BUDGET: "1",
+          OPL_PROVIDER_ACCEPTANCE_MAX_APPROVED_PROVIDER_COST: "100",
+          OPL_PROVIDER_ACCEPTANCE_ATTEMPTS: "1",
+          OPL_PROVIDER_ACCEPTANCE_RETRY_DELAY_MS: "0",
+          OPL_PROVIDER_ACCEPTANCE_MANIFEST_PATH: manifestPath
+        },
+        stdout: { write: (chunk) => { stdout += chunk; } },
+        stderr: { write: (chunk) => { stderr += chunk; } },
+        fetchImpl: async () => json(payload)
+      });
+      assert.equal(code, 1);
+      assert.equal(stdout, "");
+      assert.match(stderr, /provider_acceptance_invalid_response/);
+      assert.doesNotMatch(stdout, new RegExp(marker));
+      await assert.rejects(access(manifestPath), { code: "ENOENT" });
+      await rm(directory, { recursive: true, force: true });
+    });
+  }
+});
+
+test("Provider Acceptance CLI rejects unsupported manual-review reasons without writing evidence", async () => {
+  const slotId = "verification-slot-basic-01";
+  const accountId = PROVIDER_ACCEPTANCE_SLOTS[slotId].accountId;
+  const directory = await mkdtemp(join(tmpdir(), "opl-provider-acceptance-reason-"));
+  const manifestPath = join(directory, "manifest.json");
+  let stdout = "";
+  let stderr = "";
+  const code = await runProviderAcceptanceCli({
+    env: {
+      OPL_CONSOLE_ORIGIN: "https://cloud.medopl.cn",
+      OPL_PROVIDER_ACCEPTANCE_TOKEN: acceptanceToken,
+      OPL_PROVIDER_ACCEPTANCE_SLOT_ID: slotId,
+      OPL_PROVIDER_ACCEPTANCE_ACCOUNT_ID: accountId,
+      OPL_PROVIDER_ACCEPTANCE_CONFIRMATION: PROVIDER_ACCEPTANCE_CONFIRMATION,
+      OPL_PROVIDER_ACCEPTANCE_ENVIRONMENT_APPROVED: "true",
+      OPL_PROVIDER_ACCEPTANCE_PURCHASE_BUDGET: "1",
+      OPL_PROVIDER_ACCEPTANCE_MAX_APPROVED_PROVIDER_COST: "100",
+      OPL_PROVIDER_ACCEPTANCE_ATTEMPTS: "1",
+      OPL_PROVIDER_ACCEPTANCE_RETRY_DELAY_MS: "0",
+      OPL_PROVIDER_ACCEPTANCE_MANIFEST_PATH: manifestPath
+    },
+    stdout: { write: (chunk) => { stdout += chunk; } },
+    stderr: { write: (chunk) => { stderr += chunk; } },
+    fetchImpl: async () => json({
+      ...acceptedSlotPayload(slotId, accountId),
+      ok: false,
+      status: "manual_review",
+      reason: "unexpected_manual_review_reason"
+    })
+  });
+  assert.equal(code, 1);
+  assert.equal(stdout, "");
+  assert.match(stderr, /provider_acceptance_invalid_response/);
+  await assert.rejects(access(manifestPath), { code: "ENOENT" });
   await rm(directory, { recursive: true, force: true });
 });
 

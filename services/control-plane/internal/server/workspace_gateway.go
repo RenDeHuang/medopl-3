@@ -106,8 +106,10 @@ func providerAcceptanceWorkspaceBillingExempt(row map[string]any) bool {
 	}
 	accountID := firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"]))
 	for _, slot := range providerAcceptanceSlots {
+		computeID := stringValue(row["computeAllocationId"])
 		if stringValue(row["verificationSlotId"]) == slot.ID && accountID == slot.AccountID && stringValue(row["id"]) == primaryWorkspaceID(slot.AccountID) &&
-			stringValue(row["computeAllocationId"]) == providerAcceptanceComputeID(slot) && stringValue(row["currentComputeAllocationId"]) == providerAcceptanceComputeID(slot) &&
+			(computeID == "" || computeID == providerAcceptanceComputeID(slot)) &&
+			stringValue(row["currentComputeAllocationId"]) == providerAcceptanceComputeID(slot) &&
 			stringValue(row["storageId"]) == providerAcceptanceStorageID(slot) {
 			return true
 		}

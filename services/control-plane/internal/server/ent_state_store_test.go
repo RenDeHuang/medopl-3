@@ -497,7 +497,7 @@ func TestWorkspaceProviderAcceptanceBillingExceptionIsNarrow(t *testing.T) {
 				func(row map[string]any) { row["customerProduct"] = true },
 				func(row map[string]any) { row["verificationSlotId"] = "verification-slot-other" },
 				func(row map[string]any) { row["accountId"], row["ownerAccountId"] = "acct-other", "acct-other" },
-				func(row map[string]any) { row["computeAllocationId"] = "" },
+				func(row map[string]any) { row["computeAllocationId"] = "compute-other" },
 				func(row map[string]any) { row["currentComputeAllocationId"] = "compute-other" },
 				func(row map[string]any) { row["currentComputeAllocationId"] = "" },
 				func(row map[string]any) { row["storageId"] = "storage-other" },

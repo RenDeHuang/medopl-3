@@ -211,6 +211,61 @@ func seedProviderAcceptanceIdentity(t *testing.T, store StateStore, slot provide
 	}))
 }
 
+func TestPostgresProviderAcceptanceWorkspaceClaimRoundTripRemainsCandidate(t *testing.T) {
+	store, _ := newPostgresWorkspaceRenewalStoreWithDB(t)
+	slot := providerAcceptanceSlots["verification-slot-basic-01"]
+	ownerID := "usr-" + slot.ID
+	seedProviderAcceptanceIdentity(t, store, slot)
+	if err := store.ClaimWorkspaceCreate(context.Background(), providerAcceptanceWorkspaceClaim(ownerID, slot), providerAcceptanceOperationRow("started", slot)); err != nil {
+		t.Fatal(err)
+	}
+
+	workspaces, err := store.ListWorkspaces(context.Background(), slot.AccountID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workspace, conflict := providerAcceptanceWorkspace(workspaces, slot)
+	if conflict || !providerAcceptanceWorkspaceCandidateValid(workspace, slot, ownerID) {
+		t.Fatalf("PostgreSQL Workspace claim lost Acceptance identity: conflict=%v workspace=%#v", conflict, workspace)
+	}
+	if !providerAcceptanceWorkspaceBillingExempt(workspace) {
+		t.Fatalf("PostgreSQL Workspace claim lost Acceptance billing exemption: %#v", workspace)
+	}
+}
+
+func TestPostgresProviderAcceptanceReplaySurvivesServerReload(t *testing.T) {
+	store, db := newPostgresWorkspaceRenewalStoreWithDB(t)
+	slot := providerAcceptanceSlots["verification-slot-basic-01"]
+	seedProviderAcceptanceIdentity(t, store, slot)
+	fabric := &providerAcceptanceFabric{}
+	server := newProviderAcceptanceServer(t, fabric, store)
+	body := providerAcceptanceBodyForSlot(slot, true, 1, 20)
+
+	first := providerAcceptanceRequest(server, httptest.NewRecorder(), body, slot.Key)
+	if payload := providerAcceptancePayload(t, first); first.Code != http.StatusOK || payload["status"] != "in_progress" {
+		t.Fatalf("first PostgreSQL Acceptance = %d %#v", first.Code, payload)
+	}
+
+	var schema string
+	if err := db.QueryRow(`SELECT current_schema()`).Scan(&schema); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.client.Close(); err != nil {
+		t.Fatal(err)
+	}
+	reloadedState, err := NewPostgresEntStateStore(controlPlaneTestPostgresURL(t, "postgres", schema))
+	if err != nil {
+		t.Fatal(err)
+	}
+	reloaded := reloadedState.(*postgresEntStateStore)
+	t.Cleanup(func() { _ = reloaded.client.Close() })
+
+	second := providerAcceptanceRequest(newProviderAcceptanceServer(t, fabric, reloaded), httptest.NewRecorder(), body, slot.Key)
+	if payload := providerAcceptancePayload(t, second); second.Code != http.StatusOK || payload["status"] != "in_progress" {
+		t.Fatalf("reloaded PostgreSQL Acceptance = %d %#v", second.Code, payload)
+	}
+}
+
 func newProviderAcceptanceServer(t *testing.T, fabric *providerAcceptanceFabric, store StateStore) http.Handler {
 	t.Helper()
 	return newProviderAcceptanceServerWithSub2API(t, fabric, store, &testSub2APIClient{balance: 1_000_000, charges: map[string]int64{}})

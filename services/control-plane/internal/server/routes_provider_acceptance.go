@@ -301,10 +301,11 @@ func providerAcceptanceWorkspace(rows []map[string]any, slot providerAcceptanceS
 }
 
 func providerAcceptanceWorkspaceCandidateValid(row map[string]any, slot providerAcceptanceSlot, ownerID string) bool {
+	packageID, computeID := stringValue(row["packageId"]), stringValue(row["computeAllocationId"])
 	return row != nil && stringValue(row["id"]) == primaryWorkspaceID(slot.AccountID) && stringValue(row["accountId"]) == slot.AccountID &&
 		stringValue(row["ownerAccountId"]) == slot.AccountID && stringValue(row["ownerUserId"]) == ownerID && stringValue(row["name"]) == slot.ID &&
-		stringValue(row["packageId"]) == slot.PackageID && stringValue(row["verificationSlotId"]) == slot.ID && row["customerProduct"] == false &&
-		stringValue(row["computeAllocationId"]) == providerAcceptanceComputeID(slot) && stringValue(row["currentComputeAllocationId"]) == providerAcceptanceComputeID(slot) &&
+		(packageID == "" || packageID == slot.PackageID) && stringValue(row["verificationSlotId"]) == slot.ID && row["customerProduct"] == false &&
+		(computeID == "" || computeID == providerAcceptanceComputeID(slot)) && stringValue(row["currentComputeAllocationId"]) == providerAcceptanceComputeID(slot) &&
 		stringValue(row["storageId"]) == providerAcceptanceStorageID(slot)
 }
 
