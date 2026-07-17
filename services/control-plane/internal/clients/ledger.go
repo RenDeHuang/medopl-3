@@ -244,5 +244,17 @@ func (c *ledgerHTTPClient) do(req *http.Request, output any) error {
 	if len(body) > 1<<20 {
 		return fmt.Errorf("ledger response too large")
 	}
-	return json.Unmarshal(body, output)
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.UseNumber()
+	if err := decoder.Decode(output); err != nil {
+		return err
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("ledger response contains multiple JSON values")
+	}
+	return nil
 }

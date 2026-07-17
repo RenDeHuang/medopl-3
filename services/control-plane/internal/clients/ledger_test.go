@@ -3,8 +3,11 @@ package clients
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"math"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -113,6 +116,104 @@ func TestLedgerRecordReconciliationValidatesResponse(t *testing.T) {
 				t.Fatalf("result = %#v, error = %v", result, err)
 			}
 		})
+	}
+}
+
+func TestLedgerRecordReconciliationPreservesLargeReportIntegers(t *testing.T) {
+	for _, count := range []int64{1<<53 + 1, math.MaxInt64} {
+		t.Run(strconv.FormatInt(count, 10), func(t *testing.T) {
+			report := map[string]any{
+				"id": "report-large-integer", "status": "ok",
+				"counts": map[string]any{"billingOperations": count},
+			}
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"id": "report-large-integer", "status": "ok", "report": report,
+					"blockNewWorkspaces": false, "reason": "operator_reconciliation",
+				})
+			}))
+			defer server.Close()
+
+			client := NewLedgerHTTPClient(server.URL, "internal-secret", server.Client())
+			result, err := client.RecordReconciliation(context.Background(), ReconciliationInput{Report: report}, "report-once")
+			if err != nil {
+				t.Fatalf("RecordReconciliation: %v", err)
+			}
+			assertExactLedgerNumber(t, result.Report["counts"].(map[string]any)["billingOperations"], count)
+		})
+	}
+}
+
+func TestLedgerHTTPClientPreservesLargeReceiptCostIntegers(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/ledger/receipts":
+			_, _ = fmt.Fprint(w, `{"receiptId":"receipt-write","workspaceId":"workspace-alpha","cost":{"chargeUsdMicros":9007199254740993}}`)
+		case r.Method == http.MethodGet && r.URL.Path == "/ledger/receipts":
+			_, _ = fmt.Fprint(w, `{"receipts":[{"receiptId":"receipt-list","workspaceId":"workspace-alpha","cost":{"chargeUsdMicros":9223372036854775807}}],"hasMore":false}`)
+		case r.Method == http.MethodGet && r.URL.Path == "/ledger/receipts/receipt-readback":
+			_, _ = fmt.Fprint(w, `{"receiptId":"receipt-readback","workspaceId":"workspace-alpha","cost":{"chargeUsdMicros":9007199254740993}}`)
+		default:
+			t.Fatalf("unexpected Ledger request: %s %s", r.Method, r.URL.String())
+		}
+	}))
+	defer server.Close()
+
+	client := NewLedgerHTTPClient(server.URL, "internal-secret", server.Client())
+	t.Run("record", func(t *testing.T) {
+		receipt, err := client.RecordReceipt(context.Background(), ReceiptInput{WorkspaceID: "workspace-alpha"}, "receipt-once")
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertExactLedgerNumber(t, receipt.Cost["chargeUsdMicros"], 1<<53+1)
+	})
+	t.Run("list", func(t *testing.T) {
+		page, err := client.(LedgerReceiptListClient).ListReceipts(context.Background(), ReceiptQuery{AccountID: "acct-alpha"})
+		if err != nil || len(page.Receipts) != 1 {
+			t.Fatalf("ListReceipts = %#v err=%v", page, err)
+		}
+		assertExactLedgerNumber(t, page.Receipts[0].Cost["chargeUsdMicros"], math.MaxInt64)
+	})
+	t.Run("readback", func(t *testing.T) {
+		receipt, err := client.Receipt(context.Background(), "receipt-readback")
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertExactLedgerNumber(t, receipt.Cost["chargeUsdMicros"], 1<<53+1)
+	})
+}
+
+func TestLedgerHTTPClientRejectsTrailingResponseData(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		trailing string
+	}{
+		{name: "second JSON document", trailing: ` {"receiptId":"receipt-second"}`},
+		{name: "garbage", trailing: ` trailing-garbage`},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				_, _ = fmt.Fprint(w, `{"receiptId":"receipt-first","workspaceId":"workspace-alpha"}`+test.trailing)
+			}))
+			defer server.Close()
+
+			client := NewLedgerHTTPClient(server.URL, "internal-secret", server.Client())
+			if _, err := client.RecordReceipt(context.Background(), ReceiptInput{WorkspaceID: "workspace-alpha"}, "receipt-once"); err == nil {
+				t.Fatal("trailing response data was accepted")
+			}
+		})
+	}
+}
+
+func assertExactLedgerNumber(t *testing.T, value any, want int64) {
+	t.Helper()
+	number, ok := value.(json.Number)
+	if !ok {
+		t.Fatalf("Ledger number type = %T (%v), want json.Number", value, value)
+	}
+	got, err := number.Int64()
+	if err != nil || got != want {
+		t.Fatalf("Ledger number = %q parsed=%d err=%v, want %d", number, got, err, want)
 	}
 }
 
