@@ -1592,7 +1592,8 @@ func workspaceRuntimeIsolationReady(deployment map[string]any, pods []any) bool 
 
 func workspaceRuntimeSpecImage(spec map[string]any) (string, bool) {
 	initContainers, _ := spec["initContainers"].([]any)
-	if len(spec) == 0 || len(initContainers) != 0 || spec["hostNetwork"] == true || stringValue(spec["dnsPolicy"]) != "ClusterFirst" || spec["automountServiceAccountToken"] != false ||
+	ephemeralContainers, _ := spec["ephemeralContainers"].([]any)
+	if len(spec) == 0 || len(initContainers) != 0 || len(ephemeralContainers) != 0 || spec["hostNetwork"] == true || stringValue(spec["dnsPolicy"]) != "ClusterFirst" || spec["automountServiceAccountToken"] != false ||
 		nested(spec, "securityContext", "runAsNonRoot") != true || number(nested(spec, "securityContext", "runAsUser")) != 10001 ||
 		number(nested(spec, "securityContext", "runAsGroup")) != 10001 || number(nested(spec, "securityContext", "fsGroup")) != 10001 ||
 		stringValue(nested(spec, "securityContext", "seccompProfile", "type")) != "RuntimeDefault" {
@@ -1607,7 +1608,11 @@ func workspaceRuntimeSpecImage(spec map[string]any) (string, bool) {
 	security, _ := container["securityContext"].(map[string]any)
 	capabilities, _ := security["capabilities"].(map[string]any)
 	containerSeccomp := stringValue(nested(security, "seccompProfile", "type"))
-	if stringValue(container["name"]) != "workspace" || workspaceImage == "" || security["allowPrivilegeEscalation"] != false || security["privileged"] == true || len(capabilities) != 1 || !reflect.DeepEqual(capabilities["drop"], []any{"ALL"}) || (containerSeccomp != "" && containerSeccomp != "RuntimeDefault") {
+	runAsNonRoot, hasRunAsNonRoot := security["runAsNonRoot"]
+	runAsUser, hasRunAsUser := security["runAsUser"]
+	runAsGroup, hasRunAsGroup := security["runAsGroup"]
+	if stringValue(container["name"]) != "workspace" || workspaceImage == "" || security["allowPrivilegeEscalation"] != false || security["privileged"] == true || len(capabilities) != 1 || !reflect.DeepEqual(capabilities["drop"], []any{"ALL"}) || (containerSeccomp != "" && containerSeccomp != "RuntimeDefault") ||
+		(hasRunAsNonRoot && runAsNonRoot != true) || (hasRunAsUser && number(runAsUser) != 10001) || (hasRunAsGroup && number(runAsGroup) != 10001) {
 		return "", false
 	}
 	return workspaceImage, true

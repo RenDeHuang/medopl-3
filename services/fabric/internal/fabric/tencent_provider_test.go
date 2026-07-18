@@ -983,6 +983,11 @@ func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) 
 	}}
 	assertUnready("Ready Pod privileged initContainer")
 	delete(podSpec, "initContainers")
+	podSpec["ephemeralContainers"] = []any{map[string]any{
+		"name": "debug", "image": "debug:test", "securityContext": map[string]any{"privileged": true},
+	}}
+	assertUnready("Ready Pod privileged ephemeral container")
+	delete(podSpec, "ephemeralContainers")
 	extraPod := map[string]any{
 		"kind":     "Pod",
 		"metadata": map[string]any{"name": "opl-compute-alpha-old", "labels": podLabels},
@@ -999,6 +1004,14 @@ func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) 
 	pods = pods[:1]
 	deploymentContainer := deployment["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["containers"].([]any)[0].(map[string]any)
 	podContainer := podSpec["containers"].([]any)[0].(map[string]any)
+	podContainerSecurity := podContainer["securityContext"].(map[string]any)
+	podContainerSecurity["runAsNonRoot"] = false
+	podContainerSecurity["runAsUser"] = 0
+	podContainerSecurity["runAsGroup"] = 0
+	assertUnready("Ready Pod workspace container overrides identity as root")
+	delete(podContainerSecurity, "runAsNonRoot")
+	delete(podContainerSecurity, "runAsUser")
+	delete(podContainerSecurity, "runAsGroup")
 	delete(deploymentContainer, "volumeMounts")
 	assertUnready("deployment mounts missing")
 	deploymentContainer["volumeMounts"] = workspaceDataMounts()
