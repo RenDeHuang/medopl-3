@@ -50,12 +50,12 @@ func init() {
 	account.UpdateDefaultUpdatedAt = accountDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// accountDescOwnerUserID is the schema descriptor for owner_user_id field.
 	accountDescOwnerUserID := accountFields[3].Descriptor()
-	// account.DefaultOwnerUserID holds the default value on creation for the owner_user_id field.
-	account.DefaultOwnerUserID = accountDescOwnerUserID.Default.(string)
+	// account.OwnerUserIDValidator is a validator for the "owner_user_id" field. It is called by the builders before save.
+	account.OwnerUserIDValidator = accountDescOwnerUserID.Validators[0].(func(string) error)
 	// accountDescSub2apiUserID is the schema descriptor for sub2api_user_id field.
 	accountDescSub2apiUserID := accountFields[4].Descriptor()
-	// account.DefaultSub2apiUserID holds the default value on creation for the sub2api_user_id field.
-	account.DefaultSub2apiUserID = accountDescSub2apiUserID.Default.(int64)
+	// account.Sub2apiUserIDValidator is a validator for the "sub2api_user_id" field. It is called by the builders before save.
+	account.Sub2apiUserIDValidator = accountDescSub2apiUserID.Validators[0].(func(int64) error)
 	// accountDescName is the schema descriptor for name field.
 	accountDescName := accountFields[5].Descriptor()
 	// account.DefaultName holds the default value on creation for the name field.
@@ -710,8 +710,8 @@ func init() {
 	membership.AccountIDValidator = membershipDescAccountID.Validators[0].(func(string) error)
 	// membershipDescOrganizationID is the schema descriptor for organization_id field.
 	membershipDescOrganizationID := membershipFields[4].Descriptor()
-	// membership.DefaultOrganizationID holds the default value on creation for the organization_id field.
-	membership.DefaultOrganizationID = membershipDescOrganizationID.Default.(string)
+	// membership.OrganizationIDValidator is a validator for the "organization_id" field. It is called by the builders before save.
+	membership.OrganizationIDValidator = membershipDescOrganizationID.Validators[0].(func(string) error)
 	// membershipDescUserID is the schema descriptor for user_id field.
 	membershipDescUserID := membershipFields[5].Descriptor()
 	// membership.UserIDValidator is a validator for the "user_id" field. It is called by the builders before save.
@@ -720,6 +720,8 @@ func init() {
 	membershipDescRole := membershipFields[6].Descriptor()
 	// membership.DefaultRole holds the default value on creation for the role field.
 	membership.DefaultRole = membershipDescRole.Default.(string)
+	// membership.RoleValidator is a validator for the "role" field. It is called by the builders before save.
+	membership.RoleValidator = membershipDescRole.Validators[0].(func(string) error)
 	// membershipDescStatus is the schema descriptor for status field.
 	membershipDescStatus := membershipFields[7].Descriptor()
 	// membership.DefaultStatus holds the default value on creation for the status field.
@@ -742,8 +744,8 @@ func init() {
 	organization.UpdateDefaultUpdatedAt = organizationDescUpdatedAt.UpdateDefault.(func() time.Time)
 	// organizationDescBillingAccountID is the schema descriptor for billing_account_id field.
 	organizationDescBillingAccountID := organizationFields[3].Descriptor()
-	// organization.DefaultBillingAccountID holds the default value on creation for the billing_account_id field.
-	organization.DefaultBillingAccountID = organizationDescBillingAccountID.Default.(string)
+	// organization.BillingAccountIDValidator is a validator for the "billing_account_id" field. It is called by the builders before save.
+	organization.BillingAccountIDValidator = organizationDescBillingAccountID.Validators[0].(func(string) error)
 	// organizationDescName is the schema descriptor for name field.
 	organizationDescName := organizationFields[4].Descriptor()
 	// organization.DefaultName holds the default value on creation for the name field.
@@ -1224,6 +1226,8 @@ func init() {
 	userDescPasswordHash := userFields[7].Descriptor()
 	// user.DefaultPasswordHash holds the default value on creation for the password_hash field.
 	user.DefaultPasswordHash = userDescPasswordHash.Default.(string)
+	// user.PasswordHashValidator is a validator for the "password_hash" field. It is called by the builders before save.
+	user.PasswordHashValidator = userDescPasswordHash.Validators[0].(func(string) error)
 	// userDescDisabledAt is the schema descriptor for disabled_at field.
 	userDescDisabledAt := userFields[8].Descriptor()
 	// user.DefaultDisabledAt holds the default value on creation for the disabled_at field.

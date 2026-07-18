@@ -296,8 +296,14 @@ func TestMonthlyAutoRenewDefaultsOff(t *testing.T) {
 func TestMonthlyRenewalStaleSnapshotAfterOwnerDisableHasNoExternalEffects(t *testing.T) {
 	paidThrough := time.Date(2026, 8, 31, 9, 30, 0, 0, time.UTC)
 	app, service, sub2API, fabric, ledger, events := newMonthlyBillingTest(t, []int64{100_000_000})
-	owner := map[string]any{"id": "usr-disabled-renewal", "email": "disabled-renewal@example.com", "accountId": "acct-monthly", "role": "owner", "status": "active"}
-	mustStore(t, app.tables.SaveUser(context.Background(), owner))
+	users, err := app.tables.ListUsers(context.Background(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner := findRecord(users, "usr-monthly-owner")
+	if owner == nil {
+		t.Fatal("monthly owner missing")
+	}
 	resource := monthlyActiveResource("compute", "compute-disabled-stale", paidThrough)
 	mustStore(t, app.tables.SaveCompute(context.Background(), resource))
 	stale := cloneMap(resource)
@@ -357,7 +363,7 @@ func TestMonthlyRenewalConfirmsLostAdjustmentFromAuthoritativeHistory(t *testing
 	fabric := &monthlyFabric{events: events}
 	ledger := &monthlyLedger{events: events}
 	app := newControlPlaneAppEmpty()
-	mustStore(t, app.tables.SaveAccount(context.Background(), map[string]any{"id": "acct-monthly", "status": "active", "sub2apiUserId": int64(41)}))
+	seedTenantMember(t, app.tables, "acct-monthly", "org-monthly", "usr-monthly-owner", "monthly-owner@example.com")
 	service := controlplane.NewService(ledger, fabric, gateway.client)
 	now := time.Date(2026, 7, 30, 12, 0, 0, 0, time.UTC)
 	paidThrough := now.Add(12 * time.Hour)
@@ -658,9 +664,7 @@ func TestRetainedStorageReactivatesFromCurrentTimeOnly(t *testing.T) {
 	fabric.storageInput = clients.StorageVolumeInput{ID: "storage-retained", AccountID: "acct-monthly", WorkspaceID: "workspace-monthly", ComputeID: "compute-retained", Zone: "ap-shanghai-2", SizeGB: 30}
 	ledger := &monthlyLedger{events: events}
 	app := newControlPlaneAppEmpty()
-	if err := app.tables.SaveAccount(context.Background(), map[string]any{"id": "acct-monthly", "status": "active", "sub2apiUserId": int64(41)}); err != nil {
-		t.Fatal(err)
-	}
+	seedTenantMember(t, app.tables, "acct-monthly", "org-monthly", "usr-monthly", "monthly@example.com")
 	retained := monthlyActiveResource("storage", "storage-retained", now.Add(-time.Hour))
 	retained["billingStatus"] = "retained"
 	retained["sizeGb"], retained["monthlyPriceCnyCents"], retained["chargeUsdMicros"] = 30, int64(5400), int64(7_740_000)
@@ -689,7 +693,8 @@ func TestRetainedStorageRejectsCrossAccountReactivationBeforeExternalCalls(t *te
 	now := time.Date(2026, 8, 3, 10, 15, 0, 0, time.UTC)
 	events := &[]string{}
 	app := newControlPlaneAppEmpty()
-	mustStore(t, app.tables.SaveAccount(context.Background(), map[string]any{"id": "acct-other", "status": "active", "sub2apiUserId": int64(42)}))
+	seedTenantMember(t, app.tables, "acct-monthly", "org-monthly", "usr-monthly", "monthly@example.com")
+	seedTenantMember(t, app.tables, "acct-other", "org-other", "usr-other", "beta-other@example.com")
 	retained := monthlyActiveResource("storage", "storage-retained", now.Add(-time.Hour))
 	retained["billingStatus"] = "retained"
 	mustStore(t, app.tables.SaveStorage(context.Background(), retained))

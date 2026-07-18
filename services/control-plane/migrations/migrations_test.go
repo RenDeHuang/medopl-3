@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -81,10 +80,7 @@ func TestApplyPrimaryWorkspaceAddsClassificationAndFailsClosedOnDuplicates(t *te
 }
 
 func TestAutoRenewAuditMigrationUpgradesExistingTablesIdempotently(t *testing.T) {
-	databaseURL := strings.TrimSpace(os.Getenv("CONTROL_PLANE_TEST_DATABASE_URL"))
-	if databaseURL == "" {
-		t.Fatal("CONTROL_PLANE_TEST_DATABASE_URL is required for PostgreSQL tests")
-	}
+	databaseURL := requiredIdentityTestDatabaseURL(t)
 	admin, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		t.Fatal(err)
@@ -136,10 +132,7 @@ func TestAutoRenewAuditMigrationUpgradesExistingTablesIdempotently(t *testing.T)
 }
 
 func TestWorkspaceRenewalMigrationPostgres(t *testing.T) {
-	databaseURL := strings.TrimSpace(os.Getenv("CONTROL_PLANE_TEST_DATABASE_URL"))
-	if databaseURL == "" {
-		t.Fatal("CONTROL_PLANE_TEST_DATABASE_URL is required for PostgreSQL tests")
-	}
+	databaseURL := requiredIdentityTestDatabaseURL(t)
 	admin, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		t.Fatal(err)

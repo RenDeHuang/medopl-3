@@ -94,6 +94,40 @@ func TestSub2APIClientLogsInRefreshesOnceAndParsesDecimalBalance(t *testing.T) {
 	}
 }
 
+func TestSub2APIClientReloginsOnceWhenAccessOnlyTokenExpires(t *testing.T) {
+	loginCalls, refreshCalls, userCalls := 0, 0, 0
+	client := newSub2APITestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/auth/login":
+			loginCalls++
+			writeSub2APISuccess(t, w, map[string]any{"access_token": fmt.Sprintf("access-%d", loginCalls)})
+		case "/api/v1/auth/refresh":
+			refreshCalls++
+			w.WriteHeader(http.StatusInternalServerError)
+		case "/api/v1/admin/users/41":
+			userCalls++
+			switch r.Header.Get("Authorization") {
+			case "Bearer access-1":
+				w.WriteHeader(http.StatusUnauthorized)
+			case "Bearer access-2":
+				writeSub2APISuccess(t, w, json.RawMessage(`{"id":41,"balance":12.345678,"status":"active"}`))
+			default:
+				t.Fatalf("unexpected authorization header %q", r.Header.Get("Authorization"))
+			}
+		default:
+			t.Fatalf("unexpected request %s %s", r.Method, r.URL.String())
+		}
+	}, time.Second)
+
+	balance, err := client.Balance(context.Background(), 41)
+	if err != nil || balance != (Sub2APIBalance{UserID: 41, USDMicros: 12_345_678, Status: "active"}) {
+		t.Fatalf("balance=%#v err=%v", balance, err)
+	}
+	if loginCalls != 2 || refreshCalls != 0 || userCalls != 2 {
+		t.Fatalf("calls login=%d refresh=%d user=%d", loginCalls, refreshCalls, userCalls)
+	}
+}
+
 func TestSub2APIClientSelectsOneActiveWorkspaceKeyAcrossPages(t *testing.T) {
 	pages := []string{}
 	client := newSub2APITestClient(t, func(w http.ResponseWriter, r *http.Request) {

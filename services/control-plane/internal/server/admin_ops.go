@@ -18,65 +18,6 @@ type auditActor struct {
 	AccountID string
 }
 
-func (app *controlPlaneServer) createOrganization(input map[string]any) (map[string]any, error) {
-	name := stringField(input, "name", "Organization")
-	accountID := stringField(input, "billingAccountId", "acct-admin")
-	accounts, err := app.tables.ListAccounts(context.Background(), "")
-	if err != nil {
-		return nil, err
-	}
-	if !recordExists(accounts, accountID) {
-		return nil, errAccountNotFound
-	}
-	id := "org-" + compactID(name+"-"+time.Now().UTC().Format("20060102150405.000000000"))
-	org := map[string]any{"id": id, "name": name, "billingAccountId": accountID, "status": "active"}
-	if err := app.tables.SaveOrganization(context.Background(), org); err != nil {
-		return nil, err
-	}
-	return cloneMap(org), nil
-}
-
-func (app *controlPlaneServer) createMembership(input map[string]any) (map[string]any, error) {
-	orgID := stringField(input, "organizationId", "")
-	userID := stringField(input, "userId", "")
-	role := stringField(input, "role", "member")
-	if !validRole(role) {
-		return nil, errInvalidRole
-	}
-	organizations, err := app.tables.ListOrganizations(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	organization := findRecord(organizations, orgID)
-	if organization == nil {
-		return nil, errOrganizationNotFound
-	}
-	user, err := app.findUserByID(context.Background(), userID)
-	if err != nil {
-		return nil, err
-	}
-	if user == nil {
-		return nil, errMembershipUserNotFound
-	}
-	accountID := stringField(input, "accountId", stringValue(organization["billingAccountId"]))
-	accounts, err := app.tables.ListAccounts(context.Background(), "")
-	if err != nil {
-		return nil, err
-	}
-	if !recordExists(accounts, accountID) {
-		return nil, errAccountNotFound
-	}
-	if accountID != stringValue(organization["billingAccountId"]) || accountID != stringValue(user["accountId"]) {
-		return nil, errMembershipAccountMismatch
-	}
-	id := "mem-" + stableID(orgID, userID, time.Now().UTC().String())[:12]
-	membership := map[string]any{"id": id, "accountId": accountID, "organizationId": orgID, "userId": userID, "role": role, "status": "active"}
-	if err := app.tables.SaveMembership(context.Background(), membership); err != nil {
-		return nil, err
-	}
-	return cloneMap(membership), nil
-}
-
 func findRecord(rows []map[string]any, id string) map[string]any {
 	for _, row := range rows {
 		if stringValue(row["id"]) == id {
@@ -88,30 +29,11 @@ func findRecord(rows []map[string]any, id string) map[string]any {
 
 func recordExists(rows []map[string]any, id string) bool { return findRecord(rows, id) != nil }
 
-func (app *controlPlaneServer) revokeMembership(ctx context.Context, id string) (map[string]any, error) {
-	memberships, err := app.tables.ListMemberships(ctx)
-	if err != nil {
-		return nil, err
-	}
-	membership := findRecord(memberships, id)
-	if membership == nil {
-		return nil, errMembershipNotFound
-	}
-	membership["status"] = "revoked"
-	if err := app.tables.SaveMembership(ctx, membership); err != nil {
-		return nil, err
-	}
-	return membership, nil
-}
-
 func (app *controlPlaneServer) managementState(includeDeleted bool, computePools []any) map[string]any {
 	app.mu.Lock()
 	defer app.mu.Unlock()
 	return map[string]any{
-		"organization":           nil,
-		"organizations":          rowsAsAnyFromMaps(app.listOrganizations()),
 		"users":                  sanitizedUserValues(app.userRecordSet(includeDeleted), includeDeleted),
-		"memberships":            rowsAsAnyFromMaps(app.listMemberships()),
 		"supportTickets":         rowsAsAnyFromMaps(app.listSupportMappings("")),
 		"accounts":               app.accountsLocked(""),
 		"packages":               packageList(computePools),
@@ -301,19 +223,7 @@ func (app *controlPlaneServer) accountsLocked(accountID string) []any {
 		return []any{}
 	}
 	sort.Slice(accounts, func(i, j int) bool { return stringValue(accounts[i]["id"]) < stringValue(accounts[j]["id"]) })
-	rows := make([]any, 0, len(accounts))
-	for _, account := range accounts {
-		row := cloneMap(account)
-		accountID := stringValue(row["id"])
-		for _, user := range app.userRecordSet(true) {
-			if stringValue(user["accountId"]) == accountID && stringValue(user["status"]) != "deleted" {
-				row["userId"] = firstNonEmpty(stringValue(row["userId"]), stringValue(user["id"]))
-				row["email"] = firstNonEmpty(stringValue(row["email"]), stringValue(user["email"]))
-			}
-		}
-		rows = append(rows, row)
-	}
-	return rows
+	return rowsAsAnyFromMaps(accounts)
 }
 
 type terminalArchiveStore interface {

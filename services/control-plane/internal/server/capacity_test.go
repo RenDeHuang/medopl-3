@@ -131,7 +131,10 @@ func TestSinglePodCapacity(t *testing.T) {
 			accountID = "acct-alpha"
 			sub2APIUserID = 41
 		}
-		if err := store.SaveAccount(ctx, map[string]any{"id": accountID, "status": "active", "sub2apiUserId": sub2APIUserID}); err != nil {
+		userID := fmt.Sprintf("usr-capacity-%04d", index)
+		organizationID := fmt.Sprintf("org-capacity-%04d", index)
+		account, user, organization, membership := invitedAccountRowsFor(accountID, userID, organizationID, fmt.Sprintf("capacity-%04d@example.com", index), sub2APIUserID)
+		if err := store.CreateInvitedAccount(ctx, account, user, organization, membership); err != nil {
 			t.Fatalf("seed account %d: %v", index, err)
 		}
 		row := monthlyActiveResource("compute", fmt.Sprintf("compute-capacity-%04d", index), now.Add(12*time.Hour))

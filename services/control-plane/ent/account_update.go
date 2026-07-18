@@ -152,7 +152,25 @@ func (au *AccountUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (au *AccountUpdate) check() error {
+	if v, ok := au.mutation.OwnerUserID(); ok {
+		if err := account.OwnerUserIDValidator(v); err != nil {
+			return &ValidationError{Name: "owner_user_id", err: fmt.Errorf(`ent: validator failed for field "Account.owner_user_id": %w`, err)}
+		}
+	}
+	if v, ok := au.mutation.Sub2apiUserID(); ok {
+		if err := account.Sub2apiUserIDValidator(v); err != nil {
+			return &ValidationError{Name: "sub2api_user_id", err: fmt.Errorf(`ent: validator failed for field "Account.sub2api_user_id": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (au *AccountUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := au.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(account.Table, account.Columns, sqlgraph.NewFieldSpec(account.FieldID, field.TypeString))
 	if ps := au.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -339,7 +357,25 @@ func (auo *AccountUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (auo *AccountUpdateOne) check() error {
+	if v, ok := auo.mutation.OwnerUserID(); ok {
+		if err := account.OwnerUserIDValidator(v); err != nil {
+			return &ValidationError{Name: "owner_user_id", err: fmt.Errorf(`ent: validator failed for field "Account.owner_user_id": %w`, err)}
+		}
+	}
+	if v, ok := auo.mutation.Sub2apiUserID(); ok {
+		if err := account.Sub2apiUserIDValidator(v); err != nil {
+			return &ValidationError{Name: "sub2api_user_id", err: fmt.Errorf(`ent: validator failed for field "Account.sub2api_user_id": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (auo *AccountUpdateOne) sqlSave(ctx context.Context) (_node *Account, err error) {
+	if err := auo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(account.Table, account.Columns, sqlgraph.NewFieldSpec(account.FieldID, field.TypeString))
 	id, ok := auo.mutation.ID()
 	if !ok {

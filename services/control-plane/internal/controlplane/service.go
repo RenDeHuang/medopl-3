@@ -205,6 +205,30 @@ func (s *Service) Sub2APIWorkspaceKey(ctx context.Context, userID int64) (client
 	return client.WorkspaceKey(ctx, userID)
 }
 
+func (s *Service) ResolveOrCreateSub2APIUser(ctx context.Context, email, password string) (clients.Sub2APIIdentity, error) {
+	client, ok := s.sub2API.(clients.Sub2APIIdentityClient)
+	if !ok {
+		return clients.Sub2APIIdentity{}, errors.New("sub2api_identity_unavailable")
+	}
+	return client.ResolveOrCreateUser(ctx, email, password)
+}
+
+func (s *Service) AuthenticateSub2APIUser(ctx context.Context, email, password string) (clients.Sub2APIIdentity, error) {
+	client, ok := s.sub2API.(clients.Sub2APIIdentityClient)
+	if !ok {
+		return clients.Sub2APIIdentity{}, clients.ErrSub2APIAuthUnavailable
+	}
+	return client.AuthenticateUser(ctx, email, password)
+}
+
+func (s *Service) Sub2APIAdminIdentity(ctx context.Context) (clients.Sub2APIIdentity, error) {
+	client, ok := s.sub2API.(clients.Sub2APIAdminIdentityClient)
+	if !ok {
+		return clients.Sub2APIIdentity{}, clients.ErrSub2APIAuthUnavailable
+	}
+	return client.AdminIdentity(ctx)
+}
+
 func (s *Service) GatewaySummary(ctx context.Context, userID int64) (GatewaySummary, error) {
 	key, err := s.Sub2APIWorkspaceKey(ctx, userID)
 	if err != nil {

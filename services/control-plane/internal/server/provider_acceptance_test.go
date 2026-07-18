@@ -184,10 +184,7 @@ func newProviderAcceptanceTestServer(t *testing.T, fabric *providerAcceptanceFab
 	t.Setenv("OPL_BASIC_COMPUTE_INSTANCE_TYPE", "SA5.MEDIUM4")
 	t.Setenv("OPL_PROVIDER_ACCEPTANCE_TOKEN", testProviderAcceptanceToken)
 	store := newMemoryTableStore()
-	mustStore(t, store.SaveAccount(context.Background(), map[string]any{"id": testProviderAcceptanceAccount, "status": "active", "sub2apiUserId": int64(41)}))
-	mustStore(t, store.SaveUser(context.Background(), map[string]any{
-		"id": "usr-verification-slot-basic-01", "email": "verification-slot-basic-01@fenggaolab.org", "accountId": testProviderAcceptanceAccount, "role": "owner", "status": "active",
-	}))
+	seedProviderAcceptanceIdentity(t, store, providerAcceptanceSlots["verification-slot-basic-01"])
 	service := controlplane.NewService(fakeLedgerClient{}, fabric, &testSub2APIClient{balance: 1_000_000, charges: map[string]int64{}})
 	server, err := NewPersistentServer(service, store)
 	if err != nil {
@@ -205,10 +202,7 @@ func newProviderAcceptanceTestServerForSlot(t *testing.T, fabric *providerAccept
 
 func seedProviderAcceptanceIdentity(t *testing.T, store StateStore, slot providerAcceptanceSlot) {
 	t.Helper()
-	mustStore(t, store.SaveAccount(context.Background(), map[string]any{"id": slot.AccountID, "status": "active", "sub2apiUserId": int64(41)}))
-	mustStore(t, store.SaveUser(context.Background(), map[string]any{
-		"id": "usr-" + slot.ID, "email": slot.OwnerEmail, "accountId": slot.AccountID, "role": "owner", "status": "active",
-	}))
+	seedTenantMember(t, store, slot.AccountID, "org-"+slot.ID, "usr-"+slot.ID, slot.OwnerEmail)
 }
 
 func TestPostgresProviderAcceptanceWorkspaceClaimRoundTripRemainsCandidate(t *testing.T) {

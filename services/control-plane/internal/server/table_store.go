@@ -20,6 +20,7 @@ var errWorkspaceActivationConflict = errors.New("workspace_activation_conflict")
 var errInvalidAccountID = errors.New("invalid_account_id")
 var errInvalidEmail = errors.New("invalid_email")
 var errMembershipExists = errors.New("membership_already_exists")
+var errAccountIdentityConflict = errors.New("account_identity_conflict")
 
 type workspaceResumeOperationResult struct {
 	RequestHash    string                      `json:"requestHash"`
@@ -222,7 +223,8 @@ func validateSub2APIAccountMapping(accounts []map[string]any, row map[string]any
 func stageInvitedAccount(accounts, users, organizations, memberships controlPlaneRecordSet, account, user, organization, membership map[string]any) error {
 	accountID := stringValue(account["id"])
 	sub2APIUserID, mapped := positiveIntegerField(account, "sub2apiUserId")
-	if !validAccountID(accountID) {
+	userID := stringValue(user["id"])
+	if !validAccountID(accountID) || userID == "" || stringValue(account["ownerUserId"]) != userID {
 		return errInvalidAccountID
 	}
 	if !mapped {
@@ -232,51 +234,65 @@ func stageInvitedAccount(accounts, users, organizations, memberships controlPlan
 	if err := validateSub2APIAccountMapping(accountRows, account); err != nil {
 		return err
 	}
+	if stringValue(account["status"]) != "active" {
+		return errInvalidAccountID
+	}
 	accountRow := cloneMap(account)
 	if existing := accounts[accountID]; existing != nil {
 		existingMapping := int64(numberField(existing, "sub2apiUserId", 0))
-		if stringValue(existing["status"]) != "active" || existingMapping > 0 && existingMapping != sub2APIUserID {
-			return errSub2APIAccountMappingConflict
+		if stringValue(existing["status"]) != "active" || existingMapping != sub2APIUserID || stringValue(existing["ownerUserId"]) != userID {
+			return errAccountIdentityConflict
 		}
 		accountRow = cloneMap(existing)
-		accountRow["sub2apiUserId"] = sub2APIUserID
-	} else if stringValue(accountRow["status"]) != "active" {
-		return errInvalidAccountID
 	}
-	accounts[accountID] = accountRow
 
 	email, err := canonicalEmail(stringValue(user["email"]))
 	if err != nil {
 		return err
 	}
-	userID := stringValue(user["id"])
 	if userID == "" || stringValue(user["accountId"]) != accountID || stringValue(user["status"]) != "active" {
 		return errInvalidEmail
 	}
-	if !validRole(stringValue(user["role"])) {
+	role := stringValue(user["role"])
+	operator := userID == "usr-admin" && accountID == "acct-admin" && email == "admin@medopl.cn" && role == "admin"
+	if (!operator && role != "owner") || stringValue(user["passwordHash"]) != "" {
 		return errInvalidRole
 	}
+	userExists := false
 	for _, existing := range users {
-		if stringValue(existing["id"]) == userID || normalizeEmail(stringValue(existing["email"])) == email {
+		sameID := stringValue(existing["id"]) == userID
+		sameEmail := normalizeEmail(stringValue(existing["email"])) == email
+		if stringValue(existing["accountId"]) == accountID && !sameID {
+			return errAccountIdentityConflict
+		}
+		if !sameID && !sameEmail {
+			continue
+		}
+		if !sameID || !sameEmail || stringValue(existing["accountId"]) != accountID || stringValue(existing["role"]) != role || stringValue(existing["status"]) != "active" {
 			return errUserExists
 		}
+		userExists = true
 	}
 	userRow := cloneMap(user)
 	userRow["email"] = email
-	users[userID] = userRow
 
 	organizationID := stringValue(organization["id"])
 	if organizationID == "" || stringValue(organization["billingAccountId"]) != accountID || stringValue(organization["status"]) != "active" {
 		return errMembershipAccountMismatch
 	}
-	organizationRow := cloneMap(organization)
-	if existing := organizations[organizationID]; existing != nil {
-		if stringValue(existing["billingAccountId"]) != accountID || stringValue(existing["status"]) != "active" {
+	organizationRow, organizationExists := cloneMap(organization), false
+	for _, existing := range organizations {
+		sameID := stringValue(existing["id"]) == organizationID
+		sameAccount := stringValue(existing["billingAccountId"]) == accountID
+		if !sameID && !sameAccount {
+			continue
+		}
+		if !sameID || !sameAccount || stringValue(existing["status"]) != "active" || stringValue(existing["name"]) != stringValue(organization["name"]) {
 			return errMembershipAccountMismatch
 		}
 		organizationRow = cloneMap(existing)
+		organizationExists = true
 	}
-	organizations[organizationID] = organizationRow
 
 	membershipID := stringValue(membership["id"])
 	if membershipID == "" || stringValue(membership["accountId"]) != accountID || stringValue(membership["organizationId"]) != organizationID {
@@ -285,15 +301,30 @@ func stageInvitedAccount(accounts, users, organizations, memberships controlPlan
 	if stringValue(membership["userId"]) != userID {
 		return errMembershipUserNotFound
 	}
-	if !validRole(stringValue(membership["role"])) || stringValue(membership["role"]) != stringValue(userRow["role"]) || stringValue(membership["status"]) != "active" {
+	if stringValue(membership["role"]) != "owner" || stringValue(membership["status"]) != "active" {
 		return errInvalidRole
 	}
+	membershipExists := false
 	for _, existing := range memberships {
-		if stringValue(existing["id"]) == membershipID || stringValue(existing["organizationId"]) == organizationID && stringValue(existing["userId"]) == userID {
+		collides := stringValue(existing["id"]) == membershipID || stringValue(existing["accountId"]) == accountID || stringValue(existing["organizationId"]) == organizationID || stringValue(existing["userId"]) == userID
+		if !collides {
+			continue
+		}
+		if stringValue(existing["id"]) != membershipID || stringValue(existing["accountId"]) != accountID || stringValue(existing["organizationId"]) != organizationID || stringValue(existing["userId"]) != userID || stringValue(existing["role"]) != "owner" || stringValue(existing["status"]) != "active" {
 			return errMembershipExists
 		}
+		membershipExists = true
 	}
-	memberships[membershipID] = cloneMap(membership)
+	accounts[accountID] = accountRow
+	if !userExists {
+		users[userID] = userRow
+	}
+	if !organizationExists {
+		organizations[organizationID] = organizationRow
+	}
+	if !membershipExists {
+		memberships[membershipID] = cloneMap(membership)
+	}
 	return nil
 }
 

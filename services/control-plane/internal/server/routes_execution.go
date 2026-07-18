@@ -386,7 +386,7 @@ func (app *controlPlaneServer) authorizeOrganization(w http.ResponseWriter, r *h
 		return false
 	}
 	for _, membership := range memberships {
-		if stringValue(membership["organizationId"]) == organizationID && stringValue(membership["userId"]) == stringValue(user["id"]) && stringValue(membership["accountId"]) == stringValue(user["accountId"]) && stringValue(membership["accountId"]) == stringValue(organization["billingAccountId"]) && validRole(stringValue(membership["role"])) && stringValue(membership["status"]) == "active" {
+		if stringValue(membership["organizationId"]) == organizationID && stringValue(membership["userId"]) == stringValue(user["id"]) && stringValue(membership["accountId"]) == stringValue(user["accountId"]) && stringValue(membership["accountId"]) == stringValue(organization["billingAccountId"]) && stringValue(membership["role"]) == "owner" && stringValue(membership["status"]) == "active" {
 			return true
 		}
 	}

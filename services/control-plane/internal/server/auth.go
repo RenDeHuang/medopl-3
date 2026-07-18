@@ -1,28 +1,22 @@
 package server
 
 import (
-	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
-
-	"golang.org/x/crypto/scrypt"
 )
 
 const (
-	passwordHashPrefix   = "pbkdf2_sha256"
-	passwordIterations   = 120000
 	minimumPasswordRunes = 12
 	sessionCookieName    = "opl_session"
+	sessionLookupPrefix  = "sub2api-sha256:"
 )
 
 type sessionRecord struct {
@@ -30,15 +24,6 @@ type sessionRecord struct {
 	UserID    string
 	CSRF      string
 	ExpiresAt time.Time
-}
-
-func hashPassword(password string) (string, error) {
-	salt, err := randomToken(18)
-	if err != nil {
-		return "", err
-	}
-	hash := pbkdf2SHA256([]byte(password), []byte(salt), passwordIterations, 32)
-	return strings.Join([]string{passwordHashPrefix, strconv.Itoa(passwordIterations), salt, base64.RawStdEncoding.EncodeToString(hash)}, "$"), nil
 }
 
 func validatePlaintextPassword(password string) error {
@@ -49,66 +34,6 @@ func validatePlaintextPassword(password string) error {
 		return errWeakPassword
 	}
 	return nil
-}
-
-func verifyPassword(password string, encoded string) bool {
-	if verifyLegacyScryptPassword(password, encoded) {
-		return true
-	}
-	parts := strings.Split(encoded, "$")
-	if len(parts) != 4 || parts[0] != passwordHashPrefix {
-		return false
-	}
-	iterations, err := strconv.Atoi(parts[1])
-	if err != nil || iterations <= 0 {
-		return false
-	}
-	want, err := base64.RawStdEncoding.DecodeString(parts[3])
-	if err != nil {
-		return false
-	}
-	got := pbkdf2SHA256([]byte(password), []byte(parts[2]), iterations, len(want))
-	return hmac.Equal(got, want)
-}
-
-func verifyLegacyScryptPassword(password string, encoded string) bool {
-	parts := strings.Split(encoded, ":")
-	if len(parts) != 3 || parts[0] != "scrypt" {
-		return false
-	}
-	salt, err := hex.DecodeString(parts[1])
-	if err != nil {
-		return false
-	}
-	want, err := hex.DecodeString(parts[2])
-	if err != nil {
-		return false
-	}
-	got, err := scrypt.Key([]byte(password), salt, 1<<14, 8, 1, len(want))
-	return err == nil && hmac.Equal(got, want)
-}
-
-func pbkdf2SHA256(password []byte, salt []byte, iterations int, keyLen int) []byte {
-	hashLen := sha256.Size
-	blocks := (keyLen + hashLen - 1) / hashLen
-	output := make([]byte, 0, blocks*hashLen)
-	for block := 1; block <= blocks; block++ {
-		mac := hmac.New(sha256.New, password)
-		mac.Write(salt)
-		mac.Write([]byte{byte(block >> 24), byte(block >> 16), byte(block >> 8), byte(block)})
-		u := mac.Sum(nil)
-		t := append([]byte(nil), u...)
-		for i := 1; i < iterations; i++ {
-			mac = hmac.New(sha256.New, password)
-			mac.Write(u)
-			u = mac.Sum(nil)
-			for j := range t {
-				t[j] ^= u[j]
-			}
-		}
-		output = append(output, t...)
-	}
-	return output[:keyLen]
 }
 
 func randomToken(bytesLen int) (string, error) {
@@ -125,8 +50,10 @@ func sessionCookie(sessionID string, maxAge int) *http.Cookie {
 
 func sessionLookupKey(sessionID string) string {
 	sum := sha256.Sum256([]byte("opl-session\x00" + sessionID))
-	return "sha256:" + hex.EncodeToString(sum[:])
+	return sessionLookupPrefix + hex.EncodeToString(sum[:])
 }
+
+func validSessionLookupKey(id string) bool { return strings.HasPrefix(id, sessionLookupPrefix) }
 
 func sanitizeUser(user map[string]any) map[string]any {
 	output := cloneMap(user)
@@ -136,61 +63,12 @@ func sanitizeUser(user map[string]any) map[string]any {
 }
 
 func bootstrapUsersFromEnv() ([]map[string]any, error) {
-	raw := strings.TrimSpace(os.Getenv("OPL_CONSOLE_USERS_JSON"))
-	if raw == "" {
+	if os.Getenv("OPL_CONSOLE_USERS_JSON") == "" {
 		return nil, nil
 	}
-	var users []map[string]any
-	if err := json.Unmarshal([]byte(raw), &users); err != nil {
-		return nil, err
-	}
-	for _, user := range users {
-		email, err := canonicalEmail(stringValue(user["email"]))
-		if err != nil {
-			return nil, err
-		}
-		user["email"] = email
-		accountID := strings.TrimSpace(stringValue(user["accountId"]))
-		if !validAccountID(accountID) {
-			return nil, errInvalidAccountID
-		}
-		user["accountId"] = accountID
-		if _, ok := positiveIntegerField(user, "sub2apiUserId"); !ok {
-			return nil, errMonthlyAccountUnmapped
-		}
-		if stringValue(user["id"]) == "" {
-			user["id"] = "usr-" + compactID(email)
-		}
-		if stringValue(user["status"]) == "" {
-			user["status"] = "active"
-		}
-		role := strings.TrimSpace(stringValue(user["role"]))
-		if role == "" {
-			role = "owner"
-		}
-		if !validRole(role) {
-			return nil, errInvalidRole
-		}
-		user["role"] = role
-		if stringValue(user["passwordHash"]) == "" {
-			password := stringValue(user["password"])
-			if err := validatePlaintextPassword(password); err != nil {
-				if errors.Is(err, errMissingPassword) {
-					return nil, errors.New("bootstrap_user_missing_password")
-				}
-				return nil, err
-			}
-			hash, err := hashPassword(password)
-			if err != nil {
-				return nil, err
-			}
-			user["passwordHash"] = hash
-		}
-		delete(user, "password")
-	}
-	return users, nil
+	return nil, errors.New("OPL_CONSOLE_USERS_JSON is retired")
 }
 
 func validRole(role string) bool {
-	return role == "owner" || role == "admin" || role == "member"
+	return role == "owner" || role == "admin"
 }

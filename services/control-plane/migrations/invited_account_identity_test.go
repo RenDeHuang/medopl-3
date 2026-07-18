@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -36,10 +35,7 @@ func TestApplyInvitedAccountIdentityNormalizesAndFailsClosed(t *testing.T) {
 }
 
 func TestInvitedAccountIdentityMigrationPostgres(t *testing.T) {
-	databaseURL := os.Getenv("CONTROL_PLANE_TEST_DATABASE_URL")
-	if databaseURL == "" {
-		t.Skip("CONTROL_PLANE_TEST_DATABASE_URL is not set")
-	}
+	databaseURL := requiredIdentityTestDatabaseURL(t)
 	admin, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		t.Fatal(err)

@@ -211,7 +211,6 @@ func TestBillingReceiptListUnavailableDoesNotAffectSummary(t *testing.T) {
 }
 
 func TestGatewayUsageAndStatsUseMappedWorkspaceKey(t *testing.T) {
-	t.Setenv("OPL_CONSOLE_USERS_JSON", `[{"id":"usr-gateway-member","email":"gateway-member@example.com","password":"correct horse battery staple","role":"member","accountId":"acct-gateway","sub2apiUserId":41}]`)
 	createdAt := time.Date(2026, 7, 16, 0, 0, 0, 0, time.UTC)
 	sub2API := &customerFactsSub2API{
 		testSub2APIClient: &testSub2APIClient{balance: 123, charges: map[string]int64{}, workspaceKey: clients.Sub2APIWorkspaceKey{ID: 9, UserID: 41, Name: "opl-workspace", Key: "workspace-key-secret", Status: "active"}},
@@ -224,8 +223,7 @@ func TestGatewayUsageAndStatsUseMappedWorkspaceKey(t *testing.T) {
 		},
 		usageStats: clients.Sub2APIUsageStats{TotalRequests: 1, TotalInputTokens: 10, TotalOutputTokens: 20, TotalTokens: 35, TotalActualCostUSDMicros: 1234},
 	}
-	server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}, sub2API))
-	session := loginForTest(t, server, "gateway-member@example.com", "correct horse battery staple")
+	server, session := newGatewayOwnerTestServer(t, sub2API, nil)
 
 	usage := requestWithSession(t, server, session, http.MethodGet, "/api/gateway/usage?page=1&pageSize=50&user_id=999&api_key_id=999&sub2apiUserId=999", "")
 	if usage.Code != http.StatusOK || usage.Header().Get("Cache-Control") != "private, no-store" {
@@ -294,9 +292,7 @@ func TestGatewayUsageAndStatsFailClosedWithoutFacts(t *testing.T) {
 			},
 		} {
 			t.Run(path+" "+tc.name, func(t *testing.T) {
-				t.Setenv("OPL_CONSOLE_USERS_JSON", `[{"id":"usr-gateway-member","email":"gateway-member@example.com","password":"correct horse battery staple","role":"member","accountId":"acct-gateway","sub2apiUserId":41}]`)
-				server := NewServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}, tc.client))
-				session := loginForTest(t, server, "gateway-member@example.com", "correct horse battery staple")
+				server, session := newGatewayOwnerTestServer(t, tc.client, nil)
 				response := requestWithSession(t, server, session, http.MethodGet, path, "")
 				assertErrorResponse(t, response.Code, response.Body.String(), tc.wantStatus, tc.wantCode)
 				if strings.Contains(response.Body.String(), `:0`) {

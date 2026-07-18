@@ -14,8 +14,8 @@ var (
 		{Name: "id", Type: field.TypeString, Unique: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "owner_user_id", Type: field.TypeString, Default: ""},
-		{Name: "sub2api_user_id", Type: field.TypeInt64, Default: 0},
+		{Name: "owner_user_id", Type: field.TypeString, Unique: true},
+		{Name: "sub2api_user_id", Type: field.TypeInt64, Unique: true},
 		{Name: "name", Type: field.TypeString, Default: ""},
 		{Name: "status", Type: field.TypeString, Default: "active"},
 	}
@@ -278,10 +278,10 @@ var (
 		{Name: "id", Type: field.TypeString, Unique: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "account_id", Type: field.TypeString},
-		{Name: "organization_id", Type: field.TypeString, Default: ""},
-		{Name: "user_id", Type: field.TypeString},
-		{Name: "role", Type: field.TypeString, Default: "member"},
+		{Name: "account_id", Type: field.TypeString, Unique: true},
+		{Name: "organization_id", Type: field.TypeString, Unique: true},
+		{Name: "user_id", Type: field.TypeString, Unique: true},
+		{Name: "role", Type: field.TypeString, Default: "owner"},
 		{Name: "status", Type: field.TypeString, Default: "active"},
 	}
 	// ControlPlaneMembershipsTable holds the schema information for the "control_plane_memberships" table.
@@ -295,7 +295,7 @@ var (
 		{Name: "id", Type: field.TypeString, Unique: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "billing_account_id", Type: field.TypeString, Default: ""},
+		{Name: "billing_account_id", Type: field.TypeString, Unique: true},
 		{Name: "name", Type: field.TypeString, Default: ""},
 		{Name: "status", Type: field.TypeString, Default: "active"},
 	}
@@ -475,7 +475,7 @@ var (
 		{Name: "id", Type: field.TypeString, Unique: true},
 		{Name: "created_at", Type: field.TypeTime},
 		{Name: "updated_at", Type: field.TypeTime},
-		{Name: "account_id", Type: field.TypeString},
+		{Name: "account_id", Type: field.TypeString, Unique: true},
 		{Name: "email", Type: field.TypeString, Unique: true},
 		{Name: "role", Type: field.TypeString, Default: "owner"},
 		{Name: "status", Type: field.TypeString, Default: "active"},

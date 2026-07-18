@@ -49,6 +49,9 @@ func NewPersistentServer(service *controlplane.Service, store StateStore) (http.
 	if err != nil {
 		return nil, err
 	}
+	if err := app.ensureBootstrapAdmin(context.Background(), service); err != nil {
+		return nil, err
+	}
 	if monthlyBillingWorkerEnabled() {
 		app.startMonthlyBillingWorker(context.Background(), service, monthlyBillingWorkerInterval())
 	}
@@ -60,7 +63,7 @@ func NewPersistentServer(service *controlplane.Service, store StateStore) (http.
 	}
 	mux := http.NewServeMux()
 	registerCoreRoutes(mux, app, service)
-	registerAuthRoutes(mux, app)
+	registerAuthRoutes(mux, app, service)
 	registerStateRoutes(mux, app, service)
 	registerGatewayRoutes(mux, app, service)
 	registerWorkspaceRoutes(mux, app, service)
@@ -306,12 +309,14 @@ func writeUserLifecycleError(w http.ResponseWriter, err error) {
 
 func writeCreateUserError(w http.ResponseWriter, err error) {
 	switch {
-	case errors.Is(err, errUserExists):
+	case errors.Is(err, errUserExists), errors.Is(err, errAccountIdentityConflict), errors.Is(err, errSub2APIAccountMappingConflict), errors.Is(err, errMembershipExists), errors.Is(err, errMembershipAccountMismatch):
 		writeError(w, http.StatusConflict, err.Error())
 	case errors.Is(err, errSub2APIUserMappingUnverified):
 		writeError(w, http.StatusBadGateway, err.Error())
-	default:
+	case errors.Is(err, errCallerSuppliedSub2APIUserID), errors.Is(err, errInvalidRole), errors.Is(err, errInvalidEmail), errors.Is(err, errInvalidAccountID), errors.Is(err, errMissingPassword), errors.Is(err, errWeakPassword):
 		writeError(w, http.StatusBadRequest, err.Error())
+	default:
+		writeError(w, http.StatusInternalServerError, "state_persist_failed")
 	}
 }
 

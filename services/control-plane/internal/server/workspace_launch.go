@@ -151,6 +151,22 @@ func (app *controlPlaneServer) runWorkspaceLaunch(ctx context.Context, service *
 	if err != nil || !ok || terminalWorkspaceLaunchStatus(operation.Status) {
 		return err
 	}
+	unlockAccount := app.lockResource("account", operation.AccountID)
+	defer unlockAccount()
+	owner, err := app.findUserByID(ctx, operation.OwnerUserID)
+	if err != nil {
+		return err
+	}
+	ownerActive := owner != nil && stringValue(owner["accountId"]) == operation.AccountID
+	if ownerActive {
+		ownerActive, err = app.hasActiveCustomerMembership(ctx, owner)
+		if err != nil {
+			return err
+		}
+	}
+	if !ownerActive {
+		return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_owner_identity_mismatch")
+	}
 	if operation.Status == "manual_review" {
 		if app.workspaceLaunchPriceSnapshotUnavailable(operation) {
 			return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_"+operation.Phase+"_price_snapshot_unavailable")

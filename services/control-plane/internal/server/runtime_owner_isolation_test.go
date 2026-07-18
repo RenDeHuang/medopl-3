@@ -53,10 +53,9 @@ func TestRuntimeStatusNeverReturnsCredential(t *testing.T) {
 		t.Fatalf("create server: %v", err)
 	}
 	owner := tenantOwnerSessionForTest(t, server)
-	member := tenantSessionForTest(t, server, "member")
 	seedRuntimeAccessWorkspaceForTest(t, store, sessionUserIDForTest(t, server, owner), nil)
 
-	response := requestWithSession(t, server, member, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"ws-alpha"}`)
+	response := requestWithSession(t, server, owner, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"ws-alpha"}`)
 	if response.Code != http.StatusOK {
 		t.Fatalf("runtime status = %d: %s", response.Code, response.Body.String())
 	}
@@ -89,7 +88,6 @@ func TestRuntimeCredentialRevealOwnerOnly(t *testing.T) {
 		t.Fatalf("create server: %v", err)
 	}
 	owner := tenantOwnerSessionForTest(t, server)
-	member := tenantSessionForTest(t, server, "member")
 	ownerID := sessionUserIDForTest(t, server, owner)
 	seedRuntimeAccessWorkspaceForTest(t, store, ownerID, nil)
 	mustStore(t, store.SaveWorkspace(context.Background(), map[string]any{
@@ -102,7 +100,6 @@ func TestRuntimeCredentialRevealOwnerOnly(t *testing.T) {
 		login     *httptest.ResponseRecorder
 		workspace string
 	}{
-		{name: "member", login: member, workspace: "ws-alpha"},
 		{name: "cross-account", login: owner, workspace: "ws-beta"},
 		{name: "unknown", login: owner, workspace: "ws-unknown"},
 	} {
@@ -347,7 +344,7 @@ func TestRuntimeCredentialRotateOwnerIdempotentAndNoLeak(t *testing.T) {
 		t.Fatalf("create server: %v", err)
 	}
 	owner := tenantOwnerSessionForTest(t, server)
-	member := tenantSessionForTest(t, server, "member")
+	operator := reservedOperatorSessionForTest(t, server)
 	ownerID := sessionUserIDForTest(t, server, owner)
 	seedRuntimeAccessWorkspaceForTest(t, store, ownerID, map[string]any{
 		"state": "running", "status": "running", "url": "https://workspace.medopl.cn/w/ws-alpha/",
@@ -357,7 +354,7 @@ func TestRuntimeCredentialRotateOwnerIdempotentAndNoLeak(t *testing.T) {
 		"access": map[string]any{"username": "opl", "credentialStatus": "configured", "credentialVersion": "v-before", "secretRef": "opl-compute-alpha-env"},
 	})
 
-	unauthorized := requestWithMutationKeyForTest(t, server, member, http.MethodPost, "/api/workspaces/ws-alpha/runtime-credentials/rotate", `{}`, "rotate-member")
+	unauthorized := requestWithMutationKeyForTest(t, server, operator, http.MethodPost, "/api/workspaces/ws-alpha/runtime-credentials/rotate", `{}`, "rotate-operator")
 	if unauthorized.Code != http.StatusForbidden || len(sub2API.workspaceKeyUserIDs) != 0 || len(calls) != 0 || len(ledger.inputs) != 0 {
 		t.Fatalf("unauthorized rotate crossed trust boundary: status=%d sub2api=%#v fabric=%#v receipts=%#v", unauthorized.Code, sub2API.workspaceKeyUserIDs, calls, ledger.inputs)
 	}

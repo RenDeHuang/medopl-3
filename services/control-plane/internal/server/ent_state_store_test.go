@@ -27,6 +27,55 @@ func NewTestEntStateStore(t *testing.T, path string) StateStore {
 	return &postgresEntStateStore{client: client}
 }
 
+func TestEntIdentitySchemaEnforcesHardCut(t *testing.T) {
+	client := NewTestEntStateStore(t, t.TempDir()+"/identity-schema.sqlite").(*postgresEntStateStore).client
+	ctx := context.Background()
+
+	t.Run("non-empty password hash", func(t *testing.T) {
+		_, err := client.User.Create().
+			SetID("usr-direct").
+			SetAccountID("acct-direct").
+			SetEmail("direct@example.com").
+			SetRole("owner").
+			SetStatus("active").
+			SetPasswordHash("local-secret").
+			Save(ctx)
+		if err == nil {
+			t.Fatal("direct Ent user write accepted non-empty password hash")
+		}
+	})
+
+	t.Run("non-owner membership", func(t *testing.T) {
+		_, err := client.Membership.Create().
+			SetID("mem-direct").
+			SetAccountID("acct-membership").
+			SetOrganizationID("org-membership").
+			SetUserID("usr-membership").
+			SetRole("member").
+			SetStatus("active").
+			Save(ctx)
+		if err == nil {
+			t.Fatal("direct Ent membership write accepted non-owner role")
+		}
+	})
+
+	t.Run("membership defaults to owner", func(t *testing.T) {
+		membership, err := client.Membership.Create().
+			SetID("mem-default-owner").
+			SetAccountID("acct-default-owner").
+			SetOrganizationID("org-default-owner").
+			SetUserID("usr-default-owner").
+			SetStatus("active").
+			Save(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if membership.Role != "owner" {
+			t.Fatalf("default membership role=%q", membership.Role)
+		}
+	})
+}
+
 func TestProductionPostgresStateStoreRejectsUnsafeTLSBeforeConnecting(t *testing.T) {
 	_, err := NewPostgresEntStateStore("host=/does-not-exist dbname=opl sslmode=disable")
 	if err == nil || !strings.Contains(err.Error(), "sslmode=verify-full") {
@@ -235,10 +284,8 @@ func TestWorkspaceRenewalOwnerLifecycleDisablesCanonicalIntent(t *testing.T) {
 			t.Run(storeCase.name+"/"+status, func(t *testing.T) {
 				ctx := context.Background()
 				store := storeCase.new(t)
+				seedTenantMember(t, store, "acct-renewal", "org-renewal", "usr-renewal", "renewal-owner@example.com")
 				owner := map[string]any{"id": "usr-renewal", "email": "renewal-owner@example.com", "accountId": "acct-renewal", "role": "owner", "status": "active"}
-				if err := store.SaveUser(ctx, owner); err != nil {
-					t.Fatal(err)
-				}
 				if err := store.SaveCompute(ctx, map[string]any{"id": "compute-renewal", "accountId": "acct-renewal", "ownerUserId": "usr-renewal", "autoRenew": true}); err != nil {
 					t.Fatal(err)
 				}
@@ -269,10 +316,8 @@ func TestWorkspaceRenewalOwnerLifecycleDisablesCanonicalIntent(t *testing.T) {
 func TestWorkspaceRenewalOwnerLifecycleLeavesCorruptStateFailClosed(t *testing.T) {
 	t.Run("memory", func(t *testing.T) {
 		store := newMemoryTableStore()
+		seedTenantMember(t, store, "acct-corrupt", "org-corrupt", "usr-corrupt", "corrupt-owner@example.com")
 		owner := map[string]any{"id": "usr-corrupt", "email": "corrupt-owner@example.com", "accountId": "acct-corrupt", "role": "owner", "status": "active"}
-		if err := store.SaveUser(context.Background(), owner); err != nil {
-			t.Fatal(err)
-		}
 		store.workspaces["ws-corrupt"] = map[string]any{"id": "ws-corrupt", "accountId": "acct-corrupt", "ownerUserId": "usr-corrupt", "autoRenew": true, "renewalStatus": "active"}
 		owner["status"] = "disabled"
 		if err := store.ApplyUserLifecycle(context.Background(), owner); err != nil {
@@ -287,10 +332,8 @@ func TestWorkspaceRenewalOwnerLifecycleLeavesCorruptStateFailClosed(t *testing.T
 	t.Run("postgres", func(t *testing.T) {
 		store := newPostgresWorkspaceRenewalStore(t).(*postgresEntStateStore)
 		ctx := context.Background()
+		seedTenantMember(t, store, "acct-renewal", "org-renewal", "usr-renewal", "corrupt-pg-owner@example.com")
 		owner := map[string]any{"id": "usr-renewal", "email": "corrupt-pg-owner@example.com", "accountId": "acct-renewal", "role": "owner", "status": "active"}
-		if err := store.SaveUser(ctx, owner); err != nil {
-			t.Fatal(err)
-		}
 		if err := store.SaveWorkspace(ctx, canonicalWorkspaceRenewalRow(true)); err != nil {
 			t.Fatal(err)
 		}
@@ -610,10 +653,10 @@ func TestSaveWorkspaceStaleProjectionCannotReenableOwnerRenewal(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			ctx := context.Background()
 			store := test.new(t)
+			seedTenantMember(t, store, "acct-renewal", "org-renewal", "usr-renewal", "renewal-owner@example.com")
 			owner := map[string]any{
 				"id": "usr-renewal", "email": "renewal-owner@example.com", "accountId": "acct-renewal", "role": "owner", "status": "active",
 			}
-			mustStore(t, store.SaveUser(ctx, owner))
 			workspace := canonicalWorkspaceRenewalRow(true)
 			workspace["state"], workspace["status"] = "running", "running"
 			mustStore(t, store.SaveWorkspace(ctx, workspace))
@@ -1165,12 +1208,15 @@ func TestPostgresSaveWorkspaceUpdatesWithoutDeleteInsert(t *testing.T) {
 func seedPostgresWorkspaceActivation(t *testing.T, store *postgresEntStateStore, ownerStatus string, mutateAttachment func(map[string]any)) map[string]any {
 	t.Helper()
 	ctx := context.Background()
+	account, owner, organization, membership := invitedAccountRowsFor("acct-renewal", "usr-renewal", "org-renewal", "renewal-owner@example.com", 41)
+	mustStore(t, store.CreateInvitedAccount(ctx, account, owner, organization, membership))
+	if ownerStatus != "active" {
+		owner["status"] = ownerStatus
+		mustStore(t, store.ApplyUserLifecycle(ctx, owner))
+	}
 	mustStore(t, store.SaveWorkspace(ctx, map[string]any{
 		"id": "ws-renewal", "accountId": "acct-renewal", "ownerAccountId": "acct-renewal", "ownerUserId": "usr-renewal",
 		"state": "provisioning", "status": "provisioning",
-	}))
-	mustStore(t, store.SaveUser(ctx, map[string]any{
-		"id": "usr-renewal", "email": "renewal-owner@example.com", "accountId": "acct-renewal", "role": "owner", "status": ownerStatus,
 	}))
 	mustStore(t, store.SaveCompute(ctx, map[string]any{
 		"id": "compute-renewal", "accountId": "acct-renewal", "ownerUserId": "usr-renewal", "workspaceId": "ws-renewal",
@@ -1408,9 +1454,8 @@ func canonicalWorkspaceRenewalRow(autoRenew bool) map[string]any {
 func TestEntStateStoreSub2APIMappingAndMonthlyEntitlementRoundTrip(t *testing.T) {
 	ctx := context.Background()
 	store := NewTestEntStateStore(t, t.TempDir()+"/monthly.sqlite")
-	if err := store.SaveAccount(ctx, map[string]any{"id": "acct-monthly", "status": "active", "sub2apiUserId": int64(41)}); err != nil {
-		t.Fatalf("save account mapping: %v", err)
-	}
+	accountRow, userRow, organizationRow, membershipRow := invitedAccountRowsFor("acct-monthly", "usr-monthly", "org-monthly", "monthly@example.com", 41)
+	mustStore(t, store.CreateInvitedAccount(ctx, accountRow, userRow, organizationRow, membershipRow))
 	accounts, err := store.ListAccounts(ctx, "acct-monthly")
 	if err != nil {
 		t.Fatalf("list accounts: %v", err)
@@ -1493,10 +1538,12 @@ func TestAccountStoresRejectDuplicateSub2APIUserMapping(t *testing.T) {
 		"ent":    NewTestEntStateStore(t, t.TempDir()+"/account-mapping.sqlite"),
 	} {
 		t.Run(name, func(t *testing.T) {
-			if err := store.SaveAccount(ctx, map[string]any{"id": "acct-one", "status": "active", "sub2apiUserId": int64(41)}); err != nil {
-				t.Fatal(err)
-			}
-			if err := store.SaveAccount(ctx, map[string]any{"id": "acct-two", "status": "active", "sub2apiUserId": int64(41)}); err == nil || err.Error() != "sub2api_account_mapping_conflict" {
+			accountOne, userOne, organizationOne, membershipOne := invitedAccountRowsFor("acct-one", "usr-one", "org-one", "one@example.com", 41)
+			accountTwo, userTwo, organizationTwo, membershipTwo := invitedAccountRowsFor("acct-two", "usr-two", "org-two", "two@example.com", 42)
+			mustStore(t, store.CreateInvitedAccount(ctx, accountOne, userOne, organizationOne, membershipOne))
+			mustStore(t, store.CreateInvitedAccount(ctx, accountTwo, userTwo, organizationTwo, membershipTwo))
+			accountTwo["sub2apiUserId"] = int64(41)
+			if err := store.SaveAccount(ctx, accountTwo); err == nil || err.Error() != "sub2api_account_mapping_conflict" {
 				t.Fatalf("duplicate mapping error = %v", err)
 			}
 		})
@@ -1505,16 +1552,22 @@ func TestAccountStoresRejectDuplicateSub2APIUserMapping(t *testing.T) {
 
 func TestMemoryAccountStoreSerializesDuplicateSub2APIUserMapping(t *testing.T) {
 	store := newMemoryTableStore()
+	ctx := context.Background()
+	accountOne, userOne, organizationOne, membershipOne := invitedAccountRowsFor("acct-one", "usr-one", "org-one", "one@example.com", 41)
+	accountTwo, userTwo, organizationTwo, membershipTwo := invitedAccountRowsFor("acct-two", "usr-two", "org-two", "two@example.com", 42)
+	mustStore(t, store.CreateInvitedAccount(ctx, accountOne, userOne, organizationOne, membershipOne))
+	mustStore(t, store.CreateInvitedAccount(ctx, accountTwo, userTwo, organizationTwo, membershipTwo))
+	accountOne["sub2apiUserId"], accountTwo["sub2apiUserId"] = int64(99), int64(99)
 	start := make(chan struct{})
 	errorsByAccount := make(chan error, 2)
 	var workers sync.WaitGroup
-	for _, accountID := range []string{"acct-one", "acct-two"} {
+	for _, account := range []map[string]any{accountOne, accountTwo} {
 		workers.Add(1)
-		go func() {
+		go func(row map[string]any) {
 			defer workers.Done()
 			<-start
-			errorsByAccount <- store.SaveAccount(context.Background(), map[string]any{"id": accountID, "status": "active", "sub2apiUserId": int64(41)})
-		}()
+			errorsByAccount <- store.SaveAccount(ctx, row)
+		}(account)
 	}
 	close(start)
 	workers.Wait()
@@ -2476,25 +2529,13 @@ func TestEntStateStoreRejectsExecutionIdentityOverwrite(t *testing.T) {
 	}
 }
 
-func TestControlPlaneAdminFactsSurviveServerRestart(t *testing.T) {
+func TestControlPlaneOperationalFactsSurviveServerRestart(t *testing.T) {
 	store := NewTestEntStateStore(t, t.TempDir()+"/admin-facts.sqlite")
 	first, err := newControlPlaneAppWithStore(store)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := first.tables.SaveAccount(context.Background(), map[string]any{"id": "acct-alpha", "status": "active"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := first.tables.SaveUser(context.Background(), map[string]any{"id": "usr-alpha", "email": "alpha@example.com", "accountId": "acct-alpha", "role": "owner", "status": "active"}); err != nil {
-		t.Fatal(err)
-	}
-	organization, err := first.createOrganization(map[string]any{"name": "Research Lab", "billingAccountId": "acct-alpha"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := first.createMembership(map[string]any{"organizationId": organization["id"], "userId": "usr-alpha", "accountId": "acct-alpha", "role": "owner"}); err != nil {
-		t.Fatal(err)
-	}
+	seedTenantMember(t, first.tables, "acct-alpha", "org-alpha", "usr-alpha", "alpha@example.com")
 	if err := first.rememberRuntimeOperations([]clients.FabricOperation{{ID: "fabric-op-alpha", OperationID: "operation-alpha", WorkspaceID: "ws-alpha", ResourceID: "compute-alpha", ResourceKind: "compute_allocation", Status: "failed", ErrorCode: "compute_machine_unavailable", RedactedProviderPayload: map[string]any{"costTags": map[string]any{"opl_operation_id": "operation-alpha"}}}}); err != nil {
 		t.Fatal(err)
 	}
@@ -2507,7 +2548,7 @@ func TestControlPlaneAdminFactsSurviveServerRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 	state := restarted.managementState(true, nil)
-	if len(state["organizations"].([]any)) != 1 || len(state["memberships"].([]any)) != 1 || len(state["runtimeOperations"].([]any)) != 1 {
+	if len(state["runtimeOperations"].([]any)) != 1 {
 		t.Fatalf("admin facts did not survive restart: %#v", state)
 	}
 	operation := state["runtimeOperations"].([]any)[0].(map[string]any)

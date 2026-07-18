@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -308,17 +309,18 @@ func TestWorkspaceLaunchRequiresOwnerBeforeExternalCalls(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	user := findRecord(users, "usr-alpha")
-	user["role"] = "member"
-	mustStore(t, fixture.store.SaveUser(context.Background(), user))
+	if findRecord(users, "usr-alpha") == nil {
+		t.Fatal("owner missing")
+	}
+	fixture.store.accounts["acct-alpha"]["ownerUserId"] = "usr-other"
 
 	response := fixture.launch(t, `{"name":"Alpha","packageId":"basic","sizeGb":10,"autoRenew":false}`, "launch-alpha")
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "workspace_owner_required") {
-		t.Fatalf("member launch status = %d, want 403: %s", response.Code, response.Body.String())
+	if response.Code != http.StatusUnauthorized || !strings.Contains(response.Body.String(), "not_authenticated") {
+		t.Fatalf("owner mismatch launch status = %d, want 401: %s", response.Code, response.Body.String())
 	}
 	operations, _ := fixture.store.ListRuntimeOperations(context.Background())
 	if len(*fixture.events) != 0 || len(operations) != 0 {
-		t.Fatalf("member launch reached dependencies: events=%#v operations=%#v", *fixture.events, operations)
+		t.Fatalf("owner mismatch launch reached dependencies: events=%#v operations=%#v", *fixture.events, operations)
 	}
 }
 
@@ -362,7 +364,20 @@ func TestWorkspaceLaunchListAndDetailAreTenantScoped(t *testing.T) {
 
 type recordingWorkspaceLaunchStore struct {
 	*memoryTableStore
-	launchSaves []workspaceLaunchOperation
+	launchSaves       []workspaceLaunchOperation
+	firstClaimStarted chan struct{}
+	releaseFirstClaim chan struct{}
+	firstClaim        sync.Once
+}
+
+func (s *recordingWorkspaceLaunchStore) ClaimResourceBillingOperation(ctx context.Context, resourceType string, row map[string]any) (map[string]any, bool, error) {
+	if s.firstClaimStarted != nil {
+		s.firstClaim.Do(func() {
+			close(s.firstClaimStarted)
+			<-s.releaseFirstClaim
+		})
+	}
+	return s.memoryTableStore.ClaimResourceBillingOperation(ctx, resourceType, row)
 }
 
 func (s *recordingWorkspaceLaunchStore) SaveRuntimeOperation(ctx context.Context, row map[string]any) error {
@@ -502,27 +517,119 @@ func TestWorkspaceLaunchPersistsCanonicalRenewalIntent(t *testing.T) {
 	}
 }
 
-func TestWorkspaceLaunchOwnerRaceDisablesRenewalIntent(t *testing.T) {
-	for _, status := range []string{"disabled", "deleted"} {
-		t.Run(status, func(t *testing.T) {
-			fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 950_000_000, 950_000_000, 947_420_000}, nil, nil, true)
+func TestWorkspaceLaunchRevalidatesOwnerBeforeAnySideEffect(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		mutate func(*testing.T, workspaceLaunchWorkerFixture)
+	}{
+		{name: "disabled", mutate: func(t *testing.T, fixture workspaceLaunchWorkerFixture) {
 			owner, err := fixture.app.findUserByID(context.Background(), "usr-alpha")
 			if err != nil || owner == nil {
 				t.Fatalf("find launch owner: owner=%#v err=%v", owner, err)
 			}
-			owner["status"] = status
+			owner["status"] = "disabled"
 			if err := fixture.store.ApplyUserLifecycle(context.Background(), owner); err != nil {
 				t.Fatal(err)
 			}
-			if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
-				t.Fatal(err)
+		}},
+		{name: "reciprocal mismatch", mutate: func(_ *testing.T, fixture workspaceLaunchWorkerFixture) {
+			fixture.store.mu.Lock()
+			fixture.store.accounts["acct-alpha"]["ownerUserId"] = "usr-other"
+			fixture.store.mu.Unlock()
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 950_000_000, 950_000_000, 947_420_000}, nil, nil, true)
+			test.mutate(t, fixture)
+			beforeEvents := append([]string(nil), (*fixture.events)...)
+			if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err == nil {
+				t.Fatal("invalid launch owner did not stop the worker")
 			}
+			operation := fixture.operation(t)
 			workspaces, _ := fixture.store.ListWorkspaces(context.Background(), "acct-alpha")
 			computes, _ := fixture.store.ListComputes(context.Background(), "acct-alpha")
 			storages, _ := fixture.store.ListStorages(context.Background(), "acct-alpha")
-			if len(workspaces) != 1 || workspaces[0]["autoRenew"] != false || workspaces[0]["authorizedBy"] != "" || workspaces[0]["authorizedAt"] != "" ||
-				len(computes) != 1 || computes[0]["autoRenew"] != false || len(storages) != 1 || storages[0]["autoRenew"] != false {
-				t.Fatalf("%s owner left renewal enabled: Workspace=%#v compute=%#v storage=%#v", status, workspaces, computes, storages)
+			if operation.Status != "manual_review" || operation.ErrorCode != "workspace_launch_owner_identity_mismatch" || len(workspaces) != 0 || len(computes) != 0 || len(storages) != 0 || !reflect.DeepEqual(*fixture.events, beforeEvents) {
+				t.Fatalf("invalid owner launch=%#v Workspaces=%#v compute=%#v storage=%#v events=%#v before=%#v", operation, workspaces, computes, storages, *fixture.events, beforeEvents)
+			}
+		})
+	}
+}
+
+func TestWorkspaceLaunchSerializesOwnerLifecycleBeforeFirstSideEffect(t *testing.T) {
+	for _, test := range []struct {
+		name, wantStatus string
+		apply            func(*controlPlaneServer) error
+	}{
+		{name: "disable", wantStatus: "disabled", apply: func(app *controlPlaneServer) error {
+			_, err := app.disableUser(map[string]any{"userId": "usr-alpha"})
+			return err
+		}},
+		{name: "soft delete", wantStatus: "deleted", apply: func(app *controlPlaneServer) error {
+			_, err := app.softDeleteUser(map[string]any{"userId": "usr-alpha"})
+			return err
+		}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 950_000_000, 950_000_000, 947_420_000}, nil, nil, true)
+			started, release := make(chan struct{}), make(chan struct{})
+			fixture.store.firstClaimStarted = started
+			fixture.store.releaseFirstClaim = release
+
+			workerDone := make(chan error, 1)
+			go func() { workerDone <- fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service) }()
+			select {
+			case <-started:
+			case err := <-workerDone:
+				close(release)
+				t.Fatalf("worker returned before first claim: %v", err)
+			case <-time.After(time.Second):
+				close(release)
+				t.Fatal("worker did not reach first claim")
+			}
+
+			lifecycleDone := make(chan error, 1)
+			go func() { lifecycleDone <- test.apply(fixture.app) }()
+			var early error
+			returnedEarly := false
+			select {
+			case early = <-lifecycleDone:
+				returnedEarly = true
+			case <-time.After(50 * time.Millisecond):
+			}
+			close(release)
+
+			select {
+			case err := <-workerDone:
+				if err != nil {
+					t.Fatal(err)
+				}
+			case <-time.After(time.Second):
+				t.Fatal("worker remained blocked after first claim release")
+			}
+			if !returnedEarly {
+				select {
+				case early = <-lifecycleDone:
+				case <-time.After(time.Second):
+					t.Fatal("lifecycle remained blocked after worker completed")
+				}
+			}
+			if returnedEarly {
+				t.Fatalf("lifecycle returned before the blocked first claim: %v", early)
+			}
+			if early != nil {
+				t.Fatal(early)
+			}
+
+			owner, err := fixture.app.findUserByID(context.Background(), "usr-alpha")
+			if err != nil || stringValue(owner["status"]) != test.wantStatus {
+				t.Fatalf("owner after lifecycle = %#v, err=%v", owner, err)
+			}
+			computes, _ := fixture.store.ListComputes(context.Background(), "acct-alpha")
+			storages, _ := fixture.store.ListStorages(context.Background(), "acct-alpha")
+			workspaces, _ := fixture.store.ListWorkspaces(context.Background(), "acct-alpha")
+			if len(computes) != 1 || computes[0]["autoRenew"] != false || len(storages) != 1 || storages[0]["autoRenew"] != false || len(workspaces) != 1 || workspaces[0]["autoRenew"] != false {
+				t.Fatalf("lifecycle convergence compute=%#v storage=%#v workspace=%#v", computes, storages, workspaces)
 			}
 		})
 	}

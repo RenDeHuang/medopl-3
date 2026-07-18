@@ -53,7 +53,7 @@ func newBillingReviewHarness(t *testing.T, row map[string]any, sync clients.Comp
 	sub2API := &monthlySub2API{events: events, balances: []int64{1_000_000_000}}
 	ledger := &billingReviewLedger{}
 	store := newMemoryTableStore()
-	mustStore(t, store.SaveAccount(context.Background(), map[string]any{"id": "acct-alpha", "status": "active", "sub2apiUserId": int64(41)}))
+	seedTenantMember(t, store, "acct-alpha", "org-alpha", "usr-alpha", "alpha@example.com")
 	mustStore(t, store.SaveCompute(context.Background(), row))
 	service := controlplane.NewService(ledger, fabric, sub2API)
 	server, err := NewPersistentServer(service, store)
@@ -163,7 +163,7 @@ func TestBillingReviewResolutionActivatesConfirmedChargedStorage(t *testing.T) {
 	sub2API := &monthlySub2API{events: events}
 	ledger := &billingReviewLedger{}
 	store := newMemoryTableStore()
-	mustStore(t, store.SaveAccount(context.Background(), map[string]any{"id": "acct-alpha", "status": "active", "sub2apiUserId": int64(41)}))
+	seedTenantMember(t, store, "acct-alpha", "org-alpha", "usr-alpha", "alpha@example.com")
 	mustStore(t, store.SaveStorage(context.Background(), row))
 	server, err := NewPersistentServer(controlplane.NewService(ledger, fabric, sub2API), store)
 	if err != nil {
@@ -391,7 +391,7 @@ func TestBillingReviewResolutionRecoversAfterFinalStateSaveFailure(t *testing.T)
 	sub2API := &monthlySub2API{events: events}
 	ledger := &billingReviewLedger{}
 	store := &failFinalBillingReviewStore{memoryTableStore: newMemoryTableStore()}
-	mustStore(t, store.SaveAccount(context.Background(), map[string]any{"id": "acct-alpha", "status": "active", "sub2apiUserId": int64(41)}))
+	seedTenantMember(t, store, "acct-alpha", "org-alpha", "usr-alpha", "alpha@example.com")
 	mustStore(t, store.SaveCompute(context.Background(), billingReviewRow()))
 	server, err := NewPersistentServer(controlplane.NewService(ledger, fabric, sub2API), store)
 	if err != nil {

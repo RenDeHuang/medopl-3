@@ -22,6 +22,8 @@ const (
 	sub2APIKeyPageSize       = 1000
 	maxSub2APIKeyPages       = 10
 	maxSub2APIKeys           = sub2APIKeyPageSize * maxSub2APIKeyPages
+	maxSub2APIIdentityPages  = 10
+	maxSub2APIIdentities     = sub2APIKeyPageSize * maxSub2APIIdentityPages
 	maxSub2APIUsagePage      = 1_000_000
 )
 
@@ -31,6 +33,11 @@ var (
 	ErrSub2APIResponseTooLarge      = errors.New("sub2api response too large")
 	ErrSub2APIWorkspaceKeyMissing   = errors.New("sub2api workspace key missing")
 	ErrSub2APIWorkspaceKeyAmbiguous = errors.New("sub2api workspace key ambiguous")
+	ErrSub2APIIdentityConflict      = errors.New("sub2api identity conflict")
+	ErrSub2APIIdentityUnknown       = errors.New("sub2api identity result unknown")
+	ErrSub2APIInvalidCredentials    = errors.New("sub2api invalid credentials")
+	ErrSub2APIAuthRateLimited       = errors.New("sub2api authentication rate limited")
+	ErrSub2APIAuthUnavailable       = errors.New("sub2api authentication unavailable")
 )
 
 type Sub2APIClient interface {
@@ -53,6 +60,16 @@ type Sub2APIUsageClient interface {
 	BalanceHistory(context.Context, int64) ([]Sub2APIBalanceHistoryEntry, error)
 }
 
+type Sub2APIIdentityClient interface {
+	ResolveOrCreateUser(context.Context, string, string) (Sub2APIIdentity, error)
+	AuthenticateUser(context.Context, string, string) (Sub2APIIdentity, error)
+	UserIdentity(context.Context, int64, string) (Sub2APIIdentity, error)
+}
+
+type Sub2APIAdminIdentityClient interface {
+	AdminIdentity(context.Context) (Sub2APIIdentity, error)
+}
+
 type Sub2APIConfig struct {
 	BaseURL       string
 	AdminEmail    string
@@ -64,6 +81,12 @@ type Sub2APIBalance struct {
 	UserID    int64
 	USDMicros int64
 	Status    string
+}
+
+type Sub2APIIdentity struct {
+	ID     int64  `json:"id"`
+	Email  string `json:"email"`
+	Status string `json:"status"`
 }
 
 type Sub2APIWorkspaceKey struct {
@@ -180,6 +203,9 @@ type Sub2APIHTTPClient struct {
 	authMu       sync.Mutex
 	accessToken  string
 	refreshToken string
+
+	// ponytail: Pilot serializes identity convergence globally; use per-email locks if throughput matters.
+	identityGate chan struct{}
 }
 
 func NewSub2APIHTTPClient(config Sub2APIConfig, client *http.Client) (*Sub2APIHTTPClient, error) {
@@ -203,6 +229,7 @@ func NewSub2APIHTTPClient(config Sub2APIConfig, client *http.Client) (*Sub2APIHT
 		adminPassword: config.AdminPassword,
 		timeout:       config.Timeout,
 		client:        client,
+		identityGate:  make(chan struct{}, 1),
 	}, nil
 }
 
@@ -247,6 +274,189 @@ func (c *Sub2APIHTTPClient) Balance(ctx context.Context, userID int64) (Sub2APIB
 		return Sub2APIBalance{}, fmt.Errorf("invalid sub2api balance: %w", err)
 	}
 	return Sub2APIBalance{UserID: userID, USDMicros: micros, Status: data.Status}, nil
+}
+
+func (c *Sub2APIHTTPClient) ResolveOrCreateUser(ctx context.Context, email, password string) (Sub2APIIdentity, error) {
+	email = normalizeSub2APIEmail(email)
+	if email == "" || password == "" {
+		return Sub2APIIdentity{}, ErrSub2APIIdentityUnknown
+	}
+	select {
+	case c.identityGate <- struct{}{}:
+	case <-ctx.Done():
+		return Sub2APIIdentity{}, ctx.Err()
+	}
+	defer func() { <-c.identityGate }()
+	matches, err := c.usersByEmail(ctx, email)
+	if err != nil {
+		return Sub2APIIdentity{}, err
+	}
+	switch len(matches) {
+	case 1:
+		return c.authenticatedUserIdentity(ctx, matches[0].ID, email, password)
+	case 0:
+		// User creation has no proven idempotency-key support. Sub2API's normalized-email
+		// uniqueness and the mandatory lookup/readback below provide convergence.
+		_, _ = c.doAuthenticated(ctx, http.MethodPost, "/api/v1/admin/users", map[string]string{
+			"email": email, "password": password, "role": "user",
+		}, "")
+	default:
+		return Sub2APIIdentity{}, ErrSub2APIIdentityConflict
+	}
+	matches, err = c.usersByEmail(ctx, email)
+	if err != nil {
+		return Sub2APIIdentity{}, fmt.Errorf("%w: %v", ErrSub2APIIdentityUnknown, err)
+	}
+	if len(matches) > 1 {
+		return Sub2APIIdentity{}, ErrSub2APIIdentityConflict
+	}
+	if len(matches) != 1 {
+		return Sub2APIIdentity{}, ErrSub2APIIdentityUnknown
+	}
+	return c.authenticatedUserIdentity(ctx, matches[0].ID, email, password)
+}
+
+func (c *Sub2APIHTTPClient) authenticatedUserIdentity(ctx context.Context, userID int64, email, password string) (Sub2APIIdentity, error) {
+	identity, err := c.AuthenticateUser(ctx, email, password)
+	if err != nil {
+		return Sub2APIIdentity{}, err
+	}
+	if identity.ID != userID {
+		return Sub2APIIdentity{}, ErrSub2APIIdentityConflict
+	}
+	return c.UserIdentity(ctx, userID, email)
+}
+
+func (c *Sub2APIHTTPClient) AuthenticateUser(ctx context.Context, email, password string) (Sub2APIIdentity, error) {
+	email = normalizeSub2APIEmail(email)
+	if email == "" || password == "" {
+		return Sub2APIIdentity{}, ErrSub2APIInvalidCredentials
+	}
+	body, err := c.request(ctx, http.MethodPost, "/api/v1/auth/login", map[string]string{
+		"email": email, "password": password, "turnstile_token": "",
+	}, "", "")
+	if err != nil {
+		var httpErr *Sub2APIHTTPError
+		switch {
+		case errors.As(err, &httpErr) && httpErr.StatusCode == http.StatusUnauthorized:
+			return Sub2APIIdentity{}, ErrSub2APIInvalidCredentials
+		case errors.As(err, &httpErr) && httpErr.StatusCode == http.StatusTooManyRequests:
+			return Sub2APIIdentity{}, ErrSub2APIAuthRateLimited
+		default:
+			return Sub2APIIdentity{}, ErrSub2APIAuthUnavailable
+		}
+	}
+	var data struct {
+		AccessToken string           `json:"access_token"`
+		User        *Sub2APIIdentity `json:"user"`
+	}
+	if err := decodeSub2APIEnvelope(body, &data); err != nil || data.AccessToken == "" || data.User == nil {
+		return Sub2APIIdentity{}, ErrSub2APIAuthUnavailable
+	}
+	identity := *data.User
+	identity.Email = normalizeSub2APIEmail(identity.Email)
+	if identity.ID <= 0 || identity.Email != email || identity.Status != "active" {
+		return Sub2APIIdentity{}, ErrSub2APIAuthUnavailable
+	}
+	return identity, nil
+}
+
+func (c *Sub2APIHTTPClient) UserIdentity(ctx context.Context, userID int64, email string) (Sub2APIIdentity, error) {
+	email = normalizeSub2APIEmail(email)
+	if userID <= 0 || email == "" {
+		return Sub2APIIdentity{}, ErrSub2APIIdentityUnknown
+	}
+	body, err := c.doAuthenticated(ctx, http.MethodGet, "/api/v1/admin/users/"+strconv.FormatInt(userID, 10), nil, "")
+	if err != nil {
+		return Sub2APIIdentity{}, err
+	}
+	var identity Sub2APIIdentity
+	if err := decodeSub2APIEnvelope(body, &identity); err != nil {
+		return Sub2APIIdentity{}, err
+	}
+	identity.Email = normalizeSub2APIEmail(identity.Email)
+	if identity.ID != userID || identity.ID <= 0 || identity.Email != email || identity.Status != "active" {
+		return Sub2APIIdentity{}, ErrSub2APIIdentityConflict
+	}
+	return identity, nil
+}
+
+func (c *Sub2APIHTTPClient) AdminIdentity(ctx context.Context) (Sub2APIIdentity, error) {
+	identity, err := c.AuthenticateUser(ctx, c.adminEmail, c.adminPassword)
+	if err != nil {
+		return Sub2APIIdentity{}, err
+	}
+	return c.UserIdentity(ctx, identity.ID, c.adminEmail)
+}
+
+func (c *Sub2APIHTTPClient) usersByEmail(ctx context.Context, email string) ([]Sub2APIIdentity, error) {
+	matches := make([]Sub2APIIdentity, 0, 1)
+	seenIDs := make(map[int64]struct{})
+	total, pages, collected := int64(-1), -1, int64(0)
+	for page := 1; page <= maxSub2APIIdentityPages; page++ {
+		query := url.Values{
+			"page": {strconv.Itoa(page)}, "page_size": {strconv.Itoa(sub2APIKeyPageSize)},
+			"search": {email}, "sort_by": {"id"}, "sort_order": {"asc"},
+		}
+		body, err := c.doAuthenticated(ctx, http.MethodGet, "/api/v1/admin/users?"+query.Encode(), nil, "")
+		if err != nil {
+			return nil, err
+		}
+		var data struct {
+			Items    []Sub2APIIdentity `json:"items"`
+			Total    int64             `json:"total"`
+			Page     int               `json:"page"`
+			PageSize int               `json:"page_size"`
+			Pages    int               `json:"pages"`
+		}
+		if err := decodeSub2APIEnvelope(body, &data); err != nil {
+			return nil, err
+		}
+		expectedPages := int((data.Total + int64(sub2APIKeyPageSize) - 1) / int64(sub2APIKeyPageSize))
+		if expectedPages < 1 {
+			expectedPages = 1
+		}
+		expectedItems := sub2APIKeyPageSize
+		if page == expectedPages {
+			expectedItems = int(data.Total) - (page-1)*sub2APIKeyPageSize
+		}
+		if data.Total < 0 || data.Total > int64(maxSub2APIIdentities) || data.Page != page || data.PageSize != sub2APIKeyPageSize || data.Pages != expectedPages || data.Pages > maxSub2APIIdentityPages || len(data.Items) != expectedItems {
+			return nil, ErrSub2APIIdentityConflict
+		}
+		if page == 1 {
+			total, pages = data.Total, data.Pages
+		} else if data.Total != total || data.Pages != pages {
+			return nil, ErrSub2APIIdentityConflict
+		}
+		for _, item := range data.Items {
+			item.Email = normalizeSub2APIEmail(item.Email)
+			if item.ID <= 0 || item.Email == "" || item.Status == "" {
+				return nil, ErrSub2APIIdentityConflict
+			}
+			if _, exists := seenIDs[item.ID]; exists {
+				return nil, ErrSub2APIIdentityConflict
+			}
+			seenIDs[item.ID] = struct{}{}
+			if item.Email == email {
+				matches = append(matches, item)
+			}
+		}
+		collected += int64(len(data.Items))
+		if collected > total || (len(data.Items) == 0 && collected < total) {
+			return nil, ErrSub2APIIdentityConflict
+		}
+		if page == pages {
+			if collected != total {
+				return nil, ErrSub2APIIdentityConflict
+			}
+			return matches, nil
+		}
+	}
+	return nil, ErrSub2APIIdentityConflict
+}
+
+func normalizeSub2APIEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
 }
 
 func (c *Sub2APIHTTPClient) WorkspaceKey(ctx context.Context, userID int64) (Sub2APIWorkspaceKey, error) {
@@ -660,6 +870,10 @@ func (c *Sub2APIHTTPClient) token(ctx context.Context) (string, error) {
 	if c.accessToken != "" {
 		return c.accessToken, nil
 	}
+	return c.loginLocked(ctx)
+}
+
+func (c *Sub2APIHTTPClient) loginLocked(ctx context.Context) (string, error) {
 	body, err := c.request(ctx, http.MethodPost, "/api/v1/auth/login", map[string]string{"email": c.adminEmail, "password": c.adminPassword}, "", "")
 	if err != nil {
 		return "", err
@@ -668,7 +882,7 @@ func (c *Sub2APIHTTPClient) token(ctx context.Context) (string, error) {
 		AccessToken  string `json:"access_token"`
 		RefreshToken string `json:"refresh_token"`
 	}
-	if err := decodeSub2APIEnvelope(body, &data); err != nil || data.AccessToken == "" || data.RefreshToken == "" {
+	if err := decodeSub2APIEnvelope(body, &data); err != nil || data.AccessToken == "" {
 		return "", errors.New("sub2api login response invalid")
 	}
 	c.accessToken, c.refreshToken = data.AccessToken, data.RefreshToken
@@ -680,6 +894,9 @@ func (c *Sub2APIHTTPClient) refreshAfterUnauthorized(ctx context.Context, reject
 	defer c.authMu.Unlock()
 	if c.accessToken != "" && c.accessToken != rejectedToken {
 		return c.accessToken, nil
+	}
+	if c.refreshToken == "" {
+		return c.loginLocked(ctx)
 	}
 	body, err := c.request(ctx, http.MethodPost, "/api/v1/auth/refresh", map[string]string{"refresh_token": c.refreshToken}, "", "")
 	if err != nil {

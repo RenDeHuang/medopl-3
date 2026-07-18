@@ -54,14 +54,6 @@ func (oc *OrganizationCreate) SetBillingAccountID(s string) *OrganizationCreate 
 	return oc
 }
 
-// SetNillableBillingAccountID sets the "billing_account_id" field if the given value is not nil.
-func (oc *OrganizationCreate) SetNillableBillingAccountID(s *string) *OrganizationCreate {
-	if s != nil {
-		oc.SetBillingAccountID(*s)
-	}
-	return oc
-}
-
 // SetName sets the "name" field.
 func (oc *OrganizationCreate) SetName(s string) *OrganizationCreate {
 	oc.mutation.SetName(s)
@@ -139,10 +131,6 @@ func (oc *OrganizationCreate) defaults() {
 		v := organization.DefaultUpdatedAt()
 		oc.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := oc.mutation.BillingAccountID(); !ok {
-		v := organization.DefaultBillingAccountID
-		oc.mutation.SetBillingAccountID(v)
-	}
 	if _, ok := oc.mutation.Name(); !ok {
 		v := organization.DefaultName
 		oc.mutation.SetName(v)
@@ -163,6 +151,11 @@ func (oc *OrganizationCreate) check() error {
 	}
 	if _, ok := oc.mutation.BillingAccountID(); !ok {
 		return &ValidationError{Name: "billing_account_id", err: errors.New(`ent: missing required field "Organization.billing_account_id"`)}
+	}
+	if v, ok := oc.mutation.BillingAccountID(); ok {
+		if err := organization.BillingAccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "billing_account_id", err: fmt.Errorf(`ent: validator failed for field "Organization.billing_account_id": %w`, err)}
+		}
 	}
 	if _, ok := oc.mutation.Name(); !ok {
 		return &ValidationError{Name: "name", err: errors.New(`ent: missing required field "Organization.name"`)}

@@ -166,9 +166,19 @@ func (mu *MembershipUpdate) check() error {
 			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "Membership.account_id": %w`, err)}
 		}
 	}
+	if v, ok := mu.mutation.OrganizationID(); ok {
+		if err := membership.OrganizationIDValidator(v); err != nil {
+			return &ValidationError{Name: "organization_id", err: fmt.Errorf(`ent: validator failed for field "Membership.organization_id": %w`, err)}
+		}
+	}
 	if v, ok := mu.mutation.UserID(); ok {
 		if err := membership.UserIDValidator(v); err != nil {
 			return &ValidationError{Name: "user_id", err: fmt.Errorf(`ent: validator failed for field "Membership.user_id": %w`, err)}
+		}
+	}
+	if v, ok := mu.mutation.Role(); ok {
+		if err := membership.RoleValidator(v); err != nil {
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "Membership.role": %w`, err)}
 		}
 	}
 	return nil
@@ -378,9 +388,19 @@ func (muo *MembershipUpdateOne) check() error {
 			return &ValidationError{Name: "account_id", err: fmt.Errorf(`ent: validator failed for field "Membership.account_id": %w`, err)}
 		}
 	}
+	if v, ok := muo.mutation.OrganizationID(); ok {
+		if err := membership.OrganizationIDValidator(v); err != nil {
+			return &ValidationError{Name: "organization_id", err: fmt.Errorf(`ent: validator failed for field "Membership.organization_id": %w`, err)}
+		}
+	}
 	if v, ok := muo.mutation.UserID(); ok {
 		if err := membership.UserIDValidator(v); err != nil {
 			return &ValidationError{Name: "user_id", err: fmt.Errorf(`ent: validator failed for field "Membership.user_id": %w`, err)}
+		}
+	}
+	if v, ok := muo.mutation.Role(); ok {
+		if err := membership.RoleValidator(v); err != nil {
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "Membership.role": %w`, err)}
 		}
 	}
 	return nil

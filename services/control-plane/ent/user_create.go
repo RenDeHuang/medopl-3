@@ -306,6 +306,11 @@ func (uc *UserCreate) check() error {
 	if _, ok := uc.mutation.PasswordHash(); !ok {
 		return &ValidationError{Name: "password_hash", err: errors.New(`ent: missing required field "User.password_hash"`)}
 	}
+	if v, ok := uc.mutation.PasswordHash(); ok {
+		if err := user.PasswordHashValidator(v); err != nil {
+			return &ValidationError{Name: "password_hash", err: fmt.Errorf(`ent: validator failed for field "User.password_hash": %w`, err)}
+		}
+	}
 	if _, ok := uc.mutation.DisabledAt(); !ok {
 		return &ValidationError{Name: "disabled_at", err: errors.New(`ent: missing required field "User.disabled_at"`)}
 	}

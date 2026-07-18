@@ -12,46 +12,6 @@ import (
 var billingReviewEvidenceRefPattern = regexp.MustCompile(`^case-[0-9]{8}-[a-z0-9]{3,16}$`)
 
 func registerAdminRoutes(mux *http.ServeMux, app *controlPlaneServer, service *controlplane.Service) {
-	mux.HandleFunc("POST /api/organizations", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
-		body, err := app.createOrganization(decodeJSON(r))
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		if err := app.appendAuditEvent(r, "organization.create", "organization", stringValue(body["id"]), stringValue(body["billingAccountId"]), nil, body, "succeeded"); err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		writeJSON(w, http.StatusCreated, body)
-	}))
-	mux.HandleFunc("POST /api/organizations/members", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
-		body, err := app.createMembership(decodeJSON(r))
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		if err := app.appendAuditEvent(r, "organization.member_add", "organization_membership", stringValue(body["id"]), "", nil, body, "succeeded"); err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		writeJSON(w, http.StatusCreated, body)
-	}))
-	mux.HandleFunc("POST /api/organizations/members/{id}/revoke", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
-		body, err := app.revokeMembership(r.Context(), r.PathValue("id"))
-		if err != nil {
-			if errors.Is(err, errMembershipNotFound) {
-				writeError(w, http.StatusNotFound, err.Error())
-				return
-			}
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		if err := app.appendAuditEvent(r, "organization.member_revoke", "organization_membership", stringValue(body["id"]), stringValue(body["accountId"]), nil, body, "succeeded"); err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		writeJSON(w, http.StatusOK, body)
-	}))
 	mux.HandleFunc("POST /api/users", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
 		body, err := app.createUser(r.Context(), service, input)
@@ -64,22 +24,6 @@ func registerAdminRoutes(mux *http.ServeMux, app *controlPlaneServer, service *c
 			return
 		}
 		writeJSON(w, http.StatusCreated, body)
-	}))
-	mux.HandleFunc("POST /api/users/{id}/reset-password", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
-		body, err := app.resetUserPassword(r.Context(), r.PathValue("id"), stringField(decodeJSON(r), "password", ""))
-		if err != nil {
-			if errors.Is(err, errMissingPassword) || errors.Is(err, errWeakPassword) {
-				writeError(w, http.StatusBadRequest, err.Error())
-				return
-			}
-			writeUserLifecycleError(w, err)
-			return
-		}
-		if err := app.appendAuditEvent(r, "user.password_reset", "user", stringValue(body["id"]), stringValue(body["accountId"]), nil, body, "succeeded"); err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		writeJSON(w, http.StatusOK, body)
 	}))
 	mux.HandleFunc("POST /api/users/disable", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)

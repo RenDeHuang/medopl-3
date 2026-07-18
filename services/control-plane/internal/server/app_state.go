@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"opl-cloud/services/control-plane/internal/clients"
+	"opl-cloud/services/control-plane/internal/controlplane"
 )
 
 type controlPlaneServer struct {
@@ -29,11 +30,20 @@ type controlPlaneServer struct {
 }
 
 func (app *controlPlaneServer) lockResource(resourceType, id string) func() {
-	value, _ := app.resourceLocks.LoadOrStore(resourceType+":"+id, &sync.Mutex{})
-	lock := value.(*sync.Mutex)
-	lock.Lock()
-	// ponytail: process-local locks match the single control-plane replica; use DB advisory locks before scaling replicas.
-	return lock.Unlock
+	unlock, _ := app.lockResourceContext(context.Background(), resourceType, id)
+	return unlock
+}
+
+func (app *controlPlaneServer) lockResourceContext(ctx context.Context, resourceType, id string) (func(), error) {
+	value, _ := app.resourceLocks.LoadOrStore(resourceType+":"+id, make(chan struct{}, 1))
+	lock := value.(chan struct{})
+	select {
+	case lock <- struct{}{}:
+		// ponytail: process-local locks match one replica; use DB advisory locks before scaling replicas.
+		return func() { <-lock }, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 func (app *controlPlaneServer) lockEntitlementResources(computeID, storageID, attachmentID string) func() {
@@ -65,7 +75,6 @@ var (
 	errOrganizationNotFound      = errors.New("organization_not_found")
 	errMembershipUserNotFound    = errors.New("membership_user_not_found")
 	errMembershipAccountMismatch = errors.New("membership_account_mismatch")
-	errMembershipNotFound        = errors.New("membership_not_found")
 )
 
 func newControlPlaneApp() *controlPlaneServer {
@@ -81,27 +90,88 @@ func newControlPlaneAppWithStore(store StateStore) (*controlPlaneServer, error) 
 	if app.tables == nil {
 		app.tables = newMemoryTableStore()
 	}
-	if err := app.ensureBootstrapAdmin(); err != nil {
-		return nil, err
-	}
 	if err := app.importBootstrapUsers(); err != nil {
 		return nil, err
 	}
 	return app, nil
 }
 
-func (app *controlPlaneServer) ensureBootstrapAdmin() error {
-	users, err := app.tables.ListUsers(context.Background(), true)
+func (app *controlPlaneServer) ensureBootstrapAdmin(ctx context.Context, service *controlplane.Service) error {
+	accounts, err := app.tables.ListAccounts(ctx, "")
 	if err != nil {
 		return err
 	}
-	if len(users) > 0 {
-		return nil
-	}
-	if err := app.tables.SaveAccount(context.Background(), map[string]any{"id": "acct-admin", "status": "active"}); err != nil {
+	users, err := app.tables.ListUsers(ctx, true)
+	if err != nil {
 		return err
 	}
-	return app.tables.SaveUser(context.Background(), map[string]any{"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"})
+	organizations, err := app.tables.ListOrganizations(ctx)
+	if err != nil {
+		return err
+	}
+	memberships, err := app.tables.ListMemberships(ctx)
+	if err != nil {
+		return err
+	}
+	operatorAccounts := make([]map[string]any, 0, 1)
+	for _, account := range accounts {
+		if stringValue(account["id"]) == "acct-admin" || stringValue(account["ownerUserId"]) == "usr-admin" {
+			operatorAccounts = append(operatorAccounts, account)
+		}
+	}
+	operatorUsers := make([]map[string]any, 0, 1)
+	for _, user := range users {
+		if stringValue(user["id"]) == "usr-admin" || normalizeEmail(stringValue(user["email"])) == "admin@medopl.cn" ||
+			stringValue(user["accountId"]) == "acct-admin" || stringValue(user["role"]) == "admin" {
+			operatorUsers = append(operatorUsers, user)
+		}
+	}
+	operatorOrganizations := make([]map[string]any, 0, 1)
+	for _, organization := range organizations {
+		if stringValue(organization["billingAccountId"]) == "acct-admin" {
+			operatorOrganizations = append(operatorOrganizations, organization)
+		}
+	}
+	operatorMemberships := make([]map[string]any, 0, 1)
+	for _, membership := range memberships {
+		if stringValue(membership["accountId"]) == "acct-admin" || stringValue(membership["userId"]) == "usr-admin" {
+			operatorMemberships = append(operatorMemberships, membership)
+		}
+	}
+	operatorPresent := len(operatorAccounts)+len(operatorUsers)+len(operatorOrganizations)+len(operatorMemberships) != 0
+	operatorComplete := len(operatorAccounts) == 1 && len(operatorUsers) == 1 && len(operatorOrganizations) == 1 && len(operatorMemberships) == 1
+	var localSub2APIUserID int64
+	if operatorComplete {
+		account, user := operatorAccounts[0], operatorUsers[0]
+		organization, membership := operatorOrganizations[0], operatorMemberships[0]
+		localSub2APIUserID, _ = positiveIntegerField(account, "sub2apiUserId")
+		operatorComplete = stringValue(account["id"]) == "acct-admin" && stringValue(account["ownerUserId"]) == "usr-admin" && localSub2APIUserID > 0 && stringValue(account["status"]) == "active" &&
+			stringValue(user["id"]) == "usr-admin" && stringValue(user["email"]) == "admin@medopl.cn" && stringValue(user["accountId"]) == "acct-admin" && stringValue(user["role"]) == "admin" && stringValue(user["status"]) == "active" &&
+			stringValue(organization["id"]) != "" && stringValue(organization["status"]) == "active" &&
+			stringValue(membership["id"]) != "" && stringValue(membership["organizationId"]) == stringValue(organization["id"]) && stringValue(membership["userId"]) == "usr-admin" &&
+			stringValue(membership["accountId"]) == "acct-admin" && stringValue(membership["role"]) == "owner" && stringValue(membership["status"]) == "active"
+	}
+	if operatorPresent && !operatorComplete {
+		return errBootstrapUserIdentityConflict
+	}
+	identity, err := service.Sub2APIAdminIdentity(ctx)
+	if err != nil {
+		return err
+	}
+	if identity.ID <= 0 || normalizeEmail(identity.Email) != "admin@medopl.cn" || identity.Status != "active" {
+		return clients.ErrSub2APIIdentityConflict
+	}
+	if operatorComplete {
+		if identity.ID != localSub2APIUserID {
+			return clients.ErrSub2APIIdentityConflict
+		}
+		return nil
+	}
+	account := map[string]any{"id": "acct-admin", "ownerUserId": "usr-admin", "sub2apiUserId": identity.ID, "status": "active"}
+	user := map[string]any{"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}
+	organization := map[string]any{"id": "org-admin", "name": "OPL Cloud", "billingAccountId": "acct-admin", "status": "active"}
+	membership := map[string]any{"id": "mem-admin", "accountId": "acct-admin", "organizationId": "org-admin", "userId": "usr-admin", "role": "owner", "status": "active"}
+	return app.tables.CreateInvitedAccount(ctx, account, user, organization, membership)
 }
 
 func newControlPlaneAppEmpty() *controlPlaneServer {

@@ -131,7 +131,20 @@ func (ou *OrganizationUpdate) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (ou *OrganizationUpdate) check() error {
+	if v, ok := ou.mutation.BillingAccountID(); ok {
+		if err := organization.BillingAccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "billing_account_id", err: fmt.Errorf(`ent: validator failed for field "Organization.billing_account_id": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (ou *OrganizationUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := ou.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(organization.Table, organization.Columns, sqlgraph.NewFieldSpec(organization.FieldID, field.TypeString))
 	if ps := ou.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -291,7 +304,20 @@ func (ouo *OrganizationUpdateOne) defaults() {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (ouo *OrganizationUpdateOne) check() error {
+	if v, ok := ouo.mutation.BillingAccountID(); ok {
+		if err := organization.BillingAccountIDValidator(v); err != nil {
+			return &ValidationError{Name: "billing_account_id", err: fmt.Errorf(`ent: validator failed for field "Organization.billing_account_id": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (ouo *OrganizationUpdateOne) sqlSave(ctx context.Context) (_node *Organization, err error) {
+	if err := ouo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(organization.Table, organization.Columns, sqlgraph.NewFieldSpec(organization.FieldID, field.TypeString))
 	id, ok := ouo.mutation.ID()
 	if !ok {

@@ -88,6 +88,8 @@ var (
 	DefaultStatus string
 	// DefaultPasswordHash holds the default value on creation for the "password_hash" field.
 	DefaultPasswordHash string
+	// PasswordHashValidator is a validator for the "password_hash" field. It is called by the builders before save.
+	PasswordHashValidator func(string) error
 	// DefaultDisabledAt holds the default value on creation for the "disabled_at" field.
 	DefaultDisabledAt string
 	// DefaultDisabledBy holds the default value on creation for the "disabled_by" field.

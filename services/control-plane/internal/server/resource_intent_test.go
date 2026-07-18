@@ -2,10 +2,8 @@ package server
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
-	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -159,24 +157,14 @@ func TestMonthlyPriceSnapshotCanonicalAuthorityAndLegacyNormalization(t *testing
 
 func newPostgresResourceIntentStore(t *testing.T, prefix string) controlPlaneTableStore {
 	t.Helper()
-	databaseURL := os.Getenv("CONTROL_PLANE_TEST_DATABASE_URL")
-	if databaseURL == "" {
-		t.Skip("CONTROL_PLANE_TEST_DATABASE_URL is not set")
-	}
-	admin, err := sql.Open("postgres", databaseURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := admin.Ping(); err != nil {
-		t.Fatal(err)
-	}
+	admin := openControlPlaneTestPostgres(t)
 	t.Cleanup(func() { _ = admin.Close() })
 	schema := fmt.Sprintf("%s_%d", prefix, time.Now().UnixNano())
 	if _, err := admin.Exec(`CREATE SCHEMA ` + pq.QuoteIdentifier(schema)); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _, _ = admin.Exec(`DROP SCHEMA ` + pq.QuoteIdentifier(schema) + ` CASCADE`) })
-	stateStore, err := newTestPostgresEntStateStore(postgresInvitedAccountTestURL(databaseURL, schema))
+	stateStore, err := newTestPostgresEntStateStore(controlPlaneTestPostgresURL(t, "postgres", schema))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -286,9 +274,8 @@ func testResourceAutoRenewIntentInterleavings(t *testing.T, store controlPlaneTa
 
 func seedIntentOwner(t *testing.T, ctx context.Context, store controlPlaneTableStore, accountID, userID string, sub2APIUserID int64) map[string]any {
 	t.Helper()
-	mustStore(t, store.SaveAccount(ctx, map[string]any{"id": accountID, "status": "active", "sub2apiUserId": sub2APIUserID}))
-	user := map[string]any{"id": userID, "email": userID + "@example.com", "accountId": accountID, "role": "owner", "status": "active"}
-	mustStore(t, store.SaveUser(ctx, user))
+	account, user, organization, membership := invitedAccountRowsFor(accountID, userID, "org-"+accountID, userID+"@example.com", sub2APIUserID)
+	mustStore(t, store.CreateInvitedAccount(ctx, account, user, organization, membership))
 	return user
 }
 

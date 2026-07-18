@@ -54,8 +54,8 @@ var (
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
-	// DefaultBillingAccountID holds the default value on creation for the "billing_account_id" field.
-	DefaultBillingAccountID string
+	// BillingAccountIDValidator is a validator for the "billing_account_id" field. It is called by the builders before save.
+	BillingAccountIDValidator func(string) error
 	// DefaultName holds the default value on creation for the "name" field.
 	DefaultName string
 	// DefaultStatus holds the default value on creation for the "status" field.

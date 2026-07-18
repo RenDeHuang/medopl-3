@@ -1,9 +1,9 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "owner": "OPL Console",
-  "purpose": "Console identity, organization, membership, role, Sub2API account mapping, and management API contract.",
+  "purpose": "Console customer identity, strict owner graph, Sub2API authentication authority, lifecycle, and management API contract.",
   "state": "current",
-  "machineBoundary": "Account, organization, membership, role, disabled status, Sub2API user mapping, and management API shape.",
+  "machineBoundary": "One customer Account, User, Organization, and owner Membership per Sub2API identity; disabled status, remote authentication, session lookup, and management API shape.",
   "lifecycle": {
     "type": "long_term_contract",
     "removalCondition": "Replace only with a newer current contract for the same boundary."
@@ -12,14 +12,25 @@
     "account": {
       "requiredFields": [
         "id",
-        "email",
-        "role",
+        "ownerUserId",
         "status",
         "sub2apiUserId",
         "createdAt",
         "updatedAt"
       ],
       "sub2apiMapping": "sub2apiUserId is a required positive integer and is the only spendable-balance identity."
+    },
+    "user": {
+      "requiredFields": [
+        "id",
+        "email",
+        "accountId",
+        "role",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ],
+      "roles": ["owner"]
     },
     "organization": {
       "requiredFields": [
@@ -36,16 +47,13 @@
         "id",
         "organizationId",
         "accountId",
+        "userId",
         "role",
         "status",
         "createdAt",
         "updatedAt"
       ],
-      "roles": [
-        "owner",
-        "admin",
-        "member"
-      ]
+      "roles": ["owner"]
     },
     "supportTicketMapping": {
       "requiredFields": [
@@ -67,35 +75,63 @@
       ]
     }
   },
+  "customerIdentityGraph": {
+    "cardinality": "exactly_one_account_user_organization_membership",
+    "accountUser": "account.ownerUserId_equals_user.id_and_user.accountId_equals_account.id",
+    "organization": "exactly_one_organization_with_billingAccountId_equals_account.id",
+    "membership": "exactly_one_owner_membership_joining_the_same_account_user_and_organization",
+    "customerRole": "owner_only",
+    "customerAccess": "account_user_organization_membership_must_all_be_active",
+    "operatorException": "fixed_usr_admin_on_acct_admin_uses_admin_role_outside_customer_graph"
+  },
   "workspaceOwnership": {
-    "personalWorkspace": "ownerAccountId identifies the Console owner and its Sub2API mapping.",
-    "organizationWorkspace": "ownerAccountId is organization.billingAccountId and the caller must have active membership."
+    "personalWorkspace": "ownerAccountId identifies the Console owner and its Sub2API mapping."
   },
   "identityProvisioning": {
-    "atomicInvite": "One successful POST /api/users atomically commits the mapped Account, normalized User, one deterministic default Organization, and the User's active Membership; any conflict commits none of the four facts.",
-    "defaultRole": "An omitted role creates an owner User and owner Membership; explicit owner, admin, and member roles remain supported and the User and Membership roles match.",
-    "existingBoundaryCompatibility": "An existing Account is accepted only when its positive Sub2API mapping matches or is not yet assigned; an existing default Organization is accepted only when its billingAccountId matches."
+    "onlyMutation": "POST /api/users",
+    "atomicInvite": "After Sub2API resolves or creates the remote identity, one transaction commits the mapped Account, normalized owner User, deterministic active Organization, and active owner Membership.",
+    "atomicFacts": ["account", "user", "organization", "membership"],
+    "callerSuppliedSub2apiUserId": "forbidden",
+    "partialFailure": "rollback_all_four_facts",
+    "matchingReplay": "return_existing_graph_without_duplicate_facts",
+    "mismatch": "fail_closed_without_mutation"
   },
   "identitySecurity": {
     "email": "Create and bootstrap normalize email with lower(trim(email)); normalized email is unique in PostgreSQL and legacy blank or colliding values fail migration closed.",
     "plaintextPasswordMinimumCharacters": 12,
-    "passwordPolicy": "Create, reset, and bootstrap plaintext passwords require at least 12 characters; bootstrap passwordHash values are accepted without guessing plaintext strength.",
+    "passwordAuthority": "sub2api",
+    "invitePasswordHandling": "forward_to_sub2api_only_never_persist",
+    "localPasswordHash": {
+      "column": "control_plane_users.password_hash",
+      "requiredValue": "",
+      "enforcement": "database_check_constraint"
+    },
+    "sessionLookupKeyPrefix": "sub2api-sha256:",
     "secretProjection": "Passwords and password hashes are excluded from browser responses and audit facts."
   },
   "bootstrapLifecycle": {
-    "userState": "A matching disabled or deleted User is never reactivated and its lifecycle metadata is preserved across startup.",
-    "membershipState": "A revoked or otherwise non-active matching Membership is never replaced with an active Membership, and a non-active User never receives an active Membership."
+    "operatorProvisioning": "A fresh PostgreSQL database resolves or creates the fixed Sub2API operator identity and atomically commits its exact Account, User, Organization, and owner Membership graph.",
+    "legacyLocalUsersEnv": "retired_nonempty_value_fails_startup"
+  },
+  "identityDelivery": {
+    "controlPlane": "code_complete_local_verification",
+    "deploymentCutover": "pending_remove_retired_OPL_CONSOLE_USERS_JSON_injection",
+    "authenticatedRuntimeEvidence": "pending"
   },
   "userLifecycle": {
     "sessionPolicy": "Disabling or deleting a User revokes that User's sessions.",
     "ownerRenewalPolicy": "Disabling or deleting an owner turns off current Control Plane compute and storage autoRenew intent for that Account without deleting provider resources; non-owner lifecycle changes do not alter Account renewal intent."
   },
   "api": {
-    "createOrganization": "POST /api/organizations",
-    "createAccount": "POST /api/users",
-    "resetUserPassword": "POST /api/users/{id}/reset-password",
-    "addOrganizationMember": "POST /api/organizations/members",
-    "managementState": "GET /api/management/state?organizationId=<id>",
+    "createAccount": "POST /api/users (atomic owner invite only)",
+    "managementState": "GET /api/management/state",
+    "managementStateExcludedFields": ["organization", "organizations", "memberships"],
+    "unsupportedMutations": [
+      "POST /api/organizations",
+      "POST /api/organizations/members",
+      "POST /api/organizations/members/{id}/revoke",
+      "POST /api/users/{id}/reset-password"
+    ],
     "supportTicketMappings": "GET /api/support/tickets",
     "createSupportTicketMapping": "POST /api/support/tickets"
   },

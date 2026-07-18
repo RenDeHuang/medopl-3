@@ -57,10 +57,10 @@ var (
 	DefaultUpdatedAt func() time.Time
 	// UpdateDefaultUpdatedAt holds the default value on update for the "updated_at" field.
 	UpdateDefaultUpdatedAt func() time.Time
-	// DefaultOwnerUserID holds the default value on creation for the "owner_user_id" field.
-	DefaultOwnerUserID string
-	// DefaultSub2apiUserID holds the default value on creation for the "sub2api_user_id" field.
-	DefaultSub2apiUserID int64
+	// OwnerUserIDValidator is a validator for the "owner_user_id" field. It is called by the builders before save.
+	OwnerUserIDValidator func(string) error
+	// Sub2apiUserIDValidator is a validator for the "sub2api_user_id" field. It is called by the builders before save.
+	Sub2apiUserIDValidator func(int64) error
 	// DefaultName holds the default value on creation for the "name" field.
 	DefaultName string
 	// DefaultStatus holds the default value on creation for the "status" field.

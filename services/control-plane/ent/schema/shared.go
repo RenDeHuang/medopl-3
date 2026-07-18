@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"errors"
 	"time"
 
 	"entgo.io/ent"
@@ -23,8 +24,8 @@ func baseFields() []ent.Field {
 
 func accountFields() []ent.Field {
 	return append(baseFields(),
-		field.String("owner_user_id").Default(""),
-		field.Int64("sub2api_user_id").Default(0),
+		field.String("owner_user_id").NotEmpty().Unique(),
+		field.Int64("sub2api_user_id").Positive().Unique(),
 		field.String("name").Default(""),
 		field.String("status").Default("active"),
 	)
@@ -32,7 +33,7 @@ func accountFields() []ent.Field {
 
 func organizationFields() []ent.Field {
 	return append(baseFields(),
-		field.String("billing_account_id").Default(""),
+		field.String("billing_account_id").NotEmpty().Unique(),
 		field.String("name").Default(""),
 		field.String("status").Default("active"),
 	)
@@ -40,11 +41,16 @@ func organizationFields() []ent.Field {
 
 func userFields() []ent.Field {
 	return append(baseFields(),
-		field.String("account_id").NotEmpty(),
+		field.String("account_id").NotEmpty().Unique(),
 		field.String("email").NotEmpty().Unique(),
 		field.String("role").Default("owner"),
 		field.String("status").Default("active"),
-		field.String("password_hash").Default(""),
+		field.String("password_hash").Default("").Validate(func(value string) error {
+			if value != "" {
+				return errors.New("password_hash must be empty")
+			}
+			return nil
+		}),
 		field.String("disabled_at").Default(""),
 		field.String("disabled_by").Default(""),
 		field.String("disabled_reason").Default(""),
@@ -56,10 +62,15 @@ func userFields() []ent.Field {
 
 func membershipFields() []ent.Field {
 	return append(baseFields(),
-		field.String("account_id").NotEmpty(),
-		field.String("organization_id").Default(""),
-		field.String("user_id").NotEmpty(),
-		field.String("role").Default("member"),
+		field.String("account_id").NotEmpty().Unique(),
+		field.String("organization_id").NotEmpty().Unique(),
+		field.String("user_id").NotEmpty().Unique(),
+		field.String("role").Default("owner").Validate(func(value string) error {
+			if value != "owner" {
+				return errors.New("membership role must be owner")
+			}
+			return nil
+		}),
 		field.String("status").Default("active"),
 	)
 }

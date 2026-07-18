@@ -62,12 +62,14 @@ var (
 	UpdateDefaultUpdatedAt func() time.Time
 	// AccountIDValidator is a validator for the "account_id" field. It is called by the builders before save.
 	AccountIDValidator func(string) error
-	// DefaultOrganizationID holds the default value on creation for the "organization_id" field.
-	DefaultOrganizationID string
+	// OrganizationIDValidator is a validator for the "organization_id" field. It is called by the builders before save.
+	OrganizationIDValidator func(string) error
 	// UserIDValidator is a validator for the "user_id" field. It is called by the builders before save.
 	UserIDValidator func(string) error
 	// DefaultRole holds the default value on creation for the "role" field.
 	DefaultRole string
+	// RoleValidator is a validator for the "role" field. It is called by the builders before save.
+	RoleValidator func(string) error
 	// DefaultStatus holds the default value on creation for the "status" field.
 	DefaultStatus string
 	// IDValidator is a validator for the "id" field. It is called by the builders before save.

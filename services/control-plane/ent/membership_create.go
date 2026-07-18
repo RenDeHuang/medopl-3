@@ -60,14 +60,6 @@ func (mc *MembershipCreate) SetOrganizationID(s string) *MembershipCreate {
 	return mc
 }
 
-// SetNillableOrganizationID sets the "organization_id" field if the given value is not nil.
-func (mc *MembershipCreate) SetNillableOrganizationID(s *string) *MembershipCreate {
-	if s != nil {
-		mc.SetOrganizationID(*s)
-	}
-	return mc
-}
-
 // SetUserID sets the "user_id" field.
 func (mc *MembershipCreate) SetUserID(s string) *MembershipCreate {
 	mc.mutation.SetUserID(s)
@@ -151,10 +143,6 @@ func (mc *MembershipCreate) defaults() {
 		v := membership.DefaultUpdatedAt()
 		mc.mutation.SetUpdatedAt(v)
 	}
-	if _, ok := mc.mutation.OrganizationID(); !ok {
-		v := membership.DefaultOrganizationID
-		mc.mutation.SetOrganizationID(v)
-	}
 	if _, ok := mc.mutation.Role(); !ok {
 		v := membership.DefaultRole
 		mc.mutation.SetRole(v)
@@ -184,6 +172,11 @@ func (mc *MembershipCreate) check() error {
 	if _, ok := mc.mutation.OrganizationID(); !ok {
 		return &ValidationError{Name: "organization_id", err: errors.New(`ent: missing required field "Membership.organization_id"`)}
 	}
+	if v, ok := mc.mutation.OrganizationID(); ok {
+		if err := membership.OrganizationIDValidator(v); err != nil {
+			return &ValidationError{Name: "organization_id", err: fmt.Errorf(`ent: validator failed for field "Membership.organization_id": %w`, err)}
+		}
+	}
 	if _, ok := mc.mutation.UserID(); !ok {
 		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "Membership.user_id"`)}
 	}
@@ -194,6 +187,11 @@ func (mc *MembershipCreate) check() error {
 	}
 	if _, ok := mc.mutation.Role(); !ok {
 		return &ValidationError{Name: "role", err: errors.New(`ent: missing required field "Membership.role"`)}
+	}
+	if v, ok := mc.mutation.Role(); ok {
+		if err := membership.RoleValidator(v); err != nil {
+			return &ValidationError{Name: "role", err: fmt.Errorf(`ent: validator failed for field "Membership.role": %w`, err)}
+		}
 	}
 	if _, ok := mc.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Membership.status"`)}

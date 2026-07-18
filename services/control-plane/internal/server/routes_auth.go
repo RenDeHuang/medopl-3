@@ -1,10 +1,14 @@
 package server
 
 import (
+	"errors"
 	"net/http"
+
+	"opl-cloud/services/control-plane/internal/clients"
+	"opl-cloud/services/control-plane/internal/controlplane"
 )
 
-func registerAuthRoutes(mux *http.ServeMux, app *controlPlaneServer) {
+func registerAuthRoutes(mux *http.ServeMux, app *controlPlaneServer, service *controlplane.Service) {
 	mux.HandleFunc("POST /api/auth/login", func(w http.ResponseWriter, r *http.Request) {
 		if !limitJSONBody(w, r) {
 			return
@@ -14,10 +18,17 @@ func registerAuthRoutes(mux *http.ServeMux, app *controlPlaneServer) {
 			writeError(w, http.StatusTooManyRequests, "login_rate_limited")
 			return
 		}
-		payload, sessionID, err := app.login(input)
+		payload, sessionID, err := app.login(r.Context(), service, input)
 		if err != nil {
-			app.recordLoginFailure(r, input)
-			writeError(w, http.StatusUnauthorized, "invalid_credentials")
+			switch {
+			case errors.Is(err, clients.ErrSub2APIInvalidCredentials), errors.Is(err, errInvalidLocalCredentials):
+				app.recordLoginFailure(r, input)
+				writeError(w, http.StatusUnauthorized, "invalid_credentials")
+			case errors.Is(err, clients.ErrSub2APIAuthRateLimited):
+				writeError(w, http.StatusTooManyRequests, "login_rate_limited")
+			default:
+				writeError(w, http.StatusServiceUnavailable, "authentication_unavailable")
+			}
 			return
 		}
 		app.clearLoginFailures(r, input)

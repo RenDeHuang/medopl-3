@@ -115,6 +115,9 @@ func newPostgresEntStateStore(databaseURL string) (StateStore, error) {
 		{Version: "202607170003_workspace_auto_renew_audit", Run: func(ctx context.Context) error {
 			return controlplanemigrations.ApplyAutoRenewAudit(ctx, driver)
 		}},
+		{Version: "202607180001_customer_identity_hard_cut", Run: func(ctx context.Context) error {
+			return controlplanemigrations.ApplyCustomerIdentityHardCut(ctx, driver)
+		}},
 	}); err != nil {
 		_ = client.Close()
 		return nil, err
@@ -716,7 +719,6 @@ var (
 		textField("Email", "SetEmail", "email"),
 		textField("Role", "SetRole", "role"),
 		textField("Status", "SetStatus", "status"),
-		textField("PasswordHash", "SetPasswordHash", "passwordHash"),
 		textField("DisabledAt", "SetDisabledAt", "disabledAt"),
 		textField("DisabledBy", "SetDisabledBy", "disabledBy"),
 		textField("DisabledReason", "SetDisabledReason", "disabledReason"),
@@ -966,7 +968,8 @@ func (s *postgresEntStateStore) ListUsers(ctx context.Context, includeDeleted bo
 }
 
 func (s *postgresEntStateStore) SaveUser(ctx context.Context, row map[string]any) error {
-	if !validRole(stringValue(row["role"])) {
+	operator := stringValue(row["id"]) == "usr-admin" && stringValue(row["accountId"]) == "acct-admin" && normalizeEmail(stringValue(row["email"])) == "admin@medopl.cn" && stringValue(row["role"]) == "admin"
+	if stringValue(row["role"]) != "owner" && !operator {
 		return errInvalidRole
 	}
 	return s.replaceRecord(ctx, row, func(id string) error { return s.client.User.DeleteOneID(id).Exec(ctx) }, func() any { return s.client.User.Create() }, userEntFields)
@@ -985,6 +988,9 @@ func (s *postgresEntStateStore) ListSessions(ctx context.Context) (controlPlaneR
 }
 
 func (s *postgresEntStateStore) SaveSession(ctx context.Context, row map[string]any) error {
+	if !validSessionLookupKey(stringValue(row["id"])) {
+		return errors.New("invalid_session_id")
+	}
 	return s.replaceRecord(ctx, row, func(id string) error { return s.client.Session.DeleteOneID(id).Exec(ctx) }, func() any { return s.client.Session.Create() }, sessionEntFields)
 }
 
@@ -1050,6 +1056,40 @@ func (s *postgresEntStateStore) CreateInvitedAccount(ctx context.Context, accoun
 		_ = tx.Rollback()
 		return err
 	}
+	replayAfterConstraint := func(conflict error) error {
+		_ = tx.Rollback()
+		readback, err := s.client.Tx(ctx)
+		if err != nil {
+			return err
+		}
+		finish := func(err error) error {
+			_ = readback.Rollback()
+			return err
+		}
+		client := readback.Client()
+		accounts, err := loadRecordSet(ctx, client.Account.Query().All, accountEntFields)
+		if err != nil {
+			return finish(err)
+		}
+		users, err := loadRecordSet(ctx, client.User.Query().All, userEntFields)
+		if err != nil {
+			return finish(err)
+		}
+		organizations, err := loadRecordSet(ctx, client.Organization.Query().All, organizationEntFields)
+		if err != nil {
+			return finish(err)
+		}
+		memberships, err := loadRecordSet(ctx, client.Membership.Query().All, membershipEntFields)
+		if err != nil {
+			return finish(err)
+		}
+		if accounts[stringValue(accountRow["id"])] == nil || users[stringValue(userRow["id"])] == nil ||
+			organizations[stringValue(organizationRow["id"])] == nil || memberships[stringValue(membershipRow["id"])] == nil ||
+			stageInvitedAccount(accounts, users, organizations, memberships, accountRow, userRow, organizationRow, membershipRow) != nil {
+			return finish(conflict)
+		}
+		return finish(nil)
+	}
 	client := tx.Client()
 	accountID := stringValue(accountRow["id"])
 	accountExists := true
@@ -1079,38 +1119,53 @@ func (s *postgresEntStateStore) CreateInvitedAccount(ctx context.Context, accoun
 
 	organizationID := stringValue(organizationRow["id"])
 	_, organizationExists := organizations[organizationID]
+	userID := stringValue(userRow["id"])
+	_, userExists := users[userID]
+	membershipID := stringValue(membershipRow["id"])
+	_, membershipExists := memberships[membershipID]
 	if err := stageInvitedAccount(accounts, users, organizations, memberships, accountRow, userRow, organizationRow, membershipRow); err != nil {
 		return rollback(err)
 	}
 
 	if accountExists {
-		if _, err := client.Account.UpdateOneID(accountID).SetSub2apiUserID(int64(numberField(accounts[accountID], "sub2apiUserId", 0))).Save(ctx); err != nil {
+		if _, err := client.Account.UpdateOneID(accountID).
+			SetOwnerUserID(stringValue(accounts[accountID]["ownerUserId"])).
+			SetSub2apiUserID(int64(numberField(accounts[accountID], "sub2apiUserId", 0))).
+			Save(ctx); err != nil {
 			if controlplaneent.IsConstraintError(err) {
-				return rollback(errSub2APIAccountMappingConflict)
+				return replayAfterConstraint(errSub2APIAccountMappingConflict)
 			}
 			return rollback(err)
 		}
 	} else if err := saveRecord(ctx, accountID, accounts[accountID], client.Account.Create(), accountEntFields); err != nil {
 		if controlplaneent.IsConstraintError(err) {
-			return rollback(errSub2APIAccountMappingConflict)
+			return replayAfterConstraint(errSub2APIAccountMappingConflict)
 		}
 		return rollback(err)
 	}
-	userID := stringValue(userRow["id"])
-	if err := saveRecord(ctx, userID, users[userID], client.User.Create(), userEntFields); err != nil {
-		if controlplaneent.IsConstraintError(err) {
-			return rollback(errUserExists)
-		}
-		return rollback(err)
-	}
-	if !organizationExists {
-		if err := saveRecord(ctx, organizationID, organizations[organizationID], client.Organization.Create(), organizationEntFields); err != nil {
+	if !userExists {
+		if err := saveRecord(ctx, userID, users[userID], client.User.Create(), userEntFields); err != nil {
+			if controlplaneent.IsConstraintError(err) {
+				return replayAfterConstraint(errUserExists)
+			}
 			return rollback(err)
 		}
 	}
-	membershipID := stringValue(membershipRow["id"])
-	if err := saveRecord(ctx, membershipID, memberships[membershipID], client.Membership.Create(), membershipEntFields); err != nil {
-		return rollback(err)
+	if !organizationExists {
+		if err := saveRecord(ctx, organizationID, organizations[organizationID], client.Organization.Create(), organizationEntFields); err != nil {
+			if controlplaneent.IsConstraintError(err) {
+				return replayAfterConstraint(err)
+			}
+			return rollback(err)
+		}
+	}
+	if !membershipExists {
+		if err := saveRecord(ctx, membershipID, memberships[membershipID], client.Membership.Create(), membershipEntFields); err != nil {
+			if controlplaneent.IsConstraintError(err) {
+				return replayAfterConstraint(err)
+			}
+			return rollback(err)
+		}
 	}
 	return tx.Commit()
 }
@@ -1254,7 +1309,7 @@ func (s *postgresEntStateStore) ListMemberships(ctx context.Context) ([]map[stri
 }
 
 func (s *postgresEntStateStore) SaveMembership(ctx context.Context, row map[string]any) error {
-	if !validRole(stringValue(row["role"])) {
+	if stringValue(row["role"]) != "owner" {
 		return errInvalidRole
 	}
 	tx, err := s.client.Tx(ctx)

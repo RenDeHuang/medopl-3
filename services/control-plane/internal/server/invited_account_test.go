@@ -6,28 +6,25 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/lib/pq"
 )
 
 func TestInvitedAccountCreatesAccountUserOrganizationAndOwnerMembership(t *testing.T) {
 	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
-	user := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"owner@invite.example","accountId":"acct-invite","password":"CorrectHorseBatteryStaple!","sub2apiUserId":73}`)
+	user := createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"owner@invite.example","accountId":"acct-invite","password":"CorrectHorseBatteryStaple!"}`)
 
 	app := server.(*controlPlaneHTTPHandler).app
 	accounts, _ := app.tables.ListAccounts(context.Background(), "acct-invite")
 	organizations, _ := app.tables.ListOrganizations(context.Background())
 	memberships, _ := app.tables.ListMemberships(context.Background())
-	organization := findRecord(organizations, "org-invite")
+	organizationID := "org-" + stableID("account", "acct-invite")[:18]
+	organization := findRecord(organizations, organizationID)
 
-	if account := findRecord(accounts, "acct-invite"); account == nil || int64(numberField(account, "sub2apiUserId", 0)) != 73 {
+	if account := findRecord(accounts, "acct-invite"); account == nil || int64(numberField(account, "sub2apiUserId", 0)) != 41 {
 		t.Fatalf("invited account = %#v", account)
 	}
 	if user["accountId"] != "acct-invite" || user["role"] != "owner" {
@@ -36,7 +33,7 @@ func TestInvitedAccountCreatesAccountUserOrganizationAndOwnerMembership(t *testi
 	if organization == nil || organization["billingAccountId"] != "acct-invite" {
 		t.Fatalf("invited organization = %#v", organization)
 	}
-	membership := findRecord(memberships, "mem-"+stableID("org-invite", stringValue(user["id"]))[:12])
+	membership := findRecord(memberships, "mem-"+stableID(organizationID, stringValue(user["id"]))[:18])
 	if membership == nil || membership["accountId"] != "acct-invite" || membership["userId"] != user["id"] || membership["role"] != "owner" || membership["status"] != "active" {
 		t.Fatalf("invited membership = %#v", membership)
 	}
@@ -55,8 +52,8 @@ func TestInvitedAccountDefaultsRoleOnlyWhenOmitted(t *testing.T) {
 			server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
 			admin := operatorSessionForTest(t, server)
 			accountID := fmt.Sprintf("acct-role-%d", index)
-			body := fmt.Sprintf(`{"email":"role-%d@invite.example","accountId":%q,"password":"CorrectHorseBatteryStaple!","sub2apiUserId":%d,"role":%s}`,
-				index, accountID, 180+index, test.role)
+			body := fmt.Sprintf(`{"email":"role-%d@invite.example","accountId":%q,"password":"CorrectHorseBatteryStaple!","role":%s}`,
+				index, accountID, test.role)
 
 			response := requestWithSession(t, server, admin, http.MethodPost, "/api/users", body)
 
@@ -74,8 +71,8 @@ func TestInvitedAccountDefaultsRoleOnlyWhenOmitted(t *testing.T) {
 func TestInvitedAccountsUseDistinctDefaultOrganizations(t *testing.T) {
 	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
 	admin := operatorSessionForTest(t, server)
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"prefixed@invite.example","accountId":"acct-team","password":"CorrectHorseBatteryStaple!","sub2apiUserId":181}`)
-	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"plain@invite.example","accountId":"team","password":"CorrectHorseBatteryStaple!","sub2apiUserId":182}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"prefixed@invite.example","accountId":"acct-team","password":"CorrectHorseBatteryStaple!"}`)
+	createResourceWithSession(t, server, admin, http.MethodPost, "/api/users", `{"email":"plain@invite.example","accountId":"team","password":"CorrectHorseBatteryStaple!"}`)
 
 	organizations, err := server.(*controlPlaneHTTPHandler).app.tables.ListOrganizations(context.Background())
 	if err != nil {
@@ -98,22 +95,23 @@ func TestInvitedAccountsUseDistinctDefaultOrganizations(t *testing.T) {
 func TestMemoryInvitedAccountRollsBackEveryValidationStage(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
-		seed    func(*memoryTableStore)
+		seed    func(*testing.T, *memoryTableStore)
 		mutate  func(map[string]any, map[string]any, map[string]any, map[string]any)
 		wantErr error
 	}{
 		{
 			name: "account mapping",
-			seed: func(store *memoryTableStore) {
-				mustStore(t, store.SaveAccount(context.Background(), map[string]any{"id": "acct-existing", "status": "active", "sub2apiUserId": int64(73)}))
+			seed: func(t *testing.T, store *memoryTableStore) {
+				account, user, organization, membership := invitedAccountRowsFor("acct-existing", "usr-existing", "org-existing", "existing@invite.example", 73)
+				mustStore(t, store.CreateInvitedAccount(context.Background(), account, user, organization, membership))
 			},
 			wantErr: errSub2APIAccountMappingConflict,
 		},
 		{
 			name: "normalized user email",
-			seed: func(store *memoryTableStore) {
-				mustStore(t, store.SaveAccount(context.Background(), map[string]any{"id": "acct-existing", "status": "active", "sub2apiUserId": int64(74)}))
-				mustStore(t, store.SaveUser(context.Background(), map[string]any{"id": "usr-existing", "email": "owner@invite.example", "accountId": "acct-existing", "role": "owner", "status": "active"}))
+			seed: func(t *testing.T, store *memoryTableStore) {
+				account, user, organization, membership := invitedAccountRowsFor("acct-existing", "usr-existing", "org-existing", "owner@invite.example", 74)
+				mustStore(t, store.CreateInvitedAccount(context.Background(), account, user, organization, membership))
 			},
 			mutate: func(_ map[string]any, user, _, _ map[string]any) {
 				user["email"] = " OWNER@INVITE.EXAMPLE "
@@ -122,9 +120,9 @@ func TestMemoryInvitedAccountRollsBackEveryValidationStage(t *testing.T) {
 		},
 		{
 			name: "organization billing account",
-			seed: func(store *memoryTableStore) {
-				mustStore(t, store.SaveAccount(context.Background(), map[string]any{"id": "acct-existing", "status": "active", "sub2apiUserId": int64(74)}))
-				mustStore(t, store.SaveOrganization(context.Background(), map[string]any{"id": "org-invite", "billingAccountId": "acct-existing", "status": "active"}))
+			seed: func(t *testing.T, store *memoryTableStore) {
+				account, user, organization, membership := invitedAccountRowsFor("acct-existing", "usr-existing", "org-invite", "existing@invite.example", 74)
+				mustStore(t, store.CreateInvitedAccount(context.Background(), account, user, organization, membership))
 			},
 			wantErr: errMembershipAccountMismatch,
 		},
@@ -139,7 +137,7 @@ func TestMemoryInvitedAccountRollsBackEveryValidationStage(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			store := newMemoryTableStore()
 			if tc.seed != nil {
-				tc.seed(store)
+				tc.seed(t, store)
 			}
 			account, user, organization, membership := invitedAccountRows()
 			if tc.mutate != nil {
@@ -163,30 +161,15 @@ func TestMemoryInvitedAccountRollsBackEveryValidationStage(t *testing.T) {
 }
 
 func invitedAccountRows() (map[string]any, map[string]any, map[string]any, map[string]any) {
-	account := map[string]any{"id": "acct-invite", "status": "active", "sub2apiUserId": int64(73)}
-	user := map[string]any{"id": "usr-invite", "email": "owner@invite.example", "accountId": "acct-invite", "role": "owner", "status": "active", "passwordHash": "hash"}
-	organization := map[string]any{"id": "org-invite", "name": "Organization acct-invite", "billingAccountId": "acct-invite", "status": "active"}
-	membership := map[string]any{"id": "mem-" + stableID("org-invite", "usr-invite")[:12], "accountId": "acct-invite", "organizationId": "org-invite", "userId": "usr-invite", "role": "owner", "status": "active"}
-	return account, user, organization, membership
+	return invitedAccountRowsFor("acct-invite", "usr-invite", "org-invite", "owner@invite.example", 73)
 }
 
-func TestEntInvitedAccountAcceptsMatchingAccountAndOrganization(t *testing.T) {
-	ctx := context.Background()
-	store := NewTestEntStateStore(t, t.TempDir()+"/invited-existing.sqlite").(*postgresEntStateStore)
-	account, user, organization, membership := invitedAccountRows()
-	mustStore(t, store.SaveAccount(ctx, account))
-	mustStore(t, store.SaveOrganization(ctx, organization))
-
-	if err := store.CreateInvitedAccount(ctx, account, user, organization, membership); err != nil {
-		t.Fatal(err)
-	}
-	accounts, _ := store.ListAccounts(ctx, "acct-invite")
-	organizations, _ := store.ListOrganizations(ctx)
-	users, _ := store.ListUsers(ctx, true)
-	memberships, _ := store.ListMemberships(ctx)
-	if len(accounts) != 1 || len(organizations) != 1 || findRecord(users, "usr-invite") == nil || findRecord(memberships, stringValue(membership["id"])) == nil {
-		t.Fatalf("matching invite facts: accounts=%#v organizations=%#v users=%#v memberships=%#v", accounts, organizations, users, memberships)
-	}
+func invitedAccountRowsFor(accountID, userID, organizationID, email string, sub2APIUserID int64) (map[string]any, map[string]any, map[string]any, map[string]any) {
+	account := map[string]any{"id": accountID, "ownerUserId": userID, "status": "active", "sub2apiUserId": sub2APIUserID}
+	user := map[string]any{"id": userID, "email": email, "accountId": accountID, "role": "owner", "status": "active"}
+	organization := map[string]any{"id": organizationID, "name": "Organization " + accountID, "billingAccountId": accountID, "status": "active"}
+	membership := map[string]any{"id": "mem-" + stableID(organizationID, userID)[:12], "accountId": accountID, "organizationId": organizationID, "userId": userID, "role": "owner", "status": "active"}
+	return account, user, organization, membership
 }
 
 func TestEntInvitedAccountRollsBackOnMembershipInsertError(t *testing.T) {
@@ -215,177 +198,92 @@ func TestEntInvitedAccountRollsBackOnMembershipInsertError(t *testing.T) {
 	}
 }
 
-func TestPostgresInvitedAccountSerializesExistingAccountOrganization(t *testing.T) {
-	databaseURL := os.Getenv("CONTROL_PLANE_TEST_DATABASE_URL")
-	if databaseURL == "" {
-		t.Skip("CONTROL_PLANE_TEST_DATABASE_URL is not set")
-	}
-	admin, err := sql.Open("postgres", databaseURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := admin.Ping(); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = admin.Close() })
-	schema := fmt.Sprintf("control_plane_invite_%d", time.Now().UnixNano())
-	if _, err := admin.Exec(`CREATE SCHEMA ` + pq.QuoteIdentifier(schema)); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _, _ = admin.Exec(`DROP SCHEMA ` + pq.QuoteIdentifier(schema) + ` CASCADE`) })
+func TestPostgresInvitedAccountConcurrentReplayOrConflict(t *testing.T) {
+	for _, tc := range []struct {
+		name                            string
+		conflicting                    bool
+		wantSucceeded, wantConflicted int
+	}{
+		{name: "matching replay", wantSucceeded: 2},
+		{name: "different owner", conflicting: true, wantSucceeded: 1, wantConflicted: 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store, db := newPostgresWorkspaceRenewalStoreWithDB(t)
+			if _, err := db.Exec(`
+				CREATE FUNCTION delay_invited_account_insert() RETURNS trigger LANGUAGE plpgsql AS $$
+				BEGIN
+					PERFORM pg_sleep(0.2);
+					RETURN NEW;
+				END
+				$$;
+				CREATE TRIGGER delay_invited_account_insert BEFORE INSERT ON control_plane_accounts
+				FOR EACH ROW EXECUTE FUNCTION delay_invited_account_insert();
+			`); err != nil {
+				t.Fatal(err)
+			}
 
-	stateStore, err := newTestPostgresEntStateStore(postgresInvitedAccountTestURL(databaseURL, schema))
-	if err != nil {
-		t.Fatal(err)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			organization := map[string]any{"id": "org-new-invite", "name": "Organization acct-new-invite", "billingAccountId": "acct-new-invite", "status": "active"}
+			firstUser := map[string]any{"id": "usr-new-invite-one", "email": "one@new-invite.example", "accountId": "acct-new-invite", "role": "owner", "status": "active"}
+			firstAccount := map[string]any{"id": "acct-new-invite", "ownerUserId": firstUser["id"], "status": "active", "sub2apiUserId": int64(74)}
+			firstMembership := map[string]any{"id": "mem-new-invite-one", "accountId": "acct-new-invite", "organizationId": "org-new-invite", "userId": firstUser["id"], "role": "owner", "status": "active"}
+			secondAccount, secondUser, secondMembership := cloneMap(firstAccount), cloneMap(firstUser), cloneMap(firstMembership)
+			if tc.conflicting {
+				secondUser["id"], secondUser["email"] = "usr-new-invite-two", "two@new-invite.example"
+				secondAccount["ownerUserId"] = secondUser["id"]
+				secondMembership["id"], secondMembership["userId"] = "mem-new-invite-two", secondUser["id"]
+			}
+			start := make(chan struct{})
+			results := make(chan error, 2)
+			for _, invite := range [][3]map[string]any{{firstAccount, firstUser, firstMembership}, {secondAccount, secondUser, secondMembership}} {
+				go func(account, user, membership map[string]any) {
+					<-start
+					results <- store.CreateInvitedAccount(ctx, account, user, organization, membership)
+				}(invite[0], invite[1], invite[2])
+			}
+			close(start)
+			succeeded, conflicted := 0, 0
+			for range 2 {
+				err := <-results
+				if err == nil {
+					succeeded++
+				} else if errors.Is(err, errSub2APIAccountMappingConflict) {
+					conflicted++
+				} else {
+					t.Fatalf("concurrent new account invite: %v", err)
+				}
+			}
+			accounts, _ := store.ListAccounts(ctx, "acct-new-invite")
+			organizations, _ := store.ListOrganizations(ctx)
+			users, _ := store.ListUsers(ctx, true)
+			memberships, _ := store.ListMemberships(ctx)
+			accountUsers, accountMemberships := 0, 0
+			for _, user := range users {
+				if user["accountId"] == "acct-new-invite" {
+					accountUsers++
+				}
+			}
+			for _, membership := range memberships {
+				if membership["accountId"] == "acct-new-invite" {
+					accountMemberships++
+				}
+			}
+			if succeeded != tc.wantSucceeded || conflicted != tc.wantConflicted || len(accounts) != 1 || findRecord(organizations, "org-new-invite") == nil || accountUsers != 1 || accountMemberships != 1 {
+				t.Fatalf("new account race succeeded=%d conflicted=%d accounts=%#v organizations=%#v users=%#v memberships=%#v", succeeded, conflicted, accounts, organizations, users, memberships)
+			}
+		})
 	}
-	store := stateStore.(*postgresEntStateStore)
-	t.Cleanup(func() { _ = store.client.Close() })
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	account, firstUser, organization, firstMembership := invitedAccountRows()
-	mustStore(t, store.SaveAccount(ctx, account))
-	if _, err := admin.Exec(`
-		CREATE FUNCTION ` + pq.QuoteIdentifier(schema) + `.delay_invited_account_update() RETURNS trigger LANGUAGE plpgsql AS $$
-		BEGIN
-			PERFORM pg_sleep(0.2);
-			RETURN NEW;
-		END
-		$$;
-		CREATE TRIGGER delay_invited_account_update BEFORE UPDATE ON ` + pq.QuoteIdentifier(schema) + `.control_plane_accounts
-		FOR EACH ROW EXECUTE FUNCTION ` + pq.QuoteIdentifier(schema) + `.delay_invited_account_update();
-	`); err != nil {
-		t.Fatal(err)
-	}
-	secondUser := cloneMap(firstUser)
-	secondUser["id"], secondUser["email"] = "usr-invite-two", "owner-two@invite.example"
-	secondMembership := cloneMap(firstMembership)
-	secondMembership["id"], secondMembership["userId"] = "mem-invite-two", secondUser["id"]
-
-	start := make(chan struct{})
-	results := make(chan error, 2)
-	for _, invite := range [][2]map[string]any{{firstUser, firstMembership}, {secondUser, secondMembership}} {
-		go func(user, membership map[string]any) {
-			<-start
-			results <- store.CreateInvitedAccount(ctx, account, user, organization, membership)
-		}(invite[0], invite[1])
-	}
-	close(start)
-	for range 2 {
-		if err := <-results; err != nil {
-			t.Fatalf("concurrent invited account: %v", err)
-		}
-	}
-	organizations, _ := store.ListOrganizations(ctx)
-	users, _ := store.ListUsers(ctx, true)
-	memberships, _ := store.ListMemberships(ctx)
-	if len(organizations) != 1 || len(users) != 2 || len(memberships) != 2 {
-		t.Fatalf("concurrent invite facts: organizations=%#v users=%#v memberships=%#v", organizations, users, memberships)
-	}
-}
-
-func TestPostgresInvitedAccountNewAccountConcurrentOneWinner(t *testing.T) {
-	databaseURL := os.Getenv("CONTROL_PLANE_TEST_DATABASE_URL")
-	if databaseURL == "" {
-		t.Skip("CONTROL_PLANE_TEST_DATABASE_URL is not set")
-	}
-	admin, err := sql.Open("postgres", databaseURL)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := admin.Ping(); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = admin.Close() })
-	schema := fmt.Sprintf("control_plane_new_invite_%d", time.Now().UnixNano())
-	if _, err := admin.Exec(`CREATE SCHEMA ` + pq.QuoteIdentifier(schema)); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _, _ = admin.Exec(`DROP SCHEMA ` + pq.QuoteIdentifier(schema) + ` CASCADE`) })
-	stateStore, err := newTestPostgresEntStateStore(postgresInvitedAccountTestURL(databaseURL, schema))
-	if err != nil {
-		t.Fatal(err)
-	}
-	store := stateStore.(*postgresEntStateStore)
-	t.Cleanup(func() { _ = store.client.Close() })
-	if _, err := admin.Exec(`
-		CREATE FUNCTION ` + pq.QuoteIdentifier(schema) + `.delay_invited_account_insert() RETURNS trigger LANGUAGE plpgsql AS $$
-		BEGIN
-			PERFORM pg_sleep(0.2);
-			RETURN NEW;
-		END
-		$$;
-		CREATE TRIGGER delay_invited_account_insert BEFORE INSERT ON ` + pq.QuoteIdentifier(schema) + `.control_plane_accounts
-		FOR EACH ROW EXECUTE FUNCTION ` + pq.QuoteIdentifier(schema) + `.delay_invited_account_insert();
-	`); err != nil {
-		t.Fatal(err)
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	account := map[string]any{"id": "acct-new-invite", "status": "active", "sub2apiUserId": int64(74)}
-	organization := map[string]any{"id": "org-new-invite", "name": "Organization acct-new-invite", "billingAccountId": "acct-new-invite", "status": "active"}
-	firstUser := map[string]any{"id": "usr-new-invite-one", "email": "one@new-invite.example", "accountId": "acct-new-invite", "role": "owner", "status": "active", "passwordHash": "hash"}
-	secondUser := map[string]any{"id": "usr-new-invite-two", "email": "two@new-invite.example", "accountId": "acct-new-invite", "role": "owner", "status": "active", "passwordHash": "hash"}
-	firstMembership := map[string]any{"id": "mem-new-invite-one", "accountId": "acct-new-invite", "organizationId": "org-new-invite", "userId": firstUser["id"], "role": "owner", "status": "active"}
-	secondMembership := map[string]any{"id": "mem-new-invite-two", "accountId": "acct-new-invite", "organizationId": "org-new-invite", "userId": secondUser["id"], "role": "owner", "status": "active"}
-	start := make(chan struct{})
-	results := make(chan error, 2)
-	for _, invite := range [][2]map[string]any{{firstUser, firstMembership}, {secondUser, secondMembership}} {
-		go func(user, membership map[string]any) {
-			<-start
-			results <- store.CreateInvitedAccount(ctx, account, user, organization, membership)
-		}(invite[0], invite[1])
-	}
-	close(start)
-	succeeded, conflicted := 0, 0
-	for range 2 {
-		err := <-results
-		if err == nil {
-			succeeded++
-		} else if errors.Is(err, errSub2APIAccountMappingConflict) {
-			conflicted++
-		} else {
-			t.Fatalf("concurrent new account invite: %v", err)
-		}
-	}
-	accounts, _ := store.ListAccounts(ctx, "acct-new-invite")
-	organizations, _ := store.ListOrganizations(ctx)
-	users, _ := store.ListUsers(ctx, true)
-	memberships, _ := store.ListMemberships(ctx)
-	accountUsers, accountMemberships := 0, 0
-	for _, user := range users {
-		if user["accountId"] == "acct-new-invite" {
-			accountUsers++
-		}
-	}
-	for _, membership := range memberships {
-		if membership["accountId"] == "acct-new-invite" {
-			accountMemberships++
-		}
-	}
-	if succeeded != 1 || conflicted != 1 || len(accounts) != 1 || findRecord(organizations, "org-new-invite") == nil || accountUsers != 1 || accountMemberships != 1 {
-		t.Fatalf("new account race succeeded=%d conflicted=%d accounts=%#v organizations=%#v users=%#v memberships=%#v", succeeded, conflicted, accounts, organizations, users, memberships)
-	}
-}
-
-func postgresInvitedAccountTestURL(databaseURL, schema string) string {
-	if parsed, err := url.Parse(databaseURL); err == nil && parsed.Scheme != "" {
-		query := parsed.Query()
-		query.Set("search_path", schema)
-		parsed.RawQuery = query.Encode()
-		return parsed.String()
-	}
-	return databaseURL + " search_path=" + pq.QuoteLiteral(schema)
 }
 
 func TestEntUserLifecycleRollsBackAllFacts(t *testing.T) {
 	ctx := context.Background()
 	path := t.TempDir() + "/user-lifecycle-rollback.sqlite"
 	store := NewTestEntStateStore(t, path).(*postgresEntStateStore)
-	user := map[string]any{"id": "usr-lifecycle", "email": "lifecycle@example.com", "accountId": "acct-lifecycle", "role": "owner", "status": "active"}
-	mustStore(t, store.SaveAccount(ctx, map[string]any{"id": "acct-lifecycle", "status": "active", "sub2apiUserId": int64(113)}))
-	mustStore(t, store.SaveUser(ctx, user))
-	mustStore(t, store.SaveSession(ctx, map[string]any{"id": "session-lifecycle", "userId": "usr-lifecycle", "csrf": "csrf", "expiresAt": "2099-01-01T00:00:00Z"}))
+	account, user, organization, membership := invitedAccountRowsFor("acct-lifecycle", "usr-lifecycle", "org-lifecycle", "lifecycle@example.com", 113)
+	mustStore(t, store.CreateInvitedAccount(ctx, account, user, organization, membership))
+	sessionID := sessionLookupKey("session-lifecycle")
+	mustStore(t, store.SaveSession(ctx, map[string]any{"id": sessionID, "userId": "usr-lifecycle", "csrf": "csrf", "expiresAt": "2099-01-01T00:00:00Z"}))
 	mustStore(t, store.SaveCompute(ctx, map[string]any{"id": "compute-lifecycle", "accountId": "acct-lifecycle", "autoRenew": true}))
 	mustStore(t, store.SaveStorage(ctx, map[string]any{"id": "storage-lifecycle", "accountId": "acct-lifecycle", "autoRenew": true}))
 	db, err := sql.Open("sqlite3", path+"?_fk=1")
@@ -405,7 +303,7 @@ func TestEntUserLifecycleRollsBackAllFacts(t *testing.T) {
 	sessions, _ := store.ListSessions(ctx)
 	computes, _ := store.ListComputes(ctx, "acct-lifecycle")
 	storages, _ := store.ListStorages(ctx, "acct-lifecycle")
-	if findRecord(users, "usr-lifecycle")["status"] != "active" || sessions["session-lifecycle"] == nil || findRecord(computes, "compute-lifecycle")["autoRenew"] != true || findRecord(storages, "storage-lifecycle")["autoRenew"] != true {
+	if findRecord(users, "usr-lifecycle")["status"] != "active" || sessions[sessionID] == nil || findRecord(computes, "compute-lifecycle")["autoRenew"] != true || findRecord(storages, "storage-lifecycle")["autoRenew"] != true {
 		t.Fatalf("partial lifecycle survived rollback: users=%#v sessions=%#v computes=%#v storages=%#v", users, sessions, computes, storages)
 	}
 }

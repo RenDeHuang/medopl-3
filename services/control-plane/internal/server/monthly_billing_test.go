@@ -16,6 +16,7 @@ import (
 )
 
 type monthlySub2API struct {
+	testSub2APIClient
 	events            *[]string
 	balances          []int64
 	balanceErr        error
@@ -449,9 +450,7 @@ func newMonthlyBillingTest(t *testing.T, balances []int64) (*controlPlaneServer,
 	fabric := &monthlyFabric{events: events}
 	ledger := &monthlyLedger{events: events}
 	app := newControlPlaneAppEmpty()
-	if err := app.tables.SaveAccount(context.Background(), map[string]any{"id": "acct-monthly", "status": "active", "sub2apiUserId": int64(41)}); err != nil {
-		t.Fatalf("save monthly account: %v", err)
-	}
+	seedTenantMember(t, app.tables, "acct-monthly", "org-monthly", "usr-monthly-owner", "monthly-owner@example.com")
 	return app, controlplane.NewService(ledger, fabric, sub2API), sub2API, fabric, ledger, events
 }
 
@@ -966,9 +965,7 @@ func TestMonthlyPurchaseResumesProvisioningThroughFabricSync(t *testing.T) {
 	fabric := &provisioningMonthlyFabric{monthlyFabric: monthlyFabric{events: events}}
 	ledger := &monthlyLedger{events: events}
 	app := newControlPlaneAppEmpty()
-	if err := app.tables.SaveAccount(context.Background(), map[string]any{"id": "acct-monthly", "status": "active", "sub2apiUserId": int64(41)}); err != nil {
-		t.Fatal(err)
-	}
+	seedTenantMember(t, app.tables, "acct-monthly", "org-monthly", "usr-monthly-owner", "monthly-owner@example.com")
 	service := controlplane.NewService(ledger, fabric, sub2API)
 	input := monthlyPurchaseInput{ResourceType: "compute", ResourceID: "compute-provisioning", BillingOperationID: "billing-provisioning", AccountID: "acct-monthly", PackageID: "basic", Environment: "test", Now: time.Date(2026, 7, 14, 0, 0, 0, 0, time.UTC)}
 
@@ -1010,7 +1007,7 @@ func TestMonthlyPurchaseRecoversLostChargeResponseWithSameCodeFromAuthoritativeH
 			fabric := &monthlyFabric{events: events}
 			ledger := &monthlyLedger{events: events}
 			app := newControlPlaneAppEmpty()
-			mustStore(t, app.tables.SaveAccount(context.Background(), map[string]any{"id": "acct-monthly", "status": "active", "sub2apiUserId": int64(41)}))
+			seedTenantMember(t, app.tables, "acct-monthly", "org-monthly", "usr-monthly-owner", "monthly-owner@example.com")
 			service := controlplane.NewService(ledger, fabric, gateway.client)
 			operationID := "billing-history-replay-" + tc.resourceType
 			input := monthlyPurchaseInput{
@@ -1063,7 +1060,7 @@ func TestMonthlyPurchaseLostAdjustmentHistoryFailsClosedWithoutSecondDebit(t *te
 			fabric := &monthlyFabric{events: events}
 			ledger := &monthlyLedger{events: events}
 			app := newControlPlaneAppEmpty()
-			mustStore(t, app.tables.SaveAccount(context.Background(), map[string]any{"id": "acct-monthly", "status": "active", "sub2apiUserId": int64(41)}))
+			seedTenantMember(t, app.tables, "acct-monthly", "org-monthly", "usr-monthly-owner", "monthly-owner@example.com")
 			service := controlplane.NewService(ledger, fabric, gateway.client)
 			input := monthlyPurchaseInput{
 				ResourceType: "compute", ResourceID: "compute-history-" + tc.name, BillingOperationID: "billing-history-" + tc.name,
@@ -1201,13 +1198,11 @@ func TestMonthlyEntitlementRejectsInactiveOrExpiredResources(t *testing.T) {
 func TestMonthlyPurchaseRouteUsesSub2APIAndPersistsReceipt(t *testing.T) {
 	t.Setenv("OPL_TENCENT_ZONE", "ap-shanghai-2")
 	events := &[]string{}
-	sub2API := &monthlySub2API{events: events, balances: []int64{100_000_000, 100_000_000, 50_000_000}}
+	sub2API := &monthlySub2API{events: events, balances: []int64{100_000_000, 50_000_000}}
 	fabric := &monthlyFabric{events: events}
 	ledger := &monthlyLedger{events: events}
 	store := newMemoryTableStore()
-	if err := store.SaveAccount(context.Background(), map[string]any{"id": "acct-alpha", "status": "active", "sub2apiUserId": int64(41)}); err != nil {
-		t.Fatal(err)
-	}
+	seedTenantMember(t, store, "acct-alpha", "org-alpha", "usr-alpha", "alpha@example.com")
 	server, err := NewPersistentServer(controlplane.NewService(ledger, fabric, sub2API), store)
 	if err != nil {
 		t.Fatalf("new monthly server: %v", err)
@@ -1363,50 +1358,6 @@ func TestStorageRouteAllowsOnlyOwnedRetainedVolumeReactivation(t *testing.T) {
 	}
 }
 
-func TestCreateUserRequiresAndPersistsSub2APIUserMapping(t *testing.T) {
-	app := newControlPlaneAppEmpty()
-	events := &[]string{}
-	service := controlplane.NewService(nil, nil, &monthlySub2API{events: events, balances: []int64{0}})
-	input := map[string]any{
-		"email": "mapped@example.com", "accountId": "acct-mapped", "role": "owner",
-		"password": "CorrectHorseBatteryStaple!",
-	}
-	if _, err := app.createUser(context.Background(), service, input); !errors.Is(err, errMonthlyAccountUnmapped) {
-		t.Fatalf("missing Sub2API mapping error = %v, want %v", err, errMonthlyAccountUnmapped)
-	}
-
-	input["sub2apiUserId"] = float64(41)
-	if _, err := app.createUser(context.Background(), service, input); err != nil {
-		t.Fatalf("create mapped user: %v", err)
-	}
-	accounts, err := app.tables.ListAccounts(context.Background(), "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	account := findRecord(accounts, "acct-mapped")
-	if account == nil || int64(numberField(account, "sub2apiUserId", 0)) != 41 {
-		t.Fatalf("persisted account mapping = %#v", account)
-	}
-}
-
-func TestCreateUserRejectsSub2APIUserMappedToAnotherAccount(t *testing.T) {
-	app := newControlPlaneAppEmpty()
-	events := &[]string{}
-	service := controlplane.NewService(nil, nil, &monthlySub2API{events: events, balances: []int64{0, 0}})
-	for _, input := range []map[string]any{
-		{"email": "one@example.com", "accountId": "acct-one", "role": "owner", "password": "CorrectHorseBatteryStaple!", "sub2apiUserId": float64(41)},
-		{"email": "two@example.com", "accountId": "acct-two", "role": "owner", "password": "CorrectHorseBatteryStaple!", "sub2apiUserId": float64(41)},
-	} {
-		_, err := app.createUser(context.Background(), service, input)
-		if stringValue(input["accountId"]) == "acct-one" && err != nil {
-			t.Fatal(err)
-		}
-		if stringValue(input["accountId"]) == "acct-two" && (err == nil || err.Error() != "sub2api_account_mapping_conflict") {
-			t.Fatalf("duplicate account mapping error = %v", err)
-		}
-	}
-}
-
 func TestSub2APIUserIDRejectsDuplicateStoredMapping(t *testing.T) {
 	store := newMemoryTableStore()
 	store.mu.Lock()
@@ -1417,39 +1368,6 @@ func TestSub2APIUserIDRejectsDuplicateStoredMapping(t *testing.T) {
 	app.tables = store
 	if _, err := app.sub2APIUserID(context.Background(), "acct-one"); err == nil || err.Error() != "sub2api_account_mapping_conflict" {
 		t.Fatalf("duplicate stored mapping error = %v", err)
-	}
-}
-
-func TestCreateUserValidatesSub2APIUserBeforePersisting(t *testing.T) {
-	events := &[]string{}
-	store := newMemoryTableStore()
-	sub2API := &monthlySub2API{events: events, balanceErr: errors.New("sub2api unavailable")}
-	server, err := NewPersistentServer(controlplane.NewService(&monthlyLedger{events: events}, &monthlyFabric{events: events}, sub2API), store)
-	if err != nil {
-		t.Fatal(err)
-	}
-	session := operatorSessionForTest(t, server)
-	response := requestWithSession(t, server, session, http.MethodPost, "/api/users", `{"email":"unverified@example.com","accountId":"acct-unverified","role":"owner","password":"CorrectHorseBatteryStaple!","sub2apiUserId":41}`)
-	if response.Code != http.StatusBadGateway || !strings.Contains(response.Body.String(), "sub2api_user_mapping_unverified") {
-		t.Fatalf("create status=%d body=%s", response.Code, response.Body.String())
-	}
-	users, err := store.ListUsers(context.Background(), true)
-	if err != nil {
-		t.Fatal(err)
-	}
-	accounts, err := store.ListAccounts(context.Background(), "acct-unverified")
-	if err != nil {
-		t.Fatal(err)
-	}
-	persistedUser := false
-	for _, user := range users {
-		persistedUser = persistedUser || stringValue(user["email"]) == "unverified@example.com"
-	}
-	if persistedUser || len(accounts) != 0 {
-		t.Fatalf("unverified mapping persisted users=%#v accounts=%#v", users, accounts)
-	}
-	if len(*events) != 1 || (*events)[0] != "sub2api.balance" {
-		t.Fatalf("mapping validation events=%#v", *events)
 	}
 }
 
@@ -1475,9 +1393,7 @@ func TestStateRouteUsesOnlyLiveSub2APIBalance(t *testing.T) {
 	events := &[]string{}
 	sub2API := &monthlySub2API{events: events, balances: []int64{123_456_789, 123_456_789}}
 	store := newMemoryTableStore()
-	if err := store.SaveAccount(context.Background(), map[string]any{"id": "acct-alpha", "status": "active", "sub2apiUserId": int64(41)}); err != nil {
-		t.Fatal(err)
-	}
+	seedTenantMember(t, store, "acct-alpha", "org-alpha", "usr-alpha", "alpha@example.com")
 	server, err := NewPersistentServer(controlplane.NewService(&monthlyLedger{events: events}, &monthlyFabric{events: events}, sub2API), store)
 	if err != nil {
 		t.Fatal(err)
@@ -1503,9 +1419,7 @@ func TestStateRouteDegradesWhenSub2APIBalanceIsUnavailable(t *testing.T) {
 	events := &[]string{}
 	sub2API := &monthlySub2API{events: events, balances: []int64{0}}
 	store := newMemoryTableStore()
-	if err := store.SaveAccount(context.Background(), map[string]any{"id": "acct-alpha", "status": "active", "sub2apiUserId": int64(41)}); err != nil {
-		t.Fatal(err)
-	}
+	seedTenantMember(t, store, "acct-alpha", "org-alpha", "usr-alpha", "alpha@example.com")
 	server, err := NewPersistentServer(controlplane.NewService(&monthlyLedger{events: events}, &monthlyFabric{events: events}, sub2API), store)
 	if err != nil {
 		t.Fatal(err)
@@ -1625,13 +1539,11 @@ func TestMonthlyReadinessRoutesResumePersistedPurchase(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			events := &[]string{}
 			initial := int64(100_000_000)
-			sub2API := &monthlySub2API{events: events, balances: []int64{initial, initial, initial - tc.charge}}
+			sub2API := &monthlySub2API{events: events, balances: []int64{initial, initial - tc.charge}}
 			fabric := &provisioningMonthlyFabric{monthlyFabric: monthlyFabric{events: events}}
 			ledger := &monthlyLedger{events: events}
 			store := newMemoryTableStore()
-			if err := store.SaveAccount(context.Background(), map[string]any{"id": "acct-alpha", "status": "active", "sub2apiUserId": int64(41)}); err != nil {
-				t.Fatal(err)
-			}
+			seedTenantMember(t, store, "acct-alpha", "org-alpha", "usr-alpha", "alpha@example.com")
 			if tc.resourceType == "storage" {
 				mustStore(t, store.SaveCompute(context.Background(), map[string]any{
 					"id": "compute-placement", "accountId": "acct-alpha", "workspaceId": "workspace-placement", "packageId": "basic", "status": "running", "billingStatus": "active",
