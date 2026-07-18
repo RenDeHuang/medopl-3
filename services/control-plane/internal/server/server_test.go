@@ -1753,6 +1753,17 @@ func (failingFabricClient) ListOperations(_ context.Context) ([]clients.FabricOp
 	return nil, errors.New("provider operation secret leaked in raw error")
 }
 
+type internalReadinessFabricClient struct {
+	fakeFabricClient
+}
+
+func (internalReadinessFabricClient) Readiness(_ context.Context) (map[string]any, error) {
+	return map[string]any{
+		"provider": "tencent-tke", "ready": true, "cloudImagesReady": true, "workspaceImagesReady": true, "immutableImagesReady": true,
+		"checks": []any{map[string]any{"detail": "internal secret"}}, "missingEnv": []string{"INTERNAL_SECRET"}, "internalCredential": "secret-value",
+	}, nil
+}
+
 type catalogFabricClient struct {
 	fakeFabricClient
 }
@@ -1984,7 +1995,7 @@ func (f *fakeFabricClient) WorkspaceRuntimeStatus(_ context.Context, workspaceID
 
 func (f *fakeFabricClient) Readiness(_ context.Context) (map[string]any, error) {
 	f.record("fabric.readiness")
-	return map[string]any{"provider": "tencent-tke", "ready": true, "missingEnv": []string{}, "missingTools": []string{}}, nil
+	return map[string]any{"provider": "tencent-tke", "ready": true, "cloudImagesReady": true, "workspaceImagesReady": true, "immutableImagesReady": true, "missingEnv": []string{}, "missingTools": []string{}}, nil
 }
 
 func (f *fakeFabricClient) ListOperations(_ context.Context) ([]clients.FabricOperation, error) {
@@ -3209,6 +3220,23 @@ func TestReadinessRoutesArePublicButAdminRoutesStayProtected(t *testing.T) {
 	server.ServeHTTP(adminRec, adminReq)
 	if adminRec.Code != http.StatusUnauthorized {
 		t.Fatalf("admin route without session status = %d, want 401: %s", adminRec.Code, adminRec.Body.String())
+	}
+}
+
+func TestProductionReadinessReturnsOnlyCustomerSafeImmutableImageFacts(t *testing.T) {
+	server := NewServer(newTestService(fakeLedgerClient{}, &internalReadinessFabricClient{}))
+	req := httptest.NewRequest(http.MethodGet, "/api/production/readiness", nil)
+	rec := httptest.NewRecorder()
+
+	server.ServeHTTP(rec, req)
+
+	var body map[string]any
+	if rec.Code != http.StatusOK || json.Unmarshal(rec.Body.Bytes(), &body) != nil {
+		t.Fatalf("production readiness = %d %s", rec.Code, rec.Body.String())
+	}
+	want := map[string]any{"provider": "tencent-tke", "ready": true, "cloudImagesReady": true, "workspaceImagesReady": true, "immutableImagesReady": true, "checks": []any{}}
+	if !reflect.DeepEqual(body, want) {
+		t.Fatalf("production readiness leaked internal facts: got %#v want %#v", body, want)
 	}
 }
 

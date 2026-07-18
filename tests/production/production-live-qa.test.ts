@@ -36,6 +36,13 @@ function json(payload, status = 200, headers = {}) {
   });
 }
 
+function source(payload, sourceName = "sub2api", status = "available", headers = {}) {
+  return json({ source: sourceName, status, available: true, fetchedAt: new Date().toISOString(), data: payload }, 200, {
+    "cache-control": "private, no-store",
+    ...headers
+  });
+}
+
 class FakeEmitter {
   handlers = new Map();
 
@@ -113,15 +120,54 @@ function browserFactory(state, { frames = true, responseSuffix = "" } = {}) {
   };
 }
 
-function liveFixture({ changedResourceIds = false, frames = true, responseSuffix = "", slotMissing = false, usageStuck = false } = {}) {
+function liveFixture({
+  changedResourceIds = false,
+  changedProviderOperations = false,
+  changedLaunchOperation = false,
+  changedRuntimeOperation = false,
+  changedUntrackedOperation = false,
+  changedMutationAction = "",
+  changedReceipt = false,
+  frames = true,
+  responseSuffix = "",
+  slotMissing = false,
+  usageStuck = false,
+  ambiguousUsage = false,
+  invalidUsageRecord = false,
+  usageOverrides = {},
+  usageSnapshotTooLarge = false,
+  emptyUsageBaseline = false,
+  statsStuck = false,
+  balanceMismatch = false,
+  usageKeyId = "9",
+  duplicateKey = false,
+  statusLeaksPassword = false,
+  revealCacheControl = "private, no-store"
+} = {}) {
   const state = { modelRequests: 0, stateReads: 0 };
   const calls = [];
   const deadline = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const periodStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const liveUsage = {
+    apiKeyId: usageKeyId, requestId: "req-rollout-qa-1", createdAt: new Date().toISOString(), model: "gpt-5.5", inboundEndpoint: "/v1/responses", requestType: "sync",
+    inputTokens: 8, outputTokens: 1, cacheCreationTokens: 0, cacheReadTokens: 0, actualCostUsdMicros: invalidUsageRecord ? 12.5 : 120,
+    ...usageOverrides
+  };
+  const usageItems = () => {
+    const items = emptyUsageBaseline ? [] : [{
+      apiKeyId: "9", requestId: "req-before-1", createdAt: periodStart, model: "gpt-5.5", inboundEndpoint: "/v1/responses", requestType: "sync",
+      inputTokens: 10, outputTokens: 5, cacheCreationTokens: 0, cacheReadTokens: 0, actualCostUsdMicros: 100
+    }];
+    if (state.modelRequests > 0 && !usageStuck) {
+      items.unshift(liveUsage);
+      if (ambiguousUsage) items.unshift({ ...liveUsage, requestId: "req-concurrent-2" });
+    }
+    return items;
+  };
   const resourceState = () => {
     state.stateReads += 1;
     const suffix = changedResourceIds && state.stateReads > 1 ? "changed" : "1";
     const result = {
-      balance: { source: "sub2api", currency: "USD", userId: 41, usdMicros: 500_000_000 },
       computeAllocations: [{
         id: "compute-slot-1",
         accountId: BASIC_ACCOUNT_ID,
@@ -152,8 +198,25 @@ function liveFixture({ changedResourceIds = false, frames = true, responseSuffix
         storageId: "storage-slot-1",
         state: "running",
         openable: true,
+        receiptId: changedReceipt && state.stateReads > 1 ? "receipt-current-2" : "receipt-current-1",
         url: "https://workspace.medopl.cn/w/workspace-slot-1/"
-      }]
+      }],
+      runtimeOperations: [
+        { id: "provider-op-compute-1", accountId: BASIC_ACCOUNT_ID, workspaceId: "workspace-slot-1", action: "create_compute_allocation", status: "succeeded", providerRequestId: "ins-slot-1", result: '{"resource":"compute-slot-1"}' },
+        { id: "provider-op-storage-1", accountId: BASIC_ACCOUNT_ID, workspaceId: "workspace-slot-1", action: "create_storage_volume", status: "succeeded", providerRequestId: "disk-slot-1", result: '{"resource":"storage-slot-1"}' },
+        { id: "workspace-launch-1", accountId: BASIC_ACCOUNT_ID, workspaceId: "workspace-slot-1", action: "workspace.launch", status: "succeeded", providerRequestId: "",
+          result: changedLaunchOperation && state.stateReads > 1 ? '{"phase":"changed"}' : '{"phase":"completed","credential":"must-not-emit"}' },
+        { id: "workspace-renewal-1", accountId: BASIC_ACCOUNT_ID, workspaceId: "workspace-slot-1", action: "workspace.renewal", status: "succeeded", providerRequestId: "",
+          result: changedRuntimeOperation && state.stateReads > 1 ? '{"phase":"changed"}' : '{"phase":"completed"}' },
+        { id: "job-progress-1", accountId: BASIC_ACCOUNT_ID, workspaceId: "workspace-slot-1", action: "job.execute", status: changedUntrackedOperation && state.stateReads > 1 ? "succeeded" : "running",
+          result: { internalCredential: "ignored-job-secret" } },
+        ...(changedProviderOperations && state.stateReads > 1
+          ? [{ id: "provider-op-renew-2", accountId: BASIC_ACCOUNT_ID, workspaceId: "workspace-slot-1", action: "renew_compute_allocation", status: "succeeded", providerRequestId: "ins-slot-1", result: '{"resource":"compute-slot-1"}' }]
+          : []),
+        ...(changedMutationAction && state.stateReads > 1
+          ? [{ id: `mutation-${changedMutationAction.replaceAll(".", "-")}`, accountId: BASIC_ACCOUNT_ID, workspaceId: "workspace-slot-1", action: changedMutationAction, status: "succeeded", providerRequestId: "provider-mutation-1", result: "{}" }]
+          : [])
+      ]
     };
     if (slotMissing) {
       result.computeAllocations = [];
@@ -167,9 +230,9 @@ function liveFixture({ changedResourceIds = false, frames = true, responseSuffix
     const url = new URL(String(input));
     const method = init.method || "GET";
     const headers = new Headers(init.headers);
-    calls.push({ method, path: url.pathname, signal: init.signal });
+    calls.push({ method, path: url.pathname, search: url.search, signal: init.signal });
     if (url.hostname === "workspace.medopl.cn") return new Response("<main>workspace</main>", { status: 200 });
-    if (url.pathname === "/api/production/readiness") return json({ ready: true });
+    if (url.pathname === "/api/production/readiness") return json({ ready: true, cloudImagesReady: true, workspaceImagesReady: true, immutableImagesReady: true });
     if (url.pathname === "/api/auth/login") {
       return json({ user: { accountId: BASIC_ACCOUNT_ID, role: "owner" } }, 200, {
         "set-cookie": "opl_session=session-alpha; Path=/; HttpOnly",
@@ -188,22 +251,62 @@ function liveFixture({ changedResourceIds = false, frames = true, responseSuffix
       });
     }
     if (url.pathname === "/api/state") return json(resourceState());
-    if (url.pathname === "/api/gateway/summary") {
-      const increment = usageStuck ? 0 : state.modelRequests;
-      return json({
-        apiKey: { id: "key-9", name: "opl-workspace", status: "active", maskedValue: "sk-****", revealed: false },
-        usage: { quotaUsedUsdMicros: 1000 + increment, usage1dUsdMicros: 500 + increment }
+    if (url.pathname === "/api/gateway/wallet") {
+      const charged = state.modelRequests > 0 && !usageStuck;
+      const delta = charged ? liveUsage.actualCostUsdMicros + (balanceMismatch ? 1 : 0) : 0;
+      return source({ userId: "41", currency: "USD", usdMicros: 500_000_000 - delta, status: "active" });
+    }
+    if (url.pathname === "/api/gateway/keys") {
+      const keys = [{ id: "9", name: "opl-workspace", status: "active", quotaUsdMicros: 1_000_000, quotaUsedUsdMicros: 1_000 }];
+      if (duplicateKey) keys.push({ ...keys[0], id: "10" });
+      return source({ items: keys, total: keys.length });
+    }
+    if (url.pathname === "/api/gateway/usage") {
+      if (usageSnapshotTooLarge) return source({ items: [], total: 10_001, page: 1, pageSize: 100, pages: 101 });
+      const items = usageItems();
+      const page = Number(url.searchParams.get("page") || 1);
+      const pageSize = Number(url.searchParams.get("pageSize") || 50);
+      return source({ items: items.slice((page - 1) * pageSize, page * pageSize), total: items.length, page, pageSize, pages: items.length === 0 ? 0 : Math.ceil(items.length / pageSize) }, "sub2api", items.length === 0 ? "empty" : "available");
+    }
+    if (url.pathname === "/api/gateway/usage/stats") {
+      const includeLive = state.modelRequests > 0 && !usageStuck && !statsStuck;
+      const count = includeLive ? (ambiguousUsage ? 2 : 1) : 0;
+      const baselineRequests = emptyUsageBaseline ? 0 : 1;
+      const baselineInputTokens = emptyUsageBaseline ? 0 : 10;
+      const baselineOutputTokens = emptyUsageBaseline ? 0 : 5;
+      const baselineCost = emptyUsageBaseline ? 0 : 100;
+      return source({
+        totalRequests: baselineRequests + count,
+        totalInputTokens: baselineInputTokens + count * liveUsage.inputTokens,
+        totalOutputTokens: baselineOutputTokens + count * liveUsage.outputTokens,
+        totalTokens: baselineInputTokens + baselineOutputTokens + count * (liveUsage.inputTokens + liveUsage.outputTokens + liveUsage.cacheCreationTokens + liveUsage.cacheReadTokens),
+        totalActualCostUsdMicros: baselineCost + count * liveUsage.actualCostUsdMicros
       });
+    }
+    if (/^\/api\/billing\/receipts\/receipt-current-[12]$/.test(url.pathname)) {
+      return source({
+        receiptId: url.pathname.endsWith("-2") ? "receipt-current-2" : "receipt-current-1",
+        type: "workspace.created", status: "completed", workspaceId: "workspace-slot-1", createdAt: periodStart
+      }, "ledger");
     }
     if (url.pathname === "/api/workspaces/runtime-status") {
       assert.equal(method, "POST");
       assert.equal(headers.get("x-opl-csrf"), "csrf-alpha");
       assert.deepEqual(JSON.parse(init.body), { workspaceId: "workspace-slot-1" });
-      return json({
+      return source({
         ready: true,
         url: "https://workspace.medopl.cn/w/workspace-slot-1/",
+        access: { username: "opl", credentialStatus: "configured", ...(statusLeaksPassword ? { password: "workspace-password" } : {}) }
+      }, "fabric");
+    }
+    if (url.pathname === "/api/workspaces/workspace-slot-1/runtime-credentials/reveal") {
+      assert.equal(method, "POST");
+      assert.equal(headers.get("x-opl-csrf"), "csrf-alpha");
+      assert.deepEqual(JSON.parse(init.body), {});
+      return json({
+        workspaceId: "workspace-slot-1",
         access: { username: "opl", password: "workspace-password", credentialStatus: "configured" }
-      });
+      }, 200, { "cache-control": revealCacheControl });
     }
     return json({ error: "not_found" }, 404);
   };
@@ -225,6 +328,7 @@ function options(fixture) {
     usageRetryDelayMs: 0,
     browserTimeoutMs: 20,
     modelTimeoutMs: 20,
+    expectedModel: "gpt-5.5",
     browserFactory: fixture.browserFactory,
     fetchImpl: fixture.fetchImpl
   };
@@ -241,11 +345,25 @@ test("rollout QA proves Workspace login, WebSocket frames, one model response, u
   assert.equal(result.workspace.websocket.framesSent > 0, true);
   assert.equal(result.workspace.websocket.framesReceived > 0, true);
   assert.equal(result.workspace.modelResponse, true);
+  assert.equal(result.usage.request.requestId, "req-rollout-qa-1");
+  assert.equal(result.usage.request.apiKeyId, "9");
+  assert.equal(result.usage.request.model, "gpt-5.5");
+  assert.equal(result.usage.request.requestType, "sync");
+  assert.equal(result.usage.request.inboundEndpoint, "/v1/responses");
+  assert.equal(result.usage.request.inputTokens + result.usage.request.outputTokens > 0, true);
+  assert.equal(result.usage.request.actualCostUsdMicros, 120);
+  assert.equal(result.usage.stats.delta.totalRequests, 1);
+  assert.equal(result.balance.before.usdMicros - result.balance.after.usdMicros, 120);
+  assert.equal(result.ledgerReceipt.receiptId, "receipt-current-1");
+  assert.equal(result.ledgerReceipt.type, "workspace.created");
+  assert.equal(result.runtimeOperations.unchanged, true);
   assert.equal(result.resourceIds.unchanged, true);
   assert.deepEqual(result.resourceIds.before, result.resourceIds.after);
-  assert.equal(result.usage.after.quotaUsedUsdMicros > result.usage.before.quotaUsedUsdMicros, true);
   assert.equal(fixture.state.modelRequests, 1);
-  assert.doesNotMatch(JSON.stringify(result), /console-password|workspace-password|sk-\*\*\*\*|OPL_QA_/);
+  assert.doesNotMatch(JSON.stringify(result), /console-password|workspace-password|sk-\*\*\*\*|OPL_QA_|must-not-emit/);
+  assert.equal(fixture.calls.some((call) => call.path === "/api/billing/receipts/receipt-current-1"), true);
+  assert.equal(fixture.calls.some((call) => call.path === "/api/billing/receipts"), false);
+  assert.equal(fixture.calls.some((call) => call.path === "/api/gateway/summary" || /^\/api\/workspaces\/[^/]+\/receipt$/.test(call.path)), false);
   assert.equal(fixture.calls.some((call) => /create|destroy|detach|renew/i.test(call.path)), false);
   assert.equal(fixture.calls.every((call) => call.signal instanceof AbortSignal), true);
 });
@@ -270,7 +388,97 @@ test("rollout QA reports Provider Acceptance without starting a browser when the
 
 test("rollout QA never retries the model request when usage does not increase", async () => {
   const fixture = liveFixture({ usageStuck: true });
-  await assert.rejects(() => verifyProductionLiveQa(options(fixture)), /dedicated_key_usage_not_increased/);
+  await assert.rejects(() => verifyProductionLiveQa(options(fixture)), /exact_gateway_request_not_found/);
+  assert.equal(fixture.state.modelRequests, 1);
+});
+
+test("rollout QA fails closed unless exactly one new request id and matching stats appear", async () => {
+  for (const [fixture, error] of [
+    [liveFixture({ ambiguousUsage: true }), /gateway_request_cardinality_mismatch/],
+    [liveFixture({ invalidUsageRecord: true }), /gateway_request_usage_invalid/],
+    [liveFixture({ usageKeyId: "10" }), /gateway_request_usage_invalid/],
+    [liveFixture({ balanceMismatch: true }), /gateway_balance_delta_mismatch/],
+    [liveFixture({ statsStuck: true }), /gateway_usage_stats_mismatch/]
+  ]) {
+    await assert.rejects(() => verifyProductionLiveQa(options(fixture)), error);
+    assert.equal(fixture.state.modelRequests, 1);
+  }
+
+  const duplicateKey = liveFixture({ duplicateKey: true });
+  await assert.rejects(() => verifyProductionLiveQa(options(duplicateKey)), /dedicated_workspace_key_required/);
+  assert.equal(duplicateKey.state.modelRequests, 0);
+});
+
+test("rollout QA accepts the Control Plane empty usage page before the one model request", async () => {
+  const fixture = liveFixture({ emptyUsageBaseline: true });
+  const result = await verifyProductionLiveQa(options(fixture));
+  assert.equal(fixture.state.modelRequests, 1);
+  assert.equal(result.usage.request.requestId, "req-rollout-qa-1");
+  assert.equal(result.usage.stats.before.totalRequests, 0);
+  assert.equal(result.usage.stats.delta.totalRequests, 1);
+});
+
+test("rollout QA requires the exact model request contract, positive cost, and a bounded usage snapshot", async () => {
+  for (const fixture of [
+    liveFixture({ usageOverrides: { model: "gpt-4.1" } }),
+    liveFixture({ usageOverrides: { requestType: "stream" } }),
+    liveFixture({ usageOverrides: { inboundEndpoint: "/v1/chat/completions" } }),
+    liveFixture({ usageOverrides: { actualCostUsdMicros: 0 } })
+  ]) {
+    await assert.rejects(() => verifyProductionLiveQa(options(fixture)), /gateway_request_usage_invalid/);
+    assert.equal(fixture.state.modelRequests, 1);
+  }
+
+  const oversized = liveFixture({ usageSnapshotTooLarge: true });
+  await assert.rejects(() => verifyProductionLiveQa(options(oversized)), /gateway_usage_snapshot_limit_exceeded/);
+  assert.equal(oversized.state.modelRequests, 0);
+
+  const missingModel = liveFixture();
+  const missingModelOptions = options(missingModel);
+  delete missingModelOptions.expectedModel;
+  await assert.rejects(() => verifyProductionLiveQa(missingModelOptions), /production_live_qa_expected_model_required/);
+  assert.equal(missingModel.calls.length, 0);
+});
+
+test("rollout QA obtains credentials only from private no-store reveal", async () => {
+  await assert.rejects(() => verifyProductionLiveQa(options(liveFixture({ statusLeaksPassword: true }))), /runtime_status_secret_forbidden/);
+  await assert.rejects(() => verifyProductionLiveQa(options(liveFixture({ revealCacheControl: "no-store" }))), /runtime_credentials_cache_control_invalid/);
+});
+
+test("rollout QA rejects any provider addition or same-id launch and renewal result change", async () => {
+  for (const fixture of [
+    liveFixture({ changedProviderOperations: true }),
+    liveFixture({ changedLaunchOperation: true }),
+    liveFixture({ changedRuntimeOperation: true })
+  ]) {
+    await assert.rejects(() => verifyProductionLiveQa(options(fixture)), /production_live_qa_runtime_operations_changed/);
+    assert.equal(fixture.state.modelRequests, 1);
+  }
+});
+
+test("rollout QA rejects every provider write operation while ignoring read-only sync", async () => {
+  for (const action of [
+    "tag_compute_machine",
+    "create_storage_attachment", "detach_storage_attachment",
+    "create_workspace_runtime", "destroy_workspace_runtime",
+    "upsert_gateway_secret", "workspace.gateway_secret.rotate",
+    "create_storage_snapshot", "restore_storage_snapshot", "destroy_storage_snapshot"
+  ]) {
+    const fixture = liveFixture({ changedMutationAction: action });
+    await assert.rejects(() => verifyProductionLiveQa(options(fixture)), /production_live_qa_runtime_operations_changed/, action);
+    assert.equal(fixture.state.modelRequests, 1);
+  }
+});
+
+test("rollout QA rejects changes to any account RuntimeOperation without a static action allowlist", async () => {
+  const fixture = liveFixture({ changedUntrackedOperation: true });
+  await assert.rejects(() => verifyProductionLiveQa(options(fixture)), /production_live_qa_runtime_operations_changed/);
+  assert.equal(fixture.state.modelRequests, 1);
+});
+
+test("rollout QA requires the same safe Workspace receipt before and after the request", async () => {
+  const fixture = liveFixture({ changedReceipt: true });
+  await assert.rejects(() => verifyProductionLiveQa(options(fixture)), /production_live_qa_ledger_receipt_changed/);
   assert.equal(fixture.state.modelRequests, 1);
 });
 
@@ -303,6 +511,7 @@ test("rollout QA CLI rejects an invalid slot descriptor before network access", 
       OPL_VERIFY_AUTH_USERS_JSON: ownerSeed,
       OPL_VERIFY_ACCOUNT_ID: BASIC_ACCOUNT_ID,
       OPL_VERIFY_LIVE_QA_CONFIRMATION: LIVE_QA_CONFIRMATION,
+      OPL_VERIFY_EXPECTED_MODEL: "gpt-5.5",
       OPL_VERIFY_SLOT_DESCRIPTOR_JSON: "{"
     },
     stdout: { write: () => {} },

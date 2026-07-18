@@ -828,7 +828,7 @@ func (p *TencentProvider) workspacePods(ctx context.Context, workspaceID string)
 }
 
 func (p *TencentProvider) Readiness(ctx context.Context) (map[string]any, error) {
-	required := []string{"OPL_WORKSPACE_DOMAIN", "OPL_WORKSPACE_IMAGE", "OPL_K8S_NAMESPACE", "OPL_IMAGE_PULL_SECRET_NAME", "OPL_WORKSPACE_STORAGE_CLASS", "OPL_TENCENT_PROVISIONER_BIN", "TENCENT_DEPLOY_KUBECONFIG_REF", "RUN_TENCENT_CREATE_RELEASE_EXECUTION"}
+	required := []string{"OPL_WORKSPACE_DOMAIN", "OPL_CLOUD_IMAGE", "OPL_WORKSPACE_IMAGE", "OPL_K8S_NAMESPACE", "OPL_IMAGE_PULL_SECRET_NAME", "OPL_WORKSPACE_STORAGE_CLASS", "OPL_TENCENT_PROVISIONER_BIN", "TENCENT_DEPLOY_KUBECONFIG_REF", "RUN_TENCENT_CREATE_RELEASE_EXECUTION"}
 	missing := []string{}
 	for _, key := range required {
 		if strings.TrimSpace(os.Getenv(key)) == "" {
@@ -851,8 +851,93 @@ func (p *TencentProvider) Readiness(ctx context.Context) (map[string]any, error)
 			missing = append(missing, "provisioner_failed")
 		}
 	}
+	podRaw, podErr := p.kubectl(ctx, []string{"get", "pod", "-o", "json"}, nil)
+	pods := kubectlItems(podRaw)
+	imageChecks := map[string]bool{
+		"control_plane_image_id": podImageIDsMatch(pods, "app.kubernetes.io/component", "control-plane", "control-plane", os.Getenv("OPL_CLOUD_IMAGE")),
+		"ledger_image_id":        podImageIDsMatch(pods, "app.kubernetes.io/component", "ledger", "ledger", os.Getenv("OPL_CLOUD_IMAGE")),
+		"fabric_image_id":        podImageIDsMatch(pods, "app.kubernetes.io/component", "fabric", "fabric", os.Getenv("OPL_CLOUD_IMAGE")),
+		"workspace_image_id":     podImageIDsMatch(pods, "oplcloud.cn/workspace-id", "", "workspace", os.Getenv("OPL_WORKSPACE_IMAGE")),
+	}
+	failedChecks := []any{}
+	if podErr != nil {
+		failedChecks = append(failedChecks, "ready_pod_image_ids")
+	} else {
+		for _, name := range []string{"control_plane_image_id", "ledger_image_id", "fabric_image_id", "workspace_image_id"} {
+			if !imageChecks[name] {
+				failedChecks = append(failedChecks, name)
+			}
+		}
+	}
+	cloudImagesReady := podErr == nil && imageChecks["control_plane_image_id"] && imageChecks["ledger_image_id"] && imageChecks["fabric_image_id"]
+	workspaceImagesReady := podErr == nil && imageChecks["workspace_image_id"]
+	immutableImagesReady := cloudImagesReady && workspaceImagesReady
 	uniqueMissing := uniqueStrings(missing)
-	return map[string]any{"provider": "tencent-tke", "ready": len(uniqueMissing) == 0 && len(missingTools) == 0, "missingEnv": uniqueMissing, "missingTools": missingTools, "failedChecks": []any{}}, nil
+	return map[string]any{"provider": "tencent-tke", "ready": len(uniqueMissing) == 0 && len(missingTools) == 0 && immutableImagesReady, "cloudImagesReady": cloudImagesReady, "workspaceImagesReady": workspaceImagesReady, "immutableImagesReady": immutableImagesReady, "missingEnv": uniqueMissing, "missingTools": missingTools, "failedChecks": failedChecks}, nil
+}
+
+func podImageIDsMatch(pods []any, labelKey, labelValue, containerName, expected string) bool {
+	expectedDigest, ok := immutableImageDigest(expected)
+	if !ok {
+		return false
+	}
+	found := false
+	for _, item := range pods {
+		pod, _ := item.(map[string]any)
+		labels, _ := nested(pod, "metadata", "labels").(map[string]any)
+		label := stringValue(labels[labelKey])
+		if label == "" || (labelValue != "" && label != labelValue) || stringValue(nested(pod, "status", "phase")) != "Running" || conditionStatuses(nested(pod, "status", "conditions"))["Ready"] != "True" {
+			continue
+		}
+		containerFound := false
+		statuses, _ := nested(pod, "status", "containerStatuses").([]any)
+		for _, item := range statuses {
+			status, _ := item.(map[string]any)
+			if stringValue(status["name"]) != containerName {
+				continue
+			}
+			containerFound = true
+			found = true
+			actualDigest, ok := runtimeImageDigest(stringValue(status["imageID"]))
+			if status["ready"] != true || !ok || actualDigest != expectedDigest {
+				return false
+			}
+		}
+		if !containerFound {
+			return false
+		}
+	}
+	return found
+}
+
+func immutableImageDigest(value string) (string, bool) {
+	repository, digest, ok := strings.Cut(strings.TrimSpace(value), "@")
+	if !ok || repository == "" || strings.Contains(digest, "@") || !strings.HasPrefix(digest, "sha256:") || len(digest) != len("sha256:")+64 {
+		return "", false
+	}
+	_, err := hex.DecodeString(strings.TrimPrefix(digest, "sha256:"))
+	return digest, err == nil
+}
+
+func runtimeImageDigest(value string) (string, bool) {
+	value = strings.TrimSpace(value)
+	for _, prefix := range []string{"docker-pullable://", "containerd://"} {
+		if strings.HasPrefix(value, prefix) {
+			value = strings.TrimPrefix(value, prefix)
+			break
+		}
+	}
+	if strings.Contains(value, "://") {
+		return "", false
+	}
+	if strings.Contains(value, "@") {
+		return immutableImageDigest(value)
+	}
+	if !strings.HasPrefix(value, "sha256:") || len(value) != len("sha256:")+64 {
+		return "", false
+	}
+	_, err := hex.DecodeString(strings.TrimPrefix(value, "sha256:"))
+	return value, err == nil
 }
 
 func (p *TencentProvider) workspaceRuntimeResources(ctx context.Context, workspaceID string) (string, string) {

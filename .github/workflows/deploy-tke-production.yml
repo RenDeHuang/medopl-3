@@ -16,6 +16,11 @@ on:
         required: false
         default: false
         type: boolean
+      bootstrap_mode:
+        description: Deploy endpoints for read-only Cloud readiness; this cannot complete a release.
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -42,6 +47,7 @@ jobs:
       OPL_CLOUD_IMAGE: ${{ inputs.cloud_image }}
       OPL_WORKSPACE_IMAGE: ${{ inputs.workspace_image }}
       OPL_EXERCISE_ROLLBACK: ${{ inputs.exercise_rollback }}
+      OPL_BOOTSTRAP_MODE: ${{ inputs.bootstrap_mode }}
       OPL_IMAGE_PULL_SECRET_NAME: ${{ vars.OPL_IMAGE_PULL_SECRET_NAME || 'tcr-pull-secret' }}
       OPL_WORKSPACE_STORAGE_CLASS: ${{ vars.OPL_WORKSPACE_STORAGE_CLASS || 'cbs' }}
       OPL_TENCENT_PROVISIONER_BIN: ${{ vars.OPL_TENCENT_PROVISIONER_BIN || '/usr/local/bin/opl-tencent-provisioner' }}
@@ -54,7 +60,7 @@ jobs:
       OPL_WORKSPACE_WEBUI_PORT: ${{ vars.OPL_WORKSPACE_WEBUI_PORT || '3000' }}
       OPL_WORKSPACE_DATA_DIR: ${{ vars.OPL_WORKSPACE_DATA_DIR || '/data' }}
       OPL_WORKSPACE_PROJECTS_DIR: ${{ vars.OPL_WORKSPACE_PROJECTS_DIR || '/projects' }}
-      OPL_MONTHLY_BILLING_WORKER_ENABLED: ${{ vars.OPL_MONTHLY_BILLING_WORKER_ENABLED || '1' }}
+      OPL_MONTHLY_BILLING_WORKER_ENABLED: ${{ inputs.bootstrap_mode && '0' || vars.OPL_MONTHLY_BILLING_WORKER_ENABLED || '1' }}
       OPL_MONTHLY_BILLING_INTERVAL_MS: ${{ vars.OPL_MONTHLY_BILLING_INTERVAL_MS || '3600000' }}
       OPL_BASIC_COMPUTE_INSTANCE_TYPE: ${{ vars.OPL_BASIC_COMPUTE_INSTANCE_TYPE }}
       OPL_BASIC_COMPUTE_NODE_POOL_ID: ${{ vars.OPL_BASIC_COMPUTE_NODE_POOL_ID }}
@@ -101,6 +107,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [ "$OPL_BOOTSTRAP_MODE" = "true" ]; then
+            echo "Bootstrap mode deploys endpoints only; release incomplete until the ordinary release path succeeds."
+            exit 0
+          fi
           if [ -z "${OPL_VERIFY_BASIC_ACCOUNT_ID:-}" ] || [ -z "${OPL_VERIFY_PRO_ACCOUNT_ID:-}" ]; then
             echo "Basic and Pro Acceptance account ids are required before ordinary deployment." >&2
             exit 1
@@ -424,10 +434,24 @@ jobs:
           done
           test -f "$workspace_images"
           source tools/tke-image-rollout.sh
+          restore_deployed_images() {
+            if [ "${OPL_BOOTSTRAP_MODE:-false}" = "true" ]; then
+              restore_previous_bootstrap_images
+            else
+              restore_previous_images
+            fi
+          }
+          apply_deployed_images() {
+            if [ "${OPL_BOOTSTRAP_MODE:-false}" = "true" ]; then
+              apply_bootstrap_images
+            else
+              apply_candidate_images
+            fi
+          }
           rollback_images() {
             original_status="$?"
             trap - ERR
-            if ! restore_previous_images; then
+            if ! restore_deployed_images; then
               echo "Rollback did not restore the complete previous Cloud/App image set." >&2
               exit 1
             fi
@@ -442,10 +466,10 @@ jobs:
           fi
           kubectl --kubeconfig "$KUBECONFIG" apply -f "$OPL_DEPLOY_SECRET_DIR/opl-cloud.rendered.json"
           kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" annotate ingress opl-cloud ingress.cloud.tencent.com/tke-service-config=opl-cloud-ingress-config --overwrite
-          apply_candidate_images
+          apply_deployed_images
           if [ "$OPL_EXERCISE_ROLLBACK" = "true" ]; then
-            restore_previous_images
-            apply_candidate_images
+            restore_deployed_images
+            apply_deployed_images
           fi
           trap - ERR
 
@@ -475,27 +499,18 @@ jobs:
           fi
 
   live-qa:
-    name: Verify ${{ matrix.slot_id }} after rollout
+    name: Verify Basic reserved account after rollout
     needs: deploy
+    if: ${{ !inputs.bootstrap_mode }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
-    strategy:
-      fail-fast: true
-      matrix:
-        include:
-          - slot_id: verification-slot-basic-01
-            account_id: ${{ vars.OPL_VERIFY_BASIC_ACCOUNT_ID || '' }}
-            descriptor: '{"id":"verification-slot-basic-01","customerProduct":false,"instanceType":"SA5.MEDIUM4","server":"2c4g","cpu":2,"memoryGb":4,"cbsGb":10,"chargeType":"PREPAID","periodMonths":1,"renewFlag":"NOTIFY_AND_MANUAL_RENEW"}'
-          - slot_id: verification-slot-pro-01
-            account_id: ${{ vars.OPL_VERIFY_PRO_ACCOUNT_ID || '' }}
-            descriptor: '{"id":"verification-slot-pro-01","customerProduct":false,"instanceType":"SA5.2XLARGE16","server":"8c16g","cpu":8,"memoryGb":16,"cbsGb":100,"chargeType":"PREPAID","periodMonths":1,"renewFlag":"NOTIFY_AND_MANUAL_RENEW"}'
     env:
       OPL_CONSOLE_ORIGIN: ${{ vars.OPL_PUBLIC_URL || 'https://cloud.medopl.cn' }}
       OPL_VERIFY_AUTH_USERS_JSON: ${{ secrets.OPL_VERIFY_AUTH_USERS_JSON || secrets.OPL_CONSOLE_USERS_JSON }}
-      OPL_VERIFY_ACCOUNT_ID: ${{ matrix.account_id }}
-      OPL_VERIFY_SLOT_ID: ${{ matrix.slot_id }}
-      OPL_VERIFY_SLOT_DESCRIPTOR_JSON: ${{ matrix.descriptor }}
+      OPL_VERIFY_ACCOUNT_ID: ${{ vars.OPL_VERIFY_BASIC_ACCOUNT_ID || '' }}
+      OPL_VERIFY_SLOT_ID: verification-slot-basic-01
+      OPL_VERIFY_SLOT_DESCRIPTOR_JSON: '{"id":"verification-slot-basic-01","customerProduct":false,"instanceType":"SA5.MEDIUM4","server":"2c4g","cpu":2,"memoryGb":4,"cbsGb":10,"chargeType":"PREPAID","periodMonths":1,"renewFlag":"NOTIFY_AND_MANUAL_RENEW"}'
       OPL_VERIFY_URL_ATTEMPTS: "90"
       OPL_VERIFY_RETRY_DELAY_MS: "10000"
       OPL_VERIFY_REQUEST_TIMEOUT_MS: "30000"
@@ -503,9 +518,10 @@ jobs:
       OPL_VERIFY_USAGE_RETRY_DELAY_MS: "5000"
       OPL_VERIFY_BROWSER_TIMEOUT_MS: "60000"
       OPL_VERIFY_MODEL_TIMEOUT_MS: "300000"
-      OPL_VERIFY_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.slot_id }}
+      OPL_VERIFY_EXPECTED_MODEL: ${{ vars.OPL_CODEX_MODEL || 'gpt-5.5' }}
+      OPL_VERIFY_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}-verification-slot-basic-01
       OPL_VERIFY_LIVE_QA_CONFIRMATION: I_UNDERSTAND_THIS_SENDS_ONE_REAL_MODEL_REQUEST
-      OPL_VERIFY_MANIFEST_PATH: artifacts/production-live-qa-${{ matrix.slot_id }}/manifest.json
+      OPL_VERIFY_MANIFEST_PATH: artifacts/production-live-qa-verification-slot-basic-01/manifest.json
 
     steps:
       - name: Checkout
@@ -529,14 +545,77 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: production-live-qa-${{ matrix.slot_id }}
-          path: artifacts/production-live-qa-${{ matrix.slot_id }}
+          name: production-live-qa-verification-slot-basic-01
+          path: artifacts/production-live-qa-verification-slot-basic-01
           if-no-files-found: ignore
+
+  bootstrap-readiness:
+    name: Verify bootstrap Cloud readiness
+    needs: deploy
+    if: ${{ inputs.bootstrap_mode && needs.deploy.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    env:
+      OPL_CONSOLE_ORIGIN: ${{ vars.OPL_PUBLIC_URL || 'https://cloud.medopl.cn' }}
+
+    steps:
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify bootstrap Cloud readiness remains release incomplete
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const origin = process.env.OPL_CONSOLE_ORIGIN.replace(/\/+$/, "");
+          const response = await fetch(`${origin}/api/production/readiness`, {
+            method: "GET",
+            signal: AbortSignal.timeout(30_000)
+          });
+          const readiness = await response.json();
+          if (!response.ok || readiness.cloudImagesReady !== true || readiness.workspaceImagesReady !== false ||
+              readiness.immutableImagesReady !== false || readiness.ready !== false) {
+            throw new Error("bootstrap_cloud_readiness_invalid");
+          }
+          console.log(JSON.stringify({ releaseComplete: false, readiness: {
+            ready: false,
+            cloudImagesReady: true,
+            workspaceImagesReady: false,
+            immutableImagesReady: false
+          }}));
+          console.error("Bootstrap Cloud readiness passed; release incomplete.");
+          NODE
+
+  release-gate:
+    name: Require a completed ordinary release
+    needs: [deploy, live-qa, bootstrap-readiness]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+
+    steps:
+      - name: Require completed ordinary release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.bootstrap_mode }}" = "true" ]; then
+            echo '{"releaseComplete":false,"reason":"bootstrap release incomplete"}' >&2
+            exit 1
+          fi
+          if [ "${{ needs.deploy.result }}" != "success" ] || [ "${{ needs.live-qa.result }}" != "success" ]; then
+            echo '{"releaseComplete":false,"reason":"ordinary release incomplete"}' >&2
+            exit 1
+          fi
+          echo '{"releaseComplete":true}'
 
   retire-legacy-workspace-secret:
     name: Retire legacy global Workspace secret
     needs: [deploy, live-qa]
-    if: ${{ needs.deploy.result == 'success' && needs.live-qa.result == 'success' }}
+    if: ${{ !inputs.bootstrap_mode && needs.deploy.result == 'success' && needs.live-qa.result == 'success' }}
     runs-on: [self-hosted, tencent-cloud, opl-cloud, tke-vpc]
     timeout-minutes: 10
     environment: production
@@ -599,8 +678,8 @@ jobs:
 
   rollback-live-qa:
     name: Roll back images after live QA failure
-    needs: [deploy, live-qa]
-    if: ${{ always() && needs.deploy.outputs.rollback_image_set != '' && (needs.deploy.result != 'success' || needs.live-qa.result != 'success') }}
+    needs: [deploy, live-qa, bootstrap-readiness]
+    if: ${{ always() && needs.deploy.outputs.rollback_image_set != '' && ((inputs.bootstrap_mode && (needs.deploy.result != 'success' || needs.bootstrap-readiness.result != 'success')) || (!inputs.bootstrap_mode && (needs.deploy.result != 'success' || needs.live-qa.result != 'success'))) }}
     runs-on: [self-hosted, tencent-cloud, opl-cloud, tke-vpc]
     timeout-minutes: 20
     environment: production
@@ -657,7 +736,12 @@ jobs:
           done
           test -f "$workspace_images"
           source tools/tke-image-rollout.sh
-          if ! restore_previous_images; then
+          if [ "${{ inputs.bootstrap_mode }}" = "true" ]; then
+            restore_command=restore_previous_bootstrap_images
+          else
+            restore_command=restore_previous_images
+          fi
+          if ! "$restore_command"; then
             echo "Rollback did not restore the complete previous Cloud/App image set." >&2
             exit 1
           fi

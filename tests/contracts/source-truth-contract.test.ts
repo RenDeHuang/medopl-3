@@ -174,6 +174,21 @@ test("Console source truth contract fixes strict envelopes and live Gateway proj
       empty: "real_zero_billing_rows",
       fetchedAt: "control_plane_response_fetch_completion_time",
       sourceUpdatedAt: "omit_unless_ledger_returns_source_timestamp"
+    },
+    workspaceCreatedReceipt: {
+      route: "GET /api/billing/receipts/{id}",
+      source: "ledger",
+      authority: "live_ledger_readback",
+      identity: "session_account_and_path_receipt_id",
+      ignoredIdentityInputs: ["accountId"],
+      dataFields: ["receiptId", "type", "status", "workspaceId", "createdAt"],
+      fixedType: "workspace.created",
+      fixedStatus: "completed",
+      listProjection: false,
+      tenantMismatch: "not_found",
+      malformedReceipt: "whole_source_unavailable",
+      fetchedAt: "control_plane_response_fetch_completion_time",
+      sourceUpdatedAt: "omit_unless_ledger_returns_source_timestamp"
     }
   });
   assert.deepEqual(contract.forbiddenCustomerFields, [

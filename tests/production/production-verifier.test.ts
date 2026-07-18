@@ -77,6 +77,13 @@ function json(payload, status = 200, headers = {}) {
   });
 }
 
+function source(payload, sourceName = "sub2api", status = "available", headers = {}) {
+  return json({ source: sourceName, status, available: true, fetchedAt: new Date().toISOString(), data: payload }, 200, {
+    "cache-control": "private, no-store",
+    ...headers
+  });
+}
+
 function fixedSlotFixture({
   slotCount = 1,
   ambiguous = false,
@@ -86,6 +93,10 @@ function fixedSlotFixture({
   descriptor = fixedSlotDescriptor,
   accountId = descriptor.id === proSlotDescriptor.id ? PRO_ACCOUNT_ID : BASIC_ACCOUNT_ID,
   catalog = pricingCatalogResponse,
+  readiness = { ready: true, cloudImagesReady: true, workspaceImagesReady: true, immutableImagesReady: true },
+  includeCurrentReceipt = true,
+  receiptCacheControl = "private, no-store",
+  receiptOverrides = {},
   mutate
 } = {}) {
   const calls = [];
@@ -93,6 +104,14 @@ function fixedSlotFixture({
   const storageVolumes = [];
   const workspaces = [];
   const deadline = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const periodStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const runtimeOperations = [
+    { id: "provider-op-compute-1", accountId, workspaceId: "workspace-slot-1", action: "create_compute_allocation", status: "succeeded", providerRequestId: "ins-slot-1", result: '{"resource":"compute-slot-1"}' },
+    { id: "provider-op-storage-1", accountId, workspaceId: "workspace-slot-1", action: "create_storage_volume", status: "succeeded", providerRequestId: "disk-slot-1", result: '{"resource":"storage-slot-1"}' },
+    { id: "workspace-launch-1", accountId, workspaceId: "workspace-slot-1", action: "workspace.launch", status: "succeeded", providerRequestId: "", result: '{"phase":"completed","internalCredential":"must-not-emit"}' },
+    { id: "workspace-renewal-1", accountId, workspaceId: "workspace-slot-1", action: "workspace.renewal", status: "succeeded", providerRequestId: "", result: '{"phase":"completed"}' },
+    { id: "job-progress-1", accountId, workspaceId: "workspace-slot-1", action: "job.execute", status: "running", result: { internalCredential: "ignored-job-secret" } }
+  ];
 
   for (let index = 0; index < slotCount; index += 1) {
     const suffix = index + 1;
@@ -145,10 +164,11 @@ function fixedSlotFixture({
       storageId: `storage-slot-${suffix}`,
       state: "running",
       openable: true,
+      receiptId: "receipt-current-1",
       url: `https://workspace.medopl.cn/w/workspace-slot-${suffix}/`
     });
   }
-  mutate?.({ computeAllocations, storageVolumes, workspaces });
+  mutate?.({ computeAllocations, storageVolumes, workspaces, runtimeOperations });
 
   const fetchImpl = async (input, init = {}) => {
     const url = new URL(String(input));
@@ -158,7 +178,7 @@ function fixedSlotFixture({
     if (url.hostname === "workspace.medopl.cn") {
       return new Response("<!doctype html><main>verification slot ready</main>", { status: 200 });
     }
-    if (url.pathname === "/api/production/readiness") return json({ ready: true });
+    if (url.pathname === "/api/production/readiness") return json(readiness);
     if (url.pathname === "/api/auth/login") {
       return json({ user: { id: `usr-verifier-${descriptor.id}`, accountId, role: "owner" } }, 200, {
         "set-cookie": "opl_session=session-alpha; Path=/; HttpOnly",
@@ -174,18 +194,23 @@ function fixedSlotFixture({
     }
     if (url.pathname === "/api/state") {
       return json({
-        balance: { source: "sub2api", currency: "USD", userId: accountId === PRO_ACCOUNT_ID ? 42 : 41, usdMicros: 500_000_000 },
         computeAllocations,
         storageVolumes,
-        workspaces
+        workspaces,
+        runtimeOperations: slotCount > 0 ? runtimeOperations : []
       });
     }
-    if (url.pathname === "/api/gateway/summary") {
-      return json({
-        balance: { currency: "USD", usdMicros: 500_000_000 },
-        apiKey: { id: "key-alpha", status: "active", maskedValue: "sk-****", revealed: false },
-        usage: { usage1dUsdMicros: 1000 }
-      });
+    if (url.pathname === "/api/gateway/wallet") {
+      return source({ userId: accountId === PRO_ACCOUNT_ID ? "42" : "41", currency: "USD", usdMicros: 500_000_000, status: "active" });
+    }
+    if (url.pathname === "/api/gateway/keys") {
+      return source({ items: [{ id: accountId === PRO_ACCOUNT_ID ? "10" : "9", name: "opl-workspace", status: "active" }], total: 1 });
+    }
+    if (url.pathname === "/api/billing/receipts/receipt-current-1" && includeCurrentReceipt && slotCount > 0) {
+      return source({
+        receiptId: "receipt-current-1", type: "workspace.created", status: "completed",
+        workspaceId: "workspace-slot-1", createdAt: periodStart, ...receiptOverrides
+      }, "ledger", "available", { "cache-control": receiptCacheControl });
     }
     return json({ error: "not_found" }, 404);
   };
@@ -351,12 +376,73 @@ test("ordinary production verifier reuses exactly one fixed slot without resourc
   assert.equal(result.slot.storageProviderResourceId, "disk-slot-1");
   assert.equal(result.slot.persistentVolumeId, "pv-slot-1");
   assert.equal(result.workspaceId, "workspace-slot-1");
-  assert.doesNotMatch(JSON.stringify(result), /correct horse|session-alpha|sk-\*\*\*\*/);
+  assert.equal(result.wallet.usdMicros, 500_000_000);
+  assert.equal(result.key.id, "9");
+  assert.equal(result.ledgerReceipt.receiptId, "receipt-current-1");
+  assert.deepEqual(result.runtimeOperations.map(({ id, action, status, operationDigest }) => ({ id, action, status, digestLength: operationDigest.length })), [
+    { id: "job-progress-1", action: "job.execute", status: "running", digestLength: 64 },
+    { id: "provider-op-compute-1", action: "create_compute_allocation", status: "succeeded", digestLength: 64 },
+    { id: "provider-op-storage-1", action: "create_storage_volume", status: "succeeded", digestLength: 64 },
+    { id: "workspace-launch-1", action: "workspace.launch", status: "succeeded", digestLength: 64 },
+    { id: "workspace-renewal-1", action: "workspace.renewal", status: "succeeded", digestLength: 64 }
+  ]);
+  assert.doesNotMatch(JSON.stringify(result), /correct horse|session-alpha|sk-\*\*\*\*|must-not-emit/);
+  assert.doesNotMatch(JSON.stringify(result), /ignored-job-secret/);
+  assert.equal(fixture.calls.some((call) => call.path === "/api/billing/receipts/receipt-current-1"), true);
+  assert.equal(fixture.calls.some((call) => call.path === "/api/billing/receipts"), false);
+  assert.equal(fixture.calls.some((call) => call.path === "/api/gateway/summary" || /^\/api\/workspaces\/[^/]+\/receipt$/.test(call.path)), false);
   assert.deepEqual(fixture.calls.filter((call) => call.method !== "GET"), [
     { method: "POST", path: "/api/auth/login", search: "", signal: fixture.calls[1].signal }
   ]);
   assert.equal(fixture.calls.some((call) => /create|destroy|detach|sync/i.test(call.path)), false);
   assert.equal(fixture.calls.every((call) => call.signal instanceof AbortSignal), true);
+});
+
+test("production verifier requires immutable Ready Pod facts and the existing Ledger source contract", async () => {
+  await assert.rejects(() => verifyProductionChain({
+    origin: "https://cloud.medopl.cn", authUsersJson: ownerSeed, accountId: BASIC_ACCOUNT_ID,
+    slotDescriptor: fixedSlotDescriptor, runId: "missing-image-proof",
+    fetchImpl: fixedSlotFixture({ readiness: { ready: true } }).fetchImpl
+  }), /production_readiness/);
+
+  await assert.rejects(() => verifyProductionChain({
+    origin: "https://cloud.medopl.cn", authUsersJson: ownerSeed, accountId: BASIC_ACCOUNT_ID,
+    slotDescriptor: fixedSlotDescriptor, runId: "missing-receipt",
+    fetchImpl: fixedSlotFixture({ includeCurrentReceipt: false }).fetchImpl
+  }), /request_failed:GET:\/api\/billing\/receipts\/receipt-current-1:404/);
+
+  await assert.rejects(() => verifyProductionChain({
+    origin: "https://cloud.medopl.cn", authUsersJson: ownerSeed, accountId: BASIC_ACCOUNT_ID,
+    slotDescriptor: fixedSlotDescriptor, runId: "missing-receipt-reference",
+    fetchImpl: fixedSlotFixture({ mutate: ({ workspaces }) => { workspaces[0].receiptId = ""; } }).fetchImpl
+  }), /verification_slot_ambiguous/);
+
+  for (const fixture of [
+    fixedSlotFixture({ receiptCacheControl: "no-store" }),
+    fixedSlotFixture({ receiptOverrides: { type: "billing.resource_purchased.v1" } }),
+    fixedSlotFixture({ receiptOverrides: { internalCredential: "must-not-accept" } })
+  ]) {
+    await assert.rejects(() => verifyProductionChain({
+      origin: "https://cloud.medopl.cn", authUsersJson: ownerSeed, accountId: BASIC_ACCOUNT_ID,
+      slotDescriptor: fixedSlotDescriptor, runId: "unsafe-workspace-receipt", fetchImpl: fixture.fetchImpl
+    }), /(?:source_contract_invalid|ledger_receipt_invalid)/);
+  }
+});
+
+test("production verifier snapshots every account RuntimeOperation without returning result payloads", async () => {
+  for (const mutate of [
+    ({ runtimeOperations }) => { runtimeOperations[2].status = ""; },
+    ({ runtimeOperations }) => { delete runtimeOperations[3].action; },
+    ({ runtimeOperations }) => { delete runtimeOperations[0].id; },
+    ({ runtimeOperations }) => { runtimeOperations.push({ ...runtimeOperations[3], id: runtimeOperations[3].id }); },
+    ({ runtimeOperations }) => { runtimeOperations.splice(0); }
+  ]) {
+    const fixture = fixedSlotFixture({ mutate });
+    await assert.rejects(() => verifyProductionChain({
+      origin: "https://cloud.medopl.cn", authUsersJson: ownerSeed, accountId: BASIC_ACCOUNT_ID,
+      slotDescriptor: fixedSlotDescriptor, runId: "runtime-operation-snapshot", fetchImpl: fixture.fetchImpl
+    }), /runtime_operation_history_required/);
+  }
 });
 
 test("ordinary production verifier accepts the fixed Pro slot without resource mutations", async () => {

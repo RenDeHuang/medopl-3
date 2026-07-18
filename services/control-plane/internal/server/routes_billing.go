@@ -73,12 +73,18 @@ func registerBillingRoutes(mux *http.ServeMux, app *controlPlaneServer, service 
 			writeSourceEnvelope(w, http.StatusBadGateway, "ledger", "unavailable", nil)
 			return
 		}
-		if receipt.AccountID != accountID || !strings.HasPrefix(receipt.Type, "billing.") {
+		if receipt.AccountID != accountID {
 			writeError(w, http.StatusNotFound, "billing_receipt_not_found")
 			return
 		}
-		projected, ok := projectCustomerBillingReceipt(receipt)
-		if !ok {
+		var projected map[string]any
+		var projectedOK bool
+		if receipt.Type == "workspace.created" {
+			projected, projectedOK = projectWorkspaceCreatedReceipt(receipt)
+		} else if strings.HasPrefix(receipt.Type, "billing.") {
+			projected, projectedOK = projectCustomerBillingReceipt(receipt)
+		}
+		if !projectedOK {
 			writeSourceEnvelope(w, http.StatusBadGateway, "ledger", "unavailable", nil)
 			return
 		}
@@ -119,6 +125,20 @@ func registerBillingRoutes(mux *http.ServeMux, app *controlPlaneServer, service 
 		}
 		writeJSON(w, http.StatusCreated, reconciliationResponse(result))
 	}))
+}
+
+func projectWorkspaceCreatedReceipt(receipt clients.Receipt) (map[string]any, bool) {
+	if strings.TrimSpace(receipt.ReceiptID) == "" || receipt.Type != "workspace.created" || receipt.Status != "completed" || receipt.Surface != "workspace" ||
+		strings.TrimSpace(receipt.AccountID) == "" || strings.TrimSpace(receipt.WorkspaceID) == "" {
+		return nil, false
+	}
+	if _, err := time.Parse(time.RFC3339, receipt.CreatedAt); err != nil {
+		return nil, false
+	}
+	return map[string]any{
+		"receiptId": receipt.ReceiptID, "type": receipt.Type, "status": receipt.Status,
+		"workspaceId": receipt.WorkspaceID, "createdAt": receipt.CreatedAt,
+	}, true
 }
 
 func projectCustomerBillingReceipt(receipt clients.Receipt) (map[string]any, bool) {

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -109,6 +110,39 @@ function addCheck(checks, name, ok, details = {}) {
   checks.push(check);
   if (!check.ok) throw new Error(name);
   return check;
+}
+
+export function sourceEnvelope(result, expectedSource, allowEmpty = false) {
+  const payload = result?.payload;
+  const allowedStatus = payload?.status === "available" || (allowEmpty && payload?.status === "empty");
+  const allowedKeys = new Set(["available", "data", "fetchedAt", "source", "sourceUpdatedAt", "status"]);
+  if (result?.response?.headers?.get("cache-control") !== "private, no-store" || payload?.source !== expectedSource || payload?.available !== true ||
+    !allowedStatus || !Object.hasOwn(payload || {}, "data") || !Number.isFinite(Date.parse(payload?.fetchedAt)) ||
+    Object.keys(payload || {}).some((key) => !allowedKeys.has(key)) ||
+    (Object.hasOwn(payload || {}, "sourceUpdatedAt") && !Number.isFinite(Date.parse(payload.sourceUpdatedAt)))) {
+    throw new Error(`source_contract_invalid:${expectedSource}`);
+  }
+  return payload;
+}
+
+export function walletFact(envelope, expectedUserId) {
+  const wallet = envelope?.data;
+  if (envelope?.status !== "available" || String(wallet?.userId || "") !== String(expectedUserId) || wallet?.currency !== "USD" ||
+    wallet?.status !== "active" || !Number.isSafeInteger(wallet?.usdMicros) || wallet.usdMicros < 0) {
+    throw new Error("dedicated_workspace_wallet_required");
+  }
+  return { userId: String(wallet.userId), currency: "USD", usdMicros: wallet.usdMicros, status: wallet.status };
+}
+
+export function dedicatedWorkspaceKey(envelope, expectedId = "") {
+  const items = Array.isArray(envelope?.data?.items) ? envelope.data.items : [];
+  const key = items[0];
+  if (envelope?.status !== "available" || envelope?.data?.total !== 1 || items.length !== 1 || !/^\d+$/.test(String(key?.id || "")) ||
+    key?.name !== "opl-workspace" || key?.status !== "active" || (expectedId && String(key.id) !== String(expectedId)) ||
+    ["key", "maskedValue", "value"].some((field) => Object.hasOwn(key || {}, field))) {
+    throw new Error("dedicated_workspace_key_required");
+  }
+  return { id: String(key.id) };
 }
 
 export function responseCookie(headers) {
@@ -265,6 +299,7 @@ function fixedSlotFromState(state, { slotId, slotDescriptor, accountId, nowMs })
     ["running", "ready", "active"].includes(compute.status) &&
     ["available", "ready", "active"].includes(storage.status) &&
     workspace.openable === true &&
+    Boolean(workspace.receiptId) &&
     Boolean(workspace.url) &&
     computeInstanceType.ok && computeInstanceType.value === slotDescriptor.instanceType &&
     computeZone.ok && storageZone.ok && computeZone.value === storageZone.value &&
@@ -289,6 +324,46 @@ function fixedSlotFromState(state, { slotId, slotDescriptor, accountId, nowMs })
     nodePoolId: nodePoolId.value,
     persistentVolumeId: persistentVolumeId.value
   };
+}
+
+function runtimeOperationSnapshot(state) {
+  const operations = Array.isArray(state?.runtimeOperations) ? state.runtimeOperations : [];
+  const seen = new Set();
+  const snapshot = operations.map((operation) => {
+    const id = String(operation?.id || operation?.operationId || "").trim();
+    const action = String(operation?.action || "").trim();
+    const status = String(operation?.status || "").trim();
+    const providerRequestId = String(operation?.providerRequestId || "").trim();
+    if (!id || seen.has(id) || !action || !status || !operation || typeof operation !== "object" || Array.isArray(operation)) {
+      throw new Error("runtime_operation_history_required");
+    }
+    seen.add(id);
+    const stable = JSON.stringify(canonicalValue(operation));
+    return { id, action, status, providerRequestId, operationDigest: createHash("sha256").update(stable).digest("hex") };
+  });
+  if (snapshot.length === 0) throw new Error("runtime_operation_history_required");
+  return snapshot.sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function canonicalValue(value) {
+  if (Array.isArray(value)) return value.map(canonicalValue);
+  if (!value || typeof value !== "object") return value;
+  return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonicalValue(value[key])]));
+}
+
+async function currentLedgerReceipt({ requestOptions, auth, slot }) {
+  const receiptId = String(slot?.workspace?.receiptId || "").trim();
+  if (!receiptId) throw new Error("ledger_receipt_required");
+  const envelope = sourceEnvelope(await requestJson({
+    ...requestOptions, auth, path: `/api/billing/receipts/${encodeURIComponent(receiptId)}`
+  }), "ledger");
+  const receipt = envelope.data;
+  const keys = ["createdAt", "receiptId", "status", "type", "workspaceId"];
+  if (Object.keys(receipt || {}).sort().join(",") !== keys.join(",") || receipt?.receiptId !== receiptId || receipt?.type !== "workspace.created" ||
+    receipt?.status !== "completed" || receipt?.workspaceId !== slot.workspace.id || !Number.isFinite(Date.parse(receipt?.createdAt))) {
+    throw new Error("ledger_receipt_invalid");
+  }
+  return receipt;
 }
 
 async function requestWorkspaceUrl({ fetchImpl, url, attempts, retryDelayMs, signal, timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS }) {
@@ -361,7 +436,7 @@ export async function verifyProductionChain(options = {}) {
   const requestOptions = { fetchImpl, origin: normalizedOrigin, signal, timeoutMs: requestTimeoutMs };
   const checks = [];
   const readiness = await requestJson({ ...requestOptions, path: "/api/production/readiness" });
-  addCheck(checks, "production_readiness", readiness.payload?.ready === true);
+  addCheck(checks, "production_readiness", readiness.payload?.ready === true && readiness.payload?.cloudImagesReady === true && readiness.payload?.workspaceImagesReady === true && readiness.payload?.immutableImagesReady === true);
 
   const auth = await login({ ...requestOptions, email: owner.email, password: owner.password });
   addCheck(checks, "console_login", auth.user?.accountId === owner.accountId);
@@ -369,9 +444,10 @@ export async function verifyProductionChain(options = {}) {
   const catalog = (await requestJson({ ...requestOptions, auth, path: "/api/pricing/catalog" })).payload;
   verifyCatalog(checks, catalog);
   const state = (await requestJson({ ...requestOptions, auth, path: "/api/state" })).payload;
-  addCheck(checks, "live_sub2api_balance", state?.balance?.source === "sub2api" && state?.balance?.currency === "USD" && state?.balance?.userId === owner.sub2apiUserId && Number.isSafeInteger(state?.balance?.usdMicros));
-  const gateway = (await requestJson({ ...requestOptions, auth, path: "/api/gateway/summary" })).payload;
-  addCheck(checks, "gateway_key_masked", gateway?.apiKey?.revealed !== true && gateway?.apiKey?.value === undefined && Boolean(gateway?.apiKey?.maskedValue));
+  const wallet = walletFact(sourceEnvelope(await requestJson({ ...requestOptions, auth, path: "/api/gateway/wallet" }), "sub2api"), owner.sub2apiUserId);
+  addCheck(checks, "live_sub2api_balance", true);
+  const key = dedicatedWorkspaceKey(sourceEnvelope(await requestJson({ ...requestOptions, auth, path: "/api/gateway/keys" }), "sub2api", true));
+  addCheck(checks, "dedicated_gateway_key", true);
 
   const slot = fixedSlotFromState(state, { slotId, slotDescriptor, accountId: owner.accountId, nowMs });
   if (!slot) {
@@ -379,6 +455,9 @@ export async function verifyProductionChain(options = {}) {
     await writeVerificationManifest(manifestPath, result);
     return result;
   }
+
+  const runtimeOperations = runtimeOperationSnapshot(state);
+  const ledgerReceipt = await currentLedgerReceipt({ requestOptions, auth, slot });
 
   const workspaceAccess = await requestWorkspaceUrl({ fetchImpl, url: slot.workspace.url, attempts: workspaceUrlAttempts, retryDelayMs, signal, timeoutMs: requestTimeoutMs });
   addCheck(checks, "verification_slot_workspace_ready", workspaceAccess.status >= 200 && workspaceAccess.status < 300, { attempts: workspaceAccess.attempts });
@@ -403,6 +482,10 @@ export async function verifyProductionChain(options = {}) {
       storageProviderResourceId: slot.storageProviderId,
       persistentVolumeId: slot.persistentVolumeId
     },
+    wallet,
+    key,
+    ledgerReceipt,
+    runtimeOperations,
     checks
   };
   await writeVerificationManifest(manifestPath, result);

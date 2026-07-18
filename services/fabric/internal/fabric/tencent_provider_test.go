@@ -30,6 +30,114 @@ func TestTKENodeSelectorPrefersClaimedNodeHostname(t *testing.T) {
 	}
 }
 
+func TestTencentProviderReadinessRequiresExpectedImagesOnEveryReadyPod(t *testing.T) {
+	const (
+		cloudImage     = "registry.example.com/opl/cloud@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+		workspaceImage = "registry.example.com/opl/workspace@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	)
+	readyPod := func(component, container, imageID string) any {
+		labels := map[string]any{"app.kubernetes.io/component": component}
+		if component == "workspace" {
+			labels = map[string]any{"oplcloud.cn/workspace-id": "workspace-alpha"}
+		}
+		return map[string]any{
+			"metadata": map[string]any{"labels": labels},
+			"status": map[string]any{
+				"phase":      "Running",
+				"conditions": []any{map[string]any{"type": "Ready", "status": "True"}},
+				"containerStatuses": []any{map[string]any{
+					"name": container, "ready": true, "imageID": imageID,
+				}},
+			},
+		}
+	}
+	matchingPods := func() []any {
+		return []any{
+			readyPod("control-plane", "control-plane", "docker-pullable://"+cloudImage),
+			readyPod("ledger", "ledger", "docker-pullable://"+cloudImage),
+			readyPod("fabric", "fabric", "docker-pullable://"+cloudImage),
+			readyPod("workspace", "workspace", "docker-pullable://"+workspaceImage),
+		}
+	}
+	digestPods := func(prefix string) []any {
+		pods := matchingPods()
+		for index, item := range pods {
+			ref := cloudImage
+			if index == len(pods)-1 {
+				ref = workspaceImage
+			}
+			item.(map[string]any)["status"].(map[string]any)["containerStatuses"].([]any)[0].(map[string]any)["imageID"] = prefix + strings.SplitN(ref, "@", 2)[1]
+		}
+		return pods
+	}
+
+	for _, tc := range []struct {
+		name           string
+		cloudImage     string
+		workspaceImage string
+		pods           func() []any
+		wantReady      bool
+		wantCloud      bool
+		wantWorkspace  bool
+	}{
+		{name: "matching immutable image ids", cloudImage: cloudImage, workspaceImage: workspaceImage, pods: matchingPods, wantReady: true, wantCloud: true, wantWorkspace: true},
+		{name: "containerd digest image ids", cloudImage: cloudImage, workspaceImage: workspaceImage, pods: func() []any { return digestPods("containerd://") }, wantReady: true, wantCloud: true, wantWorkspace: true},
+		{name: "bare digest image ids", cloudImage: cloudImage, workspaceImage: workspaceImage, pods: func() []any { return digestPods("") }, wantReady: true, wantCloud: true, wantWorkspace: true},
+		{name: "missing image id", cloudImage: cloudImage, workspaceImage: workspaceImage, pods: func() []any {
+			pods := matchingPods()
+			pods[0].(map[string]any)["status"].(map[string]any)["containerStatuses"].([]any)[0].(map[string]any)["imageID"] = ""
+			return pods
+		}, wantWorkspace: true},
+		{name: "tag only image id", cloudImage: cloudImage, workspaceImage: workspaceImage, pods: func() []any {
+			pods := matchingPods()
+			pods[0].(map[string]any)["status"].(map[string]any)["containerStatuses"].([]any)[0].(map[string]any)["imageID"] = "registry.example.com/opl/cloud:latest"
+			return pods
+		}, wantWorkspace: true},
+		{name: "mixed image ids", cloudImage: cloudImage, workspaceImage: workspaceImage, pods: func() []any {
+			return append(matchingPods(), readyPod("fabric", "fabric", "docker-pullable://registry.example.com/opl/cloud@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"))
+		}, wantWorkspace: true},
+		{name: "unknown runtime image id scheme", cloudImage: cloudImage, workspaceImage: workspaceImage, pods: func() []any {
+			pods := matchingPods()
+			pods[0].(map[string]any)["status"].(map[string]any)["containerStatuses"].([]any)[0].(map[string]any)["imageID"] = "cri-o://" + strings.SplitN(cloudImage, "@", 2)[1]
+			return pods
+		}, wantWorkspace: true},
+		{name: "tag only expected image", cloudImage: "registry.example.com/opl/cloud:latest", workspaceImage: workspaceImage, pods: matchingPods, wantWorkspace: true},
+		{name: "workspace pod missing", cloudImage: cloudImage, workspaceImage: workspaceImage, pods: func() []any { return matchingPods()[:3] }, wantCloud: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OPL_CLOUD_IMAGE", tc.cloudImage)
+			t.Setenv("OPL_WORKSPACE_IMAGE", tc.workspaceImage)
+			for key, value := range map[string]string{
+				"OPL_WORKSPACE_DOMAIN": "workspace.medopl.cn", "OPL_K8S_NAMESPACE": "opl-cloud", "OPL_IMAGE_PULL_SECRET_NAME": "pull-secret",
+				"OPL_WORKSPACE_STORAGE_CLASS": "cbs", "OPL_TENCENT_PROVISIONER_BIN": "/bin/true", "TENCENT_DEPLOY_KUBECONFIG_REF": "/tmp/kubeconfig",
+				"RUN_TENCENT_CREATE_RELEASE_EXECUTION": "1",
+			} {
+				t.Setenv(key, value)
+			}
+			bin := t.TempDir()
+			if err := os.WriteFile(filepath.Join(bin, "kubectl"), []byte("#!/bin/sh\n"), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			t.Setenv("PATH", bin)
+			provider := NewTencentProvider()
+			provider.provision = func(context.Context, provisionerRequest) (provisionerResponse, error) {
+				return provisionerResponse{OK: true}, nil
+			}
+			provider.kubectl = func(_ context.Context, args []string, _ []byte) ([]byte, error) {
+				if !slices.Equal(args, []string{"get", "pod", "-o", "json"}) {
+					t.Fatalf("kubectl args = %#v", args)
+				}
+				return json.Marshal(map[string]any{"items": tc.pods()})
+			}
+
+			result, err := provider.Readiness(context.Background())
+			if err != nil || result["ready"] != tc.wantReady || result["immutableImagesReady"] != tc.wantReady || result["cloudImagesReady"] != tc.wantCloud || result["workspaceImagesReady"] != tc.wantWorkspace {
+				t.Fatalf("readiness = %#v, err=%v, want ready=%t", result, err, tc.wantReady)
+			}
+		})
+	}
+}
+
 func TestTencentProviderMonthlyPreflightUsesExplicitReadOnlyProviderPaths(t *testing.T) {
 	t.Setenv("OPL_BASIC_COMPUTE_NODE_POOL_ID", "np-basic")
 	t.Setenv("OPL_PRO_COMPUTE_NODE_POOL_ID", "np-pro")

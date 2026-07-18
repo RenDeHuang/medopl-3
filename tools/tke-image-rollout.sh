@@ -169,10 +169,12 @@ wait_cloud_rollouts() {
 }
 
 restore_previous_images() {
+  local scope="${1:-all}"
   local failed=0
   local item deployment container previous_image previous_workspace_image
   local current_workspace_rows=""
-  [ -f "$workspace_images" ] || failed=1
+  [ "$scope" = "all" ] || [ "$scope" = "cloud-only" ] || return 1
+  [ "$scope" != "all" ] || [ -f "$workspace_images" ] || failed=1
   for item in \
     "opl-cloud-control-plane:control-plane" \
     "opl-cloud-ledger:ledger" \
@@ -191,19 +193,23 @@ restore_previous_images() {
   elif ! patch_workspace_image "$previous_workspace_image"; then
     failed=1
   fi
-  if ! current_workspace_rows="$(list_workspace_images)"; then
-    current_workspace_rows=""
-    failed=1
-  else
-    set_workspace_images previous "$current_workspace_rows" "$previous_workspace_image" || failed=1
+  if [ "$scope" = "all" ]; then
+    if ! current_workspace_rows="$(list_workspace_images)"; then
+      current_workspace_rows=""
+      failed=1
+    else
+      set_workspace_images previous "$current_workspace_rows" "$previous_workspace_image" || failed=1
+    fi
   fi
   wait_cloud_rollouts previous || failed=1
-  if ! current_workspace_rows="$(list_workspace_images)"; then
-    current_workspace_rows=""
-    failed=1
-  else
-    set_workspace_images previous "$current_workspace_rows" "$previous_workspace_image" || failed=1
-    wait_workspace_rollouts previous "$current_workspace_rows" "$previous_workspace_image" || failed=1
+  if [ "$scope" = "all" ]; then
+    if ! current_workspace_rows="$(list_workspace_images)"; then
+      current_workspace_rows=""
+      failed=1
+    else
+      set_workspace_images previous "$current_workspace_rows" "$previous_workspace_image" || failed=1
+      wait_workspace_rollouts previous "$current_workspace_rows" "$previous_workspace_image" || failed=1
+    fi
   fi
   if [ -n "$previous_workspace_image" ]; then
     verify_workspace_config_image "$previous_workspace_image" || failed=1
@@ -211,10 +217,16 @@ restore_previous_images() {
   return "$failed"
 }
 
+restore_previous_bootstrap_images() {
+  restore_previous_images cloud-only
+}
+
 apply_candidate_images() {
+  local scope="${1:-all}"
   local failed=0
   local item deployment container current_workspace_rows
-  [ -f "$workspace_images" ] || failed=1
+  [ "$scope" = "all" ] || [ "$scope" = "cloud-only" ] || return 1
+  [ "$scope" != "all" ] || [ -f "$workspace_images" ] || failed=1
   patch_workspace_image "$OPL_WORKSPACE_IMAGE" || failed=1
   for item in \
     "opl-cloud-control-plane:control-plane" \
@@ -224,20 +236,28 @@ apply_candidate_images() {
     container="${item##*:}"
     kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" set image "deployment/$deployment" "$container=$OPL_CLOUD_IMAGE" || failed=1
   done
-  if ! current_workspace_rows="$(list_workspace_images)"; then
-    current_workspace_rows=""
-    failed=1
-  else
-    set_workspace_images candidate "$current_workspace_rows" "" || failed=1
+  if [ "$scope" = "all" ]; then
+    if ! current_workspace_rows="$(list_workspace_images)"; then
+      current_workspace_rows=""
+      failed=1
+    else
+      set_workspace_images candidate "$current_workspace_rows" "" || failed=1
+    fi
   fi
   wait_cloud_rollouts candidate || failed=1
-  if ! current_workspace_rows="$(list_workspace_images)"; then
-    current_workspace_rows=""
-    failed=1
-  else
-    set_workspace_images candidate "$current_workspace_rows" "" || failed=1
-    wait_workspace_rollouts candidate "$current_workspace_rows" "" || failed=1
+  if [ "$scope" = "all" ]; then
+    if ! current_workspace_rows="$(list_workspace_images)"; then
+      current_workspace_rows=""
+      failed=1
+    else
+      set_workspace_images candidate "$current_workspace_rows" "" || failed=1
+      wait_workspace_rollouts candidate "$current_workspace_rows" "" || failed=1
+    fi
   fi
   verify_workspace_config_image "$OPL_WORKSPACE_IMAGE" || failed=1
   return "$failed"
+}
+
+apply_bootstrap_images() {
+  apply_candidate_images cloud-only
 }

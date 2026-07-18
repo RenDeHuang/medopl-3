@@ -3,10 +3,13 @@ import { pathToFileURL } from "node:url";
 import {
   FIXED_VERIFICATION_SLOT_ID,
   assertPublicHttpsUrl,
+  dedicatedWorkspaceKey,
   login,
   requestJson,
+  sourceEnvelope,
   verificationOwnerFromSeed,
   verifyProductionChain,
+  walletFact,
   writeVerificationManifest
 } from "./production-verifier.ts";
 
@@ -17,6 +20,8 @@ const DEFAULT_USAGE_RETRY_DELAY_MS = 5_000;
 const DEFAULT_BROWSER_TIMEOUT_MS = 45_000;
 const DEFAULT_MODEL_TIMEOUT_MS = 180_000;
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000;
+const MAX_USAGE_ITEMS = 10_000;
+const MAX_USAGE_PAGES = 100;
 
 function sleep(ms) {
   return ms > 0 ? new Promise((resolve) => setTimeout(resolve, ms)) : Promise.resolve();
@@ -52,27 +57,80 @@ function resourceIds(result) {
   return ids;
 }
 
-function usageSnapshot(gateway) {
-  const usage = {
-    quotaUsedUsdMicros: gateway?.usage?.quotaUsedUsdMicros,
-    usage1dUsdMicros: gateway?.usage?.usage1dUsdMicros
+async function gatewayUsageSnapshot(requestOptions, auth) {
+  const items = [];
+  const ids = new Set();
+  let expected;
+  for (let page = 1; !expected || page <= expected.pages; page += 1) {
+    const envelope = sourceEnvelope(await requestJson({ ...requestOptions, auth, path: `/api/gateway/usage?page=${page}&pageSize=100` }), "sub2api", true);
+    const payload = envelope.data;
+    // ponytail: the dedicated QA key is capped at 10k rows; add a server-side snapshot endpoint if that ceiling is ever reached.
+    if ((Number.isSafeInteger(payload?.total) && payload.total > MAX_USAGE_ITEMS) || (Number.isSafeInteger(payload?.pages) && payload.pages > MAX_USAGE_PAGES)) {
+      throw new Error("gateway_usage_snapshot_limit_exceeded");
+    }
+    if (!Number.isSafeInteger(payload?.total) || payload.total < 0 || payload?.page !== page || payload?.pageSize !== 100 || !Number.isSafeInteger(payload?.pages) || payload.pages < 0 || !Array.isArray(payload?.items)) {
+      throw new Error("gateway_usage_snapshot_invalid");
+    }
+    if (envelope.status !== (payload.total === 0 ? "empty" : "available")) throw new Error("gateway_usage_snapshot_invalid");
+    if (!expected) {
+      expected = { total: payload.total, pages: payload.pages };
+      if (payload.pages !== (payload.total === 0 ? 0 : Math.ceil(payload.total / 100))) throw new Error("gateway_usage_snapshot_invalid");
+    } else if (payload.total !== expected.total || payload.pages !== expected.pages) {
+      throw new Error("gateway_usage_snapshot_changed");
+    }
+    for (const item of payload.items) {
+      const requestId = String(item?.requestId || "").trim();
+      if (!requestId || ids.has(requestId)) throw new Error("gateway_usage_snapshot_invalid");
+      ids.add(requestId);
+      items.push(item);
+    }
+    if (expected.pages === 0) break;
+  }
+  if (items.length !== expected.total) throw new Error("gateway_usage_snapshot_invalid");
+  return { total: expected.total, ids, items };
+}
+
+async function gatewayUsageStats(requestOptions, auth) {
+  const stats = sourceEnvelope(await requestJson({ ...requestOptions, auth, path: "/api/gateway/usage/stats?period=month" }), "sub2api").data;
+  for (const key of ["totalRequests", "totalInputTokens", "totalOutputTokens", "totalTokens", "totalActualCostUsdMicros"]) {
+    if (!Number.isSafeInteger(stats?.[key]) || stats[key] < 0) throw new Error("gateway_usage_stats_invalid");
+  }
+  return stats;
+}
+
+function exactUsageRecord(before, after, expectedModel, expectedKeyId) {
+  if (after.total === before.total) {
+    if (after.ids.size !== before.ids.size || [...before.ids].some((id) => !after.ids.has(id))) throw new Error("gateway_request_cardinality_mismatch");
+    return null;
+  }
+  if (after.total !== before.total + 1 || [...before.ids].some((id) => !after.ids.has(id))) throw new Error("gateway_request_cardinality_mismatch");
+  const added = [...after.ids].filter((id) => !before.ids.has(id));
+  if (added.length !== 1) throw new Error("gateway_request_cardinality_mismatch");
+  const record = after.items.find((item) => item.requestId === added[0]);
+  const tokenFields = ["inputTokens", "outputTokens", "cacheCreationTokens", "cacheReadTokens"];
+  if (record?.apiKeyId !== expectedKeyId || record?.model !== expectedModel || record?.requestType !== "sync" || record?.inboundEndpoint !== "/v1/responses" ||
+    !tokenFields.every((key) => Number.isSafeInteger(record[key]) && record[key] >= 0) || record.inputTokens + record.outputTokens < 1 ||
+    !Number.isSafeInteger(record.actualCostUsdMicros) || record.actualCostUsdMicros <= 0) {
+    throw new Error("gateway_request_usage_invalid");
+  }
+  return record;
+}
+
+function statsDelta(before, after) {
+  return {
+    totalRequests: after.totalRequests - before.totalRequests,
+    totalInputTokens: after.totalInputTokens - before.totalInputTokens,
+    totalOutputTokens: after.totalOutputTokens - before.totalOutputTokens,
+    totalTokens: after.totalTokens - before.totalTokens,
+    totalActualCostUsdMicros: after.totalActualCostUsdMicros - before.totalActualCostUsdMicros
   };
-  if (!Object.values(usage).every((value) => Number.isSafeInteger(value) && value >= 0)) {
-    throw new Error("dedicated_key_usage_required");
-  }
-  return usage;
 }
 
-function dedicatedKey(gateway, expectedId = "") {
-  const key = gateway?.apiKey || {};
-  if (!key.id || key.name !== "opl-workspace" || key.status !== "active" || key.revealed === true || key.value !== undefined || (expectedId && key.id !== expectedId)) {
-    throw new Error("dedicated_workspace_key_required");
-  }
-  return { id: String(key.id), usage: usageSnapshot(gateway) };
-}
-
-function usageIncreased(before, after) {
-  return after.quotaUsedUsdMicros > before.quotaUsedUsdMicros || after.usage1dUsdMicros > before.usage1dUsdMicros;
+function statsMatchRequest(before, after, request) {
+  const delta = statsDelta(before, after);
+  return delta.totalRequests === 1 && delta.totalInputTokens === request.inputTokens && delta.totalOutputTokens === request.outputTokens &&
+    delta.totalTokens === request.inputTokens + request.outputTokens + request.cacheCreationTokens + request.cacheReadTokens &&
+    delta.totalActualCostUsdMicros === request.actualCostUsdMicros;
 }
 
 export async function verifyWorkspaceBrowserQa({
@@ -183,6 +241,7 @@ export async function verifyProductionLiveQa(options = {}) {
     usageRetryDelayMs = DEFAULT_USAGE_RETRY_DELAY_MS,
     browserTimeoutMs = DEFAULT_BROWSER_TIMEOUT_MS,
     modelTimeoutMs = DEFAULT_MODEL_TIMEOUT_MS,
+    expectedModel = "",
     requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
     manifestPath = "",
     browserFactory,
@@ -195,6 +254,7 @@ export async function verifyProductionLiveQa(options = {}) {
     throw new Error("production_live_qa_config_invalid");
   }
   if (!String(accountId).trim()) throw new Error("verification_account_id_required");
+  if (!String(expectedModel).trim()) throw new Error("production_live_qa_expected_model_required");
 
   const owner = verificationOwnerFromSeed(authUsersJson, accountId);
   const normalizedOrigin = assertPublicHttpsUrl(origin, "public_console_origin_required", { hostname: "cloud.medopl.cn" }).origin;
@@ -220,44 +280,82 @@ export async function verifyProductionLiveQa(options = {}) {
   const requestOptions = { fetchImpl, origin: normalizedOrigin, signal, timeoutMs: requestTimeoutMs };
   const auth = await login({ ...requestOptions, email: owner.email, password: owner.password });
   if (auth.user?.accountId !== owner.accountId || !auth.csrfToken) throw new Error("production_live_qa_console_login_failed");
-  const runtime = (await requestJson({
+  const runtime = sourceEnvelope(await requestJson({
     ...requestOptions,
     auth,
     path: "/api/workspaces/runtime-status",
     method: "POST",
     body: { workspaceId: before.workspaceId }
-  })).payload;
-  if (runtime?.ready !== true || runtime?.access?.credentialStatus !== "configured" || !runtime?.access?.username || !runtime?.access?.password) {
+  }), "fabric").data;
+  if (Object.hasOwn(runtime?.access || {}, "password") || Object.hasOwn(runtime?.access || {}, "secretRef")) throw new Error("runtime_status_secret_forbidden");
+  if (runtime?.ready !== true || runtime?.access?.credentialStatus !== "configured" || !runtime?.access?.username) {
     throw new Error("production_live_qa_runtime_credentials_required");
   }
 
-  const gatewayBefore = (await requestJson({ ...requestOptions, auth, path: "/api/gateway/summary" })).payload;
-  const keyBefore = dedicatedKey(gatewayBefore);
+  const revealed = await requestJson({
+    ...requestOptions,
+    auth,
+    path: `/api/workspaces/${encodeURIComponent(before.workspaceId)}/runtime-credentials/reveal`,
+    method: "POST",
+    body: {}
+  });
+  if (revealed.response.headers.get("cache-control") !== "private, no-store") throw new Error("runtime_credentials_cache_control_invalid");
+  const credentials = revealed.payload;
+  if (credentials?.workspaceId !== before.workspaceId || credentials?.access?.credentialStatus !== "configured" || credentials?.access?.username !== runtime.access.username || !credentials?.access?.password) {
+    throw new Error("production_live_qa_runtime_credentials_required");
+  }
+
+  const walletBefore = walletFact(sourceEnvelope(await requestJson({ ...requestOptions, auth, path: "/api/gateway/wallet" }), "sub2api"), owner.sub2apiUserId);
+  const keyBefore = dedicatedWorkspaceKey(sourceEnvelope(await requestJson({ ...requestOptions, auth, path: "/api/gateway/keys" }), "sub2api", true));
+  const usageBefore = await gatewayUsageSnapshot(requestOptions, auth);
+  const statsBefore = await gatewayUsageStats(requestOptions, auth);
   const workspace = await verifyWorkspaceBrowserQa({
     url: runtime.url || before.url,
-    username: runtime.access.username,
-    password: runtime.access.password,
+    username: credentials.access.username,
+    password: credentials.access.password,
     runId,
     browserTimeoutMs,
     modelTimeoutMs,
     browserFactory
   });
 
-  let keyAfter;
+  let usageAfter;
+  let requestUsage;
+  let statsAfter;
+  let walletAfter;
   let usageReadAttempts = 0;
+  let statsMismatch = false;
+  let balanceMismatch = false;
   for (let attempt = 1; attempt <= usageAttempts; attempt += 1) {
     usageReadAttempts = attempt;
-    const gatewayAfter = (await requestJson({ ...requestOptions, auth, path: "/api/gateway/summary" })).payload;
-    keyAfter = dedicatedKey(gatewayAfter, keyBefore.id);
-    if (usageIncreased(keyBefore.usage, keyAfter.usage)) break;
+    dedicatedWorkspaceKey(sourceEnvelope(await requestJson({ ...requestOptions, auth, path: "/api/gateway/keys" }), "sub2api", true), keyBefore.id);
+    usageAfter = await gatewayUsageSnapshot(requestOptions, auth);
+    requestUsage = exactUsageRecord(usageBefore, usageAfter, expectedModel, keyBefore.id);
+    if (requestUsage) {
+      statsAfter = await gatewayUsageStats(requestOptions, auth);
+      walletAfter = walletFact(sourceEnvelope(await requestJson({ ...requestOptions, auth, path: "/api/gateway/wallet" }), "sub2api"), owner.sub2apiUserId);
+      const statsMatch = statsMatchRequest(statsBefore, statsAfter, requestUsage);
+      const balanceMatch = walletBefore.usdMicros - walletAfter.usdMicros === requestUsage.actualCostUsdMicros;
+      if (statsMatch && balanceMatch) break;
+      statsMismatch ||= !statsMatch;
+      balanceMismatch ||= !balanceMatch;
+    }
     if (attempt < usageAttempts) await sleep(usageRetryDelayMs);
   }
-  if (!keyAfter || !usageIncreased(keyBefore.usage, keyAfter.usage)) throw new Error("dedicated_key_usage_not_increased");
+  if (!requestUsage) throw new Error("exact_gateway_request_not_found");
+  if (!statsAfter || !statsMatchRequest(statsBefore, statsAfter, requestUsage)) throw new Error(statsMismatch ? "gateway_usage_stats_mismatch" : "gateway_usage_stats_invalid");
+  if (!walletAfter || walletBefore.usdMicros - walletAfter.usdMicros !== requestUsage.actualCostUsdMicros) {
+    throw new Error(balanceMismatch ? "gateway_balance_delta_mismatch" : "gateway_wallet_invalid");
+  }
 
   const after = await verifyProductionChain(verifierOptions);
   if (!after.ok || after.status !== "reused") throw new Error("production_live_qa_reusable_slot_required");
   const afterIds = resourceIds(after);
   if (JSON.stringify(beforeIds) !== JSON.stringify(afterIds)) throw new Error("production_live_qa_resource_ids_changed");
+  if (JSON.stringify(before.ledgerReceipt) !== JSON.stringify(after.ledgerReceipt)) throw new Error("production_live_qa_ledger_receipt_changed");
+  if (JSON.stringify(before.runtimeOperations) !== JSON.stringify(after.runtimeOperations)) throw new Error("production_live_qa_runtime_operations_changed");
+
+  const delta = statsDelta(statsBefore, statsAfter);
 
   const result = {
     ok: true,
@@ -269,7 +367,10 @@ export async function verifyProductionLiveQa(options = {}) {
     keyId: keyBefore.id,
     workspace,
     resourceIds: { before: beforeIds, after: afterIds, unchanged: true },
-    usage: { before: keyBefore.usage, after: keyAfter.usage, increased: true, readAttempts: usageReadAttempts }
+    balance: { before: walletBefore, after: walletAfter },
+    ledgerReceipt: before.ledgerReceipt,
+    runtimeOperations: { before: before.runtimeOperations, after: after.runtimeOperations, unchanged: true },
+    usage: { request: requestUsage, stats: { before: statsBefore, after: statsAfter, delta }, readAttempts: usageReadAttempts }
   };
   await writeVerificationManifest(manifestPath, result);
   return result;
@@ -314,6 +415,7 @@ export async function runProductionLiveQaCli({
       usageRetryDelayMs: Number(env.OPL_VERIFY_USAGE_RETRY_DELAY_MS || DEFAULT_USAGE_RETRY_DELAY_MS),
       browserTimeoutMs: Number(env.OPL_VERIFY_BROWSER_TIMEOUT_MS || DEFAULT_BROWSER_TIMEOUT_MS),
       modelTimeoutMs: Number(env.OPL_VERIFY_MODEL_TIMEOUT_MS || DEFAULT_MODEL_TIMEOUT_MS),
+      expectedModel: env.OPL_VERIFY_EXPECTED_MODEL || "",
       requestTimeoutMs: Number(env.OPL_VERIFY_REQUEST_TIMEOUT_MS || DEFAULT_REQUEST_TIMEOUT_MS),
       manifestPath: env.OPL_VERIFY_MANIFEST_PATH || "",
       browserFactory,

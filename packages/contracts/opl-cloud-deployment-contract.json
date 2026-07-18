@@ -20,7 +20,8 @@
     "job": "deploy",
     "inputs": [
       "cloud_image",
-      "workspace_image"
+      "workspace_image",
+      "bootstrap_mode"
     ],
     "requiredEnv": [
       "OPL_RUNTIME_PROVIDER",
@@ -32,6 +33,7 @@
       "OPL_TRUSTED_PROXY_CIDRS",
       "OPL_CLOUD_IMAGE",
       "OPL_WORKSPACE_IMAGE",
+      "OPL_BOOTSTRAP_MODE",
       "OPL_IMAGE_PULL_SECRET_NAME",
       "OPL_WORKSPACE_STORAGE_CLASS",
       "OPL_TENCENT_PROVISIONER_BIN",
@@ -178,7 +180,9 @@
         "kubectl --kubeconfig \"$KUBECONFIG\" apply -f \"$OPL_DEPLOY_SECRET_DIR/opl-cloud.rendered.json\"",
         "source tools/tke-image-rollout.sh",
         "apply_candidate_images",
-        "restore_previous_images"
+        "apply_bootstrap_images",
+        "restore_previous_images",
+        "restore_previous_bootstrap_images"
       ],
       "Remove deployment secrets": [
         "always()",
@@ -366,16 +370,15 @@
     "file": ".github/workflows/deploy-tke-production.yml",
     "job": "live-qa",
     "releaseGate": true,
-    "mode": "one_model_request_per_fixed_slot_no_provider_mutation",
+    "mode": "one_basic_reserved_account_one_dedicated_key_one_model_request_no_provider_mutation",
+    "reservedAccountCount": 1,
+    "dedicatedKeyCount": 1,
+    "modelRequestCount": 1,
     "requestTimeoutMsDefault": 30000,
     "slotDescriptors": [
       {
         "id": "verification-slot-basic-01", "customerProduct": false, "instanceType": "SA5.MEDIUM4", "server": "2c4g",
         "cpu": 2, "memoryGb": 4, "cbsGb": 10, "chargeType": "PREPAID", "periodMonths": 1, "renewFlag": "NOTIFY_AND_MANUAL_RENEW"
-      },
-      {
-        "id": "verification-slot-pro-01", "customerProduct": false, "instanceType": "SA5.2XLARGE16", "server": "8c16g",
-        "cpu": 8, "memoryGb": 16, "cbsGb": 100, "chargeType": "PREPAID", "periodMonths": 1, "renewFlag": "NOTIFY_AND_MANUAL_RENEW"
       }
     ],
     "runner": [
@@ -394,6 +397,7 @@
       "OPL_VERIFY_USAGE_RETRY_DELAY_MS",
       "OPL_VERIFY_BROWSER_TIMEOUT_MS",
       "OPL_VERIFY_MODEL_TIMEOUT_MS",
+      "OPL_VERIFY_EXPECTED_MODEL",
       "OPL_VERIFY_RUN_ID",
       "OPL_VERIFY_LIVE_QA_CONFIRMATION",
       "OPL_VERIFY_MANIFEST_PATH"
@@ -422,6 +426,65 @@
       ],
       "Verify rollout with one Workspace model request": [
         "node tools/production-live-qa.ts"
+      ]
+    },
+    "forbiddenRunTokens": []
+  },
+  "productionBootstrapJob": {
+    "file": ".github/workflows/deploy-tke-production.yml",
+    "job": "bootstrap-readiness",
+    "mode": "endpoints_and_cloud_image_readiness_only",
+    "releaseComplete": false,
+    "approvalEnvironment": "production",
+    "runner": [
+      "ubuntu-latest"
+    ],
+    "inputs": [
+      "bootstrap_mode"
+    ],
+    "requiredEnv": [
+      "OPL_CONSOLE_ORIGIN"
+    ],
+    "steps": [
+      "Set up Node",
+      "Verify bootstrap Cloud readiness remains release incomplete"
+    ],
+    "requiredCommandsByStep": {
+      "Set up Node": [
+        "node-version",
+        "22"
+      ],
+      "Verify bootstrap Cloud readiness remains release incomplete": [
+        "/api/production/readiness",
+        "method: \"GET\"",
+        "cloudImagesReady",
+        "workspaceImagesReady",
+        "immutableImagesReady",
+        "releaseComplete: false",
+        "release incomplete"
+      ]
+    },
+    "forbiddenRunTokens": []
+  },
+  "productionReleaseGateJob": {
+    "file": ".github/workflows/deploy-tke-production.yml",
+    "job": "release-gate",
+    "bootstrapConclusion": "release_incomplete_failure",
+    "runner": [
+      "ubuntu-latest"
+    ],
+    "inputs": [
+      "bootstrap_mode"
+    ],
+    "requiredEnv": [],
+    "steps": [
+      "Require completed ordinary release"
+    ],
+    "requiredCommandsByStep": {
+      "Require completed ordinary release": [
+        "releaseComplete",
+        "release incomplete",
+        "exit 1"
       ]
     },
     "forbiddenRunTokens": []
@@ -478,7 +541,7 @@
   "productionRollbackJob": {
     "file": ".github/workflows/deploy-tke-production.yml",
     "job": "rollback-live-qa",
-    "trigger": "post_snapshot_deploy_or_live_qa_not_successful",
+    "trigger": "post_snapshot_deploy_live_qa_or_bootstrap_readiness_not_successful",
     "runner": [
       "self-hosted",
       "tencent-cloud",
@@ -520,6 +583,7 @@
       "Restore previous Cloud and App images": [
         "source tools/tke-image-rollout.sh",
         "restore_previous_images",
+        "restore_previous_bootstrap_images",
         "complete previous Cloud/App image set"
       ],
       "Remove rollback kubeconfig": [
