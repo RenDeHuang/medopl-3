@@ -983,18 +983,19 @@ func TestRuntimeStatusVerifiesFinalMountAfterPreRuntimeAttachment(t *testing.T) 
 	}}
 	assertUnready("Ready Pod privileged initContainer")
 	delete(podSpec, "initContainers")
-	pods = append(pods, map[string]any{
-		"kind": "Pod",
-		"metadata": map[string]any{"name": "opl-compute-alpha-old", "labels": map[string]any{
-			"app.kubernetes.io/name": "opl-compute-allocation", "app.kubernetes.io/instance": "opl-compute-alpha", "oplcloud.cn/compute-allocation-id": "compute-alpha", "oplcloud.cn/workspace-id": "ws-alpha",
-		}},
-		"spec": map[string]any{
-			"automountServiceAccountToken": false, "dnsPolicy": "ClusterFirst", "securityContext": map[string]any{"runAsNonRoot": true, "runAsUser": 10001, "runAsGroup": 10001, "fsGroup": 10001, "seccompProfile": map[string]any{"type": "RuntimeDefault"}},
-			"containers": []any{map[string]any{"name": "workspace", "image": "workspace-image:test", "securityContext": map[string]any{"privileged": true, "allowPrivilegeEscalation": false, "capabilities": map[string]any{"drop": []any{"ALL"}}}}},
-		},
-		"status": map[string]any{"phase": "Running", "conditions": []any{map[string]any{"type": "Ready", "status": "False"}}},
-	})
+	extraPod := map[string]any{
+		"kind":     "Pod",
+		"metadata": map[string]any{"name": "opl-compute-alpha-old", "labels": podLabels},
+		"spec":     podSpec,
+		"status":   map[string]any{"phase": "Running", "conditions": []any{map[string]any{"type": "Ready", "status": "False"}}},
+	}
+	pods = append(pods, extraPod)
 	assertUnready("additional Running NotReady Workspace Pod")
+	extraPod["status"].(map[string]any)["phase"] = "Succeeded"
+	status, err = provider.WorkspaceRuntimeStatus(context.Background(), "ws-alpha")
+	if err != nil || !status.Ready {
+		t.Fatalf("terminal Workspace Pod must not count against active replicas: status=%#v err=%v", status, err)
+	}
 	pods = pods[:1]
 	deploymentContainer := deployment["spec"].(map[string]any)["template"].(map[string]any)["spec"].(map[string]any)["containers"].([]any)[0].(map[string]any)
 	podContainer := podSpec["containers"].([]any)[0].(map[string]any)
