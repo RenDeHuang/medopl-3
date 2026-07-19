@@ -1258,13 +1258,22 @@ func TestProviderReconcileDoesNotOverwriteManualReview(t *testing.T) {
 
 func TestWorkspaceRuntimeStatusPassesFabricChecksWithoutCredentials(t *testing.T) {
 	calls := []string{}
-	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{calls: &calls}))
+	fabric := &fakeFabricClient{calls: &calls, runtimeStatus: clients.WorkspaceRuntime{
+		ID: "runtime-from-fabric", URL: "https://workspace.medopl.cn/w/ws-from-fabric/", Status: "unready", ServiceName: "opl-compute-from-fabric", Ready: false,
+		Access: clients.WorkspaceRuntimeAccess{Username: "opl", Password: "runtime-password-alpha", CredentialStatus: "configured", CredentialVersion: "v1", SecretRef: "opl-compute-from-fabric-env"},
+		Checks: []any{
+			map[string]any{"name": "deployment_ready", "ok": true},
+			map[string]any{"name": "service_endpoints_ready", "ok": false},
+		},
+	}}
+	server := NewServer(newTestService(fakeLedgerClient{}, fabric))
 	historical := historicalCustomerWriteHandler(t, server)
 	session := tenantOwnerSessionForTest(t, server)
 	compute := createResourceWithSession(t, historical, session, http.MethodPost, "/api/compute-allocations", `{"accountId":"acct-alpha","packageId":"basic"}`)
 	storage := createResourceWithSession(t, historical, session, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10,"computeAllocationId":"`+stringValue(compute["id"])+`"}`)
 	createResourceWithSession(t, historical, session, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"`+stringValue(compute["id"])+`","storageId":"`+stringValue(storage["id"])+`","mountPath":"/data"}`)
 	workspace := createResourceWithSession(t, historical, session, http.MethodPost, "/api/workspaces", `{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
+	fabric.runtimeStatus.WorkspaceID = stringValue(workspace["id"])
 	req := httptest.NewRequest(http.MethodPost, "/api/workspaces/runtime-status", bytes.NewBufferString(`{"workspaceId":"`+stringValue(workspace["id"])+`"}`))
 	req.Header.Set("Content-Type", "application/json")
 	addSessionCookies(req, session)
@@ -1458,8 +1467,7 @@ func TestSessionCredentialRequiresLoginAfterServerRestart(t *testing.T) {
 func TestWorkspaceRuntimeStatePersistsAcrossRestart(t *testing.T) {
 	path := t.TempDir() + "/control-plane-state.sqlite"
 	fabric := &fakeFabricClient{
-		runtime:       clients.WorkspaceRuntime{ID: "runtime-from-fabric", URL: "https://workspace.medopl.cn/w/ws-from-fabric/", Status: "unready", ServiceName: "opl-compute-from-fabric", Ready: false},
-		runtimeStatus: clients.WorkspaceRuntime{ID: "runtime-from-fabric", URL: "https://workspace.medopl.cn/w/ws-from-fabric/", Status: "running", ServiceName: "opl-compute-from-fabric", Ready: true, Checks: []any{}},
+		runtime: clients.WorkspaceRuntime{ID: "runtime-from-fabric", URL: "https://workspace.medopl.cn/w/ws-from-fabric/", Status: "unready", ServiceName: "opl-compute-from-fabric", Ready: false},
 	}
 	service := newTestService(fakeLedgerClient{}, fabric)
 	server, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
@@ -1472,7 +1480,7 @@ func TestWorkspaceRuntimeStatePersistsAcrossRestart(t *testing.T) {
 	storage := createResourceWithSession(t, historical, session, http.MethodPost, "/api/storage-volumes", `{"accountId":"acct-alpha","sizeGb":10,"computeAllocationId":"`+stringValue(compute["id"])+`"}`)
 	createResourceWithSession(t, historical, session, http.MethodPost, "/api/storage-attachments", `{"workspaceId":"ws-alpha","computeAllocationId":"`+stringValue(compute["id"])+`","storageId":"`+stringValue(storage["id"])+`","mountPath":"/data"}`)
 	workspace := createResourceWithSession(t, historical, session, http.MethodPost, "/api/workspaces", `{"accountId":"acct-alpha","ownerId":"usr-owner","workspaceName":"Alpha Lab","attachmentId":"attachment-from-fabric"}`)
-	fabric.runtimeStatus.WorkspaceID = stringValue(workspace["id"])
+	fabric.runtimeStatus = clients.WorkspaceRuntime{ID: "runtime-from-fabric", WorkspaceID: stringValue(workspace["id"]), URL: "https://workspace.medopl.cn/w/ws-from-fabric/", Status: "running", ServiceName: "opl-compute-from-fabric", Ready: true, Checks: []any{}}
 	status := requestWithSession(t, server, session, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"`+stringValue(workspace["id"])+`"}`)
 	if status.Code != http.StatusOK {
 		t.Fatalf("runtime status = %d: %s", status.Code, status.Body.String())
@@ -1793,8 +1801,11 @@ func (unavailableProCatalogFabricClient) Catalog(_ context.Context) (clients.Fab
 type fakeFabricClient struct {
 	calls                *[]string
 	runtime              clients.WorkspaceRuntime
+	runtimeResults       []clients.WorkspaceRuntime
 	runtimeErr           error
+	attachment           clients.StorageAttachment
 	runtimeStatus        clients.WorkspaceRuntime
+	runtimeStatusResults []clients.WorkspaceRuntime
 	gatewaySecret        clients.GatewaySecretWriteResult
 	gatewaySecretErr     error
 	storageDestroyStatus string
@@ -1936,6 +1947,9 @@ func (f *fakeFabricClient) DestroyStorageVolume(_ context.Context, id string, _ 
 
 func (f *fakeFabricClient) CreateStorageAttachment(_ context.Context, input clients.StorageAttachmentInput, _ string) (clients.StorageAttachment, error) {
 	f.record("fabric.attachment")
+	if f.attachment.ID != "" {
+		return f.attachment, nil
+	}
 	return clients.StorageAttachment{ID: "attachment-from-fabric", WorkspaceID: input.WorkspaceID, ComputeID: input.ComputeID, VolumeID: input.VolumeID, Status: "attached", Provider: "tencent-tke", ProviderAttachmentID: "deployment/opl-compute-from-fabric:pvc/volume-from-fabric-data:/data", ProviderRequestID: "attachment-request-from-fabric", MountPath: "/data"}, nil
 }
 
@@ -1962,6 +1976,11 @@ func (f *fakeFabricClient) CreateWorkspaceRuntime(_ context.Context, input clien
 	if f.runtimeErr != nil {
 		return clients.WorkspaceRuntime{}, f.runtimeErr
 	}
+	if len(f.runtimeResults) > 0 {
+		result := f.runtimeResults[0]
+		f.runtimeResults = f.runtimeResults[1:]
+		return result, nil
+	}
 	if f.runtime.ID != "" {
 		return f.runtime, nil
 	}
@@ -1975,8 +1994,28 @@ func (f *fakeFabricClient) DestroyWorkspaceRuntime(_ context.Context, workspaceI
 
 func (f *fakeFabricClient) WorkspaceRuntimeStatus(_ context.Context, workspaceID string) (clients.WorkspaceRuntime, error) {
 	f.record("fabric.runtime-status")
+	if len(f.runtimeStatusResults) > 0 {
+		result := f.runtimeStatusResults[0]
+		f.runtimeStatusResults = f.runtimeStatusResults[1:]
+		return result, nil
+	}
 	if f.runtimeStatus.ID != "" {
-		return f.runtimeStatus, nil
+		result := f.runtimeStatus
+		if result.WorkspaceID == "" {
+			result.WorkspaceID = workspaceID
+		}
+		return result, nil
+	}
+	if f.runtime.ID != "" {
+		result := f.runtime
+		if result.WorkspaceID == "" {
+			result.WorkspaceID = workspaceID
+		}
+		return result, nil
+	}
+	if len(f.runtimeInputs) > 0 {
+		input := f.runtimeInputs[len(f.runtimeInputs)-1]
+		return clients.WorkspaceRuntime{ID: "runtime-from-fabric", WorkspaceID: input.WorkspaceID, URL: "https://workspace.medopl.cn/w/ws-from-fabric/", Status: "running", ServiceName: "opl-compute-from-fabric", Access: clients.WorkspaceRuntimeAccess{Username: "admin", Password: "runtime-password-alpha", CredentialStatus: "configured", CredentialVersion: "v1", SecretRef: "opl-compute-from-fabric-env"}, Ready: true}, nil
 	}
 	return clients.WorkspaceRuntime{
 		ID:          "runtime-from-fabric",

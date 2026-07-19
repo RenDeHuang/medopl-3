@@ -278,19 +278,15 @@ func prepareWorkspaceActivation(row, owner, compute, storage, attachment, existi
 	state := workspaceAcceptedBillingState(row)
 	accountID, ownerID, workspaceID := firstNonEmpty(stringValue(row["accountId"]), stringValue(row["ownerAccountId"])), stringValue(row["ownerUserId"]), stringValue(row["id"])
 	computeID, storageID, attachmentID := stringValue(row["currentComputeAllocationId"]), stringValue(row["storageId"]), stringValue(row["currentAttachmentId"])
-	paidThrough, paidErr := time.Parse(time.RFC3339, stringValue(state["paidThrough"]))
-	computePaidThrough, computePaidErr := time.Parse(time.RFC3339, stringValue(compute["paidThrough"]))
-	storagePaidThrough, storagePaidErr := time.Parse(time.RFC3339, stringValue(storage["paidThrough"]))
 	if state == nil || accountID == "" || ownerID == "" || workspaceID == "" || computeID == "" || storageID == "" || attachmentID == "" ||
 		stringValue(compute["id"]) != computeID || stringValue(storage["id"]) != storageID || stringValue(attachment["id"]) != attachmentID ||
 		stringValue(compute["accountId"]) != accountID || stringValue(storage["accountId"]) != accountID || stringValue(attachment["accountId"]) != accountID ||
 		stringValue(compute["ownerUserId"]) != ownerID || stringValue(storage["ownerUserId"]) != ownerID ||
 		stringValue(compute["workspaceId"]) != workspaceID || stringValue(storage["workspaceId"]) != workspaceID || stringValue(attachment["workspaceId"]) != workspaceID ||
-		stringValue(compute["billingStatus"]) != "active" || stringValue(storage["billingStatus"]) != "active" ||
 		!workspaceActivationStatus(stringValue(compute["status"]), "compute") || !workspaceActivationStatus(stringValue(storage["status"]), "storage") || !workspaceActivationStatus(stringValue(attachment["status"]), "attachment") ||
 		firstNonEmpty(stringValue(attachment["computeAllocationId"]), stringValue(attachment["computeId"])) != computeID ||
 		firstNonEmpty(stringValue(attachment["storageId"]), stringValue(attachment["volumeId"])) != storageID ||
-		paidErr != nil || computePaidErr != nil || storagePaidErr != nil || computePaidThrough.Before(paidThrough) || storagePaidThrough.Before(paidThrough) {
+		!workspaceResourceCoversEntitlement("compute", compute, state) || !workspaceResourceCoversEntitlement("storage", storage, state) {
 		return nil, errWorkspaceActivationConflict
 	}
 	if stringValue(owner["id"]) != ownerID || stringValue(owner["accountId"]) != accountID || stringValue(owner["status"]) != "active" || stringValue(owner["role"]) != "owner" {
@@ -301,6 +297,30 @@ func prepareWorkspaceActivation(row, owner, compute, storage, attachment, existi
 		return nil, errWorkspaceActivationConflict
 	}
 	return row, nil
+}
+
+func workspaceResourceCoversEntitlement(resourceType string, resource, state map[string]any) bool {
+	paidThrough, paidErr := time.Parse(time.RFC3339, stringValue(state["paidThrough"]))
+	if paidErr != nil {
+		return false
+	}
+	if stringValue(resource["billingStatus"]) == "active" {
+		resourcePaidThrough, err := time.Parse(time.RFC3339, stringValue(resource["paidThrough"]))
+		return err == nil && !resourcePaidThrough.Before(paidThrough)
+	}
+	for _, key := range []string{"billingOperationId", "sub2apiRedeemCode", "chargeUsdMicros", "priceVersion", "periodStart", "paidThrough"} {
+		if _, exists := resource[key]; exists {
+			return false
+		}
+	}
+	expected := map[string]any{
+		"packageId": state["packageId"], "periodStart": state["periodStart"], "paidThrough": state["paidThrough"],
+		"zone": firstNonEmpty(stringValue(resource["zone"]), providerDataValue(resource, "zone")),
+	}
+	if resourceType == "storage" {
+		expected["sizeGb"] = state["storageGb"]
+	}
+	return monthlyPurchaseReadbackConfirmed(resourceType, expected, resource)
 }
 
 func workspaceActivationStatus(status, kind string) bool {

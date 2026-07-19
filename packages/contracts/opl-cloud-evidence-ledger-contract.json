@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 10,
+  "schemaVersion": 11,
   "owner": "OPL Ledger",
   "purpose": "General execution, monthly billing, and current control-plane lifecycle evidence receipts.",
   "state": "current",
@@ -313,6 +313,11 @@
       "resourceId",
       "components"
     ],
+    "purchasedAdditionalCostFields": [
+      "sub2apiUserId",
+      "sub2apiRedeemCode",
+      "postChargeBalanceUsdMicros"
+    ],
     "renewedAdditionalCostFields": [
       "sub2apiUserId",
       "sub2apiRedeemCode",
@@ -328,6 +333,22 @@
       "compute": ["resourceType", "resourceId", "chargeUsdMicros"],
       "storage": ["resourceType", "resourceId", "sizeGb", "chargeUsdMicros"]
     },
+    "purchasedRequiredExecutionFields": [
+      "computeAllocationId",
+      "storageId"
+    ],
+    "purchasedOptionalExecutionFields": [
+      "attachmentId",
+      "workspaceApiKeyId",
+      "runtimeId"
+    ],
+    "customerProjectionForbiddenFields": [
+      "computeReadback",
+      "storageReadback",
+      "workspaceKeyFingerprint",
+      "runtimeServiceName",
+      "secretRef"
+    ],
     "rules": [
       "currency is USD and billingUnit is calendar_month",
       "resourceType is workspace",
@@ -339,7 +360,10 @@
       "refunded receipts require the original debit identity, a stable refund identity, and refundUsdMicros equal to totalUsdMicros"
     ],
     "writeProtocol": "append_first_with_idempotency",
-    "forbiddenContentRule": "same recursive case-insensitive exact-key rejection as general receipts"
+    "launchTerminalCardinality": "exactly_one_purchased_or_refunded_workspace_receipt",
+    "forbiddenContentRule": "same recursive case-insensitive exact-key rejection as general receipts",
+    "implementation": "validator_writer_and_customer_projection_code_complete_local_tests_only",
+    "realEnvironmentEvidence": "pending_owner_approved_acceptance"
   },
   "reconciliationReportV1": {
     "recordApi": "POST /ledger/reconciliation",

@@ -433,8 +433,12 @@ export interface WorkspaceBillingReceiptDTO {
   periodStart: string;
   paidThrough: string;
   totalUsdMicros: number;
-  chargeReference: string;
-  fulfillment: {
+  chargeReference?: string;
+  components: {
+    compute: { resourceType: "compute"; resourceId: string; chargeUsdMicros: number };
+    storage: { resourceType: "storage"; resourceId: string; sizeGb: number; chargeUsdMicros: number };
+  };
+  fulfillment?: {
     computeAllocationId: string;
     storageId: string;
     attachmentId?: string;

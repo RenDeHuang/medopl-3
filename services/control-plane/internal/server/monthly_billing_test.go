@@ -216,6 +216,7 @@ type monthlyFabric struct {
 	storageInputs         []clients.StorageVolumeInput
 	computeSync           clients.ComputeAllocation
 	storageSync           clients.StorageVolume
+	storageSyncErr        error
 	computeRenew          clients.ComputeAllocation
 	storageRenew          clients.StorageVolume
 	computeRenewErr       error
@@ -352,6 +353,9 @@ func (f *monthlyFabric) SyncStorageVolume(_ context.Context, id string) (clients
 	result := f.storageSync
 	if result.ID == "" {
 		result.ID = id
+	}
+	if f.storageSyncErr != nil {
+		return result, f.storageSyncErr
 	}
 	return result, f.syncErr
 }

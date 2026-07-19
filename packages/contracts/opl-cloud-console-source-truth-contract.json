@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "owner": "OPL Console Control Plane",
   "purpose": "Strict source envelopes and customer-safe live projections for Console source-of-truth APIs.",
   "state": "current",
@@ -29,6 +29,7 @@
   "implementationEvidence": {
     "gatewayEndpointAndGeneralKeys": "code_complete_local_focused_tests",
     "operatorProjection": "code_complete_local_focused_tests",
+    "workspaceBillingReceipts": "purchased_components_and_fulfillment_projection_code_complete_local_tests",
     "browserAndProduction": "pending"
   },
   "sources": {
@@ -282,13 +283,18 @@
         "authority": "live_ledger_readback",
         "identity": "session_account",
         "ignoredIdentityInputs": ["accountId"],
-        "itemFields": ["receiptId", "type", "status", "workspaceId", "createdAt", "resourceType", "resourceId", "priceVersion", "currency", "periodStart", "paidThrough"],
+        "itemFields": ["receiptId", "type", "status", "workspaceId", "createdAt", "resourceType", "resourceId", "priceVersion", "currency", "periodStart", "paidThrough", "totalUsdMicros", "chargeReference", "components", "fulfillment", "refundUsdMicros"],
         "moneyFieldsByType": {
           "resource": ["chargeUsdMicros"],
+          "workspacePurchased": ["totalUsdMicros"],
           "workspaceRenewed": ["totalUsdMicros"],
           "workspaceExpired": ["totalUsdMicros"],
           "workspaceRefunded": ["totalUsdMicros", "refundUsdMicros"]
-        },
+      },
+      "workspaceChargeReferenceTypes": ["billing.workspace_purchased.v1", "billing.workspace_renewed.v1", "billing.workspace_refunded.v1"],
+      "workspaceFulfillmentReceiptTypes": ["billing.workspace_purchased.v1", "billing.workspace_renewed.v1"],
+      "workspaceFulfillmentFields": ["computeAllocationId", "storageId", "attachmentId", "workspaceApiKeyId", "runtimeId"],
+        "rawProviderReadback": false,
         "nonBillingRows": "ignore_without_projection",
         "tenantMismatch": "whole_source_unavailable",
         "malformedBillingReceipt": "whole_source_unavailable",

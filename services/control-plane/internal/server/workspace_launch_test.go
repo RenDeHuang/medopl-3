@@ -569,13 +569,23 @@ type workspaceLaunchLedger struct {
 	fakeLedgerClient
 	events                *[]string
 	receipts              map[string]clients.Receipt
+	receiptInputs         []clients.ReceiptInput
+	receiptErrors         []error
 	workspaceReceiptCalls int
 }
 
 func (l *workspaceLaunchLedger) RecordReceipt(_ context.Context, input clients.ReceiptInput, key string) (clients.Receipt, error) {
+	l.receiptInputs = append(l.receiptInputs, input)
 	if input.Type == "workspace.created" {
 		*l.events = append(*l.events, "ledger.workspace.receipt")
 		l.workspaceReceiptCalls++
+	}
+	if len(l.receiptErrors) > 0 {
+		err := l.receiptErrors[0]
+		l.receiptErrors = l.receiptErrors[1:]
+		if err != nil {
+			return clients.Receipt{}, err
+		}
 	}
 	if receipt, ok := l.receipts[key]; ok {
 		return receipt, nil
@@ -858,6 +868,298 @@ func TestWorkspaceLaunchSingleTotalDebit(t *testing.T) {
 	}
 }
 
+func configureWorkspaceLaunchFulfillment(t *testing.T, fixture workspaceLaunchWorkerFixture) workspaceLaunchOperation {
+	t.Helper()
+	operation := fixture.operation(t)
+	fixture.fabric.computeSync = clients.ComputeAllocation{
+		ID: operation.ComputeID, AccountID: operation.AccountID, WorkspaceID: operation.WorkspaceID, PackageID: operation.PackageID,
+		Status: "running", Provider: "tencent-tke", ProviderResourceID: "ins-" + operation.ComputeID, ProviderRequestID: "req-" + operation.ComputeID,
+		InstanceID: "ins-" + operation.ComputeID, InstanceType: "S5.MEDIUM4", Zone: "ap-shanghai-2", ChargeType: "PREPAID",
+		RenewFlag: "NOTIFY_AND_MANUAL_RENEW", Deadline: "2099-01-01T00:00:00Z", ProviderData: map[string]string{"zone": "ap-shanghai-2", "instanceType": "S5.MEDIUM4"},
+	}
+	fixture.fabric.storageSync = clients.StorageVolume{
+		ID: operation.StorageID, AccountID: operation.AccountID, WorkspaceID: operation.WorkspaceID, Status: "available",
+		Provider: "tencent-tke", ProviderResourceID: "disk-" + operation.StorageID, ProviderRequestID: "req-" + operation.StorageID,
+		SizeGB: operation.StorageGB, CBSStatus: "UNATTACHED", DiskType: "CLOUD_PREMIUM", RenewFlag: "NOTIFY_AND_MANUAL_RENEW",
+		Deadline: "2099-01-01T00:00:00Z", Zone: "ap-shanghai-2", ProviderData: map[string]string{"chargeType": "PREPAID"},
+	}
+	return operation
+}
+
+func TestWorkspaceLaunchFulfillmentOnly(t *testing.T) {
+	fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+	configureWorkspaceLaunchFulfillment(t, fixture)
+	if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+		t.Fatal(err)
+	}
+
+	operation := fixture.operation(t)
+	if operation.Status != "succeeded" || operation.Phase != "succeeded" || operation.AttachmentID == "" || operation.RuntimeServiceName == "" || operation.URL == "" {
+		t.Fatalf("fulfilled launch=%#v", operation)
+	}
+	if len(fixture.sub2API.charges) != 1 || fixture.sub2API.charges[0].ChargeUSDMicros != 52_580_000 || len(fixture.sub2API.refunds) != 0 {
+		t.Fatalf("Workspace billing calls: charges=%#v refunds=%#v", fixture.sub2API.charges, fixture.sub2API.refunds)
+	}
+	if len(fixture.fabric.computeIDs) != 1 || len(fixture.fabric.storageIDs) != 1 || countStrings(*fixture.events, "fabric.compute.sync") != 1 || countStrings(*fixture.events, "fabric.storage.sync") != 1 ||
+		countStrings(*fixture.events, "fabric.attachment") != 1 || countStrings(*fixture.events, "fabric.gateway-secret") != 1 || countStrings(*fixture.events, "fabric.runtime") != 1 {
+		t.Fatalf("fulfillment events=%#v", *fixture.events)
+	}
+	computes, _ := fixture.store.ListComputes(context.Background(), operation.AccountID)
+	storages, _ := fixture.store.ListStorages(context.Background(), operation.AccountID)
+	if len(computes) != 1 || len(storages) != 1 {
+		t.Fatalf("fulfilled resources: computes=%#v storages=%#v", computes, storages)
+	}
+	for _, row := range []map[string]any{computes[0], storages[0]} {
+		for _, forbidden := range []string{"billingOperationId", "sub2apiRedeemCode", "chargeUsdMicros", "priceVersion"} {
+			if _, ok := row[forbidden]; ok {
+				t.Fatalf("resource retained customer billing field %s: %#v", forbidden, row)
+			}
+		}
+	}
+}
+
+func TestWorkspaceLaunchSingleReceipt(t *testing.T) {
+	fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+	expected := configureWorkspaceLaunchFulfillment(t, fixture)
+	for range 2 {
+		if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(fixture.ledger.receiptInputs) != 1 {
+		t.Fatalf("launch receipts=%#v", fixture.ledger.receiptInputs)
+	}
+	receipt := fixture.ledger.receiptInputs[0]
+	if receipt.Type != "billing.workspace_purchased.v1" || receipt.AccountID != expected.AccountID || receipt.WorkspaceID != expected.WorkspaceID || receipt.RequestID != expected.ID {
+		t.Fatalf("Workspace purchase receipt=%#v", receipt)
+	}
+	if receipt.Cost["priceVersion"] != pilotPriceVersion || receipt.Cost["currency"] != "USD" || receipt.Cost["billingUnit"] != "calendar_month" ||
+		receipt.Cost["totalUsdMicros"] != int64(52_580_000) || receipt.Cost["sub2apiRedeemCode"] != expected.RedeemCode ||
+		stringValue(receipt.Cost["periodStart"]) == "" || stringValue(receipt.Cost["paidThrough"]) == "" {
+		t.Fatalf("Workspace purchase cost=%#v", receipt.Cost)
+	}
+	components := mapField(receipt.Cost, "components")
+	if numberField(mapField(components, "compute"), "chargeUsdMicros", 0) != 50_000_000 || numberField(mapField(components, "storage"), "chargeUsdMicros", 0) != 2_580_000 {
+		t.Fatalf("Workspace purchase components=%#v", components)
+	}
+	if receipt.Execution["computeAllocationId"] != expected.ComputeID || receipt.Execution["storageId"] != expected.StorageID ||
+		stringValue(receipt.Execution["attachmentId"]) == "" || stringValue(receipt.Execution["runtimeId"]) == "" {
+		t.Fatalf("Workspace purchase fulfillment=%#v", receipt.Execution)
+	}
+}
+
+func TestWorkspaceLaunchCreateResponseLossConvergesFromReadback(t *testing.T) {
+	fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+	configureWorkspaceLaunchFulfillment(t, fixture)
+	fixture.fabric.createErr = errors.New("Fabric create response lost")
+	for range 2 {
+		if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+			t.Fatal(err)
+		}
+	}
+	operation := fixture.operation(t)
+	if operation.Status != "succeeded" || operation.Phase != "succeeded" || len(fixture.sub2API.refunds) != 0 || len(fixture.ledger.receiptInputs) != 1 {
+		t.Fatalf("response-loss launch=%#v refunds=%#v receipts=%#v", operation, fixture.sub2API.refunds, fixture.ledger.receiptInputs)
+	}
+}
+
+func TestWorkspaceLaunchRuntimeReadinessWaits(t *testing.T) {
+	fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+	operation := configureWorkspaceLaunchFulfillment(t, fixture)
+	runtime := clients.WorkspaceRuntime{
+		ID: "runtime-from-fabric", WorkspaceID: operation.WorkspaceID, URL: "https://workspace.medopl.cn/w/" + operation.WorkspaceID + "/",
+		Status: "starting", ServiceName: "opl-compute-from-fabric",
+		Access: clients.WorkspaceRuntimeAccess{Username: "admin", CredentialStatus: "configured", CredentialVersion: "v1", SecretRef: "opl-compute-from-fabric-env"},
+	}
+	ready := runtime
+	ready.Status, ready.Ready = "running", true
+	fixture.fabric.runtime = runtime
+	fixture.fabric.runtimeStatusResults = []clients.WorkspaceRuntime{runtime, ready}
+	if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+		t.Fatal(err)
+	}
+	waiting := fixture.operation(t)
+	workspaces, _ := fixture.store.ListWorkspaces(context.Background(), operation.AccountID)
+	if waiting.Status != "waiting" || waiting.Phase != "runtime_starting" || len(workspaces) != 0 || len(fixture.ledger.receiptInputs) != 0 {
+		t.Fatalf("unready runtime launch=%#v workspaces=%#v receipts=%#v", waiting, workspaces, fixture.ledger.receiptInputs)
+	}
+	beforeEvents := append([]string(nil), (*fixture.events)...)
+	if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+		t.Fatal(err)
+	}
+	completed := fixture.operation(t)
+	if completed.Status != "succeeded" || completed.Phase != "succeeded" || len(fixture.fabric.runtimeInputs) != 2 || countStrings(*fixture.events, "fabric.runtime-status") != 2 || len(fixture.ledger.receiptInputs) != 1 {
+		t.Fatalf("ready runtime launch=%#v runtime calls=%#v receipts=%#v", completed, fixture.fabric.runtimeInputs, fixture.ledger.receiptInputs)
+	}
+	for _, event := range []string{"fabric.compute.prepare", "fabric.compute.sync", "fabric.storage.prepare", "fabric.storage.sync", "fabric.attachment", "fabric.gateway-secret"} {
+		if countStrings(*fixture.events, event) != countStrings(beforeEvents, event) {
+			t.Fatalf("runtime readiness retry repeated %s: before=%#v after=%#v", event, beforeEvents, *fixture.events)
+		}
+	}
+}
+
+func TestWorkspaceLaunchRuntimeReadbackDoesNotBackfillAuthority(t *testing.T) {
+	fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+	operation := configureWorkspaceLaunchFulfillment(t, fixture)
+	fixture.fabric.runtime = clients.WorkspaceRuntime{
+		ID: "runtime-from-create", WorkspaceID: operation.WorkspaceID, URL: "https://workspace.medopl.cn/w/" + operation.WorkspaceID + "/",
+		Status: "running", ServiceName: "opl-compute-from-create", Ready: true,
+		Access: clients.WorkspaceRuntimeAccess{Username: "admin", CredentialStatus: "configured", CredentialVersion: "v1", SecretRef: "runtime-secret-from-create"},
+	}
+	fixture.fabric.runtimeStatusResults = []clients.WorkspaceRuntime{{WorkspaceID: operation.WorkspaceID, Status: "running", Ready: true}}
+	for range 2 {
+		_ = fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service)
+	}
+
+	current := fixture.operation(t)
+	workspaces, _ := fixture.store.ListWorkspaces(context.Background(), operation.AccountID)
+	if current.Status != "manual_review" || current.ErrorCode != "workspace_launch_runtime_readback_invalid" || len(workspaces) != 0 || len(fixture.ledger.receiptInputs) != 0 {
+		t.Fatalf("partial Runtime readback launch=%#v workspaces=%#v receipts=%#v", current, workspaces, fixture.ledger.receiptInputs)
+	}
+}
+
+func TestWorkspaceLaunchAttachmentAllowsProviderDTOWithoutMountPath(t *testing.T) {
+	fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+	operation := configureWorkspaceLaunchFulfillment(t, fixture)
+	fixture.fabric.attachment = clients.StorageAttachment{
+		ID: "attachment-from-tencent", WorkspaceID: operation.WorkspaceID, ComputeID: operation.ComputeID, VolumeID: operation.StorageID,
+		Status: "attached", Provider: "tencent-tke", ProviderAttachmentID: "deployment/runtime:pvc/storage", ProviderRequestID: "request-from-tencent",
+	}
+	for range 2 {
+		if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+			t.Fatal(err)
+		}
+	}
+	completed := fixture.operation(t)
+	if completed.Status != "succeeded" || completed.AttachmentID != "attachment-from-tencent" {
+		t.Fatalf("Tencent attachment launch=%#v", completed)
+	}
+	attachments, _ := fixture.store.ListAttachments(context.Background(), operation.AccountID)
+	if len(attachments) != 1 || stringValue(attachments[0]["providerAttachmentId"]) == "" || stringValue(attachments[0]["mountPath"]) != "/data" {
+		t.Fatalf("attachment projection=%#v", attachments)
+	}
+}
+
+func TestWorkspaceLaunchRefundWhenNoResources(t *testing.T) {
+	fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+	operation := fixture.operation(t)
+	fixture.fabric.createErr = errors.New("compute create response lost")
+	fixture.fabric.computeSync = clients.ComputeAllocation{
+		ID: operation.ComputeID, AccountID: operation.AccountID, WorkspaceID: operation.WorkspaceID, Status: "external_deleted",
+	}
+	fixture.fabric.storageSyncErr = &clients.FabricHTTPError{StatusCode: http.StatusInternalServerError, Body: `{"error":"storage_volume_not_found"}`}
+	if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+		t.Fatal(err)
+	}
+	refunded := fixture.operation(t)
+	if refunded.Status != "refunded" || refunded.Phase != "refunded" || len(fixture.sub2API.refunds) != 1 || fixture.sub2API.refunds[0].RefundUSDMicros != 52_580_000 {
+		t.Fatalf("refunded launch=%#v refunds=%#v", refunded, fixture.sub2API.refunds)
+	}
+	if len(fixture.fabric.storageIDs) != 0 || countStrings(*fixture.events, "fabric.storage.sync") != 1 || countStrings(*fixture.events, "fabric.attachment") != 0 || countStrings(*fixture.events, "fabric.runtime") != 0 {
+		t.Fatalf("absent compute crossed fulfillment: events=%#v", *fixture.events)
+	}
+	if len(fixture.ledger.receiptInputs) != 1 || fixture.ledger.receiptInputs[0].Type != "billing.workspace_refunded.v1" {
+		t.Fatalf("refund receipts=%#v", fixture.ledger.receiptInputs)
+	}
+	if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil || len(fixture.sub2API.refunds) != 1 || len(fixture.ledger.receiptInputs) != 1 {
+		t.Fatalf("refund replay err=%v refunds=%#v receipts=%#v", err, fixture.sub2API.refunds, fixture.ledger.receiptInputs)
+	}
+}
+
+func TestWorkspaceLaunchComputeAbsentRequiresAuthoritativeStorageAbsenceBeforeRefund(t *testing.T) {
+	for _, tc := range []struct {
+		name, wantCode string
+		err            error
+	}{
+		{name: "present", wantCode: "fabric_storage_presence_blocks_refund"},
+		{name: "readback unavailable", wantCode: "fabric_storage_readback_unconfirmed_blocks_refund", err: errors.New("Fabric storage readback unavailable")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+			operation := fixture.operation(t)
+			fixture.fabric.createErr = errors.New("compute create response lost")
+			fixture.fabric.computeSync = clients.ComputeAllocation{
+				ID: operation.ComputeID, AccountID: operation.AccountID, WorkspaceID: operation.WorkspaceID, Status: "external_deleted",
+			}
+			fixture.fabric.storageSyncErr = tc.err
+			if tc.name == "present" {
+				fixture.fabric.storageSync = clients.StorageVolume{
+					ID: operation.StorageID, AccountID: operation.AccountID, WorkspaceID: operation.WorkspaceID, Status: "available",
+					Provider: "tencent-tke", ProviderResourceID: "disk-" + operation.StorageID, CBSStatus: "UNATTACHED",
+				}
+			}
+			for range 2 {
+				_ = fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service)
+			}
+
+			current := fixture.operation(t)
+			if current.Status != "manual_review" || current.ErrorCode != tc.wantCode || len(fixture.sub2API.refunds) != 0 || countStrings(*fixture.events, "fabric.storage.sync") != 1 {
+				t.Fatalf("storage recovery=%#v refunds=%#v events=%#v", current, fixture.sub2API.refunds, *fixture.events)
+			}
+		})
+	}
+}
+
+func TestWorkspaceLaunchPartialResourceManualReview(t *testing.T) {
+	fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+	operation := configureWorkspaceLaunchFulfillment(t, fixture)
+	fixture.fabric.storageSync = clients.StorageVolume{
+		ID: operation.StorageID, AccountID: operation.AccountID, WorkspaceID: operation.WorkspaceID, Status: "external_deleted", CBSStatus: "NOT_FOUND",
+	}
+	if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+		t.Fatal(err)
+	}
+	_ = fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service)
+	partial := fixture.operation(t)
+	if partial.Status != "manual_review" || partial.Phase != "storage_fulfilling" || len(fixture.sub2API.refunds) != 0 {
+		t.Fatalf("partial launch=%#v refunds=%#v", partial, fixture.sub2API.refunds)
+	}
+	workspaces, _ := fixture.store.ListWorkspaces(context.Background(), operation.AccountID)
+	if len(workspaces) != 0 || countStrings(*fixture.events, "fabric.attachment") != 0 || countStrings(*fixture.events, "fabric.runtime") != 0 || len(fixture.ledger.receiptInputs) != 0 {
+		t.Fatalf("partial launch crossed activation: workspaces=%#v events=%#v receipts=%#v", workspaces, *fixture.events, fixture.ledger.receiptInputs)
+	}
+}
+
+func TestWorkspaceLaunchReceiptRetry(t *testing.T) {
+	fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+	configureWorkspaceLaunchFulfillment(t, fixture)
+	fixture.ledger.receiptErrors = []error{errors.New("Ledger unavailable"), nil}
+	if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err == nil {
+		t.Fatal("first Ledger failure was not returned")
+	}
+	pending := fixture.operation(t)
+	workspaces, _ := fixture.store.ListWorkspaces(context.Background(), pending.AccountID)
+	if pending.Phase != "receipt_pending" || pending.Status != "retryable" || len(workspaces) != 1 || stringValue(workspaces[0]["runtimeId"]) == "" || len(fixture.ledger.receiptInputs) != 1 {
+		t.Fatalf("receipt pending launch=%#v workspaces=%#v receipts=%#v", pending, workspaces, fixture.ledger.receiptInputs)
+	}
+	beforeEvents := append([]string(nil), (*fixture.events)...)
+	beforeCharges := len(fixture.sub2API.charges)
+	if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+		t.Fatal(err)
+	}
+	completed := fixture.operation(t)
+	if completed.Status != "succeeded" || completed.Phase != "succeeded" || len(fixture.ledger.receiptInputs) != 2 || len(fixture.sub2API.charges) != beforeCharges {
+		t.Fatalf("receipt retry launch=%#v charges=%#v receipts=%#v", completed, fixture.sub2API.charges, fixture.ledger.receiptInputs)
+	}
+	for _, event := range []string{"fabric.compute.prepare", "fabric.compute.sync", "fabric.storage.prepare", "fabric.storage.sync", "fabric.attachment", "fabric.gateway-secret", "fabric.runtime"} {
+		if countStrings(*fixture.events, event) != countStrings(beforeEvents, event) {
+			t.Fatalf("receipt retry repeated %s: before=%#v after=%#v", event, beforeEvents, *fixture.events)
+		}
+	}
+}
+
 func TestWorkspaceLaunchNoFabricBeforeDebit(t *testing.T) {
 	fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000}, []error{clients.ErrSub2APIChargeUnknown}, nil)
 	err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service)
@@ -898,6 +1200,7 @@ func TestWorkspaceLaunchRestartRecoversLostDebitResponse(t *testing.T) {
 
 func TestWorkspaceLaunchConcurrentWorkers(t *testing.T) {
 	fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000}, nil, nil)
+	configureWorkspaceLaunchFulfillment(t, fixture)
 	gateway := &durableWorkspaceLaunchSub2API{
 		workspaceLaunchSub2API: fixture.sub2API, balance: 1_000_000_000,
 		appliedCharges: map[string]clients.Sub2APIChargeInput{},
@@ -922,7 +1225,8 @@ func TestWorkspaceLaunchConcurrentWorkers(t *testing.T) {
 		}
 	}
 	operation := fixture.operation(t)
-	if operation.Status != "debited" || operation.Phase != "debited" || len(gateway.chargeCalls) != 1 || gateway.chargeCalls[0].ChargeUSDMicros != 52_580_000 {
+	settled := operation.Status == "debited" && operation.Phase == "debited" || operation.Status == "succeeded" && operation.Phase == "succeeded"
+	if !settled || len(gateway.chargeCalls) != 1 || gateway.chargeCalls[0].ChargeUSDMicros != 52_580_000 {
 		t.Fatalf("concurrent operation=%#v calls=%#v", operation, gateway.chargeCalls)
 	}
 }

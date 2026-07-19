@@ -196,6 +196,29 @@ func TestWorkspaceBillingReceiptSchemaHTTP(t *testing.T) {
 	}
 }
 
+func TestWorkspacePurchasedReceipt(t *testing.T) {
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	body := `{"type":"billing.workspace_purchased.v1","status":"completed","surface":"control_plane","accountId":"acct-alpha","workspaceId":"workspace-alpha","cost":{"priceVersion":"pilot-usd-2026-07-v1","currency":"USD","billingUnit":"calendar_month","totalUsdMicros":52580000,"sub2apiUserId":41,"sub2apiRedeemCode":"opl:workspace-launch:charge:v1","postChargeBalanceUsdMicros":947420000,"periodStart":"2026-07-20T00:00:00Z","paidThrough":"2026-08-20T00:00:00Z","resourceType":"workspace","resourceId":"workspace-alpha","components":{"compute":{"resourceType":"compute","resourceId":"compute-alpha","chargeUsdMicros":50000000},"storage":{"resourceType":"storage","resourceId":"storage-alpha","sizeGb":10,"chargeUsdMicros":2580000}}}}`
+	post := func(key, payload string) *httptest.ResponseRecorder {
+		t.Helper()
+		req := testRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(payload))
+		req.Header.Set("Idempotency-Key", key)
+		rec := httptest.NewRecorder()
+		server.ServeHTTP(rec, req)
+		return rec
+	}
+
+	if rec := post("workspace-purchased", body); rec.Code != http.StatusCreated {
+		t.Fatalf("valid Workspace purchase receipt status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if rec := post("workspace-purchased-total-mismatch", strings.Replace(body, `"totalUsdMicros":52580000`, `"totalUsdMicros":52579999`, 1)); rec.Code != http.StatusBadRequest {
+		t.Fatalf("mismatched Workspace purchase receipt status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if rec := post("workspace-purchased-cross-workspace", strings.Replace(body, `"resourceId":"workspace-alpha"`, `"resourceId":"workspace-other"`, 1)); rec.Code != http.StatusBadRequest {
+		t.Fatalf("cross-Workspace purchase receipt status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestReceiptHTTPPreservesLargeIntegerCost(t *testing.T) {
 	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
 	req := testRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(`{"type":"billing.resource_purchased.v1","status":"completed","surface":"control_plane","workspaceId":"workspace-alpha","cost":{"pricingVersion":"pricing-v1","monthlyPriceCnyCents":9007199254740993,"chargeUsdMicros":50000000,"sub2apiUserId":41,"sub2apiRedeemCode":"opl:test:billing-alpha:charge:v1","periodStart":"2026-07-01T00:00:00Z","paidThrough":"2026-08-01T00:00:00Z","resourceType":"compute","resourceId":"compute-alpha"}}`))

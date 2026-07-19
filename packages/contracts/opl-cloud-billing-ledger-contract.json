@@ -1,9 +1,9 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "owner": "OPL Control Plane",
   "purpose": "One-charge Workspace purchase and renewal, fulfillment, entitlement, receipt, wallet-adjustment reference, and reconciliation ownership contract.",
   "state": "current",
-  "machineBoundary": "Sub2API owns spendable USD balance; Control Plane owns resource charge operations and monthly entitlement; Ledger owns append-only evidence receipts and reconciliation reports.",
+  "machineBoundary": "Sub2API owns spendable USD balance; Control Plane owns the single Workspace charge operation and monthly entitlement; Fabric owns provider fulfillment; Ledger owns append-only evidence receipts and reconciliation reports.",
   "lifecycle": {
     "type": "long_term_contract",
     "removalCondition": "Replace only with a newer current contract for the same ownership boundary."
@@ -27,9 +27,21 @@
     "unit": "usd_micros",
     "writeType": "negative_redeem_code",
     "idempotencyIdentity": "opl:<environment>:<billing-operation-id>:charge:v1",
-    "activationRule": "Grant or extend entitlement only after the redeem record and post-charge balance are confirmed.",
+    "activationRule": "Grant or extend entitlement only after the redeem record, post-charge balance, provider resources, attachment, Secret, and Runtime readiness are confirmed.",
     "ambiguousResult": "manual_review",
     "automaticPositiveAdjustment": false
+  },
+  "workspaceLaunchFulfillment": {
+    "customerChargeOperations": ["workspace_debit", "workspace_refund"],
+    "resourcePurchasePath": "fabric_create_and_sync_without_customer_debit",
+    "providerMutationOwner": "fabric",
+    "successReceiptType": "billing.workspace_purchased.v1",
+    "refundReceiptType": "billing.workspace_refunded.v1",
+    "confirmedNoResource": "one_idempotent_workspace_refund",
+    "partialOrUnknownResource": "manual_review_without_refund",
+    "ledgerFailureAfterActivation": "retry_receipt_only",
+    "implementation": "code_complete_local_tests_only",
+    "realEnvironmentEvidence": "pending_owner_approved_acceptance"
   },
   "walletAdjustmentEvidence": {
     "kinds": ["recharge", "debit", "business_refund"],
@@ -67,6 +79,16 @@
       "periodStart",
       "paidThrough",
       "autoRenew"
+    ],
+    "resourceCompatibilityFieldsStatus": "historical_rows_only",
+    "newWorkspaceFulfillmentCustomerBillingFields": [],
+    "newWorkspaceFulfillmentForbiddenFields": [
+      "billingOperationId",
+      "billingStatus",
+      "priceVersion",
+      "chargeUsdMicros",
+      "periodStart",
+      "paidThrough"
     ],
     "computeExpiry": "destroy_and_deny_access",
     "storageExpiry": "retain_and_deny_access"
@@ -117,6 +139,10 @@
       "expired": "billing.workspace_expired.v1",
       "refunded": "billing.workspace_refunded.v1"
     },
+    "workspaceFulfillmentReceiptTypes": [
+      "billing.workspace_purchased.v1",
+      "billing.workspace_renewed.v1"
+    ],
     "workspaceRequiredCostFields": [
       "priceVersion",
       "currency",
@@ -127,6 +153,11 @@
       "resourceType",
       "resourceId",
       "components"
+    ],
+    "workspacePurchasedAdditionalCostFields": [
+      "sub2apiUserId",
+      "sub2apiRedeemCode",
+      "postChargeBalanceUsdMicros"
     ],
     "workspaceRenewedAdditionalCostFields": [
       "sub2apiUserId",
@@ -160,7 +191,9 @@
       "rawProviderResponse",
       "password",
       "token"
-    ]
+    ],
+    "implementation": "workspace_purchase_validator_writer_and_projection_code_complete_local_tests_only",
+    "realEnvironmentEvidence": "pending_owner_approved_acceptance"
   },
   "reconciliationPolicy": {
     "owner": "opl-ledger",

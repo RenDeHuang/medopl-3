@@ -16,6 +16,11 @@ type Service struct {
 	sub2API clients.Sub2APIClient
 }
 
+var (
+	ErrWorkspaceRuntimeIdentityMismatch = errors.New("workspace_runtime_identity_mismatch")
+	ErrWorkspaceRuntimeReadbackInvalid  = errors.New("workspace_runtime_readback_invalid")
+)
+
 func (s *Service) fabricTransfers() (clients.FabricTransferClient, error) {
 	client, ok := s.fabric.(clients.FabricTransferClient)
 	if !ok {
@@ -115,6 +120,7 @@ type CreateWorkspaceInput struct {
 	AttachmentID      string `json:"attachmentId"`
 	ComputeID         string `json:"computeAllocationId"`
 	VolumeID          string `json:"storageId"`
+	GatewaySecretRef  string `json:"-"`
 }
 
 type ResumeWorkspaceInput struct {
@@ -635,17 +641,27 @@ func (s *Service) PrepareWorkspace(ctx context.Context, input CreateWorkspaceInp
 		return domain.WorkspaceProjection{}, fmt.Errorf("attached_compute_storage_required")
 	}
 	workspaceID := input.WorkspaceID
-	var gatewaySecretRef string
-	var err error
-	if input.WorkspaceAPIKeyID > 0 {
-		gatewaySecretRef, err = s.gatewaySecretRefByID(ctx, input.AccountID, input.Sub2APIUserID, input.WorkspaceAPIKeyID, idempotencyKey)
-	} else {
-		gatewaySecretRef, err = s.gatewaySecretRef(ctx, input.AccountID, input.Sub2APIUserID, idempotencyKey)
+	gatewaySecretRef := input.GatewaySecretRef
+	if gatewaySecretRef == "" {
+		var err error
+		if input.WorkspaceAPIKeyID > 0 {
+			gatewaySecretRef, err = s.gatewaySecretRefByID(ctx, input.AccountID, input.Sub2APIUserID, input.WorkspaceAPIKeyID, idempotencyKey)
+		} else {
+			gatewaySecretRef, err = s.gatewaySecretRef(ctx, input.AccountID, input.Sub2APIUserID, idempotencyKey)
+		}
+		if err != nil {
+			return domain.WorkspaceProjection{}, err
+		}
 	}
+	runtime, err := s.fabric.CreateWorkspaceRuntime(ctx, clients.WorkspaceRuntimeInput{WorkspaceID: workspaceID, ComputeID: input.ComputeID, VolumeID: input.VolumeID, ImageID: "one-person-lab-app", GatewaySecretRef: gatewaySecretRef}, idempotencyKey+":runtime")
 	if err != nil {
 		return domain.WorkspaceProjection{}, err
 	}
-	runtime, err := s.fabric.CreateWorkspaceRuntime(ctx, clients.WorkspaceRuntimeInput{WorkspaceID: workspaceID, ComputeID: input.ComputeID, VolumeID: input.VolumeID, ImageID: "one-person-lab-app", GatewaySecretRef: gatewaySecretRef}, idempotencyKey+":runtime")
+	readback, err := s.fabric.WorkspaceRuntimeStatus(ctx, workspaceID)
+	if err != nil {
+		return domain.WorkspaceProjection{}, err
+	}
+	runtime, err = mergeWorkspaceRuntimeReadback(runtime, readback, workspaceID)
 	if err != nil {
 		return domain.WorkspaceProjection{}, err
 	}
@@ -672,6 +688,21 @@ func (s *Service) PrepareWorkspace(ctx context.Context, input CreateWorkspaceInp
 		CredentialSecretRef: runtime.Access.SecretRef,
 	}
 	return workspace, nil
+}
+
+func mergeWorkspaceRuntimeReadback(created, readback clients.WorkspaceRuntime, workspaceID string) (clients.WorkspaceRuntime, error) {
+	if workspaceID == "" || created.WorkspaceID != "" && created.WorkspaceID != workspaceID || readback.WorkspaceID != workspaceID ||
+		created.ID != "" && readback.ID != "" && created.ID != readback.ID ||
+		created.ServiceName != "" && readback.ServiceName != "" && created.ServiceName != readback.ServiceName {
+		return clients.WorkspaceRuntime{}, ErrWorkspaceRuntimeIdentityMismatch
+	}
+	if readback.Ready || readback.Status == "running" {
+		if !readback.Ready || readback.Status != "running" || readback.ID == "" || readback.URL == "" || readback.ServiceName == "" ||
+			readback.Access.Username == "" || readback.Access.CredentialStatus != "configured" || readback.Access.CredentialVersion == "" || readback.Access.SecretRef == "" {
+			return clients.WorkspaceRuntime{}, ErrWorkspaceRuntimeReadbackInvalid
+		}
+	}
+	return readback, nil
 }
 
 func (s *Service) PrepareWorkspaceResume(ctx context.Context, input ResumeWorkspaceInput, idempotencyKey string) (domain.WorkspaceProjection, error) {

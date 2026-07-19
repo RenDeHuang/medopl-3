@@ -552,7 +552,7 @@ func validateReceiptInput(input ReceiptInput) error {
 		switch input.Type {
 		case "billing.resource_purchased.v1", "billing.resource_renewed.v1", "billing.resource_expired.v1", "billing.resource_refunded.v1", "billing.charge_review_required.v1", "billing.reconciliation.v1":
 			billingCostValid = validBillingCost(input.Cost)
-		case "billing.workspace_renewed.v1", "billing.workspace_expired.v1", "billing.workspace_refunded.v1":
+		case "billing.workspace_purchased.v1", "billing.workspace_renewed.v1", "billing.workspace_expired.v1", "billing.workspace_refunded.v1":
 			billingCostValid = validWorkspaceBillingCost(input.Cost, input.Type) && input.Cost["resourceId"] == input.WorkspaceID
 		default:
 			billingCostValid = false
@@ -676,9 +676,10 @@ func validBillingCost(cost map[string]any) bool {
 
 func validWorkspaceBillingCost(cost map[string]any, receiptType string) bool {
 	wantFields := map[string]int{
-		"billing.workspace_renewed.v1":  12,
-		"billing.workspace_expired.v1":  9,
-		"billing.workspace_refunded.v1": 13,
+		"billing.workspace_purchased.v1": 12,
+		"billing.workspace_renewed.v1":   12,
+		"billing.workspace_expired.v1":   9,
+		"billing.workspace_refunded.v1":  13,
 	}[receiptType]
 	if len(cost) != wantFields || cost["currency"] != "USD" || cost["billingUnit"] != "calendar_month" || cost["resourceType"] != "workspace" {
 		return false
@@ -726,7 +727,7 @@ func validWorkspaceBillingCost(cost map[string]any, receiptType string) bool {
 	if !userOK || userID <= 0 || !redeemOK || !isOpaqueReference(redeemCode) {
 		return false
 	}
-	if receiptType == "billing.workspace_renewed.v1" {
+	if receiptType == "billing.workspace_purchased.v1" || receiptType == "billing.workspace_renewed.v1" {
 		postCharge, ok := integerValue(cost["postChargeBalanceUsdMicros"])
 		return ok && postCharge >= 0
 	}

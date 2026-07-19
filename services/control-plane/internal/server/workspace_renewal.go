@@ -691,14 +691,18 @@ func (app *controlPlaneServer) workspaceRenewalResources(operation workspaceRene
 	if !computeOK || !storageOK || stringValue(compute["accountId"]) != operation.AccountID || stringValue(storage["accountId"]) != operation.AccountID ||
 		stringValue(compute["workspaceId"]) != operation.WorkspaceID || stringValue(storage["workspaceId"]) != operation.WorkspaceID ||
 		stringValue(compute["providerResourceId"]) == "" || stringValue(storage["providerResourceId"]) == "" ||
-		!monthlyPriceSnapshotAvailable(compute) || !monthlyPriceSnapshotAvailable(storage) ||
-		int64(numberField(compute, "chargeUsdMicros", 0)) != operation.ComputeUSDMicros || int64(numberField(storage, "chargeUsdMicros", 0)) != operation.StorageUSDMicros {
+		stringValue(compute["packageId"]) != operation.PackageID || int64(numberField(storage, "sizeGb", 0)) != operation.StorageGB ||
+		stringValue(storage["computeAllocationId"]) != operation.ComputeID {
 		return nil, nil, errors.New("workspace_renewal_resource_identity_mismatch")
 	}
-	if _, ok := monthlyRenewalProviderTruth("compute", compute); !ok {
+	computeTruth := cloneMap(compute)
+	computeTruth["periodStart"], computeTruth["paidThrough"] = operation.PeriodStart, operation.PaidThrough
+	if _, ok := monthlyRenewalProviderTruth("compute", computeTruth); !ok {
 		return nil, nil, errors.New("workspace_renewal_compute_provider_truth_invalid")
 	}
-	if _, ok := monthlyRenewalProviderTruth("storage", storage); !ok {
+	storageTruth := cloneMap(storage)
+	storageTruth["periodStart"], storageTruth["paidThrough"] = operation.PeriodStart, operation.PaidThrough
+	if _, ok := monthlyRenewalProviderTruth("storage", storageTruth); !ok {
 		return nil, nil, errors.New("workspace_renewal_storage_provider_truth_invalid")
 	}
 	return compute, storage, nil
@@ -924,10 +928,6 @@ func (app *controlPlaneServer) workspaceRenewalProviderReadback(resourceType str
 	if readErr != nil || oldErr != nil || renewedErr != nil || !monthlyRenewalReadbackConfirmed(resourceType, existing, candidate, facts, oldDeadline, renewedThrough) {
 		return candidate, false, false
 	}
-	candidate["periodStart"], candidate["paidThrough"], candidate["billingStatus"] = operation.PaidThrough, operation.RenewedThrough, "active"
-	candidate["billingOperationId"] = operation.ID + ":" + resourceType
-	candidate["autoRenew"] = false
-	delete(candidate, "lastBillingError")
 	return candidate, false, true
 }
 

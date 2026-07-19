@@ -75,20 +75,22 @@ test("Pilot V2 contracts hard cut Gateway keys and source envelopes", async () =
 });
 
 test("Pilot V2 contracts hard cut Workspace purchase, access, and Runtime facts", async () => {
-  const [freeze, billing, pricing, business, product, evidence] = await Promise.all([
+  const [freeze, billing, pricing, business, product, evidence, sourceTruth] = await Promise.all([
     json("packages/contracts/opl-cloud-launch-freeze-contract.json"),
     json("packages/contracts/opl-cloud-billing-ledger-contract.json"),
     json("packages/contracts/opl-cloud-pricing-contract.json"),
     json("packages/contracts/opl-cloud-business-object-contract.json"),
     json("packages/contracts/opl-cloud-product-contract.json"),
-    json("packages/contracts/opl-cloud-evidence-ledger-contract.json")
+    json("packages/contracts/opl-cloud-evidence-ledger-contract.json"),
+    json("packages/contracts/opl-cloud-console-source-truth-contract.json")
   ]);
 
   assert.equal(freeze.workspaceLaunch.customerDebitCardinality, 1);
   assert.equal(freeze.workspaceLaunch.persistence, "control_plane_runtime_operations with action=workspace.launch.v2 and result.schemaVersion=2");
-  assert.equal(freeze.workspaceLaunch.codeCompleteThroughPhase, "debited");
+  assert.equal(freeze.workspaceLaunch.codeCompleteThroughPhase, "succeeded");
   assert.equal(freeze.workspaceLaunch.legacyNonTerminalPolicy, "clear_or_manual_handle_before_cutover_never_resume_in_v2_worker");
-  assert.equal(freeze.workspaceLaunch.backgroundProgression, "S8 target: The provider reconciliation worker will resume stable compute, storage, attachment, Gateway Secret, Runtime, and receipt sub-operations after browser close or process restart.");
+  assert.equal(freeze.workspaceLaunch.backgroundProgression, "stable_fulfillment_and_receipt_recovery_code_complete_local_only");
+  assert.equal(freeze.workspaceLaunch.nextBlockedStage, "S9_external_runtime_metadata_api_and_image_pending");
   assert.deepEqual(freeze.workspaceLaunch.fulfillmentResources, ["compute", "storage", "attachment", "gateway_secret", "runtime"]);
 	assert.deepEqual(freeze.gateway.workspaceKeyLifecycle, {
 		launchConvergence: "zero_create_one_active_reuse_other_fail_closed",
@@ -104,22 +106,47 @@ test("Pilot V2 contracts hard cut Workspace purchase, access, and Runtime facts"
   assert.equal(billing.chargePolicy.debitCardinalityPerPeriod, 1);
   assert.equal(billing.chargePolicy.launchOperationAction, "workspace.launch.v2");
   assert.equal(billing.chargePolicy.launchOperationSchemaVersion, 2);
+  assert.deepEqual(billing.workspaceLaunchFulfillment.customerChargeOperations, ["workspace_debit", "workspace_refund"]);
+  assert.equal(billing.workspaceLaunchFulfillment.resourcePurchasePath, "fabric_create_and_sync_without_customer_debit");
+  assert.equal(billing.workspaceLaunchFulfillment.successReceiptType, "billing.workspace_purchased.v1");
+  assert.equal(billing.workspaceLaunchFulfillment.implementation, "code_complete_local_tests_only");
+  assert.equal(billing.workspaceLaunchFulfillment.realEnvironmentEvidence, "pending_owner_approved_acceptance");
   assert.equal(pricing.workspaceCharge.launchOperationAction, "workspace.launch.v2");
-  assert.equal(pricing.workspaceCharge.codeCompleteThroughPhase, "debited");
+  assert.equal(pricing.workspaceCharge.codeCompleteThroughPhase, "succeeded");
+  assert.equal(pricing.workspaceCharge.implementation, "launch_terminal_code_complete_local_tests_only");
+  assert.equal(pricing.workspaceCharge.nextBlockedStage, "S9_external_runtime_metadata_api_and_image_pending");
   assert.equal(billing.ledgerEvidencePolicy.workspaceReceiptTypes.purchased, "billing.workspace_purchased.v1");
+  assert.deepEqual(billing.ledgerEvidencePolicy.workspaceFulfillmentReceiptTypes, ["billing.workspace_purchased.v1", "billing.workspace_renewed.v1"]);
+  assert.deepEqual(billing.ledgerEvidencePolicy.workspacePurchasedAdditionalCostFields, ["sub2apiUserId", "sub2apiRedeemCode", "postChargeBalanceUsdMicros"]);
+  assert.equal(billing.ledgerEvidencePolicy.realEnvironmentEvidence, "pending_owner_approved_acceptance");
   assert.equal(billing.entitlementPolicy.resourceCompatibility.customerChargeOwner, false);
   assert.ok(evidence.receiptTypes.includes("billing.workspace_purchased.v1"));
   assert.ok(evidence.receiptTypes.includes("workspace.gateway_key_rotated.v1"));
   assert.ok(evidence.receiptTypes.includes("gateway.wallet_adjustment.v1"));
+  assert.deepEqual(evidence.workspaceMonthlyBillingReceiptV1.purchasedAdditionalCostFields, ["sub2apiUserId", "sub2apiRedeemCode", "postChargeBalanceUsdMicros"]);
+  assert.deepEqual(evidence.workspaceMonthlyBillingReceiptV1.purchasedRequiredExecutionFields, ["computeAllocationId", "storageId"]);
+  assert.equal(evidence.workspaceMonthlyBillingReceiptV1.implementation, "validator_writer_and_customer_projection_code_complete_local_tests_only");
+  assert.equal(evidence.workspaceMonthlyBillingReceiptV1.realEnvironmentEvidence, "pending_owner_approved_acceptance");
 
   const workspace = business.objectKinds.find((entry: { kind: string }) => entry.kind === "Workspace");
+  const compute = business.objectKinds.find((entry: { kind: string }) => entry.kind === "ComputeAllocation");
+  const storage = business.objectKinds.find((entry: { kind: string }) => entry.kind === "StorageVolume");
+  assert.deepEqual(compute.requiredBillingFields, []);
+  assert.deepEqual(storage.requiredBillingFields, []);
+  assert.equal(compute.customerChargeOwner, false);
+  assert.equal(storage.customerChargeOwner, false);
   assert.ok(workspace.requiredFields.includes("workspaceApiKeyId"));
+  assert.equal(workspace.customerChargeOwner, true);
+  assert.equal(workspace.purchaseReceiptType, "billing.workspace_purchased.v1");
   assert.deepEqual(workspace.accessQuestions, ["url", "username", "passwordRevealCopy", "workspaceKeyRevealCopy"]);
   assert.equal(workspace.workspaceKeyRevealRoute, "POST /api/gateway/keys/{keyId}/reveal");
 	assert.equal(workspace.workspaceKeyRotationRoute, "POST /api/workspaces/{workspaceId}/workspace-key/rotate");
 	assert.equal(workspace.workspaceKeyPersistence, "workspace_api_key_id_only");
 	assert.deepEqual(workspace.workspaceKeyRotationDTOFields, ["operationId", "workspaceId", "status", "workspaceApiKeyId", "fingerprint", "updatedAt", "receiptId"]);
 	assert.equal(evidence.workspaceGatewayKeyRotationReceipt.implementation, "validator_and_control_plane_exact_readback_code_complete_local_only");
+  assert.deepEqual(sourceTruth.sources.ledger.billingReceipts.moneyFieldsByType.workspacePurchased, ["totalUsdMicros"]);
+  assert.deepEqual(sourceTruth.sources.ledger.billingReceipts.workspaceFulfillmentFields, ["computeAllocationId", "storageId", "attachmentId", "workspaceApiKeyId", "runtimeId"]);
+  assert.equal(sourceTruth.sources.ledger.billingReceipts.rawProviderReadback, false);
   assert.deepEqual(product.workspaceRuntimeFacts, {
     fileMetadataAuthority: "workspace_runtime_projects_mount",
     filesystemUsageAuthority: "workspace_runtime_statfs",
@@ -247,7 +274,8 @@ test("Pilot V2 current human truth preserves public entry points and evidence le
   }
   assert.match(consoleProduct, /Home.*Login.*Logo/is);
   assert.match(consoleProduct, /URL.*用户名.*密码.*Workspace Key/is);
-  assert.match(invariants, /workspace\.launch\.v2[\s\S]{0,300}stops at\s+`debited`[\s\S]{0,300}S8/i);
+  assert.match(invariants, /workspace\.launch\.v2[\s\S]{0,500}fulfillment[\s\S]{0,500}code-complete[\s\S]{0,500}S9/i);
+  assert.doesNotMatch(invariants, /stops at\s+`debited`[\s\S]{0,300}S8/i);
   assert.doesNotMatch(invariants, /durable `workspace\.launch` RuntimeOperation/);
   assert.match(runbook, /OPL_POSTGRES_TESTS=1/);
   assert.match(runbook, /OPL_CAPACITY_TESTS=1/);

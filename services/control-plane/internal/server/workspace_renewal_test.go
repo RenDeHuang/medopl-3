@@ -537,6 +537,37 @@ func TestWorkspaceRenewalUsesOneDebitStableProviderIDsAndOneReceipt(t *testing.T
 	}
 }
 
+func TestWorkspaceRenewalOriginalResourcesWithoutChildBilling(t *testing.T) {
+	fixture := newWorkspaceRenewalWorkerFixture(t, []int64{100_000_000, 47_420_000})
+	compute, _ := fixture.app.getCompute(stringValue(fixture.compute["id"]))
+	storage, _ := fixture.app.getStorage(stringValue(fixture.storage["id"]))
+	stripWorkspaceLaunchResourceBilling(compute)
+	stripWorkspaceLaunchResourceBilling(storage)
+	mustStore(t, fixture.app.tables.SaveCompute(context.Background(), compute))
+	mustStore(t, fixture.app.tables.SaveStorage(context.Background(), storage))
+
+	if err := fixture.app.runMonthlyBillingOnce(context.Background(), fixture.service, fixture.paidThrough.Add(-monthlyRenewalLead)); err != nil {
+		t.Fatal(err)
+	}
+	operation := fixture.operation(t)
+	renewedCompute, _ := fixture.app.getCompute(stringValue(fixture.compute["id"]))
+	renewedStorage, _ := fixture.app.getStorage(stringValue(fixture.storage["id"]))
+	if operation["status"] != "active" || renewedCompute["providerResourceId"] != fixture.compute["providerResourceId"] || renewedStorage["providerResourceId"] != fixture.storage["providerResourceId"] {
+		t.Fatalf("pure fulfillment renewal operation=%#v compute=%#v storage=%#v", operation, renewedCompute, renewedStorage)
+	}
+	for _, row := range []map[string]any{renewedCompute, renewedStorage} {
+		for _, forbidden := range []string{"billingOperationId", "billingStatus", "sub2apiRedeemCode", "chargeUsdMicros", "priceVersion", "periodStart", "paidThrough"} {
+			if _, ok := row[forbidden]; ok {
+				t.Fatalf("renewal restored child billing field %s: %#v", forbidden, row)
+			}
+		}
+	}
+	if len(fixture.sub2API.charges) != 1 || len(fixture.fabric.computeRenewKeys) != 1 || len(fixture.fabric.storageRenewKeys) != 1 ||
+		len(fixture.ledger.receipts) != 1 || fixture.ledger.receipts[0].Type != "billing.workspace_renewed.v1" {
+		t.Fatalf("pure fulfillment renewal effects charges=%#v compute=%#v storage=%#v receipts=%#v", fixture.sub2API.charges, fixture.fabric.computeRenewKeys, fixture.fabric.storageRenewKeys, fixture.ledger.receipts)
+	}
+}
+
 func TestWorkspaceRenewalConcurrentWorkersClaimOnce(t *testing.T) {
 	fixture := newWorkspaceRenewalWorkerFixture(t, []int64{100_000_000, 47_420_000})
 	second, err := newControlPlaneAppWithStore(fixture.app.tables)
