@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "owner": "OPL Console Control Plane",
   "purpose": "Strict source envelopes and customer-safe live projections for Console source-of-truth APIs.",
   "state": "current",
@@ -28,6 +28,7 @@
   },
   "implementationEvidence": {
     "gatewayEndpointAndGeneralKeys": "code_complete_local_focused_tests",
+    "operatorProjection": "code_complete_local_focused_tests",
     "browserAndProduction": "pending"
   },
   "sources": {
@@ -155,20 +156,29 @@
         "authority": "control_plane_mapping_plus_paginated_and_batch_sub2api_readback",
         "scope": "customer_accounts_only",
         "itemFields": ["accountId", "consoleUserId", "role", "sub2apiUserId", "email", "status"],
+        "nestedSourceFields": ["gatewayIdentity", "wallet", "keyCount", "usage", "workspaceCount"],
         "fieldAuthority": {
           "accountId": "control_plane",
           "consoleUserId": "control_plane",
           "role": "control_plane",
-          "sub2apiUserId": "sub2api",
-          "email": "sub2api",
-          "status": "sub2api"
+          "sub2apiUserId": "control_plane_verified_mapping",
+          "email": "control_plane_verified_mapping",
+          "status": "control_plane_user_lifecycle",
+          "gatewayIdentity": "sub2api_paginated_user_readback",
+          "wallet": "sub2api_paginated_user_readback",
+          "usage": "sub2api_batch_user_usage",
+          "workspaceCount": "control_plane",
+          "keyCount": "unavailable_until_authoritative_batch_count_exists"
         },
         "sub2apiUserIdFormat": "positive_decimal_string",
         "statusValues": ["active", "disabled"],
         "mappingConsistency": "remote_id_and_normalized_email_must_equal_control_plane_mapping",
-        "failure": "whole_source_unavailable_without_partial_data",
+        "pagination": "one_bounded_sub2api_user_page_then_control_plane_page",
+        "batchSizeMax": 50,
+        "perAccountUserOrUsageNPlusOne": false,
+        "failure": "affected_nested_source_unavailable_without_zero_data",
         "fetchedAt": "control_plane_response_fetch_completion_time",
-        "sourceUpdatedAt": "omit_unless_sub2api_returns_source_timestamp"
+        "sourceUpdatedAt": "sub2api_user_updated_at_only_for_corresponding_nested_facts"
       }
     },
     "workspace": {
@@ -225,6 +235,21 @@
       }
     },
     "operator": {
+      "routes": {
+        "overview": "GET /api/operator/overview",
+        "workspaces": "GET /api/operator/workspaces",
+        "workspaceDetail": "GET /api/operator/workspaces/{workspaceId}",
+        "reconciliation": "GET /api/operator/reconciliation",
+        "health": "GET /api/operator/health"
+      },
+      "projection": {
+        "persistence": "none_request_join_only",
+        "sub2apiCalls": "one_paginated_user_read_plus_fixed_batch_usage_calls",
+        "fabricCalls": "one_operation_listing_plus_bounded_independent_runtime_probes",
+        "ledgerCalls": "detail_only_authoritative_receipt_readback",
+        "readReplica": false,
+        "sourceUpdatedAt": "authoritative_owner_timestamp_only_never_local_fetch_time"
+      },
       "resources": {
         "route": "GET /api/operator/workspaces/{workspaceId}",
         "requiredFields": ["ownerAccount", "ownerUser", "workspace", "resourceType", "packageOrSpec", "providerId", "zone", "status", "createdAt", "expiresAt", "lastReadAt", "operationRef", "receiptRef"],
@@ -235,7 +260,9 @@
           "receiptRef": "ledger"
         },
         "missingFieldBehavior": "owner_source_unavailable",
-        "fabricAndLedgerPersistenceInControlPlane": false
+        "fabricAndLedgerPersistenceInControlPlane": false,
+        "projectionPersistence": "none_new_request_join_only",
+        "missingSourceUpdatedAt": "omit"
       }
     },
     "announcements": {

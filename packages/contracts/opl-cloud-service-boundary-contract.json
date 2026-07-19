@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 9,
   "owner": "OPL Platform Architecture",
   "purpose": "Current ownership contract for Console UI, Control Plane, Ledger, Fabric, and external Sub2API.",
   "state": "current",
@@ -50,6 +50,14 @@
         "lookupKey": "hashed_console_session_key",
         "lifetime": "console_session_or_shorter",
         "horizontalScaling": "forbidden_until_secure_shared_vault_is_approved"
+      },
+      "operatorProjection": {
+        "authorities": ["control_plane", "sub2api", "fabric", "ledger", "runtime"],
+        "persistence": "none_request_join_only",
+        "sub2apiStrategy": "paginated_users_and_batch_user_key_usage_no_per_account_n_plus_one",
+        "runtimeStrategy": "bounded_concurrency_independent_timeout",
+        "missingOwnerFact": "source_unavailable_without_zero_or_fallback",
+        "readReplica": false
       },
       "forbiddenPersistence": ["gatewayCredentials", "apiKeys", "apiUsage", "walletBalances", "runtimeFileMetadata"]
     },
@@ -119,7 +127,7 @@
         "mutate owned general keys with delegated user credentials"
       ],
       "customerProjection": "strict_allowlist_with_integer_usd_micros_and_no_local_usage_copy",
-      "currentImplementation": "delegated_user_key_crud_owned_readback_reveal_and_scoped_usage_code_complete_local_only"
+      "currentImplementation": "paginated_users_batch_user_and_key_usage_code_complete_local_only"
     }
   },
   "browserBoundary": {

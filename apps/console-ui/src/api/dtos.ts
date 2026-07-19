@@ -464,10 +464,21 @@ export interface OperatorAccountsData {
   total: number;
 }
 
+export interface OperatorUsageCostDTO {
+  todayActualCostUsdMicros: number;
+  totalActualCostUsdMicros: number;
+  byPlatform?: Array<{
+    platform: string;
+    todayActualCostUsdMicros: number;
+    totalActualCostUsdMicros: number;
+  }>;
+}
+
 export interface OperatorAccountDTO extends OperatorAccount {
+  gatewayIdentity: SourceEnvelope<{ userId: string; email: string; status: "active" | "disabled" }>;
   wallet: SourceEnvelope<GatewayWalletDTO>;
   keyCount: SourceEnvelope<number>;
-  usage: SourceEnvelope<GatewayAccountUsageSummaryDTO>;
+  usage: SourceEnvelope<OperatorUsageCostDTO>;
   workspaceCount: SourceEnvelope<number>;
 }
 
@@ -530,6 +541,7 @@ export interface OperatorWorkspaceDTO {
   ownerUser: SourceEnvelope<{ id: string; email: string }>;
   resources: OperatorResourceDTO[];
   receipt: SourceEnvelope<WorkspaceBillingReceiptDTO>;
+  workspaceKeyUsage: SourceEnvelope<OperatorUsageCostDTO & { keyId: string }>;
 }
 
 export interface OperatorWorkspacePageDTO {
@@ -611,7 +623,7 @@ export interface OperatorOverviewDTO {
   accounts: SourceEnvelope<{ total: number; active: number; disabled: number }>;
   wallet: SourceEnvelope<MoneyDTO>;
   keys: SourceEnvelope<{ total: number }>;
-  usage: SourceEnvelope<GatewayAccountUsageSummaryDTO>;
+  usage: SourceEnvelope<OperatorUsageCostDTO>;
   workspaces: SourceEnvelope<{ total: number }>;
   resources: SourceEnvelope<{ total: number }>;
   reconciliation: SourceEnvelope<{ total: number }>;

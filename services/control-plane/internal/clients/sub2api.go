@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -25,6 +26,7 @@ const (
 	maxSub2APIIdentityPages  = 10
 	maxSub2APIIdentities     = sub2APIKeyPageSize * maxSub2APIIdentityPages
 	maxSub2APIUsagePage      = 1_000_000
+	maxSub2APIBatchIDs       = 50
 )
 
 var (
@@ -86,6 +88,18 @@ type Sub2APIUserReadClient interface {
 	User(context.Context, int64) (Sub2APIIdentity, error)
 }
 
+type Sub2APIAdminUsersClient interface {
+	AdminUsers(context.Context, Sub2APIUserPageQuery) (Sub2APIUserPage, error)
+}
+
+type Sub2APIBatchUsersUsageClient interface {
+	BatchUsersUsage(context.Context, []int64) (map[int64]Sub2APIBatchUserUsage, error)
+}
+
+type Sub2APIBatchKeysUsageClient interface {
+	BatchKeysUsage(context.Context, []int64) (map[int64]Sub2APIBatchKeyUsage, error)
+}
+
 type Sub2APIAdminIdentityClient interface {
 	AdminIdentity(context.Context) (Sub2APIIdentity, error)
 }
@@ -107,6 +121,50 @@ type Sub2APIIdentity struct {
 	ID     int64  `json:"id"`
 	Email  string `json:"email"`
 	Status string `json:"status"`
+}
+
+type Sub2APIUserPageQuery struct {
+	Page      int
+	PageSize  int
+	Search    string
+	SortBy    string
+	SortOrder string
+}
+
+type Sub2APIUser struct {
+	ID               int64
+	Email            string
+	BalanceUSDMicros int64
+	Status           string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+}
+
+type Sub2APIUserPage struct {
+	Items    []Sub2APIUser
+	Total    int64
+	Page     int
+	PageSize int
+	Pages    int
+}
+
+type Sub2APIPlatformUsage struct {
+	Platform                 string
+	TodayActualCostUSDMicros int64
+	TotalActualCostUSDMicros int64
+}
+
+type Sub2APIBatchUserUsage struct {
+	UserID                   int64
+	TodayActualCostUSDMicros int64
+	TotalActualCostUSDMicros int64
+	ByPlatform               []Sub2APIPlatformUsage
+}
+
+type Sub2APIBatchKeyUsage struct {
+	APIKeyID                 int64
+	TodayActualCostUSDMicros int64
+	TotalActualCostUSDMicros int64
 }
 
 type Sub2APIUserAuthentication struct {
@@ -455,6 +513,190 @@ func (c *Sub2APIHTTPClient) User(ctx context.Context, userID int64) (Sub2APIIden
 		return Sub2APIIdentity{}, ErrSub2APIIdentityConflict
 	}
 	return identity, nil
+}
+
+func (c *Sub2APIHTTPClient) AdminUsers(ctx context.Context, query Sub2APIUserPageQuery) (Sub2APIUserPage, error) {
+	query.Search = strings.TrimSpace(query.Search)
+	if query.Page <= 0 || query.PageSize <= 0 || query.PageSize > sub2APIKeyPageSize || len([]rune(query.Search)) > 100 ||
+		!validSub2APIUserSort(query.SortBy) || (query.SortOrder != "asc" && query.SortOrder != "desc") {
+		return Sub2APIUserPage{}, errors.New("invalid sub2api user page query")
+	}
+	values := url.Values{
+		"page": {strconv.Itoa(query.Page)}, "page_size": {strconv.Itoa(query.PageSize)},
+		"sort_by": {query.SortBy}, "sort_order": {query.SortOrder},
+	}
+	if query.Search != "" {
+		values.Set("search", query.Search)
+	}
+	body, err := c.doAuthenticated(ctx, http.MethodGet, "/api/v1/admin/users?"+values.Encode(), nil, "")
+	if err != nil {
+		return Sub2APIUserPage{}, err
+	}
+	var data struct {
+		Items []struct {
+			ID        int64       `json:"id"`
+			Email     string      `json:"email"`
+			Balance   json.Number `json:"balance"`
+			Status    string      `json:"status"`
+			CreatedAt time.Time   `json:"created_at"`
+			UpdatedAt time.Time   `json:"updated_at"`
+		} `json:"items"`
+		Total    int64 `json:"total"`
+		Page     int   `json:"page"`
+		PageSize int   `json:"page_size"`
+		Pages    int   `json:"pages"`
+	}
+	if err := decodeSub2APIEnvelope(body, &data); err != nil {
+		return Sub2APIUserPage{}, err
+	}
+	expectedPages := int((data.Total + int64(query.PageSize) - 1) / int64(query.PageSize))
+	if expectedPages < 1 {
+		expectedPages = 1
+	}
+	expectedItems := query.PageSize
+	if query.Page == expectedPages {
+		expectedItems = int(data.Total) - (query.Page-1)*query.PageSize
+	}
+	if data.Total < 0 || data.Total > int64(maxSub2APIIdentities) || data.Page != query.Page || data.PageSize != query.PageSize ||
+		data.Pages != expectedPages || query.Page > data.Pages || len(data.Items) != expectedItems {
+		return Sub2APIUserPage{}, errors.New("invalid sub2api user pagination")
+	}
+	page := Sub2APIUserPage{Items: make([]Sub2APIUser, 0, len(data.Items)), Total: data.Total, Page: data.Page, PageSize: data.PageSize, Pages: data.Pages}
+	seen := make(map[int64]struct{}, len(data.Items))
+	for _, item := range data.Items {
+		email := normalizeSub2APIEmail(item.Email)
+		balance, balanceErr := decimalUSDMicros(item.Balance)
+		_, duplicate := seen[item.ID]
+		if balanceErr != nil || item.ID <= 0 || email == "" || (item.Status != "active" && item.Status != "disabled") ||
+			item.CreatedAt.IsZero() || item.UpdatedAt.IsZero() || item.UpdatedAt.Before(item.CreatedAt) || duplicate {
+			return Sub2APIUserPage{}, errors.New("invalid sub2api user facts")
+		}
+		seen[item.ID] = struct{}{}
+		page.Items = append(page.Items, Sub2APIUser{
+			ID: item.ID, Email: email, BalanceUSDMicros: balance, Status: item.Status, CreatedAt: item.CreatedAt, UpdatedAt: item.UpdatedAt,
+		})
+	}
+	return page, nil
+}
+
+func validSub2APIUserSort(value string) bool {
+	switch value {
+	case "id", "email", "balance", "status", "created_at", "updated_at":
+		return true
+	default:
+		return false
+	}
+}
+
+func (c *Sub2APIHTTPClient) BatchUsersUsage(ctx context.Context, userIDs []int64) (map[int64]Sub2APIBatchUserUsage, error) {
+	ids, err := normalizeSub2APIBatchIDs(userIDs)
+	if err != nil || len(ids) == 0 {
+		return map[int64]Sub2APIBatchUserUsage{}, err
+	}
+	body, err := c.doAuthenticated(ctx, http.MethodPost, "/api/v1/admin/dashboard/users-usage", map[string]any{"user_ids": ids}, "")
+	if err != nil {
+		return nil, err
+	}
+	var data struct {
+		Stats map[string]struct {
+			UserID          int64       `json:"user_id"`
+			TodayActualCost json.Number `json:"today_actual_cost"`
+			TotalActualCost json.Number `json:"total_actual_cost"`
+			ByPlatform      []struct {
+				Platform        string      `json:"platform"`
+				TodayActualCost json.Number `json:"today_actual_cost"`
+				TotalActualCost json.Number `json:"total_actual_cost"`
+			} `json:"by_platform"`
+		} `json:"stats"`
+	}
+	if err := decodeSub2APIEnvelope(body, &data); err != nil || len(data.Stats) != len(ids) {
+		return nil, errors.New("invalid sub2api batch user usage")
+	}
+	result := make(map[int64]Sub2APIBatchUserUsage, len(ids))
+	for _, id := range ids {
+		item, ok := data.Stats[strconv.FormatInt(id, 10)]
+		today, total, costsErr := sub2APIUsageCosts(item.TodayActualCost, item.TotalActualCost)
+		if !ok || item.UserID != id || costsErr != nil {
+			return nil, errors.New("invalid sub2api batch user usage")
+		}
+		usage := Sub2APIBatchUserUsage{UserID: id, TodayActualCostUSDMicros: today, TotalActualCostUSDMicros: total, ByPlatform: make([]Sub2APIPlatformUsage, 0, len(item.ByPlatform))}
+		platforms := make(map[string]struct{}, len(item.ByPlatform))
+		for _, raw := range item.ByPlatform {
+			platform := strings.TrimSpace(raw.Platform)
+			platformToday, platformTotal, platformErr := sub2APIUsageCosts(raw.TodayActualCost, raw.TotalActualCost)
+			_, duplicate := platforms[platform]
+			if platform == "" || platformErr != nil || duplicate {
+				return nil, errors.New("invalid sub2api batch user usage")
+			}
+			platforms[platform] = struct{}{}
+			usage.ByPlatform = append(usage.ByPlatform, Sub2APIPlatformUsage{Platform: platform, TodayActualCostUSDMicros: platformToday, TotalActualCostUSDMicros: platformTotal})
+		}
+		result[id] = usage
+	}
+	return result, nil
+}
+
+func (c *Sub2APIHTTPClient) BatchKeysUsage(ctx context.Context, apiKeyIDs []int64) (map[int64]Sub2APIBatchKeyUsage, error) {
+	ids, err := normalizeSub2APIBatchIDs(apiKeyIDs)
+	if err != nil || len(ids) == 0 {
+		return map[int64]Sub2APIBatchKeyUsage{}, err
+	}
+	body, err := c.doAuthenticated(ctx, http.MethodPost, "/api/v1/admin/dashboard/api-keys-usage", map[string]any{"api_key_ids": ids}, "")
+	if err != nil {
+		return nil, err
+	}
+	var data struct {
+		Stats map[string]struct {
+			APIKeyID        int64       `json:"api_key_id"`
+			TodayActualCost json.Number `json:"today_actual_cost"`
+			TotalActualCost json.Number `json:"total_actual_cost"`
+		} `json:"stats"`
+	}
+	if err := decodeSub2APIEnvelope(body, &data); err != nil || len(data.Stats) != len(ids) {
+		return nil, errors.New("invalid sub2api batch key usage")
+	}
+	result := make(map[int64]Sub2APIBatchKeyUsage, len(ids))
+	for _, id := range ids {
+		item, ok := data.Stats[strconv.FormatInt(id, 10)]
+		today, total, costsErr := sub2APIUsageCosts(item.TodayActualCost, item.TotalActualCost)
+		if !ok || item.APIKeyID != id || costsErr != nil {
+			return nil, errors.New("invalid sub2api batch key usage")
+		}
+		result[id] = Sub2APIBatchKeyUsage{APIKeyID: id, TodayActualCostUSDMicros: today, TotalActualCostUSDMicros: total}
+	}
+	return result, nil
+}
+
+func normalizeSub2APIBatchIDs(input []int64) ([]int64, error) {
+	if len(input) > maxSub2APIBatchIDs {
+		return nil, errors.New("sub2api batch exceeds limit")
+	}
+	seen := make(map[int64]struct{}, len(input))
+	ids := make([]int64, 0, len(input))
+	for _, id := range input {
+		if id <= 0 {
+			return nil, errors.New("sub2api batch ID must be positive")
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(i, j int) bool { return ids[i] < ids[j] })
+	return ids, nil
+}
+
+func sub2APIUsageCosts(todayRaw, totalRaw json.Number) (int64, int64, error) {
+	today, err := decimalUSDMicros(todayRaw)
+	if err != nil || today < 0 {
+		return 0, 0, errors.New("invalid sub2api usage cost")
+	}
+	total, err := decimalUSDMicros(totalRaw)
+	if err != nil || total < 0 {
+		return 0, 0, errors.New("invalid sub2api usage cost")
+	}
+	return today, total, nil
 }
 
 func (c *Sub2APIHTTPClient) AdminIdentity(ctx context.Context) (Sub2APIIdentity, error) {

@@ -58,7 +58,7 @@ test("Pilot V2 contracts hard cut Gateway keys and source envelopes", async () =
     "WorkspaceLaunchRequest", "WorkspaceLaunchOperationDTO", "WorkspaceKeyRotationDTO",
     "WorkspaceRuntimeDTO", "WorkspaceFileEntryDTO", "WorkspaceFilePageDTO",
     "WorkspaceFilesystemUsageDTO", "BillingReceiptPageDTO", "WorkspaceBillingReceiptDTO",
-    "AnnouncementPageDTO", "AnnouncementDTO", "AnnouncementReadDTO", "OperatorOverviewDTO",
+    "AnnouncementPageDTO", "AnnouncementDTO", "AnnouncementReadDTO", "OperatorOverviewDTO", "OperatorUsageCostDTO",
     "OperatorAccountPageDTO", "OperatorAccountDTO", "InviteAccountRequest",
     "OperatorAccountCommandDTO", "WalletAdjustmentRequest", "WalletAdjustmentOperationDTO",
     "OperatorWorkspacePageDTO", "OperatorWorkspaceDTO", "WorkspaceRuntimeCredentialDTO",
@@ -132,6 +132,24 @@ test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and an
     disable: "POST /api/operator/accounts/{accountId}/disable",
     delete: false
   });
+  assert.deepEqual(management.api.operatorReads, {
+    overview: "GET /api/operator/overview",
+    accounts: "GET /api/operator/accounts",
+    workspaces: "GET /api/operator/workspaces",
+    workspaceDetail: "GET /api/operator/workspaces/{workspaceId}",
+    reconciliation: "GET /api/operator/reconciliation",
+    health: "GET /api/operator/health"
+  });
+  assert.deepEqual(management.operatorProjection.sub2apiReads, {
+    users: "GET /api/v1/admin/users",
+    usersUsage: "POST /api/v1/admin/dashboard/users-usage",
+    apiKeysUsage: "POST /api/v1/admin/dashboard/api-keys-usage",
+    batchSizeMax: 50
+  });
+  assert.equal(management.operatorProjection.perAccountUserOrUsageNPlusOne, false);
+  assert.equal(management.operatorProjection.persistence, "none_request_join_only");
+  assert.equal(management.operatorProjection.readReplica, false);
+  assert.equal(management.operatorProjection.partialFailure, "affected_nested_source_unavailable_without_zero_data");
   assert.deepEqual(management.walletAdjustments.kinds, ["recharge", "debit", "business_refund"]);
   assert.equal(management.walletAdjustments.balanceAuthority, "sub2api");
   assert.equal(management.announcements.owner, "control_plane_postgresql");
@@ -144,6 +162,18 @@ test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and an
     "status", "createdAt", "expiresAt", "lastReadAt", "operationRef", "receiptRef"
   ]);
   assert.equal(resource.fabricAndLedgerPersistenceInControlPlane, false);
+  assert.equal(sourceTruth.sources.identity.operatorAccounts.pagination, "one_bounded_sub2api_user_page_then_control_plane_page");
+  assert.equal(sourceTruth.sources.identity.operatorAccounts.failure, "affected_nested_source_unavailable_without_zero_data");
+  assert.deepEqual(sourceTruth.sources.operator.routes, {
+    overview: "GET /api/operator/overview",
+    workspaces: "GET /api/operator/workspaces",
+    workspaceDetail: "GET /api/operator/workspaces/{workspaceId}",
+    reconciliation: "GET /api/operator/reconciliation",
+    health: "GET /api/operator/health"
+  });
+  assert.equal(boundary.services.controlPlane.operatorProjection.persistence, "none_request_join_only");
+  assert.deepEqual(boundary.services.controlPlane.operatorProjection.authorities, ["control_plane", "sub2api", "fabric", "ledger", "runtime"]);
+  assert.equal(boundary.externalServices.gateway.currentImplementation, "paginated_users_batch_user_and_key_usage_code_complete_local_only");
   assert.equal(business.objectKinds.some((entry: { kind: string }) => entry.kind === "Announcement"), true);
 });
 

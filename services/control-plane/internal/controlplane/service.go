@@ -287,6 +287,37 @@ func (s *Service) Sub2APIUser(ctx context.Context, userID int64) (clients.Sub2AP
 	return identity, nil
 }
 
+func (s *Service) Sub2APIAdminUsers(ctx context.Context, query clients.Sub2APIUserPageQuery) (clients.Sub2APIUserPage, error) {
+	client, ok := s.sub2API.(clients.Sub2APIAdminUsersClient)
+	if !ok {
+		return clients.Sub2APIUserPage{}, errors.New("sub2api_admin_users_unavailable")
+	}
+	return client.AdminUsers(ctx, query)
+}
+
+func (s *Service) Sub2APIBatchUsersUsage(ctx context.Context, userIDs []int64) (map[int64]clients.Sub2APIBatchUserUsage, error) {
+	client, ok := s.sub2API.(clients.Sub2APIBatchUsersUsageClient)
+	if !ok {
+		return nil, errors.New("sub2api_batch_users_usage_unavailable")
+	}
+	return client.BatchUsersUsage(ctx, userIDs)
+}
+
+func (s *Service) Sub2APIBatchKeysUsage(ctx context.Context, keyIDs []int64) (map[int64]clients.Sub2APIBatchKeyUsage, error) {
+	client, ok := s.sub2API.(clients.Sub2APIBatchKeysUsageClient)
+	if !ok {
+		return nil, errors.New("sub2api_batch_keys_usage_unavailable")
+	}
+	return client.BatchKeysUsage(ctx, keyIDs)
+}
+
+func (s *Service) Sub2APIVersion(ctx context.Context) (string, error) {
+	if s.sub2API == nil {
+		return "", errors.New("sub2api_unavailable")
+	}
+	return s.sub2API.Version(ctx)
+}
+
 func (s *Service) ResolveOrCreateSub2APIUser(ctx context.Context, email, password string) (clients.Sub2APIIdentity, error) {
 	client, ok := s.sub2API.(clients.Sub2APIIdentityClient)
 	if !ok {
