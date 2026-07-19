@@ -129,20 +129,29 @@ test("Console source truth contract fixes strict envelopes and live Gateway proj
     authority: "control_plane_mapping_plus_paginated_and_batch_sub2api_readback",
     scope: "customer_accounts_only",
     itemFields: ["accountId", "consoleUserId", "role", "sub2apiUserId", "email", "status"],
+    nestedSourceFields: ["gatewayIdentity", "wallet", "keyCount", "usage", "workspaceCount"],
     fieldAuthority: {
       accountId: "control_plane",
       consoleUserId: "control_plane",
       role: "control_plane",
-      sub2apiUserId: "sub2api",
-      email: "sub2api",
-      status: "sub2api"
+      sub2apiUserId: "control_plane_verified_mapping",
+      email: "control_plane_verified_mapping",
+      status: "control_plane_user_lifecycle",
+      gatewayIdentity: "sub2api_paginated_user_readback",
+      wallet: "sub2api_paginated_user_readback",
+      usage: "sub2api_batch_user_usage",
+      workspaceCount: "control_plane",
+      keyCount: "unavailable_until_authoritative_batch_count_exists"
     },
     sub2apiUserIdFormat: "positive_decimal_string",
     statusValues: ["active", "disabled"],
     mappingConsistency: "remote_id_and_normalized_email_must_equal_control_plane_mapping",
-    failure: "whole_source_unavailable_without_partial_data",
+    pagination: "one_bounded_sub2api_user_page_then_control_plane_page",
+    batchSizeMax: 50,
+    perAccountUserOrUsageNPlusOne: false,
+    failure: "affected_nested_source_unavailable_without_zero_data",
     fetchedAt: "control_plane_response_fetch_completion_time",
-    sourceUpdatedAt: "omit_unless_sub2api_returns_source_timestamp"
+    sourceUpdatedAt: "sub2api_user_updated_at_only_for_corresponding_nested_facts"
   });
 
   assert.deepEqual(contract.sources.workspace, {
