@@ -65,3 +65,15 @@ test("Workspace launch requires the authoritative total price and fixed SKU size
   assert.doesNotMatch(app, /plan\.diskGb === 10 \? 10 : 100/);
   assert.match(app, /typeof workspace\.totalUsdMicros === "number"/);
 });
+
+test("an unavailable launch catalog is explicit and retryable", async () => {
+  const app = await source("apps/console-ui/src/App.vue");
+  assert.match(app, /errors\.catalog && !workspace/);
+  assert.match(app, /计划与价格暂不可用/);
+  assert.match(app, /@click="loadCatalog"/);
+});
+
+test("operator account rows do not render the raw internal source identifier", async () => {
+  const app = await source("apps/console-ui/src/App.vue");
+  assert.doesNotMatch(app, /\{\{\s*accountsSource\.source\s*\}\}/);
+});

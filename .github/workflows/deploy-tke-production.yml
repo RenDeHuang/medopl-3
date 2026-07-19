@@ -88,7 +88,6 @@ jobs:
       TENCENT_DEPLOY_KUBECONFIG_B64: ${{ secrets.TENCENT_DEPLOY_KUBECONFIG_B64 }}
       TENCENT_DEPLOY_KUBECONFIG: ${{ secrets.TENCENT_DEPLOY_KUBECONFIG }}
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      OPL_CONSOLE_USERS_JSON: ${{ secrets.OPL_CONSOLE_USERS_JSON }}
       OPL_SUB2API_ADMIN_EMAIL: ${{ secrets.OPL_SUB2API_ADMIN_EMAIL }}
       OPL_SUB2API_ADMIN_PASSWORD: ${{ secrets.OPL_SUB2API_ADMIN_PASSWORD }}
       OPL_INTERNAL_SERVICE_TOKEN: ${{ secrets.OPL_INTERNAL_SERVICE_TOKEN }}
@@ -263,32 +262,6 @@ jobs:
           chmod 600 "$secret_dir/provider-acceptance-token"
           kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" create secret generic opl-cloud-provider-acceptance \
             --from-file=OPL_PROVIDER_ACCEPTANCE_TOKEN="$secret_dir/provider-acceptance-token" \
-            --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG" apply -f -
-          if [ -n "${OPL_CONSOLE_USERS_JSON:-}" ]; then
-            printf '%s' "$OPL_CONSOLE_USERS_JSON" > "$secret_dir/auth-users-json"
-          elif kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" get secret opl-cloud-auth >/dev/null 2>&1; then
-            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" get secret opl-cloud-auth -o jsonpath='{.data.OPL_CONSOLE_USERS_JSON}' \
-              | base64 -d > "$secret_dir/auth-users-json"
-          else
-            echo "Missing OPL_CONSOLE_USERS_JSON and no existing opl-cloud-auth secret was found." >&2
-            exit 1
-          fi
-          AUTH_USERS_PATH="$secret_dir/auth-users-json" node <<'NODE'
-          const { readFileSync, writeFileSync } = require("node:fs");
-          const path = process.env.AUTH_USERS_PATH;
-          const users = JSON.parse(readFileSync(path, "utf8"));
-          if (!Array.isArray(users) || !users.every((user) => user && typeof user === "object" && !Array.isArray(user))) {
-            throw new Error("OPL_CONSOLE_USERS_JSON must be an array of users");
-          }
-          const normalized = users.map((user) => user.role === "pi" ? { ...user, role: "owner" } : user);
-          if (!normalized.every((user) => Number.isSafeInteger(user.sub2apiUserId) && user.sub2apiUserId > 0)) {
-            throw new Error("every Console user must include a positive integer sub2apiUserId");
-          }
-          writeFileSync(path, JSON.stringify(normalized));
-          NODE
-          chmod 600 "$secret_dir/auth-users-json"
-          kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" create secret generic opl-cloud-auth \
-            --from-file=OPL_CONSOLE_USERS_JSON="$secret_dir/auth-users-json" \
             --dry-run=client -o yaml | kubectl --kubeconfig "$KUBECONFIG" apply -f -
           printf '%s' "$OPL_SUB2API_ADMIN_EMAIL" > "$secret_dir/sub2api-admin-email"
           printf '%s' "$OPL_SUB2API_ADMIN_PASSWORD" > "$secret_dir/sub2api-admin-password"
@@ -507,7 +480,7 @@ jobs:
     environment: production
     env:
       OPL_CONSOLE_ORIGIN: ${{ vars.OPL_PUBLIC_URL || 'https://cloud.medopl.cn' }}
-      OPL_VERIFY_AUTH_USERS_JSON: ${{ secrets.OPL_VERIFY_AUTH_USERS_JSON || secrets.OPL_CONSOLE_USERS_JSON }}
+      OPL_VERIFY_AUTH_USERS_JSON: ${{ secrets.OPL_VERIFY_AUTH_USERS_JSON }}
       OPL_VERIFY_ACCOUNT_ID: ${{ vars.OPL_VERIFY_BASIC_ACCOUNT_ID || '' }}
       OPL_VERIFY_SLOT_ID: verification-slot-basic-01
       OPL_VERIFY_SLOT_DESCRIPTOR_JSON: '{"id":"verification-slot-basic-01","customerProduct":false,"instanceType":"SA5.MEDIUM4","server":"2c4g","cpu":2,"memoryGb":4,"cbsGb":10,"chargeType":"PREPAID","periodMonths":1,"renewFlag":"NOTIFY_AND_MANUAL_RENEW"}'

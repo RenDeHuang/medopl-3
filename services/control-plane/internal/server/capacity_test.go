@@ -173,27 +173,40 @@ func TestSinglePodCapacity(t *testing.T) {
 	consoleDuration := time.Since(consoleStarted)
 	capacityRequireStatus(t, "console", consoleCalls, http.StatusOK)
 
-	commandBody := `{"packageId":"basic","name":"Capacity Compute"}`
+	commandBody := `{"packageId":"basic","name":"Capacity Workspace","sizeGb":10,"autoRenew":false}`
 	commandStarted := time.Now()
-	commandCalls := capacityRunConcurrent(ctx, capacityCommands, func(ctx context.Context, index int) capacityCall {
-		return capacityHTTPCall(ctx, client, httpServer.URL, http.MethodPost, "/api/compute-allocations", commandBody, fmt.Sprintf("capacity-command-%02d", index), cookies, csrf)
+	commandCalls := capacityRunConcurrent(ctx, capacityCommands, func(ctx context.Context, _ int) capacityCall {
+		return capacityHTTPCall(ctx, client, httpServer.URL, http.MethodPost, "/api/workspace-launches", commandBody, "capacity-workspace-launch", cookies, csrf)
 	})
 	commandDuration := time.Since(commandStarted)
-	capacityRequireStatus(t, "resource command", commandCalls, http.StatusAccepted)
+	capacityRequireStatus(t, "Workspace launch", commandCalls, http.StatusAccepted)
 	replayStarted := time.Now()
-	replayCalls := capacityRunConcurrent(ctx, capacityCommands, func(ctx context.Context, index int) capacityCall {
-		return capacityHTTPCall(ctx, client, httpServer.URL, http.MethodPost, "/api/compute-allocations", commandBody, fmt.Sprintf("capacity-command-%02d", index), cookies, csrf)
+	replayCalls := capacityRunConcurrent(ctx, capacityCommands, func(ctx context.Context, _ int) capacityCall {
+		return capacityHTTPCall(ctx, client, httpServer.URL, http.MethodPost, "/api/workspace-launches", commandBody, "capacity-workspace-launch", cookies, csrf)
 	})
 	replayDuration := time.Since(replayStarted)
-	capacityRequireStatus(t, "resource replay", replayCalls, http.StatusAccepted)
-	if got := fabric.count(); got != capacityCommands {
-		t.Fatalf("Fabric prepares = %d, want %d", got, capacityCommands)
+	capacityRequireStatus(t, "Workspace launch replay", replayCalls, http.StatusAccepted)
+	operations, err := store.ListRuntimeOperations(ctx)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if got := capacitySub2APIChargeCount(sub2API); got != capacityCommands {
-		t.Fatalf("purchase charges = %d, want %d", got, capacityCommands)
+	launches := make([]map[string]any, 0, 1)
+	for _, operation := range operations {
+		if operation["action"] == "workspace.launch" {
+			launches = append(launches, operation)
+		}
 	}
-	if got := ledger.count(); got != capacityCommands {
-		t.Fatalf("purchase receipts = %d, want %d", got, capacityCommands)
+	if len(launches) != 1 {
+		t.Fatalf("durable Workspace launches = %#v", launches)
+	}
+	if got := fabric.count(); got != 0 {
+		t.Fatalf("Workspace submission created Fabric resources: %d", got)
+	}
+	if got := capacitySub2APIChargeCount(sub2API); got != 0 {
+		t.Fatalf("Workspace submission charged before the worker: %d", got)
+	}
+	if got := ledger.count(); got != 0 {
+		t.Fatalf("Workspace submission recorded receipts before the worker: %d", got)
 	}
 
 	scanApp, err := newControlPlaneAppWithStore(stateStore)
@@ -213,14 +226,14 @@ func TestSinglePodCapacity(t *testing.T) {
 	if connectionSample.err != nil {
 		t.Fatal(connectionSample.err)
 	}
-	wantSideEffects := capacityAccountCount + capacityCommands
+	wantSideEffects := capacityAccountCount
 	if got := capacitySub2APIChargeCount(sub2API); got != wantSideEffects {
 		t.Fatalf("charges after replayed scan = %d, want %d", got, wantSideEffects)
 	}
 	if got := ledger.count(); got != wantSideEffects {
 		t.Fatalf("receipts after replayed scan = %d, want %d", got, wantSideEffects)
 	}
-	if got := fabric.count(); got != capacityCommands {
+	if got := fabric.count(); got != 0 {
 		t.Fatalf("renewal created Fabric resources: prepares=%d", got)
 	}
 	var rows, uniqueResources, uniqueOperations int

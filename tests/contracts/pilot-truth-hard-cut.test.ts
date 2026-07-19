@@ -156,7 +156,7 @@ test("release contracts separate dual Acceptance from one-request Basic live QA"
     providerMutationCount: 0
   });
   assert.deepEqual(freeze.deliveryEvidence, {
-    codeCompleteThroughTask: 10,
+    codeCompleteThroughTask: 13,
     productionProven: false,
     saleable: false
   });
@@ -166,7 +166,7 @@ test("release contracts separate dual Acceptance from one-request Basic live QA"
   assert.equal(deployment.productionLiveQaJob.modelRequestCount, 1);
   assert.deepEqual(deployment.deliveryEvidence, {
     releaseVerificationCodeComplete: true,
-    identityDeploymentCutover: "pending",
+    identityDeploymentCutover: "code_complete_local_verification",
     productionEvidence: "pending"
   });
 });

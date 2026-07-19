@@ -68,7 +68,7 @@ export function workspaceStatusLabel(runtime: Partial<WorkspaceRuntimeStatus> = 
 export function readinessRows(runtime: ReadinessFact | null, production: ReadinessFact | null) {
   const row = (label: string, value: ReadinessFact | null) => ({
     label,
-    status: value?.ready === true ? "正常" : value?.ready === false ? "需处理" : "-",
+    status: value?.ready === true ? "正常" : value?.ready === false ? "需处理" : "暂不可用",
     updatedAt: value?.generatedAt || value?.updatedAt || "-"
   });
   return [row("运行依赖", runtime), row("生产依赖", production)];

@@ -4,6 +4,40 @@
 > `5fc1f7ab364d8e34b851d9c5c467ddcda88d9352`. It is not current Task 12 product truth.
 > Task 13 replaces the final evidence with screenshots of the integrated implementation.
 
+## Task 13 Final Local Evidence
+
+- Available-state screenshots:
+  - `output/design-qa/task13/customer-workspace-desktop.png`
+  - `output/design-qa/task13/customer-api-overview-desktop.png`
+  - `output/design-qa/task13/customer-api-usage-desktop.png`
+  - `output/design-qa/task13/customer-billing-desktop.png`
+  - `output/design-qa/task13/admin-overview-desktop.png`
+  - `output/design-qa/task13/admin-accounts-desktop.png`
+  - `output/design-qa/task13/admin-resources-desktop.png`
+- Mobile screenshots:
+  - `output/design-qa/task13/customer-overview-mobile.png`
+  - `output/design-qa/task13/customer-workspace-mobile.png`
+  - `output/design-qa/task13/customer-api-usage-mobile.png`
+  - `output/design-qa/task13/admin-overview-mobile.png`
+  - `output/design-qa/task13/admin-accounts-mobile.png`
+- Unavailable-state screenshots:
+  - `output/design-qa/task13/auth-unavailable-desktop.png`
+  - `output/design-qa/task13/customer-catalog-unavailable-desktop.png`
+  - `output/design-qa/task13/customer-workspace-runtime-unavailable-desktop.png`
+  - `output/design-qa/task13/admin-system-runtime-unavailable-desktop.png`
+- The browser used a local deterministic HTTP fixture that returned the strict
+  Task 12 DTOs. It made no Sub2API, Tencent, production, payment, or model call.
+- API values were asserted against the rendered Workspace, Wallet, Key, Usage,
+  Usage Stats, balance-history, receipt, account, resource, and readiness facts.
+- Each source was then made unavailable independently. The UI removed its prior
+  value, rendered `暂不可用`, and preserved facts from the remaining sources.
+- Runtime and API Key reveal were POST-only in the browser flow; plaintext was
+  removed after hide or route leave and was never captured in a screenshot.
+- Desktop `1440x900` and mobile `375x812` passed document-overflow, navigation,
+  table containment, long-URL wrapping, and console-error checks in available states.
+
+Task 13 browser result: passed locally; production evidence remains pending.
+
 ## Task 12 Visual Freeze
 
 - `output/imagegen/task12-freeze-v2/customer-workspace-overview-v2.png`
@@ -58,4 +92,4 @@
 
 - P3 only: the reference's decorative empty-state tray icon is intentionally omitted; the real empty/error copy remains clear without adding nonessential decoration.
 
-final result: passed
+historical checkpoint result: passed for `5fc1f7a` only

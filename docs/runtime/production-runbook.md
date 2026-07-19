@@ -30,9 +30,8 @@ environment variable. Never place credentials in the manifest, command
 arguments, logs, or verifier artifacts.
 
 `OPL_CONSOLE_USERS_JSON` is retired and any non-empty value makes Control Plane
-startup fail closed. The current deploy workflow still installs that secret;
-do not deploy until the workflow/manifest cutover is fixed and verified. Invite
-customers through `POST /api/users`; the backend resolves or creates one
+startup fail closed. The deploy workflow and manifest no longer install that
+seed. Invite customers through `POST /api/users`; the backend resolves or creates one
 Sub2API identity by normalized email and atomically stores the local mapping.
 
 Workspace file bodies remain only on CBS. The PostgreSQL procedures below

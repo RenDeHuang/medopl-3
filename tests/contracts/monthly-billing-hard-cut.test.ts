@@ -99,18 +99,18 @@ test("management contract hard-cuts customer identity to Sub2API and one atomic 
   assert.equal(management.bootstrapLifecycle.legacyLocalUsersEnv, "retired_nonempty_value_fails_startup");
   assert.deepEqual(management.identityDelivery, {
     controlPlane: "code_complete_local_verification",
-    deploymentCutover: "pending_remove_retired_OPL_CONSOLE_USERS_JSON_injection",
+    deploymentCutover: "code_complete_local_verification",
     authenticatedRuntimeEvidence: "pending"
   });
 });
 
-test("offer identity reports the Control Plane hard cut without claiming deployment cutover", async () => {
+test("offer identity reports the local deployment cutover without claiming runtime evidence", async () => {
   const launch = await readJson("opl-cloud-launch-freeze-contract.json");
   const stage = launch.launchStages.find(({ id }) => id === "offer_identity");
 
   assert.equal(
     stage.currentState,
-    "Control Plane atomic mapped-owner provisioning, strict one-to-one customer identity, and Sub2API password authority are code-complete; Memory and isolated PostgreSQL tests are locally verified; deployment cutover from the retired OPL_CONSOLE_USERS_JSON path and authenticated runtime evidence remain pending, while self-registration and SSO are outside the Pilot."
+    "Control Plane atomic mapped-owner provisioning, strict one-to-one customer identity, Sub2API password authority, and retirement of the deployment-time local user seed are code-complete and locally tested; authenticated production runtime evidence remains pending, while self-registration and SSO are outside the Pilot."
   );
   assert.doesNotMatch(stage.currentState, /CI-verified/);
   assert.doesNotMatch(stage.currentState, /operator password reset/);

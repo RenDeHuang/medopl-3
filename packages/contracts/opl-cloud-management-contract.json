@@ -132,7 +132,7 @@
   },
   "identityDelivery": {
     "controlPlane": "code_complete_local_verification",
-    "deploymentCutover": "pending_remove_retired_OPL_CONSOLE_USERS_JSON_injection",
+    "deploymentCutover": "code_complete_local_verification",
     "authenticatedRuntimeEvidence": "pending"
   },
   "userLifecycle": {

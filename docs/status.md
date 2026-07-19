@@ -3,7 +3,7 @@
 ## Current Boundary
 
 Current status is a Fast Invite-Only Paid Pilot candidate for 2-5 customer
-accounts. It is code-complete through Task 10, but not production-proven and not
+accounts. It is locally code-complete through Task 13A, but not production-proven and not
 yet saleable.
 
 Code-complete and locally tested:
@@ -19,15 +19,13 @@ Code-complete and locally tested:
   owner-only credential commands, and account-scoped Gateway Secret handling;
 - Ledger validation, receipts, reconciliation, and replay safety;
 - dual Basic/Pro Provider Acceptance code and one-request Basic release live-QA;
-- immutable Ready-Pod imageID checks, security boundaries, and grouped rollback.
+- immutable Ready-Pod imageID checks, security boundaries, and grouped rollback;
+- the four-surface customer Console, five-surface operations Console, retired
+  local-user deployment seed, Sentrux structural gate, and desktop/mobile
+  source-truth browser QA with independent unavailable states.
 
 Remaining blockers:
 
-- Task 11 truth hard cut must land, then Task 12 must integrate the clean UI commit;
-- the deploy workflow still injects retired `OPL_CONSOLE_USERS_JSON`, which the
-  Control Plane now rejects; deployment identity cutover is pending;
-- Task 13A Node, Go, four isolated PostgreSQL suites, Sentrux, and desktop/mobile
-  source-truth QA have not run on one final SHA;
 - Basic and Pro Provider Acceptance has not run and no real Tencent resource
   evidence exists for this candidate;
 - no approved real renewal, production rollout, browser login/WebSocket, model
@@ -44,12 +42,18 @@ or restore Workspace files.
 ```bash
 npm test
 npm run typecheck
+npm run lint
 npm run build
-(cd services/control-plane && go test ./...)
-(cd services/fabric && go test ./...)
-(cd services/ledger && go test ./...)
+(cd services/control-plane && go test ./... -count=1)
+(cd services/fabric && go test ./... -count=1)
+(cd services/ledger && go test ./... -count=1)
+(cd services/internal/postgresmigrate && go test ./... -count=1)
+sentrux check .
 git diff --check
 ```
+
+The four PostgreSQL suites must use local or CI isolated databases and complete
+with zero SKIP; production PostgreSQL is forbidden for this gate.
 
 Production delivery additionally requires immutable image publication, both
 retained Acceptance slots, one approved Basic live-QA request, bounded rollout

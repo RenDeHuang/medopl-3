@@ -21,7 +21,7 @@
     "paymentOrderApi": false
   },
   "deliveryEvidence": {
-    "codeCompleteThroughTask": 10,
+    "codeCompleteThroughTask": 13,
     "productionProven": false,
     "saleable": false
   },
@@ -233,7 +233,7 @@
     "displayFacts": ["current_balance", "workspace_name_and_usability", "server_projected_workspace_price_period_and_renewal_status", "gateway_request_time_model_endpoint_tokens_actual_cost"],
     "prohibitions": ["second_wallet", "usage_database", "billing_fact_table", "raw_admin_dto", "browser_to_sub2api", "frontend_financial_derivation", "payment_or_topup_ui", "key_mutation", "prompt_or_response_content"],
     "partialFailure": "render_independent_sources_with_explicit_retry",
-    "currentImplementation": "Tenant-safe Ledger billing history and Sub2API request Usage/Stats projections are code-complete and locally tested without copied fact tables; deployed Console presentation and live evidence remain pending."
+    "currentImplementation": "Tenant-safe Ledger billing history and Sub2API request Usage/Stats projections plus the strict local Console presentation are code-complete and locally tested without copied fact tables; deployed live evidence remains pending."
   },
   "verification": {
     "purchaseBudget": 2,
@@ -304,7 +304,7 @@
       "id": "offer_identity",
       "business": "A mapped customer signs in and sees Basic and Pro with separate compute and storage prices; the internal verification slot never appears.",
       "owners": ["console", "gateway"],
-      "currentState": "Control Plane atomic mapped-owner provisioning, strict one-to-one customer identity, and Sub2API password authority are code-complete; Memory and isolated PostgreSQL tests are locally verified; deployment cutover from the retired OPL_CONSOLE_USERS_JSON path and authenticated runtime evidence remain pending, while self-registration and SSO are outside the Pilot.",
+      "currentState": "Control Plane atomic mapped-owner provisioning, strict one-to-one customer identity, Sub2API password authority, and retirement of the deployment-time local user seed are code-complete and locally tested; authenticated production runtime evidence remains pending, while self-registration and SSO are outside the Pilot.",
       "requiredDeliverables": ["account mapping", "Basic and Pro definitions", "tenant isolation"],
       "completionEvidence": ["contract tests", "tenant tests", "deployed mapped-account readback"]
     },
@@ -312,7 +312,7 @@
       "id": "wallet_quote",
       "business": "The customer sees live Sub2API balance and an exact monthly compute plus storage quote before side effects.",
       "owners": ["console", "gateway"],
-      "currentState": "Granular Wallet, Key, Usage, Usage Stats, and balance-history DTOs plus exact fixed-USD Basic/Pro Workspace quotes are code-complete and locally tested; UI integration and live authenticated Sub2API evidence remain incomplete.",
+      "currentState": "Granular Wallet, Key, Usage, Usage Stats, and balance-history DTOs plus exact fixed-USD Basic/Pro Workspace quotes and local Console integration are code-complete and locally tested; live authenticated Sub2API evidence remains incomplete.",
       "requiredDeliverables": ["live balance", "integer quote", "period and retention disclosure"],
       "completionEvidence": ["Sub2API read test", "quote test", "unavailable-state UI test"]
     },
@@ -376,7 +376,7 @@
       "id": "production_release",
       "business": "A release is ready only from merged code, immutable Cloud and App images, runtime checks, rollback proof, and reusable verification.",
       "owners": ["console", "fabric", "ledger", "gateway"],
-      "currentState": "Security, immutable Ready-Pod imageID checks, grouped rollback, and release tooling are code-complete; UI integration, final local gates, deployment identity cutover, rollout, browser, Gateway, and safe real verification evidence remain incomplete.",
+      "currentState": "Security, immutable Ready-Pod imageID checks, grouped rollback, release tooling, local Console integration, Task 13A gates, and the deployment identity cutover are code-complete locally; immutable publication, rollout, deployed browser, Gateway, and safe real verification evidence remain incomplete.",
       "requiredDeliverables": ["immutable digests", "production readiness", "grouped rollback", "read-only smoke", "verification receipt"],
       "completionEvidence": ["CI run", "rollout readback", "rollback and restore", "real QA evidence"]
     }

@@ -62,7 +62,7 @@ test("unavailable and zero are distinct source facts", () => {
   assert.equal(formatCount(undefined), "-");
   assert.equal(formatUsdMicros(undefined), "-");
   assert.deepEqual(readinessRows(null, null), [
-    { label: "运行依赖", status: "-", updatedAt: "-" },
-    { label: "生产依赖", status: "-", updatedAt: "-" }
+    { label: "运行依赖", status: "暂不可用", updatedAt: "-" },
+    { label: "生产依赖", status: "暂不可用", updatedAt: "-" }
   ]);
 });

@@ -25,7 +25,7 @@ order = 6
 
 [[layers]]
 name = "frontend"
-paths = ["apps/console-ui/*", "apps/console-ui/**/*", "index.html", "vite.config.js"]
+paths = ["apps/console-ui/*", "apps/console-ui/**/*", "vite.config.js"]
 order = 1
 
 [[layers]]

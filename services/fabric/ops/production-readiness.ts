@@ -42,10 +42,6 @@ const PROVIDER_CONFIG = {
   }
 };
 
-const BLOCKED_AUTH_PASSWORDS = new Set([
-  "OplAdminPass2026!"
-]);
-
 function check(id, ok, message) {
   return { id, ok, message };
 }
@@ -80,51 +76,6 @@ function matchesOplAppContract(env) {
 function hasAionUiAdminPasswordSeed(env) {
   const seed = String(env.OPL_AIONUI_ADMIN_PASSWORD_SEED || "");
   return seed.length >= 24 && !/(password|changeme|change-me|example|placeholder|seed)/i.test(seed);
-}
-
-function seedUsersFromJson(value) {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : parsed.users || [];
-  } catch {
-    return [];
-  }
-}
-
-function hasProductionSecret(user) {
-  if (user.passwordHash) return true;
-  const password = String(user.password || "");
-  return Boolean(
-    password.length >= 12 &&
-    !BLOCKED_AUTH_PASSWORDS.has(password) &&
-    !/(password|changeme|change-me|example|placeholder)/i.test(password)
-  );
-}
-
-function hasSeedUser(users, role) {
-  return users.some((user) =>
-    user?.role === role &&
-    user.email &&
-    user.accountId &&
-    user.status !== "disabled" &&
-    hasProductionSecret(user)
-  );
-}
-
-function hasProductionAuthSeed(env) {
-  const users = seedUsersFromJson(env.OPL_CONSOLE_USERS_JSON);
-  if (users.length > 0) return hasSeedUser(users, "owner") && hasSeedUser(users, "admin");
-  return Boolean(
-    env.OPL_PI_EMAIL &&
-    env.OPL_PI_ACCOUNT_ID &&
-    env.OPL_PI_PASSWORD &&
-    hasProductionSecret({ password: env.OPL_PI_PASSWORD }) &&
-    env.OPL_ADMIN_EMAIL &&
-    env.OPL_ADMIN_ACCOUNT_ID &&
-    env.OPL_ADMIN_PASSWORD &&
-    hasProductionSecret({ password: env.OPL_ADMIN_PASSWORD })
-  );
 }
 
 async function commandExistsInPath(command, env) {
@@ -184,7 +135,6 @@ export async function productionReadiness({ env = process.env, commandExists = (
     check("aionui_admin_password_seed", hasAionUiAdminPasswordSeed(env), "AionUI WebUI login must use a strong per-Workspace password seed"),
     check("workspace_domain", looksLikeProductionDomain(env.OPL_WORKSPACE_DOMAIN), "OPL_WORKSPACE_DOMAIN must be a production wildcard domain"),
     check("database_url", Boolean(env.DATABASE_URL), "DATABASE_URL is required for production persistence"),
-    check("auth_seed", hasProductionAuthSeed(env), "OPL_CONSOLE_USERS_JSON or explicit PI/Admin auth credentials are required for production"),
     check("provider_env", providerEnvReady, "Runtime provider environment is incomplete or its Tencent zone and region do not match"),
     check("live_mutation_guard", env.RUN_TENCENT_CREATE_RELEASE_EXECUTION === "1", "RUN_TENCENT_CREATE_RELEASE_EXECUTION must be 1 for production compute allocation"),
     check("tools", missingTools.length === 0, "Required production tools are missing")

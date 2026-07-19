@@ -280,7 +280,7 @@ test("production verification is read only and requires both reusable prepaid sl
   assert.equal(inputs.includes("paid_confirmation"), false);
   assert.equal(Object.hasOwn(currentJob.env, "OPL_VERIFY_PAID_CONFIRMATION"), false);
   assert.equal(Object.hasOwn(currentJob.env, "OPL_VERIFY_MODEL_ACCESS_KEY"), false);
-  assert.equal(currentJob.env.OPL_VERIFY_AUTH_USERS_JSON, "${{ secrets.OPL_VERIFY_AUTH_USERS_JSON || secrets.OPL_CONSOLE_USERS_JSON }}");
+  assert.equal(currentJob.env.OPL_VERIFY_AUTH_USERS_JSON, "${{ secrets.OPL_VERIFY_AUTH_USERS_JSON }}");
   assert.equal(currentJob.env.OPL_VERIFY_SLOT_ID, "${{ matrix.slot_id }}");
   assert.equal(currentJob.env.OPL_VERIFY_SLOT_DESCRIPTOR_JSON, "${{ matrix.descriptor }}");
   assert.deepEqual(currentJob.strategy.matrix.include.map((entry) => ({
@@ -314,11 +314,13 @@ test("TKE deploy requires both fixed slots but runs release live QA once on the 
   assert.ok(deploySteps.indexOf("Require Basic and Pro Acceptance accounts") < deploySteps.indexOf("Prepare kubeconfig"));
   assert.equal(deploy.env.OPL_VERIFY_BASIC_ACCOUNT_ID, "${{ vars.OPL_VERIFY_BASIC_ACCOUNT_ID || '' }}");
   assert.equal(deploy.env.OPL_VERIFY_PRO_ACCOUNT_ID, "${{ vars.OPL_VERIFY_PRO_ACCOUNT_ID || '' }}");
+  assert.equal(Object.hasOwn(deploy.env, "OPL_CONSOLE_USERS_JSON"), false);
+  assert.doesNotMatch(serializedRuns(deploy), /OPL_CONSOLE_USERS_JSON|opl-cloud-auth|auth-users-json/);
 
   assert.equal(liveQa.needs, "deploy");
   assert.equal(liveQa.environment, "production");
   assert.deepEqual([liveQa["runs-on"]].flat(), ["ubuntu-latest"]);
-  assert.equal(liveQa.env.OPL_VERIFY_AUTH_USERS_JSON, "${{ secrets.OPL_VERIFY_AUTH_USERS_JSON || secrets.OPL_CONSOLE_USERS_JSON }}");
+  assert.equal(liveQa.env.OPL_VERIFY_AUTH_USERS_JSON, "${{ secrets.OPL_VERIFY_AUTH_USERS_JSON }}");
   assert.equal(liveQa.env.OPL_VERIFY_ACCOUNT_ID, "${{ vars.OPL_VERIFY_BASIC_ACCOUNT_ID || '' }}");
   assert.equal(liveQa.env.OPL_VERIFY_SLOT_ID, basicSlotDescriptor.id);
   assert.deepEqual(JSON.parse(liveQa.env.OPL_VERIFY_SLOT_DESCRIPTOR_JSON), basicSlotDescriptor);
@@ -486,7 +488,7 @@ test("image release accepts only the exact primary and fallback tag-digest pairs
   }
 });
 
-test("TKE deploy installs Sub2API credentials and validates account mappings", async () => {
+test("TKE deploy installs Sub2API and Provider Acceptance credentials", async () => {
   const workflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
   const currentJob = workflowJob(workflow, "deploy");
   const steps = stepsByName(currentJob);
@@ -500,8 +502,6 @@ test("TKE deploy installs Sub2API credentials and validates account mappings", a
   assert.equal(currentJob.env.OPL_PROVIDER_ACCEPTANCE_TOKEN, "${{ secrets.OPL_PROVIDER_ACCEPTANCE_TOKEN }}");
   assert.match(install, /create secret generic opl-cloud-provider-acceptance/);
   assert.match(install, /--from-file=OPL_PROVIDER_ACCEPTANCE_TOKEN/);
-  assert.match(install, /Number\.isSafeInteger\(user\.sub2apiUserId\)/);
-  assert.match(install, /user\.sub2apiUserId > 0/);
   assert.equal(currentJob.env.OPL_TENCENT_ZONE, "${{ vars.OPL_TENCENT_ZONE || 'na-siliconvalley-1' }}");
   assert.equal(currentJob.env.TENCENTCLOUD_REGION, "${{ vars.TENCENTCLOUD_REGION || 'na-siliconvalley' }}");
   assert.equal(Object.hasOwn(currentJob.env, "OPL_CODEX_API_KEY"), false);

@@ -141,7 +141,7 @@ npm run validate:production-manifest -- \
 ```
 
 The `Deploy TKE Production` workflow installs database, internal-service,
-Console auth, Sub2API, Tencent, image-pull, and Workspace secrets; renders the
+Sub2API, Tencent, image-pull, and Workspace secrets; renders the
 manifest; restarts Control Plane, Fabric, and Ledger; and waits for each rollout.
 
 Basic and Pro each have a separate retained Provider Acceptance slot. Ordinary
@@ -151,9 +151,9 @@ exact-one Usage, balance delta, image IDs, receipts, stable CVM/CBS facts, and
 zero provider mutation. Provider Acceptance and this real request have not been
 run for the current candidate, so the Pilot is not production-proven.
 
-The current deploy workflow still references the retired
-`OPL_CONSOLE_USERS_JSON` secret while the Control Plane fails closed when it is
-present. That deployment cutover must be fixed and verified before production.
+The retired local Console user seed is no longer accepted by deployment. The
+workflow bootstraps the fixed operator from Sub2API and invited owners are added
+through `POST /api/users`; production runtime evidence is still pending.
 
 See [docs/runtime/production-runbook.md](./docs/runtime/production-runbook.md)
 for rollout and recovery commands.

@@ -10,13 +10,14 @@
   },
   "deliveryEvidence": {
     "releaseVerificationCodeComplete": true,
-    "identityDeploymentCutover": "pending",
+    "identityDeploymentCutover": "code_complete_local_verification",
     "productionEvidence": "pending"
   },
   "identityDeploymentCutover": {
     "retiredInput": "OPL_CONSOLE_USERS_JSON",
     "controlPlaneBehavior": "non_empty_value_fails_closed",
-    "workflowStatus": "pending_removal_before_deploy"
+    "workflowStatus": "removed_and_locally_tested",
+    "productionEvidence": "pending"
   },
   "runner": [
     "self-hosted",
@@ -84,7 +85,6 @@
       "DATABASE_URL",
       "OPL_INTERNAL_SERVICE_TOKEN",
       "OPL_PROVIDER_ACCEPTANCE_TOKEN",
-      "OPL_CONSOLE_USERS_JSON",
       "TCR_USERNAME",
       "TCR_PASSWORD"
     ],
@@ -92,7 +92,6 @@
       "DATABASE_URL",
       "OPL_INTERNAL_SERVICE_TOKEN",
       "OPL_PROVIDER_ACCEPTANCE_TOKEN",
-      "OPL_CONSOLE_USERS_JSON",
       "OPL_SUB2API_ADMIN_EMAIL",
       "OPL_SUB2API_ADMIN_PASSWORD",
       "TENCENTCLOUD_SECRET_ID",
@@ -158,7 +157,6 @@
         "--from-file=DATABASE_URL=\"$secret_dir/database-url\"",
         "--from-file=OPL_INTERNAL_SERVICE_TOKEN=\"$secret_dir/internal-service-token\"",
         "--from-file=OPL_PROVIDER_ACCEPTANCE_TOKEN=\"$secret_dir/provider-acceptance-token\"",
-        "--from-file=OPL_CONSOLE_USERS_JSON=\"$secret_dir/auth-users-json\"",
         "--from-file=OPL_SUB2API_ADMIN_EMAIL=\"$secret_dir/sub2api-admin-email\"",
         "--from-file=OPL_SUB2API_ADMIN_PASSWORD=\"$secret_dir/sub2api-admin-password\"",
         "--from-file=TENCENTCLOUD_SECRET_ID=\"$secret_dir/tencentcloud-secret-id\"",

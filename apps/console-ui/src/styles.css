@@ -1175,8 +1175,10 @@ tbody tr:last-child td {
 
 .workspace-details .data-list a {
   display: inline-flex;
+  max-width: 100%;
   align-items: center;
   gap: 5px;
+  overflow-wrap: anywhere;
   color: var(--blue);
 }
 

@@ -176,15 +176,6 @@
                     }
                   },
                   {
-                    "name": "OPL_CONSOLE_USERS_JSON",
-                    "valueFrom": {
-                      "secretKeyRef": {
-                        "name": "opl-cloud-auth",
-                        "key": "OPL_CONSOLE_USERS_JSON"
-                      }
-                    }
-                  },
-                  {
                     "name": "OPL_AIONUI_ADMIN_PASSWORD_SEED",
                     "valueFrom": {
                       "secretKeyRef": {
