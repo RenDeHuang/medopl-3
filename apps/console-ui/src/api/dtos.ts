@@ -20,6 +20,20 @@ export interface UnavailableSource {
 
 export type SourceEnvelope<T> = AvailableSource<T> | UnavailableSource;
 
+export interface MoneyDTO {
+  currency: "USD";
+  usdMicros: number;
+}
+
+export interface OperationStatusDTO {
+  operationId: string;
+  status: string;
+  phase?: string;
+  errorCode?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface AuthIdentity {
   id: string;
   consoleUserId?: string;
@@ -46,6 +60,9 @@ export interface AuthMeData {
   email: string;
   status: "active" | "disabled";
 }
+
+export type SessionDTO = AuthSession;
+export type CurrentAccountDTO = AuthMeData;
 
 export interface LoginRequest {
   email: string;
@@ -76,8 +93,12 @@ export interface Workspace {
   renewalStatus?: string;
 }
 
+export interface WorkspaceDTO extends Workspace {
+  workspaceApiKeyId?: string;
+}
+
 export interface WorkspaceListData {
-  items: Workspace[];
+  items: WorkspaceDTO[];
   total: number;
 }
 
@@ -114,6 +135,12 @@ export interface WorkspaceLaunchResponse {
   updatedAt?: string;
 }
 
+export interface WorkspaceLaunchOperationDTO extends WorkspaceLaunchResponse {
+  workspaceApiKeyId?: string;
+  workspaceKeyStatus?: string;
+  workspaceKeyFingerprint?: string;
+}
+
 export type WorkspaceLaunchListResponse = WorkspaceLaunchResponse[];
 
 export interface WorkspaceRenewalRequest {
@@ -127,6 +154,9 @@ export interface WorkspaceRenewalResponse {
   paidThrough: string;
   renewalStatus: string;
 }
+
+export type WorkspaceAutoRenewRequest = WorkspaceRenewalRequest;
+export type WorkspaceAutoRenewCommandDTO = WorkspaceRenewalResponse;
 
 export interface RuntimeCheck {
   name: string;
@@ -150,6 +180,8 @@ export interface WorkspaceRuntimeStatus {
   access?: RuntimeAccessSummary;
 }
 
+export type WorkspaceRuntimeDTO = WorkspaceRuntimeStatus;
+
 export interface WorkspaceRuntimeRequest {
   workspaceId: string;
 }
@@ -168,6 +200,37 @@ export interface RuntimeCredentialResponse {
   workspaceId: string;
   access: RuntimeCredentialAccess;
   receiptId?: string;
+}
+
+export type WorkspaceRuntimeCredentialDTO = RuntimeCredentialResponse;
+
+export interface WorkspaceKeyRotationDTO extends OperationStatusDTO {
+  workspaceId: string;
+  previousKeyId?: string;
+  keyId: string;
+  fingerprint: string;
+}
+
+export interface WorkspaceFileEntryDTO {
+  name: string;
+  relativePath: string;
+  kind: "file" | "directory";
+  sizeBytes?: number;
+  updatedAt: string;
+}
+
+export interface WorkspaceFilePageDTO {
+  path: string;
+  items: WorkspaceFileEntryDTO[];
+  nextCursor: string | null;
+  sourceUpdatedAt?: string;
+}
+
+export interface WorkspaceFilesystemUsageDTO {
+  totalBytes: number;
+  usedBytes: number;
+  availableBytes: number;
+  measuredAt: string;
 }
 
 export interface PricingPlan {
@@ -228,6 +291,24 @@ export interface GatewayWallet {
   status: string;
 }
 
+export interface GatewayEndpointDTO {
+  baseUrl: string;
+}
+
+export type GatewayWalletDTO = GatewayWallet;
+
+export interface CreateGatewayKeyRequest {
+  name: string;
+  quotaUsdMicros: number;
+  expiresInDays?: number;
+}
+
+export interface UpdateGatewayKeyRequest {
+  name?: string;
+  quotaUsdMicros?: number;
+  enabled?: boolean;
+}
+
 export interface GatewayKey {
   id: string;
   name: string;
@@ -238,6 +319,20 @@ export interface GatewayKey {
   usage1dUsdMicros: number;
   usage7dUsdMicros: number;
   lastUsedAt: string | null;
+}
+
+export interface GatewayKeySummaryDTO extends GatewayKey {
+  kind: "general" | "workspace";
+  expiresAt: string | null;
+  manageable: boolean;
+  deletable: boolean;
+}
+
+export interface GatewayKeyPageDTO {
+  items: GatewayKeySummaryDTO[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface GatewayKeysData {
@@ -251,6 +346,8 @@ export interface GatewayKeyReveal {
   status: "active" | "disabled";
   value: string;
 }
+
+export type GatewayKeySecretDTO = GatewayKeyReveal;
 
 export interface GatewayUsageItem {
   apiKeyId: string;
@@ -282,6 +379,10 @@ export interface GatewayUsageStats {
   totalActualCostUsdMicros: number;
 }
 
+export type GatewayKeyUsagePageDTO = GatewayUsageData;
+export type GatewayUsageSummaryDTO = GatewayUsageStats;
+export type GatewayAccountUsageSummaryDTO = GatewayUsageStats;
+
 export interface BalanceHistoryEntry {
   type: string;
   valueUsdMicros: number;
@@ -294,6 +395,8 @@ export interface BalanceHistoryData {
   items: BalanceHistoryEntry[];
   total: number;
 }
+
+export type GatewayBalanceHistoryPageDTO = BalanceHistoryData;
 
 export interface BillingReceipt {
   receiptId: string;
@@ -318,6 +421,35 @@ export interface BillingReceiptPage {
   hasMore: boolean;
 }
 
+export interface WorkspaceBillingReceiptDTO {
+  receiptId: string;
+  type: "billing.workspace_purchased.v1" | "billing.workspace_renewed.v1" |
+    "billing.workspace_expired.v1" | "billing.workspace_refunded.v1";
+  status: string;
+  workspaceId: string;
+  createdAt: string;
+  priceVersion: string;
+  currency: "USD";
+  periodStart: string;
+  paidThrough: string;
+  totalUsdMicros: number;
+  chargeReference: string;
+  fulfillment: {
+    computeAllocationId: string;
+    storageId: string;
+    attachmentId?: string;
+    workspaceApiKeyId?: string;
+    runtimeId?: string;
+  };
+  refundUsdMicros?: number;
+}
+
+export interface BillingReceiptPageDTO {
+  receipts: WorkspaceBillingReceiptDTO[];
+  nextCursor: string;
+  hasMore: boolean;
+}
+
 export interface OperatorAccount {
   accountId: string;
   consoleUserId: string;
@@ -330,6 +462,30 @@ export interface OperatorAccount {
 export interface OperatorAccountsData {
   items: OperatorAccount[];
   total: number;
+}
+
+export interface OperatorAccountDTO extends OperatorAccount {
+  wallet: SourceEnvelope<GatewayWalletDTO>;
+  keyCount: SourceEnvelope<number>;
+  usage: SourceEnvelope<GatewayAccountUsageSummaryDTO>;
+  workspaceCount: SourceEnvelope<number>;
+}
+
+export interface OperatorAccountPageDTO {
+  items: OperatorAccountDTO[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface InviteAccountRequest {
+  email: string;
+  password: string;
+  name?: string;
+}
+
+export interface OperatorAccountCommandDTO extends OperationStatusDTO {
+  accountId: string;
 }
 
 export interface CreateCustomerUserRequest {
@@ -352,6 +508,91 @@ export interface ResourceFact {
   chargeUsdMicros?: number;
 }
 
+export interface OperatorResourceDTO {
+  ownerAccount: SourceEnvelope<{ id: string }>;
+  ownerUser: SourceEnvelope<{ id: string; email: string }>;
+  workspace: SourceEnvelope<{ id: string; name?: string }>;
+  resourceType: SourceEnvelope<string>;
+  packageOrSpec: SourceEnvelope<string>;
+  providerId: SourceEnvelope<string>;
+  zone: SourceEnvelope<string>;
+  status: SourceEnvelope<string>;
+  createdAt: SourceEnvelope<string>;
+  expiresAt: SourceEnvelope<string>;
+  lastReadAt: SourceEnvelope<string>;
+  operationRef: SourceEnvelope<string>;
+  receiptRef: SourceEnvelope<string>;
+}
+
+export interface OperatorWorkspaceDTO {
+  workspace: SourceEnvelope<WorkspaceDTO>;
+  ownerAccount: SourceEnvelope<{ id: string }>;
+  ownerUser: SourceEnvelope<{ id: string; email: string }>;
+  resources: OperatorResourceDTO[];
+  receipt: SourceEnvelope<WorkspaceBillingReceiptDTO>;
+}
+
+export interface OperatorWorkspacePageDTO {
+  items: OperatorWorkspaceDTO[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface WalletAdjustmentRequest {
+  kind: "recharge" | "debit" | "business_refund";
+  amountUsd: string;
+  reason: string;
+  relatedOperationId?: string;
+  confirmationAccountId: string;
+}
+
+export interface WalletAdjustmentOperationDTO extends OperationStatusDTO {
+  accountId: string;
+  kind: WalletAdjustmentRequest["kind"];
+  amountUsd: string;
+  beforeBalance: SourceEnvelope<MoneyDTO>;
+  afterBalance: SourceEnvelope<MoneyDTO>;
+  balanceHistoryRef?: string;
+  actor: string;
+  relatedOperationId?: string;
+}
+
+export interface AnnouncementDTO {
+  id: string;
+  title: string;
+  body: string;
+  status: "draft" | "scheduled" | "published" | "withdrawn";
+  startsAt?: string;
+  endsAt?: string;
+  publishedAt?: string;
+  read: boolean;
+}
+
+export interface AnnouncementPageDTO {
+  items: AnnouncementDTO[];
+  total: number;
+}
+
+export interface AnnouncementReadDTO {
+  announcementId: string;
+  readAt: string;
+}
+
+export type OperatorAnnouncementPageDTO = AnnouncementPageDTO;
+
+export interface AnnouncementDraftRequest {
+  title: string;
+  body: string;
+  startsAt?: string;
+  endsAt?: string;
+}
+
+export interface AnnouncementScheduleRequest {
+  startsAt: string;
+  endsAt?: string;
+}
+
 export interface ManagementState {
   users: AuthIdentity[];
   workspaces: Workspace[];
@@ -366,10 +607,47 @@ export interface OperatorSummary {
   notifications?: { total?: number };
 }
 
+export interface OperatorOverviewDTO {
+  accounts: SourceEnvelope<{ total: number; active: number; disabled: number }>;
+  wallet: SourceEnvelope<MoneyDTO>;
+  keys: SourceEnvelope<{ total: number }>;
+  usage: SourceEnvelope<GatewayAccountUsageSummaryDTO>;
+  workspaces: SourceEnvelope<{ total: number }>;
+  resources: SourceEnvelope<{ total: number }>;
+  reconciliation: SourceEnvelope<{ total: number }>;
+  health: SourceEnvelope<OperatorHealthDTO>;
+}
+
+export interface OperatorReconciliationPageDTO {
+  items: Array<{
+    id: string;
+    resourceType: "workspace" | "compute" | "storage";
+    status: string;
+    operationRef?: string;
+    receiptRef?: string;
+  }>;
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface BillingReviewResolutionRequest {
+  decision: "activate_charged_resource" | "terminate_uncharged_absent" | "refund_charged_absent";
+  evidenceRef: string;
+}
+
 export interface ReadinessFact {
   ready?: boolean;
   generatedAt?: string;
   updatedAt?: string;
+}
+
+export interface OperatorHealthDTO {
+  controlPlane: SourceEnvelope<ReadinessFact>;
+  gateway: SourceEnvelope<ReadinessFact>;
+  fabric: SourceEnvelope<ReadinessFact>;
+  runtime: SourceEnvelope<ReadinessFact>;
+  ledger: SourceEnvelope<ReadinessFact>;
 }
 
 export function decodeDto<T>(value: unknown): T {

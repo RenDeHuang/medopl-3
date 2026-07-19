@@ -43,7 +43,7 @@ test("current contracts name Sub2API as the only spendable balance", async () =>
 test("management contract hard-cuts customer identity to Sub2API and one atomic owner graph", async () => {
   const management = await readJson("opl-cloud-management-contract.json");
 
-  assert.equal(management.schemaVersion, 8);
+  assert.equal(management.schemaVersion, 9);
   assert.deepEqual(management.entities.account.requiredFields, ["id", "ownerUserId", "status", "sub2apiUserId", "createdAt", "updatedAt"]);
   assert.deepEqual(management.entities.user, {
     requiredFields: ["id", "email", "accountId", "role", "status", "createdAt", "updatedAt"],
@@ -69,7 +69,7 @@ test("management contract hard-cuts customer identity to Sub2API and one atomic 
   assert.equal(management.internalCompatibilityRecords.customerAuthorizationAuthority, false);
   assert.deepEqual(management.identityProvisioning.atomicFacts, ["account", "user", "organization", "membership"]);
   assert.deepEqual(management.entities.membership.roles, ["owner"]);
-  assert.equal(management.identityProvisioning.onlyMutation, "POST /api/users");
+  assert.equal(management.identityProvisioning.onlyMutation, "POST /api/operator/accounts/invitations");
   assert.equal(management.identityProvisioning.callerSuppliedSub2apiUserId, "forbidden");
   assert.equal(management.identityProvisioning.partialFailure, "rollback_all_four_facts");
   assert.equal(management.identityProvisioning.matchingReplay, "return_existing_graph_without_duplicate_facts");
@@ -158,6 +158,7 @@ test("receipt contract exposes monthly product behavior only", async () => {
 	]);
 
   for (const type of [
+    "billing.workspace_purchased.v1",
     "billing.resource_purchased.v1",
     "billing.resource_renewed.v1",
     "billing.resource_expired.v1",
@@ -186,7 +187,7 @@ test("receipt contract exposes monthly product behavior only", async () => {
 	assert.deepEqual(evidence.reconciliationReportV1.exceptions.resourceTypes, ["compute", "storage", "workspace"]);
 	assert.deepEqual(evidence.reconciliationReportV1.workspaceRenewalAuthority, billing.reconciliationPolicy.workspaceRenewalAuthority);
 	const management = await readJson("opl-cloud-management-contract.json");
-	assert.equal(management.schemaVersion, 8);
+	assert.equal(management.schemaVersion, 9);
 	assert.equal(
 		management.operatorNotifications.source,
 		"Derived from current Workspace renewal operations plus current compute and storage compatibility state; no alert table or second source of truth."

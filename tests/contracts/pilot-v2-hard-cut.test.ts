@@ -1,0 +1,153 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const root = new URL("../../", import.meta.url);
+
+async function text(path: string) {
+  return readFile(new URL(path, root), "utf8");
+}
+
+async function json(path: string) {
+  return JSON.parse(await text(path));
+}
+
+test("Pilot V2 contracts hard cut Gateway keys and source envelopes", async () => {
+  const [freeze, sourceTruth, boundary, dtos] = await Promise.all([
+    json("packages/contracts/opl-cloud-launch-freeze-contract.json"),
+    json("packages/contracts/opl-cloud-console-source-truth-contract.json"),
+    json("packages/contracts/opl-cloud-service-boundary-contract.json"),
+    text("apps/console-ui/src/api/dtos.ts")
+  ]);
+
+  assert.deepEqual(freeze.deliveryEvidence, {
+    required: true,
+    codeComplete: false,
+    pilotReady: false,
+    productionProven: false,
+    saleable: false
+  });
+  assert.equal(freeze.gateway.publicEndpoint.configEnv, "OPL_GATEWAY_PUBLIC_BASE_URL");
+  assert.equal(freeze.gateway.publicEndpoint.productApi, "GET /api/gateway/endpoint");
+  assert.equal(freeze.gateway.publicEndpoint.productionScheme, "https");
+  assert.deepEqual(freeze.gateway.publicEndpoint.forbiddenFallbacks, ["OPL_SUB2API_BASE_URL", "gflabtoken.cn"]);
+  assert.deepEqual(freeze.gateway.customerMutationApis, ["create_general_key", "update_general_key", "delete_general_key", "reveal_owned_key"]);
+  assert.equal(freeze.gateway.createKeyRequest.expiryField, "expiresInDays");
+  assert.equal(freeze.gateway.createKeyRequest.responseExpiryField, "expiresAt");
+  assert.equal(freeze.gateway.createKeyRequest.createThenUpdate, false);
+
+  assert.equal(sourceTruth.envelope.typeName, "SourceEnvelope<T>");
+  assert.equal(sourceTruth.envelope.serverWriter, "writeSourceEnvelope");
+  assert.equal(sourceTruth.envelope.fetchedAtMaySubstituteSourceUpdatedAt, false);
+  assert.equal(sourceTruth.sources.gateway.endpoint.route, "GET /api/gateway/endpoint");
+  assert.equal(sourceTruth.sources.gateway.keys.createRequest.expiryField, "expiresInDays");
+  assert.equal(sourceTruth.sources.gateway.keys.revealRoute, "POST /api/gateway/keys/{keyId}/reveal");
+  assert.equal(sourceTruth.sources.gateway.usage.route, "GET /api/gateway/keys/{keyId}/usage");
+  assert.equal(sourceTruth.sources.gateway.usageStats.route, "GET /api/gateway/keys/{keyId}/usage-summary");
+  assert.equal(sourceTruth.sources.gateway.accountUsageStats.route, "GET /api/gateway/usage-summary");
+
+  assert.deepEqual(boundary.customerMutationBoundary, { payment: false, topUp: false, keyCreate: true, keyRevoke: true });
+  assert.ok(boundary.externalServices.gateway.controlPlaneApi.includes("mutate owned general keys with delegated user credentials"));
+  assert.doesNotMatch(dtos, /ProductSourceEnvelope/);
+  assert.match(dtos, /type SourceEnvelope<T>/);
+  for (const name of [
+    "MoneyDTO", "OperationStatusDTO", "SessionDTO", "CurrentAccountDTO", "GatewayWalletDTO", "GatewayBalanceHistoryPageDTO",
+    "GatewayEndpointDTO", "GatewayKeyPageDTO", "GatewayKeySummaryDTO", "CreateGatewayKeyRequest",
+    "UpdateGatewayKeyRequest", "GatewayKeySecretDTO", "GatewayKeyUsagePageDTO",
+    "GatewayUsageSummaryDTO", "GatewayAccountUsageSummaryDTO", "WorkspaceDTO",
+    "WorkspaceLaunchRequest", "WorkspaceLaunchOperationDTO", "WorkspaceKeyRotationDTO",
+    "WorkspaceRuntimeDTO", "WorkspaceFileEntryDTO", "WorkspaceFilePageDTO",
+    "WorkspaceFilesystemUsageDTO", "BillingReceiptPageDTO", "WorkspaceBillingReceiptDTO",
+    "AnnouncementPageDTO", "AnnouncementDTO", "AnnouncementReadDTO", "OperatorOverviewDTO",
+    "OperatorAccountPageDTO", "OperatorAccountDTO", "InviteAccountRequest",
+    "OperatorAccountCommandDTO", "WalletAdjustmentRequest", "WalletAdjustmentOperationDTO",
+    "OperatorWorkspacePageDTO", "OperatorWorkspaceDTO", "WorkspaceRuntimeCredentialDTO",
+    "WorkspaceAutoRenewRequest", "WorkspaceAutoRenewCommandDTO", "OperatorReconciliationPageDTO",
+    "BillingReviewResolutionRequest", "OperatorHealthDTO", "OperatorAnnouncementPageDTO",
+    "AnnouncementDraftRequest", "AnnouncementScheduleRequest"
+  ]) {
+    assert.match(dtos, new RegExp(`export (?:interface|type) ${name}\\b`), `missing ${name}`);
+  }
+  assert.match(dtos, /interface CreateGatewayKeyRequest[\s\S]*expiresInDays/);
+});
+
+test("Pilot V2 contracts hard cut Workspace purchase, access, and Runtime facts", async () => {
+  const [freeze, billing, business, product, evidence] = await Promise.all([
+    json("packages/contracts/opl-cloud-launch-freeze-contract.json"),
+    json("packages/contracts/opl-cloud-billing-ledger-contract.json"),
+    json("packages/contracts/opl-cloud-business-object-contract.json"),
+    json("packages/contracts/opl-cloud-product-contract.json"),
+    json("packages/contracts/opl-cloud-evidence-ledger-contract.json")
+  ]);
+
+  assert.equal(freeze.workspaceLaunch.customerDebitCardinality, 1);
+  assert.deepEqual(freeze.workspaceLaunch.fulfillmentResources, ["compute", "storage", "attachment", "gateway_secret", "runtime"]);
+  assert.equal(billing.chargePolicy.customerObject, "workspace");
+  assert.equal(billing.chargePolicy.debitCardinalityPerPeriod, 1);
+  assert.equal(billing.ledgerEvidencePolicy.workspaceReceiptTypes.purchased, "billing.workspace_purchased.v1");
+  assert.equal(billing.entitlementPolicy.resourceCompatibility.customerChargeOwner, false);
+  assert.ok(evidence.receiptTypes.includes("billing.workspace_purchased.v1"));
+  assert.ok(evidence.receiptTypes.includes("workspace.gateway_key_rotated.v1"));
+  assert.ok(evidence.receiptTypes.includes("gateway.wallet_adjustment.v1"));
+
+  const workspace = business.objectKinds.find((entry: { kind: string }) => entry.kind === "Workspace");
+  assert.ok(workspace.requiredFields.includes("workspaceApiKeyId"));
+  assert.deepEqual(workspace.accessQuestions, ["url", "username", "passwordRevealCopy", "workspaceKeyRevealCopy"]);
+  assert.equal(workspace.workspaceKeyRevealRoute, "POST /api/gateway/keys/{keyId}/reveal");
+  assert.deepEqual(product.workspaceRuntimeFacts, {
+    fileMetadataAuthority: "workspace_runtime_projects_mount",
+    filesystemUsageAuthority: "workspace_runtime_statfs",
+    persistence: "none"
+  });
+});
+
+test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and announcements", async () => {
+  const [management, sourceTruth, business, boundary] = await Promise.all([
+    json("packages/contracts/opl-cloud-management-contract.json"),
+    json("packages/contracts/opl-cloud-console-source-truth-contract.json"),
+    json("packages/contracts/opl-cloud-business-object-contract.json"),
+    json("packages/contracts/opl-cloud-service-boundary-contract.json")
+  ]);
+
+  assert.deepEqual(management.api.operatorAccounts, {
+    list: "GET /api/operator/accounts",
+    invite: "POST /api/operator/accounts/invitations",
+    disable: "POST /api/operator/accounts/{accountId}/disable",
+    delete: false
+  });
+  assert.deepEqual(management.walletAdjustments.kinds, ["recharge", "debit", "business_refund"]);
+  assert.equal(management.walletAdjustments.balanceAuthority, "sub2api");
+  assert.equal(management.announcements.owner, "control_plane_postgresql");
+  assert.deepEqual(management.announcements.tables, ["control_plane_announcements", "control_plane_announcement_reads"]);
+  assert.equal(boundary.services.controlPlane.owns.includes("announcements"), true);
+
+  const resource = sourceTruth.sources.operator.resources;
+  assert.deepEqual(resource.requiredFields, [
+    "ownerAccount", "ownerUser", "workspace", "resourceType", "packageOrSpec", "providerId", "zone",
+    "status", "createdAt", "expiresAt", "lastReadAt", "operationRef", "receiptRef"
+  ]);
+  assert.equal(resource.fabricAndLedgerPersistenceInControlPlane, false);
+  assert.equal(business.objectKinds.some((entry: { kind: string }) => entry.kind === "Announcement"), true);
+});
+
+test("Pilot V2 current human truth preserves public entry points and evidence levels", async () => {
+  const [invariants, architecture, status, consoleProduct, runbook] = await Promise.all([
+    text("docs/invariants.md"),
+    text("docs/architecture.md"),
+    text("docs/status.md"),
+    text("docs/product/console-workspace-v1.md"),
+    text("docs/runtime/production-runbook.md")
+  ]);
+
+  for (const document of [invariants, architecture, status, consoleProduct]) {
+    assert.match(document, /OPL_GATEWAY_PUBLIC_BASE_URL/);
+    assert.match(document, /code-complete/i);
+    assert.match(document, /pilot-ready/i);
+    assert.match(document, /production-proven/i);
+  }
+  assert.match(consoleProduct, /Home.*Login.*Logo/is);
+  assert.match(consoleProduct, /URL.*用户名.*密码.*Workspace Key/is);
+  assert.match(runbook, /OPL_POSTGRES_TESTS=1/);
+  assert.match(runbook, /OPL_CAPACITY_TESTS=1/);
+  assert.match(runbook, /Action=skip/);
+});

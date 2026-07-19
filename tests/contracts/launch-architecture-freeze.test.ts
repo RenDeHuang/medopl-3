@@ -108,7 +108,12 @@ test("launch freeze fixes the V2 products, owner lanes, settlement, and verifica
   assert.equal(freeze.gateway.missingCapabilityBehavior, "dependent_surface_unavailable_never_zero");
   assert.equal(freeze.gateway.summaryApi, undefined);
   assert.equal(freeze.gateway.customerReadContract, "opl-cloud-console-source-truth-contract.json");
-  assert.deepEqual(freeze.gateway.customerMutationApis, []);
+  assert.deepEqual(freeze.gateway.customerMutationApis, [
+    "create_general_key",
+    "update_general_key",
+    "delete_general_key",
+    "reveal_owned_key"
+  ]);
   assert.equal(freeze.consoleFinancialProjection.mode, "read_only_projection");
   assert.deepEqual(freeze.consoleFinancialProjection.authorities, {
     balanceApiKeysAndRequestUsage: "Sub2API",
@@ -123,7 +128,6 @@ test("launch freeze fixes the V2 products, owner lanes, settlement, and verifica
     "browser_to_sub2api",
     "frontend_financial_derivation",
     "payment_or_topup_ui",
-    "key_mutation",
     "prompt_or_response_content"
   ]);
 

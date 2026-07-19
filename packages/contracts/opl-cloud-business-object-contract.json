@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "owner": "OPL Console",
   "purpose": "Machine-readable requirements for current commercial Console objects.",
   "state": "current",
@@ -38,7 +38,7 @@
     "Fabric owns provider execution evidence and FabricOperation facts.",
     "Console presents Account, Session, Workspace lifecycle, AdminAuditEvent, SupportTicketMapping, and product DTOs; it calls only Control Plane product APIs.",
     "Frontend displays backend DTOs and must not derive pricing, billing, lifecycle, or provider state locally.",
-    "Backup, recovery, sync, transfer, payment orders, Key mutation, and raw provider diagnostics are forbidden Pilot customer surfaces."
+    "Backup, recovery, sync, transfer, payment orders, and raw provider diagnostics are forbidden Pilot customer surfaces; owned general Key mutation is projected through Control Plane with delegated user credentials."
   ],
   "repoBoundaryRules": [
     "Console owns UI and product presentation through Control Plane APIs only; Sub2API authenticates customer credentials.",
@@ -193,13 +193,16 @@
         "storageId",
         "currentComputeAllocationId",
         "currentAttachmentId",
+        "workspaceApiKeyId",
         "url",
         "access.account",
         "access.credentialStatus",
         "access.credentialVersion",
         "runtime.status",
         "state"
-      ]
+      ],
+      "accessQuestions": ["url", "username", "passwordRevealCopy", "workspaceKeyRevealCopy"],
+      "workspaceKeyRevealRoute": "POST /api/gateway/keys/{keyId}/reveal"
     },
     {
       "kind": "Balance",
@@ -271,6 +274,15 @@
       ],
       "evidenceRequired": true,
       "boundary": "Mapping from OPL account/user/workspace/resource context to external support ticket identity."
+    },
+    {
+      "kind": "Announcement",
+      "ownerRepo": "opl-console",
+      "routeKind": "business_object",
+      "lifecycle": "current",
+      "requiredCapabilitiesForImplemented": ["list", "detail", "read", "write", "action", "audit"],
+      "evidenceRequired": true,
+      "boundary": "Control Plane-owned Pilot-wide plain-text announcement with draft, scheduled, published, withdrawn, and per-user read state."
     }
   ]
 }

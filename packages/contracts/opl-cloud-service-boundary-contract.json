@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "owner": "OPL Platform Architecture",
   "purpose": "Current ownership contract for Console UI, Control Plane, Ledger, Fabric, and external Sub2API.",
   "state": "current",
@@ -24,6 +24,8 @@
       "persistence": "postgresql",
       "owns": [
         "sessions",
+        "announcements",
+        "announcementReads",
         "accountMappings",
         "internalOneToOneIdentityCompatibilityRecords",
         "workspaces",
@@ -40,7 +42,9 @@
         "ledger": "http",
         "fabric": "http",
         "sub2api": "http"
-      }
+      },
+      "ephemeralOnly": ["sessionDelegatedGatewayCredential"],
+      "forbiddenPersistence": ["gatewayCredentials", "apiKeys", "apiUsage", "walletBalances", "runtimeFileMetadata"]
     },
     "ledger": {
       "path": "services/ledger",
@@ -102,21 +106,28 @@
         "read mapped user API keys",
         "read scoped request usage",
         "read scoped aggregate usage stats",
+        "read paginated users and batch user/key usage",
         "read mapped user balance history",
-        "create and redeem adjustment"
+        "create and redeem adjustment",
+        "mutate owned general keys with delegated user credentials"
       ],
       "customerProjection": "strict_allowlist_with_integer_usd_micros_and_no_local_usage_copy"
     }
   },
   "browserBoundary": {
     "onlyCalls": "control_plane_product_apis",
+    "gatewayPublicEndpoint": {
+      "configEnv": "OPL_GATEWAY_PUBLIC_BASE_URL",
+      "productionScheme": "https",
+      "forbiddenFallbacks": ["OPL_SUB2API_BASE_URL", "gflabtoken.cn"]
+    },
     "forbidden": ["sub2api_direct", "gflabtoken_link", "iframe", "html_scraping", "raw_admin_dto"]
   },
   "customerMutationBoundary": {
     "payment": false,
     "topUp": false,
-    "keyCreate": false,
-    "keyRevoke": false
+    "keyCreate": true,
+    "keyRevoke": true
   },
   "migration": {
     "compatibilityLayer": "forbidden",

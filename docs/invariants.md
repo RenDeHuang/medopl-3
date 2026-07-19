@@ -17,8 +17,9 @@ The four implementation owner lanes are Console/Control Plane, Fabric, Gateway i
   and Sub2API email must match after `lower(trim(email))`.
 - Organization and Membership rows are internal one-to-one compatibility
   records only. They do not authorize sharing or appear in customer DTOs.
-- Operators manually pre-fund the Sub2API wallet. There is no customer payment,
-  top-up, payment-order, or Key create/revoke surface.
+- Operators manually pre-fund or adjust the Sub2API wallet through audited
+  recharge, debit, and business-refund commands. There is no customer payment,
+  top-up, or payment-order surface. Owners may manage general API Keys.
 - Each account has one Workspace. Basic and Pro are the only Pilot packages.
 - `autoRenew` defaults off. Enabling it is rejected and hidden until a real
   renewal has been approved and proven.
@@ -31,7 +32,7 @@ The four implementation owner lanes are Console/Control Plane, Fabric, Gateway i
 - Sub2API authenticates customer credentials. Control Plane owns local Sessions,
   account mapping, quotes, monthly orchestration, entitlements, expiry, and
   operator review; it stores no second customer password truth.
-- Operators invite customers through `POST /api/users`. The backend resolves or
+- Operators invite customers through `POST /api/operator/accounts/invitations`. The backend resolves or
   creates the Sub2API identity by normalized email and atomically stores the
   one-to-one local graph. Self-registration and SSO are not Pilot claims.
 - Console displays live Sub2API balance, Key metadata, request usage, usage stats, and Ledger billing receipts without creating a wallet, Key database, usage database, or billing fact table.
@@ -72,17 +73,21 @@ The four implementation owner lanes are Console/Control Plane, Fabric, Gateway i
 
 - OPL Gateway uses the externally deployed Sub2API backend. Compatibility is gated by required API capabilities; the reported version is diagnostic metadata and never blocks an otherwise compatible deployment. Sub2API code, image, container, database, configuration, and deployment remain immutable from this repository.
 - Sub2API is the only owner of spendable USD balance, API keys, model routing, and request usage.
-- Control Plane maps the signed-in account through `sub2apiUserId` and selects exactly one active Key named `opl-workspace`; zero or multiple matches fail closed.
+- Control Plane maps the signed-in account through `sub2apiUserId`. Owners may manage general Keys; Workspace
+  convergence separately requires exactly one active reserved Key named `opl-workspace` and fails closed otherwise.
 - Required read capabilities are mapped-user balance, the mapped user's paginated Key list, paginated request usage, and aggregate usage stats. Request usage and stats are scoped by both `user_id` and the selected `api_key_id`; every returned identity is validated again by Control Plane.
 - Request charges use Sub2API `actual_cost`, converted once to integer USD micros. Control Plane returns an explicit unavailable state for a missing capability or upstream failure and never substitutes zero.
 - Control Plane decodes a strict customer-safe DTO allowlist. Raw Sub2API admin responses, nested raw Keys, upstream account internals, prompts, and response content never reach Console, OPL PostgreSQL, Ledger, logs, or caches.
 - Key DTO fields `quota_used`, `usage_5h`, `usage_1d`, `usage_7d`, and `last_used_at` remain quota and recent-window signals; they do not replace request-level usage and aggregate stats.
-- The owner may request the Key only through audited
-  `POST /api/gateway/keys/opl-workspace/reveal`. It is masked by default and
+- The owner may request an owned Key only through audited
+  `POST /api/gateway/keys/{keyId}/reveal`. It is masked by default and
   never enters `/api/state`, browser storage, OPL PostgreSQL, Ledger, logs,
   caches, or operation payloads. The retired Gateway summary route is a 404.
 - Kubernetes Secret is the only authorized Key persistence point. Fabric writes or rotates an account-scoped Secret, and Workspace runtime receives only its reference.
 - The global `OPL_CODEX_API_KEY` is forbidden for customer Workspaces.
+- The public API address comes only from `OPL_GATEWAY_PUBLIC_BASE_URL` through
+  `GET /api/gateway/endpoint`. Production requires HTTPS; missing/invalid configuration is unavailable.
+  Browser responses never expose or fall back to `OPL_SUB2API_BASE_URL` or `gflabtoken.cn`.
 
 Every Console source projection carries `source`, `status`, `available`, and
 `fetchedAt`. `empty` means a successful authoritative read with zero rows;
@@ -108,7 +113,8 @@ validate account and quote
 
 - Debit, provider mutation, claim, activation, refund, Secret write, renewal, and receipt each use stable operation-scoped identities.
 - One authenticated `POST /api/workspace-launches` stores a durable `workspace.launch` RuntimeOperation. The existing provider reconciliation worker resumes its compute, storage, attachment, Gateway Secret, Runtime, and receipt phases after browser close or process restart.
-- The submission-time Sub2API total-balance read is a read-only preflight, not a hold or reservation. Each child purchase still performs its existing safety preflight and deterministic debit protocol.
+- The submission-time Sub2API total-balance read is a read-only preflight, not a hold or reservation. One
+  Workspace operation performs one deterministic total debit; compute and storage are fulfillment-only phases.
 - Debit failure forbids every Tencent resource write.
 - A confirmed provider result showing no billable resource exists permits exactly one idempotent refund.
 - A partial or unknown provider result enters `manual_review` without refund or a second purchase.
@@ -148,6 +154,8 @@ validate account and quote
 - The pinned source image is `ghcr.io/gaofeng21cn/one-person-lab-webui:26.7.13@sha256:9d867fe0fc9db48b6efa27371d77770e46fc8cd97d26ef85a81fbdac7e96ca76`.
 - Production mirrors that source to TCR and deploys the target `repository@sha256`; `latest` and tag-only production references are forbidden.
 - CBS is mounted at `/data` and `/projects`.
+- Runtime is the only authority for `/projects` file metadata and mounted filesystem usage. These read-only facts
+  are streamed through Fabric and Control Plane and are never persisted in OPL PostgreSQL or Ledger.
 
 ## Console User Experience
 
@@ -163,7 +171,23 @@ validate account and quote
   Runtime, and URL. Compute/storage are Workspace details, not separate buys.
 - Workspace status polls every 10 seconds for at most 30 attempts, stops on ready or terminal state, and offers manual retry after a real error or timeout.
 - Gateway fetches only when its page is opened, masks the Key by default, supports explicit reveal/copy, and clears sensitive response state on route leave or logout.
+- Workspace answers URL, username, password reveal/copy, and the corresponding Workspace Key reveal/copy;
+  Workspace Key reveal reuses the owned per-Key Gateway route.
+- Control Plane owns the two-table minimal Pilot announcement and read state; it does not copy Sub2API notices.
 - Desktop and mobile QA must prove responsive layout, keyboard access, error recovery, and no sensitive-information overlap or leakage.
+
+The existing public Home, Login, and Logo/brand entry remain unchanged in Pilot V2.
+
+## Evidence Levels
+
+- `code-complete` requires current contracts, code, local PostgreSQL, browser, structure, and machine-checked
+  zero-SKIP gates on one integration HEAD.
+- `pilot-ready` additionally requires separately approved real Gateway, Runtime, Tencent, billing, and browser evidence.
+- `production-proven` additionally requires the same immutable revision deployed and read back in production.
+
+`sourceUpdatedAt` is returned only when the authoritative owner supplies it. Final Go gates parse `go test -json`
+and fail on `Action=skip`; PostgreSQL suites set `OPL_POSTGRES_TESTS=1`, and a Control Plane zero-SKIP claim also
+sets `OPL_CAPACITY_TESTS=1`.
 
 ## Verification Slot
 

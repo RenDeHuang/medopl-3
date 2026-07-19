@@ -1,7 +1,7 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "owner": "OPL Control Plane",
-  "purpose": "Monthly resource charge, entitlement, receipt, and reconciliation ownership contract.",
+  "purpose": "One-charge Workspace purchase and renewal, fulfillment, entitlement, receipt, wallet-adjustment reference, and reconciliation ownership contract.",
   "state": "current",
   "machineBoundary": "Sub2API owns spendable USD balance; Control Plane owns resource charge operations and monthly entitlement; Ledger owns append-only evidence receipts and reconciliation reports.",
   "lifecycle": {
@@ -19,6 +19,8 @@
     "POST /api/v1/admin/redeem-codes/create-and-redeem"
   ],
   "chargePolicy": {
+    "customerObject": "workspace",
+    "debitCardinalityPerPeriod": 1,
     "currency": "USD",
     "unit": "usd_micros",
     "writeType": "negative_redeem_code",
@@ -42,6 +44,7 @@
     "resourceCompatibility": {
       "renewalIntentAuthority": false,
       "customerPricingAuthority": false,
+      "customerChargeOwner": false,
       "customerSurface": "workspace_detail_read_only"
     },
     "resourceCompatibilityFields": [
@@ -68,9 +71,12 @@
       "billing.resource_refunded.v1",
       "billing.charge_review_required.v1",
       "billing.reconciliation.v1",
+      "billing.workspace_purchased.v1",
       "billing.workspace_renewed.v1",
       "billing.workspace_expired.v1",
-      "billing.workspace_refunded.v1"
+      "billing.workspace_refunded.v1",
+      "gateway.wallet_adjustment.v1",
+      "workspace.gateway_key_rotated.v1"
     ],
     "requiredCostFields": [
       "pricingVersion",
@@ -95,6 +101,7 @@
       "resourceId": "non_empty_opaque_string"
     },
     "workspaceReceiptTypes": {
+      "purchased": "billing.workspace_purchased.v1",
       "renewed": "billing.workspace_renewed.v1",
       "expired": "billing.workspace_expired.v1",
       "refunded": "billing.workspace_refunded.v1"

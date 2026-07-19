@@ -20,9 +20,10 @@ outside this repository's mutation boundary.
 | Console area | Authority | Control Plane projection |
 | --- | --- | --- |
 | Signed-in identity | Sub2API identity plus local Session mapping | `/api/auth/me` |
-| Wallet, Keys, Usage, Usage Stats, balance history | live Sub2API JSON APIs | granular `/api/gateway/*` source DTOs |
+| Wallet, owned Keys, per-Key Usage, account aggregate, balance history | live Sub2API JSON APIs | granular `/api/gateway/*` source DTOs |
 | Workspace and renewal state | Control Plane Workspace row | `/api/workspaces` and launch/renewal DTOs |
-| Runtime readiness | live Fabric/Kubernetes readback | `/api/workspaces/runtime-status` |
+| Runtime readiness | live Fabric/Kubernetes readback | `/api/workspaces/{workspaceId}/runtime-status` |
+| `/projects` metadata and mounted usage | live Workspace Runtime readback | Workspace-scoped file/usage DTOs; never persisted |
 | Billing receipts | live Ledger readback | `/api/billing/receipts` |
 
 Each source returns `source`, `status`, `available`, and `fetchedAt`. A successful
@@ -31,6 +32,16 @@ invented zero, empty collection, success state, or stale data. `sourceUpdatedAt`
 is omitted unless the authority supplies it. Browser identity parameters never
 override the current Session mapping, and raw downstream DTOs never cross the
 Control Plane boundary.
+
+The browser-visible Gateway address is an independent product configuration:
+`OPL_GATEWAY_PUBLIC_BASE_URL` -> `GET /api/gateway/endpoint`. Production accepts
+only an absolute HTTPS URL. Missing or invalid configuration is unavailable and
+never falls back to the internal `OPL_SUB2API_BASE_URL` or `gflabtoken.cn`.
+
+`code-complete` means the local contracts, code, PostgreSQL, browser, and
+structure gates pass on one revision. `pilot-ready` additionally requires
+approved real service/resource evidence. `production-proven` requires the same
+immutable revision deployed and authoritatively read back in production.
 
 ## Service Ownership
 

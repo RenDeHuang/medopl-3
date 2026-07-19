@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "owner": "OPL Control Plane",
   "purpose": "Versioned fixed USD monthly prices for the paid OPL Workspace Pilot.",
   "state": "current",
@@ -41,6 +41,11 @@
       "storageUsdMicros": 25800000,
       "totalUsdMicros": 240080000
     }
+  },
+  "workspaceCharge": {
+    "customerDebitCardinalityPerPeriod": 1,
+    "totalAuthority": "server_price_snapshot",
+    "components": "explanatory_fulfillment_only"
   },
   "internalProviderCostEvidence": {
     "currency": "CNY",

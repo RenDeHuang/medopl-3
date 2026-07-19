@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "owner": "OPL Ledger",
   "purpose": "General execution, monthly billing, and current control-plane lifecycle evidence receipts.",
   "state": "current",
@@ -24,9 +24,12 @@
     "billing.resource_refunded.v1",
     "billing.charge_review_required.v1",
     "billing.reconciliation.v1",
+    "billing.workspace_purchased.v1",
     "billing.workspace_renewed.v1",
     "billing.workspace_expired.v1",
     "billing.workspace_refunded.v1",
+    "gateway.wallet_adjustment.v1",
+    "workspace.gateway_key_rotated.v1",
     "artifact.manifest.v1",
     "review.result.v1",
     "execution.receipt.v1"
@@ -234,6 +237,17 @@
       "rawProviderResponse"
     ]
   },
+  "workspaceGatewayKeyRotationReceipt": {
+    "type": "workspace.gateway_key_rotated.v1",
+    "requiredRefs": ["operationId", "workspaceId", "oldKeyId", "newKeyId", "secretFingerprint"],
+    "forbiddenContent": ["apiKey", "rawCredential", "sessionCredential", "rawSub2apiResponse"]
+  },
+  "gatewayWalletAdjustmentReceipt": {
+    "type": "gateway.wallet_adjustment.v1",
+    "balanceAuthority": "sub2api",
+    "requiredRefs": ["operationId", "kind", "amountUsdMicros", "balanceHistoryRef", "actor", "relatedOperationId"],
+    "forbiddenContent": ["redeemCode", "adminToken", "rawSub2apiResponse"]
+  },
   "monthlyBillingReceiptV1": {
     "status": "superseded_internal_compatibility",
     "types": [
@@ -280,6 +294,7 @@
   },
   "workspaceMonthlyBillingReceiptV1": {
     "types": [
+      "billing.workspace_purchased.v1",
       "billing.workspace_renewed.v1",
       "billing.workspace_expired.v1",
       "billing.workspace_refunded.v1"

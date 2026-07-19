@@ -24,31 +24,64 @@ test("Console source truth contract fixes strict envelopes and live Gateway proj
   });
 
   const gateway = contract.sources.gateway;
-  assert.deepEqual(Object.keys(gateway), ["wallet", "keys", "usage", "usageStats", "balanceHistory"]);
+  assert.deepEqual(Object.keys(gateway), [
+    "endpoint", "wallet", "keys", "usage", "usageStats", "accountUsageStats", "balanceHistory"
+  ]);
   assert.deepEqual(Object.values(gateway).map((source: any) => source.route), [
+    "GET /api/gateway/endpoint",
     "GET /api/gateway/wallet",
     "GET /api/gateway/keys",
-    "GET /api/gateway/usage",
-    "GET /api/gateway/usage/stats",
+    "GET /api/gateway/keys/{keyId}/usage",
+    "GET /api/gateway/keys/{keyId}/usage-summary",
+    "GET /api/gateway/usage-summary",
     "GET /api/gateway/balance-history"
   ]);
-  for (const source of Object.values(gateway) as any[]) {
+  assert.deepEqual(gateway.endpoint, {
+    route: "GET /api/gateway/endpoint",
+    source: "control-plane",
+    authority: "OPL_GATEWAY_PUBLIC_BASE_URL",
+    dataFields: ["baseUrl"],
+    productionScheme: "https",
+    missingBehavior: "unavailable_without_data",
+    forbiddenFallbacks: ["OPL_SUB2API_BASE_URL", "gflabtoken.cn"],
+    fetchedAt: "control_plane_response_fetch_completion_time",
+    sourceUpdatedAt: "omit_no_authoritative_source_timestamp"
+  });
+  for (const source of [
+    gateway.wallet, gateway.keys, gateway.usage, gateway.usageStats,
+    gateway.accountUsageStats, gateway.balanceHistory
+  ]) {
     assert.equal(source.source, "sub2api");
-    assert.equal(source.authority, "live_sub2api_readback");
     assert.equal(source.identity, "session_account_to_control_plane_sub2api_user_mapping");
     assert.deepEqual(source.ignoredIdentityInputs, ["accountId", "user_id", "api_key_id", "sub2apiUserId"]);
     assert.equal(source.fetchedAt, "control_plane_response_fetch_completion_time");
     assert.equal(source.sourceUpdatedAt, "omit_unless_sub2api_returns_source_timestamp");
   }
+  assert.equal(gateway.accountUsageStats.authority, "live_sub2api_aggregate");
+  for (const source of [gateway.wallet, gateway.keys, gateway.usage, gateway.usageStats, gateway.balanceHistory]) {
+    assert.equal(source.authority, "live_sub2api_readback");
+  }
   assert.deepEqual(gateway.wallet.dataFields, ["userId", "currency", "usdMicros", "status"]);
   assert.deepEqual(gateway.keys.itemFields, [
-    "id", "name", "status", "quotaUsdMicros", "quotaUsedUsdMicros",
-    "usage5hUsdMicros", "usage1dUsdMicros", "usage7dUsdMicros", "lastUsedAt"
+    "id", "name", "kind", "status", "quotaUsdMicros", "quotaUsedUsdMicros",
+    "usage5hUsdMicros", "usage1dUsdMicros", "usage7dUsdMicros", "lastUsedAt",
+    "expiresAt", "manageable", "deletable"
   ]);
   assert.equal(gateway.keys.idFormat, "positive_decimal_string");
   assert.deepEqual(gateway.keys.statusValues, ["active", "disabled"]);
   assert.equal(gateway.keys.empty, "real_zero_rows");
-  assert.equal(gateway.keys.revealRoute, "POST /api/gateway/keys/opl-workspace/reveal");
+  assert.deepEqual(gateway.keys.lifecycleRoutes, [
+    "POST /api/gateway/keys",
+    "PATCH /api/gateway/keys/{keyId}",
+    "DELETE /api/gateway/keys/{keyId}"
+  ]);
+  assert.deepEqual(gateway.keys.createRequest, {
+    fields: ["name", "quotaUsdMicros", "expiresInDays"],
+    expiryField: "expiresInDays",
+    upstreamWrites: 1,
+    responseExpiryField: "expiresAt"
+  });
+  assert.equal(gateway.keys.revealRoute, "POST /api/gateway/keys/{keyId}/reveal");
   assert.equal(gateway.keys.revealAuthorization, "session_owner_with_csrf");
   assert.deepEqual(gateway.keys.revealDataFields, ["id", "name", "status", "value"]);
   assert.equal(gateway.keys.revealIdFormat, "positive_decimal_string");
@@ -63,6 +96,8 @@ test("Console source truth contract fixes strict envelopes and live Gateway proj
     "totalRequests", "totalInputTokens", "totalOutputTokens", "totalTokens", "totalActualCostUsdMicros"
   ]);
   assert.equal(gateway.usageStats.zeroAggregate, "available");
+  assert.deepEqual(gateway.accountUsageStats.dataFields, gateway.usageStats.dataFields);
+  assert.equal(gateway.accountUsageStats.aggregation, "upstream_only_never_current_page_sum");
   assert.deepEqual(gateway.balanceHistory.itemFields, ["type", "valueUsdMicros", "status", "usedAt", "createdAt"]);
 
   const identity = contract.sources.identity;
@@ -91,7 +126,7 @@ test("Console source truth contract fixes strict envelopes and live Gateway proj
     route: "GET /api/operator/accounts",
     authorization: "operator_only",
     source: "control-plane+sub2api",
-    authority: "control_plane_mapping_plus_sequential_live_sub2api_readback",
+    authority: "control_plane_mapping_plus_paginated_and_batch_sub2api_readback",
     scope: "customer_accounts_only",
     itemFields: ["accountId", "consoleUserId", "role", "sub2apiUserId", "email", "status"],
     fieldAuthority: {
@@ -118,7 +153,7 @@ test("Console source truth contract fixes strict envelopes and live Gateway proj
       identity: "session_account",
       requiredItemFields: ["id", "ownerAccountId", "ownerUserId", "state", "createdAt", "updatedAt"],
       optionalItemFields: [
-        "name", "url", "storageId", "currentComputeAllocationId", "currentAttachmentId", "runtimeId",
+        "name", "url", "storageId", "currentComputeAllocationId", "currentAttachmentId", "runtimeId", "workspaceApiKeyId",
         "packageId", "storageGb", "autoRenew", "priceVersion", "currency", "totalUsdMicros",
         "periodStart", "paidThrough", "renewalStatus"
       ],
@@ -128,7 +163,7 @@ test("Console source truth contract fixes strict envelopes and live Gateway proj
       sourceUpdatedAt: "omit_without_authoritative_table_source_timestamp"
     },
     runtimeStatus: {
-      route: "POST /api/workspaces/runtime-status",
+      route: "GET /api/workspaces/{workspaceId}/runtime-status",
       source: "fabric",
       authority: "live_fabric_runtime_status",
       identity: "session_owned_workspace",
@@ -147,6 +182,24 @@ test("Console source truth contract fixes strict envelopes and live Gateway proj
       writeBack: false,
       fetchedAt: "control_plane_response_fetch_completion_time",
       sourceUpdatedAt: "omit_unless_fabric_returns_source_timestamp"
+    },
+    files: {
+      route: "GET /api/workspaces/{workspaceId}/files",
+      source: "runtime",
+      authority: "workspace_runtime_projects_mount",
+      identity: "session_owned_workspace",
+      persistence: "none",
+      fetchedAt: "control_plane_response_fetch_completion_time",
+      sourceUpdatedAt: "only_when_runtime_returns_source_timestamp"
+    },
+    filesystemUsage: {
+      route: "GET /api/workspaces/{workspaceId}/filesystem-usage",
+      source: "runtime",
+      authority: "workspace_runtime_statfs",
+      identity: "session_owned_workspace",
+      persistence: "none",
+      fetchedAt: "control_plane_response_fetch_completion_time",
+      sourceUpdatedAt: "only_when_runtime_returns_measurement_timestamp"
     }
   });
   assert.deepEqual(contract.sources.ledger, {
