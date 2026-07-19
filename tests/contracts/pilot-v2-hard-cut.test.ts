@@ -119,11 +119,13 @@ test("Pilot V2 contracts hard cut Workspace purchase, access, and Runtime facts"
 });
 
 test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and announcements", async () => {
-  const [management, sourceTruth, business, boundary] = await Promise.all([
+  const [management, sourceTruth, business, boundary, evidence, billing] = await Promise.all([
     json("packages/contracts/opl-cloud-management-contract.json"),
     json("packages/contracts/opl-cloud-console-source-truth-contract.json"),
     json("packages/contracts/opl-cloud-business-object-contract.json"),
-    json("packages/contracts/opl-cloud-service-boundary-contract.json")
+    json("packages/contracts/opl-cloud-service-boundary-contract.json"),
+    json("packages/contracts/opl-cloud-evidence-ledger-contract.json"),
+    json("packages/contracts/opl-cloud-billing-ledger-contract.json")
   ]);
 
   assert.deepEqual(management.api.operatorAccounts, {
@@ -152,6 +154,19 @@ test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and an
   assert.equal(management.operatorProjection.partialFailure, "affected_nested_source_unavailable_without_zero_data");
   assert.deepEqual(management.walletAdjustments.kinds, ["recharge", "debit", "business_refund"]);
   assert.equal(management.walletAdjustments.balanceAuthority, "sub2api");
+  assert.deepEqual(management.walletAdjustments.routes, {
+    create: "POST /api/operator/accounts/{accountId}/wallet-adjustments",
+    read: "GET /api/operator/wallet-adjustments/{operationId}"
+  });
+  assert.equal(management.walletAdjustments.unknownResult, "manual_review_without_automatic_replay");
+  assert.equal(management.walletAdjustments.implementation, "code_complete_local_focused_tests");
+  assert.deepEqual(evidence.gatewayWalletAdjustmentReceipt.commonRequiredRefs, ["operationId", "kind", "amountUsdMicros", "balanceHistoryRef", "actor"]);
+  assert.deepEqual(evidence.gatewayWalletAdjustmentReceipt.businessRefundAdditionalRequiredRefs, ["relatedOperationId"]);
+  assert.equal(evidence.gatewayWalletAdjustmentReceipt.implementation, "validator_and_control_plane_exact_readback_code_complete_local_only");
+  assert.equal(billing.walletAdjustmentEvidence.balanceAuthority, "sub2api");
+  assert.equal(billing.walletAdjustmentEvidence.controlPlaneState, "runtime_operation_non_authoritative");
+  assert.equal(billing.walletAdjustmentEvidence.ledgerState, "append_only_reference_non_authoritative");
+  assert.equal(billing.walletAdjustmentEvidence.localBalancePersistence, false);
   assert.equal(management.announcements.owner, "control_plane_postgresql");
   assert.deepEqual(management.announcements.tables, ["control_plane_announcements", "control_plane_announcement_reads"]);
   assert.equal(boundary.services.controlPlane.owns.includes("announcements"), true);

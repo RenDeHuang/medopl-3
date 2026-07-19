@@ -19,6 +19,12 @@ import (
 var billingReviewEvidenceRefPattern = regexp.MustCompile(`^case-[0-9]{8}-[a-z0-9]{3,16}$`)
 
 func registerAdminRoutes(mux *http.ServeMux, app *controlPlaneServer, service *controlplane.Service) {
+	mux.HandleFunc("POST /api/operator/accounts/{accountId}/wallet-adjustments", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
+		app.createWalletAdjustment(w, r, service)
+	}))
+	mux.HandleFunc("GET /api/operator/wallet-adjustments/{operationId}", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
+		app.getWalletAdjustment(w, r)
+	}))
 	mux.HandleFunc("GET /api/operator/accounts", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		page, pageSize, ok := operatorPagination(w, r)
 		if !ok {

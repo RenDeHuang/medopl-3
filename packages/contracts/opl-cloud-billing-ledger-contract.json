@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "owner": "OPL Control Plane",
   "purpose": "One-charge Workspace purchase and renewal, fulfillment, entitlement, receipt, wallet-adjustment reference, and reconciliation ownership contract.",
   "state": "current",
@@ -28,6 +28,15 @@
     "activationRule": "Grant or extend entitlement only after the redeem record and post-charge balance are confirmed.",
     "ambiguousResult": "manual_review",
     "automaticPositiveAdjustment": false
+  },
+  "walletAdjustmentEvidence": {
+    "kinds": ["recharge", "debit", "business_refund"],
+    "balanceAuthority": "sub2api",
+    "moneyWriteApi": "POST /api/v1/admin/redeem-codes/create-and-redeem",
+    "authoritativeReadback": ["sub2api_balance_history", "sub2api_user_balance"],
+    "controlPlaneState": "runtime_operation_non_authoritative",
+    "ledgerState": "append_only_reference_non_authoritative",
+    "localBalancePersistence": false
   },
   "entitlementPolicy": {
     "owner": "opl-control-plane",

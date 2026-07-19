@@ -131,6 +131,18 @@ func TestBillingReceiptSchemaHTTP(t *testing.T) {
 	}
 }
 
+func TestWalletAdjustmentReceipt(t *testing.T) {
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	body := `{"type":"gateway.wallet_adjustment.v1","status":"completed","surface":"control_plane","accountId":"acct-alpha","requestId":"wallet-adjustment-alpha","actor":{"userId":"usr-admin"},"execution":{"operationId":"wallet-adjustment-alpha","kind":"debit","amountUsdMicros":2500000},"inputRefs":{"balanceHistoryRef":"sub2api:balance-history:41:history-alpha"},"owner":{"accountId":"acct-alpha"}}`
+	req := testRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(body))
+	req.Header.Set("Idempotency-Key", "wallet-adjustment-alpha:receipt")
+	rec := httptest.NewRecorder()
+	server.ServeHTTP(rec, req)
+	if rec.Code != http.StatusCreated || !strings.Contains(rec.Body.String(), `"type":"gateway.wallet_adjustment.v1"`) {
+		t.Fatalf("wallet adjustment receipt status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestWorkspaceGatewayKeyRotationReceiptSchemaHTTP(t *testing.T) {
 	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
 	body := `{"type":"workspace.gateway_key_rotated.v1","status":"completed","surface":"control_plane","accountId":"acct-alpha","workspaceId":"workspace-alpha","execution":{"operationId":"workspace-key-rotate-alpha","oldKeyId":9,"newKeyId":19},"outputRefs":{"secretFingerprint":"sha256:replacement"},"owner":{"userId":"usr-alpha"}}`

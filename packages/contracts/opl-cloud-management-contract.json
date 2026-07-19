@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 11,
+  "schemaVersion": 12,
   "owner": "OPL Console",
   "purpose": "Console customer identity, strict owner graph, Sub2API authentication authority, lifecycle, and management API contract.",
   "state": "current",
@@ -190,11 +190,21 @@
     "implementation": "code_complete_local_focused_tests"
   },
   "walletAdjustments": {
-    "route": "POST /api/operator/accounts/{accountId}/wallet-adjustments",
+    "routes": {
+      "create": "POST /api/operator/accounts/{accountId}/wallet-adjustments",
+      "read": "GET /api/operator/wallet-adjustments/{operationId}"
+    },
     "kinds": ["recharge", "debit", "business_refund"],
     "balanceAuthority": "sub2api",
+    "operationIdentity": "stable_from_account_id_and_idempotency_key",
+    "authoritativeReadback": [
+      "sub2api_balance_history_exact_code_user_type_signed_amount_used",
+      "sub2api_user_balance_exact_expected_after"
+    ],
+    "unknownResult": "manual_review_without_automatic_replay",
     "statePersistence": "control_plane_runtime_operations_non_authoritative",
-    "evidence": ["control_plane_admin_audit", "ledger_reference"]
+    "evidence": ["control_plane_admin_audit", "ledger_reference"],
+    "implementation": "code_complete_local_focused_tests"
   },
   "announcements": {
     "owner": "control_plane_postgresql",

@@ -83,6 +83,45 @@ func TestProductionPostgresStateStoreRejectsUnsafeTLSBeforeConnecting(t *testing
 	}
 }
 
+func TestWalletAdjustmentRuntimeOperationRoundTrips(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "sqlite", new: func(t *testing.T) controlPlaneTableStore {
+			return NewTestEntStateStore(t, t.TempDir()+"/wallet-adjustment.sqlite")
+		}},
+		{name: "postgres", new: newPostgresWorkspaceRenewalStore},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			app := &controlPlaneServer{tables: tc.new(t)}
+			operation := walletAdjustmentOperation{
+				RequestHash: "wallet-request-hash", Phase: "authoritative_readback", AccountID: "acct-wallet", Sub2APIUserID: 41,
+				Kind: "debit", AmountUSDMicros: 2_500_000, AmountUSD: "2.50", Reason: "manual correction", ActorUserID: "usr-admin",
+				AdjustmentAttempted: true, BeforeBalanceKnown: true, BeforeBalanceMicros: 100_000_000,
+				BeforeBalanceReadAt: "2026-07-19T00:00:00Z", CreatedAt: "2026-07-19T00:00:00Z", UpdatedAt: "2026-07-19T00:00:00Z", Status: "pending",
+			}
+			if err := app.persistWalletAdjustment(context.Background(), "wallet-adjustment-roundtrip", &operation); err != nil {
+				t.Fatal(err)
+			}
+			readback, found, err := app.walletAdjustment(context.Background(), "wallet-adjustment-roundtrip", operation.RequestHash)
+			if err != nil || !found || readback.Phase != "authoritative_readback" || !readback.AdjustmentAttempted || readback.BeforeBalanceMicros != 100_000_000 {
+				t.Fatalf("readback=%#v found=%v err=%v", readback, found, err)
+			}
+			readback.Status, readback.Phase, readback.AfterBalanceKnown, readback.AfterBalanceMicros = "succeeded", "complete", true, 97_500_000
+			readback.AfterBalanceReadAt, readback.BalanceHistoryRef, readback.ReceiptID = "2026-07-19T00:00:01Z", "sub2api:balance-history:41:history-alpha", "receipt-wallet"
+			if err := app.persistWalletAdjustment(context.Background(), "wallet-adjustment-roundtrip", &readback); err != nil {
+				t.Fatal(err)
+			}
+			final, found, err := app.walletAdjustment(context.Background(), "wallet-adjustment-roundtrip", operation.RequestHash)
+			if err != nil || !found || final.Status != "succeeded" || final.AfterBalanceMicros != 97_500_000 || final.ReceiptID != "receipt-wallet" {
+				t.Fatalf("final=%#v found=%v err=%v", final, found, err)
+			}
+		})
+	}
+}
+
 func TestWorkspaceRenewalStateRoundTrips(t *testing.T) {
 	for _, tc := range []struct {
 		name string

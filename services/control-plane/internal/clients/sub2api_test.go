@@ -712,7 +712,7 @@ func TestSub2APIClientWorkspaceKeyBoundsAndRedactsUpstreamResponses(t *testing.T
 	}
 }
 
-func TestSub2APIClientChargesWithExactNegativeMicrosAndReplays(t *testing.T) {
+func TestSub2APIAdjustmentExactAmount(t *testing.T) {
 	chargeCalls := 0
 	client := newSub2APITestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		if rejectForbiddenSub2APIRoute(t, w, r) {
@@ -955,7 +955,7 @@ func TestSub2APIClientDetectsSameCodeDifferentValue(t *testing.T) {
 	}
 }
 
-func TestSub2APIClientConfirmsConflictReplayFromBalanceHistory(t *testing.T) {
+func TestSub2APIAdjustmentReplay(t *testing.T) {
 	historyEntry := func(code string, valueUSDMicros int64) map[string]any {
 		return map[string]any{
 			"code": code, "type": "balance", "value": usdMicrosJSON(valueUSDMicros), "status": "used", "used_by": 41,
@@ -1033,7 +1033,7 @@ func TestSub2APIClientConfirmsConflictReplayFromBalanceHistory(t *testing.T) {
 	}
 }
 
-func TestSub2APIClientBoundsBodiesAndTreatsChargeTimeoutAsUnknown(t *testing.T) {
+func TestSub2APIAdjustmentUnknown(t *testing.T) {
 	t.Run("response body limit", func(t *testing.T) {
 		client := newSub2APITestClient(t, func(w http.ResponseWriter, r *http.Request) {
 			switch r.URL.Path {

@@ -280,6 +280,26 @@ func TestLedgerHTTPClientValidatesWorkspaceBillingReceiptResponse(t *testing.T) 
 	}
 }
 
+func TestWalletAdjustmentReceipt(t *testing.T) {
+	input := ReceiptInput{
+		Type: "gateway.wallet_adjustment.v1", Status: "completed", Surface: "control_plane", AccountID: "acct-alpha",
+		RequestID: "wallet-adjustment-alpha",
+		Actor:     map[string]any{"userId": "usr-admin"},
+		Execution: map[string]any{"operationId": "wallet-adjustment-alpha", "kind": "debit", "amountUsdMicros": int64(2_500_000)},
+		InputRefs: map[string]any{"balanceHistoryRef": "sub2api:balance-history:41:history-alpha"},
+		Owner:     map[string]any{"accountId": "acct-alpha"},
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = fmt.Fprint(w, `{"receiptId":"receipt-wallet","type":"gateway.wallet_adjustment.v1","status":"completed","surface":"control_plane","accountId":"acct-alpha","requestId":"wallet-adjustment-alpha"}`)
+	}))
+	defer server.Close()
+
+	client := NewLedgerHTTPClient(server.URL, "internal-secret", server.Client())
+	if _, err := client.RecordReceipt(context.Background(), input, "wallet-adjustment-alpha:receipt"); err == nil {
+		t.Fatal("incomplete wallet adjustment receipt response was accepted")
+	}
+}
+
 func TestLedgerHTTPClientValidatesWorkspaceGatewayKeyRotationReceiptResponse(t *testing.T) {
 	input := ReceiptInput{
 		Type: "workspace.gateway_key_rotated.v1", Status: "completed", Surface: "control_plane",

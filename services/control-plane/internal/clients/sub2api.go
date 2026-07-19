@@ -1505,6 +1505,10 @@ func decimalUSDMicros(value json.Number) (int64, error) {
 	return rational.Num().Int64(), nil
 }
 
+func ParseUSDDecimalMicros(value string) (int64, error) {
+	return decimalUSDMicros(json.Number(value))
+}
+
 func usdMicrosJSON(micros int64) json.RawMessage {
 	sign := ""
 	if micros < 0 {

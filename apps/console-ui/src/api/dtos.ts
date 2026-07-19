@@ -563,6 +563,7 @@ export interface WalletAdjustmentOperationDTO extends OperationStatusDTO {
   accountId: string;
   kind: WalletAdjustmentRequest["kind"];
   amountUsd: string;
+  reason: string;
   beforeBalance: SourceEnvelope<MoneyDTO>;
   afterBalance: SourceEnvelope<MoneyDTO>;
   balanceHistoryRef?: string;

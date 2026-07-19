@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "owner": "OPL Ledger",
   "purpose": "General execution, monthly billing, and current control-plane lifecycle evidence receipts.",
   "state": "current",
@@ -246,8 +246,10 @@
   "gatewayWalletAdjustmentReceipt": {
     "type": "gateway.wallet_adjustment.v1",
     "balanceAuthority": "sub2api",
-    "requiredRefs": ["operationId", "kind", "amountUsdMicros", "balanceHistoryRef", "actor", "relatedOperationId"],
-    "forbiddenContent": ["redeemCode", "adminToken", "rawSub2apiResponse"]
+    "commonRequiredRefs": ["operationId", "kind", "amountUsdMicros", "balanceHistoryRef", "actor"],
+    "businessRefundAdditionalRequiredRefs": ["relatedOperationId"],
+    "forbiddenContent": ["redeemCode", "adminToken", "rawSub2apiResponse"],
+    "implementation": "validator_and_control_plane_exact_readback_code_complete_local_only"
   },
   "monthlyBillingReceiptV1": {
     "status": "superseded_internal_compatibility",
