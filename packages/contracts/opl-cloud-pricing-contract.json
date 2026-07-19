@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "owner": "OPL Control Plane",
   "purpose": "Versioned fixed USD monthly prices for the paid OPL Workspace Pilot.",
   "state": "current",
@@ -43,6 +43,8 @@
     }
   },
   "workspaceCharge": {
+    "launchOperationAction": "workspace.launch.v2",
+    "codeCompleteThroughPhase": "debited",
     "customerDebitCardinalityPerPeriod": 1,
     "totalAuthority": "server_price_snapshot",
     "components": "explanatory_fulfillment_only"

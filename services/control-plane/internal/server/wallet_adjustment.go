@@ -464,7 +464,7 @@ func refundableWalletOperationAmount(row map[string]any) (int64, bool) {
 	}
 	var field string
 	switch stringValue(row["action"]) {
-	case "workspace.launch":
+	case "workspace.launch", "workspace.launch.v2":
 		field = "totalChargeUsdMicros"
 	case "workspace.renewal":
 		field = "totalUsdMicros"

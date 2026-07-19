@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "owner": "OPL Platform Architecture",
   "purpose": "Freeze the approved Pilot V2 products, delegated Gateway key lifecycle, one Workspace charge, prepaid Tencent fulfillment, Runtime facts, operator workflows, announcements, and evidence levels without claiming unfinished implementation or runtime evidence.",
   "state": "current",
@@ -119,7 +119,7 @@
     "ledgerFailureAfterActivation": "retry_receipt_only",
     "retryRule": "Debit, refund, provider mutation, claim, activation, renewal, Secret write, and receipt use stable operation-scoped idempotency identities.",
     "doubleDebitForbidden": true,
-    "currentImplementation": "Debit-first orchestration, confirmed-absence refund, operator review resolution, parent launch recovery after child resolution, server-computed exception-only reconciliation, and the purchase guard are code-complete and locally tested; production rollout and live reconciliation evidence remain pending."
+    "currentImplementation": "The durable V2 Workspace launch is code-complete and locally tested through one authoritative total debit and the debited phase. S8 provider fulfillment, compensation, activation, and the single Workspace receipt remain pending; production rollout and live reconciliation evidence remain pending."
   },
   "workspaceLaunch": {
     "quoteApi": "POST /api/pricing/preview with resourceType=workspace",
@@ -149,13 +149,15 @@
       "resolvedFailed": "parent_failed_terminal",
       "nonChildReview": "quiescent_operator_only"
     },
-    "persistence": "control_plane_runtime_operations with action=workspace.launch",
+    "persistence": "control_plane_runtime_operations with action=workspace.launch.v2 and result.schemaVersion=2",
+    "codeCompleteThroughPhase": "debited",
+    "legacyNonTerminalPolicy": "clear_or_manual_handle_before_cutover_never_resume_in_v2_worker",
     "submissionOrder": ["workspace_quote", "compute_read_only_preflight", "storage_read_only_preflight", "workspace_key_preflight", "sub2api_total_balance_preflight", "persist_launch"],
     "totalBalanceSemantics": "read_only_preflight_not_hold_or_reservation",
     "customerDebitCardinality": 1,
     "fulfillmentResources": ["compute", "storage", "attachment", "gateway_secret", "runtime"],
-    "backgroundProgression": "The existing provider reconciliation worker resumes stable compute, storage, attachment, Gateway Secret, Runtime, and receipt sub-operations after browser close or process restart.",
-    "currentImplementation": "Exact fixed-USD quote composition, required-false Workspace auto-renew intent in the stable request fingerprint, one-submit persistence, total balance preflight, tenant polling, child manual-review recovery, phase recovery, and replay tests, including fenced stale Attachment, Gateway Secret, and Runtime apply convergence, are code-complete and locally tested; deployed browser, live Sub2API, and live Tencent evidence remain pending."
+    "backgroundProgression": "S8 target: The provider reconciliation worker will resume stable compute, storage, attachment, Gateway Secret, Runtime, and receipt sub-operations after browser close or process restart.",
+    "currentImplementation": "Exact fixed-USD quote composition, required-false Workspace auto-renew intent, one-submit V2 persistence, total balance preflight, durable claim fencing, one total debit, authoritative balance readback, restart recovery, and replay are code-complete and locally tested through the debited phase. S8 provider fulfillment, compensation, activation, and the single Workspace receipt remain pending; deployed browser, live Sub2API, and live Tencent evidence remain pending."
   },
   "providerProcurement": {
     "provider": "Tencent Cloud",

@@ -1947,6 +1947,92 @@ func (s *postgresEntStateStore) ApplyWorkspaceRenewalIntent(ctx context.Context,
 	return tx.Commit()
 }
 
+func (s *postgresEntStateStore) ClaimWorkspaceLaunch(ctx context.Context, claim workspaceLaunchClaimCAS) error {
+	desired, err := decodeWorkspaceLaunchOperation(claim.DesiredOperation)
+	if err != nil || desired.AccountID != claim.AccountID {
+		return errWorkspaceLaunchCASConflict
+	}
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	client := tx.Client()
+	if _, err := client.Account.Query().Where(account.IDEQ(claim.AccountID), lockRowForUpdate).Only(ctx); err != nil {
+		if controlplaneent.IsNotFound(err) {
+			return errWorkspaceLaunchCASConflict
+		}
+		return err
+	}
+	entities, err := client.RuntimeOperation.Query().Where(runtimeoperation.AccountIDEQ(claim.AccountID), lockRowForUpdate).All(ctx)
+	if err != nil {
+		return err
+	}
+	var existing map[string]any
+	for _, entity := range entities {
+		row := recordFromEnt(entity, runtimeOpEntFields)
+		if stringValue(row["id"]) == desired.ID {
+			existing = row
+		}
+		if claim.ExpectedOperationResult == "" && isWorkspaceLaunchAction(stringValue(row["action"])) && !terminalWorkspaceLaunchStatus(stringValue(row["status"])) {
+			return errWorkspaceLaunchInProgress
+		}
+	}
+	if claim.ExpectedOperationResult == "" {
+		if existing != nil {
+			return errWorkspaceLaunchCASConflict
+		}
+		if err := saveRecord(ctx, desired.ID, controlPlaneRecord(claim.DesiredOperation), client.RuntimeOperation.Create(), runtimeOpEntFields); err != nil {
+			if controlplaneent.IsConstraintError(err) {
+				return errWorkspaceLaunchCASConflict
+			}
+			return err
+		}
+	} else {
+		if existing == nil || stringValue(existing["result"]) != claim.ExpectedOperationResult {
+			return errWorkspaceLaunchCASConflict
+		}
+		if !workspaceLaunchClaimIdentityMatches(existing, claim.DesiredOperation) {
+			return errIdempotencyConflict
+		}
+		builder := client.RuntimeOperation.UpdateOneID(desired.ID)
+		setRecordFieldsWithEmptyText(builder, claim.DesiredOperation, runtimeOpEntFields, true)
+		if err := execCreate(ctx, builder); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func (s *postgresEntStateStore) PersistWorkspaceLaunch(ctx context.Context, update workspaceLaunchPersistCAS) error {
+	if _, err := decodeWorkspaceLaunchOperation(update.DesiredOperation); err != nil {
+		return errWorkspaceLaunchCASConflict
+	}
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	client := tx.Client()
+	entity, err := client.RuntimeOperation.Query().Where(runtimeoperation.IDEQ(update.OperationID), lockRowForUpdate).Only(ctx)
+	if err != nil {
+		if controlplaneent.IsNotFound(err) {
+			return errWorkspaceLaunchCASConflict
+		}
+		return err
+	}
+	current := recordFromEnt(entity, runtimeOpEntFields)
+	if stringValue(current["result"]) != update.ExpectedOperationResult || !workspaceLaunchClaimIdentityMatches(current, update.DesiredOperation) {
+		return errWorkspaceLaunchCASConflict
+	}
+	builder := client.RuntimeOperation.UpdateOneID(update.OperationID)
+	setRecordFieldsWithEmptyText(builder, update.DesiredOperation, runtimeOpEntFields, true)
+	if err := execCreate(ctx, builder); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
 func (s *postgresEntStateStore) ClaimWorkspaceRenewal(ctx context.Context, claim workspaceRenewalClaimCAS) error {
 	tx, err := s.client.Tx(ctx)
 	if err != nil {

@@ -897,6 +897,102 @@ func TestWorkspaceRenewalInactiveLifecycleRejectsEnabledIntent(t *testing.T) {
 	}
 }
 
+func TestWorkspaceLaunchCASStoresFenceConcurrentClaimsAndStalePersists(t *testing.T) {
+	for _, storeCase := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "postgres", new: newPostgresWorkspaceRenewalStore},
+	} {
+		t.Run(storeCase.name, func(t *testing.T) {
+			ctx := context.Background()
+			store := storeCase.new(t)
+			seedTenantMember(t, store, "acct-launch", "org-launch", "usr-launch", "launch@example.com")
+			first := newWorkspaceLaunchOperation("acct-launch", "usr-launch", "First", "basic", 10, false, pricingCatalogVersion, 52_580_000, "first")
+			second := newWorkspaceLaunchOperation("acct-launch", "usr-launch", "Second", "basic", 10, false, pricingCatalogVersion, 52_580_000, "second")
+			first.WorkspaceAPIKeyID, second.WorkspaceAPIKeyID = 9, 9
+			claims := []workspaceLaunchClaimCAS{
+				{AccountID: first.AccountID, DesiredOperation: workspaceLaunchOperationRow(first)},
+				{AccountID: second.AccountID, DesiredOperation: workspaceLaunchOperationRow(second)},
+			}
+			start := make(chan struct{})
+			results := make(chan error, len(claims))
+			for _, claim := range claims {
+				go func(claim workspaceLaunchClaimCAS) {
+					<-start
+					results <- store.ClaimWorkspaceLaunch(ctx, claim)
+				}(claim)
+			}
+			close(start)
+			won, fenced := 0, 0
+			for range claims {
+				switch err := <-results; {
+				case err == nil:
+					won++
+				case errors.Is(err, errWorkspaceLaunchCASConflict), errors.Is(err, errWorkspaceLaunchInProgress):
+					fenced++
+				default:
+					t.Fatalf("initial claim error=%v", err)
+				}
+			}
+			rows, err := store.ListRuntimeOperations(ctx)
+			if err != nil || won != 1 || fenced != 1 || len(rows) != 1 {
+				t.Fatalf("initial claims won=%d fenced=%d rows=%#v err=%v", won, fenced, rows, err)
+			}
+			operation, err := decodeWorkspaceLaunchOperation(rows[0])
+			if err != nil {
+				t.Fatal(err)
+			}
+			operation.LeaseToken, operation.LeaseExpiresAt = "lease-winner", "2026-07-19T12:05:00Z"
+			claim := workspaceLaunchClaimCAS{
+				AccountID: operation.AccountID, ExpectedOperationResult: operation.PersistedResult,
+				DesiredOperation: workspaceLaunchOperationRow(operation),
+			}
+			start, results = make(chan struct{}), make(chan error, 2)
+			for range 2 {
+				go func() {
+					<-start
+					results <- store.ClaimWorkspaceLaunch(ctx, claim)
+				}()
+			}
+			close(start)
+			won, fenced = 0, 0
+			for range 2 {
+				switch err := <-results; {
+				case err == nil:
+					won++
+				case errors.Is(err, errWorkspaceLaunchCASConflict):
+					fenced++
+				default:
+					t.Fatalf("worker claim error=%v", err)
+				}
+			}
+			if won != 1 || fenced != 1 {
+				t.Fatalf("worker claims won=%d fenced=%d", won, fenced)
+			}
+
+			rows, err = store.ListRuntimeOperations(ctx)
+			if err != nil || len(rows) != 1 {
+				t.Fatalf("claimed rows=%#v err=%v", rows, err)
+			}
+			operation, err = decodeWorkspaceLaunchOperation(rows[0])
+			if err != nil {
+				t.Fatal(err)
+			}
+			operation.Status, operation.ErrorCode = "unknown", "sub2api_charge_unconfirmed"
+			desired := workspaceLaunchOperationRow(operation)
+			update := workspaceLaunchPersistCAS{OperationID: operation.ID, ExpectedOperationResult: operation.PersistedResult, DesiredOperation: desired}
+			stale := update
+			stale.ExpectedOperationResult = "stale-result"
+			if err := store.PersistWorkspaceLaunch(ctx, stale); !errors.Is(err, errWorkspaceLaunchCASConflict) {
+				t.Fatalf("stale persist error=%v", err)
+			}
+			mustStore(t, store.PersistWorkspaceLaunch(ctx, update))
+		})
+	}
+}
+
 func TestWorkspaceRenewalClaimIsAtomicAndRejectsDifferentRequestHash(t *testing.T) {
 	for _, storeCase := range []struct {
 		name string

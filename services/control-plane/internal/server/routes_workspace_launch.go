@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -50,6 +51,14 @@ func registerWorkspaceLaunchRoutes(mux *http.ServeMux, app *controlPlaneServer, 
 			writeError(w, http.StatusConflict, "autoRenew_unavailable")
 			return
 		}
+		if _, supplied := input["priceVersion"]; supplied {
+			writeError(w, http.StatusBadRequest, "client_pricing_forbidden")
+			return
+		}
+		if _, supplied := input["totalChargeUsdMicros"]; supplied {
+			writeError(w, http.StatusBadRequest, "client_pricing_forbidden")
+			return
+		}
 		quote, err := app.pricingPreviewResponse(r.Context(), map[string]any{"resourceType": "workspace", "packageId": packageID, "sizeGb": storageGB})
 		if err != nil {
 			writePricingError(w, err)
@@ -68,7 +77,7 @@ func registerWorkspaceLaunchRoutes(mux *http.ServeMux, app *controlPlaneServer, 
 			return
 		}
 		for _, row := range operations {
-			if stringValue(row["id"]) != operation.ID {
+			if stringValue(row["id"]) != operation.ID || stringValue(row["action"]) != workspaceLaunchAction {
 				continue
 			}
 			persisted, err := decodeWorkspaceLaunchOperation(row)
@@ -102,7 +111,7 @@ func registerWorkspaceLaunchRoutes(mux *http.ServeMux, app *controlPlaneServer, 
 			return
 		}
 		for _, row := range operations {
-			if stringValue(row["accountId"]) == accountID && stringValue(row["action"]) == "workspace.launch" {
+			if stringValue(row["accountId"]) == accountID && isWorkspaceLaunchAction(stringValue(row["action"])) && !terminalWorkspaceLaunchStatus(stringValue(row["status"])) {
 				writeError(w, http.StatusConflict, errWorkspaceLaunchInProgress.Error())
 				return
 			}
@@ -123,6 +132,8 @@ func registerWorkspaceLaunchRoutes(mux *http.ServeMux, app *controlPlaneServer, 
 				return
 			}
 		}
+		unlockAccount := app.lockResource("account", accountID)
+		defer unlockAccount()
 		credentialUser, sub2APIUserID, credential, ok := app.gatewayUserContext(w, r)
 		if !ok {
 			return
@@ -147,11 +158,41 @@ func registerWorkspaceLaunchRoutes(mux *http.ServeMux, app *controlPlaneServer, 
 			return
 		}
 		row := workspaceLaunchOperationRow(operation)
-		if err := app.tables.SaveRuntimeOperation(r.Context(), row); err != nil {
+		if err := app.tables.ClaimWorkspaceLaunch(r.Context(), workspaceLaunchClaimCAS{AccountID: accountID, DesiredOperation: row}); err != nil {
+			if errors.Is(err, errWorkspaceLaunchCASConflict) || errors.Is(err, errWorkspaceLaunchInProgress) {
+				operations, readErr := app.tables.ListRuntimeOperations(r.Context())
+				if readErr == nil {
+					for _, existing := range operations {
+						if stringValue(existing["id"]) != operation.ID || stringValue(existing["action"]) != workspaceLaunchAction {
+							continue
+						}
+						persisted, decodeErr := decodeWorkspaceLaunchOperation(existing)
+						if decodeErr == nil && persisted.AccountID == accountID && persisted.RequestHash == operation.RequestHash {
+							body, responseErr := workspaceLaunchResponse(existing)
+							if responseErr == nil {
+								writeJSON(w, http.StatusAccepted, body)
+								return
+							}
+						}
+					}
+				}
+				if errors.Is(err, errWorkspaceLaunchInProgress) {
+					writeError(w, http.StatusConflict, errWorkspaceLaunchInProgress.Error())
+				} else {
+					writeError(w, http.StatusConflict, errIdempotencyConflict.Error())
+				}
+				return
+			}
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}
-		body, err := workspaceLaunchResponse(row)
+		operations, err = app.tables.ListRuntimeOperations(r.Context())
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "state_read_failed")
+			return
+		}
+		persistedRow := findRecord(operations, operation.ID)
+		body, err := workspaceLaunchResponse(persistedRow)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "state_read_failed")
 			return
@@ -174,7 +215,7 @@ func registerWorkspaceLaunchRoutes(mux *http.ServeMux, app *controlPlaneServer, 
 		}
 		rows := make([]any, 0)
 		for _, operation := range operations {
-			if stringValue(operation["accountId"]) != accountID || stringValue(operation["action"]) != "workspace.launch" {
+			if stringValue(operation["accountId"]) != accountID || stringValue(operation["action"]) != workspaceLaunchAction {
 				continue
 			}
 			body, err := workspaceLaunchResponse(operation)
@@ -198,7 +239,7 @@ func registerWorkspaceLaunchRoutes(mux *http.ServeMux, app *controlPlaneServer, 
 			return
 		}
 		for _, operation := range operations {
-			if stringValue(operation["id"]) != r.PathValue("id") || stringValue(operation["accountId"]) != accountID || stringValue(operation["action"]) != "workspace.launch" {
+			if stringValue(operation["id"]) != r.PathValue("id") || stringValue(operation["accountId"]) != accountID || stringValue(operation["action"]) != workspaceLaunchAction {
 				continue
 			}
 			body, err := workspaceLaunchResponse(operation)

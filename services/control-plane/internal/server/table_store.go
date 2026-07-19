@@ -240,6 +240,8 @@ type controlPlaneTableStore interface {
 	SaveWorkspace(ctx context.Context, row map[string]any) error
 	CompareAndSwapWorkspaceAPIKey(ctx context.Context, workspaceID string, expectedID, newID int64) error
 	ApplyWorkspaceRenewalIntent(ctx context.Context, update workspaceRenewalIntentCAS) error
+	ClaimWorkspaceLaunch(ctx context.Context, claim workspaceLaunchClaimCAS) error
+	PersistWorkspaceLaunch(ctx context.Context, update workspaceLaunchPersistCAS) error
 	ClaimWorkspaceRenewal(ctx context.Context, claim workspaceRenewalClaimCAS) error
 	PersistWorkspaceRenewal(ctx context.Context, update workspaceRenewalPersistCAS) error
 	ActivateWorkspace(ctx context.Context, row map[string]any) (map[string]any, error)

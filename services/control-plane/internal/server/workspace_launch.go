@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"opl-cloud/services/control-plane/internal/clients"
 	"opl-cloud/services/control-plane/internal/controlplane"
 	"opl-cloud/services/control-plane/internal/domain"
 )
@@ -14,37 +15,69 @@ import (
 var (
 	errInvalidWorkspaceLaunchOperation = errors.New("invalid_workspace_launch_operation")
 	errWorkspaceLaunchInProgress       = errors.New("workspace_launch_in_progress")
+	errWorkspaceLaunchCASConflict      = errors.New("workspace_launch_cas_conflict")
 )
 
+const (
+	workspaceLaunchAction        = "workspace.launch.v2"
+	workspaceLaunchSchemaVersion = 2
+)
+
+func isWorkspaceLaunchAction(action string) bool {
+	return action == workspaceLaunchAction || action == "workspace.launch"
+}
+
 type workspaceLaunchOperation struct {
-	ID                        string `json:"-"`
-	Status                    string `json:"-"`
-	CreatedAt                 string `json:"-"`
-	RequestHash               string `json:"requestHash"`
-	Phase                     string `json:"phase"`
-	AccountID                 string `json:"accountId"`
-	OwnerUserID               string `json:"ownerUserId"`
-	WorkspaceID               string `json:"workspaceId"`
-	Name                      string `json:"name"`
-	PackageID                 string `json:"packageId"`
-	StorageGB                 int    `json:"sizeGb"`
-	AutoRenew                 bool   `json:"autoRenew"`
-	PriceVersion              string `json:"priceVersion"`
-	PricingVersion            string `json:"pricingVersion,omitempty"`
-	TotalMonthlyPriceCNYCents int64  `json:"totalMonthlyPriceCnyCents,omitempty"`
-	TotalChargeUSDMicros      int64  `json:"totalChargeUsdMicros"`
-	ComputeID                 string `json:"computeAllocationId"`
-	ComputeBillingOperationID string `json:"computeBillingOperationId"`
-	StorageID                 string `json:"storageId"`
-	StorageBillingOperationID string `json:"storageBillingOperationId"`
-	AttachmentID              string `json:"attachmentId,omitempty"`
-	AttachmentOperationID     string `json:"attachmentOperationId"`
-	WorkspaceOperationID      string `json:"workspaceOperationId"`
-	WorkspaceAPIKeyID         int64  `json:"workspaceApiKeyId"`
-	RuntimeServiceName        string `json:"runtimeServiceName,omitempty"`
-	URL                       string `json:"url,omitempty"`
-	ReceiptID                 string `json:"receiptId,omitempty"`
-	ErrorCode                 string `json:"errorCode,omitempty"`
+	ID                         string         `json:"-"`
+	Status                     string         `json:"-"`
+	CreatedAt                  string         `json:"-"`
+	PersistedResult            string         `json:"-"`
+	SchemaVersion              int            `json:"schemaVersion"`
+	RequestHash                string         `json:"requestHash"`
+	Phase                      string         `json:"phase"`
+	AccountID                  string         `json:"accountId"`
+	OwnerUserID                string         `json:"ownerUserId"`
+	WorkspaceID                string         `json:"workspaceId"`
+	Name                       string         `json:"name"`
+	PackageID                  string         `json:"packageId"`
+	StorageGB                  int            `json:"sizeGb"`
+	AutoRenew                  bool           `json:"autoRenew"`
+	PriceVersion               string         `json:"priceVersion"`
+	PricingVersion             string         `json:"pricingVersion,omitempty"`
+	TotalMonthlyPriceCNYCents  int64          `json:"totalMonthlyPriceCnyCents,omitempty"`
+	TotalChargeUSDMicros       int64          `json:"totalChargeUsdMicros"`
+	ComputeID                  string         `json:"computeAllocationId"`
+	ComputeBillingOperationID  string         `json:"computeBillingOperationId"`
+	StorageID                  string         `json:"storageId"`
+	StorageBillingOperationID  string         `json:"storageBillingOperationId"`
+	AttachmentID               string         `json:"attachmentId,omitempty"`
+	AttachmentOperationID      string         `json:"attachmentOperationId"`
+	WorkspaceOperationID       string         `json:"workspaceOperationId"`
+	WorkspaceAPIKeyID          int64          `json:"workspaceApiKeyId"`
+	RedeemCode                 string         `json:"sub2apiRedeemCode"`
+	ChargeAttempted            bool           `json:"chargeAttempted,omitempty"`
+	ChargeConfirmation         map[string]any `json:"chargeConfirmation,omitempty"`
+	PreChargeBalanceUSDMicros  int64          `json:"preChargeBalanceUsdMicros,omitempty"`
+	PostChargeBalanceUSDMicros int64          `json:"postChargeBalanceUsdMicros,omitempty"`
+	PostChargeBalanceKnown     bool           `json:"postChargeBalanceKnown,omitempty"`
+	LeaseToken                 string         `json:"leaseToken,omitempty"`
+	LeaseExpiresAt             string         `json:"leaseExpiresAt,omitempty"`
+	RuntimeServiceName         string         `json:"runtimeServiceName,omitempty"`
+	URL                        string         `json:"url,omitempty"`
+	ReceiptID                  string         `json:"receiptId,omitempty"`
+	ErrorCode                  string         `json:"errorCode,omitempty"`
+}
+
+type workspaceLaunchClaimCAS struct {
+	AccountID               string
+	ExpectedOperationResult string
+	DesiredOperation        map[string]any
+}
+
+type workspaceLaunchPersistCAS struct {
+	OperationID             string
+	ExpectedOperationResult string
+	DesiredOperation        map[string]any
 }
 
 func encodeWorkspaceLaunchOperation(operation workspaceLaunchOperation) string {
@@ -56,13 +89,14 @@ func newWorkspaceLaunchOperation(accountID, ownerUserID, name, packageID string,
 	operationID := "workspace-launch-" + stableID(accountID, key)[:18]
 	workspaceID := primaryWorkspaceID(accountID)
 	return workspaceLaunchOperation{
-		ID: operationID, Status: "preparing", CreatedAt: time.Now().UTC().Format(time.RFC3339Nano), Phase: "compute",
+		ID: operationID, Status: "debit_pending", CreatedAt: time.Now().UTC().Format(time.RFC3339Nano), Phase: "debit_pending", SchemaVersion: workspaceLaunchSchemaVersion,
 		RequestHash: stableID("workspace-launch-v2", accountID, ownerUserID, name, packageID, strconv.Itoa(storageGB), strconv.FormatBool(autoRenew), priceVersion),
 		AccountID:   accountID, OwnerUserID: ownerUserID, WorkspaceID: workspaceID, Name: name, PackageID: packageID,
 		StorageGB: storageGB, AutoRenew: autoRenew, PriceVersion: priceVersion, TotalChargeUSDMicros: totalChargeUSDMicros,
 		ComputeID: resourceIDForMutation("ca", accountID, operationID+":compute"), ComputeBillingOperationID: "billing-" + stableID("compute", accountID, operationID)[:18],
 		StorageID: resourceIDForMutation("vol", accountID, operationID+":storage"), StorageBillingOperationID: "billing-" + stableID("storage", accountID, operationID)[:18],
 		AttachmentOperationID: operationID + ":attachment", WorkspaceOperationID: operationID + ":workspace",
+		RedeemCode: monthlyRedeemCode(monthlyEnvironment(), operationID),
 	}
 }
 
@@ -71,20 +105,17 @@ func decodeWorkspaceLaunchOperation(row map[string]any) (workspaceLaunchOperatio
 	if err := json.Unmarshal([]byte(stringValue(row["result"])), &operation); err != nil {
 		return workspaceLaunchOperation{}, errInvalidWorkspaceLaunchOperation
 	}
-	if operation.PriceVersion == "" {
-		operation.PriceVersion = operation.PricingVersion
-	}
-	operation.PricingVersion = ""
-	operation.TotalMonthlyPriceCNYCents = 0
+	result := stringValue(row["result"])
 	operation.ID = firstNonEmpty(stringValue(row["operationId"]), stringValue(row["id"]))
-	operation.Status = stringValue(row["status"])
-	operation.CreatedAt = stringValue(row["createdAt"])
-	if operation.ID == "" || operation.Status == "" || operation.RequestHash == "" || operation.AccountID == "" || operation.WorkspaceID == "" || operation.PriceVersion == "" {
+	operation.Status, operation.CreatedAt, operation.PersistedResult = stringValue(row["status"]), stringValue(row["createdAt"]), result
+	if operation.SchemaVersion != workspaceLaunchSchemaVersion || operation.ID == "" || operation.Status == "" || operation.RequestHash == "" || operation.AccountID == "" || operation.OwnerUserID == "" ||
+		operation.WorkspaceID == "" || operation.PriceVersion == "" || operation.PackageID == "" || operation.StorageGB <= 0 || operation.TotalChargeUSDMicros <= 0 ||
+		operation.WorkspaceAPIKeyID <= 0 || operation.RedeemCode == "" {
 		return workspaceLaunchOperation{}, errInvalidWorkspaceLaunchOperation
 	}
 	for field, want := range map[string]string{
 		"accountId": operation.AccountID, "workspaceId": operation.WorkspaceID, "resourceId": operation.WorkspaceID,
-		"resourceKind": "workspace_launch", "action": "workspace.launch",
+		"resourceKind": "workspace_launch", "action": workspaceLaunchAction,
 	} {
 		if got := stringValue(row[field]); got != "" && got != want {
 			return workspaceLaunchOperation{}, errInvalidWorkspaceLaunchOperation
@@ -96,11 +127,18 @@ func decodeWorkspaceLaunchOperation(row map[string]any) (workspaceLaunchOperatio
 func workspaceLaunchOperationRow(operation workspaceLaunchOperation) map[string]any {
 	return map[string]any{
 		"id": operation.ID, "operationId": operation.ID, "accountId": operation.AccountID, "workspaceId": operation.WorkspaceID,
-		"resourceId": operation.WorkspaceID, "resourceKind": "workspace_launch", "action": "workspace.launch", "status": operation.Status,
+		"resourceId": operation.WorkspaceID, "resourceKind": "workspace_launch", "action": workspaceLaunchAction, "status": operation.Status,
 		"result": encodeWorkspaceLaunchOperation(operation), "computeAllocationId": operation.ComputeID, "storageId": operation.StorageID,
 		"attachmentId": operation.AttachmentID, "runtimeServiceName": operation.RuntimeServiceName, "createdAt": operation.CreatedAt,
 		"workspaceApiKeyId": operation.WorkspaceAPIKeyID,
 	}
+}
+
+func workspaceLaunchClaimIdentityMatches(current, desired map[string]any) bool {
+	existing, existingErr := decodeWorkspaceLaunchOperation(current)
+	next, nextErr := decodeWorkspaceLaunchOperation(desired)
+	return existingErr == nil && nextErr == nil && existing.ID == next.ID && existing.AccountID == next.AccountID &&
+		existing.WorkspaceID == next.WorkspaceID && existing.RequestHash == next.RequestHash
 }
 
 func workspaceLaunchResponse(row map[string]any) (map[string]any, error) {
@@ -127,14 +165,16 @@ func (app *controlPlaneServer) runWorkspaceLaunchesOnce(ctx context.Context, ser
 	}
 	var errs []error
 	for _, row := range rows {
-		if stringValue(row["action"]) != "workspace.launch" || terminalWorkspaceLaunchStatus(stringValue(row["status"])) {
+		if stringValue(row["action"]) != workspaceLaunchAction {
 			continue
 		}
-		if stringValue(row["status"]) == "manual_review" {
-			operation, err := decodeWorkspaceLaunchOperation(row)
-			if err != nil || !workspaceLaunchChildReview(operation) {
-				continue
-			}
+		operation, err := decodeWorkspaceLaunchOperation(row)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		if terminalWorkspaceLaunchStatus(operation.Status) || operation.Phase == "debited" || operation.Status == "manual_review" {
+			continue
 		}
 		if err := app.runWorkspaceLaunch(ctx, service, stringValue(row["id"])); err != nil {
 			errs = append(errs, err)
@@ -144,6 +184,57 @@ func (app *controlPlaneServer) runWorkspaceLaunchesOnce(ctx context.Context, ser
 }
 
 func (app *controlPlaneServer) runWorkspaceLaunch(ctx context.Context, service *controlplane.Service, operationID string) error {
+	operation, ok, err := app.workspaceLaunchOperation(ctx, operationID)
+	if err != nil || !ok || terminalWorkspaceLaunchStatus(operation.Status) || operation.Phase == "debited" {
+		return err
+	}
+	unlock := app.lockResource("workspace-launch", operation.AccountID)
+	defer unlock()
+	operation, ok, err = app.workspaceLaunchOperation(ctx, operationID)
+	if err != nil || !ok || terminalWorkspaceLaunchStatus(operation.Status) || operation.Phase == "debited" {
+		return err
+	}
+	unlockAccount := app.lockResource("account", operation.AccountID)
+	defer unlockAccount()
+	if operation.LeaseExpiresAt != "" {
+		expiresAt, err := time.Parse(time.RFC3339, operation.LeaseExpiresAt)
+		if err != nil {
+			return app.manualReviewWorkspaceLaunchDebit(ctx, &operation, "workspace_launch_lease_invalid")
+		}
+		if expiresAt.After(time.Now().UTC()) {
+			return nil
+		}
+	}
+	operation.LeaseToken = stableID(operation.ID, operation.PersistedResult, time.Now().UTC().Format(time.RFC3339Nano))
+	operation.LeaseExpiresAt = time.Now().UTC().Add(workspaceRenewalLeaseDuration).Format(time.RFC3339Nano)
+	desired := workspaceLaunchOperationRow(operation)
+	if err := app.tables.ClaimWorkspaceLaunch(ctx, workspaceLaunchClaimCAS{
+		AccountID: operation.AccountID, ExpectedOperationResult: operation.PersistedResult, DesiredOperation: desired,
+	}); errors.Is(err, errWorkspaceLaunchCASConflict) {
+		return nil
+	} else if err != nil {
+		return err
+	}
+	operation.PersistedResult = stringValue(desired["result"])
+
+	owner, err := app.findUserByID(ctx, operation.OwnerUserID)
+	if err != nil {
+		return app.retryWorkspaceLaunchDebit(ctx, &operation, "workspace_launch_owner_state_unavailable", err)
+	}
+	ownerActive := owner != nil && stringValue(owner["accountId"]) == operation.AccountID
+	if ownerActive {
+		ownerActive, err = app.hasActiveCustomerMembership(ctx, owner)
+		if err != nil {
+			return app.retryWorkspaceLaunchDebit(ctx, &operation, "workspace_launch_owner_state_unavailable", err)
+		}
+	}
+	if !ownerActive {
+		return app.manualReviewWorkspaceLaunchDebit(ctx, &operation, "workspace_launch_owner_identity_mismatch")
+	}
+	return app.debitWorkspaceLaunch(ctx, service, &operation)
+}
+
+func (app *controlPlaneServer) runLegacyWorkspaceLaunch(ctx context.Context, service *controlplane.Service, operationID string) error {
 	operation, ok, err := app.workspaceLaunchOperation(ctx, operationID)
 	if err != nil || !ok || terminalWorkspaceLaunchStatus(operation.Status) {
 		return err
@@ -533,13 +624,129 @@ func (app *controlPlaneServer) workspaceLaunchOperation(ctx context.Context, ope
 		return workspaceLaunchOperation{}, false, err
 	}
 	for _, row := range rows {
-		if stringValue(row["id"]) != operationID || stringValue(row["action"]) != "workspace.launch" {
+		if stringValue(row["id"]) != operationID || stringValue(row["action"]) != workspaceLaunchAction {
 			continue
 		}
 		operation, err := decodeWorkspaceLaunchOperation(row)
 		return operation, err == nil, err
 	}
 	return workspaceLaunchOperation{}, false, nil
+}
+
+func releaseWorkspaceLaunchLease(operation *workspaceLaunchOperation) {
+	operation.LeaseToken, operation.LeaseExpiresAt = "", ""
+}
+
+func (app *controlPlaneServer) persistWorkspaceLaunch(ctx context.Context, operation *workspaceLaunchOperation) error {
+	desired := workspaceLaunchOperationRow(*operation)
+	if err := app.tables.PersistWorkspaceLaunch(ctx, workspaceLaunchPersistCAS{
+		OperationID: operation.ID, ExpectedOperationResult: operation.PersistedResult, DesiredOperation: desired,
+	}); err != nil {
+		return err
+	}
+	operation.PersistedResult = stringValue(desired["result"])
+	return nil
+}
+
+func (app *controlPlaneServer) retryWorkspaceLaunchDebit(ctx context.Context, operation *workspaceLaunchOperation, code string, cause error) error {
+	if cause == nil {
+		cause = errors.New(code)
+	}
+	operation.Status, operation.Phase, operation.ErrorCode = "unknown", "debit_pending", code
+	releaseWorkspaceLaunchLease(operation)
+	return errors.Join(cause, app.persistWorkspaceLaunch(ctx, operation))
+}
+
+func (app *controlPlaneServer) manualReviewWorkspaceLaunchDebit(ctx context.Context, operation *workspaceLaunchOperation, code string) error {
+	operation.Status, operation.ErrorCode = "manual_review", code
+	releaseWorkspaceLaunchLease(operation)
+	return errors.Join(errors.New(code), app.persistWorkspaceLaunch(ctx, operation))
+}
+
+func (app *controlPlaneServer) debitWorkspaceLaunch(ctx context.Context, service *controlplane.Service, operation *workspaceLaunchOperation) error {
+	userID, err := app.sub2APIUserID(ctx, operation.AccountID)
+	if err != nil {
+		return app.retryWorkspaceLaunchDebit(ctx, operation, errMonthlyAccountUnmapped.Error(), err)
+	}
+	key, err := service.Sub2APIWorkspaceKeyByID(ctx, userID, operation.WorkspaceAPIKeyID)
+	if err != nil || key.ID != operation.WorkspaceAPIKeyID || key.UserID != userID || key.Name != "opl-workspace" || key.Status != "active" {
+		return app.retryWorkspaceLaunchDebit(ctx, operation, "gateway_key_unavailable", err)
+	}
+	if operation.ChargeConfirmation == nil {
+		var charge clients.Sub2APICharge
+		if operation.ChargeAttempted || operation.Status == "unknown" {
+			history, historyErr := service.Sub2APIBalanceHistory(ctx, userID)
+			row := map[string]any{"sub2apiRedeemCode": operation.RedeemCode, "chargeUsdMicros": operation.TotalChargeUSDMicros}
+			switch code := sub2APIReconciliationCode(row, userID, history); {
+			case historyErr != nil || code == "sub2api_charge_missing":
+				charge, err = service.ChargeSub2API(ctx, clients.Sub2APIChargeInput{
+					UserID: userID, Code: operation.RedeemCode, ChargeUSDMicros: operation.TotalChargeUSDMicros, Notes: "OPL Workspace launch " + operation.WorkspaceID,
+				})
+			case code != "":
+				return app.manualReviewWorkspaceLaunchDebit(ctx, operation, code)
+			default:
+				charge = clients.Sub2APICharge{Code: operation.RedeemCode, UserID: userID, ChargeUSDMicros: operation.TotalChargeUSDMicros, Status: "used"}
+			}
+		} else {
+			balance, balanceErr := service.Sub2APIBalance(ctx, userID)
+			if balanceErr != nil {
+				return app.retryWorkspaceLaunchDebit(ctx, operation, "sub2api_balance_unavailable", balanceErr)
+			}
+			if balance.USDMicros < operation.TotalChargeUSDMicros {
+				operation.Status, operation.Phase, operation.ErrorCode = "insufficient", "debit_pending", errMonthlyInsufficientBalance.Error()
+				releaseWorkspaceLaunchLease(operation)
+				if err := app.persistWorkspaceLaunch(ctx, operation); err != nil {
+					return err
+				}
+				return errMonthlyInsufficientBalance
+			}
+			operation.PreChargeBalanceUSDMicros, operation.ChargeAttempted = balance.USDMicros, true
+			if err := app.persistWorkspaceLaunch(ctx, operation); err != nil {
+				return err
+			}
+			charge, err = service.ChargeSub2API(ctx, clients.Sub2APIChargeInput{
+				UserID: userID, Code: operation.RedeemCode, ChargeUSDMicros: operation.TotalChargeUSDMicros, Notes: "OPL Workspace launch " + operation.WorkspaceID,
+			})
+		}
+		if err != nil {
+			if errors.Is(err, clients.ErrSub2APIChargeUnknown) {
+				return app.retryWorkspaceLaunchDebit(ctx, operation, "sub2api_charge_unconfirmed", err)
+			}
+			if errors.Is(err, errMonthlyInsufficientBalance) {
+				operation.Status, operation.Phase, operation.ErrorCode = "insufficient", "debit_pending", errMonthlyInsufficientBalance.Error()
+				releaseWorkspaceLaunchLease(operation)
+				return errors.Join(err, app.persistWorkspaceLaunch(ctx, operation))
+			}
+			return app.manualReviewWorkspaceLaunchDebit(ctx, operation, "sub2api_charge_unconfirmed")
+		}
+		confirmation := map[string]any{"code": charge.Code, "userId": charge.UserID, "chargeUsdMicros": charge.ChargeUSDMicros, "status": charge.Status}
+		if !monthlyChargeConfirmationMatches(confirmation, operation.RedeemCode, userID, operation.TotalChargeUSDMicros) {
+			return app.manualReviewWorkspaceLaunchDebit(ctx, operation, "sub2api_charge_confirmation_invalid")
+		}
+		operation.ChargeConfirmation, operation.ErrorCode = confirmation, ""
+		if err := app.persistWorkspaceLaunch(ctx, operation); err != nil {
+			return err
+		}
+	}
+	history, historyErr := service.Sub2APIBalanceHistory(ctx, userID)
+	row := map[string]any{"sub2apiRedeemCode": operation.RedeemCode, "chargeUsdMicros": operation.TotalChargeUSDMicros}
+	if historyErr != nil || sub2APIReconciliationCode(row, userID, history) == "sub2api_charge_missing" {
+		return app.retryWorkspaceLaunchDebit(ctx, operation, "sub2api_charge_history_unavailable", errors.Join(historyErr, clients.ErrSub2APIChargeUnknown))
+	}
+	if code := sub2APIReconciliationCode(row, userID, history); code != "" {
+		return app.manualReviewWorkspaceLaunchDebit(ctx, operation, code)
+	}
+	postCharge, err := service.Sub2APIBalance(ctx, userID)
+	if err != nil {
+		return app.retryWorkspaceLaunchDebit(ctx, operation, "post_charge_balance_unavailable", err)
+	}
+	operation.PostChargeBalanceKnown, operation.PostChargeBalanceUSDMicros = true, postCharge.USDMicros
+	if postCharge.USDMicros < 0 || operation.PreChargeBalanceUSDMicros > 0 && postCharge.USDMicros > operation.PreChargeBalanceUSDMicros-operation.TotalChargeUSDMicros {
+		return app.manualReviewWorkspaceLaunchDebit(ctx, operation, "post_charge_balance_invalid")
+	}
+	operation.Status, operation.Phase, operation.ErrorCode = "debited", "debited", ""
+	releaseWorkspaceLaunchLease(operation)
+	return app.persistWorkspaceLaunch(ctx, operation)
 }
 
 func (app *controlPlaneServer) saveWorkspaceLaunchOperation(ctx context.Context, operation workspaceLaunchOperation) error {

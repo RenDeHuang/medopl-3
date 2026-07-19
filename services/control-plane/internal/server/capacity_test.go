@@ -216,7 +216,7 @@ func TestSinglePodCapacity(t *testing.T) {
 	}
 	launches := make([]map[string]any, 0, 1)
 	for _, operation := range operations {
-		if operation["action"] == "workspace.launch" {
+		if operation["action"] == workspaceLaunchAction {
 			launches = append(launches, operation)
 		}
 	}

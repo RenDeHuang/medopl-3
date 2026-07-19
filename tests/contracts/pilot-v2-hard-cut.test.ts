@@ -75,15 +75,20 @@ test("Pilot V2 contracts hard cut Gateway keys and source envelopes", async () =
 });
 
 test("Pilot V2 contracts hard cut Workspace purchase, access, and Runtime facts", async () => {
-  const [freeze, billing, business, product, evidence] = await Promise.all([
+  const [freeze, billing, pricing, business, product, evidence] = await Promise.all([
     json("packages/contracts/opl-cloud-launch-freeze-contract.json"),
     json("packages/contracts/opl-cloud-billing-ledger-contract.json"),
+    json("packages/contracts/opl-cloud-pricing-contract.json"),
     json("packages/contracts/opl-cloud-business-object-contract.json"),
     json("packages/contracts/opl-cloud-product-contract.json"),
     json("packages/contracts/opl-cloud-evidence-ledger-contract.json")
   ]);
 
   assert.equal(freeze.workspaceLaunch.customerDebitCardinality, 1);
+  assert.equal(freeze.workspaceLaunch.persistence, "control_plane_runtime_operations with action=workspace.launch.v2 and result.schemaVersion=2");
+  assert.equal(freeze.workspaceLaunch.codeCompleteThroughPhase, "debited");
+  assert.equal(freeze.workspaceLaunch.legacyNonTerminalPolicy, "clear_or_manual_handle_before_cutover_never_resume_in_v2_worker");
+  assert.equal(freeze.workspaceLaunch.backgroundProgression, "S8 target: The provider reconciliation worker will resume stable compute, storage, attachment, Gateway Secret, Runtime, and receipt sub-operations after browser close or process restart.");
   assert.deepEqual(freeze.workspaceLaunch.fulfillmentResources, ["compute", "storage", "attachment", "gateway_secret", "runtime"]);
 	assert.deepEqual(freeze.gateway.workspaceKeyLifecycle, {
 		launchConvergence: "zero_create_one_active_reuse_other_fail_closed",
@@ -97,6 +102,10 @@ test("Pilot V2 contracts hard cut Workspace purchase, access, and Runtime facts"
 	});
   assert.equal(billing.chargePolicy.customerObject, "workspace");
   assert.equal(billing.chargePolicy.debitCardinalityPerPeriod, 1);
+  assert.equal(billing.chargePolicy.launchOperationAction, "workspace.launch.v2");
+  assert.equal(billing.chargePolicy.launchOperationSchemaVersion, 2);
+  assert.equal(pricing.workspaceCharge.launchOperationAction, "workspace.launch.v2");
+  assert.equal(pricing.workspaceCharge.codeCompleteThroughPhase, "debited");
   assert.equal(billing.ledgerEvidencePolicy.workspaceReceiptTypes.purchased, "billing.workspace_purchased.v1");
   assert.equal(billing.entitlementPolicy.resourceCompatibility.customerChargeOwner, false);
   assert.ok(evidence.receiptTypes.includes("billing.workspace_purchased.v1"));
@@ -238,6 +247,8 @@ test("Pilot V2 current human truth preserves public entry points and evidence le
   }
   assert.match(consoleProduct, /Home.*Login.*Logo/is);
   assert.match(consoleProduct, /URL.*用户名.*密码.*Workspace Key/is);
+  assert.match(invariants, /workspace\.launch\.v2[\s\S]{0,300}stops at\s+`debited`[\s\S]{0,300}S8/i);
+  assert.doesNotMatch(invariants, /durable `workspace\.launch` RuntimeOperation/);
   assert.match(runbook, /OPL_POSTGRES_TESTS=1/);
   assert.match(runbook, /OPL_CAPACITY_TESTS=1/);
   assert.match(runbook, /Action=skip/);

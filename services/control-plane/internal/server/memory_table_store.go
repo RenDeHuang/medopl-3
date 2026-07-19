@@ -620,6 +620,58 @@ func (s *memoryTableStore) ApplyWorkspaceRenewalIntent(_ context.Context, update
 	return nil
 }
 
+func (s *memoryTableStore) ClaimWorkspaceLaunch(_ context.Context, claim workspaceLaunchClaimCAS) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	desired, err := decodeWorkspaceLaunchOperation(claim.DesiredOperation)
+	if err != nil || desired.AccountID != claim.AccountID || s.accounts[claim.AccountID] == nil {
+		return errWorkspaceLaunchCASConflict
+	}
+	index := -1
+	for i, row := range s.runtimeOps {
+		if stringValue(row["id"]) == desired.ID {
+			index = i
+			break
+		}
+	}
+	if claim.ExpectedOperationResult == "" {
+		if index >= 0 {
+			return errWorkspaceLaunchCASConflict
+		}
+		for _, row := range s.runtimeOps {
+			if stringValue(row["accountId"]) == claim.AccountID && isWorkspaceLaunchAction(stringValue(row["action"])) && !terminalWorkspaceLaunchStatus(stringValue(row["status"])) {
+				return errWorkspaceLaunchInProgress
+			}
+		}
+		s.runtimeOps = append(s.runtimeOps, cloneMap(claim.DesiredOperation))
+		return nil
+	}
+	if index < 0 || stringValue(s.runtimeOps[index]["result"]) != claim.ExpectedOperationResult {
+		return errWorkspaceLaunchCASConflict
+	}
+	if !workspaceLaunchClaimIdentityMatches(s.runtimeOps[index], claim.DesiredOperation) {
+		return errIdempotencyConflict
+	}
+	s.runtimeOps[index] = cloneMap(claim.DesiredOperation)
+	return nil
+}
+
+func (s *memoryTableStore) PersistWorkspaceLaunch(_ context.Context, update workspaceLaunchPersistCAS) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for i, row := range s.runtimeOps {
+		if stringValue(row["id"]) != update.OperationID {
+			continue
+		}
+		if stringValue(row["result"]) != update.ExpectedOperationResult || !workspaceLaunchClaimIdentityMatches(row, update.DesiredOperation) {
+			return errWorkspaceLaunchCASConflict
+		}
+		s.runtimeOps[i] = cloneMap(update.DesiredOperation)
+		return nil
+	}
+	return errWorkspaceLaunchCASConflict
+}
+
 func (s *memoryTableStore) ClaimWorkspaceRenewal(_ context.Context, claim workspaceRenewalClaimCAS) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

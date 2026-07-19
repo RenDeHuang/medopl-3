@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "owner": "OPL Control Plane",
   "purpose": "One-charge Workspace purchase and renewal, fulfillment, entitlement, receipt, wallet-adjustment reference, and reconciliation ownership contract.",
   "state": "current",
@@ -20,6 +20,8 @@
   ],
   "chargePolicy": {
     "customerObject": "workspace",
+    "launchOperationAction": "workspace.launch.v2",
+    "launchOperationSchemaVersion": 2,
     "debitCardinalityPerPeriod": 1,
     "currency": "USD",
     "unit": "usd_micros",
