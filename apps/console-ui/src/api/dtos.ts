@@ -583,12 +583,16 @@ export interface AnnouncementDTO {
   startsAt?: string;
   endsAt?: string;
   publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
   read: boolean;
 }
 
 export interface AnnouncementPageDTO {
   items: AnnouncementDTO[];
   total: number;
+  page: number;
+  pageSize: number;
 }
 
 export interface AnnouncementReadDTO {

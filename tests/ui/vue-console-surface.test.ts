@@ -19,7 +19,7 @@ test("Console runtime is Vue without React or Ant Design", async () => {
   assert.match(entrySource, /createApp\(App\)/);
 });
 
-test("customer views use granular source projections and the one Workspace launch", async () => {
+test("customer views use granular V2 source projections and the one Workspace launch", async () => {
   const [app, readApi, workspaceApi] = await Promise.all([
     source("apps/console-ui/src/App.vue"),
     source("apps/console-ui/src/api/console-read-api.ts"),
@@ -27,15 +27,19 @@ test("customer views use granular source projections and the one Workspace launc
   ]);
   const template = app.slice(app.indexOf("<template>"));
   for (const route of [
-    "/api/gateway/wallet", "/api/gateway/keys", "/api/gateway/usage?",
-    "/api/gateway/usage/stats?", "/api/gateway/balance-history", "/api/billing/receipts?"
-  ]) assert.match(readApi, new RegExp(route.replace(/[?]/g, "\\?")));
+    "/api/gateway/endpoint", "/api/gateway/wallet", "/api/gateway/keys",
+    "/api/gateway/keys/${encodeURIComponent(keyId)}/usage?",
+    "/api/gateway/keys/${encodeURIComponent(keyId)}/usage-summary?",
+    "/api/gateway/usage-summary?", "/api/gateway/balance-history",
+    "/api/billing/receipts?", "/api/announcements"
+  ]) assert.ok(readApi.includes(route), `${route} adapter is required`);
   assert.match(workspaceApi, /\/api\/workspace-launches/);
   assert.match(workspaceApi, /\/api\/workspaces\/runtime-status/);
   assert.doesNotMatch(readApi, /\/api\/gateway\/summary|reveal=true/);
+  assert.doesNotMatch(app, /\bgetGatewayUsage\(|\bgetGatewayUsageStats\(/);
   assert.doesNotMatch(app, /createComputeAllocation|createStorageVolume|attachStorage|buyCompute|buyStorage|mountStorage/);
   assert.doesNotMatch(template, /Sub2API|Gateway|Fabric|Ledger|Runtime|CVM|CBS|ComputeAllocation|StorageVolume|StorageAttachment|Mount/);
-  for (const label of ["概览", "Workspace", "API 服务", "账单", "模型", "Token", "请求编号", "暂不可用"]) {
+  for (const label of ["概览", "Workspace", "API 服务", "账单", "公告", "模型", "Token", "请求编号", "暂不可用"]) {
     assert.match(template, new RegExp(label));
   }
 });
@@ -65,8 +69,8 @@ test("administrator invite omits remote identity input and shows billing account
 test("revealed secrets are cleared on navigation, refresh, and logout", async () => {
   const app = await source("apps/console-ui/src/App.vue");
   assert.match(app, /function clearSecrets\(\)/);
-  assert.match(app, /previous\?\.startsWith\("\/console\/api"\)/);
-  assert.match(app, /previous\?\.startsWith\("\/console\/workspace"\)/);
+  assert.match(app, /function isSensitiveRoute\(route: string\)/);
+  assert.match(app, /isSensitiveRoute\(previous \|\| ""\)/);
   assert.match(app, /async function signOut\(\)[\s\S]*clearSecrets\(\)/);
   assert.match(app, /function refreshCurrentPage\(\) \{\s*clearSecrets\(\);/);
 });

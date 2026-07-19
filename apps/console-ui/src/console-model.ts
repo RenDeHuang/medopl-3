@@ -4,7 +4,8 @@ export const customerMenu = Object.freeze([
   { id: "overview", label: "概览", path: "/console/overview", icon: "LayoutDashboard" },
   { id: "workspace", label: "Workspace", path: "/console/workspace", icon: "Database" },
   { id: "api", label: "API 服务", path: "/console/api", icon: "Server" },
-  { id: "billing", label: "账单", path: "/console/billing", icon: "ReceiptText" }
+  { id: "billing", label: "账单", path: "/console/billing", icon: "ReceiptText" },
+  { id: "announcements", label: "公告", path: "/console/announcements", icon: "Megaphone" }
 ]);
 
 export const apiMenu = Object.freeze([

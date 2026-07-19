@@ -1,6 +1,9 @@
 import { decodeDto, decodeSource } from "./dtos.ts";
 import type {
+  AnnouncementPageDTO,
+  AnnouncementReadDTO,
   BalanceHistoryData,
+  BillingReceipt,
   BillingReceiptPage,
   CreateGatewayKeyRequest,
   CreateCustomerUserRequest,
@@ -138,6 +141,18 @@ export function getBillingReceipts(cursor = "", limit = 20, signal?: AbortSignal
   const params = new URLSearchParams({ limit: String(limit) });
   if (cursor) params.set("cursor", cursor);
   return sourceGet<BillingReceiptPage>(`/api/billing/receipts?${params}`, signal);
+}
+
+export function getBillingReceipt(receiptId: string, signal?: AbortSignal): Promise<SourceEnvelope<BillingReceipt>> {
+  return sourceGet<BillingReceipt>(`/api/billing/receipts/${encodeURIComponent(receiptId)}`, signal);
+}
+
+export function getAnnouncements(page = 1, pageSize = 20, signal?: AbortSignal): Promise<SourceEnvelope<AnnouncementPageDTO>> {
+  return sourceGet<AnnouncementPageDTO>(`/api/announcements?${new URLSearchParams({ page: String(page), pageSize: String(pageSize) })}`, signal);
+}
+
+export function markAnnouncementRead(announcementId: string, csrfToken: string, idempotencyKey: string): Promise<AnnouncementReadDTO> {
+  return postJson<unknown>(`/api/announcements/${encodeURIComponent(announcementId)}/read`, {}, csrfToken, idempotencyKey).then(decodeDto<AnnouncementReadDTO>);
 }
 
 export function getPricingCatalog(): Promise<PricingCatalogResponse> {
