@@ -558,10 +558,24 @@ func validateReceiptInput(input ReceiptInput) error {
 			billingCostValid = false
 		}
 	}
-	if !allowedStatus[input.Status] || containsForbiddenReceiptKey(input) || !billingCostValid {
+	rotationEvidenceValid := input.Type != "workspace.gateway_key_rotated.v1" || validWorkspaceGatewayKeyRotationReceipt(input)
+	if !allowedStatus[input.Status] || containsForbiddenReceiptKey(input) || !billingCostValid || !rotationEvidenceValid {
 		return ErrInvalidReceiptInput
 	}
 	return nil
+}
+
+func validWorkspaceGatewayKeyRotationReceipt(input ReceiptInput) bool {
+	if input.Status != "completed" || input.Surface != "control_plane" || input.AccountID == "" || len(input.Execution) != 3 || len(input.OutputRefs) != 1 || len(input.Owner) != 1 {
+		return false
+	}
+	operationID, operationOK := input.Execution["operationId"].(string)
+	oldKeyID, oldOK := integerValue(input.Execution["oldKeyId"])
+	newKeyID, newOK := integerValue(input.Execution["newKeyId"])
+	fingerprint, fingerprintOK := input.OutputRefs["secretFingerprint"].(string)
+	ownerID, ownerOK := input.Owner["userId"].(string)
+	return operationOK && strings.TrimSpace(operationID) != "" && oldOK && newOK && oldKeyID > 0 && newKeyID > 0 && oldKeyID != newKeyID &&
+		fingerprintOK && strings.TrimSpace(fingerprint) != "" && ownerOK && strings.TrimSpace(ownerID) != ""
 }
 
 func containsForbiddenReceiptKey(value any) bool {

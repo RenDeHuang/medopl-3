@@ -123,17 +123,26 @@ func registerWorkspaceLaunchRoutes(mux *http.ServeMux, app *controlPlaneServer, 
 				return
 			}
 		}
-		sub2APIUserID, err := app.sub2APIUserID(r.Context(), accountID)
-		if err != nil {
-			writeError(w, http.StatusConflict, errMonthlyAccountUnmapped.Error())
+		credentialUser, sub2APIUserID, credential, ok := app.gatewayUserContext(w, r)
+		if !ok {
 			return
 		}
-		summary, err := service.GatewaySummary(r.Context(), sub2APIUserID)
+		if stringValue(credentialUser["accountId"]) != accountID {
+			writeError(w, http.StatusForbidden, "account_scope_forbidden")
+			return
+		}
+		workspaceKey, err := convergeWorkspaceAPIKey(r.Context(), service, credential, sub2APIUserID, operation.ID)
 		if err != nil {
 			writeGatewayKeyError(w, err)
 			return
 		}
-		if summary.Balance.USDMicros < operation.TotalChargeUSDMicros {
+		operation.WorkspaceAPIKeyID = workspaceKey.ID
+		balance, err := service.Sub2APIBalance(r.Context(), sub2APIUserID)
+		if err != nil {
+			writeUpstreamError(w, err)
+			return
+		}
+		if balance.USDMicros < operation.TotalChargeUSDMicros {
 			writeError(w, http.StatusConflict, errMonthlyInsufficientBalance.Error())
 			return
 		}
@@ -202,4 +211,44 @@ func registerWorkspaceLaunchRoutes(mux *http.ServeMux, app *controlPlaneServer, 
 		}
 		writeError(w, http.StatusNotFound, "workspace_launch_not_found")
 	}))
+}
+
+func convergeWorkspaceAPIKey(ctx context.Context, service *controlplane.Service, credential clients.SessionDelegatedCredential, userID int64, operationID string) (clients.Sub2APIWorkspaceKey, error) {
+	keys, err := service.GatewayUserKeys(ctx, credential, userID)
+	if err != nil {
+		return clients.Sub2APIWorkspaceKey{}, err
+	}
+	reserved := workspaceReservedKeys(keys, userID)
+	if len(reserved) == 1 && reserved[0].Name == "opl-workspace" && reserved[0].Status == "active" && reserved[0].ID > 0 {
+		return reserved[0], nil
+	}
+	if len(reserved) != 0 {
+		return clients.Sub2APIWorkspaceKey{}, clients.ErrSub2APIWorkspaceKeyAmbiguous
+	}
+	created, createErr := service.CreateGatewayUserKey(ctx, credential, userID, clients.Sub2APICreateKeyInput{Name: "opl-workspace"}, operationID+":workspace-key")
+	keys, readErr := service.GatewayUserKeys(ctx, credential, userID)
+	if readErr != nil {
+		if createErr != nil {
+			return clients.Sub2APIWorkspaceKey{}, createErr
+		}
+		return clients.Sub2APIWorkspaceKey{}, readErr
+	}
+	reserved = workspaceReservedKeys(keys, userID)
+	if len(reserved) != 1 || reserved[0].Name != "opl-workspace" || reserved[0].Status != "active" || reserved[0].ID <= 0 || created.ID > 0 && created.ID != reserved[0].ID {
+		return clients.Sub2APIWorkspaceKey{}, clients.ErrSub2APIWorkspaceKeyAmbiguous
+	}
+	return reserved[0], nil
+}
+
+func workspaceReservedKeys(keys []clients.Sub2APIWorkspaceKey, userID int64) []clients.Sub2APIWorkspaceKey {
+	reserved := make([]clients.Sub2APIWorkspaceKey, 0, 1)
+	for _, key := range keys {
+		if key.UserID != userID || key.ID <= 0 {
+			return append(reserved, clients.Sub2APIWorkspaceKey{})
+		}
+		if reservedWorkspaceKeyName(key.Name) {
+			reserved = append(reserved, key)
+		}
+	}
+	return reserved
 }

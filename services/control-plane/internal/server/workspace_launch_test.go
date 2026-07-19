@@ -50,7 +50,8 @@ func TestWorkspaceLaunchResponseAllowsOnlyCustomerSafeFields(t *testing.T) {
 		ComputeID: "ca-alpha", ComputeBillingOperationID: "billing-compute-private",
 		StorageID: "vol-alpha", StorageBillingOperationID: "billing-storage-private",
 		AttachmentID: "attachment-alpha", AttachmentOperationID: "attachment-operation-private", WorkspaceOperationID: "workspace-operation-private",
-		ErrorCode: "upstream_unavailable",
+		WorkspaceAPIKeyID: 19,
+		ErrorCode:         "upstream_unavailable",
 	}
 	row := workspaceLaunchOperationRow(operation)
 	var persisted map[string]any
@@ -76,6 +77,9 @@ func TestWorkspaceLaunchResponseAllowsOnlyCustomerSafeFields(t *testing.T) {
 	if response["priceVersion"] != pilotPriceVersion || response["autoRenew"] != false || response["totalChargeUsdMicros"] != int64(52_580_000) {
 		t.Fatalf("workspace launch pricing response = %#v", response)
 	}
+	if response["workspaceApiKeyId"] != "19" {
+		t.Fatalf("workspace launch Key ID must be a decimal string: %#v", response)
+	}
 	for _, forbidden := range []string{"pricingVersion", "totalMonthlyPriceCnyCents"} {
 		if _, ok := response[forbidden]; ok {
 			t.Fatalf("workspace launch response exposed %s: %#v", forbidden, response)
@@ -97,7 +101,7 @@ type workspaceLaunchHTTPFixture struct {
 	store   *memoryTableStore
 	session *httptest.ResponseRecorder
 	events  *[]string
-	sub2API *monthlySub2API
+	sub2API *workspaceLaunchSub2API
 	fabric  *monthlyFabric
 }
 
@@ -111,14 +115,17 @@ func newWorkspaceLaunchHTTPFixture(t *testing.T, balances ...int64) workspaceLau
 	promoteWorkspaceLaunchOwner(t, store, "usr-alpha")
 	events := []string{}
 	sub2API := &monthlySub2API{events: &events, balances: balances}
+	launchSub2API := &workspaceLaunchSub2API{monthlySub2API: sub2API, keys: map[int64]clients.Sub2APIWorkspaceKey{
+		9: {ID: 9, UserID: 41, Name: "opl-workspace", Key: "workspace-key-secret", Status: "active"},
+	}}
 	fabric := &monthlyFabric{events: &events}
-	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, fabric, &workspaceLaunchSub2API{monthlySub2API: sub2API}), store)
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, fabric, launchSub2API), store)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return workspaceLaunchHTTPFixture{
 		server: server, store: store, session: loginForTest(t, server, "alpha@example.com", "CorrectHorseBatteryStaple!"),
-		events: &events, sub2API: sub2API, fabric: fabric,
+		events: &events, sub2API: launchSub2API, fabric: fabric,
 	}
 }
 
@@ -199,7 +206,7 @@ func TestWorkspaceLaunchTotalPreflightRejectsInsufficientBalanceWithoutSideEffec
 	if response.Code != http.StatusConflict || !strings.Contains(response.Body.String(), errMonthlyInsufficientBalance.Error()) {
 		t.Fatalf("insufficient launch status = %d, want 409: %s", response.Code, response.Body.String())
 	}
-	if want := []string{"fabric.monthly.preflight", "fabric.monthly.preflight", "sub2api.workspace_key", "sub2api.balance"}; !reflect.DeepEqual(*fixture.events, want) {
+	if want := []string{"fabric.monthly.preflight", "fabric.monthly.preflight", "sub2api.user_keys", "sub2api.balance"}; !reflect.DeepEqual(*fixture.events, want) {
 		t.Fatalf("preflight events = %#v, want %#v", *fixture.events, want)
 	}
 	operations, _ := fixture.store.ListRuntimeOperations(context.Background())
@@ -223,17 +230,63 @@ func TestWorkspaceLaunchGatewayKeyPreflightFailsBeforeBalanceAndSideEffects(t *t
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			fixture := newWorkspaceLaunchHTTPFixture(t, 1_000_000_000)
-			fixture.sub2API.workspaceKeyErr = tc.err
+			fixture.sub2API.userKeysErr = tc.err
 			response := fixture.launch(t, `{"name":"Alpha","packageId":"basic","sizeGb":10,"autoRenew":false}`, "launch-alpha")
 			if response.Code != tc.wantStatus || !strings.Contains(response.Body.String(), tc.wantCode) {
 				t.Fatalf("Gateway Key launch status = %d, want %d %s: %s", response.Code, tc.wantStatus, tc.wantCode, response.Body.String())
 			}
-			wantEvents := []string{"fabric.monthly.preflight", "fabric.monthly.preflight", "sub2api.workspace_key"}
+			wantEvents := []string{"fabric.monthly.preflight", "fabric.monthly.preflight", "sub2api.user_keys"}
 			operations, _ := fixture.store.ListRuntimeOperations(context.Background())
 			if !reflect.DeepEqual(*fixture.events, wantEvents) || len(operations) != 0 || len(fixture.sub2API.charges) != 0 || len(fixture.sub2API.refunds) != 0 || len(fixture.fabric.computeIDs) != 0 || len(fixture.fabric.storageIDs) != 0 {
 				t.Fatalf("Gateway Key failure caused side effects: events=%#v operations=%#v charges=%#v refunds=%#v compute=%#v storage=%#v", *fixture.events, operations, fixture.sub2API.charges, fixture.sub2API.refunds, fixture.fabric.computeIDs, fixture.fabric.storageIDs)
 			}
 		})
+	}
+}
+
+func TestWorkspaceKeyConvergenceCreatesBeforeBalanceAndPersistsID(t *testing.T) {
+	fixture := newWorkspaceLaunchHTTPFixture(t, 1_000_000_000)
+	client := fixture.sub2API
+	client.keys = map[int64]clients.Sub2APIWorkspaceKey{}
+
+	response := fixture.launch(t, `{"name":"Alpha","packageId":"basic","sizeGb":10,"autoRenew":false}`, "launch-converge")
+	if response.Code != http.StatusAccepted {
+		t.Fatalf("launch status=%d body=%s", response.Code, response.Body.String())
+	}
+	operations, err := fixture.store.ListRuntimeOperations(context.Background())
+	if err != nil || len(operations) != 1 {
+		t.Fatalf("launch operations=%#v err=%v", operations, err)
+	}
+	operation, err := decodeWorkspaceLaunchOperation(operations[0])
+	if err != nil || operation.WorkspaceAPIKeyID != 19 || client.createCalls != 1 {
+		t.Fatalf("converged operation=%#v creates=%d err=%v", operation, client.createCalls, err)
+	}
+	if got := *fixture.events; !reflect.DeepEqual(got, []string{
+		"fabric.monthly.preflight", "fabric.monthly.preflight", "sub2api.user_keys", "sub2api.create_workspace_key", "sub2api.user_keys", "sub2api.balance",
+	}) {
+		t.Fatalf("convergence order=%#v", got)
+	}
+	if strings.Contains(string(mustJSON(operations)), "created-workspace-key-secret") {
+		t.Fatalf("launch operation persisted raw Key: %#v", operations)
+	}
+}
+
+func TestWorkspaceKeyAmbiguityStopsBeforeBalanceAndCharge(t *testing.T) {
+	for _, keys := range []map[int64]clients.Sub2APIWorkspaceKey{
+		{9: {ID: 9, UserID: 41, Name: "opl-workspace", Status: "disabled"}},
+		{10: {ID: 10, UserID: 41, Name: "opl-workspace-replacement-conflict", Status: "active"}},
+	} {
+		fixture := newWorkspaceLaunchHTTPFixture(t, 1_000_000_000)
+		client := fixture.sub2API
+		client.keys = keys
+		response := fixture.launch(t, `{"name":"Alpha","packageId":"basic","sizeGb":10,"autoRenew":false}`, "launch-ambiguous")
+		if response.Code != http.StatusConflict || !strings.Contains(response.Body.String(), "gateway_key_ambiguous") {
+			t.Fatalf("ambiguous launch=%d body=%s", response.Code, response.Body.String())
+		}
+		operations, _ := fixture.store.ListRuntimeOperations(context.Background())
+		if countStrings(*fixture.events, "sub2api.balance") != 0 || len(client.charges) != 0 || len(operations) != 0 {
+			t.Fatalf("ambiguous Key crossed billing gate: events=%#v charges=%#v operations=%#v", *fixture.events, client.charges, operations)
+		}
 	}
 }
 
@@ -428,11 +481,76 @@ func (l *workspaceLaunchLedger) RecordReceipt(_ context.Context, input clients.R
 	return receipt, nil
 }
 
-type workspaceLaunchSub2API struct{ *monthlySub2API }
+type workspaceLaunchSub2API struct {
+	*monthlySub2API
+	keys        map[int64]clients.Sub2APIWorkspaceKey
+	createCalls int
+	userKeysErr error
+}
 
 func (s *workspaceLaunchSub2API) WorkspaceKey(ctx context.Context, userID int64) (clients.Sub2APIWorkspaceKey, error) {
 	*s.events = append(*s.events, "sub2api.workspace_key")
 	return s.monthlySub2API.WorkspaceKey(ctx, userID)
+}
+
+func (s *workspaceLaunchSub2API) Keys(_ context.Context, userID int64) ([]clients.Sub2APIWorkspaceKey, error) {
+	keys := make([]clients.Sub2APIWorkspaceKey, 0, len(s.keys))
+	for _, key := range s.keys {
+		if key.UserID == userID {
+			keys = append(keys, key)
+		}
+	}
+	return keys, nil
+}
+
+func (s *workspaceLaunchSub2API) UserKeys(_ context.Context, credential clients.SessionDelegatedCredential, userID int64) ([]clients.Sub2APIWorkspaceKey, error) {
+	*s.events = append(*s.events, "sub2api.user_keys")
+	if credential.Bearer != "test-user-delegated-token" {
+		return nil, errors.New("wrong delegated credential")
+	}
+	if s.userKeysErr != nil {
+		return nil, s.userKeysErr
+	}
+	keys := make([]clients.Sub2APIWorkspaceKey, 0, len(s.keys))
+	for _, key := range s.keys {
+		if key.UserID == userID {
+			keys = append(keys, key)
+		}
+	}
+	return keys, nil
+}
+
+func (s *workspaceLaunchSub2API) UserKey(_ context.Context, credential clients.SessionDelegatedCredential, userID, keyID int64) (clients.Sub2APIWorkspaceKey, error) {
+	if credential.Bearer != "test-user-delegated-token" {
+		return clients.Sub2APIWorkspaceKey{}, errors.New("wrong delegated credential")
+	}
+	key, ok := s.keys[keyID]
+	if !ok || key.UserID != userID {
+		return clients.Sub2APIWorkspaceKey{}, clients.ErrSub2APIKeyNotFound
+	}
+	return key, nil
+}
+
+func (s *workspaceLaunchSub2API) CreateUserKey(_ context.Context, credential clients.SessionDelegatedCredential, userID int64, input clients.Sub2APICreateKeyInput, idempotencyKey string) (clients.Sub2APIWorkspaceKey, error) {
+	*s.events = append(*s.events, "sub2api.create_workspace_key")
+	if credential.Bearer != "test-user-delegated-token" || idempotencyKey == "" || input.Name != "opl-workspace" || input.ExpiresInDays != nil {
+		return clients.Sub2APIWorkspaceKey{}, errors.New("invalid Workspace Key create")
+	}
+	s.createCalls++
+	key := clients.Sub2APIWorkspaceKey{ID: 19, UserID: userID, Name: input.Name, Key: "created-workspace-key-secret", Status: "active"}
+	if s.keys == nil {
+		s.keys = map[int64]clients.Sub2APIWorkspaceKey{}
+	}
+	s.keys[key.ID] = key
+	return key, nil
+}
+
+func (s *workspaceLaunchSub2API) UpdateUserKey(context.Context, clients.SessionDelegatedCredential, int64, int64, clients.Sub2APIUpdateKeyInput) (clients.Sub2APIWorkspaceKey, error) {
+	return clients.Sub2APIWorkspaceKey{}, errors.New("unexpected Workspace Key update")
+}
+
+func (s *workspaceLaunchSub2API) DeleteUserKey(context.Context, clients.SessionDelegatedCredential, int64, int64) error {
+	return errors.New("unexpected Workspace Key delete")
 }
 
 type workspaceLaunchWorkerFixture struct {
@@ -792,7 +910,8 @@ func TestWorkspaceLaunchBillingMismatchStopsBeforeWorkspaceRuntime(t *testing.T)
 		workspace := map[string]any{
 			"id": operation.WorkspaceID, "accountId": operation.AccountID, "ownerAccountId": operation.AccountID, "ownerUserId": operation.OwnerUserID,
 			"name": operation.Name, "packageId": operation.PackageID, "currentComputeAllocationId": operation.ComputeID, "computeAllocationId": operation.ComputeID,
-			"storageId": operation.StorageID, "currentAttachmentId": operation.AttachmentID, "attachmentId": operation.AttachmentID, "state": "preparing", "status": "preparing",
+			"storageId": operation.StorageID, "currentAttachmentId": operation.AttachmentID, "attachmentId": operation.AttachmentID, "workspaceApiKeyId": operation.WorkspaceAPIKeyID,
+			"state": "preparing", "status": "preparing",
 		}
 		for key, value := range state {
 			workspace[key] = value
@@ -838,10 +957,10 @@ func TestWorkspaceLaunchOrderPersistsEveryPhase(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantEvents := []string{
-		"fabric.monthly.preflight", "fabric.monthly.preflight", "sub2api.workspace_key", "sub2api.balance",
+		"fabric.monthly.preflight", "fabric.monthly.preflight", "sub2api.user_keys", "sub2api.create_workspace_key", "sub2api.user_keys", "sub2api.balance",
 		"fabric.monthly.preflight", "sub2api.balance", "sub2api.workspace_key", "sub2api.charge", "sub2api.balance", "fabric.compute.prepare",
 		"fabric.monthly.preflight", "sub2api.balance", "sub2api.workspace_key", "sub2api.charge", "sub2api.balance", "fabric.storage.prepare",
-		"fabric.attachment", "sub2api.workspace_key", "fabric.gateway-secret", "fabric.runtime", "ledger.workspace.receipt",
+		"fabric.attachment", "fabric.gateway-secret", "fabric.runtime", "ledger.workspace.receipt",
 	}
 	if !reflect.DeepEqual(*fixture.events, wantEvents) {
 		t.Fatalf("workspace launch events = %#v, want %#v", *fixture.events, wantEvents)

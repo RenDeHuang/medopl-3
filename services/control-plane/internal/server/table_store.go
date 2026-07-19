@@ -17,6 +17,7 @@ var errBillingOperationInProgress = errors.New("billing_operation_in_progress")
 var errSub2APIAccountMappingConflict = errors.New("sub2api_account_mapping_conflict")
 var errPrimaryWorkspaceExists = errors.New("primary_workspace_already_exists")
 var errWorkspaceActivationConflict = errors.New("workspace_activation_conflict")
+var errWorkspaceAPIKeyCASConflict = errors.New("workspace_api_key_cas_conflict")
 var errInvalidAccountID = errors.New("invalid_account_id")
 var errInvalidEmail = errors.New("invalid_email")
 var errMembershipExists = errors.New("membership_already_exists")
@@ -135,6 +136,7 @@ type controlPlaneTableStore interface {
 	DeleteAttachment(ctx context.Context, id string) error
 	ListWorkspaces(ctx context.Context, accountID string) ([]map[string]any, error)
 	SaveWorkspace(ctx context.Context, row map[string]any) error
+	CompareAndSwapWorkspaceAPIKey(ctx context.Context, workspaceID string, expectedID, newID int64) error
 	ApplyWorkspaceRenewalIntent(ctx context.Context, update workspaceRenewalIntentCAS) error
 	ClaimWorkspaceRenewal(ctx context.Context, claim workspaceRenewalClaimCAS) error
 	PersistWorkspaceRenewal(ctx context.Context, update workspaceRenewalPersistCAS) error

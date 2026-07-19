@@ -118,6 +118,9 @@ func newPostgresEntStateStore(databaseURL string) (StateStore, error) {
 		{Version: "202607180001_customer_identity_hard_cut", Run: func(ctx context.Context) error {
 			return controlplanemigrations.ApplyCustomerIdentityHardCut(ctx, driver)
 		}},
+		{Version: "202607190001_workspace_api_key_id", Run: func(ctx context.Context) error {
+			return controlplanemigrations.ApplyWorkspaceAPIKeyID(ctx, driver)
+		}},
 	}); err != nil {
 		_ = client.Close()
 		return nil, err
@@ -818,6 +821,7 @@ var (
 		textField("RuntimeServiceName", "SetRuntimeServiceName", "runtime", "serviceName"),
 		textField("RuntimeServiceNameRoot", "SetRuntimeServiceNameRoot", "runtimeServiceName"),
 		textField("ServiceName", "SetServiceName", "serviceName"),
+		intField("WorkspaceAPIKeyID", "SetWorkspaceAPIKeyID", "workspaceApiKeyId"),
 		textField("AccessAccount", "SetAccessAccount", "access", "account"),
 		textField("AccessUsername", "SetAccessUsername", "access", "username"),
 		textField("CredentialStatus", "SetCredentialStatus", "access", "credentialStatus"),
@@ -1812,6 +1816,34 @@ func (s *postgresEntStateStore) SaveWorkspace(ctx context.Context, row map[strin
 	}
 	defer func() { _ = tx.Rollback() }()
 	if err := saveWorkspaceRecord(ctx, tx.Client(), row); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *postgresEntStateStore) CompareAndSwapWorkspaceAPIKey(ctx context.Context, workspaceID string, expectedID, newID int64) error {
+	if workspaceID == "" || expectedID <= 0 || newID <= 0 {
+		return errWorkspaceAPIKeyCASConflict
+	}
+	tx, err := s.client.Tx(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	entity, err := tx.Workspace.Query().Where(workspace.IDEQ(workspaceID), lockRowForUpdate).Only(ctx)
+	if err != nil {
+		if controlplaneent.IsNotFound(err) {
+			return errWorkspaceAPIKeyCASConflict
+		}
+		return err
+	}
+	if entity.WorkspaceAPIKeyID == newID {
+		return tx.Commit()
+	}
+	if entity.WorkspaceAPIKeyID != expectedID {
+		return errWorkspaceAPIKeyCASConflict
+	}
+	if err := tx.Workspace.UpdateOneID(workspaceID).SetWorkspaceAPIKeyID(newID).Exec(ctx); err != nil {
 		return err
 	}
 	return tx.Commit()

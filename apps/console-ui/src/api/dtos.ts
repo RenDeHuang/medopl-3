@@ -207,7 +207,7 @@ export type WorkspaceRuntimeCredentialDTO = RuntimeCredentialResponse;
 export interface WorkspaceKeyRotationDTO extends OperationStatusDTO {
   workspaceId: string;
   previousKeyId?: string;
-  keyId: string;
+  workspaceApiKeyId: string;
   fingerprint: string;
 }
 

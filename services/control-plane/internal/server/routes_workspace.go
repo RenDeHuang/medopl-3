@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -250,6 +251,9 @@ func registerWorkspaceRoutes(mux *http.ServeMux, app *controlPlaneServer, servic
 		}
 		w.Header().Set("Cache-Control", "private, no-store")
 		writeJSON(w, http.StatusOK, map[string]any{"operationId": operationID, "workspaceId": workspaceID, "status": "succeeded", "secretRef": result.SecretRef, "fingerprint": result.Fingerprint})
+	}))
+	mux.HandleFunc("POST /api/workspaces/{workspaceId}/workspace-key/rotate", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
+		app.rotateWorkspaceGatewayKey(w, r, service)
 	}))
 	mux.HandleFunc("POST /api/workspaces/{workspaceId}/auto-renew", app.protected(false, func(w http.ResponseWriter, r *http.Request) {
 		input := decodeJSON(r)
@@ -765,6 +769,9 @@ func workspaceSourceProjection(row map[string]any) (map[string]any, bool) {
 		if value := stringValue(row[key]); value != "" {
 			item[key] = value
 		}
+	}
+	if keyID, ok := requiredPositiveInteger(row, "workspaceApiKeyId"); ok {
+		item["workspaceApiKeyId"] = strconv.FormatInt(keyID, 10)
 	}
 	for _, key := range []string{"packageId", "priceVersion", "currency", "renewalStatus"} {
 		if raw, exists := row[key]; exists {

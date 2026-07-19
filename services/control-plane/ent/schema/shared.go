@@ -184,6 +184,7 @@ func workspaceFields() []ent.Field {
 		field.String("runtime_service_name").Default(""),
 		field.String("runtime_service_name_root").Default(""),
 		field.String("service_name").Default(""),
+		field.Int64("workspace_api_key_id").Optional().Positive(),
 		field.String("access_token_status").Default(""),
 		field.String("access_account").Default(""),
 		field.String("access_username").Default(""),

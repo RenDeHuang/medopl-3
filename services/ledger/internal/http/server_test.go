@@ -131,6 +131,25 @@ func TestBillingReceiptSchemaHTTP(t *testing.T) {
 	}
 }
 
+func TestWorkspaceGatewayKeyRotationReceiptSchemaHTTP(t *testing.T) {
+	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
+	body := `{"type":"workspace.gateway_key_rotated.v1","status":"completed","surface":"control_plane","accountId":"acct-alpha","workspaceId":"workspace-alpha","execution":{"operationId":"workspace-key-rotate-alpha","oldKeyId":9,"newKeyId":19},"outputRefs":{"secretFingerprint":"sha256:replacement"},"owner":{"userId":"usr-alpha"}}`
+	valid := testRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(body))
+	valid.Header.Set("Idempotency-Key", "http-workspace-key-rotation")
+	validRec := httptest.NewRecorder()
+	server.ServeHTTP(validRec, valid)
+	if validRec.Code != http.StatusCreated {
+		t.Fatalf("valid Workspace Key rotation receipt status=%d body=%s", validRec.Code, validRec.Body.String())
+	}
+	invalid := testRequest(http.MethodPost, "/ledger/receipts", bytes.NewBufferString(strings.Replace(body, `"secretFingerprint":"sha256:replacement"`, `"fingerprint":"sha256:replacement"`, 1)))
+	invalid.Header.Set("Idempotency-Key", "http-workspace-key-rotation-invalid")
+	invalidRec := httptest.NewRecorder()
+	server.ServeHTTP(invalidRec, invalid)
+	if invalidRec.Code != http.StatusBadRequest {
+		t.Fatalf("invalid Workspace Key rotation receipt status=%d body=%s", invalidRec.Code, invalidRec.Body.String())
+	}
+}
+
 func TestWorkspaceBillingReceiptSchemaHTTP(t *testing.T) {
 	server := NewServer(ledger.NewMemoryStore(), "internal-secret")
 	body := `{"type":"billing.workspace_renewed.v1","status":"completed","surface":"control_plane","accountId":"acct-alpha","workspaceId":"workspace-alpha","cost":{"priceVersion":"pilot-usd-2026-07-v1","currency":"USD","billingUnit":"calendar_month","totalUsdMicros":52580000,"sub2apiUserId":41,"sub2apiRedeemCode":"opl:workspace-renewal:charge:v1","postChargeBalanceUsdMicros":47420000,"periodStart":"2026-08-31T09:30:00Z","paidThrough":"2026-09-30T09:30:00Z","resourceType":"workspace","resourceId":"workspace-alpha","components":{"compute":{"resourceType":"compute","resourceId":"compute-alpha","chargeUsdMicros":50000000},"storage":{"resourceType":"storage","resourceId":"storage-alpha","sizeGb":10,"chargeUsdMicros":2580000}}}}`

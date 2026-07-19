@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "owner": "OPL Console",
   "purpose": "Machine-readable requirements for current commercial Console objects.",
   "state": "current",
@@ -202,7 +202,10 @@
         "state"
       ],
       "accessQuestions": ["url", "username", "passwordRevealCopy", "workspaceKeyRevealCopy"],
-      "workspaceKeyRevealRoute": "POST /api/gateway/keys/{keyId}/reveal"
+      "workspaceKeyRevealRoute": "POST /api/gateway/keys/{keyId}/reveal",
+      "workspaceKeyRotationRoute": "POST /api/workspaces/{workspaceId}/workspace-key/rotate",
+      "workspaceKeyPersistence": "workspace_api_key_id_only",
+      "workspaceKeyRotationDTOFields": ["operationId", "workspaceId", "status", "workspaceApiKeyId", "fingerprint", "updatedAt", "receiptId"]
     },
     {
       "kind": "Balance",

@@ -740,12 +740,26 @@ func TestWorkspaceRuntimeIsolationRequiresCompleteCurrentReplicaSet(t *testing.T
 func TestTencentProviderWritesAccountGatewaySecretWithoutReturningRawKey(t *testing.T) {
 	provider := NewTencentProvider()
 	var applied []byte
+	var calls [][]string
 	provider.kubectl = func(_ context.Context, args []string, stdin []byte) ([]byte, error) {
-		if !slices.Equal(args, []string{"apply", "-f", "-"}) {
+		calls = append(calls, append([]string(nil), args...))
+		switch {
+		case slices.Equal(args, []string{"apply", "-f", "-"}):
+			applied = append([]byte(nil), stdin...)
+			return nil, nil
+		case len(args) == 4 && args[0] == "get" && strings.HasPrefix(args[1], "secret/") && args[2] == "-o" && args[3] == "json":
+			var manifest map[string]any
+			if err := json.Unmarshal(applied, &manifest); err != nil {
+				t.Fatal(err)
+			}
+			return json.Marshal(map[string]any{
+				"apiVersion": "v1", "kind": "Secret", "type": manifest["type"], "metadata": manifest["metadata"],
+				"data": map[string]any{"opl_gateway_api_key": base64.StdEncoding.EncodeToString([]byte(nested(manifest, "stringData", "opl_gateway_api_key").(string)))},
+			})
+		default:
 			t.Fatalf("kubectl args = %#v", args)
+			return nil, nil
 		}
-		applied = append([]byte(nil), stdin...)
-		return nil, nil
 	}
 
 	secret, err := provider.UpsertGatewaySecret(context.Background(), GatewaySecretInput{AccountID: "acct-alpha", GatewayAPIKey: "raw-gateway-key", IdempotencyKey: "gateway-once"})
@@ -770,6 +784,61 @@ func TestTencentProviderWritesAccountGatewaySecretWithoutReturningRawKey(t *test
 	rotated, err := provider.UpsertGatewaySecret(context.Background(), GatewaySecretInput{AccountID: "acct-alpha", GatewayAPIKey: "rotated-gateway-key", IdempotencyKey: "gateway-rotate"})
 	if err != nil || rotated.SecretRef != secret.SecretRef || rotated.Version == secret.Version || rotated.Fingerprint == secret.Fingerprint {
 		t.Fatalf("rotated Gateway Secret=%#v original=%#v err=%v", rotated, secret, err)
+	}
+	if len(calls) != 6 {
+		t.Fatalf("Gateway Secret writes must each perform apply then authoritative get: %#v", calls)
+	}
+}
+
+func TestTencentProviderGatewaySecretReadbackFailsClosed(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		mutate func(map[string]any)
+	}{
+		{name: "missing key data", mutate: func(secret map[string]any) { secret["data"] = map[string]any{} }},
+		{name: "malformed key data", mutate: func(secret map[string]any) { secret["data"].(map[string]any)["opl_gateway_api_key"] = "%%%" }},
+		{name: "different key", mutate: func(secret map[string]any) {
+			secret["data"].(map[string]any)["opl_gateway_api_key"] = base64.StdEncoding.EncodeToString([]byte("different-secret"))
+		}},
+		{name: "wrong kind", mutate: func(secret map[string]any) { secret["kind"] = "ConfigMap" }},
+		{name: "wrong type", mutate: func(secret map[string]any) { secret["type"] = "kubernetes.io/tls" }},
+		{name: "wrong name", mutate: func(secret map[string]any) { secret["metadata"].(map[string]any)["name"] = "wrong-secret" }},
+		{name: "wrong label", mutate: func(secret map[string]any) {
+			secret["metadata"].(map[string]any)["labels"].(map[string]any)["app.kubernetes.io/name"] = "wrong-label"
+		}},
+		{name: "wrong account annotation", mutate: func(secret map[string]any) {
+			secret["metadata"].(map[string]any)["annotations"].(map[string]any)["oplcloud.cn/account-id"] = "acct-other"
+		}},
+		{name: "wrong version annotation", mutate: func(secret map[string]any) {
+			secret["metadata"].(map[string]any)["annotations"].(map[string]any)["oplcloud.cn/secret-version"] = "wrong-version"
+		}},
+		{name: "wrong fingerprint annotation", mutate: func(secret map[string]any) {
+			secret["metadata"].(map[string]any)["annotations"].(map[string]any)["oplcloud.cn/secret-fingerprint"] = "sha256:wrong"
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			provider := NewTencentProvider()
+			var applied map[string]any
+			provider.kubectl = func(_ context.Context, args []string, stdin []byte) ([]byte, error) {
+				if slices.Equal(args, []string{"apply", "-f", "-"}) {
+					if err := json.Unmarshal(stdin, &applied); err != nil {
+						t.Fatal(err)
+					}
+					return nil, nil
+				}
+				secret := map[string]any{
+					"apiVersion": "v1", "kind": "Secret", "type": applied["type"], "metadata": applied["metadata"],
+					"data": map[string]any{"opl_gateway_api_key": base64.StdEncoding.EncodeToString([]byte("raw-gateway-key"))},
+				}
+				tc.mutate(secret)
+				return json.Marshal(secret)
+			}
+
+			_, err := provider.UpsertGatewaySecret(context.Background(), GatewaySecretInput{AccountID: "acct-alpha", GatewayAPIKey: "raw-gateway-key", IdempotencyKey: "gateway-once"})
+			if err == nil || strings.Contains(err.Error(), "raw-gateway-key") || strings.Contains(err.Error(), "different-secret") {
+				t.Fatalf("Gateway Secret readback must fail closed without leaking secrets: %v", err)
+			}
+		})
 	}
 }
 

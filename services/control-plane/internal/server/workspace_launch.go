@@ -40,6 +40,7 @@ type workspaceLaunchOperation struct {
 	AttachmentID              string `json:"attachmentId,omitempty"`
 	AttachmentOperationID     string `json:"attachmentOperationId"`
 	WorkspaceOperationID      string `json:"workspaceOperationId"`
+	WorkspaceAPIKeyID         int64  `json:"workspaceApiKeyId"`
 	RuntimeServiceName        string `json:"runtimeServiceName,omitempty"`
 	URL                       string `json:"url,omitempty"`
 	ReceiptID                 string `json:"receiptId,omitempty"`
@@ -98,6 +99,7 @@ func workspaceLaunchOperationRow(operation workspaceLaunchOperation) map[string]
 		"resourceId": operation.WorkspaceID, "resourceKind": "workspace_launch", "action": "workspace.launch", "status": operation.Status,
 		"result": encodeWorkspaceLaunchOperation(operation), "computeAllocationId": operation.ComputeID, "storageId": operation.StorageID,
 		"attachmentId": operation.AttachmentID, "runtimeServiceName": operation.RuntimeServiceName, "createdAt": operation.CreatedAt,
+		"workspaceApiKeyId": operation.WorkspaceAPIKeyID,
 	}
 }
 
@@ -112,6 +114,7 @@ func workspaceLaunchResponse(row map[string]any) (map[string]any, error) {
 		"packageId": operation.PackageID, "sizeGb": operation.StorageGB, "autoRenew": operation.AutoRenew, "priceVersion": operation.PriceVersion,
 		"currency": pricingCurrency, "totalChargeUsdMicros": operation.TotalChargeUSDMicros,
 		"computeAllocationId": operation.ComputeID, "storageId": operation.StorageID, "attachmentId": operation.AttachmentID,
+		"workspaceApiKeyId":  strconv.FormatInt(operation.WorkspaceAPIKeyID, 10),
 		"runtimeServiceName": operation.RuntimeServiceName, "url": operation.URL, "receiptId": operation.ReceiptID,
 		"errorCode": operation.ErrorCode, "createdAt": row["createdAt"], "updatedAt": row["updatedAt"],
 	}, nil
@@ -280,7 +283,8 @@ func (app *controlPlaneServer) runWorkspaceLaunch(ctx context.Context, service *
 			}
 			workspace, err := service.PrepareWorkspace(ctx, controlplane.CreateWorkspaceInput{
 				WorkspaceID: operation.WorkspaceID, AccountID: operation.AccountID, Sub2APIUserID: sub2APIUserID,
-				OwnerID: operation.OwnerUserID, Name: operation.Name, PackageID: operation.PackageID,
+				WorkspaceAPIKeyID: operation.WorkspaceAPIKeyID,
+				OwnerID:           operation.OwnerUserID, Name: operation.Name, PackageID: operation.PackageID,
 				AttachmentID: operation.AttachmentID, ComputeID: operation.ComputeID, VolumeID: operation.StorageID,
 			}, operation.WorkspaceOperationID)
 			if err != nil {
@@ -601,11 +605,11 @@ func workspaceMatchesLaunch(workspace map[string]any, operation workspaceLaunchO
 		firstNonEmpty(stringValue(workspace["ownerUserId"]), stringValue(workspace["ownerId"])) == operation.OwnerUserID &&
 		stringValue(workspace["packageId"]) == operation.PackageID &&
 		firstNonEmpty(stringValue(workspace["computeAllocationId"]), stringValue(workspace["currentComputeAllocationId"])) == operation.ComputeID &&
-		stringValue(workspace["storageId"]) == operation.StorageID &&
+		stringValue(workspace["storageId"]) == operation.StorageID && int64(numberField(workspace, "workspaceApiKeyId", 0)) == operation.WorkspaceAPIKeyID &&
 		firstNonEmpty(stringValue(workspace["attachmentId"]), stringValue(workspace["currentAttachmentId"])) == operation.AttachmentID
 }
 
 func workspaceProjectionMatchesLaunch(workspace domain.WorkspaceProjection, operation workspaceLaunchOperation) bool {
 	return workspace.ID == operation.WorkspaceID && workspace.AccountID == operation.AccountID && workspace.OwnerID == operation.OwnerUserID &&
-		workspace.PackageID == operation.PackageID && workspace.ComputeID == operation.ComputeID && workspace.VolumeID == operation.StorageID && workspace.AttachmentID == operation.AttachmentID
+		workspace.PackageID == operation.PackageID && workspace.ComputeID == operation.ComputeID && workspace.VolumeID == operation.StorageID && workspace.AttachmentID == operation.AttachmentID && workspace.WorkspaceAPIKeyID == operation.WorkspaceAPIKeyID
 }

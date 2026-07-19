@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +18,29 @@ import (
 type recordingDriver struct {
 	dialect.Driver
 	query string
+}
+
+func TestWorkspaceAPIKeyIDMigration(t *testing.T) {
+	raw, err := os.ReadFile("202607190001_workspace_api_key_id.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sql := string(raw)
+	for _, required := range []string{
+		"ADD COLUMN IF NOT EXISTS workspace_api_key_id BIGINT",
+		"workspace_api_key_id IS NULL OR workspace_api_key_id > 0",
+	} {
+		if !strings.Contains(sql, required) {
+			t.Fatalf("Workspace Key migration missing %q", required)
+		}
+	}
+	driver := &recordingDriver{}
+	if err := ApplyWorkspaceAPIKeyID(context.Background(), driver); err != nil {
+		t.Fatal(err)
+	}
+	if driver.query != sql {
+		t.Fatal("ApplyWorkspaceAPIKeyID did not execute the embedded migration")
+	}
 }
 
 func (d *recordingDriver) Tx(context.Context) (dialect.Tx, error) {

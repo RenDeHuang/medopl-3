@@ -69,6 +69,9 @@ test("Pilot V2 contracts hard cut Gateway keys and source envelopes", async () =
     assert.match(dtos, new RegExp(`export (?:interface|type) ${name}\\b`), `missing ${name}`);
   }
   assert.match(dtos, /interface CreateGatewayKeyRequest[\s\S]*expiresInDays/);
+  const rotationDTO = dtos.match(/export interface WorkspaceKeyRotationDTO[\s\S]*?\n}/)?.[0] ?? "";
+  assert.match(rotationDTO, /workspaceApiKeyId:\s*string;/);
+  assert.doesNotMatch(rotationDTO, /\n\s+keyId:\s*string;/);
 });
 
 test("Pilot V2 contracts hard cut Workspace purchase, access, and Runtime facts", async () => {
@@ -82,6 +85,16 @@ test("Pilot V2 contracts hard cut Workspace purchase, access, and Runtime facts"
 
   assert.equal(freeze.workspaceLaunch.customerDebitCardinality, 1);
   assert.deepEqual(freeze.workspaceLaunch.fulfillmentResources, ["compute", "storage", "attachment", "gateway_secret", "runtime"]);
+	assert.deepEqual(freeze.gateway.workspaceKeyLifecycle, {
+		launchConvergence: "zero_create_one_active_reuse_other_fail_closed",
+		rotationApi: "POST /api/workspaces/{workspaceId}/workspace-key/rotate",
+		mutationCredential: "session_delegated_user_bearer",
+		workspacePersistence: "workspace_api_key_id_only",
+		operationPersistence: "control_plane_runtime_operations_non_secret_phases",
+		phases: ["replacement_check", "replacement_create", "secret_write", "retire_old", "promote_replacement", "workspace_commit", "runtime_apply", "delete_old", "receipt", "complete"],
+		receiptType: "workspace.gateway_key_rotated.v1",
+		currentImplementation: "code_complete_local_focused_tests_only"
+	});
   assert.equal(billing.chargePolicy.customerObject, "workspace");
   assert.equal(billing.chargePolicy.debitCardinalityPerPeriod, 1);
   assert.equal(billing.ledgerEvidencePolicy.workspaceReceiptTypes.purchased, "billing.workspace_purchased.v1");
@@ -94,6 +107,10 @@ test("Pilot V2 contracts hard cut Workspace purchase, access, and Runtime facts"
   assert.ok(workspace.requiredFields.includes("workspaceApiKeyId"));
   assert.deepEqual(workspace.accessQuestions, ["url", "username", "passwordRevealCopy", "workspaceKeyRevealCopy"]);
   assert.equal(workspace.workspaceKeyRevealRoute, "POST /api/gateway/keys/{keyId}/reveal");
+	assert.equal(workspace.workspaceKeyRotationRoute, "POST /api/workspaces/{workspaceId}/workspace-key/rotate");
+	assert.equal(workspace.workspaceKeyPersistence, "workspace_api_key_id_only");
+	assert.deepEqual(workspace.workspaceKeyRotationDTOFields, ["operationId", "workspaceId", "status", "workspaceApiKeyId", "fingerprint", "updatedAt", "receiptId"]);
+	assert.equal(evidence.workspaceGatewayKeyRotationReceipt.implementation, "validator_and_control_plane_exact_readback_code_complete_local_only");
   assert.deepEqual(product.workspaceRuntimeFacts, {
     fileMetadataAuthority: "workspace_runtime_projects_mount",
     filesystemUsageAuthority: "workspace_runtime_statfs",

@@ -98,6 +98,34 @@ func (p *TencentProvider) UpsertGatewaySecret(ctx context.Context, input Gateway
 	if _, err := p.kubectl(ctx, []string{"apply", "-f", "-"}, manifest); err != nil {
 		return GatewaySecret{}, err
 	}
+	readback, err := p.kubectl(ctx, []string{"get", "secret/" + secret.SecretRef, "-o", "json"}, nil)
+	if err != nil {
+		return GatewaySecret{}, err
+	}
+	var actual struct {
+		Kind     string `json:"kind"`
+		Type     string `json:"type"`
+		Metadata struct {
+			Name        string            `json:"name"`
+			Labels      map[string]string `json:"labels"`
+			Annotations map[string]string `json:"annotations"`
+		} `json:"metadata"`
+		Data map[string]string `json:"data"`
+	}
+	if json.Unmarshal(readback, &actual) != nil {
+		return GatewaySecret{}, fmt.Errorf("gateway_secret_readback_mismatch")
+	}
+	rawKey, err := base64.StdEncoding.DecodeString(actual.Data["opl_gateway_api_key"])
+	if err != nil {
+		return GatewaySecret{}, fmt.Errorf("gateway_secret_readback_mismatch")
+	}
+	actualDigest := fmt.Sprintf("%x", sha256.Sum256(rawKey))
+	if actual.Kind != "Secret" || actual.Type != "Opaque" || actual.Metadata.Name != secret.SecretRef ||
+		actual.Metadata.Labels["app.kubernetes.io/name"] != "opl-gateway-secret" || actual.Metadata.Annotations["oplcloud.cn/account-id"] != input.AccountID ||
+		actual.Metadata.Annotations["oplcloud.cn/secret-version"] != secret.Version || actual.Metadata.Annotations["oplcloud.cn/secret-fingerprint"] != secret.Fingerprint ||
+		"sha256:"+actualDigest != secret.Fingerprint {
+		return GatewaySecret{}, fmt.Errorf("gateway_secret_readback_mismatch")
+	}
 	return secret, nil
 }
 

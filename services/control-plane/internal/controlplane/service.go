@@ -105,15 +105,16 @@ func (s *Service) Content(ctx context.Context, workspaceID, digest string) (clie
 }
 
 type CreateWorkspaceInput struct {
-	WorkspaceID   string `json:"workspaceId"`
-	AccountID     string `json:"accountId"`
-	Sub2APIUserID int64  `json:"-"`
-	OwnerID       string `json:"ownerId"`
-	Name          string `json:"name"`
-	PackageID     string `json:"packageId"`
-	AttachmentID  string `json:"attachmentId"`
-	ComputeID     string `json:"computeAllocationId"`
-	VolumeID      string `json:"storageId"`
+	WorkspaceID       string `json:"workspaceId"`
+	AccountID         string `json:"accountId"`
+	Sub2APIUserID     int64  `json:"-"`
+	WorkspaceAPIKeyID int64  `json:"workspaceApiKeyId"`
+	OwnerID           string `json:"ownerId"`
+	Name              string `json:"name"`
+	PackageID         string `json:"packageId"`
+	AttachmentID      string `json:"attachmentId"`
+	ComputeID         string `json:"computeAllocationId"`
+	VolumeID          string `json:"storageId"`
 }
 
 type ResumeWorkspaceInput struct {
@@ -212,6 +213,22 @@ func (s *Service) GatewayKeys(ctx context.Context, userID int64) ([]clients.Sub2
 		return nil, errors.New("sub2api_key_list_unavailable")
 	}
 	return client.Keys(ctx, userID)
+}
+
+func (s *Service) Sub2APIWorkspaceKeyByID(ctx context.Context, userID, keyID int64) (clients.Sub2APIWorkspaceKey, error) {
+	if userID <= 0 || keyID <= 0 {
+		return clients.Sub2APIWorkspaceKey{}, clients.ErrSub2APIWorkspaceKeyMissing
+	}
+	keys, err := s.GatewayKeys(ctx, userID)
+	if err != nil {
+		return clients.Sub2APIWorkspaceKey{}, err
+	}
+	for _, key := range keys {
+		if key.ID == keyID && key.UserID == userID {
+			return key, nil
+		}
+	}
+	return clients.Sub2APIWorkspaceKey{}, clients.ErrSub2APIWorkspaceKeyMissing
 }
 
 func (s *Service) GatewayUserKeys(ctx context.Context, credential clients.SessionDelegatedCredential, userID int64) ([]clients.Sub2APIWorkspaceKey, error) {
@@ -587,7 +604,13 @@ func (s *Service) PrepareWorkspace(ctx context.Context, input CreateWorkspaceInp
 		return domain.WorkspaceProjection{}, fmt.Errorf("attached_compute_storage_required")
 	}
 	workspaceID := input.WorkspaceID
-	gatewaySecretRef, err := s.gatewaySecretRef(ctx, input.AccountID, input.Sub2APIUserID, idempotencyKey)
+	var gatewaySecretRef string
+	var err error
+	if input.WorkspaceAPIKeyID > 0 {
+		gatewaySecretRef, err = s.gatewaySecretRefByID(ctx, input.AccountID, input.Sub2APIUserID, input.WorkspaceAPIKeyID, idempotencyKey)
+	} else {
+		gatewaySecretRef, err = s.gatewaySecretRef(ctx, input.AccountID, input.Sub2APIUserID, idempotencyKey)
+	}
 	if err != nil {
 		return domain.WorkspaceProjection{}, err
 	}
@@ -610,6 +633,7 @@ func (s *Service) PrepareWorkspace(ctx context.Context, input CreateWorkspaceInp
 		AttachmentID:        input.AttachmentID,
 		RuntimeID:           runtime.ID,
 		RuntimeServiceName:  runtime.ServiceName,
+		WorkspaceAPIKeyID:   input.WorkspaceAPIKeyID,
 		RuntimeReady:        runtime.Ready,
 		RuntimeUsername:     runtime.Access.Username,
 		CredentialStatus:    runtime.Access.CredentialStatus,
@@ -661,6 +685,30 @@ func (s *Service) gatewaySecretRef(ctx context.Context, accountID string, userID
 	return secret.SecretRef, err
 }
 
+func (s *Service) gatewaySecretRefByID(ctx context.Context, accountID string, userID, keyID int64, idempotencyKey string) (string, error) {
+	secret, err := s.SyncWorkspaceGatewaySecretByID(ctx, accountID, userID, keyID, idempotencyKey)
+	return secret.SecretRef, err
+}
+
+func (s *Service) SyncWorkspaceGatewaySecretByID(ctx context.Context, accountID string, userID, keyID int64, idempotencyKey string) (clients.GatewaySecretWriteResult, error) {
+	key, err := s.Sub2APIWorkspaceKeyByID(ctx, userID, keyID)
+	if err != nil {
+		return clients.GatewaySecretWriteResult{}, err
+	}
+	return s.writeWorkspaceGatewaySecret(ctx, accountID, userID, key, idempotencyKey)
+}
+
+func (s *Service) SyncWorkspaceGatewayReplacementSecret(ctx context.Context, credential clients.SessionDelegatedCredential, accountID string, userID, keyID int64, replacementName, idempotencyKey string) (clients.GatewaySecretWriteResult, error) {
+	key, err := s.GatewayUserKey(ctx, credential, userID, keyID)
+	if err != nil {
+		return clients.GatewaySecretWriteResult{}, err
+	}
+	if replacementName == "" || key.Name != replacementName || !strings.HasPrefix(replacementName, "opl-workspace-replacement-") {
+		return clients.GatewaySecretWriteResult{}, errors.New("invalid_sub2api_workspace_key")
+	}
+	return s.writeGatewaySecretValue(ctx, accountID, userID, key, idempotencyKey)
+}
+
 func (s *Service) SyncWorkspaceGatewaySecret(ctx context.Context, accountID string, userID int64, idempotencyKey string) (clients.GatewaySecretWriteResult, error) {
 	if accountID == "" || userID <= 0 || idempotencyKey == "" {
 		return clients.GatewaySecretWriteResult{}, errors.New("gateway_secret_write_failed")
@@ -669,7 +717,18 @@ func (s *Service) SyncWorkspaceGatewaySecret(ctx context.Context, accountID stri
 	if err != nil {
 		return clients.GatewaySecretWriteResult{}, err
 	}
-	if key.UserID != userID || key.Name != "opl-workspace" || key.Status != "active" || key.Key == "" {
+	return s.writeWorkspaceGatewaySecret(ctx, accountID, userID, key, idempotencyKey)
+}
+
+func (s *Service) writeWorkspaceGatewaySecret(ctx context.Context, accountID string, userID int64, key clients.Sub2APIWorkspaceKey, idempotencyKey string) (clients.GatewaySecretWriteResult, error) {
+	if key.Name != "opl-workspace" {
+		return clients.GatewaySecretWriteResult{}, errors.New("invalid_sub2api_workspace_key")
+	}
+	return s.writeGatewaySecretValue(ctx, accountID, userID, key, idempotencyKey)
+}
+
+func (s *Service) writeGatewaySecretValue(ctx context.Context, accountID string, userID int64, key clients.Sub2APIWorkspaceKey, idempotencyKey string) (clients.GatewaySecretWriteResult, error) {
+	if accountID == "" || userID <= 0 || idempotencyKey == "" || key.ID <= 0 || key.UserID != userID || key.Status != "active" || key.Key == "" {
 		return clients.GatewaySecretWriteResult{}, errors.New("invalid_sub2api_workspace_key")
 	}
 	secret, err := s.fabric.WriteGatewaySecret(ctx, clients.GatewaySecretWriteInput{AccountID: accountID, GatewayAPIKey: key.Key}, idempotencyKey+":gateway-secret")
@@ -680,6 +739,49 @@ func (s *Service) SyncWorkspaceGatewaySecret(ctx context.Context, accountID stri
 		return clients.GatewaySecretWriteResult{}, errors.New("gateway_secret_write_failed")
 	}
 	return secret, nil
+}
+
+func (s *Service) ReapplyWorkspaceRuntime(ctx context.Context, workspaceID, computeID, volumeID, secretRef, idempotencyKey string) (clients.WorkspaceRuntime, error) {
+	if workspaceID == "" || computeID == "" || volumeID == "" || secretRef == "" || idempotencyKey == "" {
+		return clients.WorkspaceRuntime{}, errors.New("workspace_runtime_apply_input_required")
+	}
+	applied, err := s.fabric.CreateWorkspaceRuntime(ctx, clients.WorkspaceRuntimeInput{
+		WorkspaceID: workspaceID, ComputeID: computeID, VolumeID: volumeID,
+		ImageID: "one-person-lab-app", GatewaySecretRef: secretRef,
+	}, idempotencyKey+":runtime")
+	if err != nil {
+		return clients.WorkspaceRuntime{}, err
+	}
+	runtime, err := s.fabric.WorkspaceRuntimeStatus(ctx, workspaceID)
+	if err != nil {
+		return clients.WorkspaceRuntime{}, err
+	}
+	if runtime.ID == "" {
+		runtime.ID = applied.ID
+	}
+	if runtime.WorkspaceID == "" {
+		runtime.WorkspaceID = applied.WorkspaceID
+	}
+	if runtime.ServiceName == "" {
+		runtime.ServiceName = applied.ServiceName
+	}
+	if runtime.WorkspaceID != workspaceID || runtime.ID == "" || runtime.Status == "not_found" || !runtime.Ready {
+		return clients.WorkspaceRuntime{}, errors.New("workspace_runtime_readback_invalid")
+	}
+	return runtime, nil
+}
+
+func (s *Service) RecordWorkspaceGatewayKeyRotation(ctx context.Context, accountID, workspaceID, ownerID, operationID string, oldKeyID, newKeyID int64, fingerprint string) (clients.Receipt, error) {
+	if accountID == "" || workspaceID == "" || ownerID == "" || operationID == "" || oldKeyID <= 0 || newKeyID <= 0 || oldKeyID == newKeyID || fingerprint == "" {
+		return clients.Receipt{}, errors.New("workspace_gateway_key_rotation_evidence_invalid")
+	}
+	return s.ledger.RecordReceipt(ctx, clients.ReceiptInput{
+		Type: "workspace.gateway_key_rotated.v1", Status: "completed", Surface: "control_plane",
+		AccountID: accountID, WorkspaceID: workspaceID,
+		Execution:  map[string]any{"operationId": operationID, "oldKeyId": oldKeyID, "newKeyId": newKeyID},
+		OutputRefs: map[string]any{"secretFingerprint": fingerprint},
+		Owner:      map[string]any{"userId": ownerID},
+	}, operationID+":receipt")
 }
 
 func (s *Service) RotateWorkspaceCredential(ctx context.Context, input RotateWorkspaceCredentialInput, idempotencyKey string) (clients.WorkspaceRuntime, clients.Receipt, error) {

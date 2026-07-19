@@ -514,6 +514,7 @@ var (
 		{Name: "runtime_service_name", Type: field.TypeString, Default: ""},
 		{Name: "runtime_service_name_root", Type: field.TypeString, Default: ""},
 		{Name: "service_name", Type: field.TypeString, Default: ""},
+		{Name: "workspace_api_key_id", Type: field.TypeInt64, Nullable: true},
 		{Name: "access_token_status", Type: field.TypeString, Default: ""},
 		{Name: "access_account", Type: field.TypeString, Default: ""},
 		{Name: "access_username", Type: field.TypeString, Default: ""},

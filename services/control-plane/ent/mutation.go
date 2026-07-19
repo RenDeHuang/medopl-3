@@ -20877,6 +20877,8 @@ type WorkspaceMutation struct {
 	runtime_service_name          *string
 	runtime_service_name_root     *string
 	service_name                  *string
+	workspace_api_key_id          *int64
+	addworkspace_api_key_id       *int64
 	access_token_status           *string
 	access_account                *string
 	access_username               *string
@@ -21644,6 +21646,76 @@ func (m *WorkspaceMutation) ResetServiceName() {
 	m.service_name = nil
 }
 
+// SetWorkspaceAPIKeyID sets the "workspace_api_key_id" field.
+func (m *WorkspaceMutation) SetWorkspaceAPIKeyID(i int64) {
+	m.workspace_api_key_id = &i
+	m.addworkspace_api_key_id = nil
+}
+
+// WorkspaceAPIKeyID returns the value of the "workspace_api_key_id" field in the mutation.
+func (m *WorkspaceMutation) WorkspaceAPIKeyID() (r int64, exists bool) {
+	v := m.workspace_api_key_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldWorkspaceAPIKeyID returns the old "workspace_api_key_id" field's value of the Workspace entity.
+// If the Workspace object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WorkspaceMutation) OldWorkspaceAPIKeyID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldWorkspaceAPIKeyID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldWorkspaceAPIKeyID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldWorkspaceAPIKeyID: %w", err)
+	}
+	return oldValue.WorkspaceAPIKeyID, nil
+}
+
+// AddWorkspaceAPIKeyID adds i to the "workspace_api_key_id" field.
+func (m *WorkspaceMutation) AddWorkspaceAPIKeyID(i int64) {
+	if m.addworkspace_api_key_id != nil {
+		*m.addworkspace_api_key_id += i
+	} else {
+		m.addworkspace_api_key_id = &i
+	}
+}
+
+// AddedWorkspaceAPIKeyID returns the value that was added to the "workspace_api_key_id" field in this mutation.
+func (m *WorkspaceMutation) AddedWorkspaceAPIKeyID() (r int64, exists bool) {
+	v := m.addworkspace_api_key_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ClearWorkspaceAPIKeyID clears the value of the "workspace_api_key_id" field.
+func (m *WorkspaceMutation) ClearWorkspaceAPIKeyID() {
+	m.workspace_api_key_id = nil
+	m.addworkspace_api_key_id = nil
+	m.clearedFields[workspace.FieldWorkspaceAPIKeyID] = struct{}{}
+}
+
+// WorkspaceAPIKeyIDCleared returns if the "workspace_api_key_id" field was cleared in this mutation.
+func (m *WorkspaceMutation) WorkspaceAPIKeyIDCleared() bool {
+	_, ok := m.clearedFields[workspace.FieldWorkspaceAPIKeyID]
+	return ok
+}
+
+// ResetWorkspaceAPIKeyID resets all changes to the "workspace_api_key_id" field.
+func (m *WorkspaceMutation) ResetWorkspaceAPIKeyID() {
+	m.workspace_api_key_id = nil
+	m.addworkspace_api_key_id = nil
+	delete(m.clearedFields, workspace.FieldWorkspaceAPIKeyID)
+}
+
 // SetAccessTokenStatus sets the "access_token_status" field.
 func (m *WorkspaceMutation) SetAccessTokenStatus(s string) {
 	m.access_token_status = &s
@@ -22002,7 +22074,7 @@ func (m *WorkspaceMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *WorkspaceMutation) Fields() []string {
-	fields := make([]string, 0, 27)
+	fields := make([]string, 0, 28)
 	if m.created_at != nil {
 		fields = append(fields, workspace.FieldCreatedAt)
 	}
@@ -22056,6 +22128,9 @@ func (m *WorkspaceMutation) Fields() []string {
 	}
 	if m.service_name != nil {
 		fields = append(fields, workspace.FieldServiceName)
+	}
+	if m.workspace_api_key_id != nil {
+		fields = append(fields, workspace.FieldWorkspaceAPIKeyID)
 	}
 	if m.access_token_status != nil {
 		fields = append(fields, workspace.FieldAccessTokenStatus)
@@ -22128,6 +22203,8 @@ func (m *WorkspaceMutation) Field(name string) (ent.Value, bool) {
 		return m.RuntimeServiceNameRoot()
 	case workspace.FieldServiceName:
 		return m.ServiceName()
+	case workspace.FieldWorkspaceAPIKeyID:
+		return m.WorkspaceAPIKeyID()
 	case workspace.FieldAccessTokenStatus:
 		return m.AccessTokenStatus()
 	case workspace.FieldAccessAccount:
@@ -22191,6 +22268,8 @@ func (m *WorkspaceMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldRuntimeServiceNameRoot(ctx)
 	case workspace.FieldServiceName:
 		return m.OldServiceName(ctx)
+	case workspace.FieldWorkspaceAPIKeyID:
+		return m.OldWorkspaceAPIKeyID(ctx)
 	case workspace.FieldAccessTokenStatus:
 		return m.OldAccessTokenStatus(ctx)
 	case workspace.FieldAccessAccount:
@@ -22344,6 +22423,13 @@ func (m *WorkspaceMutation) SetField(name string, value ent.Value) error {
 		}
 		m.SetServiceName(v)
 		return nil
+	case workspace.FieldWorkspaceAPIKeyID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetWorkspaceAPIKeyID(v)
+		return nil
 	case workspace.FieldAccessTokenStatus:
 		v, ok := value.(string)
 		if !ok {
@@ -22414,13 +22500,21 @@ func (m *WorkspaceMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *WorkspaceMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addworkspace_api_key_id != nil {
+		fields = append(fields, workspace.FieldWorkspaceAPIKeyID)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *WorkspaceMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case workspace.FieldWorkspaceAPIKeyID:
+		return m.AddedWorkspaceAPIKeyID()
+	}
 	return nil, false
 }
 
@@ -22429,6 +22523,13 @@ func (m *WorkspaceMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *WorkspaceMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case workspace.FieldWorkspaceAPIKeyID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddWorkspaceAPIKeyID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown Workspace numeric field %s", name)
 }
@@ -22436,7 +22537,11 @@ func (m *WorkspaceMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *WorkspaceMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(workspace.FieldWorkspaceAPIKeyID) {
+		fields = append(fields, workspace.FieldWorkspaceAPIKeyID)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -22449,6 +22554,11 @@ func (m *WorkspaceMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *WorkspaceMutation) ClearField(name string) error {
+	switch name {
+	case workspace.FieldWorkspaceAPIKeyID:
+		m.ClearWorkspaceAPIKeyID()
+		return nil
+	}
 	return fmt.Errorf("unknown Workspace nullable field %s", name)
 }
 
@@ -22509,6 +22619,9 @@ func (m *WorkspaceMutation) ResetField(name string) error {
 		return nil
 	case workspace.FieldServiceName:
 		m.ResetServiceName()
+		return nil
+	case workspace.FieldWorkspaceAPIKeyID:
+		m.ResetWorkspaceAPIKeyID()
 		return nil
 	case workspace.FieldAccessTokenStatus:
 		m.ResetAccessTokenStatus()

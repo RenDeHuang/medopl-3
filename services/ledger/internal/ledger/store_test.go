@@ -22,6 +22,43 @@ func TestReceiptRejectsMissingIdentityAndSecretContent(t *testing.T) {
 	}
 }
 
+func validWorkspaceGatewayKeyRotationReceiptInput() ReceiptInput {
+	return ReceiptInput{
+		Type: "workspace.gateway_key_rotated.v1", Status: "completed", Surface: "control_plane",
+		AccountID: "acct-alpha", WorkspaceID: "workspace-alpha",
+		Execution:      map[string]any{"operationId": "workspace-key-rotate-alpha", "oldKeyId": int64(9), "newKeyId": int64(19)},
+		OutputRefs:     map[string]any{"secretFingerprint": "sha256:replacement"},
+		Owner:          map[string]any{"userId": "usr-alpha"},
+		IdempotencyKey: "workspace-key-rotate-alpha:receipt",
+	}
+}
+
+func TestWorkspaceGatewayKeyRotationReceiptSchemaMemory(t *testing.T) {
+	store := NewMemoryStore()
+	if _, err := store.RecordReceipt(context.Background(), validWorkspaceGatewayKeyRotationReceiptInput()); err != nil {
+		t.Fatalf("valid Workspace Key rotation receipt: %v", err)
+	}
+	for _, tc := range []struct {
+		name   string
+		mutate func(*ReceiptInput)
+	}{
+		{name: "missing operation", mutate: func(input *ReceiptInput) { delete(input.Execution, "operationId") }},
+		{name: "missing old Key", mutate: func(input *ReceiptInput) { delete(input.Execution, "oldKeyId") }},
+		{name: "same Key", mutate: func(input *ReceiptInput) { input.Execution["newKeyId"] = int64(9) }},
+		{name: "missing fingerprint", mutate: func(input *ReceiptInput) { delete(input.OutputRefs, "secretFingerprint") }},
+		{name: "missing owner", mutate: func(input *ReceiptInput) { input.Owner = nil }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			input := validWorkspaceGatewayKeyRotationReceiptInput()
+			input.IdempotencyKey += "-" + strings.ReplaceAll(tc.name, " ", "-")
+			tc.mutate(&input)
+			if _, err := store.RecordReceipt(context.Background(), input); !errors.Is(err, ErrInvalidReceiptInput) {
+				t.Fatalf("error=%v, want ErrInvalidReceiptInput", err)
+			}
+		})
+	}
+}
+
 func validBillingReceiptInput() ReceiptInput {
 	return ReceiptInput{
 		Type: "billing.resource_purchased.v1", Status: "completed", Surface: "control_plane", AccountID: "acct-alpha", WorkspaceID: "workspace-alpha",

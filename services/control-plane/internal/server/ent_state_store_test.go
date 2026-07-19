@@ -118,6 +118,42 @@ func TestWorkspaceRenewalStateRoundTrips(t *testing.T) {
 	}
 }
 
+func TestWorkspaceAPIKeyIDRoundTripsAndCAS(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "sqlite", new: func(t *testing.T) controlPlaneTableStore {
+			return NewTestEntStateStore(t, t.TempDir()+"/workspace-api-key.sqlite")
+		}},
+		{name: "postgres", new: newPostgresWorkspaceRenewalStore},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			store := tc.new(t)
+			row := canonicalWorkspaceRenewalRow(false)
+			row["workspaceApiKeyId"] = int64(9)
+			if err := store.SaveWorkspace(ctx, row); err != nil {
+				t.Fatalf("save Workspace Key ID: %v", err)
+			}
+			if err := store.CompareAndSwapWorkspaceAPIKey(ctx, stringValue(row["id"]), 9, 19); err != nil {
+				t.Fatalf("replace Workspace Key ID: %v", err)
+			}
+			if err := store.CompareAndSwapWorkspaceAPIKey(ctx, stringValue(row["id"]), 9, 19); err != nil {
+				t.Fatalf("replay Workspace Key ID replacement: %v", err)
+			}
+			if err := store.CompareAndSwapWorkspaceAPIKey(ctx, stringValue(row["id"]), 9, 29); !errors.Is(err, errWorkspaceAPIKeyCASConflict) {
+				t.Fatalf("stale Workspace Key ID replacement error=%v", err)
+			}
+			rows, err := store.ListWorkspaces(ctx, stringValue(row["accountId"]))
+			if err != nil || len(rows) != 1 || int64(numberField(rows[0], "workspaceApiKeyId", 0)) != 19 {
+				t.Fatalf("Workspace Key ID readback rows=%#v err=%v", rows, err)
+			}
+		})
+	}
+}
+
 func TestWorkspaceRenewalStateRejectsMissingField(t *testing.T) {
 	for _, tc := range []struct {
 		name string

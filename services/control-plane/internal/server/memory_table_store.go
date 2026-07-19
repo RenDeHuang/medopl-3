@@ -556,6 +556,24 @@ func (s *memoryTableStore) SaveWorkspace(_ context.Context, row map[string]any) 
 	return nil
 }
 
+func (s *memoryTableStore) CompareAndSwapWorkspaceAPIKey(_ context.Context, workspaceID string, expectedID, newID int64) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	workspace := s.workspaces[workspaceID]
+	currentID, ok := requiredPositiveInteger(workspace, "workspaceApiKeyId")
+	if workspace == nil || !ok || expectedID <= 0 || newID <= 0 || currentID != expectedID && currentID != newID {
+		return errWorkspaceAPIKeyCASConflict
+	}
+	if currentID == newID {
+		return nil
+	}
+	workspace = cloneMap(workspace)
+	workspace["workspaceApiKeyId"] = newID
+	workspace["updatedAt"] = time.Now().UTC().Format(time.RFC3339Nano)
+	s.workspaces[workspaceID] = workspace
+	return nil
+}
+
 func (s *memoryTableStore) ApplyWorkspaceRenewalIntent(_ context.Context, update workspaceRenewalIntentCAS) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

@@ -3275,8 +3275,8 @@ func TestProtectedAPIRoutesRequireSessionCSRFAndAdminRole(t *testing.T) {
 		t.Fatalf("admin route as owner status = %d, want 403: %s", adminReqRec.Code, adminReqRec.Body.String())
 	}
 
-	allowed := requestWithSession(t, server, admin, http.MethodPost, "/api/workspace-launches", `{"name":"Alpha","packageId":"basic","sizeGb":10,"autoRenew":false}`)
-	if allowed.Code != http.StatusAccepted {
+	allowed := requestWithSession(t, server, admin, http.MethodPost, "/api/pricing/preview", `{"resourceType":"workspace","packageId":"basic","sizeGb":10}`)
+	if allowed.Code != http.StatusOK {
 		t.Fatalf("admin csrf request did not reach protected route: status=%d body=%s", allowed.Code, allowed.Body.String())
 	}
 }

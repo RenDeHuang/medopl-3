@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "owner": "OPL Platform Architecture",
   "purpose": "Freeze the approved Pilot V2 products, delegated Gateway key lifecycle, one Workspace charge, prepaid Tencent fulfillment, Runtime facts, operator workflows, announcements, and evidence levels without claiming unfinished implementation or runtime evidence.",
   "state": "current",
@@ -242,6 +242,16 @@
     "keyDTOUsageSource": ["quota_used", "usage_5h", "usage_1d", "usage_7d", "last_used_at"],
     "keyPersistence": "Kubernetes Secret only",
     "ownerOnlyReveal": true,
+    "workspaceKeyLifecycle": {
+      "launchConvergence": "zero_create_one_active_reuse_other_fail_closed",
+      "rotationApi": "POST /api/workspaces/{workspaceId}/workspace-key/rotate",
+      "mutationCredential": "session_delegated_user_bearer",
+      "workspacePersistence": "workspace_api_key_id_only",
+      "operationPersistence": "control_plane_runtime_operations_non_secret_phases",
+      "phases": ["replacement_check", "replacement_create", "secret_write", "retire_old", "promote_replacement", "workspace_commit", "runtime_apply", "delete_old", "receipt", "complete"],
+      "receiptType": "workspace.gateway_key_rotated.v1",
+      "currentImplementation": "code_complete_local_focused_tests_only"
+    },
     "currentImplementation": "The independent public endpoint, Session-delegated general Key create/update/delete/read/reveal, exact expiresInDays create input, authoritative expiresAt readback, per-Key Usage, and upstream account aggregate are code-complete and locally focused-tested without Key/Usage persistence; browser integration, a real model request, and production readback remain pending."
   },
   "consoleFinancialProjection": {
