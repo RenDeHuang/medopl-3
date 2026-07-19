@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 12,
+  "schemaVersion": 13,
   "owner": "OPL Console",
   "purpose": "Console customer identity, strict owner graph, Sub2API authentication authority, lifecycle, and management API contract.",
   "state": "current",
@@ -211,7 +211,8 @@
     "tables": ["control_plane_announcements", "control_plane_announcement_reads"],
     "states": ["draft", "scheduled", "published", "withdrawn"],
     "audience": "all_pilot_users",
-    "scheduler": false
+    "scheduler": false,
+    "implementation": "code_complete_local_focused_tests"
   },
   "operatorAuthPolicy": {
     "operatorOverview": "GET /api/operator/overview",

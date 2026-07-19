@@ -22,6 +22,8 @@ var errInvalidAccountID = errors.New("invalid_account_id")
 var errInvalidEmail = errors.New("invalid_email")
 var errMembershipExists = errors.New("membership_already_exists")
 var errAccountIdentityConflict = errors.New("account_identity_conflict")
+var errAnnouncementStateConflict = errors.New("announcement_state_conflict")
+var errAnnouncementNotActive = errors.New("announcement_not_active")
 
 type workspaceResumeOperationResult struct {
 	RequestHash    string                      `json:"requestHash"`
@@ -42,6 +44,106 @@ type workspaceGatewaySecretOperationResult struct {
 	RequestHash string `json:"requestHash"`
 	SecretRef   string `json:"secretRef"`
 	Fingerprint string `json:"fingerprint"`
+}
+
+type announcementMutation struct {
+	AnnouncementID  string
+	Create          bool
+	AllowedStatuses []string
+	RequestHash     string
+	Patch           map[string]any
+	AuditEvent      map[string]any
+}
+
+func prepareAnnouncementMutation(current map[string]any, mutation announcementMutation, now time.Time) (map[string]any, error) {
+	if mutation.AnnouncementID == "" || mutation.RequestHash == "" || stringValue(mutation.AuditEvent["id"]) == "" {
+		return nil, errAnnouncementStateConflict
+	}
+	if mutation.Create {
+		if current != nil {
+			return nil, errIdempotencyConflict
+		}
+		current = map[string]any{"id": mutation.AnnouncementID, "createdAt": now.UTC().Format(time.RFC3339Nano)}
+	} else {
+		if current == nil || !announcementStatusAllowed(stringValue(current["status"]), mutation.AllowedStatuses) {
+			return nil, errAnnouncementStateConflict
+		}
+		current = cloneMap(current)
+	}
+	for key, value := range mutation.Patch {
+		current[key] = value
+	}
+	current["id"] = mutation.AnnouncementID
+	current["updatedAt"] = now.UTC().Format(time.RFC3339Nano)
+	if !validAnnouncementRecord(current) {
+		return nil, errAnnouncementStateConflict
+	}
+	return current, nil
+}
+
+func announcementStatusAllowed(status string, allowed []string) bool {
+	for _, candidate := range allowed {
+		if status == candidate {
+			return true
+		}
+	}
+	return false
+}
+
+func validAnnouncementRecord(row map[string]any) bool {
+	if strings.TrimSpace(stringValue(row["title"])) == "" || strings.TrimSpace(stringValue(row["body"])) == "" ||
+		strings.TrimSpace(stringValue(row["createdByUserId"])) == "" || strings.TrimSpace(stringValue(row["updatedByUserId"])) == "" ||
+		!announcementStatusAllowed(stringValue(row["status"]), []string{"draft", "scheduled", "published", "withdrawn"}) {
+		return false
+	}
+	startsAt, startsOK := optionalAnnouncementTime(stringValue(row["startsAt"]))
+	endsAt, endsOK := optionalAnnouncementTime(stringValue(row["endsAt"]))
+	if !startsOK || !endsOK || (!startsAt.IsZero() && !endsAt.IsZero() && !endsAt.After(startsAt)) {
+		return false
+	}
+	_, publishedOK := optionalAnnouncementTime(stringValue(row["publishedAt"]))
+	return publishedOK
+}
+
+func optionalAnnouncementTime(value string) (time.Time, bool) {
+	if value == "" {
+		return time.Time{}, true
+	}
+	parsed, err := time.Parse(time.RFC3339, value)
+	return parsed, err == nil
+}
+
+func announcementIsActive(row map[string]any, now time.Time) bool {
+	if !announcementStatusAllowed(stringValue(row["status"]), []string{"scheduled", "published"}) {
+		return false
+	}
+	startsAt, startsOK := optionalAnnouncementTime(stringValue(row["startsAt"]))
+	endsAt, endsOK := optionalAnnouncementTime(stringValue(row["endsAt"]))
+	return startsOK && endsOK && (startsAt.IsZero() || !startsAt.After(now)) && (endsAt.IsZero() || endsAt.After(now))
+}
+
+func announcementReplay(audit map[string]any, mutation announcementMutation) (map[string]any, error) {
+	if audit == nil {
+		return nil, nil
+	}
+	after := mapField(audit, "after")
+	announcement := mapField(after, "announcement")
+	if stringValue(after["requestHash"]) != mutation.RequestHash || stringValue(audit["action"]) != stringValue(mutation.AuditEvent["action"]) ||
+		stringValue(audit["resourceId"]) != mutation.AnnouncementID || stringValue(announcement["id"]) != mutation.AnnouncementID {
+		return nil, errIdempotencyConflict
+	}
+	return announcement, nil
+}
+
+func announcementAudit(mutation announcementMutation, before, after map[string]any) map[string]any {
+	audit := cloneMap(mutation.AuditEvent)
+	audit["before"] = cloneMap(before)
+	audit["after"] = map[string]any{"requestHash": mutation.RequestHash, "announcement": cloneMap(after)}
+	return audit
+}
+
+func announcementReadID(announcementID, userID string) string {
+	return "announcement-read-" + stableID(announcementID, userID)[:18]
 }
 
 func decodeWorkspaceCreateOperation(operation map[string]any) (workspaceCreateOperationResult, error) {
@@ -151,6 +253,10 @@ type controlPlaneTableStore interface {
 
 	ListAuditEvents(ctx context.Context, accountID string) ([]map[string]any, error)
 	SaveAuditEvent(ctx context.Context, row map[string]any) error
+	ListAnnouncements(ctx context.Context) ([]map[string]any, error)
+	ApplyAnnouncementMutation(ctx context.Context, mutation announcementMutation) (map[string]any, error)
+	ListAnnouncementReads(ctx context.Context, userID string) ([]map[string]any, error)
+	MarkAnnouncementRead(ctx context.Context, announcementID, userID, readAt string) (map[string]any, error)
 	ListSupportMappings(ctx context.Context, accountID string) ([]map[string]any, error)
 	SaveSupportMapping(ctx context.Context, row map[string]any) error
 	ListRuntimeOperations(ctx context.Context) ([]map[string]any, error)

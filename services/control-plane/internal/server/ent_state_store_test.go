@@ -83,6 +83,129 @@ func TestProductionPostgresStateStoreRejectsUnsafeTLSBeforeConnecting(t *testing
 	}
 }
 
+func TestAnnouncementStorePersistsAtomicMutationsAndIdempotentReads(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "sqlite", new: func(t *testing.T) controlPlaneTableStore {
+			return NewTestEntStateStore(t, t.TempDir()+"/announcements.sqlite")
+		}},
+		{name: "postgres", new: newPostgresWorkspaceRenewalStore},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := tc.new(t)
+			ctx := context.Background()
+			mutation := announcementMutation{
+				AnnouncementID: "announcement-store",
+				Create:         true,
+				RequestHash:    "request-hash",
+				Patch: map[string]any{
+					"title": "Store notice", "body": "Persisted once", "status": "published",
+					"startsAt": "2026-07-19T00:00:00Z", "publishedAt": "2026-07-19T00:00:00Z",
+					"createdByUserId": "usr-admin", "updatedByUserId": "usr-admin",
+				},
+				AuditEvent: map[string]any{
+					"id": "audit-announcement-store", "action": "announcement.create", "resourceKind": "announcement",
+					"resourceId": "announcement-store", "actorUserId": "usr-admin", "result": "succeeded",
+				},
+			}
+			first, err := store.ApplyAnnouncementMutation(ctx, mutation)
+			if err != nil || first["title"] != "Store notice" {
+				t.Fatalf("first mutation row=%#v err=%v", first, err)
+			}
+			replayed, err := store.ApplyAnnouncementMutation(ctx, mutation)
+			if err != nil || replayed["id"] != first["id"] || replayed["createdAt"] != first["createdAt"] {
+				t.Fatalf("replay row=%#v err=%v", replayed, err)
+			}
+			conflicting := mutation
+			conflicting.RequestHash = "different-request-hash"
+			if _, err := store.ApplyAnnouncementMutation(ctx, conflicting); !errors.Is(err, errIdempotencyConflict) {
+				t.Fatalf("conflicting mutation error=%v", err)
+			}
+
+			firstRead, err := store.MarkAnnouncementRead(ctx, "announcement-store", "usr-alpha", "2026-07-19T01:00:00Z")
+			if err != nil {
+				t.Fatal(err)
+			}
+			replayedRead, err := store.MarkAnnouncementRead(ctx, "announcement-store", "usr-alpha", "2026-07-19T02:00:00Z")
+			if err != nil || replayedRead["readAt"] != firstRead["readAt"] {
+				t.Fatalf("read replay first=%#v replay=%#v err=%v", firstRead, replayedRead, err)
+			}
+			announcements, announcementErr := store.ListAnnouncements(ctx)
+			reads, readErr := store.ListAnnouncementReads(ctx, "usr-alpha")
+			audits, auditErr := store.ListAuditEvents(ctx, "")
+			if announcementErr != nil || readErr != nil || auditErr != nil || len(announcements) != 1 || len(reads) != 1 || countRecords(audits, "action", "announcement.create") != 1 {
+				t.Fatalf("announcement facts rows=%#v reads=%#v audits=%#v errors=%v/%v/%v", announcements, reads, audits, announcementErr, readErr, auditErr)
+			}
+		})
+	}
+}
+
+func TestPostgresAnnouncementConcurrentReplayReturnsFirstResult(t *testing.T) {
+	store, db := newPostgresWorkspaceRenewalStoreWithDB(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	created, err := store.ApplyAnnouncementMutation(ctx, announcementMutation{
+		AnnouncementID: "announcement-concurrent-replay", Create: true, RequestHash: "announcement-create",
+		Patch: map[string]any{
+			"title": "Concurrent notice", "body": "One publish result", "status": "draft",
+			"startsAt": "", "endsAt": "", "publishedAt": "", "createdByUserId": "usr-admin", "updatedByUserId": "usr-admin",
+		},
+		AuditEvent: map[string]any{
+			"id": "audit-announcement-concurrent-create", "action": "announcement.create", "resourceKind": "announcement",
+			"resourceId": "announcement-concurrent-replay", "actorUserId": "usr-admin", "result": "succeeded",
+		},
+	})
+	if err != nil || created["status"] != "draft" {
+		t.Fatalf("create row=%#v err=%v", created, err)
+	}
+	if _, err := db.Exec(`
+		CREATE FUNCTION delay_announcement_publish_audit() RETURNS trigger LANGUAGE plpgsql AS $$
+		BEGIN
+			IF NEW.id = 'audit-announcement-concurrent-publish' THEN
+				PERFORM pg_sleep(0.2);
+			END IF;
+			RETURN NEW;
+		END
+		$$;
+		CREATE TRIGGER delay_announcement_publish_audit
+		BEFORE INSERT ON control_plane_admin_audit_events
+		FOR EACH ROW EXECUTE FUNCTION delay_announcement_publish_audit();
+	`); err != nil {
+		t.Fatal(err)
+	}
+	mutation := announcementMutation{
+		AnnouncementID: "announcement-concurrent-replay", AllowedStatuses: []string{"draft"}, RequestHash: "announcement-publish",
+		Patch: map[string]any{
+			"status": "published", "startsAt": "2026-07-19T00:00:00Z", "publishedAt": "2026-07-19T00:00:00Z", "updatedByUserId": "usr-admin",
+		},
+		AuditEvent: map[string]any{
+			"id": "audit-announcement-concurrent-publish", "action": "announcement.publish", "resourceKind": "announcement",
+			"resourceId": "announcement-concurrent-replay", "actorUserId": "usr-admin", "result": "succeeded",
+		},
+	}
+	type result struct {
+		row map[string]any
+		err error
+	}
+	start := make(chan struct{})
+	results := make(chan result, 2)
+	for range 2 {
+		go func() {
+			<-start
+			row, err := store.ApplyAnnouncementMutation(ctx, mutation)
+			results <- result{row: row, err: err}
+		}()
+	}
+	close(start)
+	first, second := <-results, <-results
+	if first.err != nil || second.err != nil || first.row["updatedAt"] != second.row["updatedAt"] || first.row["publishedAt"] != second.row["publishedAt"] {
+		t.Fatalf("concurrent replay first=%#v/%v second=%#v/%v", first.row, first.err, second.row, second.err)
+	}
+}
+
 func TestWalletAdjustmentRuntimeOperationRoundTrips(t *testing.T) {
 	for _, tc := range []struct {
 		name string

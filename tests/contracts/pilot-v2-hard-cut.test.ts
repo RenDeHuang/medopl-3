@@ -169,6 +169,7 @@ test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and an
   assert.equal(billing.walletAdjustmentEvidence.localBalancePersistence, false);
   assert.equal(management.announcements.owner, "control_plane_postgresql");
   assert.deepEqual(management.announcements.tables, ["control_plane_announcements", "control_plane_announcement_reads"]);
+  assert.equal(management.announcements.implementation, "code_complete_local_focused_tests");
   assert.equal(boundary.services.controlPlane.owns.includes("announcements"), true);
 
   const resource = sourceTruth.sources.operator.resources;
@@ -189,7 +190,9 @@ test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and an
   assert.equal(boundary.services.controlPlane.operatorProjection.persistence, "none_request_join_only");
   assert.deepEqual(boundary.services.controlPlane.operatorProjection.authorities, ["control_plane", "sub2api", "fabric", "ledger", "runtime"]);
   assert.equal(boundary.externalServices.gateway.currentImplementation, "paginated_users_batch_user_and_key_usage_code_complete_local_only");
-  assert.equal(business.objectKinds.some((entry: { kind: string }) => entry.kind === "Announcement"), true);
+  const announcement = business.objectKinds.find((entry: { kind: string }) => entry.kind === "Announcement");
+  assert.equal(Boolean(announcement), true);
+  assert.equal(announcement.implementation, "code_complete_local_focused_tests");
 });
 
 test("Pilot V2 binds delegated Gateway credentials to process-local Console sessions", async () => {

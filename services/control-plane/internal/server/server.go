@@ -78,6 +78,7 @@ func NewPersistentServerWithGatewayPublicBaseURL(service *controlplane.Service, 
 	registerWorkspaceRoutes(mux, app, service)
 	registerWorkspaceLaunchRoutes(mux, app, service)
 	registerBillingRoutes(mux, app, service)
+	registerAnnouncementRoutes(mux, app)
 	registerResourceRoutes(mux, app, service)
 	registerSupportRoutes(mux, app)
 	registerAdminRoutes(mux, app, service)

@@ -9,41 +9,45 @@ import (
 )
 
 type memoryTableStore struct {
-	mu             sync.Mutex
-	accounts       controlPlaneRecordSet
-	users          controlPlaneRecordSet
-	sessions       controlPlaneRecordSet
-	organizations  controlPlaneRecordSet
-	memberships    controlPlaneRecordSet
-	computes       controlPlaneRecordSet
-	storages       controlPlaneRecordSet
-	attachments    controlPlaneRecordSet
-	workspaces     controlPlaneRecordSet
-	backups        controlPlaneRecordSet
-	auditEvents    []map[string]any
-	support        controlPlaneRecordSet
-	runtimeOps     []map[string]any
-	projectTasks   controlPlaneRecordSet
-	syncEvents     []map[string]any
-	executionReqs  controlPlaneRecordSet
-	reconciliation map[string]any
+	mu                sync.Mutex
+	accounts          controlPlaneRecordSet
+	users             controlPlaneRecordSet
+	sessions          controlPlaneRecordSet
+	organizations     controlPlaneRecordSet
+	memberships       controlPlaneRecordSet
+	computes          controlPlaneRecordSet
+	storages          controlPlaneRecordSet
+	attachments       controlPlaneRecordSet
+	workspaces        controlPlaneRecordSet
+	backups           controlPlaneRecordSet
+	auditEvents       []map[string]any
+	announcements     controlPlaneRecordSet
+	announcementReads controlPlaneRecordSet
+	support           controlPlaneRecordSet
+	runtimeOps        []map[string]any
+	projectTasks      controlPlaneRecordSet
+	syncEvents        []map[string]any
+	executionReqs     controlPlaneRecordSet
+	reconciliation    map[string]any
 }
 
 func newMemoryTableStore() *memoryTableStore {
 	return &memoryTableStore{
-		accounts:      controlPlaneRecordSet{"acct-admin": {"id": "acct-admin", "ownerUserId": "usr-admin", "sub2apiUserId": int64(1), "status": "active"}},
-		users:         controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}},
-		sessions:      controlPlaneRecordSet{},
-		organizations: controlPlaneRecordSet{"org-admin": {"id": "org-admin", "name": "OPL Cloud", "billingAccountId": "acct-admin", "status": "active"}},
-		memberships:   controlPlaneRecordSet{"mem-admin": {"id": "mem-admin", "accountId": "acct-admin", "organizationId": "org-admin", "userId": "usr-admin", "role": "owner", "status": "active"}},
-		computes:      controlPlaneRecordSet{},
-		storages:      controlPlaneRecordSet{},
-		attachments:   controlPlaneRecordSet{},
-		workspaces:    controlPlaneRecordSet{},
-		backups:       controlPlaneRecordSet{},
-		support:       controlPlaneRecordSet{},
-		projectTasks:  controlPlaneRecordSet{},
-		executionReqs: controlPlaneRecordSet{},
+		accounts:          controlPlaneRecordSet{"acct-admin": {"id": "acct-admin", "ownerUserId": "usr-admin", "sub2apiUserId": int64(1), "status": "active"}},
+		users:             controlPlaneRecordSet{"usr-admin": {"id": "usr-admin", "email": "admin@medopl.cn", "accountId": "acct-admin", "role": "admin", "status": "active"}},
+		sessions:          controlPlaneRecordSet{},
+		organizations:     controlPlaneRecordSet{"org-admin": {"id": "org-admin", "name": "OPL Cloud", "billingAccountId": "acct-admin", "status": "active"}},
+		memberships:       controlPlaneRecordSet{"mem-admin": {"id": "mem-admin", "accountId": "acct-admin", "organizationId": "org-admin", "userId": "usr-admin", "role": "owner", "status": "active"}},
+		computes:          controlPlaneRecordSet{},
+		storages:          controlPlaneRecordSet{},
+		attachments:       controlPlaneRecordSet{},
+		workspaces:        controlPlaneRecordSet{},
+		backups:           controlPlaneRecordSet{},
+		announcements:     controlPlaneRecordSet{},
+		announcementReads: controlPlaneRecordSet{},
+		support:           controlPlaneRecordSet{},
+		projectTasks:      controlPlaneRecordSet{},
+		executionReqs:     controlPlaneRecordSet{},
 	}
 }
 
@@ -870,6 +874,67 @@ func (s *memoryTableStore) SaveAuditEvent(_ context.Context, row map[string]any)
 	defer s.mu.Unlock()
 	s.auditEvents = upsertProjectionByID(s.auditEvents, cloneMap(row))
 	return nil
+}
+
+func (s *memoryTableStore) ListAnnouncements(_ context.Context) ([]map[string]any, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return filteredRecords(s.announcements, "")
+}
+
+func (s *memoryTableStore) ApplyAnnouncementMutation(_ context.Context, mutation announcementMutation) (map[string]any, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if replay, err := announcementReplay(findRecord(s.auditEvents, stringValue(mutation.AuditEvent["id"])), mutation); replay != nil || err != nil {
+		return cloneMap(replay), err
+	}
+	var current map[string]any
+	if existing := s.announcements[mutation.AnnouncementID]; existing != nil {
+		current = cloneMap(existing)
+	}
+	desired, err := prepareAnnouncementMutation(current, mutation, time.Now().UTC())
+	if err != nil {
+		return nil, err
+	}
+	audit := announcementAudit(mutation, current, desired)
+	s.announcements[mutation.AnnouncementID] = cloneMap(desired)
+	s.auditEvents = upsertProjectionByID(s.auditEvents, audit)
+	return cloneMap(desired), nil
+}
+
+func (s *memoryTableStore) ListAnnouncementReads(_ context.Context, userID string) ([]map[string]any, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	rows := make([]map[string]any, 0, len(s.announcementReads))
+	for _, row := range s.announcementReads {
+		if userID == "" || stringValue(row["userId"]) == userID {
+			rows = append(rows, cloneMap(row))
+		}
+	}
+	return rows, nil
+}
+
+func (s *memoryTableStore) MarkAnnouncementRead(_ context.Context, announcementID, userID, readAt string) (map[string]any, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if announcementID == "" || userID == "" {
+		return nil, errAnnouncementNotActive
+	}
+	id := announcementReadID(announcementID, userID)
+	if existing := s.announcementReads[id]; existing != nil {
+		return cloneMap(existing), nil
+	}
+	readTime, ok := optionalAnnouncementTime(readAt)
+	announcement := s.announcements[announcementID]
+	if !ok || !announcementIsActive(announcement, readTime) {
+		return nil, errAnnouncementNotActive
+	}
+	row := map[string]any{
+		"id": id, "announcementId": announcementID, "userId": userID, "readAt": readAt,
+		"createdAt": readAt, "updatedAt": readAt,
+	}
+	s.announcementReads[id] = row
+	return cloneMap(row), nil
 }
 
 func (s *memoryTableStore) ListSupportMappings(_ context.Context, accountID string) ([]map[string]any, error) {

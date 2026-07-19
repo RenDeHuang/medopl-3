@@ -485,8 +485,8 @@ func TestPostgresStoreStartsFromFreshDatabase(t *testing.T) {
 	if err := check.QueryRow(`SELECT count(*) FROM opl_schema_migrations WHERE service = 'control-plane'`).Scan(&migrationCount); err != nil {
 		t.Fatalf("read control-plane migration journal: %v", err)
 	}
-	if migrationCount != 12 {
-		t.Fatalf("control-plane migration count = %d, want 12", migrationCount)
+	if migrationCount != 13 {
+		t.Fatalf("control-plane migration count = %d, want 13", migrationCount)
 	}
 	var autoRenewAuditMigration bool
 	if err := check.QueryRow(`SELECT EXISTS (SELECT 1 FROM opl_schema_migrations WHERE service = 'control-plane' AND version = '202607170003_workspace_auto_renew_audit')`).Scan(&autoRenewAuditMigration); err != nil || !autoRenewAuditMigration {
@@ -495,6 +495,14 @@ func TestPostgresStoreStartsFromFreshDatabase(t *testing.T) {
 	var identityHardCutMigration bool
 	if err := check.QueryRow(`SELECT EXISTS (SELECT 1 FROM opl_schema_migrations WHERE service = 'control-plane' AND version = '202607180001_customer_identity_hard_cut')`).Scan(&identityHardCutMigration); err != nil || !identityHardCutMigration {
 		t.Fatalf("customer identity hard cut migration missing: applied=%v err=%v", identityHardCutMigration, err)
+	}
+	var announcementMigration bool
+	if err := check.QueryRow(`SELECT EXISTS (SELECT 1 FROM opl_schema_migrations WHERE service = 'control-plane' AND version = '202607190002_pilot_announcements')`).Scan(&announcementMigration); err != nil || !announcementMigration {
+		t.Fatalf("Pilot announcement migration missing: applied=%v err=%v", announcementMigration, err)
+	}
+	var announcementConstraints int
+	if err := check.QueryRow(`SELECT count(*) FROM pg_constraint WHERE conrelid IN ('control_plane_announcements'::regclass, 'control_plane_announcement_reads'::regclass) AND conname IN ('control_plane_announcements_status_check', 'control_plane_announcements_schedule_check', 'control_plane_announcement_reads_announcement_fk', 'control_plane_announcement_reads_user_unique')`).Scan(&announcementConstraints); err != nil || announcementConstraints != 4 {
+		t.Fatalf("Pilot announcement constraints = %d, want 4: %v", announcementConstraints, err)
 	}
 	if _, err := check.Exec(`CREATE TABLE control_plane_startup_probe (id text PRIMARY KEY, probe text); INSERT INTO control_plane_startup_probe VALUES ('probe', NULL)`); err != nil {
 		t.Fatal(err)

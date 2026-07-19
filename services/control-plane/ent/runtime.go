@@ -5,6 +5,8 @@ package ent
 import (
 	"opl-cloud/services/control-plane/ent/account"
 	"opl-cloud/services/control-plane/ent/adminauditevent"
+	"opl-cloud/services/control-plane/ent/announcement"
+	"opl-cloud/services/control-plane/ent/announcementread"
 	"opl-cloud/services/control-plane/ent/archivedadminauditevent"
 	"opl-cloud/services/control-plane/ent/archivedcomputeallocation"
 	"opl-cloud/services/control-plane/ent/archivedstorageattachment"
@@ -132,6 +134,82 @@ func init() {
 	adminauditeventDescID := adminauditeventFields[0].Descriptor()
 	// adminauditevent.IDValidator is a validator for the "id" field. It is called by the builders before save.
 	adminauditevent.IDValidator = adminauditeventDescID.Validators[0].(func(string) error)
+	announcementFields := schema.Announcement{}.Fields()
+	_ = announcementFields
+	// announcementDescCreatedAt is the schema descriptor for created_at field.
+	announcementDescCreatedAt := announcementFields[1].Descriptor()
+	// announcement.DefaultCreatedAt holds the default value on creation for the created_at field.
+	announcement.DefaultCreatedAt = announcementDescCreatedAt.Default.(func() time.Time)
+	// announcementDescUpdatedAt is the schema descriptor for updated_at field.
+	announcementDescUpdatedAt := announcementFields[2].Descriptor()
+	// announcement.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	announcement.DefaultUpdatedAt = announcementDescUpdatedAt.Default.(func() time.Time)
+	// announcement.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	announcement.UpdateDefaultUpdatedAt = announcementDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// announcementDescTitle is the schema descriptor for title field.
+	announcementDescTitle := announcementFields[3].Descriptor()
+	// announcement.TitleValidator is a validator for the "title" field. It is called by the builders before save.
+	announcement.TitleValidator = announcementDescTitle.Validators[0].(func(string) error)
+	// announcementDescBody is the schema descriptor for body field.
+	announcementDescBody := announcementFields[4].Descriptor()
+	// announcement.BodyValidator is a validator for the "body" field. It is called by the builders before save.
+	announcement.BodyValidator = announcementDescBody.Validators[0].(func(string) error)
+	// announcementDescStatus is the schema descriptor for status field.
+	announcementDescStatus := announcementFields[5].Descriptor()
+	// announcement.DefaultStatus holds the default value on creation for the status field.
+	announcement.DefaultStatus = announcementDescStatus.Default.(string)
+	// announcementDescStartsAt is the schema descriptor for starts_at field.
+	announcementDescStartsAt := announcementFields[6].Descriptor()
+	// announcement.DefaultStartsAt holds the default value on creation for the starts_at field.
+	announcement.DefaultStartsAt = announcementDescStartsAt.Default.(string)
+	// announcementDescEndsAt is the schema descriptor for ends_at field.
+	announcementDescEndsAt := announcementFields[7].Descriptor()
+	// announcement.DefaultEndsAt holds the default value on creation for the ends_at field.
+	announcement.DefaultEndsAt = announcementDescEndsAt.Default.(string)
+	// announcementDescPublishedAt is the schema descriptor for published_at field.
+	announcementDescPublishedAt := announcementFields[8].Descriptor()
+	// announcement.DefaultPublishedAt holds the default value on creation for the published_at field.
+	announcement.DefaultPublishedAt = announcementDescPublishedAt.Default.(string)
+	// announcementDescCreatedByUserID is the schema descriptor for created_by_user_id field.
+	announcementDescCreatedByUserID := announcementFields[9].Descriptor()
+	// announcement.CreatedByUserIDValidator is a validator for the "created_by_user_id" field. It is called by the builders before save.
+	announcement.CreatedByUserIDValidator = announcementDescCreatedByUserID.Validators[0].(func(string) error)
+	// announcementDescUpdatedByUserID is the schema descriptor for updated_by_user_id field.
+	announcementDescUpdatedByUserID := announcementFields[10].Descriptor()
+	// announcement.UpdatedByUserIDValidator is a validator for the "updated_by_user_id" field. It is called by the builders before save.
+	announcement.UpdatedByUserIDValidator = announcementDescUpdatedByUserID.Validators[0].(func(string) error)
+	// announcementDescID is the schema descriptor for id field.
+	announcementDescID := announcementFields[0].Descriptor()
+	// announcement.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	announcement.IDValidator = announcementDescID.Validators[0].(func(string) error)
+	announcementreadFields := schema.AnnouncementRead{}.Fields()
+	_ = announcementreadFields
+	// announcementreadDescCreatedAt is the schema descriptor for created_at field.
+	announcementreadDescCreatedAt := announcementreadFields[1].Descriptor()
+	// announcementread.DefaultCreatedAt holds the default value on creation for the created_at field.
+	announcementread.DefaultCreatedAt = announcementreadDescCreatedAt.Default.(func() time.Time)
+	// announcementreadDescUpdatedAt is the schema descriptor for updated_at field.
+	announcementreadDescUpdatedAt := announcementreadFields[2].Descriptor()
+	// announcementread.DefaultUpdatedAt holds the default value on creation for the updated_at field.
+	announcementread.DefaultUpdatedAt = announcementreadDescUpdatedAt.Default.(func() time.Time)
+	// announcementread.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
+	announcementread.UpdateDefaultUpdatedAt = announcementreadDescUpdatedAt.UpdateDefault.(func() time.Time)
+	// announcementreadDescAnnouncementID is the schema descriptor for announcement_id field.
+	announcementreadDescAnnouncementID := announcementreadFields[3].Descriptor()
+	// announcementread.AnnouncementIDValidator is a validator for the "announcement_id" field. It is called by the builders before save.
+	announcementread.AnnouncementIDValidator = announcementreadDescAnnouncementID.Validators[0].(func(string) error)
+	// announcementreadDescUserID is the schema descriptor for user_id field.
+	announcementreadDescUserID := announcementreadFields[4].Descriptor()
+	// announcementread.UserIDValidator is a validator for the "user_id" field. It is called by the builders before save.
+	announcementread.UserIDValidator = announcementreadDescUserID.Validators[0].(func(string) error)
+	// announcementreadDescReadAt is the schema descriptor for read_at field.
+	announcementreadDescReadAt := announcementreadFields[5].Descriptor()
+	// announcementread.ReadAtValidator is a validator for the "read_at" field. It is called by the builders before save.
+	announcementread.ReadAtValidator = announcementreadDescReadAt.Validators[0].(func(string) error)
+	// announcementreadDescID is the schema descriptor for id field.
+	announcementreadDescID := announcementreadFields[0].Descriptor()
+	// announcementread.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	announcementread.IDValidator = announcementreadDescID.Validators[0].(func(string) error)
 	archivejobFields := schema.ArchiveJob{}.Fields()
 	_ = archivejobFields
 	// archivejobDescCreatedAt is the schema descriptor for created_at field.

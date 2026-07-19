@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "owner": "OPL Console",
   "purpose": "Machine-readable requirements for current commercial Console objects.",
   "state": "current",
@@ -285,6 +285,7 @@
       "lifecycle": "current",
       "requiredCapabilitiesForImplemented": ["list", "detail", "read", "write", "action", "audit"],
       "evidenceRequired": true,
+      "implementation": "code_complete_local_focused_tests",
       "boundary": "Control Plane-owned Pilot-wide plain-text announcement with draft, scheduled, published, withdrawn, and per-user read state."
     }
   ]

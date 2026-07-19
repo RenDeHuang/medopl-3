@@ -11,7 +11,7 @@ async function readJson(path) {
 test("business object contract defines the current commercial object boundary", async () => {
   const contract = await readJson(businessObjectContractPath);
 
-	assert.equal(contract.schemaVersion, 3);
+	assert.equal(contract.schemaVersion, 4);
   assert.equal(contract.owner, "OPL Console");
   assert.equal(contract.purpose, "Machine-readable requirements for current commercial Console objects.");
   assert.deepEqual(contract.repositoryBoundaries, ["opl-console", "opl-fabric", "opl-ledger"]);
