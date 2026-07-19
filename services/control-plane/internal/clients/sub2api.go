@@ -66,7 +66,7 @@ type Sub2APIUsageClient interface {
 
 type Sub2APIIdentityClient interface {
 	ResolveOrCreateUser(context.Context, string, string) (Sub2APIIdentity, error)
-	AuthenticateUser(context.Context, string, string) (Sub2APIIdentity, error)
+	AuthenticateUser(context.Context, string, string) (Sub2APIUserAuthentication, error)
 	UserIdentity(context.Context, int64, string) (Sub2APIIdentity, error)
 }
 
@@ -95,6 +95,11 @@ type Sub2APIIdentity struct {
 	ID     int64  `json:"id"`
 	Email  string `json:"email"`
 	Status string `json:"status"`
+}
+
+type Sub2APIUserAuthentication struct {
+	Identity    Sub2APIIdentity `json:"-"`
+	AccessToken string          `json:"-"`
 }
 
 type Sub2APIWorkspaceKey struct {
@@ -328,20 +333,21 @@ func (c *Sub2APIHTTPClient) ResolveOrCreateUser(ctx context.Context, email, pass
 }
 
 func (c *Sub2APIHTTPClient) authenticatedUserIdentity(ctx context.Context, userID int64, email, password string) (Sub2APIIdentity, error) {
-	identity, err := c.AuthenticateUser(ctx, email, password)
+	authentication, err := c.AuthenticateUser(ctx, email, password)
 	if err != nil {
 		return Sub2APIIdentity{}, err
 	}
+	identity := authentication.Identity
 	if identity.ID != userID {
 		return Sub2APIIdentity{}, ErrSub2APIIdentityConflict
 	}
 	return c.UserIdentity(ctx, userID, email)
 }
 
-func (c *Sub2APIHTTPClient) AuthenticateUser(ctx context.Context, email, password string) (Sub2APIIdentity, error) {
+func (c *Sub2APIHTTPClient) AuthenticateUser(ctx context.Context, email, password string) (Sub2APIUserAuthentication, error) {
 	email = normalizeSub2APIEmail(email)
 	if email == "" || password == "" {
-		return Sub2APIIdentity{}, ErrSub2APIInvalidCredentials
+		return Sub2APIUserAuthentication{}, ErrSub2APIInvalidCredentials
 	}
 	body, err := c.request(ctx, http.MethodPost, "/api/v1/auth/login", map[string]string{
 		"email": email, "password": password, "turnstile_token": "",
@@ -350,11 +356,11 @@ func (c *Sub2APIHTTPClient) AuthenticateUser(ctx context.Context, email, passwor
 		var httpErr *Sub2APIHTTPError
 		switch {
 		case errors.As(err, &httpErr) && httpErr.StatusCode == http.StatusUnauthorized:
-			return Sub2APIIdentity{}, ErrSub2APIInvalidCredentials
+			return Sub2APIUserAuthentication{}, ErrSub2APIInvalidCredentials
 		case errors.As(err, &httpErr) && httpErr.StatusCode == http.StatusTooManyRequests:
-			return Sub2APIIdentity{}, ErrSub2APIAuthRateLimited
+			return Sub2APIUserAuthentication{}, ErrSub2APIAuthRateLimited
 		default:
-			return Sub2APIIdentity{}, ErrSub2APIAuthUnavailable
+			return Sub2APIUserAuthentication{}, ErrSub2APIAuthUnavailable
 		}
 	}
 	var data struct {
@@ -362,14 +368,14 @@ func (c *Sub2APIHTTPClient) AuthenticateUser(ctx context.Context, email, passwor
 		User        *Sub2APIIdentity `json:"user"`
 	}
 	if err := decodeSub2APIEnvelope(body, &data); err != nil || data.AccessToken == "" || data.User == nil {
-		return Sub2APIIdentity{}, ErrSub2APIAuthUnavailable
+		return Sub2APIUserAuthentication{}, ErrSub2APIAuthUnavailable
 	}
 	identity := *data.User
 	identity.Email = normalizeSub2APIEmail(identity.Email)
 	if identity.ID <= 0 || identity.Email != email || identity.Status != "active" {
-		return Sub2APIIdentity{}, ErrSub2APIAuthUnavailable
+		return Sub2APIUserAuthentication{}, ErrSub2APIAuthUnavailable
 	}
-	return identity, nil
+	return Sub2APIUserAuthentication{Identity: identity, AccessToken: data.AccessToken}, nil
 }
 
 func (c *Sub2APIHTTPClient) UserIdentity(ctx context.Context, userID int64, email string) (Sub2APIIdentity, error) {
@@ -407,10 +413,11 @@ func (c *Sub2APIHTTPClient) User(ctx context.Context, userID int64) (Sub2APIIden
 }
 
 func (c *Sub2APIHTTPClient) AdminIdentity(ctx context.Context) (Sub2APIIdentity, error) {
-	identity, err := c.AuthenticateUser(ctx, c.adminEmail, c.adminPassword)
+	authentication, err := c.AuthenticateUser(ctx, c.adminEmail, c.adminPassword)
 	if err != nil {
 		return Sub2APIIdentity{}, err
 	}
+	identity := authentication.Identity
 	return c.UserIdentity(ctx, identity.ID, c.adminEmail)
 }
 

@@ -130,6 +130,32 @@ test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and an
   assert.equal(business.objectKinds.some((entry: { kind: string }) => entry.kind === "Announcement"), true);
 });
 
+test("Pilot V2 binds delegated Gateway credentials to process-local Console sessions", async () => {
+  const [management, boundary, deployment] = await Promise.all([
+    json("packages/contracts/opl-cloud-management-contract.json"),
+    json("packages/contracts/opl-cloud-service-boundary-contract.json"),
+    json("packages/contracts/opl-cloud-deployment-contract.json")
+  ]);
+
+  assert.deepEqual(management.identitySecurity.delegatedGatewayCredential, {
+    authority: "sub2api_login_access_token",
+    storage: "control_plane_process_memory_only",
+    index: "hashed_session_lookup_key",
+    lifetime: "bounded_by_console_session",
+    missingOrExpired: "401_reauthentication_required_and_cookie_clear",
+    forbidden: ["browser", "postgresql", "ledger", "logs"]
+  });
+  assert.equal(boundary.services.controlPlane.sessionDelegatedGatewayCredential.persistence, "process_memory_only");
+  assert.equal(boundary.services.controlPlane.sessionDelegatedGatewayCredential.lookupKey, "hashed_console_session_key");
+  assert.deepEqual(deployment.controlPlaneSessionCredentialVault, {
+    replicas: 1,
+    strategyType: "Recreate",
+    persistence: "none",
+    restartBehavior: "reauthentication_required",
+    horizontalScaling: "blocked_pending_secure_shared_vault"
+  });
+});
+
 test("Pilot V2 current human truth preserves public entry points and evidence levels", async () => {
   const [invariants, architecture, status, consoleProduct, runbook] = await Promise.all([
     text("docs/invariants.md"),

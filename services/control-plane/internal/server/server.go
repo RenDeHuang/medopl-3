@@ -224,8 +224,13 @@ func consoleDistDir() string {
 
 func (app *controlPlaneServer) protected(requiresAdmin bool, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		payload, ok := app.session(r)
-		if !ok {
+		payload, state := app.session(r)
+		if state != sessionAuthenticated {
+			if state == sessionReauthenticationRequired {
+				http.SetCookie(w, sessionCookie("", -1))
+				writeError(w, http.StatusUnauthorized, "reauthentication_required")
+				return
+			}
 			writeError(w, http.StatusUnauthorized, "not_authenticated")
 			return
 		}

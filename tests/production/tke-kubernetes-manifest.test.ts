@@ -29,6 +29,7 @@ test("OPL Cloud TKE manifest declares three decoupled services and monthly Sub2A
   assert.equal(config.data.OPL_RESOURCE_BILLING_WORKER_ENABLED, undefined);
 
   const controlPlane = deployments.find((item) => item.metadata.name === "opl-cloud-control-plane");
+  assert.equal(controlPlane.spec.replicas, 1);
   assert.equal(controlPlane.spec.strategy.type, "Recreate");
   const controlContainer = controlPlane.spec.template.spec.containers[0];
   assert.deepEqual(controlContainer.envFrom, [{ configMapRef: { name: "opl-cloud-config" } }]);

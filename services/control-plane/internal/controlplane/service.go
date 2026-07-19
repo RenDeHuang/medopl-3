@@ -238,10 +238,10 @@ func (s *Service) ResolveOrCreateSub2APIUser(ctx context.Context, email, passwor
 	return client.ResolveOrCreateUser(ctx, email, password)
 }
 
-func (s *Service) AuthenticateSub2APIUser(ctx context.Context, email, password string) (clients.Sub2APIIdentity, error) {
+func (s *Service) AuthenticateSub2APIUser(ctx context.Context, email, password string) (clients.Sub2APIUserAuthentication, error) {
 	client, ok := s.sub2API.(clients.Sub2APIIdentityClient)
 	if !ok {
-		return clients.Sub2APIIdentity{}, clients.ErrSub2APIAuthUnavailable
+		return clients.Sub2APIUserAuthentication{}, clients.ErrSub2APIAuthUnavailable
 	}
 	return client.AuthenticateUser(ctx, email, password)
 }

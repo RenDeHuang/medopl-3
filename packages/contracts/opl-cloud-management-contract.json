@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 9,
+  "schemaVersion": 10,
   "owner": "OPL Console",
   "purpose": "Console customer identity, strict owner graph, Sub2API authentication authority, lifecycle, and management API contract.",
   "state": "current",
@@ -124,6 +124,14 @@
       "enforcement": "database_check_constraint"
     },
     "sessionLookupKeyPrefix": "sub2api-sha256:",
+    "delegatedGatewayCredential": {
+      "authority": "sub2api_login_access_token",
+      "storage": "control_plane_process_memory_only",
+      "index": "hashed_session_lookup_key",
+      "lifetime": "bounded_by_console_session",
+      "missingOrExpired": "401_reauthentication_required_and_cookie_clear",
+      "forbidden": ["browser", "postgresql", "ledger", "logs"]
+    },
     "secretProjection": "Passwords and password hashes are excluded from browser responses and audit facts."
   },
   "bootstrapLifecycle": {
@@ -136,7 +144,7 @@
     "authenticatedRuntimeEvidence": "pending"
   },
   "userLifecycle": {
-    "sessionPolicy": "Disabling or deleting a User revokes that User's sessions.",
+    "sessionPolicy": "Disabling or deleting a User revokes that User's sessions and process-local delegated Gateway credentials.",
     "ownerRenewalPolicy": "Disabling or deleting an owner turns off the Workspace autoRenew intent without deleting provider resources."
   },
   "api": {

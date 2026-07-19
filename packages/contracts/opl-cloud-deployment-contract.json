@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "owner": "OPL Fabric",
   "purpose": "Deployment workflow, immutable Cloud and Workspace images, TKE handoff, and production-verification safety.",
   "state": "current",
@@ -18,6 +18,13 @@
     "controlPlaneBehavior": "non_empty_value_fails_closed",
     "workflowStatus": "removed_and_locally_tested",
     "productionEvidence": "pending"
+  },
+  "controlPlaneSessionCredentialVault": {
+    "replicas": 1,
+    "strategyType": "Recreate",
+    "persistence": "none",
+    "restartBehavior": "reauthentication_required",
+    "horizontalScaling": "blocked_pending_secure_shared_vault"
   },
   "runner": [
     "self-hosted",

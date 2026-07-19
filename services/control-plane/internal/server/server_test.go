@@ -1433,7 +1433,7 @@ func TestWorkspaceListNeverExposesPersistedPassword(t *testing.T) {
 	}
 }
 
-func TestSessionFactSurvivesServerRestart(t *testing.T) {
+func TestSessionCredentialRequiresLoginAfterServerRestart(t *testing.T) {
 	path := t.TempDir() + "/control-plane-state.sqlite"
 	service := newTestService(fakeLedgerClient{}, &fakeFabricClient{})
 	server, err := NewPersistentServer(service, NewTestEntStateStore(t, path))
@@ -1450,8 +1450,8 @@ func TestSessionFactSurvivesServerRestart(t *testing.T) {
 	addSessionCookies(req, session)
 	rec := httptest.NewRecorder()
 	restarted.ServeHTTP(rec, req)
-	if rec.Code != http.StatusOK {
-		t.Fatalf("session did not survive restart: status=%d body=%s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusUnauthorized || !strings.Contains(rec.Body.String(), "reauthentication_required") || !strings.Contains(rec.Header().Get("Set-Cookie"), sessionCookieName+"=;") {
+		t.Fatalf("restart status=%d cookie=%q body=%s", rec.Code, rec.Header().Get("Set-Cookie"), rec.Body.String())
 	}
 }
 
@@ -1599,21 +1599,21 @@ func (c *testSub2APIClient) ResolveOrCreateUser(_ context.Context, email, passwo
 	return identity, nil
 }
 
-func (c *testSub2APIClient) AuthenticateUser(_ context.Context, email, password string) (clients.Sub2APIIdentity, error) {
+func (c *testSub2APIClient) AuthenticateUser(_ context.Context, email, password string) (clients.Sub2APIUserAuthentication, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	email = normalizeEmail(email)
 	identity, ok := c.identities[email]
 	if !ok {
 		if password == "CorrectHorseBatteryStaple!" {
-			return clients.Sub2APIIdentity{ID: testSub2APIUserID(email), Email: email, Status: "active"}, nil
+			return clients.Sub2APIUserAuthentication{Identity: clients.Sub2APIIdentity{ID: testSub2APIUserID(email), Email: email, Status: "active"}, AccessToken: "test-user-delegated-token"}, nil
 		}
-		return clients.Sub2APIIdentity{}, clients.ErrSub2APIInvalidCredentials
+		return clients.Sub2APIUserAuthentication{}, clients.ErrSub2APIInvalidCredentials
 	}
 	if c.passwords[email] != password {
-		return clients.Sub2APIIdentity{}, clients.ErrSub2APIInvalidCredentials
+		return clients.Sub2APIUserAuthentication{}, clients.ErrSub2APIInvalidCredentials
 	}
-	return identity, nil
+	return clients.Sub2APIUserAuthentication{Identity: identity, AccessToken: "test-user-delegated-token"}, nil
 }
 
 func (c *testSub2APIClient) UserIdentity(_ context.Context, userID int64, email string) (clients.Sub2APIIdentity, error) {
@@ -2504,7 +2504,7 @@ func reservedOperatorSessionForTest(t *testing.T, server http.Handler) *httptest
 	if admin == nil {
 		t.Fatal("admin@medopl.cn test user missing")
 	}
-	payload, sessionID, err := handler.app.createSession(admin)
+	payload, sessionID, err := handler.app.createSession(admin, "test-operator-delegated-token")
 	if err != nil {
 		t.Fatal(err)
 	}

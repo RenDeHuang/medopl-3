@@ -25,6 +25,7 @@ type controlPlaneServer struct {
 	operationalAlertStates sync.Map
 	store                  StateStore
 	tables                 controlPlaneTableStore
+	sessionCredentials     *SessionCredentialVault
 	// ponytail: per-process limiter; move to Redis when login traffic spans multiple replicas.
 	loginRateLimits map[string]loginFailure
 }
@@ -177,8 +178,9 @@ func (app *controlPlaneServer) ensureBootstrapAdmin(ctx context.Context, service
 func newControlPlaneAppEmpty() *controlPlaneServer {
 	tables := newMemoryTableStore()
 	return &controlPlaneServer{
-		tables:          tables,
-		loginRateLimits: map[string]loginFailure{},
+		tables:             tables,
+		sessionCredentials: newSessionCredentialVault(time.Now),
+		loginRateLimits:    map[string]loginFailure{},
 	}
 }
 

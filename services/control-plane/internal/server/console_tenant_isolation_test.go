@@ -186,7 +186,7 @@ func TestCustomerOwnerCannotUseEndpointsAcrossAccountsOrOrganizations(t *testing
 		t.Fatal(err)
 	}
 	owner := findRecord(users, "usr-alpha")
-	_, sessionID, err := app.createSession(owner)
+	_, sessionID, err := app.createSession(owner, "test-owner-delegated-token")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,7 +219,7 @@ func TestNonOwnerMembershipCannotAuthorizeOrganization(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, sessionID, err := app.createSession(findRecord(users, "usr-admin"))
+			_, sessionID, err := app.createSession(findRecord(users, "usr-admin"), "test-operator-delegated-token")
 			if err != nil {
 				t.Fatal(err)
 			}

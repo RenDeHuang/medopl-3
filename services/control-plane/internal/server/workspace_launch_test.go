@@ -330,7 +330,7 @@ func TestWorkspaceLaunchRequiresOwnerBeforeExternalCalls(t *testing.T) {
 	fixture.store.accounts["acct-alpha"]["ownerUserId"] = "usr-other"
 
 	response := fixture.launch(t, `{"name":"Alpha","packageId":"basic","sizeGb":10,"autoRenew":false}`, "launch-alpha")
-	if response.Code != http.StatusUnauthorized || !strings.Contains(response.Body.String(), "not_authenticated") {
+	if response.Code != http.StatusUnauthorized || !strings.Contains(response.Body.String(), "reauthentication_required") {
 		t.Fatalf("owner mismatch launch status = %d, want 401: %s", response.Code, response.Body.String())
 	}
 	operations, _ := fixture.store.ListRuntimeOperations(context.Background())

@@ -57,22 +57,22 @@ func (c *identityTestSub2API) ResolveOrCreateUser(_ context.Context, email, pass
 	return identity, nil
 }
 
-func (c *identityTestSub2API) AuthenticateUser(_ context.Context, email, password string) (clients.Sub2APIIdentity, error) {
+func (c *identityTestSub2API) AuthenticateUser(_ context.Context, email, password string) (clients.Sub2APIUserAuthentication, error) {
 	c.identityMu.Lock()
 	defer c.identityMu.Unlock()
 	c.authCalls++
 	if c.authErr != nil {
-		return clients.Sub2APIIdentity{}, c.authErr
+		return clients.Sub2APIUserAuthentication{}, c.authErr
 	}
 	if c.authOverride != nil {
-		return *c.authOverride, nil
+		return clients.Sub2APIUserAuthentication{Identity: *c.authOverride, AccessToken: "test-user-delegated-token"}, nil
 	}
 	email = normalizeEmail(email)
 	identity, ok := c.identities[email]
 	if !ok || c.passwords[email] != password {
-		return clients.Sub2APIIdentity{}, clients.ErrSub2APIInvalidCredentials
+		return clients.Sub2APIUserAuthentication{}, clients.ErrSub2APIInvalidCredentials
 	}
-	return identity, nil
+	return clients.Sub2APIUserAuthentication{Identity: identity, AccessToken: "test-user-delegated-token"}, nil
 }
 
 func (c *identityTestSub2API) UserIdentity(_ context.Context, id int64, email string) (clients.Sub2APIIdentity, error) {

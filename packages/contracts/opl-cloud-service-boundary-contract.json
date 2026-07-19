@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "owner": "OPL Platform Architecture",
   "purpose": "Current ownership contract for Console UI, Control Plane, Ledger, Fabric, and external Sub2API.",
   "state": "current",
@@ -44,6 +44,13 @@
         "sub2api": "http"
       },
       "ephemeralOnly": ["sessionDelegatedGatewayCredential"],
+      "sessionDelegatedGatewayCredential": {
+        "source": "sub2api_user_login",
+        "persistence": "process_memory_only",
+        "lookupKey": "hashed_console_session_key",
+        "lifetime": "console_session_or_shorter",
+        "horizontalScaling": "forbidden_until_secure_shared_vault_is_approved"
+      },
       "forbiddenPersistence": ["gatewayCredentials", "apiKeys", "apiUsage", "walletBalances", "runtimeFileMetadata"]
     },
     "ledger": {
