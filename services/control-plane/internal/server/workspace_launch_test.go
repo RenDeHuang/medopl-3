@@ -22,14 +22,13 @@ func TestWorkspaceLaunchOperationRoundTripsWithoutSecrets(t *testing.T) {
 		ID: "launch-alpha", Status: "debit_pending", SchemaVersion: workspaceLaunchSchemaVersion, RequestHash: "hash", Phase: "debit_pending",
 		AccountID: "acct-alpha", OwnerUserID: "usr-alpha", WorkspaceID: "ws-alpha", Name: "Alpha", PackageID: "basic",
 		StorageGB: 10, PriceVersion: pilotPriceVersion, TotalChargeUSDMicros: 52_580_000,
-		ComputeID: "ca-alpha", ComputeBillingOperationID: "billing-compute-alpha",
-		StorageID: "vol-alpha", StorageBillingOperationID: "billing-storage-alpha",
+		ComputeID: "ca-alpha", StorageID: "vol-alpha",
 		AttachmentID: "attachment-alpha", AttachmentOperationID: "attach-operation-alpha", WorkspaceOperationID: "workspace-operation-alpha",
 		WorkspaceAPIKeyID: 19, RedeemCode: "opl:launch-alpha",
 	}
 	row := workspaceLaunchOperationRow(input)
 	decoded, err := decodeWorkspaceLaunchOperation(row)
-	if err != nil || decoded.RequestHash != input.RequestHash || decoded.ID != input.ID || decoded.Status != input.Status || decoded.PriceVersion != pilotPriceVersion || decoded.PricingVersion != "" || decoded.TotalMonthlyPriceCNYCents != 0 {
+	if err != nil || decoded.RequestHash != input.RequestHash || decoded.ID != input.ID || decoded.Status != input.Status || decoded.PriceVersion != pilotPriceVersion {
 		t.Fatalf("decoded=%#v err=%v", decoded, err)
 	}
 	if row["action"] != workspaceLaunchAction || row["resourceKind"] != "workspace_launch" || row["computeAllocationId"] != input.ComputeID || row["storageId"] != input.StorageID {
@@ -43,13 +42,22 @@ func TestWorkspaceLaunchOperationRoundTripsWithoutSecrets(t *testing.T) {
 	}
 }
 
+func TestNoLegacyWorkspaceBillingConsumer(t *testing.T) {
+	operation := newWorkspaceLaunchOperation("acct-alpha", "usr-alpha", "Alpha", "basic", 10, false, pilotPriceVersion, 52_580_000, "launch-v2")
+	encoded := encodeWorkspaceLaunchOperation(operation)
+	for _, field := range []string{"pricingVersion", "totalMonthlyPriceCnyCents", "computeBillingOperationId", "storageBillingOperationId"} {
+		if strings.Contains(encoded, `"`+field+`"`) {
+			t.Fatalf("current Workspace launch persisted legacy field %s: %s", field, encoded)
+		}
+	}
+}
+
 func TestWorkspaceLaunchResponseAllowsOnlyCustomerSafeFields(t *testing.T) {
 	operation := workspaceLaunchOperation{
 		ID: "launch-alpha", Status: "unknown", SchemaVersion: workspaceLaunchSchemaVersion, RequestHash: "hash", Phase: "debit_pending",
 		AccountID: "acct-alpha", OwnerUserID: "usr-private", WorkspaceID: "ws-alpha", Name: "Alpha", PackageID: "basic",
 		StorageGB: 10, PriceVersion: pilotPriceVersion, TotalChargeUSDMicros: 52_580_000,
-		ComputeID: "ca-alpha", ComputeBillingOperationID: "billing-compute-private",
-		StorageID: "vol-alpha", StorageBillingOperationID: "billing-storage-private",
+		ComputeID: "ca-alpha", StorageID: "vol-alpha",
 		AttachmentID: "attachment-alpha", AttachmentOperationID: "attachment-operation-private", WorkspaceOperationID: "workspace-operation-private",
 		WorkspaceAPIKeyID: 19, RedeemCode: "opl:launch-alpha",
 		ErrorCode: "upstream_unavailable",
@@ -90,7 +98,7 @@ func TestWorkspaceLaunchResponseAllowsOnlyCustomerSafeFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, forbidden := range []string{"usr-private", "billing-compute-private", "billing-storage-private", "attachment-operation-private", "workspace-operation-private", "private upstream detail", "private-password", "private row detail"} {
+	for _, forbidden := range []string{"usr-private", "attachment-operation-private", "workspace-operation-private", "private upstream detail", "private-password", "private row detail"} {
 		if strings.Contains(string(responseJSON), forbidden) {
 			t.Fatalf("workspace launch response leaked %q: %s", forbidden, responseJSON)
 		}
@@ -514,10 +522,6 @@ func TestWorkspaceLaunchListAndDetailAreTenantScoped(t *testing.T) {
 
 type recordingWorkspaceLaunchStore struct {
 	*memoryTableStore
-	launchSaves                []workspaceLaunchOperation
-	firstClaimStarted          chan struct{}
-	releaseFirstClaim          chan struct{}
-	firstClaim                 sync.Once
 	lifecycleStarted           chan struct{}
 	releaseLifecycle           chan struct{}
 	lifecycleSignal            sync.Once
@@ -540,29 +544,6 @@ func (s *recordingWorkspaceLaunchStore) ClaimWorkspaceLaunch(ctx context.Context
 		s.workspaceLaunchClaimSignal.Do(func() { close(s.workspaceLaunchClaimed) })
 	}
 	return s.memoryTableStore.ClaimWorkspaceLaunch(ctx, claim)
-}
-
-func (s *recordingWorkspaceLaunchStore) ClaimResourceBillingOperation(ctx context.Context, resourceType string, row map[string]any) (map[string]any, bool, error) {
-	if s.firstClaimStarted != nil {
-		s.firstClaim.Do(func() {
-			close(s.firstClaimStarted)
-			<-s.releaseFirstClaim
-		})
-	}
-	return s.memoryTableStore.ClaimResourceBillingOperation(ctx, resourceType, row)
-}
-
-func (s *recordingWorkspaceLaunchStore) SaveRuntimeOperation(ctx context.Context, row map[string]any) error {
-	if err := s.memoryTableStore.SaveRuntimeOperation(ctx, row); err != nil {
-		return err
-	}
-	if stringValue(row["action"]) == "workspace.launch" {
-		operation, err := decodeWorkspaceLaunchOperation(row)
-		if err == nil {
-			s.launchSaves = append(s.launchSaves, operation)
-		}
-	}
-	return nil
 }
 
 type workspaceLaunchLedger struct {

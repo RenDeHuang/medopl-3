@@ -86,7 +86,7 @@ import type {
   CreateGatewayKeyRequest,
   GatewayAccountUsageSummaryDTO,
   GatewayEndpointDTO,
-  GatewayKeyReveal,
+  GatewayKeySecretDTO,
   GatewayKeyPageDTO,
   GatewayKeySummaryDTO,
   GatewayKeyUsagePageDTO,
@@ -112,7 +112,7 @@ import type {
   WorkspaceLaunchRequest,
   WorkspaceLaunchResponse,
   WorkspaceListData,
-  WorkspaceRuntimeStatus,
+  WorkspaceRuntimeDTO,
   WorkspacePricePreview
 } from "./api/dtos.ts";
 import {
@@ -141,7 +141,7 @@ const session = ref<AuthSession | null>(null);
 const authStatus = ref(needsSession(path.value) ? "checking" : "public");
 const authError = ref("");
 const workspaceSource = ref<SourceEnvelope<WorkspaceListData> | null>(null);
-const workspaceStatusSource = ref<SourceEnvelope<WorkspaceRuntimeStatus> | null>(null);
+const workspaceStatusSource = ref<SourceEnvelope<WorkspaceRuntimeDTO> | null>(null);
 const filesSource: SourceEnvelope<WorkspaceFilePageDTO> = { source: "runtime", status: "unavailable", available: false, fetchedAt: "" };
 const filesystemSource: SourceEnvelope<WorkspaceFilesystemUsageDTO> = { source: "runtime", status: "unavailable", available: false, fetchedAt: "" };
 const endpointSource = ref<SourceEnvelope<GatewayEndpointDTO> | null>(null);
@@ -166,7 +166,7 @@ const walletAdjustmentOperation = ref<WalletAdjustmentOperationDTO | null>(null)
 const operatorWorkspaceDetailSource = ref<SourceEnvelope<OperatorWorkspaceDTO> | null>(null);
 const selectedOperatorWorkspaceId = ref("");
 const launchOperation = ref<WorkspaceLaunchResponse | null>(null);
-const revealedApiKey = ref<GatewayKeyReveal | null>(null);
+const revealedApiKey = ref<GatewayKeySecretDTO | null>(null);
 const revealedWorkspaceCredentials = ref<WorkspaceCredentialAccess | null>(null);
 const gatewayPageNumber = reactive({ page: 1, pages: 0, total: 0, pageSize: 20 });
 const operatorAccountPage = ref(1);
@@ -512,14 +512,14 @@ async function loadWorkspaceStatus() {
   }
   loading.runtime = true;
   resetSource("runtime");
-  workspaceStatusSource.value = unavailableSource<WorkspaceRuntimeStatus>("fabric");
+  workspaceStatusSource.value = unavailableSource<WorkspaceRuntimeDTO>("fabric");
   try {
-    const result = await getWorkspaceRuntimeStatus({ workspaceId: current.id }, session.value?.csrfToken || "");
+    const result = await getWorkspaceRuntimeStatus(current.id);
     if (!requestStillCurrent()) return;
     workspaceStatusSource.value = result;
   } catch (error) {
     if (!requestStillCurrent()) return;
-    workspaceStatusSource.value = unavailableSource<WorkspaceRuntimeStatus>("fabric");
+    workspaceStatusSource.value = unavailableSource<WorkspaceRuntimeDTO>("fabric");
     errors.runtime = friendlyError(error);
   } finally { if (requestStillCurrent()) loading.runtime = false; }
 }

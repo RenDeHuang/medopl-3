@@ -147,51 +147,6 @@ func registerAdminRoutes(mux *http.ServeMux, app *controlPlaneServer, service *c
 		}
 		writeJSON(w, http.StatusOK, result)
 	}))
-	mux.HandleFunc("POST /api/users", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
-		input := decodeJSON(r)
-		body, err := app.createUser(r.Context(), service, input)
-		if err != nil {
-			writeCreateUserError(w, err)
-			return
-		}
-		if err := app.appendAuditEvent(r, "user.create", "user", stringValue(body["id"]), stringValue(body["accountId"]), nil, body, "succeeded"); err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		writeJSON(w, http.StatusCreated, body)
-	}))
-	mux.HandleFunc("POST /api/users/disable", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
-		input := decodeJSON(r)
-		withOperatorUserID(input, app.sessionUserID(r))
-		body, err := app.disableUser(input)
-		if err != nil {
-			writeUserLifecycleError(w, err)
-			return
-		}
-		if err := app.appendAuditEvent(r, "user.disable", "user", stringValue(body["id"]), stringValue(body["accountId"]), nil, body, "succeeded"); err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		writeJSON(w, http.StatusOK, body)
-	}))
-	mux.HandleFunc("POST /api/users/delete", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
-		input := decodeJSON(r)
-		if !confirmed(input, "confirm") {
-			writeError(w, http.StatusBadRequest, "confirmation_required")
-			return
-		}
-		withOperatorUserID(input, app.sessionUserID(r))
-		body, err := app.softDeleteUser(input)
-		if err != nil {
-			writeUserLifecycleError(w, err)
-			return
-		}
-		if err := app.appendAuditEvent(r, "user.delete", "user", stringValue(body["id"]), stringValue(body["accountId"]), nil, body, "succeeded"); err != nil {
-			writeError(w, http.StatusInternalServerError, "state_persist_failed")
-			return
-		}
-		writeJSON(w, http.StatusOK, body)
-	}))
 	mux.HandleFunc("GET /api/operator/archive", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		result, err := app.archiveState(r.Context())
 		if err != nil {

@@ -50,10 +50,10 @@ func TestVaultMissRequiresLoginAndClearsSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	operator := operatorSessionForTest(t, server)
-	created := requestWithSession(t, server, operator, http.MethodPost, "/api/users", `{"email":"vault-miss@example.com","accountId":"acct-vault-miss","password":"CorrectHorseBatteryStaple!"}`)
-	if created.Code != http.StatusCreated {
-		t.Fatalf("create status=%d body=%s", created.Code, created.Body.String())
+	if _, err := createIdentityUser(server, map[string]any{
+		"email": "vault-miss@example.com", "accountId": "acct-vault-miss", "password": "CorrectHorseBatteryStaple!",
+	}); err != nil {
+		t.Fatal(err)
 	}
 	login := loginForTest(t, server, "vault-miss@example.com", "CorrectHorseBatteryStaple!")
 	cookie := login.Result().Cookies()[0]
@@ -80,8 +80,11 @@ func TestVaultMissRequiresLoginAndClearsSession(t *testing.T) {
 
 func TestDelegatedCredentialNeverPersistsOrLeaks(t *testing.T) {
 	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
-	operator := operatorSessionForTest(t, server)
-	requestWithSession(t, server, operator, http.MethodPost, "/api/users", `{"email":"delegated@example.com","accountId":"acct-delegated","password":"CorrectHorseBatteryStaple!"}`)
+	if _, err := createIdentityUser(server, map[string]any{
+		"email": "delegated@example.com", "accountId": "acct-delegated", "password": "CorrectHorseBatteryStaple!",
+	}); err != nil {
+		t.Fatal(err)
+	}
 	login := loginForTest(t, server, "delegated@example.com", "CorrectHorseBatteryStaple!")
 	cookie := login.Result().Cookies()[0]
 	app := server.(*controlPlaneHTTPHandler).app
@@ -164,26 +167,23 @@ func TestSessionCredentialSaveFailureRollsBackVault(t *testing.T) {
 	}
 }
 
-func TestSessionCredentialLifecycleRevokesVault(t *testing.T) {
-	for _, action := range []string{"disable", "delete"} {
-		t.Run(action, func(t *testing.T) {
-			server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
-			operator := operatorSessionForTest(t, server)
-			created := createResourceWithSession(t, server, operator, http.MethodPost, "/api/users", `{"email":"lifecycle-`+action+`@example.com","accountId":"acct-lifecycle-`+action+`","password":"CorrectHorseBatteryStaple!"}`)
-			login := loginForTest(t, server, "lifecycle-"+action+"@example.com", "CorrectHorseBatteryStaple!")
-			app := server.(*controlPlaneHTTPHandler).app
-			key := sessionLookupKey(login.Result().Cookies()[0].Value)
-			body := `{"userId":"` + stringValue(created["id"]) + `"}`
-			if action == "delete" {
-				body = `{"userId":"` + stringValue(created["id"]) + `","confirm":true}`
-			}
-			response := requestWithSession(t, server, operator, http.MethodPost, "/api/users/"+action, body)
-			if response.Code != http.StatusOK {
-				t.Fatalf("%s status=%d body=%s", action, response.Code, response.Body.String())
-			}
-			if _, ok := app.sessionCredentials.Get(key); ok {
-				t.Fatalf("%s retained delegated credential", action)
-			}
-		})
+func TestAccountDisableRevokesSessionCredential(t *testing.T) {
+	server := NewServer(newTestService(fakeLedgerClient{}, &fakeFabricClient{}))
+	operator := operatorSessionForTest(t, server)
+	const accountID = "acct-lifecycle-disable"
+	if _, err := createIdentityUser(server, map[string]any{
+		"email": "lifecycle-disable@example.com", "accountId": accountID, "password": "CorrectHorseBatteryStaple!",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	login := loginForTest(t, server, "lifecycle-disable@example.com", "CorrectHorseBatteryStaple!")
+	app := server.(*controlPlaneHTTPHandler).app
+	key := sessionLookupKey(login.Result().Cookies()[0].Value)
+	response := requestWithMutationKeyForTest(t, server, operator, http.MethodPost, "/api/operator/accounts/"+accountID+"/disable", `{"confirmationAccountId":"`+accountID+`","reason":"pilot_offboarding"}`, "disable-vault-account")
+	if response.Code != http.StatusOK {
+		t.Fatalf("disable status=%d body=%s", response.Code, response.Body.String())
+	}
+	if _, ok := app.sessionCredentials.Get(key); ok {
+		t.Fatal("disable retained delegated credential")
 	}
 }

@@ -40,12 +40,6 @@ type workspaceCreateOperationResult struct {
 	AcceptedBillingState map[string]any             `json:"acceptedBillingState,omitempty"`
 }
 
-type workspaceGatewaySecretOperationResult struct {
-	RequestHash string `json:"requestHash"`
-	SecretRef   string `json:"secretRef"`
-	Fingerprint string `json:"fingerprint"`
-}
-
 type announcementMutation struct {
 	AnnouncementID  string
 	Create          bool
@@ -181,19 +175,6 @@ func workspaceCreateClaimCompatible(current, claim workspaceCreateOperationResul
 		persistedBillingState != nil && claimBillingState != nil &&
 		workspaceCreateProjectionCompatible(persisted, current.Workspace, claimBillingState, true) &&
 		workspaceCreateProjectionCompatible(persisted, claim.Workspace, claimBillingState, true)
-}
-
-func decodeWorkspaceGatewaySecretOperation(operation map[string]any) (workspaceGatewaySecretOperationResult, error) {
-	var result workspaceGatewaySecretOperationResult
-	if err := json.Unmarshal([]byte(stringValue(operation["result"])), &result); err != nil || result.RequestHash == "" || result.SecretRef == "" || result.Fingerprint == "" {
-		return workspaceGatewaySecretOperationResult{}, errors.New("invalid_workspace_gateway_secret_operation")
-	}
-	return result, nil
-}
-
-func encodeWorkspaceGatewaySecretOperation(result workspaceGatewaySecretOperationResult) string {
-	payload, _ := json.Marshal(result)
-	return string(payload)
 }
 
 func decodeWorkspaceResumeOperation(operation map[string]any) (workspaceResumeOperationResult, error) {

@@ -169,7 +169,7 @@ export interface RuntimeAccessSummary {
   credentialVersion?: string;
 }
 
-export interface WorkspaceRuntimeStatus {
+export interface WorkspaceRuntimeDTO {
   workspaceId: string;
   status: "running" | "unready" | "not_found" | "destroyed";
   ready: boolean;
@@ -178,12 +178,6 @@ export interface WorkspaceRuntimeStatus {
   url?: string;
   serviceName?: string;
   access?: RuntimeAccessSummary;
-}
-
-export type WorkspaceRuntimeDTO = WorkspaceRuntimeStatus;
-
-export interface WorkspaceRuntimeRequest {
-  workspaceId: string;
 }
 
 export interface RuntimeCredentialAccess {
@@ -340,14 +334,12 @@ export interface GatewayKeysData {
   total: number;
 }
 
-export interface GatewayKeyReveal {
+export interface GatewayKeySecretDTO {
   id: string;
   name: string;
   status: "active" | "disabled";
   value: string;
 }
-
-export type GatewayKeySecretDTO = GatewayKeyReveal;
 
 export interface GatewayUsageItem {
   apiKeyId: string;
@@ -363,7 +355,7 @@ export interface GatewayUsageItem {
   actualCostUsdMicros: number;
 }
 
-export interface GatewayUsageData {
+export interface GatewayKeyUsagePageDTO {
   items: GatewayUsageItem[];
   total: number;
   page: number;
@@ -371,7 +363,7 @@ export interface GatewayUsageData {
   pages: number;
 }
 
-export interface GatewayUsageStats {
+export interface GatewayUsageSummaryDTO {
   totalRequests: number;
   totalInputTokens: number;
   totalOutputTokens: number;
@@ -379,9 +371,7 @@ export interface GatewayUsageStats {
   totalActualCostUsdMicros: number;
 }
 
-export type GatewayKeyUsagePageDTO = GatewayUsageData;
-export type GatewayUsageSummaryDTO = GatewayUsageStats;
-export type GatewayAccountUsageSummaryDTO = GatewayUsageStats;
+export type GatewayAccountUsageSummaryDTO = GatewayUsageSummaryDTO;
 
 export interface BalanceHistoryEntry {
   type: string;
@@ -503,14 +493,6 @@ export interface OperatorAccountCommandDTO extends OperationStatusDTO {
   accountId: string;
 }
 
-export interface CreateCustomerUserRequest {
-  email: string;
-  password: string;
-  name?: string;
-  accountId: string;
-  role: "owner";
-}
-
 export interface ResourceFact {
   id: string;
   accountId?: string;
@@ -620,12 +602,6 @@ export interface ManagementState {
   computeAllocations: ResourceFact[];
   storageVolumes: ResourceFact[];
   storageAttachments: ResourceFact[];
-}
-
-export interface OperatorSummary {
-  failedOperations: ResourceFact[];
-  resourceAnomalies: ResourceFact[];
-  notifications?: { total?: number };
 }
 
 export interface OperatorOverviewDTO {

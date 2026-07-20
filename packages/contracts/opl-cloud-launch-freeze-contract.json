@@ -193,7 +193,7 @@
     "gatewaySecretPersistence": "Kubernetes Secret only",
     "globalGatewayKeyForbidden": true,
     "authenticationMode": "runtime_password",
-    "statusApi": "POST /api/workspaces/runtime-status",
+    "statusApi": "GET /api/workspaces/{workspaceId}/runtime-status",
     "statusContainsPassword": false,
     "runtimeRequestIdentityBinding": "not_in_pilot_requires_sso",
     "credentialCommands": {

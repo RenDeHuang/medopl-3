@@ -36,8 +36,11 @@ func newWorkspaceRenewalAPIFixtureWithStore(t *testing.T, store StateStore) work
 	}
 	handler := server.(*controlPlaneHTTPHandler)
 	owner := tenantOwnerSessionForTest(t, server)
-	attachment := createWorkspaceAttachmentForTest(t, handler.next, owner, "workspace-renewal-api")
-	workspace := createResourceWithMutationKeyForTest(t, handler.next, owner, http.MethodPost, "/api/workspaces", `{"attachmentId":"`+stringValue(attachment["id"])+`"}`, "workspace-renewal-api-workspace")
+	ownerID := sessionUserIDForTest(t, server, owner)
+	workspace := canonicalWorkspaceRenewalRow(false)
+	workspace["id"], workspace["accountId"], workspace["ownerAccountId"], workspace["ownerUserId"] = "workspace-renewal-api", "acct-alpha", "acct-alpha", ownerID
+	workspace["state"], workspace["status"] = "running", "running"
+	mustStore(t, handler.app.tables.SaveWorkspace(context.Background(), workspace))
 	return workspaceRenewalAPIFixture{server: server, app: handler.app, owner: owner, workspace: workspace}
 }
 

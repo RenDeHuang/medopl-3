@@ -34,7 +34,7 @@ test("customer views use granular V2 source projections and the one Workspace la
     "/api/billing/receipts?", "/api/announcements"
   ]) assert.ok(readApi.includes(route), `${route} adapter is required`);
   assert.match(workspaceApi, /\/api\/workspace-launches/);
-  assert.match(workspaceApi, /\/api\/workspaces\/runtime-status/);
+  assert.match(workspaceApi, /\/api\/workspaces\/\$\{encodeURIComponent\(workspaceId\)\}\/runtime-status/);
   assert.doesNotMatch(readApi, /\/api\/gateway\/summary|reveal=true/);
   assert.doesNotMatch(app, /\bgetGatewayUsage\(|\bgetGatewayUsageStats\(/);
   assert.doesNotMatch(app, /createComputeAllocation|createStorageVolume|attachStorage|buyCompute|buyStorage|mountStorage/);

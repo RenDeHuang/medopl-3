@@ -56,31 +56,6 @@ export function deleteJson<T>(path: string, csrfToken = "", idempotencyKey = "")
   return writeJson<T>("DELETE", path, {}, csrfToken, idempotencyKey);
 }
 
-export const api = postJson;
-
-export function operationEnvelope(payload: unknown = {}, defaults: JsonObject = {}) {
-  const object = asObject(payload);
-  const resourceId = String(object.id || object.workspaceId || object.resourceId || defaults.resourceId || "");
-  const failureReason = object.safeMessage || object.failureReason || object.error
-    ? customerSafeMessage(object)
-    : "";
-  return {
-    ok: !failureReason,
-    status: failureReason ? "failed" : String(defaults.status || object.operationStatus || "completed"),
-    operationId: String(object.operationId || defaults.operationId || ""),
-    resourceId,
-    failureReason,
-    costImpact: {
-      monthlyPriceCnyCents: object.monthlyPriceCnyCents,
-      chargeUsdMicros: object.chargeUsdMicros,
-      paidThrough: object.paidThrough,
-      autoRenew: object.autoRenew
-    },
-    next: defaults.next || {},
-    ...object
-  };
-}
-
 export async function getJson<T>(path: string, { signal }: { signal?: AbortSignal } = {}): Promise<T> {
   const timeout = AbortSignal.timeout(10_000);
   const requestSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;

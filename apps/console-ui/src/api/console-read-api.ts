@@ -7,15 +7,12 @@ import type {
   BillingReceipt,
   BillingReceiptPage,
   CreateGatewayKeyRequest,
-  CreateCustomerUserRequest,
   GatewayAccountUsageSummaryDTO,
   GatewayEndpointDTO,
   GatewayKeyPageDTO,
-  GatewayKeyReveal,
+  GatewayKeySecretDTO,
   GatewayKeySummaryDTO,
   GatewayKeyUsagePageDTO,
-  GatewayUsageData,
-  GatewayUsageStats,
   GatewayUsageSummaryDTO,
   GatewayWallet,
   ManagementState,
@@ -35,7 +32,6 @@ import type {
   WalletAdjustmentRequest,
   OperatorAccountsData,
   OperationStatusDTO,
-  OperatorSummary,
   PricingCatalogResponse,
   PricingPreviewRequest,
   PricingPreviewResponse,
@@ -121,22 +117,12 @@ export function deleteGatewayKey(keyId: string, csrfToken: string, idempotencyKe
   return sourceDelete<OperationStatusDTO>(`/api/gateway/keys/${encodeURIComponent(keyId)}`, csrfToken, idempotencyKey);
 }
 
-export function getGatewayUsage(page = 1, pageSize = 20, signal?: AbortSignal): Promise<SourceEnvelope<GatewayUsageData>> {
-  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
-  return sourceGet<GatewayUsageData>(`/api/gateway/usage?${params}`, signal);
-}
-
-export function getGatewayUsageStats(period = "month", signal?: AbortSignal): Promise<SourceEnvelope<GatewayUsageStats>> {
-  return sourceGet<GatewayUsageStats>(`/api/gateway/usage/stats?${new URLSearchParams({ period })}`, signal);
-}
-
 export function getGatewayBalanceHistory(signal?: AbortSignal): Promise<SourceEnvelope<BalanceHistoryData>> {
   return sourceGet<BalanceHistoryData>("/api/gateway/balance-history", signal);
 }
 
-export function revealGatewayKey(keyIdOrCsrf: string, csrfToken?: string): Promise<SourceEnvelope<GatewayKeyReveal>> {
-  const legacy = csrfToken === undefined;
-  return sourcePost<GatewayKeyReveal>(legacy ? "/api/gateway/keys/opl-workspace/reveal" : `/api/gateway/keys/${encodeURIComponent(keyIdOrCsrf)}/reveal`, {}, legacy ? keyIdOrCsrf : csrfToken);
+export function revealGatewayKey(keyId: string, csrfToken: string): Promise<SourceEnvelope<GatewayKeySecretDTO>> {
+  return sourcePost<GatewayKeySecretDTO>(`/api/gateway/keys/${encodeURIComponent(keyId)}/reveal`, {}, csrfToken);
 }
 
 export function getGatewayKeyUsage(keyId: string, page = 1, pageSize = 20, signal?: AbortSignal): Promise<SourceEnvelope<GatewayKeyUsagePageDTO>> {
@@ -254,18 +240,10 @@ export function getManagementState(): Promise<ManagementState> {
   return getJson<unknown>("/api/management/state").then(decodeDto<ManagementState>);
 }
 
-export function getOperatorSummary(): Promise<OperatorSummary> {
-  return getJson<unknown>("/api/operator/summary").then(decodeDto<OperatorSummary>);
-}
-
 export function getRuntimeReadiness(): Promise<ReadinessFact> {
   return getJson<unknown>("/api/runtime/readiness").then(decodeDto<ReadinessFact>);
 }
 
 export function getProductionReadiness(): Promise<ReadinessFact> {
   return getJson<unknown>("/api/production/readiness").then(decodeDto<ReadinessFact>);
-}
-
-export function createUser(input: CreateCustomerUserRequest, csrfToken: string): Promise<unknown> {
-  return postJson<unknown>("/api/users", input, csrfToken);
 }

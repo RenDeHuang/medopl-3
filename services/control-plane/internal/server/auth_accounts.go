@@ -155,53 +155,6 @@ func (app *controlPlaneServer) disableUser(input map[string]any) (map[string]any
 	return sanitizeUser(user), nil
 }
 
-func (app *controlPlaneServer) softDeleteUser(input map[string]any) (map[string]any, error) {
-	id := stringField(input, "userId", "")
-	user, err := app.findUserByID(context.Background(), id)
-	if err != nil {
-		return nil, err
-	}
-	if user == nil {
-		return nil, errUserNotFound
-	}
-	accountID := stringValue(user["accountId"])
-	unlock := app.lockResource("account", accountID)
-	defer unlock()
-	user, err = app.findUserByID(context.Background(), id)
-	if err != nil {
-		return nil, err
-	}
-	if user == nil {
-		return nil, errUserNotFound
-	}
-	if stringValue(user["accountId"]) != accountID {
-		return nil, errAccountIdentityConflict
-	}
-	sessionKeys, err := app.sessionKeysForUser(context.Background(), id)
-	if err != nil {
-		return nil, err
-	}
-	if stringValue(user["status"]) == "deleted" {
-		if err := app.tables.ApplyUserLifecycle(context.Background(), user); err != nil {
-			return nil, err
-		}
-		app.sessionCredentials.Delete(sessionKeys...)
-		return sanitizeUser(user), nil
-	}
-	if isOperatorUser(user) && stringValue(user["status"]) == "active" {
-		return nil, errLastActiveAdmin
-	}
-	user["status"] = "deleted"
-	user["deletedAt"] = time.Now().UTC().Format(time.RFC3339)
-	user["deletedBy"] = firstNonEmpty(stringField(input, "operatorUserId", ""), stringField(input, "deletedBy", ""), "usr-admin")
-	user["deleteReason"] = stringField(input, "reason", "admin_deleted")
-	if err := app.tables.ApplyUserLifecycle(context.Background(), user); err != nil {
-		return nil, err
-	}
-	app.sessionCredentials.Delete(sessionKeys...)
-	return sanitizeUser(user), nil
-}
-
 func (app *controlPlaneServer) importBootstrapUsers() error {
 	users, err := bootstrapUsersFromEnv()
 	if err != nil {

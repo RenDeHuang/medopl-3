@@ -20,6 +20,7 @@ type sourceTruthGatewayClient struct {
 	balanceErr error
 	keys       []clients.Sub2APIWorkspaceKey
 	keysErr    error
+	userKeyErr error
 	keyUserIDs []int64
 }
 
@@ -45,6 +46,10 @@ func (c *sourceTruthGatewayClient) UserKeys(ctx context.Context, credential clie
 func (c *sourceTruthGatewayClient) UserKey(_ context.Context, credential clients.SessionDelegatedCredential, userID, keyID int64) (clients.Sub2APIWorkspaceKey, error) {
 	if credential.Bearer != "test-user-delegated-token" {
 		return clients.Sub2APIWorkspaceKey{}, errors.New("wrong delegated credential")
+	}
+	c.keyUserIDs = append(c.keyUserIDs, userID)
+	if c.userKeyErr != nil {
+		return clients.Sub2APIWorkspaceKey{}, c.userKeyErr
 	}
 	for _, key := range c.keys {
 		if key.ID == keyID && key.UserID == userID {
@@ -146,7 +151,7 @@ func TestGatewaySourceTruthRoutesUseSessionIdentityAndStrictEnvelopes(t *testing
 		t.Fatalf("active key = %#v", activeKey)
 	}
 
-	usage := requestWithSession(t, server, session, http.MethodGet, "/api/gateway/usage"+spoofed+"&page=1&pageSize=50", "")
+	usage := requestWithSession(t, server, session, http.MethodGet, "/api/gateway/keys/9/usage"+spoofed+"&page=1&pageSize=50", "")
 	if usage.Code != http.StatusOK {
 		t.Fatalf("usage = %d: %s", usage.Code, usage.Body.String())
 	}
@@ -156,7 +161,7 @@ func TestGatewaySourceTruthRoutesUseSessionIdentityAndStrictEnvelopes(t *testing
 		t.Fatalf("usage envelope = %#v", usageEnvelope)
 	}
 
-	stats := requestWithSession(t, server, session, http.MethodGet, "/api/gateway/usage/stats"+spoofed+"&period=month", "")
+	stats := requestWithSession(t, server, session, http.MethodGet, "/api/gateway/keys/9/usage-summary"+spoofed+"&period=month", "")
 	if stats.Code != http.StatusOK {
 		t.Fatalf("stats = %d: %s", stats.Code, stats.Body.String())
 	}
@@ -175,7 +180,7 @@ func TestGatewaySourceTruthRoutesUseSessionIdentityAndStrictEnvelopes(t *testing
 		t.Fatalf("history envelope = %#v", historyEnvelope)
 	}
 
-	if len(client.keyUserIDs) != 1 || client.keyUserIDs[0] != 41 || base.usageQuery.UserID != 41 || base.usageQuery.APIKeyID != 9 || base.statsQuery.UserID != 41 || base.statsQuery.APIKeyID != 9 || len(base.historyIDs) != 1 || base.historyIDs[0] != 41 {
+	if len(client.keyUserIDs) != 3 || client.keyUserIDs[0] != 41 || client.keyUserIDs[1] != 41 || client.keyUserIDs[2] != 41 || base.usageQuery.UserID != 41 || base.usageQuery.APIKeyID != 9 || base.statsQuery.UserID != 41 || base.statsQuery.APIKeyID != 9 || len(base.historyIDs) != 1 || base.historyIDs[0] != 41 {
 		t.Fatalf("session identity was not authoritative: keys=%#v usage=%#v stats=%#v history=%#v", client.keyUserIDs, base.usageQuery, base.statsQuery, base.historyIDs)
 	}
 }
@@ -189,10 +194,23 @@ func TestGatewaySourceTruthEmptyAndUnavailableAreNotFabricated(t *testing.T) {
 		}}
 	}
 
-	for _, path := range []string{"/api/gateway/keys", "/api/gateway/usage", "/api/gateway/balance-history"} {
-		t.Run("empty "+path, func(t *testing.T) {
-			server, session := newGatewayOwnerTestServer(t, baseClient(), nil)
-			response := requestWithSession(t, server, session, http.MethodGet, path, "")
+	for _, tc := range []struct {
+		path   string
+		mutate func(*sourceTruthGatewayClient)
+	}{
+		{path: "/api/gateway/keys"},
+		{path: "/api/gateway/keys/9/usage", mutate: func(c *sourceTruthGatewayClient) {
+			c.keys = []clients.Sub2APIWorkspaceKey{{ID: 9, UserID: 41, Name: "general", Status: "active"}}
+		}},
+		{path: "/api/gateway/balance-history"},
+	} {
+		t.Run("empty "+tc.path, func(t *testing.T) {
+			client := baseClient()
+			if tc.mutate != nil {
+				tc.mutate(client)
+			}
+			server, session := newGatewayOwnerTestServer(t, client, nil)
+			response := requestWithSession(t, server, session, http.MethodGet, tc.path, "")
 			if response.Code != http.StatusOK {
 				t.Fatalf("empty status = %d: %s", response.Code, response.Body.String())
 			}
@@ -209,9 +227,18 @@ func TestGatewaySourceTruthEmptyAndUnavailableAreNotFabricated(t *testing.T) {
 	}{
 		{name: "wallet", path: "/api/gateway/wallet", mutate: func(c *sourceTruthGatewayClient) { c.balanceErr = errors.New("wallet unavailable") }},
 		{name: "keys", path: "/api/gateway/keys", mutate: func(c *sourceTruthGatewayClient) { c.keysErr = errors.New("keys unavailable") }},
-		{name: "usage", path: "/api/gateway/usage", mutate: func(c *sourceTruthGatewayClient) { c.usageErr = errors.New("usage unavailable") }},
-		{name: "usage pagination", path: "/api/gateway/usage", mutate: func(c *sourceTruthGatewayClient) { c.usageErr = errors.New("invalid sub2api usage pagination") }},
-		{name: "stats", path: "/api/gateway/usage/stats", mutate: func(c *sourceTruthGatewayClient) { c.statsErr = errors.New("stats unavailable") }},
+		{name: "usage", path: "/api/gateway/keys/9/usage", mutate: func(c *sourceTruthGatewayClient) {
+			c.keys = []clients.Sub2APIWorkspaceKey{{ID: 9, UserID: 41, Name: "general", Status: "active"}}
+			c.usageErr = errors.New("usage unavailable")
+		}},
+		{name: "usage pagination", path: "/api/gateway/keys/9/usage", mutate: func(c *sourceTruthGatewayClient) {
+			c.keys = []clients.Sub2APIWorkspaceKey{{ID: 9, UserID: 41, Name: "general", Status: "active"}}
+			c.usageErr = errors.New("invalid sub2api usage pagination")
+		}},
+		{name: "stats", path: "/api/gateway/keys/9/usage-summary", mutate: func(c *sourceTruthGatewayClient) {
+			c.keys = []clients.Sub2APIWorkspaceKey{{ID: 9, UserID: 41, Name: "general", Status: "active"}}
+			c.statsErr = errors.New("stats unavailable")
+		}},
 		{name: "history", path: "/api/gateway/balance-history", mutate: func(c *sourceTruthGatewayClient) { c.historyErr = errors.New("history unavailable") }},
 	} {
 		t.Run("unavailable "+tc.name, func(t *testing.T) {
@@ -237,11 +264,12 @@ func TestGatewaySourceTruthEmptyAndUnavailableAreNotFabricated(t *testing.T) {
 }
 
 func TestGatewayRevealIsStrictSub2APISource(t *testing.T) {
-	client := &testSub2APIClient{charges: map[string]int64{}, workspaceKey: clients.Sub2APIWorkspaceKey{
-		ID: 9, UserID: 41, Name: "opl-workspace", Key: "workspace-secret", Status: "active",
-	}}
+	client := &sourceTruthGatewayClient{
+		customerFactsSub2API: &customerFactsSub2API{testSub2APIClient: &testSub2APIClient{charges: map[string]int64{}}},
+		keys:                 []clients.Sub2APIWorkspaceKey{{ID: 9, UserID: 41, Name: "opl-workspace", Key: "workspace-secret", Status: "active"}},
+	}
 	server, session := newGatewayOwnerTestServer(t, client, nil)
-	response := requestWithSession(t, server, session, http.MethodPost, "/api/gateway/keys/opl-workspace/reveal?accountId=acct-other&sub2apiUserId=999", "{}")
+	response := requestWithSession(t, server, session, http.MethodPost, "/api/gateway/keys/9/reveal?accountId=acct-other&sub2apiUserId=999", "{}")
 	if response.Code != http.StatusOK {
 		t.Fatalf("reveal = %d: %s", response.Code, response.Body.String())
 	}
@@ -250,8 +278,8 @@ func TestGatewayRevealIsStrictSub2APISource(t *testing.T) {
 	if envelope["status"] != "available" || len(data) != 4 || data["id"] != "9" || data["name"] != "opl-workspace" || data["status"] != "active" || data["value"] != "workspace-secret" {
 		t.Fatalf("reveal envelope = %#v", envelope)
 	}
-	if response.Header().Get("Cache-Control") != "private, no-store" || len(client.workspaceKeyUserIDs) != 1 || client.workspaceKeyUserIDs[0] != 41 {
-		t.Fatalf("reveal boundary cache=%q users=%#v", response.Header().Get("Cache-Control"), client.workspaceKeyUserIDs)
+	if response.Header().Get("Cache-Control") != "private, no-store" || len(client.keyUserIDs) != 1 || client.keyUserIDs[0] != 41 {
+		t.Fatalf("reveal boundary cache=%q users=%#v", response.Header().Get("Cache-Control"), client.keyUserIDs)
 	}
 }
 

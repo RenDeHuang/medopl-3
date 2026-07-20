@@ -31,8 +31,9 @@ func NewServer(service *controlplane.Service) http.Handler {
 }
 
 type controlPlaneHTTPHandler struct {
-	app  *controlPlaneServer
-	next http.Handler
+	app     *controlPlaneServer
+	next    http.Handler
+	service *controlplane.Service
 }
 
 func (h *controlPlaneHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -79,27 +80,31 @@ func NewPersistentServerWithGatewayPublicBaseURL(service *controlplane.Service, 
 	registerWorkspaceLaunchRoutes(mux, app, service)
 	registerBillingRoutes(mux, app, service)
 	registerAnnouncementRoutes(mux, app)
-	registerResourceRoutes(mux, app, service)
 	registerSupportRoutes(mux, app)
 	registerAdminRoutes(mux, app, service)
 	registerProviderAcceptanceRoutes(mux, app, service)
 	registerExecutionRoutes(mux, app, service)
-	return &controlPlaneHTTPHandler{app: app, next: mux}, nil
+	return &controlPlaneHTTPHandler{app: app, next: mux, service: service}, nil
 }
 
 func retiredConsoleAPI(method, path string) bool {
-	if method == http.MethodPost {
-		switch path {
-		case "/api/compute-allocations", "/api/storage-volumes", "/api/storage-attachments", "/api/workspaces":
-			return true
-		}
+	if method == http.MethodPost && path == "/api/workspaces" {
+		return true
 	}
 	switch path {
-	case "/api/me", "/api/overview", "/api/gateway/summary", "/api/billing/summary":
+	case "/api/me", "/api/overview", "/api/gateway/summary", "/api/billing/summary",
+		"/api/gateway/usage", "/api/gateway/usage/stats", "/api/gateway/keys/opl-workspace/reveal",
+		"/api/workspaces/runtime-status", "/api/operator/summary":
 		return true
 	}
 	if path == "/api/workspace-backups" || strings.HasPrefix(path, "/api/workspace-backups/") || strings.HasPrefix(path, "/api/payment") || strings.HasPrefix(path, "/api/orders") ||
-		strings.HasPrefix(path, "/api/api-keys") || strings.HasPrefix(path, "/api/keys") {
+		strings.HasPrefix(path, "/api/api-keys") || strings.HasPrefix(path, "/api/keys") ||
+		strings.HasPrefix(path, "/api/users") || strings.HasPrefix(path, "/api/compute-allocations") ||
+		strings.HasPrefix(path, "/api/storage-volumes") || strings.HasPrefix(path, "/api/storage-attachments") ||
+		strings.HasPrefix(path, "/api/compute-pools") {
+		return true
+	}
+	if strings.HasPrefix(path, "/api/workspaces/") && strings.HasSuffix(path, "/gateway-secret/rotate") {
 		return true
 	}
 	if strings.HasPrefix(path, "/api/gateway/keys/") && path != "/api/gateway/keys/opl-workspace/reveal" && !currentGatewayKeyAPI(method, path) {

@@ -57,12 +57,12 @@ function resourceIds(result) {
   return ids;
 }
 
-async function gatewayUsageSnapshot(requestOptions, auth) {
+async function gatewayUsageSnapshot(requestOptions, auth, keyId) {
   const items = [];
   const ids = new Set();
   let expected;
   for (let page = 1; !expected || page <= expected.pages; page += 1) {
-    const envelope = sourceEnvelope(await requestJson({ ...requestOptions, auth, path: `/api/gateway/usage?page=${page}&pageSize=100` }), "sub2api", true);
+    const envelope = sourceEnvelope(await requestJson({ ...requestOptions, auth, path: `/api/gateway/keys/${encodeURIComponent(keyId)}/usage?page=${page}&pageSize=100` }), "sub2api", true);
     const payload = envelope.data;
     // ponytail: the dedicated QA key is capped at 10k rows; add a server-side snapshot endpoint if that ceiling is ever reached.
     if ((Number.isSafeInteger(payload?.total) && payload.total > MAX_USAGE_ITEMS) || (Number.isSafeInteger(payload?.pages) && payload.pages > MAX_USAGE_PAGES)) {
@@ -90,8 +90,8 @@ async function gatewayUsageSnapshot(requestOptions, auth) {
   return { total: expected.total, ids, items };
 }
 
-async function gatewayUsageStats(requestOptions, auth) {
-  const stats = sourceEnvelope(await requestJson({ ...requestOptions, auth, path: "/api/gateway/usage/stats?period=month" }), "sub2api").data;
+async function gatewayUsageStats(requestOptions, auth, keyId) {
+  const stats = sourceEnvelope(await requestJson({ ...requestOptions, auth, path: `/api/gateway/keys/${encodeURIComponent(keyId)}/usage-summary?period=month` }), "sub2api").data;
   for (const key of ["totalRequests", "totalInputTokens", "totalOutputTokens", "totalTokens", "totalActualCostUsdMicros"]) {
     if (!Number.isSafeInteger(stats?.[key]) || stats[key] < 0) throw new Error("gateway_usage_stats_invalid");
   }
@@ -283,9 +283,7 @@ export async function verifyProductionLiveQa(options = {}) {
   const runtime = sourceEnvelope(await requestJson({
     ...requestOptions,
     auth,
-    path: "/api/workspaces/runtime-status",
-    method: "POST",
-    body: { workspaceId: before.workspaceId }
+    path: `/api/workspaces/${encodeURIComponent(before.workspaceId)}/runtime-status`
   }), "fabric").data;
   if (Object.hasOwn(runtime?.access || {}, "password") || Object.hasOwn(runtime?.access || {}, "secretRef")) throw new Error("runtime_status_secret_forbidden");
   if (runtime?.ready !== true || runtime?.access?.credentialStatus !== "configured" || !runtime?.access?.username) {
@@ -307,8 +305,8 @@ export async function verifyProductionLiveQa(options = {}) {
 
   const walletBefore = walletFact(sourceEnvelope(await requestJson({ ...requestOptions, auth, path: "/api/gateway/wallet" }), "sub2api"), owner.sub2apiUserId);
   const keyBefore = dedicatedWorkspaceKey(sourceEnvelope(await requestJson({ ...requestOptions, auth, path: "/api/gateway/keys" }), "sub2api", true));
-  const usageBefore = await gatewayUsageSnapshot(requestOptions, auth);
-  const statsBefore = await gatewayUsageStats(requestOptions, auth);
+  const usageBefore = await gatewayUsageSnapshot(requestOptions, auth, keyBefore.id);
+  const statsBefore = await gatewayUsageStats(requestOptions, auth, keyBefore.id);
   const workspace = await verifyWorkspaceBrowserQa({
     url: runtime.url || before.url,
     username: credentials.access.username,
@@ -329,10 +327,10 @@ export async function verifyProductionLiveQa(options = {}) {
   for (let attempt = 1; attempt <= usageAttempts; attempt += 1) {
     usageReadAttempts = attempt;
     dedicatedWorkspaceKey(sourceEnvelope(await requestJson({ ...requestOptions, auth, path: "/api/gateway/keys" }), "sub2api", true), keyBefore.id);
-    usageAfter = await gatewayUsageSnapshot(requestOptions, auth);
+    usageAfter = await gatewayUsageSnapshot(requestOptions, auth, keyBefore.id);
     requestUsage = exactUsageRecord(usageBefore, usageAfter, expectedModel, keyBefore.id);
     if (requestUsage) {
-      statsAfter = await gatewayUsageStats(requestOptions, auth);
+      statsAfter = await gatewayUsageStats(requestOptions, auth, keyBefore.id);
       walletAfter = walletFact(sourceEnvelope(await requestJson({ ...requestOptions, auth, path: "/api/gateway/wallet" }), "sub2api"), owner.sub2apiUserId);
       const statsMatch = statsMatchRequest(statsBefore, statsAfter, requestUsage);
       const balanceMatch = walletBefore.usdMicros - walletAfter.usdMicros === requestUsage.actualCostUsdMicros;

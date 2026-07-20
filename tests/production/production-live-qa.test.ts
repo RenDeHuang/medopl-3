@@ -261,14 +261,14 @@ function liveFixture({
       if (duplicateKey) keys.push({ ...keys[0], id: "10" });
       return source({ items: keys, total: keys.length });
     }
-    if (url.pathname === "/api/gateway/usage") {
+    if (url.pathname === "/api/gateway/keys/9/usage") {
       if (usageSnapshotTooLarge) return source({ items: [], total: 10_001, page: 1, pageSize: 100, pages: 101 });
       const items = usageItems();
       const page = Number(url.searchParams.get("page") || 1);
       const pageSize = Number(url.searchParams.get("pageSize") || 50);
       return source({ items: items.slice((page - 1) * pageSize, page * pageSize), total: items.length, page, pageSize, pages: items.length === 0 ? 0 : Math.ceil(items.length / pageSize) }, "sub2api", items.length === 0 ? "empty" : "available");
     }
-    if (url.pathname === "/api/gateway/usage/stats") {
+    if (url.pathname === "/api/gateway/keys/9/usage-summary") {
       const includeLive = state.modelRequests > 0 && !usageStuck && !statsStuck;
       const count = includeLive ? (ambiguousUsage ? 2 : 1) : 0;
       const baselineRequests = emptyUsageBaseline ? 0 : 1;
@@ -289,10 +289,9 @@ function liveFixture({
         type: "workspace.created", status: "completed", workspaceId: "workspace-slot-1", createdAt: periodStart
       }, "ledger");
     }
-    if (url.pathname === "/api/workspaces/runtime-status") {
-      assert.equal(method, "POST");
-      assert.equal(headers.get("x-opl-csrf"), "csrf-alpha");
-      assert.deepEqual(JSON.parse(init.body), { workspaceId: "workspace-slot-1" });
+    if (url.pathname === "/api/workspaces/workspace-slot-1/runtime-status") {
+      assert.equal(method, "GET");
+      assert.equal(init.body, undefined);
       return source({
         ready: true,
         url: "https://workspace.medopl.cn/w/workspace-slot-1/",
@@ -364,6 +363,10 @@ test("rollout QA proves Workspace login, WebSocket frames, one model response, u
   assert.equal(fixture.calls.some((call) => call.path === "/api/billing/receipts/receipt-current-1"), true);
   assert.equal(fixture.calls.some((call) => call.path === "/api/billing/receipts"), false);
   assert.equal(fixture.calls.some((call) => call.path === "/api/gateway/summary" || /^\/api\/workspaces\/[^/]+\/receipt$/.test(call.path)), false);
+  assert.equal(fixture.calls.some((call) => call.path === "/api/gateway/usage" || call.path === "/api/gateway/usage/stats" || call.path === "/api/workspaces/runtime-status"), false);
+  assert.equal(fixture.calls.some((call) => call.path === "/api/gateway/keys/9/usage"), true);
+  assert.equal(fixture.calls.some((call) => call.path === "/api/gateway/keys/9/usage-summary"), true);
+  assert.equal(fixture.calls.some((call) => call.path === "/api/workspaces/workspace-slot-1/runtime-status"), true);
   assert.equal(fixture.calls.some((call) => /create|destroy|detach|renew/i.test(call.path)), false);
   assert.equal(fixture.calls.every((call) => call.signal instanceof AbortSignal), true);
 });

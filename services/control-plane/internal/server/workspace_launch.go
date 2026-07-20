@@ -43,16 +43,12 @@ type workspaceLaunchOperation struct {
 	StorageGB                  int            `json:"sizeGb"`
 	AutoRenew                  bool           `json:"autoRenew"`
 	PriceVersion               string         `json:"priceVersion"`
-	PricingVersion             string         `json:"pricingVersion,omitempty"`
-	TotalMonthlyPriceCNYCents  int64          `json:"totalMonthlyPriceCnyCents,omitempty"`
 	TotalChargeUSDMicros       int64          `json:"totalChargeUsdMicros"`
 	PeriodStart                string         `json:"periodStart,omitempty"`
 	PaidThrough                string         `json:"paidThrough,omitempty"`
 	BillingAnchorDay           int            `json:"billingAnchorDay,omitempty"`
 	ComputeID                  string         `json:"computeAllocationId"`
-	ComputeBillingOperationID  string         `json:"computeBillingOperationId"`
 	StorageID                  string         `json:"storageId"`
-	StorageBillingOperationID  string         `json:"storageBillingOperationId"`
 	AttachmentID               string         `json:"attachmentId,omitempty"`
 	AttachmentOperationID      string         `json:"attachmentOperationId"`
 	WorkspaceOperationID       string         `json:"workspaceOperationId"`
@@ -573,200 +569,6 @@ func workspaceProjectionFromLaunch(operation workspaceLaunchOperation) domain.Wo
 	}
 }
 
-func (app *controlPlaneServer) runLegacyWorkspaceLaunch(ctx context.Context, service *controlplane.Service, operationID string) error {
-	operation, ok, err := app.workspaceLaunchOperation(ctx, operationID)
-	if err != nil || !ok || terminalWorkspaceLaunchStatus(operation.Status) {
-		return err
-	}
-	unlock := app.lockResource("workspace-launch", operation.AccountID)
-	defer unlock()
-	operation, ok, err = app.workspaceLaunchOperation(ctx, operationID)
-	if err != nil || !ok || terminalWorkspaceLaunchStatus(operation.Status) {
-		return err
-	}
-	unlockAccount := app.lockResource("account", operation.AccountID)
-	defer unlockAccount()
-	owner, err := app.findUserByID(ctx, operation.OwnerUserID)
-	if err != nil {
-		return err
-	}
-	ownerActive := owner != nil && stringValue(owner["accountId"]) == operation.AccountID
-	if ownerActive {
-		ownerActive, err = app.hasActiveCustomerMembership(ctx, owner)
-		if err != nil {
-			return err
-		}
-	}
-	if !ownerActive {
-		return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_owner_identity_mismatch")
-	}
-	if operation.Status == "manual_review" {
-		if app.workspaceLaunchPriceSnapshotUnavailable(operation) {
-			return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_"+operation.Phase+"_price_snapshot_unavailable")
-		}
-		resume, err := app.reconcileWorkspaceLaunchChildReview(ctx, &operation)
-		if err != nil || !resume {
-			return err
-		}
-	}
-
-	for range 6 {
-		if app.workspaceLaunchPriceSnapshotUnavailable(operation) {
-			return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_"+operation.Phase+"_price_snapshot_unavailable")
-		}
-		switch operation.Phase {
-		case "compute":
-			row, err := app.purchaseWorkspaceLaunchResource(ctx, service, monthlyPurchaseInput{
-				ResourceType: "compute", ResourceID: operation.ComputeID, BillingOperationID: operation.ComputeBillingOperationID,
-				AccountID: operation.AccountID, OwnerUserID: operation.OwnerUserID, WorkspaceID: operation.WorkspaceID,
-				Name: operation.Name, PackageID: operation.PackageID, Zone: monthlyComputeLaunchZone(), Environment: monthlyEnvironment(), AutoRenew: &operation.AutoRenew,
-			})
-			if err != nil {
-				return app.failWorkspaceLaunchPurchase(ctx, operation, row, err)
-			}
-			if stringValue(row["billingStatus"]) != "active" {
-				return app.waitWorkspaceLaunch(ctx, operation)
-			}
-			operation.Phase, operation.Status, operation.ErrorCode = "storage", "preparing", ""
-			if err := app.saveWorkspaceLaunchOperation(ctx, operation); err != nil {
-				return err
-			}
-
-		case "storage":
-			compute, ok := app.getCompute(operation.ComputeID)
-			if !ok {
-				return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_compute_missing")
-			}
-			zone := firstNonEmpty(stringValue(compute["zone"]), providerDataValue(compute, "zone"))
-			if zone == "" {
-				return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_compute_zone_unavailable")
-			}
-			row, err := app.purchaseWorkspaceLaunchResource(ctx, service, monthlyPurchaseInput{
-				ResourceType: "storage", ResourceID: operation.StorageID, BillingOperationID: operation.StorageBillingOperationID,
-				AccountID: operation.AccountID, OwnerUserID: operation.OwnerUserID, WorkspaceID: operation.WorkspaceID,
-				Name: operation.Name, PackageID: operation.PackageID, SizeGB: operation.StorageGB, ComputeID: operation.ComputeID,
-				Zone: zone, Environment: monthlyEnvironment(), AutoRenew: &operation.AutoRenew,
-			})
-			if err != nil {
-				return app.failWorkspaceLaunchPurchase(ctx, operation, row, err)
-			}
-			if stringValue(row["billingStatus"]) != "active" {
-				return app.waitWorkspaceLaunch(ctx, operation)
-			}
-			operation.Phase, operation.Status, operation.ErrorCode = "attachment", "preparing", ""
-			if err := app.saveWorkspaceLaunchOperation(ctx, operation); err != nil {
-				return err
-			}
-
-		case "attachment":
-			if attachment, ok := app.workspaceLaunchAttachment(operation); ok {
-				operation.AttachmentID = stringValue(attachment["id"])
-			} else {
-				created, err := service.CreateStorageAttachment(ctx, controlplane.StorageAttachmentInput{
-					WorkspaceID: operation.WorkspaceID, ComputeID: operation.ComputeID, VolumeID: operation.StorageID,
-				}, operation.AttachmentOperationID)
-				if err != nil {
-					return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_attachment_retryable")
-				}
-				if created.ID == "" || created.WorkspaceID != operation.WorkspaceID || created.ComputeID != operation.ComputeID || created.VolumeID != operation.StorageID {
-					return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_attachment_identity_mismatch")
-				}
-				body := attachmentResponse(structToMap(created), map[string]any{
-					"computeAllocationId": operation.ComputeID, "storageId": operation.StorageID, "workspaceId": operation.WorkspaceID,
-				})
-				body["accountId"], body["packageId"], body["operationId"] = operation.AccountID, operation.PackageID, operation.AttachmentOperationID
-				if err := app.saveAttachmentFact(body, body); err != nil {
-					return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_attachment_persist_retryable")
-				}
-				operation.AttachmentID = created.ID
-			}
-			operation.Phase, operation.Status, operation.ErrorCode = "workspace", "preparing", ""
-			if err := app.saveWorkspaceLaunchOperation(ctx, operation); err != nil {
-				return err
-			}
-
-		case "workspace":
-			billingState, reviewCode := app.workspaceLaunchBillingState(ctx, operation)
-			if reviewCode != "" {
-				return app.manualReviewWorkspaceLaunch(ctx, operation, reviewCode)
-			}
-			if workspace, ok := app.getWorkspace(operation.WorkspaceID); ok {
-				if !workspaceMatchesLaunch(workspace, operation) {
-					return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_projection_identity_mismatch")
-				}
-				if !workspaceBillingStateMatchesLaunch(workspace, billingState) {
-					return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_billing_state_mismatch")
-				}
-				if stringValue(workspace["runtimeId"]) != "" {
-					operation.RuntimeServiceName = firstNonEmpty(stringValue(workspace["runtimeServiceName"]), stringValue(nested(workspace, "runtime", "serviceName")))
-					operation.URL = stringValue(workspace["url"])
-					operation.Phase, operation.Status, operation.ErrorCode = "receipt", "preparing", ""
-					if err := app.saveWorkspaceLaunchOperation(ctx, operation); err != nil {
-						return err
-					}
-					continue
-				}
-			}
-			sub2APIUserID, err := app.sub2APIUserID(ctx, operation.AccountID)
-			if err != nil {
-				return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_account_mapping_unavailable")
-			}
-			workspace, err := service.PrepareWorkspace(ctx, controlplane.CreateWorkspaceInput{
-				WorkspaceID: operation.WorkspaceID, AccountID: operation.AccountID, Sub2APIUserID: sub2APIUserID,
-				WorkspaceAPIKeyID: operation.WorkspaceAPIKeyID,
-				OwnerID:           operation.OwnerUserID, Name: operation.Name, PackageID: operation.PackageID,
-				AttachmentID: operation.AttachmentID, ComputeID: operation.ComputeID, VolumeID: operation.StorageID,
-			}, operation.WorkspaceOperationID)
-			if err != nil {
-				return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_runtime_retryable")
-			}
-			if !workspaceProjectionMatchesLaunch(workspace, operation) {
-				return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_runtime_identity_mismatch")
-			}
-			workspaceRow := workspaceProjectionRow(workspace)
-			for key, value := range billingState {
-				workspaceRow[key] = value
-			}
-			workspaceRow, err = app.tables.ActivateWorkspace(ctx, workspaceRow)
-			if errors.Is(err, errWorkspaceActivationConflict) {
-				return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_activation_conflict")
-			}
-			if err != nil {
-				return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_projection_persist_retryable")
-			}
-			operation.RuntimeServiceName, operation.URL = workspace.RuntimeServiceName, workspace.URL
-			operation.Phase, operation.Status, operation.ErrorCode = "receipt", "preparing", ""
-			if err := app.saveWorkspaceLaunchOperation(ctx, operation); err != nil {
-				return err
-			}
-
-		case "receipt":
-			workspace, ok := app.getWorkspace(operation.WorkspaceID)
-			if !ok || !workspaceMatchesLaunch(workspace, operation) {
-				return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_projection_unavailable")
-			}
-			recorded, err := service.RecordWorkspaceCreatedReceipt(ctx, domain.WorkspaceProjection{
-				ID: operation.WorkspaceID, AccountID: operation.AccountID, URL: stringValue(workspace["url"]), RuntimeID: stringValue(workspace["runtimeId"]),
-			}, operation.WorkspaceOperationID)
-			if err != nil {
-				return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_receipt_retryable")
-			}
-			workspace["receiptId"] = recorded.ReceiptID
-			if err := app.tables.SaveWorkspace(ctx, workspace); err != nil {
-				return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_receipt_projection_retryable")
-			}
-			operation.ReceiptID, operation.Phase, operation.Status, operation.ErrorCode = recorded.ReceiptID, "complete", "succeeded", ""
-			return app.saveWorkspaceLaunchOperation(ctx, operation)
-
-		case "complete":
-			return nil
-		default:
-			return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_phase_invalid")
-		}
-	}
-	return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_transition_limit")
-}
-
 type workspaceBillingChildIdentity struct {
 	AccountID, OwnerUserID, WorkspaceID, PackageID, ComputeID, StorageID string
 	StorageGB                                                            int64
@@ -913,58 +715,6 @@ func workspaceBillingStateMatchesLaunch(workspace, expected map[string]any) bool
 
 func terminalWorkspaceLaunchStatus(status string) bool {
 	return status == "succeeded" || status == "refunded" || status == "failed"
-}
-
-func workspaceLaunchChildReview(operation workspaceLaunchOperation) bool {
-	return (operation.Phase == "compute" || operation.Phase == "storage") &&
-		operation.ErrorCode == "workspace_launch_"+operation.Phase+"_manual_review"
-}
-
-func (app *controlPlaneServer) workspaceLaunchPriceSnapshotUnavailable(operation workspaceLaunchOperation) bool {
-	if operation.Phase != "compute" && operation.Phase != "storage" || operation.PriceVersion == pricingCatalogVersion {
-		return false
-	}
-	resourceID, billingOperationID := operation.ComputeID, operation.ComputeBillingOperationID
-	if operation.Phase == "storage" {
-		resourceID, billingOperationID = operation.StorageID, operation.StorageBillingOperationID
-	}
-	child, ok := app.monthlyResource(operation.Phase, resourceID)
-	return !ok || stringValue(child["accountId"]) != operation.AccountID || stringValue(child["billingOperationId"]) != billingOperationID ||
-		firstNonEmpty(stringValue(child["priceVersion"]), stringValue(child["pricingVersion"])) != operation.PriceVersion || !monthlyPriceSnapshotAvailable(child)
-}
-
-func (app *controlPlaneServer) reconcileWorkspaceLaunchChildReview(ctx context.Context, operation *workspaceLaunchOperation) (bool, error) {
-	if !workspaceLaunchChildReview(*operation) {
-		return false, nil
-	}
-	resourceID, billingOperationID := operation.ComputeID, operation.ComputeBillingOperationID
-	if operation.Phase == "storage" {
-		resourceID, billingOperationID = operation.StorageID, operation.StorageBillingOperationID
-	}
-	child, ok := app.monthlyResource(operation.Phase, resourceID)
-	if !ok || stringValue(child["accountId"]) != operation.AccountID || stringValue(child["billingOperationId"]) != billingOperationID {
-		return false, nil
-	}
-	switch stringValue(child["billingStatus"]) {
-	case "active":
-		operation.Status, operation.ErrorCode = "preparing", ""
-		if err := app.saveWorkspaceLaunchOperation(ctx, *operation); err != nil {
-			return false, err
-		}
-		return true, nil
-	case "refunded", "failed":
-		operation.Status = stringValue(child["billingStatus"])
-		operation.ErrorCode = "workspace_launch_" + operation.Phase + "_" + operation.Status
-		return false, app.saveWorkspaceLaunchOperation(ctx, *operation)
-	default:
-		return false, nil
-	}
-}
-
-func (app *controlPlaneServer) purchaseWorkspaceLaunchResource(ctx context.Context, service *controlplane.Service, input monthlyPurchaseInput) (map[string]any, error) {
-	unlock := app.lockResource(input.ResourceType, input.ResourceID)
-	defer unlock()
-	return app.purchaseMonthlyResource(ctx, service, input)
 }
 
 func (app *controlPlaneServer) workspaceLaunchOperation(ctx context.Context, operationID string) (workspaceLaunchOperation, bool, error) {
@@ -1243,49 +993,6 @@ func (app *controlPlaneServer) recordWorkspaceLaunchPurchaseReceipt(ctx context.
 	operation.ReceiptID, operation.Status, operation.Phase, operation.ErrorCode = receipt.ReceiptID, "succeeded", "succeeded", ""
 	releaseWorkspaceLaunchLease(operation)
 	return app.persistWorkspaceLaunch(ctx, operation)
-}
-
-func (app *controlPlaneServer) saveWorkspaceLaunchOperation(ctx context.Context, operation workspaceLaunchOperation) error {
-	return app.tables.SaveRuntimeOperation(ctx, workspaceLaunchOperationRow(operation))
-}
-
-func (app *controlPlaneServer) waitWorkspaceLaunch(ctx context.Context, operation workspaceLaunchOperation) error {
-	operation.Status, operation.ErrorCode = "waiting", ""
-	return app.saveWorkspaceLaunchOperation(ctx, operation)
-}
-
-func (app *controlPlaneServer) retryWorkspaceLaunch(ctx context.Context, operation workspaceLaunchOperation, code string) error {
-	operation.Status, operation.ErrorCode = "retryable", code
-	if err := app.saveWorkspaceLaunchOperation(ctx, operation); err != nil {
-		return err
-	}
-	return errors.New(code)
-}
-
-func (app *controlPlaneServer) manualReviewWorkspaceLaunch(ctx context.Context, operation workspaceLaunchOperation, code string) error {
-	operation.Status, operation.ErrorCode = "manual_review", code
-	if err := app.saveWorkspaceLaunchOperation(ctx, operation); err != nil {
-		return err
-	}
-	return errors.New(code)
-}
-
-func (app *controlPlaneServer) failWorkspaceLaunchPurchase(ctx context.Context, operation workspaceLaunchOperation, row map[string]any, cause error) error {
-	status := stringValue(row["billingStatus"])
-	if errors.Is(cause, errMonthlyPriceSnapshotUnavailable) {
-		return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_"+operation.Phase+"_price_snapshot_unavailable")
-	}
-	if status == "failed" && errors.Is(cause, errMonthlyInsufficientBalance) {
-		row["billingStatus"] = "charge_pending"
-		if err := app.saveMonthlyResource(ctx, operation.Phase, row); err != nil {
-			return err
-		}
-		return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_"+operation.Phase+"_balance_insufficient")
-	}
-	if status == "manual_review" || status == "failed" || errors.Is(cause, errMonthlyChargeNeedsReview) || errors.Is(cause, errMonthlyInsufficientBalance) || errors.Is(cause, errMonthlyPurchaseRefunded) || errors.Is(cause, errIdempotencyConflict) {
-		return app.manualReviewWorkspaceLaunch(ctx, operation, "workspace_launch_"+operation.Phase+"_manual_review")
-	}
-	return app.retryWorkspaceLaunch(ctx, operation, "workspace_launch_"+operation.Phase+"_retryable")
 }
 
 func (app *controlPlaneServer) workspaceLaunchAttachment(operation workspaceLaunchOperation) (map[string]any, bool) {

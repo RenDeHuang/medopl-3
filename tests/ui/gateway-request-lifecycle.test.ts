@@ -116,7 +116,7 @@ test("leaving Login clears the password without waiting for a session replacemen
 test("Workspace reads preserve confirmed Runtime unless authority proves empty or changes identity", async () => {
   const app = await appSource();
   const source = appFunction(app, "loadWorkspaces").replaceAll("unavailableSource<WorkspaceListData>", "unavailableSource");
-  const statusSource = appFunction(app, "loadWorkspaceStatus").replaceAll("unavailableSource<WorkspaceRuntimeStatus>", "unavailableSource");
+  const statusSource = appFunction(app, "loadWorkspaceStatus").replaceAll("unavailableSource<WorkspaceRuntimeDTO>", "unavailableSource");
   const confirmedRuntime = {
     source: "fabric",
     status: "available",

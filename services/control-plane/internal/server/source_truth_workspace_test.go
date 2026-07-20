@@ -141,7 +141,7 @@ func TestRuntimeStatusIsStrictReadOnlyFabricSource(t *testing.T) {
 	seedRuntimeAccessWorkspaceForTest(t, store, "usr-alpha", nil)
 	before, _ := store.ListWorkspaces(context.Background(), "acct-alpha")
 
-	response := requestWithSession(t, server, session, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"ws-alpha"}`)
+	response := requestWithSession(t, server, session, http.MethodGet, "/api/workspaces/ws-alpha/runtime-status", "")
 	if response.Code != http.StatusOK || strings.Contains(response.Body.String(), "must-not-leak") || strings.Contains(response.Body.String(), "provider") {
 		t.Fatalf("runtime source = %d: %s", response.Code, response.Body.String())
 	}
@@ -159,7 +159,7 @@ func TestRuntimeStatusIsStrictReadOnlyFabricSource(t *testing.T) {
 		t.Fatalf("runtime data = %#v", data)
 	}
 	fabric.runtimeStatus.Checks = []any{}
-	emptyChecks := requestWithSession(t, server, session, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"ws-alpha"}`)
+	emptyChecks := requestWithSession(t, server, session, http.MethodGet, "/api/workspaces/ws-alpha/runtime-status", "")
 	var emptyEnvelope map[string]any
 	_ = json.NewDecoder(emptyChecks.Body).Decode(&emptyEnvelope)
 	if emptyChecks.Code != http.StatusOK || len(mapField(emptyEnvelope, "data")["checks"].([]any)) != 0 {
@@ -171,7 +171,7 @@ func TestRuntimeStatusIsStrictReadOnlyFabricSource(t *testing.T) {
 	}
 
 	fabric.runtimeStatus = clients.WorkspaceRuntime{WorkspaceID: "ws-alpha", Status: "not_found", Ready: false, Checks: []any{map[string]any{"name": "workspace_resources_found", "ok": false}}}
-	notFound := requestWithSession(t, server, session, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"ws-alpha"}`)
+	notFound := requestWithSession(t, server, session, http.MethodGet, "/api/workspaces/ws-alpha/runtime-status", "")
 	if notFound.Code != http.StatusOK {
 		t.Fatalf("not_found runtime = %d: %s", notFound.Code, notFound.Body.String())
 	}
@@ -183,19 +183,19 @@ func TestRuntimeStatusIsStrictReadOnlyFabricSource(t *testing.T) {
 	}
 	fabric.runtimeStatus = clients.WorkspaceRuntime{ID: "runtime-alpha", WorkspaceID: "ws-alpha", URL: "https://workspace.medopl.cn/w/ws-alpha/", ServiceName: "opl-compute-alpha", Status: "unready", Ready: false, Checks: []any{}}
 	fabric.runtimeStatus.Status = "mystery"
-	unknown := requestWithSession(t, server, session, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"ws-alpha"}`)
+	unknown := requestWithSession(t, server, session, http.MethodGet, "/api/workspaces/ws-alpha/runtime-status", "")
 	assertUnavailableWorkspaceEnvelope(t, unknown, http.StatusBadGateway, "fabric")
 	fabric.runtimeStatus.Status = "unready"
 	fabric.runtimeStatus.WorkspaceID = "ws-other"
-	mismatch := requestWithSession(t, server, session, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"ws-alpha"}`)
+	mismatch := requestWithSession(t, server, session, http.MethodGet, "/api/workspaces/ws-alpha/runtime-status", "")
 	assertUnavailableWorkspaceEnvelope(t, mismatch, http.StatusBadGateway, "fabric")
 	fabric.runtimeStatus.WorkspaceID = "ws-alpha"
 	fabric.runtimeStatus.Status = ""
-	missing := requestWithSession(t, server, session, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"ws-alpha"}`)
+	missing := requestWithSession(t, server, session, http.MethodGet, "/api/workspaces/ws-alpha/runtime-status", "")
 	assertUnavailableWorkspaceEnvelope(t, missing, http.StatusBadGateway, "fabric")
 	fabric.runtimeStatus.Status = "unready"
 	fabric.statusErr = errors.New("Fabric unavailable")
-	unavailable := requestWithSession(t, server, session, http.MethodPost, "/api/workspaces/runtime-status", `{"workspaceId":"ws-alpha"}`)
+	unavailable := requestWithSession(t, server, session, http.MethodGet, "/api/workspaces/ws-alpha/runtime-status", "")
 	assertUnavailableWorkspaceEnvelope(t, unavailable, http.StatusBadGateway, "fabric")
 	for _, accountID := range store.accountIDs {
 		if accountID != "acct-alpha" {
