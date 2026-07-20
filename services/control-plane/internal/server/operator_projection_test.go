@@ -385,23 +385,32 @@ func TestOperatorResourceUnavailableFields(t *testing.T) {
 	}
 }
 
-func TestOperatorAccountInvite(t *testing.T) {
+func TestOperatorAccountProvisionUsesCanonicalRouteAndTerminology(t *testing.T) {
 	store := newMemoryTableStore()
 	client := newOperatorProjectionClient()
 	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}, client), store)
 	if err != nil {
 		t.Fatal(err)
 	}
-	response := requestWithMutationKeyForTest(t, server, reservedOperatorSessionForTest(t, server), http.MethodPost, "/api/operator/accounts/invitations", `{"email":"invite@example.com","password":"CorrectHorseBatteryStaple!","name":"Invite"}`, "invite-account-once")
+	operator := reservedOperatorSessionForTest(t, server)
+	response := requestWithMutationKeyForTest(t, server, operator, http.MethodPost, "/api/operator/accounts", `{"email":"provision@example.com","password":"CorrectHorseBatteryStaple!","name":"Provision"}`, "provision-account-once")
 	if response.Code != http.StatusCreated {
-		t.Fatalf("account invite = %d: %s", response.Code, response.Body.String())
+		t.Fatalf("canonical provision = %d: %s", response.Code, response.Body.String())
 	}
 	var body map[string]any
 	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
 		t.Fatal(err)
 	}
-	if body["status"] != "succeeded" || !strings.HasPrefix(stringValue(body["operationId"]), "account-invite-") || !strings.HasPrefix(stringValue(body["accountId"]), "acct-") {
-		t.Fatalf("account invite body = %#v", body)
+	if body["status"] != "succeeded" || !strings.HasPrefix(stringValue(body["operationId"]), "account-provision-") || !strings.HasPrefix(stringValue(body["accountId"]), "acct-") {
+		t.Fatalf("account provision body = %#v", body)
+	}
+	events, err := store.ListAuditEvents(context.Background(), stringValue(body["accountId"]))
+	if err != nil || len(events) != 1 || events[0]["action"] != "account.provision" {
+		t.Fatalf("account provision audit=%#v err=%v", events, err)
+	}
+	legacy := requestWithMutationKeyForTest(t, server, operator, http.MethodPost, "/api/operator/accounts/invitations", `{"email":"legacy@example.com","password":"CorrectHorseBatteryStaple!"}`, "legacy-invite")
+	if legacy.Code != http.StatusNotFound {
+		t.Fatalf("legacy invitation route status=%d body=%s", legacy.Code, legacy.Body.String())
 	}
 }
 

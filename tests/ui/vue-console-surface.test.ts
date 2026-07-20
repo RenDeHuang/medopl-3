@@ -55,14 +55,15 @@ test("customer financial facts are direct server fields", async () => {
   assert.doesNotMatch(app, /receipt\.status\s*\|\|\s*["']/);
 });
 
-test("administrator invitation derives the billing account and omits remote identity input", async () => {
+test("administrator provisioning derives the billing account and omits remote identity input", async () => {
   const [app, readApi] = await Promise.all([
     source("apps/console-ui/src/App.vue"), source("apps/console-ui/src/api/console-read-api.ts")
   ]);
   const template = app.slice(app.indexOf("<template>"));
-  assert.match(readApi, /\/api\/operator\/accounts\/invitations/);
-  assert.match(app, /inviteOperatorUser\(\)/);
-  assert.match(app, /InviteAccountRequest/);
+  assert.match(readApi, /postJson<unknown>\("\/api\/operator\/accounts"/);
+  assert.doesNotMatch(readApi, /\/api\/operator\/accounts\/invitations/);
+  assert.match(app, /provisionOperatorUser\(\)/);
+  assert.match(app, /ProvisionAccountRequest/);
   assert.doesNotMatch(app, /adminUserForm\.sub2apiUserId|sub2apiUserId:\s*Number/);
   assert.doesNotMatch(template, /adminUserForm\.accountId/);
 });

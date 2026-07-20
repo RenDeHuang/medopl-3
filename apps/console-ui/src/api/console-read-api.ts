@@ -19,7 +19,7 @@ import type {
   AnnouncementDraftRequest,
   AnnouncementScheduleRequest,
   BillingReviewResolutionRequest,
-  InviteAccountRequest,
+  ProvisionAccountRequest,
   OperatorAccountCommandDTO,
   OperatorAccountPageDTO,
   OperatorAnnouncementPageDTO,
@@ -208,8 +208,8 @@ export function getWalletAdjustment(operationId: string, signal?: AbortSignal): 
   return getJson<unknown>(`/api/operator/wallet-adjustments/${encodeURIComponent(operationId)}`, { signal }).then(decodeDto<WalletAdjustmentOperationDTO>);
 }
 
-export function inviteOperatorAccount(input: InviteAccountRequest, csrfToken: string, idempotencyKey: string): Promise<OperatorAccountCommandDTO> {
-  return postJson<unknown>("/api/operator/accounts/invitations", input, csrfToken, idempotencyKey).then(decodeDto<OperatorAccountCommandDTO>);
+export function provisionOperatorAccount(input: ProvisionAccountRequest, csrfToken: string, idempotencyKey: string): Promise<OperatorAccountCommandDTO> {
+  return postJson<unknown>("/api/operator/accounts", input, csrfToken, idempotencyKey).then(decodeDto<OperatorAccountCommandDTO>);
 }
 
 export function disableOperatorAccount(accountId: string, reason: string, csrfToken: string, idempotencyKey: string): Promise<OperatorAccountCommandDTO> {

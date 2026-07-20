@@ -75,7 +75,7 @@ test("wallet adjustment readback shows non-secret audit facts", async () => {
 test("operator mutations retain stable intents across unknown retries", async () => {
   const app = await source("apps/console-ui/src/App.vue");
   for (const intent of [
-    "operatorInviteIntent",
+    "operatorProvisionIntent",
     "operatorDisableIntents",
     "billingReviewIntent",
     "announcementCreateIntent",
@@ -91,9 +91,10 @@ test("operator announcement publish preserves the saved schedule", async () => {
   assert.match(app, /endsAt: announcement\.endsAt \|\| ""/);
 });
 
-test("operator accounts invite and disable without delete", async () => {
+test("operator accounts provision and disable without delete", async () => {
   const app = await source("apps/console-ui/src/App.vue");
-  assert.match(app, /邀请用户/);
+  assert.match(app, /开通用户/);
+  assert.doesNotMatch(app, /邀请用户/);
   assert.match(app, /禁用/);
   assert.doesNotMatch(app, /删除账号|deleteAccount|\/api\/operator\/accounts\/[^"']+\/delete/);
 });

@@ -483,7 +483,7 @@ export interface OperatorAccountPageDTO {
   pageSize: number;
 }
 
-export interface InviteAccountRequest {
+export interface ProvisionAccountRequest {
   email: string;
   password: string;
   name?: string;

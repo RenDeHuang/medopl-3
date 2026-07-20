@@ -84,14 +84,14 @@ func registerAdminRoutes(mux *http.ServeMux, app *controlPlaneServer, service *c
 	mux.HandleFunc("GET /api/operator/health", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		writeSourceEnvelope(w, http.StatusOK, "control-plane", "available", app.operatorHealth(r.Context(), service))
 	}))
-	mux.HandleFunc("POST /api/operator/accounts/invitations", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /api/operator/accounts", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		key, ok := requiredMutationKey(w, r)
 		if !ok {
 			return
 		}
 		input := decodeJSON(r)
-		if !operatorInvitationShapeValid(input) {
-			writeError(w, http.StatusBadRequest, "invalid_invitation")
+		if !operatorProvisionShapeValid(input) {
+			writeError(w, http.StatusBadRequest, "invalid_provision")
 			return
 		}
 		email, err := canonicalEmail(stringValue(input["email"]))
@@ -105,8 +105,8 @@ func registerAdminRoutes(mux *http.ServeMux, app *controlPlaneServer, service *c
 			writeCreateUserError(w, err)
 			return
 		}
-		result := map[string]any{"operationId": "account-invite-" + stableID(key, email)[:18], "accountId": accountID, "status": "succeeded"}
-		if err := app.appendAuditEvent(r, "account.invite", "account", accountID, accountID, nil, map[string]any{"userId": user["id"], "email": email}, "succeeded"); err != nil {
+		result := map[string]any{"operationId": "account-provision-" + stableID(key, email)[:18], "accountId": accountID, "status": "succeeded"}
+		if err := app.appendAuditEvent(r, "account.provision", "account", accountID, accountID, nil, map[string]any{"userId": user["id"], "email": email}, "succeeded"); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}
@@ -234,7 +234,7 @@ func operatorPagination(w http.ResponseWriter, r *http.Request) (int, int, bool)
 	return page, pageSize, true
 }
 
-func operatorInvitationShapeValid(input map[string]any) bool {
+func operatorProvisionShapeValid(input map[string]any) bool {
 	if len(input) < 2 || len(input) > 3 {
 		return false
 	}

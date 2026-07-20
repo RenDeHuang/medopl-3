@@ -571,7 +571,7 @@ test("customer mutations cannot write shared state after their session is replac
     removeKey: 5,
     submitKey: 5,
     readAnnouncement: 4,
-    inviteOperatorUser: 4
+    provisionOperatorUser: 4
   };
 
   for (const [name, count] of Object.entries(minimumChecks)) {

@@ -94,7 +94,7 @@ func retiredConsoleAPI(method, path string) bool {
 	switch path {
 	case "/api/me", "/api/overview", "/api/gateway/summary", "/api/billing/summary",
 		"/api/gateway/usage", "/api/gateway/usage/stats", "/api/gateway/keys/opl-workspace/reveal",
-		"/api/workspaces/runtime-status", "/api/operator/summary":
+		"/api/workspaces/runtime-status", "/api/operator/summary", "/api/operator/accounts/invitations":
 		return true
 	}
 	if path == "/api/workspace-backups" || strings.HasPrefix(path, "/api/workspace-backups/") || strings.HasPrefix(path, "/api/payment") || strings.HasPrefix(path, "/api/orders") ||
