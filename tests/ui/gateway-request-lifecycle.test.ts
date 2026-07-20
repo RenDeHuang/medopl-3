@@ -95,6 +95,15 @@ test("session generation prevents late customer and admin reads from repopulatin
   assert.match(appFunction(app, "signOut"), /replaceSession\(null\)/);
 });
 
+test("session replacement clears login password and receipt refresh returns to the first page", async () => {
+  const app = await appSource();
+  const clearSession = appFunction(app, "clearSessionState");
+  const loadReceipts = appFunction(app, "loadReceipts");
+  assert.match(clearSession, /loginForm\.password\s*=\s*""/);
+  assert.match(clearSession, /loginForm\.email\s*=\s*""/);
+  assert.match(loadReceipts, /if \(!cursor\)\s*receiptCursorStack\.value\s*=\s*\[\]/);
+});
+
 test("Workspace reads preserve confirmed Runtime unless authority proves empty or changes identity", async () => {
   const app = await appSource();
   const source = appFunction(app, "loadWorkspaces").replaceAll("unavailableSource<WorkspaceListData>", "unavailableSource");

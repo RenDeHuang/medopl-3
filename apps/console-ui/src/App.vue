@@ -394,6 +394,8 @@ function clearSessionState() {
   launchBusy.value = false;
   loginBusy.value = false;
   loginError.value = "";
+  loginForm.email = "";
+  loginForm.password = "";
   for (const key of Object.keys(loading) as Array<keyof typeof loading>) loading[key] = false;
   for (const key of Object.keys(errors) as Array<keyof typeof errors>) errors[key] = "";
 }
@@ -585,6 +587,7 @@ async function loadReceipts(cursorOrEvent: string | Event = "") {
   const cursor = typeof cursorOrEvent === "string" ? cursorOrEvent : receiptCursor.value;
   const generation = ++receiptRequestGeneration;
   receiptCursor.value = cursor;
+  if (!cursor) receiptCursorStack.value = [];
   const requestStillCurrent = () => sessionRequestStillCurrent() && generation === receiptRequestGeneration && cursor === receiptCursor.value;
   clearReceiptDetail();
   loading.receipts = true;
