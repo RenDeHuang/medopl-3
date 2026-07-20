@@ -5,6 +5,7 @@ import {
   assertPublicHttpsUrl,
   dedicatedWorkspaceKey,
   login,
+  mutationApprovalFromJson,
   requestJson,
   sourceEnvelope,
   verificationOwnerFromSeed,
@@ -244,6 +245,8 @@ export async function verifyProductionLiveQa(options = {}) {
     expectedModel = "",
     requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
     manifestPath = "",
+    mutationApprovalJson = "",
+    mutationApprovalId = "",
     browserFactory,
     fetchImpl = globalThis.fetch,
     signal,
@@ -307,6 +310,12 @@ export async function verifyProductionLiveQa(options = {}) {
   const keyBefore = dedicatedWorkspaceKey(sourceEnvelope(await requestJson({ ...requestOptions, auth, path: "/api/gateway/keys" }), "sub2api", true));
   const usageBefore = await gatewayUsageSnapshot(requestOptions, auth, keyBefore.id);
   const statsBefore = await gatewayUsageStats(requestOptions, auth, keyBefore.id);
+  mutationApprovalFromJson(mutationApprovalJson, {
+    approvalId: mutationApprovalId,
+    accountId: owner.accountId,
+    workspaceId: before.workspaceId,
+    resourceIds: [slotId, keyBefore.id]
+  }, "production_live_qa");
   const workspace = await verifyWorkspaceBrowserQa({
     url: runtime.url || before.url,
     username: credentials.access.username,
@@ -393,19 +402,32 @@ export async function runProductionLiveQaCli({
   browserFactory
 } = {}) {
   if (argv.includes("--help") || argv.includes("-h")) {
-    stdout.write("Usage: node tools/production-live-qa.ts [--origin <https-url>] [--account <id>]\nRuns one explicitly confirmed Workspace model request after rollout; never buys, renews, or deletes provider resources.\n");
+    stdout.write("Usage: node tools/production-live-qa.ts --read-only\nA model request additionally requires --allow-gateway-write --allow-model-write --approval-id <id> and OPL_VERIFY_MUTATION_APPROVAL_JSON.\n");
     return 0;
   }
   try {
     if (env.OPL_VERIFY_MODEL_ACCESS_KEY) throw new Error("production_live_qa_raw_key_forbidden");
     const args = cliArgs(argv);
+    if (args["read-only"] === "true") {
+      if (args["allow-gateway-write"] || args["allow-model-write"] || args["approval-id"]) throw new Error("production_live_qa_read_only_conflict");
+      stdout.write(`${JSON.stringify({ ok: true, mode: "read-only", evidenceLevel: "read-only", writesPerformed: 0 }, null, 2)}\n`);
+      return 0;
+    }
+    if (args["allow-gateway-write"] !== "true" || args["allow-model-write"] !== "true") throw new Error("production_live_qa_write_allow_flags_required");
+    const accountId = args.account || env.OPL_VERIFY_ACCOUNT_ID || "";
+    const slotId = env.OPL_VERIFY_SLOT_ID || FIXED_VERIFICATION_SLOT_ID;
+    mutationApprovalFromJson(env.OPL_VERIFY_MUTATION_APPROVAL_JSON, {
+      approvalId: args["approval-id"] || "",
+      accountId,
+      resourceIds: [slotId]
+    }, "production_live_qa");
     const result = await verifyProductionLiveQa({
       origin: args.origin || env.OPL_CONSOLE_ORIGIN,
       authUsersJson: env.OPL_VERIFY_AUTH_USERS_JSON,
-      accountId: args.account || env.OPL_VERIFY_ACCOUNT_ID || "",
+      accountId,
       runId: args["run-id"] || env.OPL_VERIFY_RUN_ID,
       confirmation: env.OPL_VERIFY_LIVE_QA_CONFIRMATION,
-      slotId: env.OPL_VERIFY_SLOT_ID || FIXED_VERIFICATION_SLOT_ID,
+      slotId,
       slotDescriptor: env.OPL_VERIFY_SLOT_DESCRIPTOR_JSON,
       workspaceUrlAttempts: Number(env.OPL_VERIFY_URL_ATTEMPTS || 3),
       retryDelayMs: Number(env.OPL_VERIFY_RETRY_DELAY_MS || 10_000),
@@ -416,6 +438,8 @@ export async function runProductionLiveQaCli({
       expectedModel: env.OPL_VERIFY_EXPECTED_MODEL || "",
       requestTimeoutMs: Number(env.OPL_VERIFY_REQUEST_TIMEOUT_MS || DEFAULT_REQUEST_TIMEOUT_MS),
       manifestPath: env.OPL_VERIFY_MANIFEST_PATH || "",
+      mutationApprovalJson: env.OPL_VERIFY_MUTATION_APPROVAL_JSON,
+      mutationApprovalId: args["approval-id"] || "",
       browserFactory,
       fetchImpl
     });

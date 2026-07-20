@@ -37,6 +37,14 @@ const SECRET_TKE_ENV = [
   "TENCENT_DEPLOY_KUBECONFIG_REF"
 ];
 
+const FORBIDDEN_VERIFICATION_MUTATION_ENV = [
+  "OPL_VERIFY_MUTATION_APPROVAL_JSON",
+  "OPL_VERIFY_MUTATION_APPROVAL_ID",
+  "OPL_VERIFY_ALLOW_GATEWAY_WRITE",
+  "OPL_VERIFY_ALLOW_MODEL_WRITE",
+  "OPL_VERIFY_ALLOW_PROVIDER_WRITE"
+];
+
 const PROVIDER_CONFIG = {
   [PROVIDERS.TENCENT_TKE]: {
     requiredEnv: REQUIRED_TKE_ENV,
@@ -110,11 +118,13 @@ export function validateProductionManifest({ env = {} } = {}) {
   ];
   const missingEnv = requiredEnv.filter((key) => !env[key] || (!hasSecretRef(env[key]) && !String(valueOf(env[key])).trim()));
   const inlineSecretEnv = secretEnv.filter((key) => env[key] && !hasSecretRef(env[key]));
+  const hasVerificationMutationAuthority = FORBIDDEN_VERIFICATION_MUTATION_ENV.some((key) => Object.hasOwn(env, key));
   const checks = [
     check("required_env", missingEnv.length === 0, "Every production launch variable must be declared"),
     check("secret_refs", inlineSecretEnv.length === 0, "Sensitive production values must use secretRef"),
     check("runtime_provider", provider === PROVIDERS.TENCENT_TKE, "OPL_RUNTIME_PROVIDER must be tencent-tke"),
     check("gateway_public_base_url", looksLikeGatewayPublicBaseURL(values.OPL_GATEWAY_PUBLIC_BASE_URL, values.OPL_SUB2API_BASE_URL), "OPL_GATEWAY_PUBLIC_BASE_URL must be an independent HTTPS URL"),
+    check("verification_mutation_authority", !hasVerificationMutationAuthority, "Ordinary production manifests must not carry real-verification approvals or write flags"),
     check(
       "registry_images",
       looksLikeRegistryImage({ image: values.OPL_CLOUD_IMAGE, registry: values.TENCENT_TCR_REGISTRY }) &&

@@ -237,6 +237,7 @@ test("TKE deploy workflow matches the current deployment contract", async () => 
   assert.deepEqual(contract.productionVerificationWorkflow.slotDescriptors, [basicSlotDescriptor, proSlotDescriptor]);
   assertWorkflowContract(await readWorkflow(contract.productionVerificationWorkflow.file), contract.productionVerificationWorkflow, contract);
   assert.equal(contract.productionLiveQaJob.releaseGate, true);
+  assert.equal(contract.productionLiveQaJob.mutationAuthorityWiring, "absent_pending_separate_owner_approval");
   assert.equal(contract.productionLiveQaJob.mode, "one_basic_reserved_account_one_dedicated_key_one_model_request_no_provider_mutation");
   assert.equal(contract.productionLiveQaJob.reservedAccountCount, 1);
   assert.equal(contract.productionLiveQaJob.dedicatedKeyCount, 1);
@@ -333,6 +334,7 @@ test("TKE deploy requires both fixed slots but runs release live QA once on the 
   assert.match(runs, /npm ci/);
   assert.match(runs, /playwright install --with-deps chromium/);
   assert.match(runs, /node tools\/production-live-qa\.ts/);
+  assert.doesNotMatch(runs, /OPL_VERIFY_MUTATION_APPROVAL_JSON|--allow-gateway-write|--allow-model-write|--approval-id/);
   assert.doesNotMatch(runs, /compute-allocations|storage-volumes|destroy|detach|renew/i);
   assert.doesNotMatch(readOnlyWorkflow, /production-live-qa|LIVE_QA_CONFIRMATION/);
 });

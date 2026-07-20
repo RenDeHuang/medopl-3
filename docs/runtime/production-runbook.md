@@ -387,6 +387,22 @@ Do not run the legacy paid verifier. The replacement is code-complete and
 fake-tested, but no real Provider Acceptance or live-QA run is authorized by
 this document.
 
+The only commands authorized without a new owner approval are read-only:
+
+```bash
+node tools/production-verifier.ts --read-only
+node tools/production-live-qa.ts --read-only
+node tools/provider-acceptance.ts --read-only
+```
+
+Ordinary CI, release, E2E, deployment manifests, and deployed runtime
+environments must not carry `OPL_VERIFY_MUTATION_APPROVAL_JSON`, an approval ID,
+or Gateway/model/provider write allow flags. The current Provider Acceptance and
+post-rollout model-QA workflow wiring intentionally omits that authority and
+therefore fails before network access. Enabling either write path requires a
+separately approved change binding one unexpired approval ID to exact account,
+Workspace, and resource allowlists; this runbook does not provide such a command.
+
 Provider Acceptance separately creates or adopts these retained non-customer
 slots after read-only inventory and explicit approval:
 

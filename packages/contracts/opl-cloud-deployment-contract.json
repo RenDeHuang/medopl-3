@@ -302,6 +302,7 @@
     "launchStatus": "active",
     "releaseGate": false,
     "mode": "operator_only_one_time_dual_fixed_slot",
+    "mutationAuthorityWiring": "absent_pending_separate_owner_approval",
     "environment": "production-provider-acceptance",
     "credential": {
       "serverEnv": "OPL_PROVIDER_ACCEPTANCE_TOKEN",
@@ -395,6 +396,7 @@
     "job": "live-qa",
     "releaseGate": true,
     "mode": "one_basic_reserved_account_one_dedicated_key_one_model_request_no_provider_mutation",
+    "mutationAuthorityWiring": "absent_pending_separate_owner_approval",
     "reservedAccountCount": 1,
     "dedicatedKeyCount": 1,
     "modelRequestCount": 1,

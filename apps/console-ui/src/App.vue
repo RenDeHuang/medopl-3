@@ -1577,7 +1577,6 @@ onBeforeUnmount(() => {
       </div>
 
       <div v-else class="page-content">
-        <template>
           <div v-if="errors.catalog && !workspace && (path === '/console' || path === '/console/overview' || path.startsWith('/console/workspace'))" class="inline-error"><AlertCircle :size="17" />计划与价格暂不可用<button type="button" @click="loadCatalog">重试</button></div>
           <section v-if="path === '/console' || path === '/console/overview'" class="overview-layout">
             <div class="overview-main">
@@ -1667,7 +1666,6 @@ onBeforeUnmount(() => {
               <div v-else class="empty-panel">交易详情暂不可用 <button class="text-button" type="button" @click="loadReceiptDetail(selectedReceiptId)">重试</button></div>
             </section>
           </section>
-        </template>
       </div>
     </section>
 

@@ -11,6 +11,9 @@ test("production manifest example declares the dedicated Provider Acceptance sec
   const manifest = JSON.parse(await readFile("deploy/production-manifest.example.json", "utf8"));
   assert.deepEqual(manifest.env.OPL_PROVIDER_ACCEPTANCE_TOKEN, { secretRef: "opl-cloud/provider-acceptance-token" });
   assert.deepEqual(manifest.env.OPL_GATEWAY_PUBLIC_BASE_URL, { value: "https://api.medopl.cn/v1" });
+  for (const key of ["OPL_VERIFY_MUTATION_APPROVAL_JSON", "OPL_VERIFY_MUTATION_APPROVAL_ID", "OPL_VERIFY_ALLOW_GATEWAY_WRITE", "OPL_VERIFY_ALLOW_MODEL_WRITE", "OPL_VERIFY_ALLOW_PROVIDER_WRITE"]) {
+    assert.equal(Object.hasOwn(manifest.env, key), false);
+  }
 });
 
 test("production manifest requires deployment secret refs for every launch variable", () => {
@@ -47,6 +50,7 @@ test("production manifest requires deployment secret refs for every launch varia
     "secret_refs:true",
     "runtime_provider:true",
     "gateway_public_base_url:true",
+    "verification_mutation_authority:true",
     "registry_images:true",
     "workspace_domain:true"
   ]);
@@ -86,9 +90,19 @@ test("production manifest validates Tencent TKE fields only", () => {
     "secret_refs:true",
     "runtime_provider:true",
     "gateway_public_base_url:true",
+    "verification_mutation_authority:true",
     "registry_images:true",
     "workspace_domain:true"
   ]);
+});
+
+test("ordinary production manifests reject real-verification mutation authority", async () => {
+  const manifest = JSON.parse(await readFile("deploy/production-manifest.example.json", "utf8"));
+  for (const key of ["OPL_VERIFY_MUTATION_APPROVAL_JSON", "OPL_VERIFY_MUTATION_APPROVAL_ID", "OPL_VERIFY_ALLOW_GATEWAY_WRITE", "OPL_VERIFY_ALLOW_MODEL_WRITE", "OPL_VERIFY_ALLOW_PROVIDER_WRITE"]) {
+    const report = validateProductionManifest({ env: { ...manifest.env, [key]: { value: "present" } } });
+    assert.equal(report.ok, false, key);
+    assert.ok(report.failedChecks.includes("verification_mutation_authority"), key);
+  }
 });
 
 test("production manifest rejects missing, non-HTTPS, and internal Gateway public addresses", () => {

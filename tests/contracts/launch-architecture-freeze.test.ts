@@ -74,7 +74,7 @@ test("launch freeze fixes the V2 products, owner lanes, settlement, and verifica
     nonChildReview: "quiescent_operator_only"
   });
 
-  assert.deepEqual(freeze.monthlySettlement.protocol, ["debit", "provision", "claim", "activate"]);
+  assert.deepEqual(freeze.monthlySettlement.protocol, ["debit", "fabric_fulfillment", "claim", "activate", "record_workspace_receipt"]);
   assert.equal(freeze.monthlySettlement.confirmedNoResourceAfterDebit, "idempotent_refund");
   assert.equal(freeze.monthlySettlement.partialOrUnknownProviderResult, "manual_review_without_refund");
   assert.equal(freeze.providerProcurement.chargeType, "PREPAID");
