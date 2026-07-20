@@ -21,6 +21,10 @@ on:
         required: false
         default: false
         type: boolean
+      live_qa_approval_id:
+        description: Owner approval ID matching the protected live-QA mutation manifest; required outside bootstrap mode.
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -95,6 +99,7 @@ jobs:
       OPL_PROVIDER_ACCEPTANCE_TOKEN: ${{ secrets.OPL_PROVIDER_ACCEPTANCE_TOKEN }}
       OPL_VERIFY_BASIC_ACCOUNT_ID: ${{ vars.OPL_VERIFY_BASIC_ACCOUNT_ID || '' }}
       OPL_VERIFY_PRO_ACCOUNT_ID: ${{ vars.OPL_VERIFY_PRO_ACCOUNT_ID || '' }}
+      OPL_VERIFY_MUTATION_APPROVAL_ID: ${{ inputs.live_qa_approval_id || '' }}
       OPL_AIONUI_ADMIN_PASSWORD_SEED: ${{ secrets.OPL_AIONUI_ADMIN_PASSWORD_SEED }}
       TCR_USERNAME: ${{ secrets.TCR_USERNAME }}
       TCR_PASSWORD: ${{ secrets.TCR_PASSWORD }}
@@ -113,6 +118,10 @@ jobs:
           fi
           if [ -z "${OPL_VERIFY_BASIC_ACCOUNT_ID:-}" ] || [ -z "${OPL_VERIFY_PRO_ACCOUNT_ID:-}" ]; then
             echo "Basic and Pro Acceptance account ids are required before ordinary deployment." >&2
+            exit 1
+          fi
+          if [ -z "${OPL_VERIFY_MUTATION_APPROVAL_ID:-}" ]; then
+            echo "A live-QA owner approval id is required before ordinary deployment." >&2
             exit 1
           fi
 
@@ -154,6 +163,8 @@ jobs:
             OPL_WORKSPACE_IMAGE
             OPL_OPERATOR_CIDRS
             OPL_TRUSTED_PROXY_CIDRS
+            OPL_BASIC_COMPUTE_NODE_POOL_ID
+            OPL_PRO_COMPUTE_NODE_POOL_ID
             OPL_GATEWAY_PUBLIC_BASE_URL
             DATABASE_URL
             OPL_PROVIDER_ACCEPTANCE_TOKEN
@@ -497,6 +508,7 @@ jobs:
       OPL_VERIFY_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}-verification-slot-basic-01
       OPL_VERIFY_LIVE_QA_CONFIRMATION: I_UNDERSTAND_THIS_SENDS_ONE_REAL_MODEL_REQUEST
       OPL_VERIFY_MANIFEST_PATH: artifacts/production-live-qa-verification-slot-basic-01/manifest.json
+      OPL_VERIFY_MUTATION_APPROVAL_ID: ${{ inputs.live_qa_approval_id || '' }}
 
     steps:
       - name: Checkout
@@ -514,7 +526,9 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Verify rollout with one Workspace model request
-        run: node tools/production-live-qa.ts
+        env:
+          OPL_VERIFY_MUTATION_APPROVAL_JSON: ${{ secrets.OPL_VERIFY_MUTATION_APPROVAL_JSON }}
+        run: node tools/production-live-qa.ts --allow-gateway-write --allow-model-write --approval-id "$OPL_VERIFY_MUTATION_APPROVAL_ID"
 
       - name: Upload rollout QA manifest
         if: always()

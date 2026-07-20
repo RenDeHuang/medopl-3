@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "owner": "OPL Fabric",
   "purpose": "Deployment workflow, immutable Cloud and Workspace images, TKE handoff, and production-verification safety.",
   "state": "current",
@@ -47,7 +47,8 @@
     "inputs": [
       "cloud_image",
       "workspace_image",
-      "bootstrap_mode"
+      "bootstrap_mode",
+      "live_qa_approval_id"
     ],
     "requiredEnv": [
       "OPL_RUNTIME_PROVIDER",
@@ -74,7 +75,9 @@
       "OPL_MONTHLY_BILLING_INTERVAL_MS",
       "OPL_TENCENT_ZONE",
       "OPL_BASIC_COMPUTE_INSTANCE_TYPE",
+      "OPL_BASIC_COMPUTE_NODE_POOL_ID",
       "OPL_PRO_COMPUTE_INSTANCE_TYPE",
+      "OPL_PRO_COMPUTE_NODE_POOL_ID",
       "OPL_CODEX_MODEL",
       "OPL_CODEX_REASONING_EFFORT",
       "OPL_CODEX_BASE_URL",
@@ -85,6 +88,7 @@
       "OPL_SUB2API_ADMIN_PASSWORD",
       "OPL_VERIFY_BASIC_ACCOUNT_ID",
       "OPL_VERIFY_PRO_ACCOUNT_ID",
+      "OPL_VERIFY_MUTATION_APPROVAL_ID",
       "TENCENTCLOUD_SECRET_ID",
       "TENCENTCLOUD_SECRET_KEY",
       "TENCENTCLOUD_REGION",
@@ -160,6 +164,10 @@
       ]
     ],
     "requiredCommandsByStep": {
+      "Require Basic and Pro Acceptance accounts": [
+        "OPL_BOOTSTRAP_MODE",
+        "OPL_VERIFY_MUTATION_APPROVAL_ID"
+      ],
       "Set up Node": [
         "node-version",
         "22"
@@ -168,6 +176,10 @@
         "TENCENT_DEPLOY_KUBECONFIG_PATH",
         "TENCENT_DEPLOY_KUBECONFIG_B64",
         "TENCENT_DEPLOY_KUBECONFIG"
+      ],
+      "Check deployment inputs": [
+        "OPL_BASIC_COMPUTE_NODE_POOL_ID",
+        "OPL_PRO_COMPUTE_NODE_POOL_ID"
       ],
       "Install Kubernetes secrets": [
         "--from-file=DATABASE_URL=\"$secret_dir/database-url\"",
@@ -302,7 +314,7 @@
     "launchStatus": "active",
     "releaseGate": false,
     "mode": "operator_only_one_time_dual_fixed_slot",
-    "mutationAuthorityWiring": "absent_pending_separate_owner_approval",
+    "mutationAuthorityWiring": "dispatch_approval_id_protected_manifest_explicit_cli_allow_flags",
     "environment": "production-provider-acceptance",
     "credential": {
       "serverEnv": "OPL_PROVIDER_ACCEPTANCE_TOKEN",
@@ -353,14 +365,16 @@
       "account_id",
       "confirmation",
       "purchase_budget",
-      "max_approved_provider_cost"
+      "max_approved_provider_cost",
+      "approval_id"
     ],
     "requiredInputs": [
       "slot_id",
       "account_id",
       "confirmation",
       "purchase_budget",
-      "max_approved_provider_cost"
+      "max_approved_provider_cost",
+      "approval_id"
     ],
     "timeoutMinutes": 30,
     "requiredEnv": [
@@ -372,10 +386,13 @@
       "OPL_PROVIDER_ACCEPTANCE_ENVIRONMENT_APPROVED",
       "OPL_PROVIDER_ACCEPTANCE_PURCHASE_BUDGET",
       "OPL_PROVIDER_ACCEPTANCE_MAX_APPROVED_PROVIDER_COST",
-      "OPL_PROVIDER_ACCEPTANCE_MANIFEST_PATH"
+      "OPL_PROVIDER_ACCEPTANCE_MANIFEST_PATH",
+      "OPL_VERIFY_MUTATION_APPROVAL_JSON",
+      "OPL_VERIFY_MUTATION_APPROVAL_ID"
     ],
     "secretEnv": [
-      "OPL_PROVIDER_ACCEPTANCE_TOKEN"
+      "OPL_PROVIDER_ACCEPTANCE_TOKEN",
+      "OPL_VERIFY_MUTATION_APPROVAL_JSON"
     ],
     "steps": [
       "Checkout",
@@ -383,6 +400,15 @@
       "Run one-time Provider Acceptance",
       "Upload Provider Acceptance manifest"
     ],
+    "requiredCommandsByStep": {
+      "Run one-time Provider Acceptance": [
+        "node tools/provider-acceptance.ts",
+        "--allow-gateway-write",
+        "--allow-provider-write",
+        "--approval-id",
+        "OPL_VERIFY_MUTATION_APPROVAL_JSON"
+      ]
+    },
     "forbiddenRunTokens": [
       "compute-allocations",
       "storage-volumes",
@@ -396,7 +422,7 @@
     "job": "live-qa",
     "releaseGate": true,
     "mode": "one_basic_reserved_account_one_dedicated_key_one_model_request_no_provider_mutation",
-    "mutationAuthorityWiring": "absent_pending_separate_owner_approval",
+    "mutationAuthorityWiring": "dispatch_approval_id_protected_manifest_explicit_cli_allow_flags",
     "reservedAccountCount": 1,
     "dedicatedKeyCount": 1,
     "modelRequestCount": 1,
@@ -411,6 +437,10 @@
     "runner": [
       "ubuntu-latest"
     ],
+    "inputs": [
+      "live_qa_approval_id"
+    ],
+    "requiredInputs": [],
     "requiredEnv": [
       "OPL_CONSOLE_ORIGIN",
       "OPL_VERIFY_AUTH_USERS_JSON",
@@ -427,7 +457,8 @@
       "OPL_VERIFY_EXPECTED_MODEL",
       "OPL_VERIFY_RUN_ID",
       "OPL_VERIFY_LIVE_QA_CONFIRMATION",
-      "OPL_VERIFY_MANIFEST_PATH"
+      "OPL_VERIFY_MANIFEST_PATH",
+      "OPL_VERIFY_MUTATION_APPROVAL_ID"
     ],
     "secretEnv": [
       "OPL_VERIFY_AUTH_USERS_JSON"
@@ -452,7 +483,11 @@
         "playwright install --with-deps chromium"
       ],
       "Verify rollout with one Workspace model request": [
-        "node tools/production-live-qa.ts"
+        "node tools/production-live-qa.ts",
+        "--allow-gateway-write",
+        "--allow-model-write",
+        "--approval-id",
+        "OPL_VERIFY_MUTATION_APPROVAL_JSON"
       ]
     },
     "forbiddenRunTokens": []

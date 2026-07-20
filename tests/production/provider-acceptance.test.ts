@@ -272,7 +272,7 @@ test("Provider Acceptance workflow is independently approved, dual-slot fixed, a
   assert.equal(spec.file, ".github/workflows/provider-acceptance.yml");
   assert.equal(spec.job, "accept");
   assert.equal(spec.mode, "operator_only_one_time_dual_fixed_slot");
-  assert.equal(spec.mutationAuthorityWiring, "absent_pending_separate_owner_approval");
+  assert.equal(spec.mutationAuthorityWiring, "dispatch_approval_id_protected_manifest_explicit_cli_allow_flags");
   assert.equal(spec.endpoint, "/api/operator/provider-acceptance");
   assert.equal(spec.lifetimePurchaseBudget, 2);
   assert.deepEqual(spec.fixedSlots.map(({ id, accountId, idempotencyKey, packageId, instanceType, cbsGb }) => ({ id, accountId, idempotencyKey, packageId, instanceType, cbsGb })), [
@@ -287,6 +287,7 @@ test("Provider Acceptance workflow is independently approved, dual-slot fixed, a
   assert.equal(workflow.on.workflow_dispatch.inputs.confirmation.required, true);
   assert.equal(workflow.on.workflow_dispatch.inputs.purchase_budget.required, true);
   assert.equal(workflow.on.workflow_dispatch.inputs.max_approved_provider_cost.required, true);
+  assert.equal(workflow.on.workflow_dispatch.inputs.approval_id.required, true);
   assert.equal(job.environment, "production-provider-acceptance");
   assert.equal(job.env.OPL_PROVIDER_ACCEPTANCE_SLOT_ID, "${{ inputs.slot_id }}");
   assert.equal(job.env.OPL_PROVIDER_ACCEPTANCE_ACCOUNT_ID, "${{ inputs.account_id }}");
@@ -296,11 +297,13 @@ test("Provider Acceptance workflow is independently approved, dual-slot fixed, a
   assert.equal(job.env.OPL_PROVIDER_ACCEPTANCE_MAX_APPROVED_PROVIDER_COST, "${{ inputs.max_approved_provider_cost }}");
   assert.equal(job.env.OPL_PROVIDER_ACCEPTANCE_TOKEN, undefined);
   assert.equal(runStep.env.OPL_PROVIDER_ACCEPTANCE_TOKEN, "${{ secrets.OPL_PROVIDER_ACCEPTANCE_TOKEN }}");
+  assert.equal(runStep.env.OPL_VERIFY_MUTATION_APPROVAL_JSON, "${{ secrets.OPL_VERIFY_MUTATION_APPROVAL_JSON }}");
+  assert.equal(runStep.env.OPL_VERIFY_MUTATION_APPROVAL_ID, "${{ inputs.approval_id }}");
   assert.equal(runStep.env.OPL_PROVIDER_ACCEPTANCE_OPERATOR_TOKEN, undefined);
   assert.equal(job.env.OPL_PROVIDER_ACCEPTANCE_AUTH_USERS_JSON, undefined);
   assert.equal(spec.environment, "production-provider-acceptance");
   assert.ok(spec.requiredEnv.includes("OPL_PROVIDER_ACCEPTANCE_TOKEN"));
-  assert.deepEqual(spec.secretEnv, ["OPL_PROVIDER_ACCEPTANCE_TOKEN"]);
+  assert.deepEqual(spec.secretEnv, ["OPL_PROVIDER_ACCEPTANCE_TOKEN", "OPL_VERIFY_MUTATION_APPROVAL_JSON"]);
   assert.ok(deploySpec.requiredEnv.includes("OPL_PROVIDER_ACCEPTANCE_TOKEN"));
   assert.ok(deploySpec.secretEnv.includes("OPL_PROVIDER_ACCEPTANCE_TOKEN"));
   assert.ok(deploySpec.requiredCommandsByStep["Install Kubernetes secrets"].includes('--from-file=OPL_PROVIDER_ACCEPTANCE_TOKEN="$secret_dir/provider-acceptance-token"'));
@@ -309,8 +312,7 @@ test("Provider Acceptance workflow is independently approved, dual-slot fixed, a
   assert.equal(launch.verification.providerAcceptance.credentialHeader, "x-opl-provider-acceptance-token");
   assert.equal(launch.verification.providerAcceptance.operatorSessionAccepted, false);
   assert.equal(launch.verification.providerAcceptance.genericOperatorTokenAccepted, false);
-  assert.match(source, /node tools\/provider-acceptance\.ts/);
-  assert.doesNotMatch(source, /OPL_VERIFY_MUTATION_APPROVAL_JSON|--allow-gateway-write|--allow-provider-write|--approval-id/);
+  assert.match(runStep.run, /node tools\/provider-acceptance\.ts --allow-gateway-write --allow-provider-write --approval-id "\$OPL_VERIFY_MUTATION_APPROVAL_ID"/);
   assert.doesNotMatch(source, /TENCENTCLOUD_SECRET|compute-allocations|storage-volumes|destroy|delete|renew/i);
   assert.match(backend, /POST \/api\/operator\/provider-acceptance/);
   assert.match(backend, /providerAcceptanceSlots/);

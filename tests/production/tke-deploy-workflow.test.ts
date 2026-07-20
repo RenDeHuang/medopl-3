@@ -229,6 +229,8 @@ test("TKE deploy workflow matches the current deployment contract", async () => 
   assert.ok(contract.deployWorkflow.requiredEnv.includes("OPL_TENCENT_ZONE"));
   assert.ok(contract.deployWorkflow.requiredEnv.includes("OPL_OPERATOR_CIDRS"));
   assert.ok(contract.deployWorkflow.requiredEnv.includes("OPL_TRUSTED_PROXY_CIDRS"));
+  assert.ok(contract.deployWorkflow.requiredEnv.includes("OPL_BASIC_COMPUTE_NODE_POOL_ID"));
+  assert.ok(contract.deployWorkflow.requiredEnv.includes("OPL_PRO_COMPUTE_NODE_POOL_ID"));
   assert.equal(contract.productionVerificationWorkflow.launchStatus, "active");
   assert.equal(contract.productionVerificationWorkflow.mode, "read_only_dual_fixed_slots");
   assert.deepEqual(contract.productionVerificationWorkflow.requiredInputs, []);
@@ -237,7 +239,7 @@ test("TKE deploy workflow matches the current deployment contract", async () => 
   assert.deepEqual(contract.productionVerificationWorkflow.slotDescriptors, [basicSlotDescriptor, proSlotDescriptor]);
   assertWorkflowContract(await readWorkflow(contract.productionVerificationWorkflow.file), contract.productionVerificationWorkflow, contract);
   assert.equal(contract.productionLiveQaJob.releaseGate, true);
-  assert.equal(contract.productionLiveQaJob.mutationAuthorityWiring, "absent_pending_separate_owner_approval");
+  assert.equal(contract.productionLiveQaJob.mutationAuthorityWiring, "dispatch_approval_id_protected_manifest_explicit_cli_allow_flags");
   assert.equal(contract.productionLiveQaJob.mode, "one_basic_reserved_account_one_dedicated_key_one_model_request_no_provider_mutation");
   assert.equal(contract.productionLiveQaJob.reservedAccountCount, 1);
   assert.equal(contract.productionLiveQaJob.dedicatedKeyCount, 1);
@@ -306,15 +308,22 @@ test("TKE deploy requires both fixed slots but runs release live QA once on the 
   const readOnlyWorkflow = JSON.stringify(await readWorkflow(".github/workflows/verify-production-chain.yml"));
   const deploySteps = deploy.steps.map((step) => step.name);
   const accountGate = stepsByName(deploy).get("Require Basic and Pro Acceptance accounts");
+  const inputGate = stepsByName(deploy).get("Check deployment inputs");
+  const liveQaStep = stepsByName(liveQa).get("Verify rollout with one Workspace model request");
 
   assert.equal(deploySteps[0], "Require Basic and Pro Acceptance accounts");
   assert.ok(accountGate);
   assert.match(accountGate.run, /OPL_VERIFY_BASIC_ACCOUNT_ID/);
   assert.match(accountGate.run, /OPL_VERIFY_PRO_ACCOUNT_ID/);
+  assert.match(accountGate.run, /OPL_BOOTSTRAP_MODE[\s\S]*exit 0[\s\S]*OPL_VERIFY_MUTATION_APPROVAL_ID/);
+  assert.match(inputGate.run, /OPL_BASIC_COMPUTE_NODE_POOL_ID/);
+  assert.match(inputGate.run, /OPL_PRO_COMPUTE_NODE_POOL_ID/);
   assert.ok(deploySteps.indexOf("Require Basic and Pro Acceptance accounts") < deploySteps.indexOf("Checkout"));
   assert.ok(deploySteps.indexOf("Require Basic and Pro Acceptance accounts") < deploySteps.indexOf("Prepare kubeconfig"));
   assert.equal(deploy.env.OPL_VERIFY_BASIC_ACCOUNT_ID, "${{ vars.OPL_VERIFY_BASIC_ACCOUNT_ID || '' }}");
   assert.equal(deploy.env.OPL_VERIFY_PRO_ACCOUNT_ID, "${{ vars.OPL_VERIFY_PRO_ACCOUNT_ID || '' }}");
+  assert.equal(deploy.env.OPL_VERIFY_MUTATION_APPROVAL_ID, "${{ inputs.live_qa_approval_id || '' }}");
+  assert.equal(deployWorkflow.on.workflow_dispatch.inputs.live_qa_approval_id.required, false);
   assert.equal(Object.hasOwn(deploy.env, "OPL_CONSOLE_USERS_JSON"), false);
   assert.doesNotMatch(serializedRuns(deploy), /OPL_CONSOLE_USERS_JSON|opl-cloud-auth|auth-users-json/);
 
@@ -330,11 +339,12 @@ test("TKE deploy requires both fixed slots but runs release live QA once on the 
   assert.doesNotMatch(JSON.stringify(liveQa), /matrix\./);
   assert.equal(Object.hasOwn(liveQa.env, "OPL_VERIFY_PURCHASE_BUDGET_REMAINING"), false);
   assert.equal(liveQa.env.OPL_VERIFY_LIVE_QA_CONFIRMATION, "I_UNDERSTAND_THIS_SENDS_ONE_REAL_MODEL_REQUEST");
+  assert.equal(liveQa.env.OPL_VERIFY_MUTATION_APPROVAL_ID, "${{ inputs.live_qa_approval_id || '' }}");
+  assert.equal(liveQaStep.env.OPL_VERIFY_MUTATION_APPROVAL_JSON, "${{ secrets.OPL_VERIFY_MUTATION_APPROVAL_JSON }}");
   assert.equal(Object.hasOwn(liveQa.env, "OPL_VERIFY_MODEL_ACCESS_KEY"), false);
   assert.match(runs, /npm ci/);
   assert.match(runs, /playwright install --with-deps chromium/);
-  assert.match(runs, /node tools\/production-live-qa\.ts/);
-  assert.doesNotMatch(runs, /OPL_VERIFY_MUTATION_APPROVAL_JSON|--allow-gateway-write|--allow-model-write|--approval-id/);
+  assert.match(liveQaStep.run, /node tools\/production-live-qa\.ts --allow-gateway-write --allow-model-write --approval-id "\$OPL_VERIFY_MUTATION_APPROVAL_ID"/);
   assert.doesNotMatch(runs, /compute-allocations|storage-volumes|destroy|detach|renew/i);
   assert.doesNotMatch(readOnlyWorkflow, /production-live-qa|LIVE_QA_CONFIRMATION/);
 });
