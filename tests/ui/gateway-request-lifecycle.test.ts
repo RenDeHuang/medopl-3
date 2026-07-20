@@ -110,7 +110,7 @@ test("leaving Login clears the password without waiting for a session replacemen
   const watcher = app.slice(app.indexOf("\nwatch(path"), app.indexOf("\nonMounted(()"));
   assert.match(watcher, /if \(previous === "\/login"\)[\s\S]*loginForm\.email\s*=\s*""/);
   assert.match(watcher, /if \(previous === "\/login"\)[\s\S]*loginForm\.password\s*=\s*""/);
-  assert.match(watcher, /if \(previous !== next && modal\.value\)[\s\S]*closeModal\(\)/);
+  assert.match(watcher, /if \(previous !== next\)[\s\S]*closeModal\(\)/);
 });
 
 test("Workspace reads preserve confirmed Runtime unless authority proves empty or changes identity", async () => {
@@ -258,32 +258,44 @@ test("closing a modal or replacing the session clears every modal draft", async 
 
   assert.match(closeModalSource, /Object\.assign\(launchForm, \{ name: "", packageId: "basic" \}\)/);
   assert.match(closeModalSource, /Object\.assign\(keyForm, \{ name: "", quotaUsd: 10, expiresInDays: 30 \}\)/);
-  assert.match(closeModalSource, /Object\.assign\(adminUserForm, \{ email: "", password: "", name: "", accountId: "" \}\)/);
+  assert.match(closeModalSource, /Object\.assign\(adminUserForm, \{ email: "", password: "", name: "" \}\)/);
   assert.match(closeModalSource, /modal\.value = ""/);
   assert.match(clearSession, /closeModal\(\)/);
   assert.equal((app.match(/modal\.value = ""/g) || []).length, 1, "every modal close path must reset drafts");
 
   const modalTemplate = app.slice(app.indexOf("<div v-if=\"modal\" class=\"modal-backdrop\""));
   assert.doesNotMatch(modalTemplate, /@click(?:\.self)?="modal = ''"/);
-  assert.equal((modalTemplate.match(/@click(?:\.self)?="closeModal"/g) || []).length, 5);
+  assert.ok((modalTemplate.match(/@click(?:\.self)?="closeModal"/g) || []).length >= 7);
 
   const launchForm = { name: "secret workspace", packageId: "pro" };
   const keyForm = { name: "secret key", quotaUsd: 99, expiresInDays: 365 };
-  const adminUserForm = { email: "owner@example.com", password: "secret password", name: "Owner", accountId: "acct-secret" };
+  const adminUserForm = { email: "owner@example.com", password: "secret password", name: "Owner" };
+  const walletAdjustmentForm = { kind: "debit", amountUsd: "9", reason: "secret reason", confirmationAccountId: "acct-secret", relatedOperationId: "op-secret" };
+  const announcementForm = { title: "secret title", body: "secret body", startsAt: "start", endsAt: "end" };
+  const selectedOperatorAccountId = { value: "acct-secret" };
+  const selectedReview = { value: { resourceType: "workspace", id: "review-secret" } };
   const modal = { value: "admin-user" };
   const closeModal = new Function(
     "launchForm",
     "keyForm",
     "adminUserForm",
+    "walletAdjustmentForm",
+    "announcementForm",
+    "selectedOperatorAccountId",
+    "selectedReview",
     "modal",
     `${closeModalSource}\nreturn closeModal;`
-  )(launchForm, keyForm, adminUserForm, modal) as () => void;
+  )(launchForm, keyForm, adminUserForm, walletAdjustmentForm, announcementForm, selectedOperatorAccountId, selectedReview, modal) as () => void;
 
   closeModal();
   modal.value = "admin-user";
   assert.deepEqual(launchForm, { name: "", packageId: "basic" });
   assert.deepEqual(keyForm, { name: "", quotaUsd: 10, expiresInDays: 30 });
-  assert.deepEqual(adminUserForm, { email: "", password: "", name: "", accountId: "" });
+  assert.deepEqual(adminUserForm, { email: "", password: "", name: "" });
+  assert.deepEqual(walletAdjustmentForm, { kind: "recharge", amountUsd: "", reason: "", confirmationAccountId: "", relatedOperationId: "" });
+  assert.deepEqual(announcementForm, { title: "", body: "", startsAt: "", endsAt: "" });
+  assert.equal(selectedOperatorAccountId.value, "");
+  assert.equal(selectedReview.value, null);
 });
 
 test("per-Key usage ignores late key, period, and page responses including finalizers", async () => {
@@ -559,7 +571,7 @@ test("customer mutations cannot write shared state after their session is replac
     removeKey: 5,
     submitKey: 5,
     readAnnouncement: 4,
-    createCustomerUser: 4
+    inviteOperatorUser: 4
   };
 
   for (const [name, count] of Object.entries(minimumChecks)) {
