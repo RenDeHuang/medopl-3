@@ -60,7 +60,8 @@ test("API, Gateway, and Workspace route changes clear secrets for direct and pop
   for (const prefix of ["/console/api", "/console/gateway", "/console/workspace"]) {
     assert.match(app, new RegExp(prefix.replaceAll("/", "\\/")));
   }
-  assert.match(app, /watch\(path, \(next, previous\) => \{\s*if \(previous !== next && isSensitiveRoute\(previous \|\| ""\)\) clearSecrets\(\);/);
+  const watcher = app.slice(app.indexOf("\nwatch(path"), app.indexOf("\nonMounted(()"));
+  assert.match(watcher, /if \(previous !== next && isSensitiveRoute\(previous \|\| ""\)\) clearSecrets\(\);/);
   assert.match(app, /const path = ref\(window\.location\.pathname\)/);
   assert.match(app, /const onPopState = \(\) => \{ path\.value = window\.location\.pathname; \}/);
 });
@@ -102,6 +103,14 @@ test("session replacement clears login password and receipt refresh returns to t
   assert.match(clearSession, /loginForm\.password\s*=\s*""/);
   assert.match(clearSession, /loginForm\.email\s*=\s*""/);
   assert.match(loadReceipts, /if \(!cursor\)\s*receiptCursorStack\.value\s*=\s*\[\]/);
+});
+
+test("leaving Login clears the password without waiting for a session replacement", async () => {
+  const app = await appSource();
+  const watcher = app.slice(app.indexOf("\nwatch(path"), app.indexOf("\nonMounted(()"));
+  assert.match(watcher, /if \(previous === "\/login"\)[\s\S]*loginForm\.email\s*=\s*""/);
+  assert.match(watcher, /if \(previous === "\/login"\)[\s\S]*loginForm\.password\s*=\s*""/);
+  assert.match(watcher, /if \(previous !== next && modal\.value\)[\s\S]*closeModal\(\)/);
 });
 
 test("Workspace reads preserve confirmed Runtime unless authority proves empty or changes identity", async () => {

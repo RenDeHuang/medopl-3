@@ -1190,6 +1190,11 @@ function receiptLabel(type: string) {
 }
 
 watch(path, (next, previous) => {
+  if (previous === "/login") {
+    loginForm.email = "";
+    loginForm.password = "";
+  }
+  if (previous !== next && modal.value) closeModal();
   if (previous !== next && isSensitiveRoute(previous || "")) clearSecrets();
   void handleRoute();
 });
