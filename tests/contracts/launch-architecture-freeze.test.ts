@@ -82,7 +82,7 @@ test("launch freeze fixes the V2 products, owner lanes, settlement, and verifica
       receiptPending: "retry_purchase_receipt_only",
       refundConfirmedReceiptPending: "retry_refund_receipt_only"
     },
-    implementation: "pending_integrated_local_verification"
+    implementation: "integrated_local_fake_verified"
   });
 
   assert.deepEqual(freeze.monthlySettlement.protocol, ["debit", "fabric_fulfillment", "claim", "activate", "record_workspace_receipt"]);
@@ -114,7 +114,8 @@ test("launch freeze fixes the V2 products, owner lanes, settlement, and verifica
   });
   assert.equal(freeze.workspaceLaunch.codeCompleteThroughPhase, undefined);
   assert.equal(freeze.workspaceLaunch.nextBlockedStage, undefined);
-  assert.match(freeze.workspaceLaunch.currentImplementation, /manual-review recovery.*pending integrated verification/i);
+  assert.match(freeze.workspaceLaunch.currentImplementation, /manual-review recovery.*integrated local fake evidence/i);
+  assert.doesNotMatch(freeze.workspaceLaunch.currentImplementation, /pending integrated verification/i);
   assert.doesNotMatch(freeze.workspaceLaunch.currentImplementation, /S9|manual review.*code-complete/i);
   assert.equal(freeze.workspaceRuntime.sourceImage.digest, "sha256:9d867fe0fc9db48b6efa27371d77770e46fc8cd97d26ef85a81fbdac7e96ca76");
   assert.equal(freeze.workspaceRuntime.primaryWorkspacePerAccount, 1);

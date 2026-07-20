@@ -106,19 +106,19 @@ test("management contract hard-cuts customer identity to Sub2API and one atomic 
   assert.deepEqual(management.api.managementStateExcludedFields, ["organization", "organizations", "memberships"]);
   assert.equal(management.bootstrapLifecycle.legacyLocalUsersEnv, "retired_nonempty_value_fails_startup");
   assert.deepEqual(management.identityDelivery, {
-    controlPlane: "canonical_provisioning_pending_integrated_local_verification",
-    deploymentCutover: "canonical_route_pending_integrated_local_verification",
+    controlPlane: "canonical_provisioning_integrated_local_verified",
+    deploymentCutover: "canonical_route_deployment_pending",
     authenticatedRuntimeEvidence: "pending"
   });
 });
 
-test("offer identity reports pending integrated verification without claiming runtime evidence", async () => {
+test("offer identity reports local integrated verification without claiming runtime evidence", async () => {
   const launch = await readJson("opl-cloud-launch-freeze-contract.json");
   const stage = launch.launchStages.find(({ id }) => id === "offer_identity");
 
   assert.equal(
     stage.currentState,
-    "Canonical POST /api/operator/accounts provisioning and the strict one-to-one mapped-owner graph are pending integrated local verification; authenticated production runtime evidence remains pending, while self-registration and SSO are outside the Pilot."
+    "Canonical POST /api/operator/accounts provisioning and the strict one-to-one mapped-owner graph have integrated local evidence; deployment and authenticated production runtime evidence remain pending, while self-registration and SSO are outside the Pilot."
   );
   assert.doesNotMatch(stage.currentState, /CI-verified/);
   assert.doesNotMatch(stage.currentState, /operator password reset/);

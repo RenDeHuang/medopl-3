@@ -262,7 +262,7 @@
         },
         "recoveryRoute": "POST /api/operator/workspace-launches/{operationId}/recover",
         "recoveryRequestFields": ["accountId", "billingOperationId", "evidenceRef"],
-        "implementation": "pending_integrated_local_verification"
+        "implementation": "integrated_local_fake_verified"
       },
       "resources": {
         "route": "GET /api/operator/workspaces/{workspaceId}",

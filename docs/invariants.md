@@ -143,7 +143,7 @@ validate account and quote
   `POST /api/operator/workspace-launches/{operationId}/recover`. Reconciliation
   items require `accountId`, `billingOperationId`, `phase`, `errorCode`, and
   `allowedActions`; only `manual_review` exposes `recover_workspace_launch`.
-  This dedicated recovery and DTO are pending integrated verification.
+  This dedicated recovery and DTO have integrated local fake evidence.
   Provider reconciliation uses internal
   `GET /fabric/monthly-provider-truth?computeAllocationId=<id>&storageVolumeId=<id>`
   only for `workspace.launch.v2` manual-review recovery and reuses the existing
@@ -162,7 +162,7 @@ validate account and quote
 - Replays never create a second debit, refund, purchase, renewal, Secret, or receipt.
 - The non-review V2 path has local focused evidence from debit through pure Fabric
   fulfillment, activation, confirmed-absence refund, and receipt-only retry.
-  Dedicated manual-review recovery remains pending integrated verification.
+  Dedicated manual-review recovery has integrated local fake evidence.
   No real Sub2API, Tencent, Runtime, browser, or production evidence is claimed.
 
 ## Products And Lifecycle
@@ -256,11 +256,11 @@ Provider Acceptance owns two retained non-customer slots:
 
 | Stage | Business | Owners | Current state | Required output and evidence |
 | --- | --- | --- | --- | --- |
-| 1. Offer and identity | Show invited mapped owners Basic and Pro without the Acceptance SKUs. | Console, Gateway | Canonical `POST /api/operator/accounts` provisioning and the strict one-to-one mapped-owner graph are pending integrated local verification; deployed authenticated identity readback is pending. | Product contract, tenant tests, deployed account readback. |
+| 1. Offer and identity | Show invited mapped owners Basic and Pro without the Acceptance SKUs. | Console, Gateway | Canonical `POST /api/operator/accounts` provisioning and the strict one-to-one mapped-owner graph have integrated local evidence; deployment and authenticated production identity readback remain pending. | Product contract, tenant tests, deployed account readback. |
 | 2. Wallet and quote | Show live wallet and exact Workspace quote before side effects. | Console, Gateway | Granular Wallet/Key/Usage/Stats/history DTOs, fixed USD Basic/Pro quotes, and local Console integration are code-complete; live authenticated Sub2API evidence is pending. | Source-contract tests, quote tests, unavailable-state UI tests. |
 | 3. Balance debit | Debit the exact monthly amount once before provider mutation. | Console, Gateway, Ledger | Durable one-submit launch, debit-first recovery, and replay are code-complete; deployed browser and live Sub2API evidence are pending. | Deterministic debit, balance check, replay/concurrency evidence. |
 | 4. Prepaid fulfillment | Open one-month PREPAID CVM/CBS after debit. | Fabric, Console | PREPAID CVM/CBS request/readback and pure-fulfillment recovery behind one Workspace debit are code-complete in local tests; live Tencent evidence is pending. | Request shapes, provider readback, duplicate-purchase guard. |
-| 5. Claim and activate | Activate only after every resource is owned and read back. | All four lanes | Non-review V2 claim, confirmed-absence one-refund convergence, activation, and purchased/refunded Receipt paths have local focused evidence; dedicated launch review recovery and reconciliation DTO are pending integrated verification, and live evidence is pending. | Claim identity, confirmed-absence refund, ambiguous-result review. |
+| 5. Claim and activate | Activate only after every resource is owned and read back. | All four lanes | Non-review V2 claim, confirmed-absence one-refund convergence, activation, purchased/refunded Receipt paths, dedicated launch review recovery, and its reconciliation DTO have integrated local fake evidence; live evidence remains pending. | Claim identity, confirmed-absence refund, ambiguous-result review. |
 | 6. Workspace access | Authenticate to a ready, persistent, account-keyed Workspace. | Fabric, Console, Ledger | V2 attachment, Secret, Runtime readiness gate, activation, receipt-only recovery, status, and credential flows have local focused evidence on the non-review path; external Runtime metadata/statfs API, new immutable image, browser, WebSocket, model, and deployed evidence remain pending. | Owner isolation, login, WebSocket 101, Secret rotation, credential revision and digest readback. |
 | 7. Gateway usage | Reveal the owner Key, make a metered Workspace model request, and show its customer-safe cost and Token facts. | Gateway, Console, Ledger | Wallet, Key list, request Usage, Usage Stats, balance history, and integer-cost projections are code-complete and locally tested; a real model request and production readback remain pending. | Tenant isolation, model response, request usage and stats projection, integer `actual_cost`, no leakage. |
 | 8. Renewal and recovery | Renew one Workspace period with deterministic recovery. | All four lanes | Workspace-level claim, combined debit, same-ID provider renewal/readback, expiry, refund/review, and receipt recovery are code-complete; enabling auto-renew and real renewal evidence are pending. | Isolated PostgreSQL concurrency, renewal replay, deadline readback, real approved renewal. |

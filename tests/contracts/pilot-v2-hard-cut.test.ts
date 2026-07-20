@@ -89,7 +89,7 @@ test("Pilot V2 contracts hard cut Workspace purchase, access, and Runtime facts"
   assert.equal(freeze.workspaceLaunch.persistence, "control_plane_runtime_operations with action=workspace.launch.v2 and result.schemaVersion=2");
   assert.equal(freeze.workspaceLaunch.codeCompleteThroughPhase, undefined);
   assert.equal(freeze.workspaceLaunch.legacyNonTerminalPolicy, "clear_or_manual_handle_before_cutover_never_resume_in_v2_worker");
-  assert.equal(freeze.workspaceLaunch.backgroundProgression, "non_review_fulfillment_and_receipt_recovery_locally_tested_manual_review_recovery_pending_integration");
+  assert.equal(freeze.workspaceLaunch.backgroundProgression, "non_review_and_manual_review_recovery_integrated_local_fake_verified");
   assert.equal(freeze.workspaceLaunch.nextBlockedStage, undefined);
   assert.deepEqual(freeze.workspaceLaunch.fulfillmentResources, ["compute", "storage", "attachment", "gateway_secret", "runtime"]);
 	assert.deepEqual(freeze.gateway.workspaceKeyLifecycle, {
@@ -288,7 +288,7 @@ test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and an
     },
     recoveryRoute: "POST /api/operator/workspace-launches/{operationId}/recover",
     recoveryRequestFields: ["accountId", "billingOperationId", "evidenceRef"],
-    implementation: "pending_integrated_local_verification"
+    implementation: "integrated_local_fake_verified"
   });
   assert.equal(boundary.externalServices.gateway.currentImplementation, "paginated_users_batch_user_and_key_usage_code_complete_local_only");
   const announcement = business.objectKinds.find((entry: { kind: string }) => entry.kind === "Announcement");
@@ -339,7 +339,8 @@ test("Pilot V2 current human truth preserves public entry points and evidence le
   }
   assert.match(consoleProduct, /Home.*Login.*Logo/is);
   assert.match(consoleProduct, /URL.*用户名.*密码.*Workspace Key/is);
-  assert.match(invariants, /Dedicated `workspace\.launch\.v2` review recovery[\s\S]{0,800}pending integrated verification/i);
+  assert.match(invariants, /Dedicated `workspace\.launch\.v2` review recovery[\s\S]{0,800}integrated local fake evidence/i);
+  assert.doesNotMatch(invariants, /pending integrated verification/i);
   assert.doesNotMatch(invariants, /stops at\s+`debited`[\s\S]{0,300}S8/i);
   assert.doesNotMatch(invariants, /durable `workspace\.launch` RuntimeOperation/);
   assert.doesNotMatch(invariants, /S9|manual[- ]review[^.\n]{0,160}code-complete/i);

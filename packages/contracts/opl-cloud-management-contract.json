@@ -146,8 +146,8 @@
     "legacyLocalUsersEnv": "retired_nonempty_value_fails_startup"
   },
   "identityDelivery": {
-    "controlPlane": "canonical_provisioning_pending_integrated_local_verification",
-    "deploymentCutover": "canonical_route_pending_integrated_local_verification",
+    "controlPlane": "canonical_provisioning_integrated_local_verified",
+    "deploymentCutover": "canonical_route_deployment_pending",
     "authenticatedRuntimeEvidence": "pending"
   },
   "userLifecycle": {

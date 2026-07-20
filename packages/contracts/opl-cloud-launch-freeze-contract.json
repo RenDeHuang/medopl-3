@@ -126,7 +126,7 @@
     },
     "retryRule": "Debit, refund, provider mutation, claim, activation, renewal, Secret write, and receipt use stable operation-scoped idempotency identities.",
     "doubleDebitForbidden": true,
-    "currentImplementation": "The non-review workspace.launch.v2 path has local focused evidence through debit, pure Fabric fulfillment, activation, confirmed-absence refund, and receipt-only retry. Dedicated manual-review recovery and its reconciliation DTO are pending integrated verification. No real Sub2API, Tencent, Runtime, browser, or production evidence is claimed."
+    "currentImplementation": "The workspace.launch.v2 non-review path, dedicated manual-review recovery, and reconciliation DTO have integrated local fake evidence through debit, pure Fabric fulfillment, activation, confirmed-absence refund, and receipt-only retry. No real Sub2API, Tencent, Runtime, browser, or production evidence is claimed."
   },
   "workspaceLaunch": {
     "quoteApi": "POST /api/pricing/preview with resourceType=workspace",
@@ -165,7 +165,7 @@
         "receiptPending": "retry_purchase_receipt_only",
         "refundConfirmedReceiptPending": "retry_refund_receipt_only"
       },
-      "implementation": "pending_integrated_local_verification"
+      "implementation": "integrated_local_fake_verified"
     },
     "persistence": "control_plane_runtime_operations with action=workspace.launch.v2 and result.schemaVersion=2",
     "legacyNonTerminalPolicy": "clear_or_manual_handle_before_cutover_never_resume_in_v2_worker",
@@ -179,8 +179,8 @@
     "totalBalanceSemantics": "read_only_preflight_not_hold_or_reservation",
     "customerDebitCardinality": 1,
     "fulfillmentResources": ["compute", "storage", "attachment", "gateway_secret", "runtime"],
-    "backgroundProgression": "non_review_fulfillment_and_receipt_recovery_locally_tested_manual_review_recovery_pending_integration",
-    "currentImplementation": "Exact fixed-USD quote composition, one-submit V2 persistence, CAS/lease recovery, strict one-debit balance proof, pure Fabric fulfillment, attachment, Gateway Secret, Runtime readiness, activation, confirmed-absence refund, and receipt-only retry have local focused evidence on non-review paths. Dedicated workspace.launch.v2 manual-review recovery and reconciliation fields are pending integrated verification; no real environment evidence is claimed."
+    "backgroundProgression": "non_review_and_manual_review_recovery_integrated_local_fake_verified",
+    "currentImplementation": "Exact fixed-USD quote composition, one-submit V2 persistence, CAS/lease recovery, strict one-debit balance proof, pure Fabric fulfillment, attachment, Gateway Secret, Runtime readiness, activation, confirmed-absence refund, dedicated workspace.launch.v2 manual-review recovery, reconciliation fields, and receipt-only retry have integrated local fake evidence; no real environment evidence is claimed."
   },
   "providerProcurement": {
     "provider": "Tencent Cloud",
@@ -369,7 +369,7 @@
       "id": "offer_identity",
       "business": "A mapped customer signs in and sees Basic and Pro with separate compute and storage prices; the internal verification slot never appears.",
       "owners": ["console", "gateway"],
-      "currentState": "Canonical POST /api/operator/accounts provisioning and the strict one-to-one mapped-owner graph are pending integrated local verification; authenticated production runtime evidence remains pending, while self-registration and SSO are outside the Pilot.",
+      "currentState": "Canonical POST /api/operator/accounts provisioning and the strict one-to-one mapped-owner graph have integrated local evidence; deployment and authenticated production runtime evidence remain pending, while self-registration and SSO are outside the Pilot.",
       "requiredDeliverables": ["account mapping", "Basic and Pro definitions", "tenant isolation"],
       "completionEvidence": ["contract tests", "tenant tests", "deployed mapped-account readback"]
     },
@@ -401,7 +401,7 @@
       "id": "claim_and_activate",
       "business": "Entitlements activate only after all billable provider resources are identified and assigned.",
       "owners": ["fabric", "console", "gateway", "ledger"],
-      "currentState": "The non-review V2 claim, confirmed-absence one-refund convergence, Workspace activation, and purchased-or-refunded Receipt paths have local focused evidence. Dedicated workspace.launch.v2 manual-review recovery and reconciliation DTO are pending integrated verification; live evidence is pending.",
+      "currentState": "The non-review V2 claim, confirmed-absence one-refund convergence, Workspace activation, purchased-or-refunded Receipt paths, dedicated workspace.launch.v2 manual-review recovery, and reconciliation DTO have integrated local fake evidence; live evidence remains pending.",
       "requiredDeliverables": ["resource claim", "confirmed-absence refund", "manual-review state", "purchase receipt"],
       "completionEvidence": ["claim identity test", "refund replay test", "partial-result manual-review test"]
     },
