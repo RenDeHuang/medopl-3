@@ -37,7 +37,8 @@ import type {
   PricingPreviewResponse,
   ReadinessFact,
   SourceEnvelope,
-  UpdateGatewayKeyRequest
+  UpdateGatewayKeyRequest,
+  WorkspaceLaunchRecoveryRequest
 } from "./dtos.ts";
 import { deleteJson, getJson, patchJson, postJson, putJson, type ApiError } from "./console-api.ts";
 
@@ -218,6 +219,10 @@ export function disableOperatorAccount(accountId: string, reason: string, csrfTo
 
 export function resolveBillingReview(resourceType: string, resourceId: string, input: BillingReviewResolutionRequest, csrfToken: string, idempotencyKey: string): Promise<OperationStatusDTO> {
   return postJson<unknown>(`/api/operator/billing-reviews/${encodeURIComponent(resourceType)}/${encodeURIComponent(resourceId)}/resolve`, input, csrfToken, idempotencyKey).then(decodeDto<OperationStatusDTO>);
+}
+
+export function recoverWorkspaceLaunch(operationId: string, input: WorkspaceLaunchRecoveryRequest, csrfToken: string, idempotencyKey: string): Promise<OperationStatusDTO> {
+  return postJson<unknown>(`/api/operator/workspace-launches/${encodeURIComponent(operationId)}/recover`, input, csrfToken, idempotencyKey).then(decodeDto<OperationStatusDTO>);
 }
 
 export function createOperatorAnnouncement(input: AnnouncementDraftRequest, csrfToken: string, idempotencyKey: string): Promise<AnnouncementDTO> {

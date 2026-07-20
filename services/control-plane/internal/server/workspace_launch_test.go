@@ -1440,6 +1440,186 @@ func TestWorkspaceLaunchOwnerLifecycleFencesClaimBeforeDebit(t *testing.T) {
 	}
 }
 
+func chargedWorkspaceLaunchReview(t *testing.T, fixture workspaceLaunchWorkerFixture) workspaceLaunchOperation {
+	t.Helper()
+	if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+		t.Fatal(err)
+	}
+	operation := fixture.operation(t)
+	if operation.Status != "debited" || operation.ChargeConfirmation == nil || !operation.PostChargeBalanceKnown {
+		t.Fatalf("launch was not charged exactly before review: %#v", operation)
+	}
+	operation.Status, operation.Phase, operation.ErrorCode = "manual_review", "storage_fulfilling", "fabric_storage_confirmed_absent_after_compute_created"
+	mustStore(t, fixture.store.memoryTableStore.SaveRuntimeOperation(context.Background(), workspaceLaunchOperationRow(operation)))
+	return fixture.operation(t)
+}
+
+func recoverWorkspaceLaunchForTest(t *testing.T, fixture workspaceLaunchWorkerFixture, key string) *httptest.ResponseRecorder {
+	t.Helper()
+	operation := fixture.operation(t)
+	body := fmt.Sprintf(`{"accountId":%q,"billingOperationId":%q,"evidenceRef":"case-20260720-cbs"}`, operation.AccountID, operation.ID)
+	return requestWithMutationKeyForTest(t, fixture.server, fixture.operator, http.MethodPost, "/api/operator/workspace-launches/"+operation.ID+"/recover", body, key)
+}
+
+func TestWorkspaceLaunchRecoveryRetriesAbsentStorageWithOriginalIdentity(t *testing.T) {
+	fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+	operation := chargedWorkspaceLaunchReview(t, fixture)
+	configureWorkspaceLaunchFulfillment(t, fixture)
+	fixture.fabric.storageSync = clients.StorageVolume{
+		ID: operation.StorageID, AccountID: operation.AccountID, WorkspaceID: operation.WorkspaceID, Status: "external_deleted", CBSStatus: "NOT_FOUND",
+	}
+	fixture.fabric.providerTruth = &clients.MonthlyProviderTruth{
+		ComputeState: "ready", StorageState: "absent", Compute: fixture.fabric.computeSync, Storage: fixture.fabric.storageSync,
+	}
+	fixture.fabric.mutateStorage = func(created *clients.StorageVolume) { fixture.fabric.storageSync = *created }
+
+	response := recoverWorkspaceLaunchForTest(t, fixture, "launch-recovery-storage")
+	if response.Code != http.StatusOK {
+		t.Fatalf("storage recovery status=%d body=%s", response.Code, response.Body.String())
+	}
+	recovered := fixture.operation(t)
+	if recovered.Status != "succeeded" || len(fixture.fabric.storageIDs) != 1 || fixture.fabric.storageIDs[0] != operation.StorageID ||
+		len(fixture.fabric.storageCreateKeys) != 1 || fixture.fabric.storageCreateKeys[0] != operation.ID+":storage" ||
+		len(fixture.fabric.storageInputs) != 1 || fixture.fabric.storageInputs[0].ID != operation.StorageID || len(fixture.sub2API.refunds) != 0 || len(fixture.sub2API.charges) != 1 {
+		t.Fatalf("storage recovery=%#v ids=%#v keys=%#v inputs=%#v charges=%#v refunds=%#v", recovered, fixture.fabric.storageIDs, fixture.fabric.storageCreateKeys, fixture.fabric.storageInputs, fixture.sub2API.charges, fixture.sub2API.refunds)
+	}
+}
+
+func TestWorkspaceLaunchRecoveryRefundsBothAbsentOnlyOnce(t *testing.T) {
+	fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+	operation := chargedWorkspaceLaunchReview(t, fixture)
+	fixture.fabric.computeSync = clients.ComputeAllocation{ID: operation.ComputeID, AccountID: operation.AccountID, WorkspaceID: operation.WorkspaceID, Status: "external_deleted"}
+	fixture.fabric.storageSync = clients.StorageVolume{ID: operation.StorageID, AccountID: operation.AccountID, WorkspaceID: operation.WorkspaceID, Status: "external_deleted", CBSStatus: "NOT_FOUND"}
+	fixture.fabric.providerTruth = &clients.MonthlyProviderTruth{
+		ComputeState: "absent", StorageState: "absent", Compute: fixture.fabric.computeSync, Storage: fixture.fabric.storageSync,
+	}
+
+	first := recoverWorkspaceLaunchForTest(t, fixture, "launch-recovery-refund")
+	second := recoverWorkspaceLaunchForTest(t, fixture, "launch-recovery-refund")
+	refunded := fixture.operation(t)
+	if first.Code != http.StatusOK || second.Code != http.StatusOK || refunded.Status != "refunded" || len(fixture.sub2API.refunds) != 1 ||
+		fixture.sub2API.refunds[0].Code != operation.RefundCode || fixture.sub2API.refunds[0].RefundUSDMicros != operation.TotalChargeUSDMicros ||
+		len(fixture.fabric.computeIDs) != 0 || len(fixture.fabric.storageIDs) != 0 || len(fixture.sub2API.charges) != 1 {
+		t.Fatalf("both-absent recovery first=%d second=%d operation=%#v charges=%#v refunds=%#v compute=%#v storage=%#v", first.Code, second.Code, refunded, fixture.sub2API.charges, fixture.sub2API.refunds, fixture.fabric.computeIDs, fixture.fabric.storageIDs)
+	}
+}
+
+func TestWorkspaceLaunchRecoveryKeepsUnsafeProviderStatesInReview(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		setup func(workspaceLaunchWorkerFixture, workspaceLaunchOperation)
+	}{
+		{name: "unknown", setup: func(fixture workspaceLaunchWorkerFixture, _ workspaceLaunchOperation) {
+			configureWorkspaceLaunchFulfillment(t, fixture)
+			fixture.fabric.providerTruthErr = errors.New("provider truth unavailable")
+		}},
+		{name: "compute absent storage ready", setup: func(fixture workspaceLaunchWorkerFixture, operation workspaceLaunchOperation) {
+			configureWorkspaceLaunchFulfillment(t, fixture)
+			fixture.fabric.computeSync = clients.ComputeAllocation{ID: operation.ComputeID, AccountID: operation.AccountID, WorkspaceID: operation.WorkspaceID, Status: "external_deleted"}
+			fixture.fabric.providerTruth = &clients.MonthlyProviderTruth{
+				ComputeState: "absent", StorageState: "ready", Compute: fixture.fabric.computeSync, Storage: fixture.fabric.storageSync,
+			}
+		}},
+		{name: "absent state contradicts ready facts", setup: func(fixture workspaceLaunchWorkerFixture, _ workspaceLaunchOperation) {
+			configureWorkspaceLaunchFulfillment(t, fixture)
+			fixture.fabric.providerTruth = &clients.MonthlyProviderTruth{
+				ComputeState: "absent", StorageState: "absent", Compute: fixture.fabric.computeSync, Storage: fixture.fabric.storageSync,
+			}
+		}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+			operation := chargedWorkspaceLaunchReview(t, fixture)
+			tc.setup(fixture, operation)
+			response := recoverWorkspaceLaunchForTest(t, fixture, "launch-recovery-unsafe")
+			current := fixture.operation(t)
+			if response.Code != http.StatusOK || current.Status != "manual_review" || len(fixture.sub2API.refunds) != 0 ||
+				len(fixture.fabric.computeIDs) != 0 || len(fixture.fabric.storageIDs) != 0 || len(fixture.sub2API.charges) != 1 ||
+				countStrings(*fixture.events, "fabric.monthly-provider-truth") != 1 || countStrings(*fixture.events, "fabric.compute.sync") != 0 || countStrings(*fixture.events, "fabric.storage.sync") != 0 {
+				t.Fatalf("unsafe recovery status=%d body=%s operation=%#v charges=%#v refunds=%#v compute=%#v storage=%#v", response.Code, response.Body.String(), current, fixture.sub2API.charges, fixture.sub2API.refunds, fixture.fabric.computeIDs, fixture.fabric.storageIDs)
+			}
+		})
+	}
+}
+
+func TestWorkspaceLaunchRecoveryRejectsUnconfirmedChargeBeforeProviderTruth(t *testing.T) {
+	fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000}, nil, nil)
+	operation := fixture.operation(t)
+	operation.Status, operation.Phase, operation.ErrorCode = "manual_review", "storage_fulfilling", "sub2api_charge_unconfirmed"
+	mustStore(t, fixture.store.memoryTableStore.SaveRuntimeOperation(context.Background(), workspaceLaunchOperationRow(operation)))
+
+	response := recoverWorkspaceLaunchForTest(t, fixture, "launch-recovery-unconfirmed")
+	current := fixture.operation(t)
+	if response.Code != http.StatusOK || current.Status != "manual_review" || current.ErrorCode != "workspace_launch_charge_unconfirmed" ||
+		len(fixture.sub2API.charges) != 0 || len(fixture.sub2API.refunds) != 0 || countStrings(*fixture.events, "fabric.monthly-provider-truth") != 0 ||
+		len(fixture.fabric.computeIDs) != 0 || len(fixture.fabric.storageIDs) != 0 {
+		t.Fatalf("unconfirmed charge recovery status=%d body=%s operation=%#v events=%#v charges=%#v refunds=%#v", response.Code, response.Body.String(), current, *fixture.events, fixture.sub2API.charges, fixture.sub2API.refunds)
+	}
+}
+
+func TestWorkspaceLaunchRecoveryRetriesOnlyReceiptAfterLedgerFailure(t *testing.T) {
+	t.Run("purchase", func(t *testing.T) {
+		fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+		configureWorkspaceLaunchFulfillment(t, fixture)
+		fixture.ledger.receiptErrors = []error{errors.New("Ledger unavailable"), nil}
+		if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err != nil {
+			t.Fatal(err)
+		}
+		if err := fixture.app.runWorkspaceLaunchesOnce(context.Background(), fixture.service); err == nil {
+			t.Fatal("first purchase receipt failure was not returned")
+		}
+		operation := fixture.operation(t)
+		operation.Status = "manual_review"
+		mustStore(t, fixture.store.memoryTableStore.SaveRuntimeOperation(context.Background(), workspaceLaunchOperationRow(operation)))
+		beforeEvents := append([]string(nil), (*fixture.events)...)
+		beforeCharges := len(fixture.sub2API.charges)
+
+		response := recoverWorkspaceLaunchForTest(t, fixture, "launch-recovery-purchase-receipt")
+		current := fixture.operation(t)
+		if response.Code != http.StatusOK || current.Status != "succeeded" || current.Phase != "succeeded" || len(fixture.ledger.receiptInputs) != 2 || len(fixture.sub2API.charges) != beforeCharges {
+			t.Fatalf("purchase receipt recovery status=%d body=%s operation=%#v charges=%#v receipts=%#v", response.Code, response.Body.String(), current, fixture.sub2API.charges, fixture.ledger.receiptInputs)
+		}
+		assertNoWorkspaceLaunchRecoveryFabricWrites(t, beforeEvents, *fixture.events)
+	})
+
+	t.Run("refund", func(t *testing.T) {
+		fixture := newWorkspaceLaunchWorkerFixture(t, []int64{1_000_000_000, 1_000_000_000, 947_420_000}, nil, nil)
+		operation := chargedWorkspaceLaunchReview(t, fixture)
+		fixture.fabric.providerTruth = &clients.MonthlyProviderTruth{
+			ComputeState: "absent", StorageState: "absent",
+			Compute: clients.ComputeAllocation{ID: operation.ComputeID, AccountID: operation.AccountID, WorkspaceID: operation.WorkspaceID, Status: "external_deleted"},
+			Storage: clients.StorageVolume{ID: operation.StorageID, AccountID: operation.AccountID, WorkspaceID: operation.WorkspaceID, Status: "external_deleted", CBSStatus: "NOT_FOUND"},
+		}
+		fixture.ledger.receiptErrors = []error{errors.New("Ledger unavailable"), nil}
+		first := recoverWorkspaceLaunchForTest(t, fixture, "launch-recovery-refund-receipt")
+		operation = fixture.operation(t)
+		if first.Code != http.StatusOK || operation.Phase != "refund_pending" || operation.RefundConfirmation == nil || len(fixture.sub2API.refunds) != 1 {
+			t.Fatalf("refund receipt setup status=%d body=%s operation=%#v refunds=%#v", first.Code, first.Body.String(), operation, fixture.sub2API.refunds)
+		}
+		operation.Status = "manual_review"
+		mustStore(t, fixture.store.memoryTableStore.SaveRuntimeOperation(context.Background(), workspaceLaunchOperationRow(operation)))
+		beforeEvents := append([]string(nil), (*fixture.events)...)
+		beforeCharges, beforeRefunds := len(fixture.sub2API.charges), len(fixture.sub2API.refunds)
+
+		second := recoverWorkspaceLaunchForTest(t, fixture, "launch-recovery-refund-receipt")
+		current := fixture.operation(t)
+		if second.Code != http.StatusOK || current.Status != "refunded" || current.Phase != "refunded" || len(fixture.ledger.receiptInputs) != 2 ||
+			len(fixture.sub2API.charges) != beforeCharges || len(fixture.sub2API.refunds) != beforeRefunds {
+			t.Fatalf("refund receipt recovery status=%d body=%s operation=%#v charges=%#v refunds=%#v receipts=%#v", second.Code, second.Body.String(), current, fixture.sub2API.charges, fixture.sub2API.refunds, fixture.ledger.receiptInputs)
+		}
+		assertNoWorkspaceLaunchRecoveryFabricWrites(t, beforeEvents, *fixture.events)
+	})
+}
+
+func assertNoWorkspaceLaunchRecoveryFabricWrites(t *testing.T, before, after []string) {
+	t.Helper()
+	for _, event := range []string{"fabric.monthly-provider-truth", "fabric.compute.prepare", "fabric.compute.sync", "fabric.storage.prepare", "fabric.storage.sync", "fabric.attachment", "fabric.gateway-secret", "fabric.runtime"} {
+		if countStrings(after, event) != countStrings(before, event) {
+			t.Fatalf("receipt-only recovery repeated %s: before=%#v after=%#v", event, before, after)
+		}
+	}
+}
+
 func countStrings(values []string, target string) int {
 	count := 0
 	for _, value := range values {

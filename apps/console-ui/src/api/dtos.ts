@@ -615,16 +615,21 @@ export interface OperatorOverviewDTO {
   health: SourceEnvelope<OperatorHealthDTO>;
 }
 
+export interface OperatorReconciliationItemDTO {
+  id: string;
+  resourceType: "workspace" | "compute" | "storage";
+  status: string;
+  accountId: string;
+  billingOperationId: string;
+  phase: string;
+  errorCode: string;
+  allowedActions: Array<"recover_workspace_launch" | "resolve_billing_review">;
+  operationRef?: string;
+  receiptRef?: string;
+}
+
 export interface OperatorReconciliationPageDTO {
-  items: Array<{
-    id: string;
-    resourceType: "workspace" | "compute" | "storage";
-    status: string;
-    operationRef?: string;
-    receiptRef?: string;
-    accountId?: string;
-    billingOperationId?: string;
-  }>;
+  items: OperatorReconciliationItemDTO[];
   total: number;
   page: number;
   pageSize: number;
@@ -634,6 +639,12 @@ export interface BillingReviewResolutionRequest {
   accountId: string;
   billingOperationId: string;
   decision: "activate_charged_resource" | "terminate_uncharged_absent" | "refund_charged_absent";
+  evidenceRef: string;
+}
+
+export interface WorkspaceLaunchRecoveryRequest {
+  accountId: string;
+  billingOperationId: string;
   evidenceRef: string;
 }
 

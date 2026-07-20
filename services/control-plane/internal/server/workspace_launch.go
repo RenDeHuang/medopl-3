@@ -800,6 +800,155 @@ func (app *controlPlaneServer) workspaceLaunchOperation(ctx context.Context, ope
 	return workspaceLaunchOperation{}, false, nil
 }
 
+func (app *controlPlaneServer) recoverWorkspaceLaunchReview(ctx context.Context, service *controlplane.Service, input billingReviewResolutionInput) (map[string]any, error) {
+	if input.ResourceType != "workspace_launch" || input.ResourceID == "" || input.ResourceID != input.BillingOperationID || input.AccountID == "" || input.IdempotencyKey == "" || input.Reviewer == "" {
+		return nil, errInvalidBillingReview
+	}
+	operation, ok, err := app.workspaceLaunchOperation(ctx, input.ResourceID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, errBillingReviewNotFound
+	}
+	if operation.AccountID != input.AccountID {
+		return nil, errBillingReviewIdentity
+	}
+
+	unlock := app.lockResource("workspace-launch", operation.AccountID)
+	defer unlock()
+	operation, ok, err = app.workspaceLaunchOperation(ctx, input.ResourceID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, errBillingReviewNotFound
+	}
+	if operation.AccountID != input.AccountID {
+		return nil, errBillingReviewIdentity
+	}
+	if terminalWorkspaceLaunchStatus(operation.Status) {
+		return workspaceLaunchRecoveryResponse(operation)
+	}
+	if operation.Status != "manual_review" {
+		return nil, errBillingReviewNotPending
+	}
+
+	unlockAccount := app.lockResource("account", operation.AccountID)
+	defer unlockAccount()
+	if operation.Phase == "receipt_pending" {
+		_ = app.recordWorkspaceLaunchPurchaseReceipt(ctx, service, &operation)
+		return app.currentWorkspaceLaunchRecoveryResponse(ctx, operation.ID)
+	}
+	if operation.Phase == "refund_pending" && operation.RefundConfirmation != nil {
+		userID, userErr := app.sub2APIUserID(ctx, operation.AccountID)
+		if userErr != nil {
+			return app.keepWorkspaceLaunchReview(ctx, &operation, "workspace_launch_refund_account_unmapped")
+		}
+		_ = app.recordWorkspaceLaunchRefundReceipt(ctx, service, &operation, userID)
+		return app.currentWorkspaceLaunchRecoveryResponse(ctx, operation.ID)
+	}
+
+	userID, err := app.sub2APIUserID(ctx, operation.AccountID)
+	if err != nil || !workspaceLaunchChargeConfirmed(operation, userID) {
+		return app.keepWorkspaceLaunchReview(ctx, &operation, "workspace_launch_charge_unconfirmed")
+	}
+	computeState, storageState, err := app.workspaceLaunchRecoveryResourceStates(ctx, service, operation)
+	if err != nil {
+		return nil, err
+	}
+
+	switch {
+	case computeState == "ready" && storageState == "absent":
+		operation.Status, operation.Phase, operation.ErrorCode = "preparing", "storage_fulfilling", ""
+	case computeState == "ready" && storageState == "ready":
+		operation.Status, operation.Phase, operation.ErrorCode = "preparing", "attaching", ""
+	case computeState == "absent" && storageState == "absent":
+		_ = app.refundWorkspaceLaunch(ctx, service, &operation, "fabric_compute_and_storage_confirmed_absent")
+		return app.currentWorkspaceLaunchRecoveryResponse(ctx, operation.ID)
+	case computeState == "absent" && storageState == "ready":
+		return app.keepWorkspaceLaunchReview(ctx, &operation, "workspace_launch_compute_absent_storage_present")
+	default:
+		return app.keepWorkspaceLaunchReview(ctx, &operation, "workspace_launch_provider_state_unknown")
+	}
+	releaseWorkspaceLaunchLease(&operation)
+	if err := app.persistWorkspaceLaunch(ctx, &operation); err != nil {
+		return nil, err
+	}
+	_ = app.fulfillWorkspaceLaunch(ctx, service, &operation)
+	return app.currentWorkspaceLaunchRecoveryResponse(ctx, operation.ID)
+}
+
+func workspaceLaunchChargeConfirmed(operation workspaceLaunchOperation, userID int64) bool {
+	return operation.ChargeAttempted && operation.PostChargeBalanceKnown && operation.PreChargeBalanceUSDMicros > operation.TotalChargeUSDMicros &&
+		operation.PostChargeBalanceUSDMicros == operation.PreChargeBalanceUSDMicros-operation.TotalChargeUSDMicros &&
+		monthlyChargeConfirmationMatches(operation.ChargeConfirmation, operation.RedeemCode, userID, operation.TotalChargeUSDMicros)
+}
+
+func (app *controlPlaneServer) workspaceLaunchRecoveryResourceStates(ctx context.Context, service *controlplane.Service, operation workspaceLaunchOperation) (string, string, error) {
+	truth, err := service.MonthlyProviderTruth(ctx, operation.ComputeID, operation.StorageID)
+	if err != nil {
+		return "unknown", "unknown", nil
+	}
+	computeState, err := app.workspaceLaunchRecoveryResourceState(ctx, operation, "compute", truth.ComputeState, structToMap(truth.Compute))
+	if err != nil {
+		return "", "", err
+	}
+	storageState, err := app.workspaceLaunchRecoveryResourceState(ctx, operation, "storage", truth.StorageState, structToMap(truth.Storage))
+	return computeState, storageState, err
+}
+
+func (app *controlPlaneServer) workspaceLaunchRecoveryResourceState(ctx context.Context, operation workspaceLaunchOperation, resourceType, state string, facts map[string]any) (string, error) {
+	if (state != "ready" && state != "absent") || !workspaceLaunchResourceIdentityMatches(resourceType, facts, operation) ||
+		(state == "ready" && !monthlyPurchaseReadbackConfirmed(resourceType, workspaceLaunchProviderExpectation(operation, resourceType), facts)) ||
+		(state == "absent" && !monthlyResourceConfirmedAbsent(resourceType, facts)) {
+		return "unknown", nil
+	}
+	row := mergeMaps(workspaceLaunchResourceRow(operation, resourceType), facts)
+	stripWorkspaceLaunchResourceBilling(row)
+	if resourceType == "compute" {
+		if err := app.tables.SaveCompute(ctx, row); err != nil {
+			return "", err
+		}
+	} else if err := app.tables.SaveStorage(ctx, row); err != nil {
+		return "", err
+	}
+	return state, nil
+}
+
+func (app *controlPlaneServer) keepWorkspaceLaunchReview(ctx context.Context, operation *workspaceLaunchOperation, code string) (map[string]any, error) {
+	operation.Status, operation.ErrorCode = "manual_review", code
+	releaseWorkspaceLaunchLease(operation)
+	if err := app.persistWorkspaceLaunch(ctx, operation); err != nil {
+		return nil, err
+	}
+	return workspaceLaunchRecoveryResponse(*operation)
+}
+
+func (app *controlPlaneServer) currentWorkspaceLaunchRecoveryResponse(ctx context.Context, operationID string) (map[string]any, error) {
+	operation, ok, err := app.workspaceLaunchOperation(ctx, operationID)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, errBillingReviewNotFound
+	}
+	return workspaceLaunchRecoveryResponse(operation)
+}
+
+func workspaceLaunchRecoveryResponse(operation workspaceLaunchOperation) (map[string]any, error) {
+	result, err := workspaceLaunchResponse(workspaceLaunchOperationRow(operation))
+	if err != nil {
+		return nil, err
+	}
+	result["resourceType"], result["billingOperationId"] = "workspace", operation.ID
+	result["allowedActions"] = []string{}
+	if operation.Status == "manual_review" {
+		result["allowedActions"] = []string{"recover_workspace_launch"}
+	}
+	return result, nil
+}
+
 func releaseWorkspaceLaunchLease(operation *workspaceLaunchOperation) {
 	operation.LeaseToken, operation.LeaseExpiresAt = "", ""
 }

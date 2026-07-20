@@ -58,6 +58,7 @@ import {
   markAnnouncementRead,
   publishOperatorAnnouncement,
   previewPricing,
+  recoverWorkspaceLaunch as recoverOperatorWorkspaceLaunch,
   resolveBillingReview,
   revealGatewayKey,
   updateGatewayKey,
@@ -97,6 +98,7 @@ import type {
   OperatorAnnouncementPageDTO,
   OperatorHealthDTO,
   OperatorOverviewDTO,
+  OperatorReconciliationItemDTO,
   OperatorReconciliationPageDTO,
   OperatorWorkspacePageDTO,
   OperatorWorkspaceDTO,
@@ -112,6 +114,7 @@ import type {
   WorkspaceLaunchRequest,
   WorkspaceLaunchResponse,
   WorkspaceListData,
+  WorkspaceLaunchRecoveryRequest,
   WorkspaceRuntimeDTO,
   WorkspacePricePreview
 } from "./api/dtos.ts";
@@ -195,7 +198,7 @@ const adminUserForm = reactive({ email: "", password: "", name: "" });
 const walletAdjustmentForm = reactive<WalletAdjustmentRequest>({ kind: "recharge", amountUsd: "", reason: "", confirmationAccountId: "", relatedOperationId: "" });
 const announcementForm = reactive<AnnouncementDraftRequest>({ title: "", body: "", startsAt: "", endsAt: "" });
 const selectedOperatorAccountId = ref("");
-const selectedReview = ref<{ resourceType: string; id: string; accountId?: string; billingOperationId?: string } | null>(null);
+const selectedReview = ref<OperatorReconciliationItemDTO | null>(null);
 const loading = reactive({ workspace: false, runtime: false, endpoint: false, wallet: false, keys: false, usage: false, stats: false, accountStats: false, history: false, receipts: false, receiptDetail: false, announcements: false, catalog: false, accounts: false, admin: false, readiness: false, operatorOverview: false, operatorAccounts: false, operatorWorkspaces: false, operatorWorkspaceDetail: false, operatorReconciliation: false, operatorHealth: false, operatorAnnouncements: false, walletAdjustment: false, review: false });
 const errors = reactive({ workspace: "", runtime: "", endpoint: "", wallet: "", keys: "", usage: "", stats: "", accountStats: "", history: "", receipts: "", receiptDetail: "", announcements: "", catalog: "", accounts: "", admin: "", readiness: "", operatorOverview: "", operatorAccounts: "", operatorWorkspaces: "", operatorWorkspaceDetail: "", operatorReconciliation: "", operatorHealth: "", operatorAnnouncements: "", walletAdjustment: "", review: "" });
 let toastTimer: number | undefined;
@@ -213,6 +216,7 @@ let gatewayKeyCreateIntent: { input: CreateGatewayKeyRequest; idempotencyKey: st
 let walletAdjustmentIntent: { accountId: string; input: WalletAdjustmentRequest; idempotencyKey: string } | null = null;
 let operatorProvisionIntent: { input: ProvisionAccountRequest; idempotencyKey: string } | null = null;
 let billingReviewIntent: { resourceType: string; resourceId: string; input: BillingReviewResolutionRequest; idempotencyKey: string } | null = null;
+let workspaceLaunchRecoveryIntent: { operationId: string; input: WorkspaceLaunchRecoveryRequest; idempotencyKey: string } | null = null;
 let announcementCreateIntent: { input: AnnouncementDraftRequest; idempotencyKey: string } | null = null;
 const gatewayKeyToggleIntents = new Map<string, { targetStatus: GatewayKeySummaryDTO["status"]; idempotencyKey: string }>();
 const gatewayKeyDeleteIntents = new Map<string, string>();
@@ -453,6 +457,7 @@ function clearSessionState() {
   walletAdjustmentIntent = null;
   operatorProvisionIntent = null;
   billingReviewIntent = null;
+  workspaceLaunchRecoveryIntent = null;
   announcementCreateIntent = null;
   gatewayKeyToggleIntents.clear();
   gatewayKeyDeleteIntents.clear();
@@ -1376,19 +1381,29 @@ async function resolveOperatorReview() {
   if (!review) return;
   const evidenceRef = window.prompt("请输入 case-YYYYMMDD-xxx 证据引用", "case-20260720-review") || "";
   if (!evidenceRef) return;
-  const accountId = review.accountId || "";
-  const billingOperationId = review.billingOperationId || review.id;
+  const accountId = review.accountId;
+  const billingOperationId = review.billingOperationId;
   if (!accountId) {
     flash("缺少账号来源，暂不可处理", "danger");
     return;
   }
-  const input: BillingReviewResolutionRequest = { accountId, billingOperationId, decision: "activate_charged_resource", evidenceRef };
-  if (!billingReviewIntent || billingReviewIntent.resourceType !== review.resourceType || billingReviewIntent.resourceId !== review.id || JSON.stringify(billingReviewIntent.input) !== JSON.stringify(input)) {
-    billingReviewIntent = { resourceType: review.resourceType, resourceId: review.id, input, idempotencyKey: `billing-review:${review.resourceType}:${review.id}:${crypto.randomUUID()}` };
-  }
   try {
-    await resolveBillingReview(review.resourceType, review.id, billingReviewIntent.input, session.value?.csrfToken || "", billingReviewIntent.idempotencyKey);
-    billingReviewIntent = null;
+    const launchRecovery = review.allowedActions.includes("recover_workspace_launch");
+    if (launchRecovery) {
+      const input: WorkspaceLaunchRecoveryRequest = { accountId, billingOperationId, evidenceRef };
+      if (!workspaceLaunchRecoveryIntent || workspaceLaunchRecoveryIntent.operationId !== billingOperationId || JSON.stringify(workspaceLaunchRecoveryIntent.input) !== JSON.stringify(input)) {
+        workspaceLaunchRecoveryIntent = { operationId: billingOperationId, input, idempotencyKey: `recover-${crypto.randomUUID()}` };
+      }
+      await recoverOperatorWorkspaceLaunch(billingOperationId, workspaceLaunchRecoveryIntent.input, session.value?.csrfToken || "", workspaceLaunchRecoveryIntent.idempotencyKey);
+      workspaceLaunchRecoveryIntent = null;
+    } else {
+      const input: BillingReviewResolutionRequest = { accountId, billingOperationId, decision: "activate_charged_resource", evidenceRef };
+      if (!billingReviewIntent || billingReviewIntent.resourceType !== review.resourceType || billingReviewIntent.resourceId !== review.id || JSON.stringify(billingReviewIntent.input) !== JSON.stringify(input)) {
+        billingReviewIntent = { resourceType: review.resourceType, resourceId: review.id, input, idempotencyKey: `billing-review:${review.resourceType}:${review.id}:${crypto.randomUUID()}` };
+      }
+      await resolveBillingReview(review.resourceType, review.id, billingReviewIntent.input, session.value?.csrfToken || "", billingReviewIntent.idempotencyKey);
+      billingReviewIntent = null;
+    }
     flash("复核命令已提交");
     selectedReview.value = null;
     await loadAdmin();
@@ -1531,7 +1546,7 @@ onBeforeUnmount(() => {
             <section class="panel"><div class="panel-title"><h2>公告</h2><button class="button secondary" type="button" @click="openModal('announcement')"><Plus :size="16" />新建草稿</button></div><div v-if="loading.operatorAnnouncements" class="loading-panel"><span class="spinner" />正在读取公告...</div><div v-else-if="errors.operatorAnnouncements" class="inline-error"><AlertCircle :size="17" />{{ errors.operatorAnnouncements }}<button type="button" @click="loadAdmin">重试</button></div><div v-else-if="operatorAnnouncementsSource?.status === 'unavailable'" class="empty-panel">公告暂不可用 <button class="text-button" type="button" @click="loadAdmin">重试</button></div><div v-else-if="operatorAnnouncementsSource?.status === 'empty'" class="empty-panel">暂无公告</div><div v-else class="announcement-list"><article v-for="announcement in operatorAnnouncementRows" :key="announcement.id" class="announcement-item"><header><div><h3>{{ announcement.title }}</h3><span>{{ operatorAnnouncementStatus(announcement.status) }}</span></div><span>{{ formatDate(announcement.updatedAt, true) }}</span></header><p>{{ announcement.body }}</p><footer class="table-actions"><button v-if="announcement.status === 'draft' || announcement.status === 'scheduled'" class="text-button" type="button" @click="publishOperatorAnnouncementAction(announcement.id)">发布</button><button v-if="announcement.status === 'published'" class="text-button danger-text" type="button" @click="withdrawOperatorAnnouncementAction(announcement.id)">撤下</button></footer></article></div></section>
           </section>
           <section v-else-if="path.startsWith('/admin/accounts')" class="panel"><div class="panel-title"><h2>用户与计费账户</h2><button class="button primary" type="button" @click="openModal('admin-user')"><Plus :size="16" />开通用户</button></div><div v-if="loading.operatorAccounts" class="loading-panel"><span class="spinner" />正在读取账号...</div><div v-else-if="errors.operatorAccounts" class="inline-error"><AlertCircle :size="17" />{{ errors.operatorAccounts }}<button type="button" @click="loadAdmin">重试</button></div><div v-else-if="operatorAccountsPageSource?.status === 'unavailable'" class="empty-panel">账号暂不可用 <button class="text-button" type="button" @click="loadAdmin">重试</button></div><div v-else-if="operatorAccountsPageSource?.status === 'empty'" class="empty-panel">暂无用户</div><div v-else class="table-wrap"><table><thead><tr><th>邮箱</th><th>计费账户编号</th><th>映射</th><th>余额</th><th>Key 数</th><th>用量</th><th>Workspace</th><th>状态</th><th>操作</th></tr></thead><tbody><tr v-for="account in operatorAccountRows" :key="account.accountId"><td>{{ account.email }}</td><td>{{ account.accountId }}</td><td>{{ operatorSourceText(account.gatewayIdentity, (data) => data.userId) }}</td><td>{{ operatorSourceText(account.wallet, (data) => formatUsdMicros(data.usdMicros)) }}</td><td>{{ operatorSourceText(account.keyCount, formatCount) }}</td><td>{{ operatorSourceText(account.usage, (data) => formatUsdMicros(data.totalActualCostUsdMicros)) }}</td><td>{{ operatorSourceText(account.workspaceCount, formatCount) }}</td><td>{{ account.status }}</td><td class="table-actions"><button class="text-button" type="button" @click="selectedOperatorAccountId = account.accountId; walletAdjustmentForm.confirmationAccountId = account.accountId; openModal('wallet-adjustment')">调整钱包</button><button v-if="account.status === 'active'" class="text-button danger-text" type="button" @click="disableOperatorAccount(account.accountId)">禁用</button></td></tr></tbody></table></div></section>
-          <section v-else-if="path.startsWith('/admin/billing')" class="panel"><div class="panel-title"><h2>计费复核</h2></div><div v-if="loading.operatorReconciliation" class="loading-panel"><span class="spinner" />正在读取复核项...</div><div v-else-if="errors.operatorReconciliation" class="inline-error"><AlertCircle :size="17" />{{ errors.operatorReconciliation }}<button type="button" @click="loadAdmin">重试</button></div><div v-else-if="operatorReconciliationSource?.status === 'unavailable'" class="empty-panel">复核数据暂不可用 <button class="text-button" type="button" @click="loadAdmin">重试</button></div><div v-else-if="operatorReconciliationSource?.status === 'empty'" class="empty-panel">暂无待复核项目</div><div v-else class="table-wrap"><table><thead><tr><th>资源类型</th><th>状态</th><th>operation</th><th>Receipt</th><th>操作</th></tr></thead><tbody><tr v-for="item in operatorReconciliationRows" :key="item.id"><td>{{ item.resourceType }}</td><td>{{ item.status }}</td><td>{{ item.operationRef || "暂不可用" }}</td><td>{{ item.receiptRef || "暂不可用" }}</td><td><button class="text-button" type="button" @click="selectedReview = item; resolveOperatorReview()">人工复核</button></td></tr></tbody></table></div></section>
+          <section v-else-if="path.startsWith('/admin/billing')" class="panel"><div class="panel-title"><h2>计费复核</h2></div><div v-if="loading.operatorReconciliation" class="loading-panel"><span class="spinner" />正在读取复核项...</div><div v-else-if="errors.operatorReconciliation" class="inline-error"><AlertCircle :size="17" />{{ errors.operatorReconciliation }}<button type="button" @click="loadAdmin">重试</button></div><div v-else-if="operatorReconciliationSource?.status === 'unavailable'" class="empty-panel">复核数据暂不可用 <button class="text-button" type="button" @click="loadAdmin">重试</button></div><div v-else-if="operatorReconciliationSource?.status === 'empty'" class="empty-panel">暂无待复核项目</div><div v-else class="table-wrap"><table><thead><tr><th>资源类型</th><th>状态</th><th>operation</th><th>Receipt</th><th>操作</th></tr></thead><tbody><tr v-for="item in operatorReconciliationRows" :key="item.id"><td>{{ item.resourceType }}</td><td>{{ item.status }}</td><td>{{ item.operationRef || "暂不可用" }}</td><td>{{ item.receiptRef || "暂不可用" }}</td><td><button v-if="item.status === 'manual_review' && item.allowedActions.includes('recover_workspace_launch')" class="text-button" type="button" @click="selectedReview = item; resolveOperatorReview()">恢复 Launch</button><button v-else-if="item.status === 'manual_review' && item.allowedActions.includes('resolve_billing_review')" class="text-button" type="button" @click="selectedReview = item; resolveOperatorReview()">人工复核</button><span v-else>暂不可用</span></td></tr></tbody></table></div></section>
           <section v-else-if="path.startsWith('/admin/resources')" class="admin-dashboard">
             <section class="panel">
               <div class="panel-title"><h2>Workspace 与资源</h2></div>

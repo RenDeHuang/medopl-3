@@ -78,6 +78,7 @@ test("operator mutations retain stable intents across unknown retries", async ()
     "operatorProvisionIntent",
     "operatorDisableIntents",
     "billingReviewIntent",
+    "workspaceLaunchRecoveryIntent",
     "announcementCreateIntent",
     "announcementPublishIntents",
     "announcementWithdrawIntents"
@@ -112,4 +113,21 @@ test("operator accounts and workspaces expose server-side pagination", async () 
   assert.match(app, /changeOperatorWorkspacePage/);
   assert.match(app, /aria-label="账号分页"/);
   assert.match(app, /aria-label="Workspace 分页"/);
+});
+
+test("operator launch review uses the dedicated recovery command", async () => {
+  const [app, readApiSource, dtos] = await Promise.all([
+    source("apps/console-ui/src/App.vue"),
+    source("apps/console-ui/src/api/console-read-api.ts"),
+    source("apps/console-ui/src/api/dtos.ts")
+  ]);
+  assert.equal(typeof readApi.recoverWorkspaceLaunch, "function");
+  assert.match(readApiSource, /\/api\/operator\/workspace-launches\/.*\/recover/);
+  for (const field of ["accountId", "billingOperationId", "phase", "errorCode", "allowedActions"]) {
+    assert.match(dtos, new RegExp(`${field}[?]?:`));
+  }
+  assert.match(app, /allowedActions\.includes\("recover_workspace_launch"\)/);
+  assert.match(app, /recoverWorkspaceLaunch\(/);
+  assert.match(app, /idempotencyKey: `recover-\$\{crypto\.randomUUID\(\)\}`/);
+  assert.match(app, /item\.status === ['"]manual_review['"]/);
 });

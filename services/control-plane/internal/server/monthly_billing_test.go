@@ -208,10 +208,13 @@ type monthlyFabric struct {
 	preflightResults      []clients.MonthlyPreflight
 	preflightErr          error
 	preflightInputs       []clients.MonthlyPreflightInput
+	providerTruth         *clients.MonthlyProviderTruth
+	providerTruthErr      error
 	mutateCompute         func(*clients.ComputeAllocation)
 	mutateStorage         func(*clients.StorageVolume)
 	computeIDs            []string
 	storageIDs            []string
+	storageCreateKeys     []string
 	storageInputs         []clients.StorageVolumeInput
 	computeSync           clients.ComputeAllocation
 	storageSync           clients.StorageVolume
@@ -264,6 +267,14 @@ func (f *monthlyFabric) MonthlyPreflight(_ context.Context, input clients.Monthl
 	}, f.preflightErr
 }
 
+func (f *monthlyFabric) MonthlyProviderTruth(_ context.Context, _, _ string) (clients.MonthlyProviderTruth, error) {
+	*f.events = append(*f.events, "fabric.monthly-provider-truth")
+	if f.providerTruth == nil {
+		return clients.MonthlyProviderTruth{}, f.providerTruthErr
+	}
+	return *f.providerTruth, f.providerTruthErr
+}
+
 func (f *provisioningMonthlyFabric) CreateComputeAllocation(_ context.Context, input clients.ComputeAllocationInput, _ string) (clients.ComputeAllocation, error) {
 	*f.events = append(*f.events, "fabric.compute.prepare")
 	f.computeIDs = append(f.computeIDs, input.ID)
@@ -307,9 +318,10 @@ func (f *monthlyFabric) CreateComputeAllocation(_ context.Context, input clients
 	return result, nil
 }
 
-func (f *monthlyFabric) CreateStorageVolume(_ context.Context, input clients.StorageVolumeInput, _ string) (clients.StorageVolume, error) {
+func (f *monthlyFabric) CreateStorageVolume(_ context.Context, input clients.StorageVolumeInput, key string) (clients.StorageVolume, error) {
 	*f.events = append(*f.events, "fabric.storage.prepare")
 	f.storageIDs = append(f.storageIDs, input.ID)
+	f.storageCreateKeys = append(f.storageCreateKeys, key)
 	f.storageInputs = append(f.storageInputs, input)
 	if f.createErr != nil {
 		return clients.StorageVolume{ID: input.ID}, f.createErr

@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"math"
 	"net/http"
@@ -167,6 +168,39 @@ func registerAdminRoutes(mux *http.ServeMux, app *controlPlaneServer, service *c
 			return
 		}
 		if err := app.appendAuditEvent(r, "operator.archive_terminal_resources", "archive_job", stringValue(result["id"]), "", nil, result, "succeeded"); err != nil {
+			writeError(w, http.StatusInternalServerError, "state_persist_failed")
+			return
+		}
+		writeJSON(w, http.StatusOK, result)
+	}))
+	mux.HandleFunc("POST /api/operator/workspace-launches/{operationId}/recover", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
+		key, ok := requiredMutationKey(w, r)
+		if !ok {
+			return
+		}
+		input := decodeJSON(r)
+		operationID := strings.TrimSpace(r.PathValue("operationId"))
+		if !workspaceLaunchRecoveryShapeValid(input) || operationID == "" || stringValue(input["billingOperationId"]) != operationID || !validBillingReviewOpaqueID(key) {
+			writeError(w, http.StatusBadRequest, errInvalidBillingReview.Error())
+			return
+		}
+		evidenceRef := stringValue(input["evidenceRef"])
+		if !validBillingReviewEvidenceRef(evidenceRef) {
+			writeError(w, http.StatusBadRequest, "invalid_evidence_ref")
+			return
+		}
+		resolution := billingReviewResolutionInput{
+			ResourceType: "workspace_launch", ResourceID: operationID, AccountID: stringValue(input["accountId"]), BillingOperationID: operationID,
+			EvidenceRef: evidenceRef, IdempotencyKey: key, Reviewer: app.sessionUserID(r),
+		}
+		result, err := app.recoverWorkspaceLaunchReview(r.Context(), service, resolution)
+		if err != nil {
+			writeBillingReviewResolutionError(w, err)
+			return
+		}
+		audit := app.auditEvent(r, "workspace.launch.recover", "workspace", stringValue(result["workspaceId"]), resolution.AccountID, nil, mergeMaps(result, map[string]any{"evidenceRef": evidenceRef}), stringValue(result["status"]))
+		audit["id"] = "audit-" + stableID("workspace.launch.recover", operationID, key)[:12]
+		if err := app.tables.SaveAuditEvent(r.Context(), audit); err != nil {
 			writeError(w, http.StatusInternalServerError, "state_persist_failed")
 			return
 		}
@@ -751,12 +785,27 @@ func (app *controlPlaneServer) operatorReconciliationPage(ctx context.Context, p
 		if status == "succeeded" || status == "completed" || status == "cancelled" {
 			continue
 		}
+		details := map[string]any{}
+		_ = json.Unmarshal([]byte(stringValue(operation["result"])), &details)
+		operationID := firstNonEmpty(stringValue(operation["operationId"]), stringValue(operation["id"]))
 		item := map[string]any{
-			"id":           firstNonEmpty(stringValue(operation["id"]), stringValue(operation["operationId"])),
-			"resourceType": operatorResourceType(firstNonEmpty(stringValue(operation["resourceKind"]), stringValue(operation["action"]))),
-			"status":       status,
+			"id":                 firstNonEmpty(stringValue(operation["id"]), stringValue(operation["operationId"])),
+			"resourceType":       operatorResourceType(firstNonEmpty(stringValue(operation["resourceKind"]), stringValue(operation["action"]))),
+			"status":             status,
+			"accountId":          firstNonEmpty(stringValue(operation["accountId"]), stringValue(details["accountId"])),
+			"billingOperationId": firstNonEmpty(stringValue(details["billingOperationId"]), operationID),
+			"phase":              firstNonEmpty(stringValue(details["phase"]), status),
+			"errorCode":          firstNonEmpty(stringValue(details["errorCode"]), stringValue(details["lastBillingError"])),
+			"allowedActions":     []string{},
 		}
-		if operationID := firstNonEmpty(stringValue(operation["operationId"]), stringValue(operation["id"])); operationID != "" {
+		if status == "manual_review" {
+			if stringValue(operation["action"]) == workspaceLaunchAction {
+				item["allowedActions"] = []string{"recover_workspace_launch"}
+			} else {
+				item["allowedActions"] = []string{"resolve_billing_review"}
+			}
+		}
+		if operationID != "" {
 			item["operationRef"] = operationID
 		}
 		if receiptID := stringValue(operation["receiptId"]); receiptID != "" {
@@ -767,7 +816,11 @@ func (app *controlPlaneServer) operatorReconciliationPage(ctx context.Context, p
 	if reconciliation, ok, err := app.tables.BillingReconciliation(ctx); err != nil {
 		return nil, "", err
 	} else if ok && stringValue(reconciliation["status"]) != "ok" {
-		items = append(items, map[string]any{"id": stringValue(reconciliation["id"]), "resourceType": "workspace", "status": stringValue(reconciliation["status"])})
+		items = append(items, map[string]any{
+			"id": stringValue(reconciliation["id"]), "resourceType": "workspace", "status": stringValue(reconciliation["status"]),
+			"accountId": "", "billingOperationId": stringValue(reconciliation["id"]), "phase": stringValue(reconciliation["status"]),
+			"errorCode": firstNonEmpty(stringValue(reconciliation["reason"]), stringValue(reconciliation["status"])), "allowedActions": []string{},
+		})
 	}
 	sort.Slice(items, func(i, j int) bool {
 		return stringValue(items[i].(map[string]any)["id"]) < stringValue(items[j].(map[string]any)["id"])
@@ -941,6 +994,19 @@ func billingReviewRequestShapeValid(input map[string]any) bool {
 		return false
 	}
 	for _, key := range []string{"accountId", "billingOperationId", "decision", "evidenceRef"} {
+		value, ok := input[key].(string)
+		if !ok || value == "" || value != strings.TrimSpace(value) {
+			return false
+		}
+	}
+	return true
+}
+
+func workspaceLaunchRecoveryShapeValid(input map[string]any) bool {
+	if len(input) != 3 {
+		return false
+	}
+	for _, key := range []string{"accountId", "billingOperationId", "evidenceRef"} {
 		value, ok := input[key].(string)
 		if !ok || value == "" || value != strings.TrimSpace(value) {
 			return false
