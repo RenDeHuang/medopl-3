@@ -268,37 +268,88 @@ jobs:
           backup_root="/home/actions/.secrets/medopl/v22/postgres-backups"
           install -d -m 700 "$backup_root"
           backup_file="$backup_root/opl-cloud-before-primary-workspace-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.dump"
-          postgres_env_file="$backup_root/opl-cloud-postgres-env-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          install -m 600 /dev/null "$postgres_env_file"
-          cat > "$postgres_env_file" <<EOF
-          DATABASE_URL=$DATABASE_URL
-          PGSSLMODE=$PGSSLMODE
+          postgres_client_pod="opl-postgres-recovery-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          cleanup_postgres_client() {
+            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
+              delete "pod/$postgres_client_pod" --wait=false >/dev/null 2>&1 || true
+          }
+          trap cleanup_postgres_client EXIT
+          cat <<EOF | kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" create -f -
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: $postgres_client_pod
+            labels:
+              app.kubernetes.io/name: opl-cloud
+              app.kubernetes.io/component: postgres-recovery
+          spec:
+            automountServiceAccountToken: false
+            restartPolicy: Never
+            securityContext:
+              runAsNonRoot: true
+              runAsUser: 26
+              runAsGroup: 26
+              fsGroup: 26
+              seccompProfile:
+                type: RuntimeDefault
+            containers:
+              - name: postgres-client
+                image: $OPL_POSTGRES_CLIENT_IMAGE
+                imagePullPolicy: IfNotPresent
+                command: ["/bin/bash", "-ceu", "--"]
+                args:
+                  - "while :; do sleep 3600; done"
+                env:
+                  - name: DATABASE_URL
+                    valueFrom:
+                      secretKeyRef:
+                        name: opl-cloud-database
+                        key: DATABASE_URL
+                  - name: PGSSLMODE
+                    value: disable
+                  - name: TMPDIR
+                    value: /work
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  capabilities:
+                    drop: ["ALL"]
+                volumeMounts:
+                  - name: work
+                    mountPath: /work
+                  - name: tmp
+                    mountPath: /tmp
+            volumes:
+              - name: work
+                emptyDir: {}
+              - name: tmp
+                emptyDir: {}
           EOF
-          chmod 600 "$postgres_env_file"
-          trap 'rm -f "$postgres_env_file"' EXIT
+          if ! kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
+            wait --for=condition=Ready "pod/$postgres_client_pod" --timeout=120s; then
+            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" describe "pod/$postgres_client_pod" || true
+            exit 1
+          fi
           install -m 600 /dev/null "$backup_file"
-          sudo -n /usr/bin/docker run --rm --network host \
-            --user "$(id -u):$(id -g)" \
-            --env-file "$postgres_env_file" \
-            --volume "$backup_file:/backup.dump" \
-            --entrypoint /bin/bash "$OPL_POSTGRES_CLIENT_IMAGE" \
-            -ceu 'pg_dump --format=custom --no-owner --no-acl --file=/backup.dump "$DATABASE_URL"'
+          kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec "$postgres_client_pod" \
+            -c postgres-client -- /bin/bash -ceu \
+            'umask 077; pg_dump --format=custom --no-owner --no-acl --file=/work/backup.dump "$DATABASE_URL"; test -s /work/backup.dump; pg_restore --list /work/backup.dump >/dev/null'
+          kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec "$postgres_client_pod" \
+            -c postgres-client -- cat /work/backup.dump > "$backup_file"
           test -s "$backup_file"
           chmod 600 "$backup_file"
-          sudo -n /usr/bin/docker run --rm --network none \
-            --user "$(id -u):$(id -g)" \
-            --volume "$backup_file:/backup.dump:ro" \
-            --entrypoint /bin/bash "$OPL_POSTGRES_CLIENT_IMAGE" \
-            -ceu 'pg_restore --list /backup.dump >/dev/null'
           backup_bytes="$(wc -c < "$backup_file" | tr -d ' ')"
           backup_sha256="$(sha256sum "$backup_file" | cut -d ' ' -f 1)"
+          remote_backup="$(kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec "$postgres_client_pod" \
+            -c postgres-client -- /bin/bash -ceu 'printf "%s %s" "$(wc -c < /work/backup.dump)" "$(sha256sum /work/backup.dump | cut -d " " -f 1)"')"
+          if [ "$remote_backup" != "$backup_bytes $backup_sha256" ]; then
+            echo "PostgreSQL backup readback mismatch." >&2
+            exit 1
+          fi
           printf 'backupFile=%s\nbackupBytes=%s\nbackupSha256=%s\n' "$backup_file" "$backup_bytes" "$backup_sha256"
 
-          sudo -n /usr/bin/docker run --rm --interactive --network host \
-            --user "$(id -u):$(id -g)" \
-            --env-file "$postgres_env_file" \
-            --entrypoint /bin/bash "$OPL_POSTGRES_CLIENT_IMAGE" \
-            -ceu 'psql "$DATABASE_URL" -X --set ON_ERROR_STOP=1 --csv' <<'SQL'
+          kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec --stdin "$postgres_client_pod" \
+            -c postgres-client -- /bin/bash -ceu 'psql "$DATABASE_URL" -X --set ON_ERROR_STOP=1 --csv' <<'SQL'
           WITH duplicate_accounts AS (
             SELECT
               COALESCE(NULLIF(account_id, ''), owner_account_id) AS account_key,
