@@ -425,12 +425,8 @@ jobs:
             test -s "$rollback_dir/$deployment"
           done
           kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" get configmap opl-cloud-config \
-            -o jsonpath='{.data.OPL_WORKSPACE_IMAGE}' > "$rollback_dir/OPL_WORKSPACE_IMAGE"
-          test -s "$rollback_dir/OPL_WORKSPACE_IMAGE"
-
-          workspace_images="$rollback_dir/workspace-images.tsv"
-          source tools/tke-image-rollout.sh
-          list_workspace_images > "$workspace_images"
+            -o json > "$rollback_dir/opl-cloud-config.json"
+          test -s "$rollback_dir/opl-cloud-config.json"
 
       - name: Upload rollback image set
         id: rollback_snapshot
@@ -446,11 +442,9 @@ jobs:
         run: |
           set -Eeuo pipefail
           rollback_dir="$OPL_DEPLOY_SECRET_DIR/previous-images"
-          workspace_images="$rollback_dir/workspace-images.tsv"
-          for file in opl-cloud-control-plane opl-cloud-ledger opl-cloud-fabric OPL_WORKSPACE_IMAGE; do
+          for file in opl-cloud-control-plane opl-cloud-ledger opl-cloud-fabric opl-cloud-config.json; do
             test -s "$rollback_dir/$file"
           done
-          test -f "$workspace_images"
           source tools/tke-image-rollout.sh
           restore_deployed_images() {
             if [ "${OPL_BOOTSTRAP_MODE:-false}" = "true" ]; then
@@ -470,7 +464,7 @@ jobs:
             original_status="$?"
             trap - ERR
             if ! restore_deployed_images; then
-              echo "Rollback did not restore the complete previous Cloud/App image set." >&2
+              echo "Rollback did not restore the previous Cloud images and ConfigMap." >&2
               exit 1
             fi
             exit "$original_status"
@@ -487,6 +481,7 @@ jobs:
           apply_deployed_images
           if [ "$OPL_EXERCISE_ROLLBACK" = "true" ]; then
             restore_deployed_images
+            kubectl --kubeconfig "$KUBECONFIG" apply -f "$OPL_DEPLOY_SECRET_DIR/opl-cloud.rendered.json"
             apply_deployed_images
           fi
           trap - ERR
@@ -697,11 +692,9 @@ jobs:
         run: |
           set -Eeuo pipefail
           rollback_dir="$RUNNER_TEMP/production-rollback-images"
-          workspace_images="$rollback_dir/workspace-images.tsv"
-          for file in opl-cloud-control-plane opl-cloud-ledger opl-cloud-fabric OPL_WORKSPACE_IMAGE; do
+          for file in opl-cloud-control-plane opl-cloud-ledger opl-cloud-fabric opl-cloud-config.json; do
             test -s "$rollback_dir/$file"
           done
-          test -f "$workspace_images"
           source tools/tke-image-rollout.sh
           if [ "${{ inputs.bootstrap_mode }}" = "true" ]; then
             restore_command=restore_previous_bootstrap_images
@@ -709,7 +702,7 @@ jobs:
             restore_command=restore_previous_images
           fi
           if ! "$restore_command"; then
-            echo "Rollback did not restore the complete previous Cloud/App image set." >&2
+            echo "Rollback did not restore the previous Cloud images and ConfigMap." >&2
             exit 1
           fi
 
