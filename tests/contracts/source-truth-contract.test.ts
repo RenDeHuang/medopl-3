@@ -57,6 +57,7 @@ test("Console source truth contract fixes strict envelopes and live Gateway proj
   ]);
   assert.equal(gateway.keys.idFormat, "positive_decimal_string");
   assert.deepEqual(gateway.keys.statusValues, ["active", "disabled"]);
+  assert.deepEqual(gateway.keys.emptyUpstreamPagination, { total: 0, page: 1, pages: 1, items: [], otherShapes: "reject" });
   assert.equal(gateway.keys.empty, "real_zero_rows");
   assert.deepEqual(gateway.keys.lifecycleRoutes, [
     "POST /api/gateway/keys",
@@ -80,6 +81,7 @@ test("Console source truth contract fixes strict envelopes and live Gateway proj
     "inputTokens", "outputTokens", "cacheCreationTokens", "cacheReadTokens", "actualCostUsdMicros"
   ]);
   assert.equal(gateway.usage.apiKeyIdFormat, "positive_decimal_string");
+  assert.deepEqual(gateway.usage.emptyUpstreamPagination, gateway.keys.emptyUpstreamPagination);
   assert.deepEqual(gateway.usageStats.dataFields, [
     "totalRequests", "totalInputTokens", "totalOutputTokens", "totalTokens", "totalActualCostUsdMicros"
   ]);
@@ -87,6 +89,7 @@ test("Console source truth contract fixes strict envelopes and live Gateway proj
   assert.deepEqual(gateway.accountUsageStats.dataFields, gateway.usageStats.dataFields);
   assert.equal(gateway.accountUsageStats.aggregation, "upstream_only_never_current_page_sum");
   assert.deepEqual(gateway.balanceHistory.itemFields, ["type", "valueUsdMicros", "status", "usedAt", "createdAt"]);
+  assert.deepEqual(gateway.balanceHistory.emptyUpstreamPagination, gateway.keys.emptyUpstreamPagination);
 
   const identity = contract.sources.identity;
   assert.deepEqual(identity.authMe, {
@@ -134,7 +137,7 @@ test("Console source truth contract fixes strict envelopes and live Gateway proj
     sub2apiUserIdFormat: "positive_decimal_string",
     statusValues: ["active", "disabled"],
     mappingConsistency: "remote_id_and_normalized_email_must_equal_control_plane_mapping",
-    pagination: "one_bounded_sub2api_user_page_then_control_plane_page",
+    pagination: "collect_all_coherent_sub2api_user_pages_then_control_plane_page",
     batchSizeMax: 50,
     perAccountUserOrUsageNPlusOne: false,
     failure: "affected_nested_source_unavailable_without_zero_data",

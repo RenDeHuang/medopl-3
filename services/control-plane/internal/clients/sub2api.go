@@ -804,7 +804,10 @@ func (c *Sub2APIHTTPClient) Keys(ctx context.Context, userID int64) ([]Sub2APIWo
 		if data.Total < 0 || data.Total > maxSub2APIKeys {
 			return nil, errors.New("invalid sub2api api key pagination")
 		}
-		expectedPages := (data.Total + sub2APIKeyPageSize - 1) / sub2APIKeyPageSize
+		expectedPages := 1
+		if data.Total > 0 {
+			expectedPages = (data.Total + sub2APIKeyPageSize - 1) / sub2APIKeyPageSize
+		}
 		if data.Page != page || data.PageSize != sub2APIKeyPageSize || data.Pages != expectedPages || data.Pages > maxSub2APIKeyPages || len(data.Items) > sub2APIKeyPageSize {
 			return nil, errors.New("invalid sub2api api key pagination")
 		}
@@ -830,9 +833,6 @@ func (c *Sub2APIHTTPClient) Keys(ctx context.Context, userID int64) ([]Sub2APIWo
 		collected += len(data.Items)
 		if collected > total || (len(data.Items) == 0 && collected < total) {
 			return nil, errors.New("invalid sub2api api key pagination")
-		}
-		if pages == 0 {
-			break
 		}
 		if page == pages {
 			if collected != total {
@@ -900,7 +900,10 @@ func (c *Sub2APIHTTPClient) UserKeys(ctx context.Context, credential SessionDele
 		if data.Total < 0 || data.Total > maxSub2APIKeys {
 			return nil, errors.New("invalid sub2api api key pagination")
 		}
-		expectedPages := (data.Total + sub2APIKeyPageSize - 1) / sub2APIKeyPageSize
+		expectedPages := 1
+		if data.Total > 0 {
+			expectedPages = (data.Total + sub2APIKeyPageSize - 1) / sub2APIKeyPageSize
+		}
 		if data.Page != page || data.PageSize != sub2APIKeyPageSize || data.Pages != expectedPages || data.Pages > maxSub2APIKeyPages || len(data.Items) > sub2APIKeyPageSize {
 			return nil, errors.New("invalid sub2api api key pagination")
 		}
@@ -924,7 +927,7 @@ func (c *Sub2APIHTTPClient) UserKeys(ctx context.Context, credential SessionDele
 		if collected > total || (len(data.Items) == 0 && collected < total) {
 			return nil, errors.New("invalid sub2api api key pagination")
 		}
-		if pages == 0 || page == pages {
+		if page == pages {
 			if collected != total {
 				return nil, errors.New("invalid sub2api api key pagination")
 			}
@@ -1111,7 +1114,7 @@ func (c *Sub2APIHTTPClient) Usage(ctx context.Context, query Sub2APIUsageQuery) 
 	if err := decodeSub2APIEnvelope(body, &data); err != nil {
 		return Sub2APIUsagePage{}, err
 	}
-	var expectedPages int64
+	var expectedPages int64 = 1
 	expectedItems := 0
 	if data.Total > 0 {
 		expectedPages = (data.Total-1)/int64(query.PageSize) + 1
@@ -1229,7 +1232,10 @@ func (c *Sub2APIHTTPClient) BalanceHistory(ctx context.Context, userID int64) ([
 		if data.Total < 0 || data.Total > int64(maxSub2APIKeys) {
 			return nil, errors.New("invalid sub2api balance history pagination")
 		}
-		expectedPages := int((data.Total + int64(sub2APIKeyPageSize) - 1) / int64(sub2APIKeyPageSize))
+		expectedPages := 1
+		if data.Total > 0 {
+			expectedPages = int((data.Total + int64(sub2APIKeyPageSize) - 1) / int64(sub2APIKeyPageSize))
+		}
 		if data.Page != page || data.PageSize != sub2APIKeyPageSize || data.Pages != expectedPages || data.Pages > maxSub2APIKeyPages || len(data.Items) > sub2APIKeyPageSize {
 			return nil, errors.New("invalid sub2api balance history pagination")
 		}
@@ -1257,9 +1263,6 @@ func (c *Sub2APIHTTPClient) BalanceHistory(ctx context.Context, userID int64) ([
 		collected += int64(len(data.Items))
 		if collected > total || (len(data.Items) == 0 && collected < total) {
 			return nil, errors.New("invalid sub2api balance history pagination")
-		}
-		if pages == 0 {
-			return entries, nil
 		}
 		if page == pages {
 			if collected != total {

@@ -64,6 +64,8 @@ test("launch freeze fixes the V2 products, owner lanes, settlement, and verifica
     { packageId: "basic", sizeGb: 10 },
     { packageId: "pro", sizeGb: 100 }
   ]);
+  assert.equal(freeze.workspaceLaunch.packageAvailabilitySource, "live_fabric_catalog");
+  assert.equal(freeze.workspaceLaunch.unavailablePackageBehavior, "package_unavailable_before_gateway_balance_debit_ledger_or_tencent_calls");
   assert.deepEqual(freeze.workspaceLaunch.requestHashFields, ["accountId", "ownerUserId", "name", "packageId", "sizeGb", "autoRenew", "priceVersion"]);
   assert.equal(freeze.workspaceLaunch.autoRenew.submission, "required_false_boolean");
   assert.equal(freeze.workspaceLaunch.autoRenew.defaultProductIntent, false);
@@ -186,6 +188,9 @@ test("launch freeze fixes the V2 products, owner lanes, settlement, and verifica
   assert.equal(freeze.gateway.missingCapabilityBehavior, "dependent_surface_unavailable_never_zero");
   assert.equal(freeze.gateway.summaryApi, undefined);
   assert.equal(freeze.gateway.customerReadContract, "opl-cloud-console-source-truth-contract.json");
+  assert.deepEqual(freeze.gateway.emptyListPaginationRule, {
+    appliesTo: ["Keys", "UserKeys", "Usage", "BalanceHistory"], total: 0, page: 1, pages: 1, items: [], otherShapes: "reject"
+  });
   assert.deepEqual(freeze.gateway.customerMutationApis, [
     "create_general_key",
     "update_general_key",

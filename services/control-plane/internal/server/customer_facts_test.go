@@ -546,7 +546,7 @@ func assertReconciliationException(t *testing.T, report map[string]any, resource
 func assertReconciliationReadOnly(t *testing.T, fixture *billingReconciliationFixture) {
 	t.Helper()
 	for _, call := range *fixture.calls {
-		if call != "fabric.operations" {
+		if call != "fabric.operations" && call != "fabric.catalog" {
 			t.Fatalf("reconciliation mutated Fabric: %#v", *fixture.calls)
 		}
 	}

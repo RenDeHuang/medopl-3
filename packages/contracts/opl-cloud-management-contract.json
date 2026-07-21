@@ -188,6 +188,7 @@
       "apiKeysUsage": "POST /api/v1/admin/dashboard/api-keys-usage",
       "batchSizeMax": 50
     },
+    "usersPagination": "collect_all_coherent_sub2api_user_pages",
     "pageSizeMax": 50,
     "perAccountUserOrUsageNPlusOne": false,
     "persistence": "none_request_join_only",
@@ -227,7 +228,17 @@
     "genericOperatorTokenAccepted": false,
     "providerAcceptanceCredential": "x-opl-provider-acceptance-token header only",
     "queryTokenAllowed": false,
-    "adminSessionAllowed": true
+    "adminSessionAllowed": true,
+    "defaultRoute": "/admin/overview",
+    "consoleRouteBehavior": "redirect_to_admin_overview",
+    "navigation": "admin_routes_only",
+    "accountPageLabel": "客户与计费账户",
+    "reservedAdminAccountInCustomerRows": false
+  },
+  "operatorBillingReviewProjection": {
+    "included": ["workspace.launch.v2_manual_review", "workspace.renewal_manual_review", "compute_billingStatus_manual_review", "storage_billingStatus_manual_review", "BillingReconciliation_mismatch"],
+    "nonBillingRuntimeOperations": "excluded",
+    "mismatchRecoveryAction": false
   },
   "operatorNotifications": {
     "source": "Derived from current Workspace renewal operations plus current compute and storage compatibility state; no alert table or second source of truth.",

@@ -44,7 +44,11 @@ func registerStateRoutes(mux *http.ServeMux, app *controlPlaneServer, service *c
 		if !ok {
 			return
 		}
-		preview, err := app.pricingPreviewResponse(r.Context(), input)
+		computePools, ok := fabricComputePools(w, r, service)
+		if !ok {
+			return
+		}
+		preview, err := app.pricingPreviewResponse(r.Context(), input, computePools)
 		if err != nil {
 			writePricingError(w, err)
 			return
@@ -64,6 +68,10 @@ func registerStateRoutes(mux *http.ServeMux, app *controlPlaneServer, service *c
 }
 
 func writePricingError(w http.ResponseWriter, err error) {
+	if errors.Is(err, errPackageUnavailable) {
+		writeError(w, http.StatusConflict, "package_unavailable")
+		return
+	}
 	if errors.Is(err, errInvalidPricingInput) {
 		writeError(w, http.StatusBadRequest, "invalid_pricing_input")
 		return

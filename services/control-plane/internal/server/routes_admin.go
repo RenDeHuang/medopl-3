@@ -338,13 +338,27 @@ func (app *controlPlaneServer) operatorAccountPage(ctx context.Context, service 
 	if len(local) > 50 {
 		return nil, "", errors.New("operator account projection exceeds Pilot limit")
 	}
-	remotePage, err := service.Sub2APIAdminUsers(ctx, clients.Sub2APIUserPageQuery{Page: 1, PageSize: 50, SortBy: "id", SortOrder: "asc"})
-	if err != nil || remotePage.Pages != 1 || remotePage.Total > 50 {
-		return nil, "", errors.New("sub2api user projection unavailable")
+	remoteByID := make(map[int64]clients.Sub2APIUser)
+	remoteTotal, remotePages := int64(-1), -1
+	for remotePageNumber := 1; remotePageNumber <= remotePages || remotePages == -1; remotePageNumber++ {
+		remotePage, err := service.Sub2APIAdminUsers(ctx, clients.Sub2APIUserPageQuery{Page: remotePageNumber, PageSize: 50, SortBy: "id", SortOrder: "asc"})
+		if err != nil || remotePage.Page != remotePageNumber || remotePage.PageSize != 50 || remotePage.Pages < 1 {
+			return nil, "", errors.New("sub2api user projection unavailable")
+		}
+		if remotePageNumber == 1 {
+			remoteTotal, remotePages = remotePage.Total, remotePage.Pages
+		} else if remotePage.Total != remoteTotal || remotePage.Pages != remotePages {
+			return nil, "", errors.New("sub2api user projection unavailable")
+		}
+		for _, user := range remotePage.Items {
+			if _, duplicate := remoteByID[user.ID]; duplicate {
+				return nil, "", errors.New("sub2api user projection unavailable")
+			}
+			remoteByID[user.ID] = user
+		}
 	}
-	remoteByID := make(map[int64]clients.Sub2APIUser, len(remotePage.Items))
-	for _, user := range remotePage.Items {
-		remoteByID[user.ID] = user
+	if int64(len(remoteByID)) != remoteTotal {
+		return nil, "", errors.New("sub2api user projection unavailable")
 	}
 	usageByID, usageErr := service.Sub2APIBatchUsersUsage(ctx, remoteIDs)
 	items := make([]any, 0, len(local))
@@ -779,43 +793,67 @@ func (app *controlPlaneServer) operatorReconciliationPage(ctx context.Context, p
 	if err != nil {
 		return nil, "", err
 	}
+	computes, err := app.tables.ListComputes(ctx, "")
+	if err != nil {
+		return nil, "", err
+	}
+	storages, err := app.tables.ListStorages(ctx, "")
+	if err != nil {
+		return nil, "", err
+	}
 	items := make([]any, 0)
+	appendReview := func(resourceType, resourceID, accountID, operationID, phase, errorCode, action, receiptID string) {
+		if resourceID == "" || accountID == "" || operationID == "" {
+			return
+		}
+		item := map[string]any{
+			"id": resourceID, "resourceType": resourceType, "status": "manual_review", "accountId": accountID,
+			"billingOperationId": operationID, "phase": phase, "errorCode": errorCode, "allowedActions": []string{action},
+			"operationRef": operationID,
+		}
+		if receiptID != "" {
+			item["receiptRef"] = receiptID
+		}
+		items = append(items, item)
+	}
 	for _, operation := range operations {
-		status := stringValue(operation["status"])
-		if status == "succeeded" || status == "completed" || status == "cancelled" {
+		if stringValue(operation["status"]) != "manual_review" {
 			continue
 		}
 		details := map[string]any{}
 		_ = json.Unmarshal([]byte(stringValue(operation["result"])), &details)
 		operationID := firstNonEmpty(stringValue(operation["operationId"]), stringValue(operation["id"]))
-		item := map[string]any{
-			"id":                 firstNonEmpty(stringValue(operation["id"]), stringValue(operation["operationId"])),
-			"resourceType":       operatorResourceType(firstNonEmpty(stringValue(operation["resourceKind"]), stringValue(operation["action"]))),
-			"status":             status,
-			"accountId":          firstNonEmpty(stringValue(operation["accountId"]), stringValue(details["accountId"])),
-			"billingOperationId": firstNonEmpty(stringValue(details["billingOperationId"]), operationID),
-			"phase":              firstNonEmpty(stringValue(details["phase"]), status),
-			"errorCode":          firstNonEmpty(stringValue(details["errorCode"]), stringValue(details["lastBillingError"])),
-			"allowedActions":     []string{},
+		switch stringValue(operation["action"]) {
+		case workspaceLaunchAction:
+			appendReview(
+				"workspace", operationID, firstNonEmpty(stringValue(operation["accountId"]), stringValue(details["accountId"])), operationID,
+				firstNonEmpty(stringValue(details["phase"]), "manual_review"), firstNonEmpty(stringValue(details["errorCode"]), stringValue(details["lastBillingError"])),
+				"recover_workspace_launch", firstNonEmpty(stringValue(operation["receiptId"]), stringValue(details["receiptId"])),
+			)
+		case "workspace.renewal":
+			appendReview(
+				"workspace", firstNonEmpty(stringValue(operation["workspaceId"]), stringValue(details["workspaceId"])),
+				firstNonEmpty(stringValue(operation["accountId"]), stringValue(details["accountId"])), operationID,
+				firstNonEmpty(stringValue(details["phase"]), "manual_review"), firstNonEmpty(stringValue(details["errorCode"]), stringValue(details["lastBillingError"])),
+				"resolve_billing_review", firstNonEmpty(stringValue(operation["receiptId"]), stringValue(details["receiptId"])),
+			)
 		}
-		if status == "manual_review" {
-			if stringValue(operation["action"]) == workspaceLaunchAction {
-				item["allowedActions"] = []string{"recover_workspace_launch"}
-			} else {
-				item["allowedActions"] = []string{"resolve_billing_review"}
+	}
+	for resourceType, rows := range map[string][]map[string]any{"compute": computes, "storage": storages} {
+		for _, row := range rows {
+			if stringValue(row["billingStatus"]) != "manual_review" {
+				continue
 			}
+			appendReview(
+				resourceType, stringValue(row["id"]), stringValue(row["accountId"]), stringValue(row["billingOperationId"]),
+				firstNonEmpty(stringValue(row["reviewResolutionPhase"]), "manual_review"), firstNonEmpty(stringValue(row["lastBillingError"]), stringValue(row["manualReviewReason"])),
+				"resolve_billing_review", firstNonEmpty(stringValue(row["lastReceiptId"]), stringValue(row["receiptId"])),
+			)
 		}
-		if operationID != "" {
-			item["operationRef"] = operationID
-		}
-		if receiptID := stringValue(operation["receiptId"]); receiptID != "" {
-			item["receiptRef"] = receiptID
-		}
-		items = append(items, item)
 	}
 	if reconciliation, ok, err := app.tables.BillingReconciliation(ctx); err != nil {
 		return nil, "", err
-	} else if ok && stringValue(reconciliation["status"]) != "ok" {
+	} else if ok && stringValue(reconciliation["status"]) == "mismatch" {
 		items = append(items, map[string]any{
 			"id": stringValue(reconciliation["id"]), "resourceType": "workspace", "status": stringValue(reconciliation["status"]),
 			"accountId": "", "billingOperationId": stringValue(reconciliation["id"]), "phase": stringValue(reconciliation["status"]),
@@ -841,17 +879,6 @@ func (app *controlPlaneServer) operatorReconciliationPage(ctx context.Context, p
 		status = "empty"
 	}
 	return map[string]any{"items": items, "total": total, "page": page, "pageSize": pageSize}, status, nil
-}
-
-func operatorResourceType(value string) string {
-	switch {
-	case strings.Contains(value, "compute"):
-		return "compute"
-	case strings.Contains(value, "storage"):
-		return "storage"
-	default:
-		return "workspace"
-	}
 }
 
 func (app *controlPlaneServer) operatorHealth(ctx context.Context, service *controlplane.Service) map[string]any {

@@ -634,6 +634,27 @@ func TestPricingPackageAvailabilityFollowsFabricComputePools(t *testing.T) {
 	}
 }
 
+func TestUnavailablePackageStopsPreviewAndLaunchBeforeExternalCalls(t *testing.T) {
+	calls := []string{}
+	fabric := &unavailableProCatalogFabricClient{fakeFabricClient{calls: &calls}}
+	server := NewServer(newTestService(fakeLedgerClient{}, fabric))
+	session := tenantAdminSessionForTest(t, server)
+
+	preview := requestWithSession(t, server, session, http.MethodPost, "/api/pricing/preview", `{"resourceType":"workspace","packageId":"pro","sizeGb":100}`)
+	if preview.Code != http.StatusConflict || !strings.Contains(preview.Body.String(), `"error":"package_unavailable"`) {
+		t.Fatalf("Pro preview status=%d body=%s", preview.Code, preview.Body.String())
+	}
+	launch := requestWithMutationKeyForTest(t, server, session, http.MethodPost, "/api/workspace-launches", `{"name":"Pro","packageId":"pro","sizeGb":100,"autoRenew":false}`, "unavailable-pro")
+	if launch.Code != http.StatusConflict || !strings.Contains(launch.Body.String(), `"error":"package_unavailable"`) {
+		t.Fatalf("Pro launch status=%d body=%s", launch.Code, launch.Body.String())
+	}
+	for _, call := range calls {
+		if call != "fabric.catalog" {
+			t.Fatalf("unavailable Pro crossed read-only catalog: calls=%#v", calls)
+		}
+	}
+}
+
 func TestProviderReconcilePreservesReleasedStorageStatus(t *testing.T) {
 	app := newControlPlaneAppEmpty()
 	row := map[string]any{"id": "storage-reconcile-released", "accountId": "acct-alpha", "status": "available", "desiredStatus": "destroyed", "billingStatus": "active"}
@@ -1175,7 +1196,8 @@ func (catalogFabricClient) Catalog(_ context.Context) (clients.FabricCatalog, er
 
 type unavailableProCatalogFabricClient struct{ fakeFabricClient }
 
-func (unavailableProCatalogFabricClient) Catalog(_ context.Context) (clients.FabricCatalog, error) {
+func (f unavailableProCatalogFabricClient) Catalog(_ context.Context) (clients.FabricCatalog, error) {
+	f.record("fabric.catalog")
 	return clients.FabricCatalog{WorkspacePackages: []clients.FabricWorkspacePackage{
 		{ID: "basic", ComputeProfileID: "pool-basic", Available: true},
 		{ID: "pro", ComputeProfileID: "pool-pro", Available: false},

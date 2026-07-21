@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -38,7 +39,19 @@ func (c *operatorProjectionSub2API) AdminUsers(_ context.Context, query clients.
 	if c.adminUsersErr != nil {
 		return clients.Sub2APIUserPage{}, c.adminUsersErr
 	}
-	return clients.Sub2APIUserPage{Items: c.users, Total: int64(len(c.users)), Page: query.Page, PageSize: query.PageSize, Pages: 1}, nil
+	pages := (len(c.users) + query.PageSize - 1) / query.PageSize
+	if pages == 0 {
+		pages = 1
+	}
+	start := (query.Page - 1) * query.PageSize
+	end := start + query.PageSize
+	if start > len(c.users) {
+		start = len(c.users)
+	}
+	if end > len(c.users) {
+		end = len(c.users)
+	}
+	return clients.Sub2APIUserPage{Items: c.users[start:end], Total: int64(len(c.users)), Page: query.Page, PageSize: query.PageSize, Pages: pages}, nil
 }
 
 func (c *operatorProjectionSub2API) BatchUsersUsage(_ context.Context, ids []int64) (map[int64]clients.Sub2APIBatchUserUsage, error) {
@@ -193,6 +206,50 @@ func TestOperatorProjectionUsesBatchAPIs(t *testing.T) {
 	}
 }
 
+func TestOperatorAccountsCollectsAllRemotePagesWithoutUsageNPlusOne(t *testing.T) {
+	store := newMemoryTableStore()
+	seedOperatorProjectionAccount(t, store, "acct-alpha", "usr-alpha", "alpha@example.com", 99)
+	users := make([]clients.Sub2APIUser, 0, 51)
+	for id := int64(1); id <= 50; id++ {
+		users = append(users, operatorProjectionUser(id, fmt.Sprintf("unrelated-%d@example.com", id), "active", 0))
+	}
+	users = append(users, operatorProjectionUser(99, "alpha@example.com", "active", 10_000_000))
+	client := newOperatorProjectionClient(users...)
+	client.userUsage[99] = clients.Sub2APIBatchUserUsage{UserID: 99, TotalActualCostUSDMicros: 123}
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}, client), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := requestWithSession(t, server, reservedOperatorSessionForTest(t, server), http.MethodGet, "/api/operator/accounts", "")
+	if response.Code != http.StatusOK {
+		t.Fatalf("operator accounts status=%d body=%s", response.Code, response.Body.String())
+	}
+	items := mapField(decodeOperatorEnvelope(t, response), "data")["items"].([]any)
+	if len(items) != 1 || mapField(items[0].(map[string]any), "wallet")["available"] != true || mapField(items[0].(map[string]any), "usage")["available"] != true {
+		t.Fatalf("mapped later-page customer=%#v", items)
+	}
+	if client.adminUsersCalls != 2 || client.batchUsersCalls != 1 || client.singleUserCalls != 0 {
+		t.Fatalf("calls pages=%d batch=%d singles=%d", client.adminUsersCalls, client.batchUsersCalls, client.singleUserCalls)
+	}
+}
+
+func TestOperatorAccountsFreshInstallIsAvailableEmptyWithoutRemoteReads(t *testing.T) {
+	client := newOperatorProjectionClient(operatorProjectionUser(99, "unrelated@example.com", "active", 0))
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}, client), newMemoryTableStore())
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := requestWithSession(t, server, reservedOperatorSessionForTest(t, server), http.MethodGet, "/api/operator/accounts", "")
+	if response.Code != http.StatusOK {
+		t.Fatalf("operator accounts status=%d body=%s", response.Code, response.Body.String())
+	}
+	envelope := decodeOperatorEnvelope(t, response)
+	data := mapField(envelope, "data")
+	if envelope["status"] != "empty" || data["total"] != float64(0) || len(data["items"].([]any)) != 0 || client.adminUsersCalls != 0 || client.batchUsersCalls != 0 {
+		t.Fatalf("fresh projection envelope=%#v calls=%d/%d", envelope, client.adminUsersCalls, client.batchUsersCalls)
+	}
+}
+
 func TestOperatorOverviewRejectsMoneyAggregationOverflow(t *testing.T) {
 	store := newMemoryTableStore()
 	seedOperatorProjectionAccount(t, store, "acct-alpha", "usr-alpha", "alpha@example.com", 41)
@@ -323,6 +380,81 @@ func TestOperatorReconciliationProjectsLaunchRecoveryIdentity(t *testing.T) {
 	if item["id"] != operation.ID || item["accountId"] != operation.AccountID || item["billingOperationId"] != operation.ID ||
 		item["phase"] != operation.Phase || item["errorCode"] != operation.ErrorCode || !ok || len(actions) != 1 || actions[0] != "recover_workspace_launch" {
 		t.Fatalf("launch reconciliation item=%#v", item)
+	}
+}
+
+func TestOperatorReconciliationOnlyProjectsBillingReviewFacts(t *testing.T) {
+	store := newMemoryTableStore()
+	for _, operation := range []map[string]any{
+		{"id": "gateway-key", "operationId": "gateway-key", "action": "gateway.key.create", "status": "manual_review"},
+		{"id": "account-provision", "operationId": "account-provision", "action": "account.provision", "status": "manual_review"},
+		{"id": "runtime-resume", "operationId": "runtime-resume", "action": "runtime.resume", "status": "started"},
+		{"id": "launch-started", "operationId": "launch-started", "action": workspaceLaunchAction, "status": "started"},
+		{"id": "launch-succeeded", "operationId": "launch-succeeded", "action": workspaceLaunchAction, "status": "succeeded"},
+	} {
+		mustStore(t, store.SaveRuntimeOperation(context.Background(), operation))
+	}
+	mustStore(t, store.SaveBillingReconciliation(context.Background(), map[string]any{"id": "reconcile-ok", "status": "available"}))
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}, newOperatorProjectionClient()), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := requestWithSession(t, server, reservedOperatorSessionForTest(t, server), http.MethodGet, "/api/operator/reconciliation", "")
+	if response.Code != http.StatusOK {
+		t.Fatalf("reconciliation status=%d body=%s", response.Code, response.Body.String())
+	}
+	envelope := decodeOperatorEnvelope(t, response)
+	data := mapField(envelope, "data")
+	if envelope["status"] != "empty" || data["total"] != float64(0) || len(data["items"].([]any)) != 0 {
+		t.Fatalf("non-billing operations leaked into review queue: %#v", envelope)
+	}
+}
+
+func TestOperatorReconciliationProjectsResourceRenewalAndMismatchReviews(t *testing.T) {
+	store := newMemoryTableStore()
+	mustStore(t, store.SaveCompute(context.Background(), map[string]any{
+		"id": "compute-review", "accountId": "acct-alpha", "billingOperationId": "compute-billing", "billingStatus": "manual_review", "lastBillingError": "compute_unknown",
+	}))
+	mustStore(t, store.SaveStorage(context.Background(), map[string]any{
+		"id": "storage-review", "accountId": "acct-alpha", "billingOperationId": "storage-billing", "billingStatus": "manual_review", "lastBillingError": "storage_unknown",
+	}))
+	renewal := workspaceRenewalOperation{
+		ID: "renewal-billing", Status: "manual_review", RequestHash: "renewal-hash", Phase: "provider_review",
+		AccountID: "acct-alpha", WorkspaceID: "ws-alpha", PaidThrough: "2026-08-19T00:00:00Z", ErrorCode: "provider_unknown",
+	}
+	mustStore(t, store.SaveRuntimeOperation(context.Background(), workspaceRenewalOperationRow(renewal)))
+	mustStore(t, store.SaveBillingReconciliation(context.Background(), map[string]any{"id": "reconcile-mismatch", "status": "mismatch", "reason": "balance_mismatch"}))
+	server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}, newOperatorProjectionClient()), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := requestWithSession(t, server, reservedOperatorSessionForTest(t, server), http.MethodGet, "/api/operator/reconciliation", "")
+	if response.Code != http.StatusOK {
+		t.Fatalf("reconciliation status=%d body=%s", response.Code, response.Body.String())
+	}
+	data := mapField(decodeOperatorEnvelope(t, response), "data")
+	items := data["items"].([]any)
+	if data["total"] != float64(4) || len(items) != 4 {
+		t.Fatalf("billing review items=%#v", data)
+	}
+	byID := map[string]map[string]any{}
+	for _, raw := range items {
+		item := raw.(map[string]any)
+		byID[stringValue(item["id"])] = item
+	}
+	for id, resourceType := range map[string]string{"compute-review": "compute", "storage-review": "storage", "ws-alpha": "workspace"} {
+		item := byID[id]
+		actions, _ := item["allowedActions"].([]any)
+		if item["resourceType"] != resourceType || item["status"] != "manual_review" || len(actions) != 1 || actions[0] != "resolve_billing_review" {
+			t.Fatalf("%s review=%#v", id, item)
+		}
+	}
+	if byID["ws-alpha"]["billingOperationId"] != renewal.ID || byID["ws-alpha"]["operationRef"] != renewal.ID {
+		t.Fatalf("renewal identity=%#v", byID["ws-alpha"])
+	}
+	mismatchActions, _ := byID["reconcile-mismatch"]["allowedActions"].([]any)
+	if byID["reconcile-mismatch"]["status"] != "mismatch" || len(mismatchActions) != 0 {
+		t.Fatalf("mismatch review=%#v", byID["reconcile-mismatch"])
 	}
 }
 

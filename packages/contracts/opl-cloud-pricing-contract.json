@@ -63,6 +63,7 @@
   "rules": [
     "All customer charge decisions use integer USD micros and priceVersion.",
     "Workspace launch permits only Basic with 10GB and Pro with 100GB.",
+    "Pricing preview and Workspace launch require available=true from the live Fabric catalog; unavailable packages return package_unavailable before Gateway, balance, debit, Ledger, or Tencent calls.",
     "Unknown packages, invalid storage sizes, and cross-package storage combinations fail before external side effects.",
     "A resource keeps its accepted price snapshot for the current period.",
     "Provider costs are internal reconciliation evidence and never a customer pricing formula or browser DTO."

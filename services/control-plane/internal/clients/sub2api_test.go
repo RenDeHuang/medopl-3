@@ -79,6 +79,78 @@ func TestSub2APIAdminUsersPagination(t *testing.T) {
 	}
 }
 
+func TestSub2APIEmptyListingsRequireV0162Pagination(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		path string
+		call func(*Sub2APIHTTPClient) error
+	}{
+		{
+			name: "admin keys",
+			path: "/api/v1/admin/users/41/api-keys",
+			call: func(client *Sub2APIHTTPClient) error {
+				_, err := client.Keys(context.Background(), 41)
+				return err
+			},
+		},
+		{
+			name: "delegated user keys",
+			path: "/api/v1/keys",
+			call: func(client *Sub2APIHTTPClient) error {
+				_, err := client.UserKeys(context.Background(), SessionDelegatedCredential{Bearer: "delegated", ExpiresAt: time.Now().Add(time.Hour)}, 41)
+				return err
+			},
+		},
+		{
+			name: "usage",
+			path: "/api/v1/admin/usage",
+			call: func(client *Sub2APIHTTPClient) error {
+				_, err := client.Usage(context.Background(), Sub2APIUsageQuery{UserID: 41, APIKeyID: 9, Page: 1, PageSize: 50})
+				return err
+			},
+		},
+		{
+			name: "balance history",
+			path: "/api/v1/admin/users/41/balance-history",
+			call: func(client *Sub2APIHTTPClient) error {
+				_, err := client.BalanceHistory(context.Background(), 41)
+				return err
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, pagination := range []struct {
+				pages   int
+				wantErr bool
+			}{{pages: 1}, {pages: 0, wantErr: true}} {
+				t.Run(fmt.Sprintf("pages=%d", pagination.pages), func(t *testing.T) {
+					client := newSub2APITestClient(t, func(w http.ResponseWriter, r *http.Request) {
+						switch r.URL.Path {
+						case "/api/v1/auth/login":
+							writeSub2APISuccess(t, w, map[string]any{"access_token": "access", "refresh_token": "refresh"})
+						case tc.path:
+							pageSize := 1000
+							if tc.path == "/api/v1/admin/usage" {
+								pageSize = 50
+							}
+							writeSub2APISuccess(t, w, map[string]any{"items": []any{}, "total": 0, "page": 1, "page_size": pageSize, "pages": pagination.pages})
+						default:
+							t.Fatalf("unexpected route %s", r.URL.Path)
+						}
+					}, time.Second)
+					err := tc.call(client)
+					if pagination.wantErr && (err == nil || !strings.Contains(err.Error(), "pagination")) {
+						t.Fatalf("pages=%d error=%v, want pagination error", pagination.pages, err)
+					}
+					if !pagination.wantErr && err != nil {
+						t.Fatalf("pages=%d error=%v", pagination.pages, err)
+					}
+				})
+			}
+		})
+	}
+}
+
 func TestSub2APIBatchUsersUsage(t *testing.T) {
 	client := newSub2APITestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
@@ -613,11 +685,7 @@ func TestSub2APIClientWorkspaceKeyCardinalityFailsClosed(t *testing.T) {
 				case "/api/v1/admin/system/version":
 					writeSub2APISuccess(t, w, map[string]any{"version": "0.1.155"})
 				case "/api/v1/admin/users/41/api-keys":
-					pages := 1
-					if len(tc.items) == 0 {
-						pages = 0
-					}
-					writeSub2APISuccess(t, w, map[string]any{"items": tc.items, "total": len(tc.items), "page": 1, "page_size": 1000, "pages": pages})
+					writeSub2APISuccess(t, w, map[string]any{"items": tc.items, "total": len(tc.items), "page": 1, "page_size": 1000, "pages": 1})
 				default:
 					t.Fatalf("unexpected route %s", r.URL.Path)
 				}
@@ -1168,7 +1236,7 @@ func TestSub2APIUsageListRequiresCoherentPagination(t *testing.T) {
 		{name: "wrong total pages", page: 1, total: 51, pages: 1, items: rows(50), wantErr: true},
 		{name: "short non-final page", page: 1, total: 51, pages: 2, items: rows(1), wantErr: true},
 		{name: "short final page", page: 2, total: 51, pages: 2, items: rows(0), wantErr: true},
-		{name: "empty", page: 1, total: 0, pages: 0, items: rows(0)},
+		{name: "empty", page: 1, total: 0, pages: 1, items: rows(0)},
 		{name: "full non-final page", page: 1, total: 51, pages: 2, items: rows(50)},
 		{name: "final remainder", page: 2, total: 51, pages: 2, items: rows(1)},
 	} {
@@ -1295,7 +1363,7 @@ func TestSub2APIBalanceHistoryAcceptsEmptyCoherentListing(t *testing.T) {
 			writeSub2APISuccess(t, w, map[string]any{"access_token": "access", "refresh_token": "refresh"})
 			return
 		}
-		writeSub2APISuccess(t, w, map[string]any{"items": []any{}, "total": 0, "page": 1, "page_size": 1000, "pages": 0})
+		writeSub2APISuccess(t, w, map[string]any{"items": []any{}, "total": 0, "page": 1, "page_size": 1000, "pages": 1})
 	}, time.Second)
 	entries, err := client.BalanceHistory(context.Background(), 41)
 	if err != nil || len(entries) != 0 {
