@@ -420,6 +420,7 @@ ${diagnostic.run}
     encoding: "utf8",
     env: {
       ...process.env,
+      GITHUB_OUTPUT: "/dev/null",
       KUBECONFIG: "/dev/null",
       OPL_K8S_NAMESPACE: "opl-test",
       TEST_RESOURCE_JSON: JSON.stringify(resources)
@@ -431,6 +432,66 @@ ${diagnostic.run}
   assert.match(result.stdout, /^databaseURLHostKind=rfc1918_ipv4$/m);
   assert.match(result.stdout, /^databaseURLSslmode=disable$/m);
   assert.doesNotMatch(`${result.stdout}\n${result.stderr}`, /pilot-user|pilot-password|10\.66\.0\.21|postgres(?:ql)?:\/\//);
+});
+
+test("TKE roll-forward recovery repairs only the approved private PostgreSQL transport", async () => {
+  const workflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
+  const input = workflow.on.workflow_dispatch.inputs.repair_postgres_transport;
+  const repair = stepsByName(workflowJob(workflow, "roll-forward")).get("Repair approved private PostgreSQL transport");
+  assert.equal(input.type, "boolean");
+  assert.equal(input.default, false);
+  assert.equal(
+    repair?.if,
+    "${{ inputs.repair_postgres_transport && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane' }}"
+  );
+  assert.ok(repair?.run, "roll-forward recovery is missing the PostgreSQL transport repair");
+
+  const root = await mkdtemp(join(tmpdir(), "opl-postgres-transport-repair-"));
+  const kubectlLog = join(root, "kubectl.log");
+  const harness = `
+kubectl() {
+  printf '%s\n' "$*" >> "$TEST_KUBECTL_LOG"
+  case " $* " in
+    *" patch configmap/opl-cloud-config --type merge -p "*) ;;
+    *" get configmap/opl-cloud-config -o jsonpath={.data.PGSSLMODE} "*) printf 'disable' ;;
+    *) return 64 ;;
+  esac
+}
+${repair.run}
+`;
+  const runRepair = (extraEnv = {}) => spawnSync("bash", ["-c", harness], {
+    cwd: fileURLToPath(repoFile(".")),
+    encoding: "utf8",
+    env: {
+      ...process.env,
+      KUBECONFIG: "/dev/null",
+      OPL_K8S_NAMESPACE: "opl-test",
+      OPL_RECOVERY_PG_CONFIG_MODE: "absent",
+      OPL_RECOVERY_DATABASE_HOST_KIND: "rfc1918_ipv4",
+      OPL_RECOVERY_DATABASE_SSLMODE: "absent",
+      TEST_KUBECTL_LOG: kubectlLog,
+      ...extraEnv
+    }
+  });
+
+  try {
+    await writeFile(kubectlLog, "");
+    const success = runRepair();
+    assert.equal(success.status, 0, success.stderr);
+    assert.match(await readFile(kubectlLog, "utf8"), /patch configmap\/opl-cloud-config --type merge -p \{"data":\{"PGSSLMODE":"disable"\}\}/);
+
+    for (const extraEnv of [
+      { OPL_RECOVERY_PG_CONFIG_MODE: "other" },
+      { OPL_RECOVERY_DATABASE_HOST_KIND: "non_literal" },
+      { OPL_RECOVERY_DATABASE_SSLMODE: "verify-full" }
+    ]) {
+      await writeFile(kubectlLog, "");
+      assert.notEqual(runRepair(extraEnv).status, 0);
+      assert.equal(await readFile(kubectlLog, "utf8"), "");
+    }
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test("TKE bootstrap deploy is approved, read only, and cannot complete a release", async () => {

@@ -35,6 +35,11 @@ on:
           - none
           - control-plane
           - all-cloud
+      repair_postgres_transport:
+        description: Restore PGSSLMODE=disable only after the sanitized diagnostic confirms the approved RFC1918 non-TLS transport.
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
 
@@ -154,6 +159,7 @@ jobs:
           echo "KUBECONFIG=$kubeconfig" >> "$GITHUB_ENV"
 
       - name: Read sanitized PostgreSQL transport
+        id: postgres_transport
         shell: bash
         run: |
           set -euo pipefail
@@ -202,16 +208,54 @@ jobs:
                 sslmode = "unknown";
               }
 
-              console.log(`configMapPGSSLMODE=${configMode === undefined ? "absent" : configMode === "disable" ? "disable" : "other"}`);
+              const configModeClass = configMode === undefined ? "absent" : configMode === "disable" ? "disable" : "other";
+              console.log(`configMapPGSSLMODE=${configModeClass}`);
               console.log(`databaseURLHostKind=${hostKind}`);
               console.log(`databaseURLSslmode=${sslmode}`);
+              require("node:fs").appendFileSync(process.env.GITHUB_OUTPUT, [
+                `config_mode=${configModeClass}`,
+                `host_kind=${hostKind}`,
+                `sslmode=${sslmode}`
+              ].join("\n") + "\n");
             '
+
+      - name: Repair approved private PostgreSQL transport
+        if: ${{ inputs.repair_postgres_transport && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane' }}
+        shell: bash
+        env:
+          OPL_RECOVERY_PG_CONFIG_MODE: ${{ steps.postgres_transport.outputs.config_mode }}
+          OPL_RECOVERY_DATABASE_HOST_KIND: ${{ steps.postgres_transport.outputs.host_kind }}
+          OPL_RECOVERY_DATABASE_SSLMODE: ${{ steps.postgres_transport.outputs.sslmode }}
+        run: |
+          set -euo pipefail
+          case "$OPL_RECOVERY_PG_CONFIG_MODE" in
+            absent|disable) ;;
+            *) echo "Refusing PostgreSQL transport repair: ConfigMap mode is not absent/disable." >&2; exit 1 ;;
+          esac
+          if [ "$OPL_RECOVERY_DATABASE_HOST_KIND" != "rfc1918_ipv4" ]; then
+            echo "Refusing PostgreSQL transport repair: DATABASE_URL host is not one RFC1918 IPv4 literal." >&2
+            exit 1
+          fi
+          case "$OPL_RECOVERY_DATABASE_SSLMODE" in
+            absent|disable) ;;
+            *) echo "Refusing PostgreSQL transport repair: DATABASE_URL sslmode is not absent/disable." >&2; exit 1 ;;
+          esac
+          kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" patch configmap/opl-cloud-config \
+            --type merge -p '{"data":{"PGSSLMODE":"disable"}}'
+          readback="$(kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
+            get configmap/opl-cloud-config -o jsonpath='{.data.PGSSLMODE}')"
+          if [ "$readback" != "disable" ]; then
+            echo "PostgreSQL transport ConfigMap readback mismatch." >&2
+            exit 1
+          fi
+          echo "PostgreSQL transport ConfigMap repaired and read back."
 
       - name: Apply roll-forward image and capture diagnostics
         shell: bash
         run: |
           set -uo pipefail
           mode="${{ inputs.roll_forward_mode }}"
+          repair_requested="${{ inputs.repair_postgres_transport }}"
           if [ "${{ inputs.diagnostics_only }}" = "true" ]; then
             echo "diagnostics_only and roll_forward_mode are mutually exclusive." >&2
             exit 1
@@ -257,7 +301,7 @@ jobs:
                 status="$(pod_status "$pod" "$container")"
                 IFS=$'\t' read -r ready restarts image_id <<< "$status"
                 restarts="${restarts:-0}"
-                if [ "$ready" = "true" ] || [ "$restarts" -gt 0 ]; then
+                if [ "$ready" = "true" ] || { [ "$repair_requested" != "true" ] && [ "$restarts" -gt 0 ]; }; then
                   printf '%s' "$pod"
                   return 0
                 fi

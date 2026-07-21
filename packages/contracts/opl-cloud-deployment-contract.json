@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 14,
+  "schemaVersion": 15,
   "owner": "OPL Fabric",
   "purpose": "Deployment workflow, immutable Cloud and Workspace images, TKE handoff, read-only diagnostics, explicit roll-forward recovery, and production-verification safety.",
   "state": "current",
@@ -56,7 +56,8 @@
       "exercise_rollback",
       "bootstrap_mode",
       "diagnostics_only",
-      "roll_forward_mode"
+      "roll_forward_mode",
+      "repair_postgres_transport"
     ],
     "preDebitTencentMutationGate": {
       "env": "RUN_TENCENT_CREATE_RELEASE_EXECUTION",
@@ -270,7 +271,7 @@
     "file": ".github/workflows/deploy-tke-production.yml",
     "job": "roll-forward",
     "runner": ["self-hosted", "tencent-cloud", "opl-cloud", "tke-vpc"],
-    "inputs": ["roll_forward_mode"],
+    "inputs": ["roll_forward_mode", "repair_postgres_transport"],
     "modeOptions": ["none", "control-plane", "all-cloud"],
     "candidateImage": "uswccr.ccs.tencentyun.com/oplcloud/opl-cloud@sha256:1c68bd613223ce06ffd1042ec226144830f1533c937569e886cd07ade97b5ca5",
     "requiredEnv": [
@@ -286,6 +287,7 @@
       "Set up Node",
       "Prepare recovery kubeconfig",
       "Read sanitized PostgreSQL transport",
+      "Repair approved private PostgreSQL transport",
       "Apply roll-forward image and capture diagnostics",
       "Remove recovery kubeconfig"
     ],
@@ -304,6 +306,13 @@
         "configMapPGSSLMODE",
         "databaseURLHostKind",
         "databaseURLSslmode"
+      ],
+      "Repair approved private PostgreSQL transport": [
+        "inputs.repair_postgres_transport && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane'",
+        "rfc1918_ipv4",
+        "patch configmap/opl-cloud-config",
+        "PGSSLMODE",
+        "get configmap/opl-cloud-config"
       ],
       "Apply roll-forward image and capture diagnostics": [
         "deployment/opl-cloud-control-plane",
