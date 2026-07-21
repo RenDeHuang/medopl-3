@@ -323,6 +323,29 @@ test("ordinary TKE deploy has no Acceptance or live QA mutation gate", async () 
   assert.doesNotMatch(inputGate.run, /NODE_POOL_ID|GATEWAY_PUBLIC_BASE_URL|PROVIDER_ACCEPTANCE|OPL_VERIFY_/);
 });
 
+test("TKE diagnostics are read only and mutually exclusive with deploy", async () => {
+  const workflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
+  const input = workflow.on.workflow_dispatch.inputs.diagnostics_only;
+  const deploy = workflowJob(workflow, "deploy");
+  const diagnose = workflowJob(workflow, "diagnose");
+  const releaseGate = workflowJob(workflow, "release-gate");
+  const runs = serializedStep(stepsByName(diagnose).get("Read cluster diagnostics"));
+
+  assert.equal(input.type, "boolean");
+  assert.equal(input.default, false);
+  assert.equal(deploy.if, "${{ !inputs.diagnostics_only }}");
+  assert.equal(diagnose.if, "${{ inputs.diagnostics_only }}");
+  assert.match(String(releaseGate.if), /!inputs\.diagnostics_only/);
+  assert.deepEqual(diagnose["runs-on"], ["self-hosted", "tencent-cloud", "opl-cloud", "tke-vpc"]);
+  assert.equal(diagnose.environment, "production");
+  assert.match(runs, /get nodes -o wide/);
+  assert.match(runs, /get deploy,rs,pod -o wide/);
+  assert.match(runs, /get events/);
+  assert.match(runs, /describe "\$pod"/);
+  assert.match(runs, /logs/);
+  assert.doesNotMatch(runs, /\b(?:apply|delete|patch|scale)\b|set image|rollout restart/);
+});
+
 test("TKE bootstrap deploy is approved, read only, and cannot complete a release", async () => {
   const workflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
   const input = workflow.on.workflow_dispatch.inputs.bootstrap_mode;
@@ -355,7 +378,7 @@ test("TKE bootstrap deploy is approved, read only, and cannot complete a release
   assert.doesNotMatch(bootstrapRun, /production-live-qa|provider-acceptance|purchase|delete|renew|POST/i);
 
   assert.deepEqual(releaseGate.needs, ["deploy", "bootstrap-readiness"]);
-  assert.equal(releaseGate.if, "${{ always() }}");
+  assert.equal(releaseGate.if, "${{ always() && !inputs.diagnostics_only }}");
   assert.match(releaseRun, /release incomplete/i);
   assert.match(releaseRun, /releaseComplete.*false/s);
   assert.match(releaseRun, /exit 1/);
