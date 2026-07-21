@@ -624,6 +624,14 @@ test("TKE roll-forward recovery inspects the customer identity hard cut without 
   assert.match(inspect.run, /HAVING COUNT\(\*\) > 1/i);
   assert.match(inspect.run, /install -m 600 \/dev\/null "\$identity_manifest"/);
   assert.match(inspect.run, /manifestSha256=/);
+  assert.ok(
+    inspect.run.indexOf("manifestSha256=") < inspect.run.indexOf("Customer identity hard-cut precondition failed"),
+    "the private manifest must be identified before a fail-closed precondition exits"
+  );
+  assert.ok(
+    inspect.run.indexOf("localMapping account=") < inspect.run.indexOf("Customer identity hard-cut precondition failed"),
+    "mapping targets must be reported only in redacted form before a fail-closed exit"
+  );
   assert.match(inspect.run, /\/api\/v1\/admin\/users\?/);
   assert.match(inspect.run, /\/api\/v1\/admin\/users\//);
   assert.doesNotMatch(inspect.run, /\/api\/v1\/auth\/login|ResolveOrCreateUser/);

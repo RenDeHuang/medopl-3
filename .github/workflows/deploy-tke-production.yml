@@ -849,6 +849,8 @@ jobs:
             echo "Customer identity manifest mode is not 0600." >&2
             exit 1
           fi
+          manifest_sha256="$(sha256sum "$identity_manifest" | cut -d ' ' -f 1)"
+          printf 'manifestSha256=%s\n' "$manifest_sha256"
           OPL_IDENTITY_MANIFEST="$identity_manifest" node <<'NODE'
           const crypto = require("node:crypto");
           const fs = require("node:fs");
@@ -867,20 +869,18 @@ jobs:
             "duplicatePrimaryWorkspaceCount",
             "migrationJournalCount"
           ];
-          if (metrics.truthTableCount !== 5 || metrics.archivedWorkspaceCount !== 34 || zeroMetrics.some((name) => metrics[name] !== 0)) {
-            throw new Error(`Customer identity hard-cut precondition failed: ${JSON.stringify(metrics)}`);
-          }
           const targets = Array.isArray(local.targets) ? local.targets : [];
-          if (targets.length === 0 || targets.length !== metrics.invalidMappingCount + targets.filter((item) => item.oldSub2apiUserId > 0).length) {
-            throw new Error("Customer identity mapping target set is empty or inconsistent.");
-          }
           console.log(`hardCutMetrics=${JSON.stringify(metrics)} mappingTargets=${targets.length}`);
           for (const target of targets) {
             console.log(`localMapping account=${hash(target.accountId).slice(0, 12)} email=${hash(target.normalizedEmail).slice(0, 12)} mapping=${target.oldSub2apiUserId > 0 ? "duplicated" : "missing"}`);
           }
+          if (metrics.truthTableCount !== 5 || metrics.archivedWorkspaceCount !== 34 || zeroMetrics.some((name) => metrics[name] !== 0)) {
+            throw new Error(`Customer identity hard-cut precondition failed: ${JSON.stringify(metrics)}`);
+          }
+          if (targets.length === 0 || targets.length !== metrics.invalidMappingCount + targets.filter((item) => item.oldSub2apiUserId > 0).length) {
+            throw new Error("Customer identity mapping target set is empty or inconsistent.");
+          }
           NODE
-          manifest_sha256="$(sha256sum "$identity_manifest" | cut -d ' ' -f 1)"
-          printf 'manifestSha256=%s\n' "$manifest_sha256"
 
           auth_file="$OPL_RECOVERY_SECRET_DIR/sub2api-read-auth.json"
           config_file="$OPL_RECOVERY_SECRET_DIR/sub2api-read-config.json"
