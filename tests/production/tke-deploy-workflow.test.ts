@@ -505,7 +505,7 @@ test("TKE roll-forward recovery backs up before read-only primary Workspace conf
     inspect?.if,
     "${{ inputs.inspect_primary_workspace_conflict && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane' }}"
   );
-  assert.equal(inspect?.env?.DATABASE_URL, "${{ secrets.DATABASE_URL }}");
+  assert.equal(inspect?.env?.DATABASE_URL, undefined);
   assert.equal(inspect?.env?.PGSSLMODE, "disable");
   assert.equal(
     recover.env.OPL_POSTGRES_CLIENT_IMAGE,
@@ -514,12 +514,19 @@ test("TKE roll-forward recovery backs up before read-only primary Workspace conf
   assert.ok(inspect?.run, "roll-forward recovery is missing the migration conflict inspection");
   assert.match(inspect.run, /install -m 600 \/dev\/null "\$backup_file"/);
   assert.match(inspect.run, /postgres_client_pod="opl-postgres-recovery-/);
+  assert.match(inspect.run, /imagePullSecrets:[\s\S]*name: tcr-pull-secret/);
+  assert.match(inspect.run, /initContainers:[\s\S]*name: database-url-normalizer/);
+  assert.match(inspect.run, /name: database-url-normalizer[\s\S]*image: \$OPL_CANDIDATE_IMAGE/);
+  assert.match(inspect.run, /new URL\(raw\)\.toString\(\)/);
+  assert.match(inspect.run, /writeFileSync\("\/work\/database-url"[\s\S]*mode: 0o600/);
+  assert.match(inspect.run, /name: database-secret[\s\S]*secret:[\s\S]*secretName: opl-cloud-database/);
   assert.match(inspect.run, /automountServiceAccountToken: false/);
   assert.match(inspect.run, /readOnlyRootFilesystem: true/);
-  assert.match(inspect.run, /secretKeyRef:[\s\S]*name: opl-cloud-database[\s\S]*key: DATABASE_URL/);
+  assert.doesNotMatch(inspect.run, /secretKeyRef:[\s\S]*name: opl-cloud-database[\s\S]*key: DATABASE_URL/);
   assert.match(inspect.run, /kubectl .* create -f -/);
   assert.match(inspect.run, /kubectl [\s\S]* wait --for=condition=Ready/);
   assert.match(inspect.run, /kubectl [\s\S]* exec [\s\S]*pg_dump/);
+  assert.match(inspect.run, /DATABASE_URL="\$\(cat \/work\/database-url\)"/);
   assert.match(inspect.run, /kubectl [\s\S]* exec [\s\S]*cat \/work\/backup\.dump > "\$backup_file"/);
   assert.match(inspect.run, /pg_dump .*--format=custom/);
   assert.match(inspect.run, /pg_restore --list/);

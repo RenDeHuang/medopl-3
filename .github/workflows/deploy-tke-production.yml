@@ -260,7 +260,6 @@ jobs:
         if: ${{ inputs.inspect_primary_workspace_conflict && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane' }}
         shell: bash
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
           PGSSLMODE: disable
         run: |
           set -euo pipefail
@@ -285,6 +284,8 @@ jobs:
           spec:
             automountServiceAccountToken: false
             restartPolicy: Never
+            imagePullSecrets:
+              - name: tcr-pull-secret
             securityContext:
               runAsNonRoot: true
               runAsUser: 26
@@ -292,6 +293,33 @@ jobs:
               fsGroup: 26
               seccompProfile:
                 type: RuntimeDefault
+            initContainers:
+              - name: database-url-normalizer
+                image: $OPL_CANDIDATE_IMAGE
+                imagePullPolicy: IfNotPresent
+                command: ["node", "-e"]
+                args:
+                  - |
+                    const { readFileSync, writeFileSync } = require("node:fs");
+                    try {
+                      const raw = readFileSync("/run/opl-postgres/DATABASE_URL", "utf8").trim();
+                      const normalized = new URL(raw).toString();
+                      writeFileSync("/work/database-url", normalized, { mode: 0o600 });
+                    } catch {
+                      console.error("DATABASE_URL normalization failed.");
+                      process.exit(1);
+                    }
+                securityContext:
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+                  capabilities:
+                    drop: ["ALL"]
+                volumeMounts:
+                  - name: database-secret
+                    mountPath: /run/opl-postgres
+                    readOnly: true
+                  - name: work
+                    mountPath: /work
             containers:
               - name: postgres-client
                 image: $OPL_POSTGRES_CLIENT_IMAGE
@@ -300,11 +328,6 @@ jobs:
                 args:
                   - "while :; do sleep 3600; done"
                 env:
-                  - name: DATABASE_URL
-                    valueFrom:
-                      secretKeyRef:
-                        name: opl-cloud-database
-                        key: DATABASE_URL
                   - name: PGSSLMODE
                     value: disable
                   - name: TMPDIR
@@ -320,6 +343,10 @@ jobs:
                   - name: tmp
                     mountPath: /tmp
             volumes:
+              - name: database-secret
+                secret:
+                  secretName: opl-cloud-database
+                  defaultMode: 0440
               - name: work
                 emptyDir: {}
               - name: tmp
@@ -333,7 +360,7 @@ jobs:
           install -m 600 /dev/null "$backup_file"
           kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec "$postgres_client_pod" \
             -c postgres-client -- /bin/bash -ceu \
-            'umask 077; pg_dump --format=custom --no-owner --no-acl --file=/work/backup.dump "$DATABASE_URL"; test -s /work/backup.dump; pg_restore --list /work/backup.dump >/dev/null'
+            'umask 077; DATABASE_URL="$(cat /work/database-url)"; pg_dump --format=custom --no-owner --no-acl --file=/work/backup.dump "$DATABASE_URL"; test -s /work/backup.dump; pg_restore --list /work/backup.dump >/dev/null'
           kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec "$postgres_client_pod" \
             -c postgres-client -- cat /work/backup.dump > "$backup_file"
           test -s "$backup_file"
@@ -349,7 +376,7 @@ jobs:
           printf 'backupFile=%s\nbackupBytes=%s\nbackupSha256=%s\n' "$backup_file" "$backup_bytes" "$backup_sha256"
 
           kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec --stdin "$postgres_client_pod" \
-            -c postgres-client -- /bin/bash -ceu 'psql "$DATABASE_URL" -X --set ON_ERROR_STOP=1 --csv' <<'SQL'
+            -c postgres-client -- /bin/bash -ceu 'DATABASE_URL="$(cat /work/database-url)"; psql "$DATABASE_URL" -X --set ON_ERROR_STOP=1 --csv' <<'SQL'
           WITH duplicate_accounts AS (
             SELECT
               COALESCE(NULLIF(account_id, ''), owner_account_id) AS account_key,
