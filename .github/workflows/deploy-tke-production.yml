@@ -50,6 +50,11 @@ on:
         required: false
         default: false
         type: boolean
+      inspect_customer_identity_hard_cut:
+        description: Back up PostgreSQL, inspect every customer identity hard-cut precondition, and perform GET-only Sub2API readback.
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
 
@@ -262,7 +267,7 @@ jobs:
           echo "PostgreSQL transport ConfigMap repaired and read back."
 
       - name: Back up and inspect primary Workspace conflict
-        if: ${{ inputs.inspect_primary_workspace_conflict && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane' }}
+        if: ${{ (inputs.inspect_primary_workspace_conflict || inputs.inspect_customer_identity_hard_cut) && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane' }}
         shell: bash
         env:
           PGSSLMODE: disable
@@ -384,8 +389,9 @@ jobs:
           fi
           printf 'backupFile=%s\nbackupBytes=%s\nbackupSha256=%s\n' "$backup_file" "$backup_bytes" "$backup_sha256"
 
-          kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec --stdin "$postgres_client_pod" \
-            -c postgres-client -- /bin/bash -ceu 'DATABASE_URL="$(cat /work/database-url)"; psql "$DATABASE_URL" -X --set ON_ERROR_STOP=1 --csv' <<'SQL'
+          if [ "${{ inputs.inspect_primary_workspace_conflict }}" = "true" ]; then
+            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec --stdin "$postgres_client_pod" \
+              -c postgres-client -- /bin/bash -ceu 'DATABASE_URL="$(cat /work/database-url)"; psql "$DATABASE_URL" -X --set ON_ERROR_STOP=1 --csv' <<'SQL'
           WITH duplicate_accounts AS (
             SELECT
               COALESCE(NULLIF(account_id, ''), owner_account_id) AS account_key,
@@ -453,7 +459,8 @@ jobs:
           GROUP BY operations.workspace_id, operations.action, operations.status
           ORDER BY operations.workspace_id, operations.action, operations.status;
           SQL
-          if [ "${{ inputs.repair_primary_workspace_conflict }}" = "true" ]; then
+          fi
+          if [ "${{ inputs.repair_primary_workspace_conflict }}" = "true" ] || [ "${{ inputs.inspect_customer_identity_hard_cut }}" = "true" ]; then
             retain_postgres_client=true
             printf 'OPL_PRIMARY_WORKSPACE_BACKUP_FILE=%s\nOPL_POSTGRES_RECOVERY_POD=%s\n' \
               "$backup_file" "$postgres_client_pod" >> "$GITHUB_ENV"
@@ -683,6 +690,308 @@ jobs:
           COMMIT;
           SQL
 
+      - name: Inspect customer identity hard cut
+        if: ${{ inputs.inspect_customer_identity_hard_cut && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane' }}
+        shell: bash
+        env:
+          PGSSLMODE: disable
+        run: |
+          set -euo pipefail
+          umask 077
+          postgres_client_pod="${OPL_POSTGRES_RECOVERY_POD:-}"
+          if [ -z "$postgres_client_pod" ]; then
+            echo "Customer identity inspection is missing the verified PostgreSQL client." >&2
+            exit 1
+          fi
+
+          manifest_root="/home/actions/.secrets/medopl/v22/postgres-backups"
+          identity_manifest="$manifest_root/opl-cloud-customer-identity-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+          matched_manifest="$manifest_root/opl-cloud-customer-identity-matched-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.json"
+          install -m 600 /dev/null "$identity_manifest"
+          install -m 600 /dev/null "$matched_manifest"
+
+          kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec --stdin "$postgres_client_pod" \
+            -c postgres-client -- /bin/bash -ceu 'DATABASE_URL="$(cat /work/database-url)"; psql "$DATABASE_URL" -X --set ON_ERROR_STOP=1 --quiet --tuples-only --no-align' \
+            > "$identity_manifest" <<'SQL'
+          -- Mirrors every fail-closed data precondition in the migration:
+          -- legacy account/user cardinality is not one-to-one
+          -- legacy normalized user email is blank or duplicated
+          -- legacy Sub2API mapping is missing or duplicated
+          -- legacy account owner is cross-account or missing
+          -- legacy customer role is not owner
+          -- legacy customer organization cardinality is not one-to-one
+          -- legacy customer membership is not one-to-one
+          WITH
+          duplicate_mappings AS (
+            SELECT sub2api_user_id
+            FROM control_plane_accounts
+            GROUP BY sub2api_user_id
+            HAVING COUNT(*) > 1
+          ),
+          targets AS (
+            SELECT COALESCE(jsonb_agg(jsonb_build_object(
+              'accountId', accounts.id,
+              'userId', users.id,
+              'oldSub2apiUserId', accounts.sub2api_user_id,
+              'normalizedEmail', lower(btrim(users.email)),
+              'localStatus', users.status
+            ) ORDER BY accounts.id), '[]'::jsonb) AS value
+            FROM control_plane_accounts accounts
+            JOIN control_plane_users users ON users.account_id = accounts.id
+            WHERE accounts.sub2api_user_id <= 0
+               OR accounts.sub2api_user_id IN (SELECT sub2api_user_id FROM duplicate_mappings)
+          )
+          SELECT jsonb_build_object(
+            'metrics', jsonb_build_object(
+              'truthTableCount', (
+                SELECT count(*) FROM unnest(ARRAY[
+                  to_regclass('control_plane_accounts'),
+                  to_regclass('control_plane_users'),
+                  to_regclass('control_plane_organizations'),
+                  to_regclass('control_plane_memberships'),
+                  to_regclass('control_plane_sessions')
+                ]) relation WHERE relation IS NOT NULL
+              ),
+              'accountUserCardinalityViolations', (
+                SELECT count(*) FROM (
+                  SELECT accounts.id
+                  FROM control_plane_accounts accounts
+                  LEFT JOIN control_plane_users users ON users.account_id = accounts.id
+                  GROUP BY accounts.id
+                  HAVING count(users.id) <> 1
+                ) violations
+              ) + (
+                SELECT count(*)
+                FROM control_plane_users users
+                LEFT JOIN control_plane_accounts accounts ON accounts.id = users.account_id
+                WHERE accounts.id IS NULL
+              ),
+              'blankEmailCount', (SELECT count(*) FROM control_plane_users WHERE email IS NULL OR btrim(email) = ''),
+              'duplicateEmailGroupCount', (
+                SELECT count(*) FROM (
+                  SELECT lower(btrim(email)) FROM control_plane_users GROUP BY lower(btrim(email)) HAVING count(*) > 1
+                ) duplicates
+              ),
+              'invalidMappingCount', (SELECT count(*) FROM control_plane_accounts WHERE sub2api_user_id <= 0),
+              'duplicateMappingGroupCount', (SELECT count(*) FROM duplicate_mappings),
+              'ownerViolations', (
+                SELECT count(*)
+                FROM control_plane_accounts accounts
+                LEFT JOIN control_plane_users owners ON owners.id = accounts.owner_user_id
+                WHERE accounts.owner_user_id <> '' AND (owners.id IS NULL OR owners.account_id <> accounts.id)
+              ) + (
+                SELECT count(*) FROM (
+                  SELECT owner_user_id FROM control_plane_accounts WHERE owner_user_id <> '' GROUP BY owner_user_id HAVING count(*) > 1
+                ) duplicates
+              ),
+              'roleViolations', (
+                SELECT count(*) FROM control_plane_users users
+                WHERE NOT (users.id = 'usr-admin' AND users.account_id = 'acct-admin' AND users.role = 'admin')
+                  AND (users.id = 'usr-admin' OR users.account_id = 'acct-admin' OR users.role <> 'owner')
+              ),
+              'organizationCardinalityViolations', (
+                SELECT count(*) FROM control_plane_users users
+                WHERE (SELECT count(*) FROM control_plane_organizations organizations WHERE organizations.billing_account_id = users.account_id) <> 1
+              ),
+              'membershipViolations', (
+                SELECT count(*)
+                FROM control_plane_memberships memberships
+                LEFT JOIN control_plane_accounts accounts ON accounts.id = memberships.account_id
+                LEFT JOIN control_plane_users users ON users.id = memberships.user_id
+                LEFT JOIN control_plane_organizations organizations ON organizations.id = memberships.organization_id
+                WHERE accounts.id IS NULL OR users.id IS NULL OR organizations.id IS NULL
+                  OR users.account_id <> memberships.account_id
+                  OR organizations.billing_account_id <> memberships.account_id
+                  OR memberships.role <> 'owner'
+              ) + (
+                SELECT count(*) FROM control_plane_users users
+                WHERE (SELECT count(*) FROM control_plane_memberships memberships WHERE memberships.account_id = users.account_id) <> 1
+                   OR (SELECT count(*) FROM control_plane_memberships memberships WHERE memberships.user_id = users.id) <> 1
+                   OR NOT EXISTS (
+                     SELECT 1
+                     FROM control_plane_memberships memberships
+                     JOIN control_plane_organizations organizations ON organizations.id = memberships.organization_id
+                     WHERE memberships.account_id = users.account_id
+                       AND memberships.user_id = users.id
+                       AND organizations.billing_account_id = users.account_id
+                   )
+              ),
+              'reciprocalOwnerAfterBackfillViolations', (
+                SELECT count(*)
+                FROM control_plane_accounts accounts
+                JOIN control_plane_users users ON users.account_id = accounts.id
+                WHERE COALESCE(NULLIF(accounts.owner_user_id, ''), users.id) <> users.id
+              ),
+              'duplicatePrimaryWorkspaceCount', (
+                SELECT count(*) FROM (
+                  SELECT COALESCE(NULLIF(account_id, ''), owner_account_id)
+                  FROM control_plane_workspaces
+                  WHERE COALESCE(NULLIF(account_id, ''), owner_account_id) <> ''
+                  GROUP BY COALESCE(NULLIF(account_id, ''), owner_account_id)
+                  HAVING count(*) > 1
+                ) duplicates
+              ),
+              'archivedWorkspaceCount', (
+                SELECT count(*) FROM control_plane_archived_workspaces
+                WHERE reason = 'roll_forward_primary_workspace_conflict_20260721'
+              ),
+              'migrationJournalCount', (
+                SELECT count(*) FROM opl_schema_migrations
+                WHERE service = 'control-plane' AND version = '202607180001_customer_identity_hard_cut'
+              )
+            ),
+            'targets', targets.value
+          )
+          FROM targets;
+          SQL
+          chmod 600 "$identity_manifest"
+          if [ "$(stat -c '%a' "$identity_manifest")" != "600" ]; then
+            echo "Customer identity manifest mode is not 0600." >&2
+            exit 1
+          fi
+          OPL_IDENTITY_MANIFEST="$identity_manifest" node <<'NODE'
+          const crypto = require("node:crypto");
+          const fs = require("node:fs");
+          const hash = (value) => crypto.createHash("sha256").update(String(value)).digest("hex");
+          const local = JSON.parse(fs.readFileSync(process.env.OPL_IDENTITY_MANIFEST, "utf8"));
+          const metrics = local.metrics || {};
+          const zeroMetrics = [
+            "accountUserCardinalityViolations",
+            "blankEmailCount",
+            "duplicateEmailGroupCount",
+            "ownerViolations",
+            "roleViolations",
+            "organizationCardinalityViolations",
+            "membershipViolations",
+            "reciprocalOwnerAfterBackfillViolations",
+            "duplicatePrimaryWorkspaceCount",
+            "migrationJournalCount"
+          ];
+          if (metrics.truthTableCount !== 5 || metrics.archivedWorkspaceCount !== 34 || zeroMetrics.some((name) => metrics[name] !== 0)) {
+            throw new Error(`Customer identity hard-cut precondition failed: ${JSON.stringify(metrics)}`);
+          }
+          const targets = Array.isArray(local.targets) ? local.targets : [];
+          if (targets.length === 0 || targets.length !== metrics.invalidMappingCount + targets.filter((item) => item.oldSub2apiUserId > 0).length) {
+            throw new Error("Customer identity mapping target set is empty or inconsistent.");
+          }
+          console.log(`hardCutMetrics=${JSON.stringify(metrics)} mappingTargets=${targets.length}`);
+          for (const target of targets) {
+            console.log(`localMapping account=${hash(target.accountId).slice(0, 12)} email=${hash(target.normalizedEmail).slice(0, 12)} mapping=${target.oldSub2apiUserId > 0 ? "duplicated" : "missing"}`);
+          }
+          NODE
+          manifest_sha256="$(sha256sum "$identity_manifest" | cut -d ' ' -f 1)"
+          printf 'manifestSha256=%s\n' "$manifest_sha256"
+
+          auth_file="$OPL_RECOVERY_SECRET_DIR/sub2api-read-auth.json"
+          config_file="$OPL_RECOVERY_SECRET_DIR/sub2api-read-config.json"
+          install -m 600 /dev/null "$auth_file"
+          install -m 600 /dev/null "$config_file"
+          kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
+            get secret/opl-cloud-sub2api configmap/opl-cloud-config -o json \
+            | OPL_RECOVERY_AUTH_FILE="$auth_file" OPL_RECOVERY_CONFIG_FILE="$config_file" node -e '
+              const fs = require("node:fs");
+              const resources = JSON.parse(fs.readFileSync(0, "utf8")).items || [];
+              const secret = resources.find((item) => item.kind === "Secret" && item.metadata?.name === "opl-cloud-sub2api");
+              const config = resources.find((item) => item.kind === "ConfigMap" && item.metadata?.name === "opl-cloud-config");
+              const decode = (name) => Buffer.from(secret?.data?.[name] || "", "base64").toString("utf8").trim();
+              const apiKey = decode("OPL_SUB2API_ADMIN_API_KEY");
+              const jwt = decode("OPL_SUB2API_ADMIN_JWT");
+              const baseURL = String(config?.data?.OPL_SUB2API_BASE_URL || "").trim();
+              const parsed = new URL(baseURL);
+              if (parsed.protocol !== "https:" || parsed.hostname !== "gflabtoken.cn" || parsed.username || parsed.password || parsed.search || parsed.hash) {
+                throw new Error("Configured Sub2API base URL is not the approved HTTPS backend.");
+              }
+              if ((!apiKey && !jwt) || (apiKey && jwt)) {
+                throw new Error("No single existing GET-only Sub2API admin credential is available; POST login is forbidden.");
+              }
+              fs.writeFileSync(process.env.OPL_RECOVERY_AUTH_FILE, JSON.stringify(apiKey ? { apiKey } : { jwt }), { mode: 0o600 });
+              fs.writeFileSync(process.env.OPL_RECOVERY_CONFIG_FILE, JSON.stringify({ baseURL: parsed.href.replace(/\/$/, "") }), { mode: 0o600 });
+            '
+
+          OPL_IDENTITY_MANIFEST="$identity_manifest" \
+          OPL_MATCHED_MANIFEST="$matched_manifest" \
+          OPL_SUB2API_READ_AUTH_FILE="$auth_file" \
+          OPL_SUB2API_READ_CONFIG_FILE="$config_file" \
+          node <<'NODE'
+          const crypto = require("node:crypto");
+          const fs = require("node:fs");
+          const hash = (value) => crypto.createHash("sha256").update(String(value)).digest("hex");
+          const local = JSON.parse(fs.readFileSync(process.env.OPL_IDENTITY_MANIFEST, "utf8"));
+          const auth = JSON.parse(fs.readFileSync(process.env.OPL_SUB2API_READ_AUTH_FILE, "utf8"));
+          const { baseURL } = JSON.parse(fs.readFileSync(process.env.OPL_SUB2API_READ_CONFIG_FILE, "utf8"));
+          const metrics = local.metrics || {};
+          const zeroMetrics = [
+            "accountUserCardinalityViolations",
+            "blankEmailCount",
+            "duplicateEmailGroupCount",
+            "ownerViolations",
+            "roleViolations",
+            "organizationCardinalityViolations",
+            "membershipViolations",
+            "reciprocalOwnerAfterBackfillViolations",
+            "duplicatePrimaryWorkspaceCount",
+            "migrationJournalCount"
+          ];
+          if (metrics.truthTableCount !== 5 || metrics.archivedWorkspaceCount !== 34 || zeroMetrics.some((name) => metrics[name] !== 0)) {
+            throw new Error(`Customer identity hard-cut precondition failed: ${JSON.stringify(metrics)}`);
+          }
+          const targets = Array.isArray(local.targets) ? local.targets : [];
+          if (targets.length === 0 || targets.length !== metrics.invalidMappingCount + targets.filter((item) => item.oldSub2apiUserId > 0).length) {
+            throw new Error("Customer identity mapping target set is empty or inconsistent.");
+          }
+          const headers = auth.apiKey
+            ? { Accept: "application/json", "x-api-key": auth.apiKey }
+            : { Accept: "application/json", Authorization: `Bearer ${auth.jwt}` };
+          let getCount = 0;
+          const get = async (path) => {
+            getCount += 1;
+            const response = await fetch(`${baseURL}${path}`, { method: "GET", headers, redirect: "error" });
+            const body = await response.json();
+            if (!response.ok || body?.code !== 0 || body?.data === undefined) {
+              throw new Error(`Sub2API GET failed with status ${response.status}.`);
+            }
+            return body.data;
+          };
+          const matched = [];
+          for (const target of targets) {
+            const exact = [];
+            let page = 1;
+            let pages = 1;
+            do {
+              const query = new URLSearchParams({
+                page: String(page), page_size: "50", search: target.normalizedEmail, sort_by: "id", sort_order: "asc"
+              });
+              const data = await get(`/api/v1/admin/users?${query}`);
+              if (!Array.isArray(data.items) || !Number.isInteger(data.pages) || data.pages < 1 || data.pages > 10) {
+                throw new Error("Sub2API users pagination is invalid.");
+              }
+              pages = data.pages;
+              exact.push(...data.items.filter((item) => String(item.email || "").trim().toLowerCase() === target.normalizedEmail));
+              page += 1;
+            } while (page <= pages);
+            if (exact.length !== 1 || !Number.isSafeInteger(exact[0].id) || exact[0].id <= 0) {
+              throw new Error(`Sub2API email match count is ${exact.length} for account ${hash(target.accountId).slice(0, 12)}.`);
+            }
+            const remote = await get(`/api/v1/admin/users/${exact[0].id}`);
+            const remoteEmail = String(remote.email || "").trim().toLowerCase();
+            if (remote.id !== exact[0].id || remoteEmail !== target.normalizedEmail || !["active", "disabled"].includes(remote.status)) {
+              throw new Error(`Sub2API user readback mismatch for account ${hash(target.accountId).slice(0, 12)}.`);
+            }
+            matched.push({ ...target, remoteId: remote.id, remoteStatus: remote.status });
+          }
+          if (new Set(matched.map((item) => item.remoteId)).size !== matched.length) {
+            throw new Error("Two local accounts resolve to the same Sub2API wallet.");
+          }
+          fs.writeFileSync(process.env.OPL_MATCHED_MANIFEST, JSON.stringify(matched), { mode: 0o600 });
+          for (const item of matched) {
+            console.log(`mapping account=${hash(item.accountId).slice(0, 12)} email=${hash(item.normalizedEmail).slice(0, 12)} status=${item.remoteStatus}`);
+          }
+          console.log(`sub2apiGetCount=${getCount} sub2apiWriteCount=0 matched=${matched.length}`);
+          NODE
+          chmod 600 "$matched_manifest"
+          matched_sha256="$(sha256sum "$matched_manifest" | cut -d ' ' -f 1)"
+          printf 'matchedManifestSha256=%s\n' "$matched_sha256"
+
       - name: Apply roll-forward image and capture diagnostics
         shell: bash
         run: |
@@ -863,6 +1172,11 @@ jobs:
             "$RUNNER_TEMP"/*|/tmp/*) ;;
             *) echo "Refusing to remove unexpected recovery path." >&2; exit 1 ;;
           esac
+          postgres_client_pod="${OPL_POSTGRES_RECOVERY_POD:-}"
+          if [ -n "$postgres_client_pod" ]; then
+            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
+              delete "pod/$postgres_client_pod" --wait=false >/dev/null 2>&1 || true
+          fi
           if [ -d "$secret_dir" ]; then
             find "$secret_dir" -mindepth 1 -delete
             rmdir "$secret_dir"

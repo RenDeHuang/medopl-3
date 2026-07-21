@@ -506,7 +506,7 @@ test("TKE roll-forward recovery backs up before read-only primary Workspace conf
   assert.equal(input.default, false);
   assert.equal(
     inspect?.if,
-    "${{ inputs.inspect_primary_workspace_conflict && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane' }}"
+    "${{ (inputs.inspect_primary_workspace_conflict || inputs.inspect_customer_identity_hard_cut) && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane' }}"
   );
   assert.equal(inspect?.env?.DATABASE_URL, undefined);
   assert.equal(inspect?.env?.PGSSLMODE, "disable");
@@ -599,6 +599,37 @@ test("TKE roll-forward recovery repairs only the verified terminal primary Works
   assert.match(repair.run, /archived.*34|workspaceArchived.*34/i);
   assert.doesNotMatch(repair.run, /control_plane_runtime_operations[\s\S]*DELETE/i);
   assert.doesNotMatch(repair.run, /kubectl [^\n]*delete (?:pod\/\$pod|deployment\/opl-cloud)/i);
+});
+
+test("TKE roll-forward recovery inspects the customer identity hard cut without Sub2API writes", async () => {
+  const workflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
+  const input = workflow.on.workflow_dispatch.inputs.inspect_customer_identity_hard_cut;
+  const inspect = stepsByName(workflowJob(workflow, "roll-forward")).get("Inspect customer identity hard cut");
+
+  assert.equal(input?.type, "boolean");
+  assert.equal(input?.default, false);
+  assert.equal(
+    inspect?.if,
+    "${{ inputs.inspect_customer_identity_hard_cut && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane' }}"
+  );
+  assert.ok(inspect?.run, "roll-forward recovery is missing the customer identity inspection");
+  assert.match(inspect.run, /legacy account\/user cardinality is not one-to-one/);
+  assert.match(inspect.run, /legacy normalized user email is blank or duplicated/);
+  assert.match(inspect.run, /legacy Sub2API mapping is missing or duplicated/);
+  assert.match(inspect.run, /legacy account owner is cross-account or missing/);
+  assert.match(inspect.run, /legacy customer role is not owner/);
+  assert.match(inspect.run, /legacy customer organization cardinality is not one-to-one/);
+  assert.match(inspect.run, /legacy customer membership is not one-to-one/);
+  assert.match(inspect.run, /sub2api_user_id <= 0/);
+  assert.match(inspect.run, /HAVING COUNT\(\*\) > 1/i);
+  assert.match(inspect.run, /install -m 600 \/dev\/null "\$identity_manifest"/);
+  assert.match(inspect.run, /manifestSha256=/);
+  assert.match(inspect.run, /\/api\/v1\/admin\/users\?/);
+  assert.match(inspect.run, /\/api\/v1\/admin\/users\//);
+  assert.doesNotMatch(inspect.run, /\/api\/v1\/auth\/login|ResolveOrCreateUser/);
+  assert.doesNotMatch(inspect.run, /fetch\([^\n]+method:\s*["'](?:POST|PUT|PATCH|DELETE)/i);
+  assert.doesNotMatch(inspect.run, /^\s*(?:UPDATE|INSERT|DELETE|ALTER|DROP|TRUNCATE)\b/im);
+  assert.doesNotMatch(inspect.run, /cat "\$identity_manifest"/);
 });
 
 test("TKE bootstrap deploy is approved, read only, and cannot complete a release", async () => {

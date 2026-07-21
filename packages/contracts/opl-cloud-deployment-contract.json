@@ -273,7 +273,7 @@
     "file": ".github/workflows/deploy-tke-production.yml",
     "job": "roll-forward",
     "runner": ["self-hosted", "tencent-cloud", "opl-cloud", "tke-vpc"],
-    "inputs": ["roll_forward_mode", "repair_postgres_transport", "inspect_primary_workspace_conflict", "repair_primary_workspace_conflict"],
+    "inputs": ["roll_forward_mode", "repair_postgres_transport", "inspect_primary_workspace_conflict", "repair_primary_workspace_conflict", "inspect_customer_identity_hard_cut"],
     "modeOptions": ["none", "control-plane", "all-cloud"],
     "candidateImage": "uswccr.ccs.tencentyun.com/oplcloud/opl-cloud@sha256:1c68bd613223ce06ffd1042ec226144830f1533c937569e886cd07ade97b5ca5",
     "postgresClientImage": "quay.io/sclorg/postgresql-16-c9s@sha256:cf7fb6396ee839019b6fef1838474e5b752828a512bb27030f13a28f42ec5617",
@@ -298,6 +298,7 @@
       "Repair approved private PostgreSQL transport",
       "Back up and inspect primary Workspace conflict",
       "Repair verified primary Workspace conflict",
+      "Inspect customer identity hard cut",
       "Apply roll-forward image and capture diagnostics",
       "Remove recovery kubeconfig"
     ],
@@ -325,7 +326,7 @@
         "get configmap/opl-cloud-config"
       ],
       "Back up and inspect primary Workspace conflict": [
-        "inputs.inspect_primary_workspace_conflict && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane'",
+        "inputs.inspect_primary_workspace_conflict || inputs.inspect_customer_identity_hard_cut",
         "imagePullSecrets",
         "tcr-pull-secret",
         "database-url-normalizer",
@@ -373,6 +374,22 @@
         "DELETE FROM control_plane_workspaces",
         "workspaceArchived=34",
         "duplicate_count=0"
+      ],
+      "Inspect customer identity hard cut": [
+        "inputs.inspect_customer_identity_hard_cut && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane'",
+        "install -m 600 /dev/null \"$identity_manifest\"",
+        "legacy account/user cardinality is not one-to-one",
+        "legacy normalized user email is blank or duplicated",
+        "legacy Sub2API mapping is missing or duplicated",
+        "legacy account owner is cross-account or missing",
+        "legacy customer role is not owner",
+        "legacy customer organization cardinality is not one-to-one",
+        "legacy customer membership is not one-to-one",
+        "/api/v1/admin/users?",
+        "/api/v1/admin/users/",
+        "method: \"GET\"",
+        "sub2apiWriteCount=0",
+        "manifestSha256="
       ],
       "Apply roll-forward image and capture diagnostics": [
         "deployment/opl-cloud-control-plane",
