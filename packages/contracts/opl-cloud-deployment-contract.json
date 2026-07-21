@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 20,
+  "schemaVersion": 21,
   "owner": "OPL Fabric",
   "purpose": "Deployment workflow, immutable Cloud and Workspace images, TKE handoff, read-only diagnostics, explicit roll-forward recovery, and production-verification safety.",
   "state": "current",
@@ -58,7 +58,8 @@
       "diagnostics_only",
       "roll_forward_mode",
       "repair_postgres_transport",
-      "inspect_primary_workspace_conflict"
+      "inspect_primary_workspace_conflict",
+      "repair_primary_workspace_conflict"
     ],
     "preDebitTencentMutationGate": {
       "env": "RUN_TENCENT_CREATE_RELEASE_EXECUTION",
@@ -272,10 +273,14 @@
     "file": ".github/workflows/deploy-tke-production.yml",
     "job": "roll-forward",
     "runner": ["self-hosted", "tencent-cloud", "opl-cloud", "tke-vpc"],
-    "inputs": ["roll_forward_mode", "repair_postgres_transport", "inspect_primary_workspace_conflict"],
+    "inputs": ["roll_forward_mode", "repair_postgres_transport", "inspect_primary_workspace_conflict", "repair_primary_workspace_conflict"],
     "modeOptions": ["none", "control-plane", "all-cloud"],
     "candidateImage": "uswccr.ccs.tencentyun.com/oplcloud/opl-cloud@sha256:1c68bd613223ce06ffd1042ec226144830f1533c937569e886cd07ade97b5ca5",
     "postgresClientImage": "quay.io/sclorg/postgresql-16-c9s@sha256:cf7fb6396ee839019b6fef1838474e5b752828a512bb27030f13a28f42ec5617",
+    "approvedBackup": {
+      "file": "/home/actions/.secrets/medopl/v22/postgres-backups/opl-cloud-before-primary-workspace-29824127440-1.dump",
+      "sha256": "3f9478e071595d8f0af275e2eebc351b4a828fc54319ece39318f88b35569b33"
+    },
     "requiredEnv": [
       "OPL_K8S_NAMESPACE",
       "OPL_PUBLIC_URL",
@@ -292,6 +297,7 @@
       "Read sanitized PostgreSQL transport",
       "Repair approved private PostgreSQL transport",
       "Back up and inspect primary Workspace conflict",
+      "Repair verified primary Workspace conflict",
       "Apply roll-forward image and capture diagnostics",
       "Remove recovery kubeconfig"
     ],
@@ -348,6 +354,25 @@
         "operations.status",
         "result_present",
         "result_bytes"
+      ],
+      "Repair verified primary Workspace conflict": [
+        "inputs.repair_primary_workspace_conflict && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane'",
+        "inputs.inspect_primary_workspace_conflict",
+        "/home/actions/.secrets/medopl/v22/postgres-backups/opl-cloud-before-primary-workspace-29824127440-1.dump",
+        "3f9478e071595d8f0af275e2eebc351b4a828fc54319ece39318f88b35569b33",
+        "pg_restore --list",
+        "CREATE TEMP TABLE",
+        "acct-production-owner",
+        "pi-production-verifier",
+        "data_deleted",
+        "unrecoverable",
+        "control_plane_compute_allocations",
+        "control_plane_storage_volumes",
+        "control_plane_storage_attachments",
+        "INSERT INTO control_plane_archived_workspaces",
+        "DELETE FROM control_plane_workspaces",
+        "workspaceArchived=34",
+        "duplicate_count=0"
       ],
       "Apply roll-forward image and capture diagnostics": [
         "deployment/opl-cloud-control-plane",

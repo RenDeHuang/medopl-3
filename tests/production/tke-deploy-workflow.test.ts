@@ -556,6 +556,48 @@ test("TKE roll-forward recovery backs up before read-only primary Workspace conf
   assert.doesNotMatch(inspect.run, /echo .*DATABASE_URL|printf .*DATABASE_URL/);
 });
 
+test("TKE roll-forward recovery repairs only the verified terminal primary Workspace conflict", async () => {
+  const workflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
+  const input = workflow.on.workflow_dispatch.inputs.repair_primary_workspace_conflict;
+  const recover = workflowJob(workflow, "roll-forward");
+  const repair = stepsByName(recover).get("Repair verified primary Workspace conflict");
+
+  assert.equal(input?.type, "boolean");
+  assert.equal(input?.default, false);
+  assert.equal(
+    repair?.if,
+    "${{ inputs.repair_primary_workspace_conflict && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane' }}"
+  );
+  assert.ok(repair?.run, "roll-forward recovery is missing the primary Workspace repair");
+  assert.match(repair.run, /inspect_primary_workspace_conflict/);
+  assert.match(repair.run, /expected_backup=.*primary-workspace/);
+  assert.match(
+    repair.run,
+    /approved_backup="\/home\/actions\/\.secrets\/medopl\/v22\/postgres-backups\/opl-cloud-before-primary-workspace-29824127440-1\.dump"/
+  );
+  assert.match(repair.run, /approved_backup_sha256="3f9478e071595d8f0af275e2eebc351b4a828fc54319ece39318f88b35569b33"/);
+  assert.match(repair.run, /\[ ! -s "\$approved_backup" \]/);
+  assert.match(repair.run, /sha256sum "\$approved_backup"/);
+  assert.match(repair.run, /pg_restore --list/);
+  assert.match(repair.run, /acct-production-owner/);
+  assert.match(repair.run, /pi-production-verifier/);
+  assert.match(repair.run, /data_deleted/);
+  assert.match(repair.run, /unrecoverable/);
+  assert.match(repair.run, /count\(\*\).*34/s);
+  assert.match(repair.run, /control_plane_compute_allocations/);
+  assert.match(repair.run, /control_plane_storage_volumes/);
+  assert.match(repair.run, /control_plane_storage_attachments/);
+  assert.match(repair.run, /CREATE TEMP TABLE/);
+  assert.match(repair.run, /INSERT INTO control_plane_archived_workspaces/);
+  assert.match(repair.run, /DELETE FROM control_plane_workspaces/);
+  assert.match(repair.run, /BEGIN/);
+  assert.match(repair.run, /COMMIT/);
+  assert.match(repair.run, /duplicate.*0|duplicate_count.*0/i);
+  assert.match(repair.run, /archived.*34|workspaceArchived.*34/i);
+  assert.doesNotMatch(repair.run, /control_plane_runtime_operations[\s\S]*DELETE/i);
+  assert.doesNotMatch(repair.run, /kubectl [^\n]*delete (?:pod\/\$pod|deployment\/opl-cloud)/i);
+});
+
 test("TKE bootstrap deploy is approved, read only, and cannot complete a release", async () => {
   const workflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
   const input = workflow.on.workflow_dispatch.inputs.bootstrap_mode;

@@ -45,6 +45,11 @@ on:
         required: false
         default: false
         type: boolean
+      repair_primary_workspace_conflict:
+        description: After the same-run backup and inspection, archive and remove only the verified 34 terminal duplicate Workspaces.
+        required: false
+        default: false
+        type: boolean
 permissions:
   contents: read
 
@@ -268,7 +273,11 @@ jobs:
           install -d -m 700 "$backup_root"
           backup_file="$backup_root/opl-cloud-before-primary-workspace-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.dump"
           postgres_client_pod="opl-postgres-recovery-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          retain_postgres_client=false
           cleanup_postgres_client() {
+            if [ "$retain_postgres_client" = "true" ]; then
+              return
+            fi
             kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
               delete "pod/$postgres_client_pod" --wait=false >/dev/null 2>&1 || true
           }
@@ -443,6 +452,235 @@ jobs:
           JOIN duplicate_workspaces ON duplicate_workspaces.id = operations.workspace_id
           GROUP BY operations.workspace_id, operations.action, operations.status
           ORDER BY operations.workspace_id, operations.action, operations.status;
+          SQL
+          if [ "${{ inputs.repair_primary_workspace_conflict }}" = "true" ]; then
+            retain_postgres_client=true
+            printf 'OPL_PRIMARY_WORKSPACE_BACKUP_FILE=%s\nOPL_POSTGRES_RECOVERY_POD=%s\n' \
+              "$backup_file" "$postgres_client_pod" >> "$GITHUB_ENV"
+          fi
+
+      - name: Repair verified primary Workspace conflict
+        if: ${{ inputs.repair_primary_workspace_conflict && !inputs.diagnostics_only && inputs.roll_forward_mode == 'control-plane' }}
+        shell: bash
+        env:
+          PGSSLMODE: disable
+        run: |
+          set -euo pipefail
+          postgres_client_pod="${OPL_POSTGRES_RECOVERY_POD:-}"
+          cleanup_postgres_client() {
+            if [ -n "$postgres_client_pod" ]; then
+              kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
+                delete "pod/$postgres_client_pod" --wait=false >/dev/null 2>&1 || true
+            fi
+          }
+          trap cleanup_postgres_client EXIT
+
+          if [ "${{ inputs.inspect_primary_workspace_conflict }}" != "true" ]; then
+            echo "Refusing primary Workspace repair without same-run inspection and backup." >&2
+            exit 1
+          fi
+          approved_backup="/home/actions/.secrets/medopl/v22/postgres-backups/opl-cloud-before-primary-workspace-29824127440-1.dump"
+          approved_backup_sha256="3f9478e071595d8f0af275e2eebc351b4a828fc54319ece39318f88b35569b33"
+          if [ ! -s "$approved_backup" ]; then
+            echo "Refusing primary Workspace repair: approved backup is missing." >&2
+            exit 1
+          fi
+          actual_approved_backup_sha256="$(sha256sum "$approved_backup" | cut -d ' ' -f 1)"
+          if [ "$actual_approved_backup_sha256" != "$approved_backup_sha256" ]; then
+            echo "Refusing primary Workspace repair: approved backup SHA256 mismatch." >&2
+            exit 1
+          fi
+          backup_file="${OPL_PRIMARY_WORKSPACE_BACKUP_FILE:-}"
+          expected_backup="/home/actions/.secrets/medopl/v22/postgres-backups/opl-cloud-before-primary-workspace-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.dump"
+          expected_pod="opl-postgres-recovery-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          if [ "$backup_file" != "$expected_backup" ] || [ ! -s "$backup_file" ] || [ "$postgres_client_pod" != "$expected_pod" ]; then
+            echo "Refusing primary Workspace repair without the verified same-run backup client." >&2
+            exit 1
+          fi
+          local_backup="$(wc -c < "$backup_file" | tr -d ' ') $(sha256sum "$backup_file" | cut -d ' ' -f 1)"
+          remote_backup="$(kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec "$postgres_client_pod" \
+            -c postgres-client -- /bin/bash -ceu 'pg_restore --list /work/backup.dump >/dev/null; printf "%s %s" "$(wc -c < /work/backup.dump)" "$(sha256sum /work/backup.dump | cut -d " " -f 1)"')"
+          if [ "$remote_backup" != "$local_backup" ]; then
+            echo "Refusing primary Workspace repair: backup readback changed." >&2
+            exit 1
+          fi
+
+          kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec --stdin "$postgres_client_pod" \
+            -c postgres-client -- /bin/bash -ceu 'DATABASE_URL="$(cat /work/database-url)"; psql "$DATABASE_URL" -X --set ON_ERROR_STOP=1' <<'SQL'
+          BEGIN;
+          CREATE TEMP TABLE opl_primary_workspace_repair_ids (
+            id TEXT PRIMARY KEY,
+            account_id TEXT NOT NULL
+          ) ON COMMIT DROP;
+          INSERT INTO opl_primary_workspace_repair_ids (id, account_id) VALUES
+            ('ws_1783882834034413362', 'acct-production-owner'),
+            ('ws_1783883757382965976', 'acct-production-owner'),
+            ('ws_1783884449896368511', 'acct-production-owner'),
+            ('ws_1783885797531445065', 'acct-production-owner'),
+            ('ws_1783886628705368207', 'acct-production-owner'),
+            ('ws_1783886986856289941', 'acct-production-owner'),
+            ('ws_1783888297749360763', 'acct-production-owner'),
+            ('ws_1783888656851127208', 'acct-production-owner'),
+            ('ws_1783889444787312647', 'acct-production-owner'),
+            ('ws_1783889795524148996', 'acct-production-owner'),
+            ('ws_1783890447574981128', 'acct-production-owner'),
+            ('ws_1783890801197068999', 'acct-production-owner'),
+            ('ws_1783891381955027660', 'acct-production-owner'),
+            ('ws_1783891732749036474', 'acct-production-owner'),
+            ('ws_1783892287551095587', 'acct-production-owner'),
+            ('ws_1783892647741367623', 'acct-production-owner'),
+            ('ws_1783893615925075436', 'acct-production-owner'),
+            ('ws_1783893990165584949', 'acct-production-owner'),
+            ('ws_1784044223504193498', 'acct-production-owner'),
+            ('ws_1784075471495939135', 'acct-production-owner'),
+            ('ws_1783702265139084219', 'pi-production-verifier'),
+            ('ws_1783702557207047641', 'pi-production-verifier'),
+            ('ws_1783735430058178341', 'pi-production-verifier'),
+            ('ws_1783736074650805655', 'pi-production-verifier'),
+            ('ws_1783737149531194011', 'pi-production-verifier'),
+            ('ws_1783738548346715920', 'pi-production-verifier'),
+            ('ws_1783739559144618906', 'pi-production-verifier'),
+            ('ws_1783740622365687039', 'pi-production-verifier'),
+            ('ws_1783741739835468962', 'pi-production-verifier'),
+            ('ws_1783742074687487075', 'pi-production-verifier'),
+            ('ws_1783747539564739331', 'pi-production-verifier'),
+            ('ws_1783748403084166567', 'pi-production-verifier'),
+            ('ws_1783748886405156667', 'pi-production-verifier'),
+            ('ws_1783809813667683135', 'pi-production-verifier');
+
+          DO $repair$
+          DECLARE
+            expected_workspace_count CONSTANT INTEGER := 34;
+            current_workspace_count INTEGER;
+            archived_workspace_count INTEGER;
+            deleted_workspace_count INTEGER;
+            inserted_archive_count INTEGER;
+            duplicate_count INTEGER;
+            resource_reference_count INTEGER;
+          BEGIN
+            IF (SELECT count(*) FROM opl_primary_workspace_repair_ids) <> expected_workspace_count THEN
+              RAISE EXCEPTION 'primary Workspace repair ID set mismatch';
+            END IF;
+
+            PERFORM workspaces.id
+            FROM control_plane_workspaces workspaces
+            JOIN opl_primary_workspace_repair_ids repair ON repair.id = workspaces.id
+            FOR UPDATE;
+
+            SELECT count(*) INTO current_workspace_count
+            FROM control_plane_workspaces workspaces
+            JOIN opl_primary_workspace_repair_ids repair ON repair.id = workspaces.id;
+            SELECT count(*) INTO archived_workspace_count
+            FROM control_plane_archived_workspaces archived
+            JOIN opl_primary_workspace_repair_ids repair
+              ON archived.id = 'archived-workspace-' || repair.id
+             AND archived.workspace_id = repair.id
+             AND archived.resource_id = repair.id
+             AND archived.resource_kind = 'workspace'
+             AND archived.account_id = repair.account_id
+             AND archived.status = 'data_deleted';
+
+            IF current_workspace_count = 0 AND archived_workspace_count = expected_workspace_count THEN
+              SELECT count(*) INTO duplicate_count
+              FROM (
+                SELECT COALESCE(NULLIF(account_id, ''), owner_account_id)
+                FROM control_plane_workspaces
+                WHERE COALESCE(NULLIF(account_id, ''), owner_account_id) <> ''
+                GROUP BY COALESCE(NULLIF(account_id, ''), owner_account_id)
+                HAVING count(*) > 1
+              ) duplicates;
+              IF duplicate_count <> 0 THEN
+                RAISE EXCEPTION 'primary Workspace repair replay found % duplicate accounts', duplicate_count;
+              END IF;
+              RAISE NOTICE 'workspaceArchived=34 deleted=34 duplicate_count=0 already_applied=true';
+              RETURN;
+            END IF;
+            IF current_workspace_count <> expected_workspace_count OR archived_workspace_count <> 0 THEN
+              RAISE EXCEPTION 'primary Workspace repair state mismatch: current %, archived %', current_workspace_count, archived_workspace_count;
+            END IF;
+            IF EXISTS (
+              SELECT 1
+              FROM control_plane_workspaces workspaces
+              JOIN opl_primary_workspace_repair_ids repair ON repair.id = workspaces.id
+              WHERE COALESCE(NULLIF(workspaces.account_id, ''), workspaces.owner_account_id) <> repair.account_id
+                 OR workspaces.state <> 'data_deleted'
+                 OR workspaces.status <> 'unrecoverable'
+            ) THEN
+              RAISE EXCEPTION 'primary Workspace repair candidate identity or terminal state changed';
+            END IF;
+            IF EXISTS (
+              SELECT 1
+              FROM control_plane_workspaces workspaces
+              WHERE COALESCE(NULLIF(workspaces.account_id, ''), workspaces.owner_account_id) IN ('acct-production-owner', 'pi-production-verifier')
+                AND NOT EXISTS (SELECT 1 FROM opl_primary_workspace_repair_ids repair WHERE repair.id = workspaces.id)
+            ) THEN
+              RAISE EXCEPTION 'primary Workspace repair found an unapproved Workspace for a target account';
+            END IF;
+
+            SELECT
+              (SELECT count(*) FROM control_plane_compute_allocations resources JOIN opl_primary_workspace_repair_ids repair ON repair.id = resources.workspace_id)
+              + (SELECT count(*) FROM control_plane_storage_volumes resources JOIN opl_primary_workspace_repair_ids repair ON repair.id = resources.workspace_id)
+              + (SELECT count(*) FROM control_plane_storage_attachments resources JOIN opl_primary_workspace_repair_ids repair ON repair.id = resources.workspace_id)
+            INTO resource_reference_count;
+            IF resource_reference_count <> 0 THEN
+              RAISE EXCEPTION 'primary Workspace repair found % current Fabric resource references', resource_reference_count;
+            END IF;
+
+            INSERT INTO control_plane_archived_workspaces (
+              id, created_at, updated_at, account_id, workspace_id, resource_id,
+              resource_kind, name, status, reason, archived_at
+            )
+            SELECT
+              'archived-workspace-' || workspaces.id,
+              CURRENT_TIMESTAMP,
+              CURRENT_TIMESTAMP,
+              repair.account_id,
+              workspaces.id,
+              workspaces.id,
+              'workspace',
+              workspaces.name,
+              workspaces.state,
+              'roll_forward_primary_workspace_conflict_20260721',
+              CURRENT_TIMESTAMP
+            FROM control_plane_workspaces workspaces
+            JOIN opl_primary_workspace_repair_ids repair ON repair.id = workspaces.id;
+            GET DIAGNOSTICS inserted_archive_count = ROW_COUNT;
+            IF inserted_archive_count <> expected_workspace_count THEN
+              RAISE EXCEPTION 'primary Workspace archive count mismatch: %', inserted_archive_count;
+            END IF;
+
+            DELETE FROM control_plane_workspaces workspaces
+            USING opl_primary_workspace_repair_ids repair
+            WHERE workspaces.id = repair.id;
+            GET DIAGNOSTICS deleted_workspace_count = ROW_COUNT;
+            IF deleted_workspace_count <> expected_workspace_count THEN
+              RAISE EXCEPTION 'primary Workspace delete count mismatch: %', deleted_workspace_count;
+            END IF;
+
+            SELECT count(*) INTO archived_workspace_count
+            FROM control_plane_archived_workspaces archived
+            JOIN opl_primary_workspace_repair_ids repair
+              ON archived.id = 'archived-workspace-' || repair.id
+             AND archived.workspace_id = repair.id
+             AND archived.resource_id = repair.id
+             AND archived.resource_kind = 'workspace'
+             AND archived.account_id = repair.account_id
+             AND archived.status = 'data_deleted';
+            SELECT count(*) INTO duplicate_count
+            FROM (
+              SELECT COALESCE(NULLIF(account_id, ''), owner_account_id)
+              FROM control_plane_workspaces
+              WHERE COALESCE(NULLIF(account_id, ''), owner_account_id) <> ''
+              GROUP BY COALESCE(NULLIF(account_id, ''), owner_account_id)
+              HAVING count(*) > 1
+            ) duplicates;
+            IF archived_workspace_count <> expected_workspace_count OR duplicate_count <> 0 THEN
+              RAISE EXCEPTION 'primary Workspace repair readback mismatch: archived %, duplicate_count %', archived_workspace_count, duplicate_count;
+            END IF;
+            RAISE NOTICE 'workspaceArchived=34 deleted=34 duplicate_count=0 already_applied=false';
+          END
+          $repair$;
+          COMMIT;
           SQL
 
       - name: Apply roll-forward image and capture diagnostics
