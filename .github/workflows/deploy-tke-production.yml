@@ -292,7 +292,9 @@ jobs:
           install -d -m 700 "$backup_root"
           backup_file="$backup_root/opl-cloud-before-primary-workspace-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}.dump"
           postgres_client_pod="opl-postgres-recovery-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          reset_requested="${{ inputs.reset_prelaunch_control_plane_data }}"
           retain_postgres_client=false
+          restore_control_plane=false
           cleanup_postgres_client() {
             if [ "$retain_postgres_client" = "true" ]; then
               return
@@ -300,7 +302,81 @@ jobs:
             kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
               delete "pod/$postgres_client_pod" --wait=false >/dev/null 2>&1 || true
           }
-          trap cleanup_postgres_client EXIT
+          control_plane_pod_count() {
+            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" get pods \
+              -l 'app.kubernetes.io/name=opl-cloud,app.kubernetes.io/component=control-plane' -o name \
+              | awk 'NF { count++ } END { print count + 0 }'
+          }
+          show_control_plane_state() {
+            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
+              get deployment/opl-cloud-control-plane -o wide || true
+            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" get pods \
+              -l 'app.kubernetes.io/name=opl-cloud,app.kubernetes.io/component=control-plane' -o wide || true
+          }
+          wait_for_control_plane_zero() {
+            local attempt=""
+            local deployment_state=""
+            local spec_replicas=""
+            local status_replicas=""
+            local ready_replicas=""
+            local available_replicas=""
+            local pods=""
+            for attempt in $(seq 1 24); do
+              deployment_state="$(kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
+                get deployment/opl-cloud-control-plane \
+                -o jsonpath='{.spec.replicas}{"|"}{.status.replicas}{"|"}{.status.readyReplicas}{"|"}{.status.availableReplicas}')"
+              IFS='|' read -r spec_replicas status_replicas ready_replicas available_replicas <<< "$deployment_state"
+              status_replicas="${status_replicas:-0}"
+              ready_replicas="${ready_replicas:-0}"
+              available_replicas="${available_replicas:-0}"
+              pods="$(control_plane_pod_count)"
+              if [ "$spec_replicas" = "0" ] && [ "$status_replicas" = "0" ] \
+                && [ "$ready_replicas" = "0" ] && [ "$available_replicas" = "0" ] \
+                && [ "$pods" = "0" ]; then
+                return 0
+              fi
+              sleep 5
+            done
+            echo "Control Plane did not reach zero replicas and zero pods within 120 seconds." >&2
+            return 1
+          }
+          cleanup_recovery() {
+            local exit_status=$?
+            trap - EXIT
+            if [ "$reset_requested" = "true" ]; then
+              if [ "$restore_control_plane" = "true" ]; then
+                kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" scale \
+                  deployment/opl-cloud-control-plane --replicas=1 || true
+              fi
+              show_control_plane_state
+            fi
+            cleanup_postgres_client
+            exit "$exit_status"
+          }
+          trap cleanup_recovery EXIT
+
+          if [ "$reset_requested" = "true" ]; then
+            desired_replicas="$(kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
+              get deployment/opl-cloud-control-plane -o jsonpath='{.spec.replicas}')"
+            current_control_plane_image="$(kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
+              get deployment/opl-cloud-control-plane -o jsonpath="{.spec.template.spec.containers[?(@.name=='control-plane')].image}")"
+            current_control_plane_pods="$(control_plane_pod_count)"
+            if [ "$current_control_plane_image" != "$OPL_CANDIDATE_IMAGE" ]; then
+              echo "Refusing prelaunch reset: Control Plane image is not the approved candidate." >&2
+              exit 1
+            fi
+            if [ "$desired_replicas" = "0" ]; then
+              if [ "$current_control_plane_pods" != "0" ]; then
+                echo "Refusing prelaunch reset: interrupted recovery still has Control Plane pods." >&2
+                exit 1
+              fi
+              echo "interruptedResetRecovery=true"
+            elif [ "$desired_replicas" != "1" ]; then
+              echo "Refusing prelaunch reset: unsupported Control Plane replica state $desired_replicas." >&2
+              exit 1
+            fi
+            restore_control_plane=true
+          fi
           cat <<EOF | kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" create -f -
           apiVersion: v1
           kind: Pod
@@ -476,25 +552,24 @@ jobs:
           fi
 
           if [ "${{ inputs.reset_prelaunch_control_plane_data }}" = "true" ]; then
-            desired_replicas="$(kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
+            reset_replicas="$(kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
               get deployment/opl-cloud-control-plane -o jsonpath='{.spec.replicas}')"
-            if [ "$desired_replicas" != "1" ]; then
-              echo "Refusing prelaunch reset: Control Plane replicas must be exactly 1 before suspension." >&2
+            reset_control_plane_image="$(kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" \
+              get deployment/opl-cloud-control-plane -o jsonpath="{.spec.template.spec.containers[?(@.name=='control-plane')].image}")"
+            if [ "$reset_replicas" != "$desired_replicas" ] || \
+              [ "$reset_control_plane_image" != "$OPL_CANDIDATE_IMAGE" ]; then
+              echo "Refusing prelaunch reset: Control Plane state changed after backup." >&2
               exit 1
             fi
-            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" scale \
-              deployment/opl-cloud-control-plane --replicas=0
-            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" rollout status \
-              deployment/opl-cloud-control-plane --timeout=120s
-            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" wait --for=delete pod \
-              -l 'app.kubernetes.io/name=opl-cloud,app.kubernetes.io/component=control-plane' --timeout=120s || true
-            remaining_control_plane_pods="$(kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" get pods \
-              -l 'app.kubernetes.io/name=opl-cloud,app.kubernetes.io/component=control-plane' \
-              -o jsonpath='{.items[*].metadata.name}')"
-            if [ -n "$remaining_control_plane_pods" ]; then
-              echo "Refusing prelaunch reset: Control Plane pods still exist after suspension." >&2
+            if [ "$desired_replicas" = "1" ]; then
+              kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" scale \
+                deployment/opl-cloud-control-plane --replicas=0
+            elif [ "$(control_plane_pod_count)" != "0" ]; then
+              echo "Refusing prelaunch reset: interrupted recovery gained a Control Plane pod." >&2
               exit 1
             fi
+            wait_for_control_plane_zero
+            echo "controlPlaneSuspended=replicas:0 pods:0"
 
             kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" exec --stdin "$postgres_client_pod" \
               -c postgres-client -- /bin/bash -seu <<'RESET'
@@ -597,6 +672,14 @@ jobs:
           SQL
           echo "resetCommit=committed"
           RESET
+            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" scale \
+              deployment/opl-cloud-control-plane --replicas=1
+            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" rollout restart \
+              deployment/opl-cloud-control-plane
+            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" rollout status \
+              deployment/opl-cloud-control-plane --timeout=300s
+            restore_control_plane=false
+            echo "controlPlaneRestored=replicas:1 ready:true"
           fi
           if [ "${{ inputs.repair_primary_workspace_conflict }}" = "true" ] || \
             [ "${{ inputs.inspect_customer_identity_hard_cut }}" = "true" ] || \
@@ -1261,18 +1344,18 @@ jobs:
           }
 
           if [ "$mode" = "control-plane" ]; then
-            previous_pod="$(candidate_pod control-plane control-plane)"
-            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" set image \
-              deployment/opl-cloud-control-plane "control-plane=$OPL_CANDIDATE_IMAGE"
-            kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" rollout restart \
-              deployment/opl-cloud-control-plane
             if [ "$reset_requested" = "true" ]; then
-              kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" scale \
-                deployment/opl-cloud-control-plane --replicas=1
+              pod="$(candidate_pod control-plane control-plane)"
+            else
+              previous_pod="$(candidate_pod control-plane control-plane)"
+              kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" set image \
+                deployment/opl-cloud-control-plane "control-plane=$OPL_CANDIDATE_IMAGE"
+              kubectl --kubeconfig "$KUBECONFIG" -n "$OPL_K8S_NAMESPACE" rollout restart \
+                deployment/opl-cloud-control-plane
+              pod=""
+              wait_for_candidate_pod control-plane control-plane "$previous_pod" > "$RUNNER_TEMP/opl-control-plane-pod" || true
+              pod="$(tr -d '\r\n' < "$RUNNER_TEMP/opl-control-plane-pod")"
             fi
-            pod=""
-            wait_for_candidate_pod control-plane control-plane "$previous_pod" > "$RUNNER_TEMP/opl-control-plane-pod" || true
-            pod="$(tr -d '\r\n' < "$RUNNER_TEMP/opl-control-plane-pod")"
             show_pod control-plane control-plane "$pod" || true
             if ! candidate_ready opl-cloud-control-plane control-plane control-plane "$pod"; then
               echo "Candidate Control Plane is not Ready; Pod retained for recovery." >&2

@@ -389,6 +389,50 @@ test("TKE roll-forward recovery restarts the candidate Control Plane and never r
   assert.doesNotMatch(apply, /restore_previous|rollback|rollout undo|delete (?:pod|deployment)/i);
 });
 
+test("TKE prelaunch reset suspends and restores the approved Control Plane safely", async () => {
+  const workflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
+  const recover = workflowJob(workflow, "roll-forward");
+  const reset = stepsByName(recover).get("Back up and inspect primary Workspace conflict");
+  const apply = serializedStep(stepsByName(recover).get("Apply roll-forward image and capture diagnostics"));
+  const input = workflow.on.workflow_dispatch.inputs.reset_prelaunch_control_plane_data;
+  assert.equal(input?.type, "boolean");
+  assert.equal(input?.default, false);
+  assert.ok(reset?.run, "roll-forward recovery is missing the prelaunch reset");
+
+  const run = reset.run;
+  const suspendAt = run.indexOf("--replicas=0");
+  const committedAt = run.indexOf("resetCommit=committed");
+  assert.ok(suspendAt >= 0 && committedAt > suspendAt, "reset suspension and commit markers must be ordered");
+  assert.ok(run.indexOf("pg_restore --list") < run.indexOf("TRUNCATE TABLE"), "verified backup must precede reset");
+  assert.doesNotMatch(run.slice(suspendAt, committedAt), /rollout status/);
+  assert.match(run, /wait_for_control_plane_zero/);
+  assert.match(run, /for attempt in \$\(seq 1 [1-9][0-9]*\)/);
+  assert.match(run, /\.spec\.replicas[\s\S]*\.status\.replicas[\s\S]*\.status\.readyReplicas[\s\S]*\.status\.availableReplicas/);
+  assert.match(run, /control_plane_pod_count/);
+
+  assert.match(run, /desired_replicas" = "0"/);
+  assert.match(run, /current_control_plane_image" != "\$OPL_CANDIDATE_IMAGE"/);
+  assert.match(run, /current_control_plane_pods" != "0"/);
+  assert.match(run, /interruptedResetRecovery=true/);
+  assert.match(run, /Refusing prelaunch reset: unsupported Control Plane replica state/);
+
+  assert.match(run, /cleanup_recovery\(\)/);
+  assert.match(run, /local exit_status=\$\?/);
+  assert.match(run, /cleanup_postgres_client/);
+  assert.equal((run.match(/trap cleanup_recovery EXIT/g) || []).length, 1);
+  const cleanup = run.match(/cleanup_recovery\(\) \{([\s\S]*?)\n\s*\}/)?.[1] || "";
+  assert.match(cleanup, /--replicas=1/);
+  assert.match(cleanup, /show_control_plane_state/);
+  assert.match(run, /show_control_plane_state\(\)[\s\S]*get deployment\/opl-cloud-control-plane[\s\S]*get pods/);
+  assert.match(cleanup, /cleanup_postgres_client/);
+  assert.match(cleanup, /exit "\$exit_status"/);
+
+  const committed = run.slice(committedAt);
+  assert.match(committed, /--replicas=1[\s\S]*rollout restart[\s\S]*rollout status/);
+  assert.match(apply, /reset_requested.*candidate_pod control-plane control-plane/s);
+  assert.match(apply, /reset_requested[\s\S]*rollout restart/);
+});
+
 test("TKE roll-forward recovery reports PostgreSQL transport without leaking the DSN", async () => {
   const workflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
   const recover = workflowJob(workflow, "roll-forward");
