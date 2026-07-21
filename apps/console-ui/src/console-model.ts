@@ -16,14 +16,14 @@ export const apiMenu = Object.freeze([
 
 export const adminMenu = Object.freeze([
   { id: "overview", label: "运维概览", path: "/admin/overview", icon: "LayoutDashboard" },
-  { id: "accounts", label: "用户与计费账户", path: "/admin/accounts", icon: "UsersRound" },
+  { id: "accounts", label: "客户与计费账户", path: "/admin/accounts", icon: "UsersRound" },
   { id: "billing", label: "计费复核", path: "/admin/billing", icon: "CircleDollarSign" },
   { id: "resources", label: "资源状态", path: "/admin/resources", icon: "Database" },
   { id: "system", label: "系统状态", path: "/admin/system", icon: "Activity" }
 ]);
 
-export function defaultAuthenticatedRoute(): string {
-  return "/console/overview";
+export function defaultAuthenticatedRoute(isOperator = false): string {
+  return isOperator ? "/admin/overview" : "/console/overview";
 }
 
 export function apiPage(pathname = ""): "overview" | "usage" | "keys" {

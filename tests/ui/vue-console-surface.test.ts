@@ -69,6 +69,17 @@ test("administrator provisioning derives the billing account and omits remote id
   assert.doesNotMatch(template, /adminUserForm\.accountId/);
 });
 
+test("administrator stays on admin routes and unavailable Pro remains visible but disabled", async () => {
+  const app = await source("apps/console-ui/src/App.vue");
+  assert.match(app, /isOperator\.value && !isAdminRoute\.value/);
+  assert.match(app, /defaultAuthenticatedRoute\(next\.isOperator\)/);
+  assert.match(app, /v-if="!isOperator"[\s\S]+v-for="item in customerMenu"/);
+  assert.match(app, /filter\(\(plan\) => plan\.id === "basic" \|\| plan\.id === "pro"\)/);
+  assert.match(app, /type="radio"[^>]+:disabled="!plan\.available"/);
+  assert.match(app, /plans\.value\.filter\(\(plan\) => plan\.available\)/);
+  assert.match(app, /客户与计费账户/);
+});
+
 test("revealed secrets are cleared on navigation, refresh, and logout", async () => {
   const app = await source("apps/console-ui/src/App.vue");
   assert.match(app, /function clearSecrets\(\)/);

@@ -36,12 +36,13 @@ test("customer navigation exposes the five pilot surfaces", () => {
 test("operator navigation has the five frozen operations surfaces", () => {
   assert.deepEqual(adminMenu.map(({ label, path }) => ({ label, path })), [
     { label: "运维概览", path: "/admin/overview" },
-    { label: "用户与计费账户", path: "/admin/accounts" },
+    { label: "客户与计费账户", path: "/admin/accounts" },
     { label: "计费复核", path: "/admin/billing" },
     { label: "资源状态", path: "/admin/resources" },
     { label: "系统状态", path: "/admin/system" }
   ]);
-  assert.equal(defaultAuthenticatedRoute(), "/console/overview");
+  assert.equal(defaultAuthenticatedRoute(false), "/console/overview");
+  assert.equal(defaultAuthenticatedRoute(true), "/admin/overview");
 });
 
 test("public and login routes render without session recovery", () => {

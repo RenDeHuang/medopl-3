@@ -12,11 +12,18 @@ const pilotPriceVersion = "pilot-usd-2026-07-v1"
 
 func customerPricingPreview(t *testing.T, input map[string]any) map[string]any {
 	t.Helper()
-	preview, err := newControlPlaneAppEmpty().pricingPreviewResponse(context.Background(), input)
+	preview, err := newControlPlaneAppEmpty().pricingPreviewResponse(context.Background(), input, allPricingPackagesAvailable())
 	if err != nil {
 		t.Fatal(err)
 	}
 	return preview
+}
+
+func allPricingPackagesAvailable() []any {
+	return []any{
+		map[string]any{"packageId": "basic", "available": true},
+		map[string]any{"packageId": "pro", "available": true},
+	}
 }
 
 func assertCustomerUSDPrice(t *testing.T, dto map[string]any, usdMicros int64) {
@@ -125,7 +132,7 @@ func TestWorkspacePricingPreviewAllowsOnlyFrozenPackageStoragePairs(t *testing.T
 		{"resourceType": "workspace", "packageId": "basic", "sizeGb": 100},
 		{"resourceType": "workspace", "packageId": "pro", "sizeGb": 10},
 	} {
-		if _, err := newControlPlaneAppEmpty().pricingPreviewResponse(context.Background(), input); !errors.Is(err, errInvalidPricingInput) {
+		if _, err := newControlPlaneAppEmpty().pricingPreviewResponse(context.Background(), input, allPricingPackagesAvailable()); !errors.Is(err, errInvalidPricingInput) {
 			t.Fatalf("cross-package input %#v error = %v", input, err)
 		}
 	}

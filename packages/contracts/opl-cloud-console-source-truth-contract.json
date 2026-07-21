@@ -54,6 +54,7 @@
         "idFormat": "positive_decimal_string",
         "statusValues": ["active", "disabled"],
         "pagination": "collect_all_coherent_upstream_pages_before_projection",
+        "emptyUpstreamPagination": { "total": 0, "page": 1, "pages": 1, "items": [], "otherShapes": "reject" },
         "empty": "real_zero_rows",
         "lifecycleRoutes": ["POST /api/gateway/keys", "PATCH /api/gateway/keys/{keyId}", "DELETE /api/gateway/keys/{keyId}"],
         "createRequest": {
@@ -79,6 +80,7 @@
         "ignoredIdentityInputs": ["accountId", "user_id", "api_key_id", "sub2apiUserId"],
         "itemFields": ["apiKeyId", "requestId", "createdAt", "model", "inboundEndpoint", "requestType", "inputTokens", "outputTokens", "cacheCreationTokens", "cacheReadTokens", "actualCostUsdMicros"],
         "apiKeyIdFormat": "positive_decimal_string",
+        "emptyUpstreamPagination": { "total": 0, "page": 1, "pages": 1, "items": [], "otherShapes": "reject" },
         "fetchedAt": "control_plane_response_fetch_completion_time",
         "sourceUpdatedAt": "omit_unless_sub2api_returns_source_timestamp"
       },
@@ -112,6 +114,7 @@
         "identity": "session_account_to_control_plane_sub2api_user_mapping",
         "ignoredIdentityInputs": ["accountId", "user_id", "api_key_id", "sub2apiUserId"],
         "itemFields": ["type", "valueUsdMicros", "status", "usedAt", "createdAt"],
+        "emptyUpstreamPagination": { "total": 0, "page": 1, "pages": 1, "items": [], "otherShapes": "reject" },
         "empty": "real_zero_rows",
         "fetchedAt": "control_plane_response_fetch_completion_time",
         "sourceUpdatedAt": "omit_unless_sub2api_returns_source_timestamp"
@@ -163,7 +166,7 @@
         "sub2apiUserIdFormat": "positive_decimal_string",
         "statusValues": ["active", "disabled"],
         "mappingConsistency": "remote_id_and_normalized_email_must_equal_control_plane_mapping",
-        "pagination": "one_bounded_sub2api_user_page_then_control_plane_page",
+        "pagination": "collect_all_coherent_sub2api_user_pages_then_control_plane_page",
         "batchSizeMax": 50,
         "perAccountUserOrUsageNPlusOne": false,
         "failure": "affected_nested_source_unavailable_without_zero_data",
@@ -216,7 +219,7 @@
       },
       "projection": {
         "persistence": "none_request_join_only",
-        "sub2apiCalls": "one_paginated_user_read_plus_fixed_batch_usage_calls",
+        "sub2apiCalls": "all_coherent_user_pages_plus_one_batch_usage_call",
         "fabricCalls": "one_operation_listing_plus_bounded_independent_runtime_probes",
         "ledgerCalls": "detail_only_authoritative_receipt_readback",
         "readReplica": false,
@@ -234,6 +237,15 @@
         "recoveryRoute": "POST /api/operator/workspace-launches/{operationId}/recover",
         "recoveryRequestFields": ["accountId", "billingOperationId", "evidenceRef"],
         "implementation": "integrated_local_fake_verified"
+      },
+      "billingReviewProjection": {
+        "included": ["workspace.launch.v2_manual_review", "workspace.renewal_manual_review", "compute_billingStatus_manual_review", "storage_billingStatus_manual_review", "BillingReconciliation_mismatch"],
+        "excluded": ["gateway.key", "account.provision", "runtime.resume", "ordinary_started", "ordinary_succeeded"],
+        "recoveryActions": {
+          "workspace.launch.v2_manual_review": "recover_workspace_launch",
+          "workspace.renewal_or_resource_manual_review": "resolve_billing_review",
+          "BillingReconciliation_mismatch": "none"
+        }
       },
       "resources": {
         "route": "GET /api/operator/workspaces/{workspaceId}",

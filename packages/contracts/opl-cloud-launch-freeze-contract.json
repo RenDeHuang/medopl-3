@@ -142,6 +142,8 @@
       { "packageId": "basic", "sizeGb": 10 },
       { "packageId": "pro", "sizeGb": 100 }
     ],
+    "packageAvailabilitySource": "live_fabric_catalog",
+    "unavailablePackageBehavior": "package_unavailable_before_gateway_balance_debit_ledger_or_tencent_calls",
     "requestHashFields": ["accountId", "ownerUserId", "name", "packageId", "sizeGb", "autoRenew", "priceVersion"],
     "autoRenew": {
       "submission": "required_false_boolean",
@@ -280,6 +282,7 @@
     "workspaceKeyActiveCardinality": 1,
     "adminKeyListEndpoint": "GET /api/v1/admin/users/:id/api-keys",
     "keyListPaginationRule": "freeze first-page total pages and requested page_size; require coherent metadata, exact page numbers and ceiling, bounded items, positive unique Key IDs, mapped user_id on every item, and collected item count equal total before cardinality selection",
+    "emptyListPaginationRule": { "appliesTo": ["Keys", "UserKeys", "Usage", "BalanceHistory"], "total": 0, "page": 1, "pages": 1, "items": [], "otherShapes": "reject" },
     "customerReadContract": "opl-cloud-console-source-truth-contract.json",
     "customerMutationApis": ["create_general_key", "update_general_key", "delete_general_key", "reveal_owned_key"],
     "createKeyRequest": {

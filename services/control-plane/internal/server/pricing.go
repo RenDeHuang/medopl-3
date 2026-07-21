@@ -20,7 +20,10 @@ const (
 	maxStorageGB               = maxStorageBlocks * storageBlockGB
 )
 
-var errInvalidPricingInput = errors.New("invalid pricing input")
+var (
+	errInvalidPricingInput = errors.New("invalid pricing input")
+	errPackageUnavailable  = errors.New("package unavailable")
+)
 
 type pricingCatalogData struct {
 	Version        string
@@ -76,7 +79,7 @@ func pricingPreviewResponse(input map[string]any) (map[string]any, error) {
 	return pricingPreviewFromCatalog(defaultPricingCatalog(), input)
 }
 
-func (app *controlPlaneServer) pricingPreviewResponse(_ context.Context, input map[string]any) (map[string]any, error) {
+func (app *controlPlaneServer) pricingPreviewResponse(_ context.Context, input map[string]any, computePools []any) (map[string]any, error) {
 	resourceType, validResourceType := input["resourceType"].(string)
 	packageID, validPackage := input["packageId"].(string)
 	if !validResourceType || !validPackage || strings.TrimSpace(packageID) == "" {
@@ -94,6 +97,12 @@ func (app *controlPlaneServer) pricingPreviewResponse(_ context.Context, input m
 	preview, err := pricingPreviewResponse(input)
 	if err != nil {
 		return nil, err
+	}
+	for _, raw := range packageRowsForComputePools(defaultPricingCatalog(), computePools) {
+		plan := raw.(map[string]any)
+		if stringValue(plan["id"]) == packageID && plan["available"] != true {
+			return nil, errPackageUnavailable
+		}
 	}
 	return customerPricingPreviewDTO(preview), nil
 }

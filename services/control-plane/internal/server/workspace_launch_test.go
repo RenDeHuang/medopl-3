@@ -295,6 +295,10 @@ func TestWorkspaceKeyConvergenceCreatesBeforeBalanceAndPersistsID(t *testing.T) 
 	if strings.Contains(string(mustJSON(operations)), "created-workspace-key-secret") {
 		t.Fatalf("launch operation persisted raw Key: %#v", operations)
 	}
+	replay := fixture.launch(t, `{"name":"Alpha","packageId":"basic","sizeGb":10,"autoRenew":false}`, "launch-converge")
+	if replay.Code != http.StatusAccepted || client.createCalls != 1 || len(client.keys) != 1 {
+		t.Fatalf("convergence replay status=%d creates=%d keys=%#v", replay.Code, client.createCalls, client.keys)
+	}
 }
 
 func TestWorkspaceKeyAmbiguityStopsBeforeBalanceAndCharge(t *testing.T) {

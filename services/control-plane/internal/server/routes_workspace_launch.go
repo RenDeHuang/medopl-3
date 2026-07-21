@@ -59,7 +59,11 @@ func registerWorkspaceLaunchRoutes(mux *http.ServeMux, app *controlPlaneServer, 
 			writeError(w, http.StatusBadRequest, "client_pricing_forbidden")
 			return
 		}
-		quote, err := app.pricingPreviewResponse(r.Context(), map[string]any{"resourceType": "workspace", "packageId": packageID, "sizeGb": storageGB})
+		computePools, ok := fabricComputePools(w, r, service)
+		if !ok {
+			return
+		}
+		quote, err := app.pricingPreviewResponse(r.Context(), map[string]any{"resourceType": "workspace", "packageId": packageID, "sizeGb": storageGB}, computePools)
 		if err != nil {
 			writePricingError(w, err)
 			return

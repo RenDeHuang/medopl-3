@@ -112,11 +112,7 @@ func newAuthoritativeReplaySub2API(t *testing.T, config authoritativeReplayConfi
 			if config.historyEntries != nil {
 				items = config.historyEntries(code, value)
 			}
-			pages := 1
-			if len(items) == 0 {
-				pages = 0
-			}
-			success(w, map[string]any{"items": items, "total": len(items), "page": 1, "page_size": 1000, "pages": pages})
+			success(w, map[string]any{"items": items, "total": len(items), "page": 1, "page_size": 1000, "pages": 1})
 		default:
 			t.Fatalf("unexpected Sub2API route %s %s", r.Method, r.URL.Path)
 		}

@@ -38,6 +38,8 @@ The four implementation owner lanes are Console/Control Plane, Fabric, Gateway i
   The backend resolves or creates the Sub2API identity by normalized email and
   atomically stores the one-to-one local graph. Self-registration and SSO are not
   Pilot claims.
+- Operators enter only `/admin/*`; `/console/*` redirects to `/admin/overview`.
+  The customer table is labelled "客户与计费账户" and excludes `acct-admin`.
 - Console displays live Sub2API balance, Key metadata, request usage, usage stats, and Ledger billing receipts without creating a wallet, Key database, usage database, or billing fact table.
 - Basic is `2c4g` plus 10GB for `52_580_000` USD micros/month:
   `50_000_000` compute plus `2_580_000` storage.
@@ -49,6 +51,8 @@ The four implementation owner lanes are Console/Control Plane, Fabric, Gateway i
 - Internal Acceptance slots are not customer products and never appear in
   catalog or quote paths. Static package definitions are targets; actual
   availability comes from live Fabric catalog readback.
+- Pricing preview and Workspace launch reject an unavailable package with
+  `package_unavailable` before Gateway, balance, debit, Ledger, or Tencent calls.
 
 ## Fabric
 
@@ -87,6 +91,9 @@ The four implementation owner lanes are Console/Control Plane, Fabric, Gateway i
 - Control Plane maps the signed-in account through `sub2apiUserId`. Owners may manage general Keys; Workspace
   convergence separately requires exactly one active reserved Key named `opl-workspace` and fails closed otherwise.
 - Required read capabilities are mapped-user balance, the mapped user's paginated Key list, paginated request usage, and aggregate usage stats. Request usage and stats are scoped by both `user_id` and the selected `api_key_id`; every returned identity is validated again by Control Plane.
+- For Keys, UserKeys, Usage, and BalanceHistory, a zero-row Sub2API v0.1.162
+  response is valid only as `total=0,page=1,pages=1,items=[]`; every other empty
+  pagination shape fails closed.
 - Request charges use Sub2API `actual_cost`, converted once to integer USD micros. Control Plane returns an explicit unavailable state for a missing capability or upstream failure and never substitutes zero.
 - Control Plane decodes a strict customer-safe DTO allowlist. Raw Sub2API admin responses, nested raw Keys, upstream account internals, prompts, and response content never reach Console, OPL PostgreSQL, Ledger, logs, or caches.
 - Key DTO fields `quota_used`, `usage_5h`, `usage_1d`, `usage_7d`, and `last_used_at` remain quota and recent-window signals; they do not replace request-level usage and aggregate stats.
