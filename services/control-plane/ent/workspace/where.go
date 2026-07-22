@@ -114,6 +114,11 @@ func Status(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldEQ(FieldStatus, v))
 }
 
+// PurchaseReceiptID applies equality check predicate on the "purchase_receipt_id" field. It's identical to PurchaseReceiptIDEQ.
+func PurchaseReceiptID(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldPurchaseReceiptID, v))
+}
+
 // BillingStateJSON applies equality check predicate on the "billing_state_json" field. It's identical to BillingStateJSONEQ.
 func BillingStateJSON(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldEQ(FieldBillingStateJSON, v))
@@ -802,6 +807,71 @@ func StatusEqualFold(v string) predicate.Workspace {
 // StatusContainsFold applies the ContainsFold predicate on the "status" field.
 func StatusContainsFold(v string) predicate.Workspace {
 	return predicate.Workspace(sql.FieldContainsFold(FieldStatus, v))
+}
+
+// PurchaseReceiptIDEQ applies the EQ predicate on the "purchase_receipt_id" field.
+func PurchaseReceiptIDEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEQ(FieldPurchaseReceiptID, v))
+}
+
+// PurchaseReceiptIDNEQ applies the NEQ predicate on the "purchase_receipt_id" field.
+func PurchaseReceiptIDNEQ(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNEQ(FieldPurchaseReceiptID, v))
+}
+
+// PurchaseReceiptIDIn applies the In predicate on the "purchase_receipt_id" field.
+func PurchaseReceiptIDIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldIn(FieldPurchaseReceiptID, vs...))
+}
+
+// PurchaseReceiptIDNotIn applies the NotIn predicate on the "purchase_receipt_id" field.
+func PurchaseReceiptIDNotIn(vs ...string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldNotIn(FieldPurchaseReceiptID, vs...))
+}
+
+// PurchaseReceiptIDGT applies the GT predicate on the "purchase_receipt_id" field.
+func PurchaseReceiptIDGT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGT(FieldPurchaseReceiptID, v))
+}
+
+// PurchaseReceiptIDGTE applies the GTE predicate on the "purchase_receipt_id" field.
+func PurchaseReceiptIDGTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldGTE(FieldPurchaseReceiptID, v))
+}
+
+// PurchaseReceiptIDLT applies the LT predicate on the "purchase_receipt_id" field.
+func PurchaseReceiptIDLT(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLT(FieldPurchaseReceiptID, v))
+}
+
+// PurchaseReceiptIDLTE applies the LTE predicate on the "purchase_receipt_id" field.
+func PurchaseReceiptIDLTE(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldLTE(FieldPurchaseReceiptID, v))
+}
+
+// PurchaseReceiptIDContains applies the Contains predicate on the "purchase_receipt_id" field.
+func PurchaseReceiptIDContains(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContains(FieldPurchaseReceiptID, v))
+}
+
+// PurchaseReceiptIDHasPrefix applies the HasPrefix predicate on the "purchase_receipt_id" field.
+func PurchaseReceiptIDHasPrefix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasPrefix(FieldPurchaseReceiptID, v))
+}
+
+// PurchaseReceiptIDHasSuffix applies the HasSuffix predicate on the "purchase_receipt_id" field.
+func PurchaseReceiptIDHasSuffix(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldHasSuffix(FieldPurchaseReceiptID, v))
+}
+
+// PurchaseReceiptIDEqualFold applies the EqualFold predicate on the "purchase_receipt_id" field.
+func PurchaseReceiptIDEqualFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldEqualFold(FieldPurchaseReceiptID, v))
+}
+
+// PurchaseReceiptIDContainsFold applies the ContainsFold predicate on the "purchase_receipt_id" field.
+func PurchaseReceiptIDContainsFold(v string) predicate.Workspace {
+	return predicate.Workspace(sql.FieldContainsFold(FieldPurchaseReceiptID, v))
 }
 
 // BillingStateJSONEQ applies the EQ predicate on the "billing_state_json" field.

@@ -113,7 +113,10 @@ func (app *controlPlaneServer) reconcileMonthlyCompute(ctx context.Context, serv
 			return err
 		}
 		body := computeResponse(mergeMaps(row, structToMap(result)))
-		body["status"], body["billingStatus"] = "destroyed", "stopped"
+		body["status"] = "destroyed"
+		if stringValue(row["billingStatus"]) != "" {
+			body["billingStatus"] = "stopped"
+		}
 		return app.saveComputeFact(body)
 	}
 	result, err := service.SyncMonthlyCompute(ctx, id)
@@ -147,7 +150,9 @@ func (app *controlPlaneServer) reconcileMonthlyStorage(ctx context.Context, serv
 			return err
 		}
 		body := storageResponse(mergeMaps(row, structToMap(result)))
-		body["billingStatus"] = "stopped"
+		if stringValue(row["billingStatus"]) != "" {
+			body["billingStatus"] = "stopped"
+		}
 		return app.saveStorageFact(body)
 	}
 	result, err := service.SyncMonthlyStorage(ctx, id)

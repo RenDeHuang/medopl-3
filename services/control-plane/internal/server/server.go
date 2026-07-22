@@ -513,7 +513,11 @@ func computeResponse(row map[string]any) map[string]any {
 	row["ownerAccountId"] = firstNonEmpty(stringValue(row["ownerAccountId"]), stringValue(row["accountId"]))
 	row["provider"] = firstNonEmpty(stringValue(row["provider"]), "tencent-tke")
 	row["status"] = firstNonEmpty(stringValue(row["status"]), "running")
-	row["billingStatus"] = billingStatusFor(row)
+	if stringValue(row["billingStatus"]) != "" {
+		row["billingStatus"] = billingStatusFor(row)
+	} else {
+		delete(row, "billingStatus")
+	}
 	row["cvmInstanceId"] = firstNonEmpty(stringValue(row["cvmInstanceId"]), stringValue(row["instanceId"]))
 	if serviceName := stringValue(row["serviceName"]); serviceName != "" {
 		row["runtime"] = map[string]any{"serviceName": serviceName, "service": "service/" + serviceName}
@@ -531,7 +535,11 @@ func storageResponse(row map[string]any) map[string]any {
 		row["status"] = "available"
 	}
 	row["status"] = firstNonEmpty(stringValue(row["status"]), "available")
-	row["billingStatus"] = billingStatusFor(row)
+	if stringValue(row["billingStatus"]) != "" {
+		row["billingStatus"] = billingStatusFor(row)
+	} else {
+		delete(row, "billingStatus")
+	}
 	if numberField(row, "sizeGb", 0) == 0 {
 		row["sizeGb"] = 10
 	}

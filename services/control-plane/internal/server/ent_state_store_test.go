@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"sync"
@@ -17,6 +18,7 @@ import (
 
 	controlplaneenttest "opl-cloud/services/control-plane/ent/enttest"
 	"opl-cloud/services/control-plane/internal/clients"
+	"opl-cloud/services/control-plane/internal/controlplane"
 	"opl-cloud/services/control-plane/internal/domain"
 )
 
@@ -313,6 +315,82 @@ func TestWorkspaceAPIKeyIDRoundTripsAndCAS(t *testing.T) {
 				t.Fatalf("Workspace Key ID readback rows=%#v err=%v", rows, err)
 			}
 		})
+	}
+}
+
+func TestWorkspacePurchaseReceiptIDRoundTripsWithoutLegacyOverwrite(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		new  func(*testing.T) controlPlaneTableStore
+	}{
+		{name: "memory", new: func(*testing.T) controlPlaneTableStore { return newMemoryTableStore() }},
+		{name: "sqlite", new: func(t *testing.T) controlPlaneTableStore {
+			return NewTestEntStateStore(t, t.TempDir()+"/workspace-purchase-receipt.sqlite")
+		}},
+		{name: "postgres", new: newPostgresWorkspaceRenewalStore},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			store := tc.new(t)
+			row := canonicalWorkspaceRenewalRow(false)
+			row["receiptId"] = "receipt-workspace-created"
+			if err := store.SaveWorkspace(ctx, row); err != nil {
+				t.Fatal(err)
+			}
+			rows, err := store.ListWorkspaces(ctx, "acct-renewal")
+			if err != nil || len(rows) != 1 {
+				t.Fatalf("created Workspace rows=%#v err=%v", rows, err)
+			}
+			if stringValue(rows[0]["purchaseReceiptId"]) != "" {
+				t.Fatalf("workspace.created became purchase receipt: %#v", rows[0])
+			}
+
+			row = rows[0]
+			row["purchaseReceiptId"] = "receipt-purchase"
+			if err := store.SaveWorkspace(ctx, row); err != nil {
+				t.Fatal(err)
+			}
+			rows, err = store.ListWorkspaces(ctx, "acct-renewal")
+			if err != nil || len(rows) != 1 || stringValue(rows[0]["purchaseReceiptId"]) != "receipt-purchase" {
+				t.Fatalf("purchase Receipt round-trip rows=%#v err=%v", rows, err)
+			}
+
+			resumed := applyWorkspaceRuntimeProjection(rows[0], domain.WorkspaceProjection{
+				Status: "running", ComputeID: "compute-renewal", VolumeID: "storage-renewal", ReceiptID: "receipt-resume",
+			})
+			if err := store.SaveWorkspace(ctx, resumed); err != nil {
+				t.Fatal(err)
+			}
+			rows, err = store.ListWorkspaces(ctx, "acct-renewal")
+			if err != nil || len(rows) != 1 || stringValue(rows[0]["purchaseReceiptId"]) != "receipt-purchase" {
+				t.Fatalf("resume overwrote purchase Receipt rows=%#v err=%v", rows, err)
+			}
+		})
+	}
+}
+
+func TestPostgresOperatorWorkspaceDetailReadsPurchaseReceipt(t *testing.T) {
+	store := newPostgresWorkspaceRenewalStore(t)
+	seedOperatorProjectionAccount(t, store, "acct-alpha", "usr-alpha", "alpha@example.com", 41)
+	mustStore(t, store.SaveWorkspace(context.Background(), map[string]any{
+		"id": "ws-alpha", "name": "Alpha", "accountId": "acct-alpha", "ownerAccountId": "acct-alpha", "ownerUserId": "usr-alpha",
+		"state": "active", "purchaseReceiptId": "receipt-workspace", "createdAt": "2026-07-16T00:00:00Z", "updatedAt": "2026-07-16T00:00:00Z",
+	}))
+	receipt := workspaceBillingReceipt("billing.workspace_purchased.v1")
+	ledger := &operatorProjectionLedger{receipts: map[string]clients.Receipt{"receipt-workspace": receipt}}
+	client := newOperatorProjectionClient(operatorProjectionUser(41, "alpha@example.com", "active", 1_000_000))
+	server, err := NewPersistentServer(controlplane.NewService(ledger, &fakeFabricClient{}, client), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	response := requestWithSession(t, server, reservedOperatorSessionForTest(t, server), http.MethodGet, "/api/operator/workspaces/ws-alpha", "")
+	if response.Code != http.StatusOK {
+		t.Fatalf("operator Workspace detail=%d: %s", response.Code, response.Body.String())
+	}
+	projected := mapField(mapField(mapField(decodeOperatorEnvelope(t, response), "data"), "receipt"), "data")
+	if projected["receiptId"] != "receipt-workspace" || projected["type"] != "billing.workspace_purchased.v1" || projected["totalUsdMicros"] != float64(52_580_000) {
+		t.Fatalf("PostgreSQL purchase Receipt projection=%#v", projected)
 	}
 }
 

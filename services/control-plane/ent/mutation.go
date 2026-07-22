@@ -22239,6 +22239,7 @@ type WorkspaceMutation struct {
 	url                           *string
 	state                         *string
 	status                        *string
+	purchase_receipt_id           *string
 	billing_state_json            *string
 	storage_id                    *string
 	current_compute_allocation_id *string
@@ -22726,6 +22727,42 @@ func (m *WorkspaceMutation) OldStatus(ctx context.Context) (v string, err error)
 // ResetStatus resets all changes to the "status" field.
 func (m *WorkspaceMutation) ResetStatus() {
 	m.status = nil
+}
+
+// SetPurchaseReceiptID sets the "purchase_receipt_id" field.
+func (m *WorkspaceMutation) SetPurchaseReceiptID(s string) {
+	m.purchase_receipt_id = &s
+}
+
+// PurchaseReceiptID returns the value of the "purchase_receipt_id" field in the mutation.
+func (m *WorkspaceMutation) PurchaseReceiptID() (r string, exists bool) {
+	v := m.purchase_receipt_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPurchaseReceiptID returns the old "purchase_receipt_id" field's value of the Workspace entity.
+// If the Workspace object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *WorkspaceMutation) OldPurchaseReceiptID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPurchaseReceiptID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPurchaseReceiptID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPurchaseReceiptID: %w", err)
+	}
+	return oldValue.PurchaseReceiptID, nil
+}
+
+// ResetPurchaseReceiptID resets all changes to the "purchase_receipt_id" field.
+func (m *WorkspaceMutation) ResetPurchaseReceiptID() {
+	m.purchase_receipt_id = nil
 }
 
 // SetBillingStateJSON sets the "billing_state_json" field.
@@ -23444,7 +23481,7 @@ func (m *WorkspaceMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *WorkspaceMutation) Fields() []string {
-	fields := make([]string, 0, 28)
+	fields := make([]string, 0, 29)
 	if m.created_at != nil {
 		fields = append(fields, workspace.FieldCreatedAt)
 	}
@@ -23474,6 +23511,9 @@ func (m *WorkspaceMutation) Fields() []string {
 	}
 	if m.status != nil {
 		fields = append(fields, workspace.FieldStatus)
+	}
+	if m.purchase_receipt_id != nil {
+		fields = append(fields, workspace.FieldPurchaseReceiptID)
 	}
 	if m.billing_state_json != nil {
 		fields = append(fields, workspace.FieldBillingStateJSON)
@@ -23557,6 +23597,8 @@ func (m *WorkspaceMutation) Field(name string) (ent.Value, bool) {
 		return m.State()
 	case workspace.FieldStatus:
 		return m.Status()
+	case workspace.FieldPurchaseReceiptID:
+		return m.PurchaseReceiptID()
 	case workspace.FieldBillingStateJSON:
 		return m.BillingStateJSON()
 	case workspace.FieldStorageID:
@@ -23622,6 +23664,8 @@ func (m *WorkspaceMutation) OldField(ctx context.Context, name string) (ent.Valu
 		return m.OldState(ctx)
 	case workspace.FieldStatus:
 		return m.OldStatus(ctx)
+	case workspace.FieldPurchaseReceiptID:
+		return m.OldPurchaseReceiptID(ctx)
 	case workspace.FieldBillingStateJSON:
 		return m.OldBillingStateJSON(ctx)
 	case workspace.FieldStorageID:
@@ -23736,6 +23780,13 @@ func (m *WorkspaceMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetStatus(v)
+		return nil
+	case workspace.FieldPurchaseReceiptID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPurchaseReceiptID(v)
 		return nil
 	case workspace.FieldBillingStateJSON:
 		v, ok := value.(string)
@@ -23965,6 +24016,9 @@ func (m *WorkspaceMutation) ResetField(name string) error {
 		return nil
 	case workspace.FieldStatus:
 		m.ResetStatus()
+		return nil
+	case workspace.FieldPurchaseReceiptID:
+		m.ResetPurchaseReceiptID()
 		return nil
 	case workspace.FieldBillingStateJSON:
 		m.ResetBillingStateJSON()

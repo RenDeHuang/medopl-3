@@ -655,6 +655,99 @@ func TestUnavailablePackageStopsPreviewAndLaunchBeforeExternalCalls(t *testing.T
 	}
 }
 
+func TestProviderReconcileDoesNotCreateCanonicalChildBilling(t *testing.T) {
+	assertAbsent := func(t *testing.T, resource map[string]any) {
+		t.Helper()
+		for _, field := range []string{"billingOperationId", "billingStatus", "priceVersion", "chargeUsdMicros", "periodStart", "paidThrough"} {
+			if value, exists := resource[field]; exists {
+				t.Errorf("canonical %s unexpectedly contains %s=%#v: %#v", stringValue(resource["id"]), field, value, resource)
+			}
+		}
+	}
+
+	t.Run("operation memory", func(t *testing.T) {
+		app := newControlPlaneAppEmpty()
+		err := app.rememberRuntimeOperations([]clients.FabricOperation{
+			{ID: "operation-memory-compute", ResourceKind: "compute_allocation", ResourceID: "compute-canonical", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", Status: "succeeded", RedactedProviderPayload: map[string]any{"resource": map[string]any{"id": "compute-canonical", "status": "running"}}},
+			{ID: "operation-memory-storage", ResourceKind: "storage_volume", ResourceID: "storage-canonical", AccountID: "acct-alpha", WorkspaceID: "ws-alpha", Status: "succeeded", RedactedProviderPayload: map[string]any{"resource": map[string]any{"id": "storage-canonical", "status": "available"}}},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		compute, _ := app.getCompute("compute-canonical")
+		storage, _ := app.getStorage("storage-canonical")
+		assertAbsent(t, compute)
+		assertAbsent(t, storage)
+	})
+
+	for _, tc := range []struct {
+		name, computeStatus, storageStatus, desiredStatus string
+		syncErr                                           error
+	}{
+		{name: "successful sync", computeStatus: "running", storageStatus: "available"},
+		{name: "failed sync", syncErr: errors.New("provider sync unavailable")},
+		{name: "external missing", computeStatus: "external_deleted", storageStatus: "external_deleted"},
+		{name: "destroy", desiredStatus: "destroyed"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			app := newControlPlaneAppEmpty()
+			compute := map[string]any{"id": "compute-canonical", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "status": "running"}
+			storage := map[string]any{"id": "storage-canonical", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "status": "available"}
+			if tc.desiredStatus != "" {
+				compute["desiredStatus"], storage["desiredStatus"] = tc.desiredStatus, tc.desiredStatus
+			}
+			mustStore(t, app.tables.SaveCompute(context.Background(), compute))
+			mustStore(t, app.tables.SaveStorage(context.Background(), storage))
+			fabric := &providerReconcileFabricClient{
+				computeResult: clients.ComputeAllocation{ID: "compute-canonical", Status: tc.computeStatus, Provider: "tencent-tke"},
+				storageResult: clients.StorageVolume{ID: "storage-canonical", Status: tc.storageStatus, Provider: "tencent-tke"},
+				computeErr:    tc.syncErr, storageErr: tc.syncErr,
+			}
+			service := newTestService(fakeLedgerClient{}, fabric)
+			if err := app.reconcileMonthlyCompute(context.Background(), service, compute, time.Now().UTC()); err != nil {
+				t.Fatal(err)
+			}
+			if err := app.reconcileMonthlyStorage(context.Background(), service, storage, time.Now().UTC()); err != nil {
+				t.Fatal(err)
+			}
+			compute, _ = app.getCompute("compute-canonical")
+			storage, _ = app.getStorage("storage-canonical")
+			assertAbsent(t, compute)
+			assertAbsent(t, storage)
+		})
+	}
+}
+
+func TestProviderReconcilePreservesHistoricalChildBilling(t *testing.T) {
+	historical := map[string]any{
+		"billingOperationId": "billing-historical", "billingStatus": "active", "priceVersion": "legacy-price-v1",
+		"chargeUsdMicros": int64(123), "periodStart": "2026-07-01T00:00:00Z", "paidThrough": "2026-08-01T00:00:00Z",
+	}
+	app := newControlPlaneAppEmpty()
+	compute := mergeMaps(map[string]any{"id": "compute-historical", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "status": "running"}, historical)
+	storage := mergeMaps(map[string]any{"id": "storage-historical", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "status": "available"}, historical)
+	mustStore(t, app.tables.SaveCompute(context.Background(), compute))
+	mustStore(t, app.tables.SaveStorage(context.Background(), storage))
+	fabric := &providerReconcileFabricClient{
+		computeResult: clients.ComputeAllocation{ID: "compute-historical", Status: "running", Provider: "tencent-tke", NodeName: "node-readback"},
+		storageResult: clients.StorageVolume{ID: "storage-historical", Status: "available", Provider: "tencent-tke", ProviderResourceID: "disk-readback"},
+	}
+	service := newTestService(fakeLedgerClient{}, fabric)
+	if err := app.reconcileMonthlyCompute(context.Background(), service, compute, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.reconcileMonthlyStorage(context.Background(), service, storage, time.Now().UTC()); err != nil {
+		t.Fatal(err)
+	}
+	compute, _ = app.getCompute("compute-historical")
+	storage, _ = app.getStorage("storage-historical")
+	for field, want := range historical {
+		if !reflect.DeepEqual(compute[field], want) || !reflect.DeepEqual(storage[field], want) {
+			t.Errorf("historical %s changed: compute=%#v storage=%#v want=%#v", field, compute[field], storage[field], want)
+		}
+	}
+}
+
 func TestProviderReconcilePreservesReleasedStorageStatus(t *testing.T) {
 	app := newControlPlaneAppEmpty()
 	row := map[string]any{"id": "storage-reconcile-released", "accountId": "acct-alpha", "status": "available", "desiredStatus": "destroyed", "billingStatus": "active"}
@@ -1219,6 +1312,22 @@ type fakeFabricClient struct {
 	runtimeInputs        []clients.WorkspaceRuntimeInput
 }
 
+type providerReconcileFabricClient struct {
+	fakeFabricClient
+	computeResult clients.ComputeAllocation
+	storageResult clients.StorageVolume
+	computeErr    error
+	storageErr    error
+}
+
+func (f *providerReconcileFabricClient) SyncComputeAllocation(_ context.Context, _ string) (clients.ComputeAllocation, error) {
+	return f.computeResult, f.computeErr
+}
+
+func (f *providerReconcileFabricClient) SyncStorageVolume(_ context.Context, _ string) (clients.StorageVolume, error) {
+	return f.storageResult, f.storageErr
+}
+
 type countingWorkspaceFabricClient struct {
 	fakeFabricClient
 	mu             sync.Mutex
@@ -1423,7 +1532,7 @@ func (f *fakeFabricClient) WorkspaceRuntimeStatus(_ context.Context, workspaceID
 	}
 	if len(f.runtimeInputs) > 0 {
 		input := f.runtimeInputs[len(f.runtimeInputs)-1]
-		return clients.WorkspaceRuntime{ID: "runtime-from-fabric", WorkspaceID: input.WorkspaceID, URL: "https://workspace.medopl.cn/w/ws-from-fabric/", Status: "running", ServiceName: "opl-compute-from-fabric", Access: clients.WorkspaceRuntimeAccess{Username: "admin", Password: "runtime-password-alpha", CredentialStatus: "configured", CredentialVersion: "v1", SecretRef: "opl-compute-from-fabric-env"}, Ready: true}, nil
+		return clients.WorkspaceRuntime{ID: "runtime-from-fabric", WorkspaceID: input.WorkspaceID, URL: "https://workspace.medopl.cn/w/ws-from-fabric/", Status: "running", ServiceName: "opl-compute-from-fabric", Access: clients.WorkspaceRuntimeAccess{Username: "admin", Password: "runtime-password-alpha", CredentialStatus: "configured", CredentialVersion: "v1", SecretRef: "opl-compute-from-fabric-env"}, Ready: true, Checks: []any{map[string]any{"name": "deployment_ready", "ok": true}, map[string]any{"name": "service_endpoints_ready", "ok": true}}}, nil
 	}
 	return clients.WorkspaceRuntime{
 		ID:          "runtime-from-fabric",
@@ -2402,48 +2511,7 @@ func TestWorkspaceGatewaySetsRoutingCookieForRootRuntimeApi(t *testing.T) {
 	}
 }
 
-func TestWorkspaceStateRequiresActiveUnexpiredStorageEntitlement(t *testing.T) {
-	for _, tc := range []struct {
-		name          string
-		storageStatus string
-		billingStatus string
-		paidThrough   string
-		openable      bool
-	}{
-		{name: "active", storageStatus: "available", billingStatus: "active", paidThrough: "2099-01-01T00:00:00Z", openable: true},
-		{name: "past due", storageStatus: "available", billingStatus: "past_due", paidThrough: "2099-01-01T00:00:00Z"},
-		{name: "expired", storageStatus: "available", billingStatus: "active", paidThrough: "2000-01-01T00:00:00Z"},
-		{name: "invalid deadline", storageStatus: "available", billingStatus: "active", paidThrough: "not-a-time"},
-		{name: "retained", storageStatus: "retained", billingStatus: "active", paidThrough: "2099-01-01T00:00:00Z"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			app := newControlPlaneApp()
-			mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{
-				"id": "compute-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "status": "running", "billingStatus": "active", "paidThrough": "2099-01-01T00:00:00Z",
-			}))
-			mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{
-				"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "status": tc.storageStatus, "billingStatus": tc.billingStatus, "paidThrough": tc.paidThrough,
-			}))
-			mustStore(t, app.tables.SaveAttachment(context.Background(), map[string]any{
-				"id": "attachment-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "computeAllocationId": "compute-alpha", "storageId": "storage-alpha", "status": "attached",
-			}))
-			mustStore(t, app.tables.SaveWorkspace(context.Background(), workspaceGatewayTestRow(map[string]any{
-				"id": "ws-alpha", "accountId": "acct-alpha", "state": "running", "currentComputeAllocationId": "compute-alpha",
-				"storageId": "storage-alpha", "attachmentId": "attachment-alpha", "currentAttachmentId": "attachment-alpha",
-				"runtime": map[string]any{"serviceName": "runtime-alpha", "ready": true},
-			})))
-			workspace := app.workspaceStateRowsLocked("")[0].(map[string]any)
-			if workspace["openable"] != tc.openable {
-				t.Fatalf("workspace openable=%#v, want %v: %#v", workspace["openable"], tc.openable, workspace)
-			}
-			if !tc.openable && workspace["accessState"] != "disabled" {
-				t.Fatalf("closed workspace accessState=%#v", workspace["accessState"])
-			}
-		})
-	}
-}
-
-func TestWorkspaceGatewayBlocksExpiredStorageEntitlementBeforeProxy(t *testing.T) {
+func TestWorkspaceAccessUsesCanonicalBillingWithoutChildBilling(t *testing.T) {
 	proxied := false
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		proxied = true
@@ -2451,29 +2519,53 @@ func TestWorkspaceGatewayBlocksExpiredStorageEntitlementBeforeProxy(t *testing.T
 	}))
 	defer backend.Close()
 	app := newControlPlaneApp()
-	mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "status": "available", "billingStatus": "active", "paidThrough": "2000-01-01T00:00:00Z"}))
+	mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{"id": "compute-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "status": "running"}))
+	mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "status": "available"}))
+	mustStore(t, app.tables.SaveAttachment(context.Background(), map[string]any{
+		"id": "attachment-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "computeAllocationId": "compute-alpha", "storageId": "storage-alpha", "status": "attached",
+	}))
 	mustStore(t, app.tables.SaveWorkspace(context.Background(), workspaceGatewayTestRow(map[string]any{
-		"id": "ws-alpha", "accountId": "acct-alpha", "state": "running", "storageId": "storage-alpha", "runtime": map[string]any{"serviceName": strings.TrimPrefix(backend.URL, "http://"), "ready": true},
+		"id": "ws-alpha", "accountId": "acct-alpha", "state": "running", "currentComputeAllocationId": "compute-alpha",
+		"storageId": "storage-alpha", "attachmentId": "attachment-alpha", "currentAttachmentId": "attachment-alpha",
+		"runtime": map[string]any{"serviceName": strings.TrimPrefix(backend.URL, "http://"), "ready": true},
 	})))
-	req := httptest.NewRequest(http.MethodGet, "/w/ws-alpha/", nil)
 	rec := httptest.NewRecorder()
-
-	app.proxyWorkspace(rec, req)
-
-	if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "workspace_storage_entitlement_inactive") || proxied {
-		t.Fatalf("expired storage proxy status=%d body=%s proxied=%v", rec.Code, rec.Body.String(), proxied)
+	app.proxyWorkspace(rec, httptest.NewRequest(http.MethodGet, "/w/ws-alpha/", nil))
+	if rec.Code != http.StatusOK || !proxied {
+		t.Fatalf("canonical access status=%d body=%s proxied=%v", rec.Code, rec.Body.String(), proxied)
 	}
 }
 
-func TestWorkspaceGatewayBlocksInactiveComputeEntitlementBeforeProxy(t *testing.T) {
-	for _, tc := range []struct {
-		name          string
-		billingStatus string
-		paidThrough   string
+func TestWorkspaceAccessRejectsInvalidCanonicalOrProviderFacts(t *testing.T) {
+	tests := []struct {
+		name, reason string
+		direct       bool
+		mutate       func(map[string]any, map[string]any, map[string]any, map[string]any)
 	}{
-		{name: "past due", billingStatus: "past_due", paidThrough: "2099-01-01T00:00:00Z"},
-		{name: "expired", billingStatus: "active", paidThrough: "2000-01-01T00:00:00Z"},
-	} {
+		{name: "invalid canonical billing", reason: "workspace_billing_state_invalid", direct: true, mutate: func(workspace, _, _, _ map[string]any) { workspace["totalUsdMicros"] = int64(1) }},
+		{name: "manual review", reason: "workspace_billing_manual_review", mutate: func(workspace, _, _, _ map[string]any) {
+			for _, field := range workspaceBillingStateExclusiveKeys {
+				delete(workspace, field)
+			}
+			workspace["autoRenew"], workspace["renewalStatus"], workspace["manualReviewReason"] = false, "manual_review", workspaceBillingLegacyMismatch
+		}},
+		{name: "expired canonical billing", reason: "workspace_billing_period_expired", mutate: func(workspace, _, _, _ map[string]any) {
+			workspace["periodStart"], workspace["paidThrough"], workspace["nextRenewalAt"] = "1999-12-01T00:00:00Z", "2000-01-01T00:00:00Z", "1999-12-31T00:00:00Z"
+		}},
+		{name: "compute wrong status", reason: "workspace_compute_entitlement_inactive", mutate: func(_, compute, _, _ map[string]any) { compute["status"] = "stopped" }},
+		{name: "storage wrong status", reason: "workspace_storage_entitlement_inactive", mutate: func(_, _, storage, _ map[string]any) { storage["status"] = "retained" }},
+		{name: "compute wrong account", reason: "workspace_compute_entitlement_inactive", mutate: func(_, compute, _, _ map[string]any) { compute["accountId"] = "acct-other" }},
+		{name: "storage wrong account", reason: "workspace_storage_entitlement_inactive", mutate: func(_, _, storage, _ map[string]any) { storage["accountId"] = "acct-other" }},
+		{name: "compute wrong workspace", reason: "workspace_compute_entitlement_inactive", mutate: func(_, compute, _, _ map[string]any) { compute["workspaceId"] = "ws-other" }},
+		{name: "storage wrong workspace", reason: "workspace_storage_entitlement_inactive", mutate: func(_, _, storage, _ map[string]any) { storage["workspaceId"] = "ws-other" }},
+		{name: "canonical compute id missing", reason: "workspace_compute_entitlement_inactive", mutate: func(workspace, _, _, _ map[string]any) {
+			workspace["computeAllocationId"], workspace["currentComputeAllocationId"] = "compute-other", "compute-other"
+		}},
+		{name: "canonical storage id missing", reason: "workspace_storage_entitlement_inactive", mutate: func(workspace, _, _, _ map[string]any) { workspace["storageId"] = "storage-other" }},
+		{name: "attachment mismatch", reason: "workspace_attachment_inactive", mutate: func(_, _, _, attachment map[string]any) { attachment["storageId"] = "storage-other" }},
+		{name: "attachment wrong status", reason: "workspace_attachment_inactive", mutate: func(_, _, _, attachment map[string]any) { attachment["status"] = "detached" }},
+	}
+	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			proxied := false
 			backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -2482,25 +2574,29 @@ func TestWorkspaceGatewayBlocksInactiveComputeEntitlementBeforeProxy(t *testing.
 			}))
 			defer backend.Close()
 			app := newControlPlaneApp()
-			mustStore(t, app.tables.SaveCompute(context.Background(), map[string]any{
-				"id": "compute-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "status": "running",
-				"billingStatus": tc.billingStatus, "paidThrough": tc.paidThrough,
-			}))
-			mustStore(t, app.tables.SaveStorage(context.Background(), map[string]any{
-				"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "status": "available",
-				"billingStatus": "active", "paidThrough": "2099-01-01T00:00:00Z",
-			}))
-			mustStore(t, app.tables.SaveWorkspace(context.Background(), workspaceGatewayTestRow(map[string]any{
-				"id": "ws-alpha", "accountId": "acct-alpha", "state": "running", "currentComputeAllocationId": "compute-alpha",
-				"storageId": "storage-alpha", "runtime": map[string]any{"serviceName": strings.TrimPrefix(backend.URL, "http://"), "ready": true},
-			})))
-			req := httptest.NewRequest(http.MethodGet, "/w/ws-alpha/", nil)
+			compute := map[string]any{"id": "compute-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "status": "running"}
+			storage := map[string]any{"id": "storage-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "status": "available"}
+			attachment := map[string]any{"id": "attachment-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "computeAllocationId": "compute-alpha", "storageId": "storage-alpha", "status": "attached"}
+			workspace := workspaceGatewayTestRow(map[string]any{
+				"id": "ws-alpha", "accountId": "acct-alpha", "state": "running", "currentComputeAllocationId": "compute-alpha", "storageId": "storage-alpha",
+				"attachmentId": "attachment-alpha", "currentAttachmentId": "attachment-alpha", "runtime": map[string]any{"serviceName": strings.TrimPrefix(backend.URL, "http://"), "ready": true},
+			})
+			tc.mutate(workspace, compute, storage, attachment)
+			if tc.direct {
+				response, reason := app.workspaceAccessResponse(workspace, time.Now().UTC())
+				if reason != tc.reason || response["openable"] == true || proxied {
+					t.Fatalf("direct access openable=%#v reason=%s proxied=%v want=%s", response["openable"], reason, proxied, tc.reason)
+				}
+				return
+			}
+			mustStore(t, app.tables.SaveCompute(context.Background(), compute))
+			mustStore(t, app.tables.SaveStorage(context.Background(), storage))
+			mustStore(t, app.tables.SaveAttachment(context.Background(), attachment))
+			mustStore(t, app.tables.SaveWorkspace(context.Background(), workspace))
 			rec := httptest.NewRecorder()
-
-			app.proxyWorkspace(rec, req)
-
-			if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), "workspace_compute_entitlement_inactive") || proxied {
-				t.Fatalf("inactive compute proxy status=%d body=%s proxied=%v", rec.Code, rec.Body.String(), proxied)
+			app.proxyWorkspace(rec, httptest.NewRequest(http.MethodGet, "/w/ws-alpha/", nil))
+			if rec.Code != http.StatusConflict || !strings.Contains(rec.Body.String(), `"error":"`+tc.reason+`"`) || proxied {
+				t.Fatalf("access status=%d body=%s proxied=%v want=%s", rec.Code, rec.Body.String(), proxied, tc.reason)
 			}
 		})
 	}
@@ -2992,5 +3088,91 @@ func TestActiveConsoleAPIRoutesReachControlPlane(t *testing.T) {
 				t.Fatalf("decode response: %v", err)
 			}
 		})
+	}
+}
+
+func TestOperatorWorkspaceDetailUsesCanonicalPurchaseReceipt(t *testing.T) {
+	tests := []struct {
+		name      string
+		mutate    func(*clients.Receipt)
+		available bool
+	}{
+		{name: "canonical purchase", available: true},
+		{name: "receipt ID mismatch", mutate: func(receipt *clients.Receipt) { receipt.ReceiptID = "receipt-other" }},
+		{name: "account mismatch", mutate: func(receipt *clients.Receipt) { receipt.AccountID = "acct-other" }},
+		{name: "workspace mismatch", mutate: func(receipt *clients.Receipt) { receipt.WorkspaceID = "ws-other" }},
+		{name: "legacy workspace created", mutate: func(receipt *clients.Receipt) {
+			receipt.Type = "workspace.created"
+			receipt.Surface = "workspace"
+			receipt.Cost = nil
+			receipt.Execution = nil
+		}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			store := newMemoryTableStore()
+			seedOperatorProjectionAccount(t, store, "acct-alpha", "usr-alpha", "alpha@example.com", 41)
+			mustStore(t, store.SaveWorkspace(context.Background(), map[string]any{
+				"id": "ws-alpha", "name": "Alpha", "accountId": "acct-alpha", "ownerAccountId": "acct-alpha", "ownerUserId": "usr-alpha",
+				"state": "active", "purchaseReceiptId": "receipt-workspace", "createdAt": "2026-07-16T00:00:00Z", "updatedAt": "2026-07-16T00:00:00Z",
+			}))
+			receipt := workspaceBillingReceipt("billing.workspace_purchased.v1")
+			if test.mutate != nil {
+				test.mutate(&receipt)
+			}
+			ledger := &operatorProjectionLedger{receipts: map[string]clients.Receipt{"receipt-workspace": receipt}}
+			client := newOperatorProjectionClient(operatorProjectionUser(41, "alpha@example.com", "active", 1_000_000))
+			server, err := NewPersistentServer(controlplane.NewService(ledger, &fakeFabricClient{}, client), store)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			response := requestWithSession(t, server, reservedOperatorSessionForTest(t, server), http.MethodGet, "/api/operator/workspaces/ws-alpha", "")
+			if response.Code != http.StatusOK {
+				t.Fatalf("operator workspace detail = %d: %s", response.Code, response.Body.String())
+			}
+			projectedReceipt := mapField(mapField(decodeOperatorEnvelope(t, response), "data"), "receipt")
+			if !test.available {
+				if projectedReceipt["source"] != "ledger" || projectedReceipt["status"] != "unavailable" || projectedReceipt["available"] != false {
+					t.Fatalf("mismatched receipt envelope = %#v", projectedReceipt)
+				}
+				if _, exists := projectedReceipt["data"]; exists {
+					t.Fatalf("unavailable receipt exposed data = %#v", projectedReceipt)
+				}
+				return
+			}
+
+			if projectedReceipt["source"] != "ledger" || projectedReceipt["status"] != "available" || projectedReceipt["available"] != true {
+				t.Fatalf("purchase receipt envelope = %#v", projectedReceipt)
+			}
+			data := mapField(projectedReceipt, "data")
+			if data["receiptId"] != "receipt-workspace" || data["workspaceId"] != "ws-alpha" || data["type"] != "billing.workspace_purchased.v1" || data["totalUsdMicros"] != float64(52_580_000) {
+				t.Fatalf("purchase receipt identity or amount = %#v", data)
+			}
+			components := mapField(data, "components")
+			fulfillment := mapField(data, "fulfillment")
+			if mapField(components, "compute")["chargeUsdMicros"] != float64(50_000_000) || mapField(components, "storage")["chargeUsdMicros"] != float64(2_580_000) ||
+				fulfillment["computeAllocationId"] != "compute-alpha" || fulfillment["storageId"] != "storage-alpha" || fulfillment["attachmentId"] != "attachment-alpha" || fulfillment["runtimeId"] != "runtime-alpha" {
+				t.Fatalf("purchase receipt components or fulfillment = %#v", data)
+			}
+		})
+	}
+}
+
+func TestWorkspaceReconciliationUsesPurchaseReceiptOnly(t *testing.T) {
+	app := newControlPlaneApp()
+	mustStore(t, app.tables.SaveWorkspace(context.Background(), map[string]any{
+		"id": "ws-alpha", "accountId": "acct-alpha", "ownerAccountId": "acct-alpha", "ownerUserId": "usr-alpha",
+		"purchaseReceiptId": "receipt-purchase", "receiptId": "receipt-workspace-created",
+	}))
+
+	rows := app.resourceLedgerEvidenceLocked("acct-alpha")
+	if len(rows) != 1 {
+		t.Fatalf("Workspace reconciliation rows = %#v", rows)
+	}
+	receiptIDs, _ := rows[0].(map[string]any)["receiptIds"].([]string)
+	if !reflect.DeepEqual(receiptIDs, []string{"receipt-purchase"}) {
+		t.Fatalf("Workspace reconciliation receipt IDs = %#v", receiptIDs)
 	}
 }

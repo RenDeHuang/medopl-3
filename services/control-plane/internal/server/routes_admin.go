@@ -26,6 +26,9 @@ func registerAdminRoutes(mux *http.ServeMux, app *controlPlaneServer, service *c
 	mux.HandleFunc("GET /api/operator/wallet-adjustments/{operationId}", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		app.getWalletAdjustment(w, r)
 	}))
+	mux.HandleFunc("POST /api/operator/wallet-adjustments/{operationId}/recover", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
+		app.recoverWalletAdjustment(w, r, service)
+	}))
 	mux.HandleFunc("GET /api/operator/accounts", app.protected(true, func(w http.ResponseWriter, r *http.Request) {
 		page, pageSize, ok := operatorPagination(w, r)
 		if !ok {
@@ -593,9 +596,9 @@ func (app *controlPlaneServer) operatorWorkspaceDTO(ctx context.Context, service
 	}
 	result["resources"] = resources
 	if liveLedger {
-		receiptID := stringValue(workspace["receiptId"])
+		receiptID := stringValue(workspace["purchaseReceiptId"])
 		if receipt, err := service.BillingReceipt(ctx, receiptID); err == nil && receipt.ReceiptID == receiptID && receipt.AccountID == accountID && receipt.WorkspaceID == workspaceID {
-			if projected, ok := projectWorkspaceCreatedReceipt(receipt); ok {
+			if projected, ok := projectCustomerBillingReceipt(receipt); ok {
 				result["receipt"] = sourceEnvelope("ledger", "available", projected, authoritativeSourceTimestamp(receipt.CreatedAt))
 			}
 		}
@@ -901,7 +904,7 @@ func (app *controlPlaneServer) operatorHealth(ctx context.Context, service *cont
 	}
 	if workspaces, err := app.tables.ListWorkspaces(ctx, ""); err == nil {
 		for _, workspace := range workspaces {
-			receiptID := stringValue(workspace["receiptId"])
+			receiptID := stringValue(workspace["purchaseReceiptId"])
 			if receiptID == "" {
 				continue
 			}

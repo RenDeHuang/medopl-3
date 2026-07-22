@@ -73,6 +73,50 @@ func TestWorkspaceAPIKeyIDMigration(t *testing.T) {
 	}
 }
 
+func TestWorkspacePurchaseReceiptIDMigrationIsAdditiveAndIdempotent(t *testing.T) {
+	raw, err := os.ReadFile("202607230001_workspace_purchase_receipt_id.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	const want = `ALTER TABLE control_plane_workspaces
+  ADD COLUMN IF NOT EXISTS purchase_receipt_id TEXT NOT NULL DEFAULT '';`
+	if strings.TrimSpace(string(raw)) != want {
+		t.Fatalf("Workspace purchase Receipt migration=%q, want exact additive statement", strings.TrimSpace(string(raw)))
+	}
+
+	databaseURL := requiredIdentityTestDatabaseURL(t)
+	admin, err := sql.Open("postgres", databaseURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = admin.Close() })
+	if err := admin.Ping(); err != nil {
+		t.Fatal(err)
+	}
+	schema := fmt.Sprintf("control_plane_workspace_purchase_receipt_%d", time.Now().UnixNano())
+	if _, err := admin.Exec(`CREATE SCHEMA ` + schema); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = admin.Exec(`DROP SCHEMA ` + schema + ` CASCADE`) })
+	db, err := sql.Open("postgres", postgresURLWithSearchPath(databaseURL, schema))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if _, err := db.Exec(`CREATE TABLE control_plane_workspaces (id TEXT PRIMARY KEY); INSERT INTO control_plane_workspaces VALUES ('ws-existing')`); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		if _, err := db.Exec(string(raw)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var purchaseReceiptID string
+	if err := db.QueryRow(`SELECT purchase_receipt_id FROM control_plane_workspaces WHERE id = 'ws-existing'`).Scan(&purchaseReceiptID); err != nil || purchaseReceiptID != "" {
+		t.Fatalf("existing Workspace purchase Receipt ID=%q err=%v", purchaseReceiptID, err)
+	}
+}
+
 func (d *recordingDriver) Tx(context.Context) (dialect.Tx, error) {
 	return dialect.NopTx(d), nil
 }

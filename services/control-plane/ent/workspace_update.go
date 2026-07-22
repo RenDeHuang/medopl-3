@@ -160,6 +160,20 @@ func (wu *WorkspaceUpdate) SetNillableStatus(s *string) *WorkspaceUpdate {
 	return wu
 }
 
+// SetPurchaseReceiptID sets the "purchase_receipt_id" field.
+func (wu *WorkspaceUpdate) SetPurchaseReceiptID(s string) *WorkspaceUpdate {
+	wu.mutation.SetPurchaseReceiptID(s)
+	return wu
+}
+
+// SetNillablePurchaseReceiptID sets the "purchase_receipt_id" field if the given value is not nil.
+func (wu *WorkspaceUpdate) SetNillablePurchaseReceiptID(s *string) *WorkspaceUpdate {
+	if s != nil {
+		wu.SetPurchaseReceiptID(*s)
+	}
+	return wu
+}
+
 // SetBillingStateJSON sets the "billing_state_json" field.
 func (wu *WorkspaceUpdate) SetBillingStateJSON(s string) *WorkspaceUpdate {
 	wu.mutation.SetBillingStateJSON(s)
@@ -518,6 +532,9 @@ func (wu *WorkspaceUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := wu.mutation.Status(); ok {
 		_spec.SetField(workspace.FieldStatus, field.TypeString, value)
 	}
+	if value, ok := wu.mutation.PurchaseReceiptID(); ok {
+		_spec.SetField(workspace.FieldPurchaseReceiptID, field.TypeString, value)
+	}
 	if value, ok := wu.mutation.BillingStateJSON(); ok {
 		_spec.SetField(workspace.FieldBillingStateJSON, field.TypeString, value)
 	}
@@ -726,6 +743,20 @@ func (wuo *WorkspaceUpdateOne) SetStatus(s string) *WorkspaceUpdateOne {
 func (wuo *WorkspaceUpdateOne) SetNillableStatus(s *string) *WorkspaceUpdateOne {
 	if s != nil {
 		wuo.SetStatus(*s)
+	}
+	return wuo
+}
+
+// SetPurchaseReceiptID sets the "purchase_receipt_id" field.
+func (wuo *WorkspaceUpdateOne) SetPurchaseReceiptID(s string) *WorkspaceUpdateOne {
+	wuo.mutation.SetPurchaseReceiptID(s)
+	return wuo
+}
+
+// SetNillablePurchaseReceiptID sets the "purchase_receipt_id" field if the given value is not nil.
+func (wuo *WorkspaceUpdateOne) SetNillablePurchaseReceiptID(s *string) *WorkspaceUpdateOne {
+	if s != nil {
+		wuo.SetPurchaseReceiptID(*s)
 	}
 	return wuo
 }
@@ -1117,6 +1148,9 @@ func (wuo *WorkspaceUpdateOne) sqlSave(ctx context.Context) (_node *Workspace, e
 	}
 	if value, ok := wuo.mutation.Status(); ok {
 		_spec.SetField(workspace.FieldStatus, field.TypeString, value)
+	}
+	if value, ok := wuo.mutation.PurchaseReceiptID(); ok {
+		_spec.SetField(workspace.FieldPurchaseReceiptID, field.TypeString, value)
 	}
 	if value, ok := wuo.mutation.BillingStateJSON(); ok {
 		_spec.SetField(workspace.FieldBillingStateJSON, field.TypeString, value)

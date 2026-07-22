@@ -1209,7 +1209,7 @@ func (app *controlPlaneServer) recordWorkspaceLaunchPurchaseReceipt(ctx context.
 	if receipt.ReceiptID == "" {
 		return app.retryWorkspaceLaunchFulfillment(ctx, operation, "workspace_launch_receipt_invalid", errors.New("Ledger purchase receipt ID missing"))
 	}
-	workspace["receiptId"] = receipt.ReceiptID
+	workspace["purchaseReceiptId"] = receipt.ReceiptID
 	if err := app.tables.SaveWorkspace(ctx, workspace); err != nil {
 		return app.retryWorkspaceLaunchFulfillment(ctx, operation, "workspace_launch_receipt_projection_retryable", err)
 	}
