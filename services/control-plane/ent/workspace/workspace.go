@@ -33,6 +33,8 @@ const (
 	FieldState = "state"
 	// FieldStatus holds the string denoting the status field in the database.
 	FieldStatus = "status"
+	// FieldPurchaseReceiptID holds the string denoting the purchase_receipt_id field in the database.
+	FieldPurchaseReceiptID = "purchase_receipt_id"
 	// FieldBillingStateJSON holds the string denoting the billing_state_json field in the database.
 	FieldBillingStateJSON = "billing_state_json"
 	// FieldStorageID holds the string denoting the storage_id field in the database.
@@ -86,6 +88,7 @@ var Columns = []string{
 	FieldURL,
 	FieldState,
 	FieldStatus,
+	FieldPurchaseReceiptID,
 	FieldBillingStateJSON,
 	FieldStorageID,
 	FieldCurrentComputeAllocationID,
@@ -139,6 +142,8 @@ var (
 	DefaultState string
 	// DefaultStatus holds the default value on creation for the "status" field.
 	DefaultStatus string
+	// DefaultPurchaseReceiptID holds the default value on creation for the "purchase_receipt_id" field.
+	DefaultPurchaseReceiptID string
 	// DefaultBillingStateJSON holds the default value on creation for the "billing_state_json" field.
 	DefaultBillingStateJSON string
 	// DefaultStorageID holds the default value on creation for the "storage_id" field.
@@ -235,6 +240,11 @@ func ByState(opts ...sql.OrderTermOption) OrderOption {
 // ByStatus orders the results by the status field.
 func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByPurchaseReceiptID orders the results by the purchase_receipt_id field.
+func ByPurchaseReceiptID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldPurchaseReceiptID, opts...).ToFunc()
 }
 
 // ByBillingStateJSON orders the results by the billing_state_json field.

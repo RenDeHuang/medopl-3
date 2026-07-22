@@ -596,9 +596,9 @@ func (app *controlPlaneServer) operatorWorkspaceDTO(ctx context.Context, service
 	}
 	result["resources"] = resources
 	if liveLedger {
-		receiptID := stringValue(workspace["receiptId"])
+		receiptID := stringValue(workspace["purchaseReceiptId"])
 		if receipt, err := service.BillingReceipt(ctx, receiptID); err == nil && receipt.ReceiptID == receiptID && receipt.AccountID == accountID && receipt.WorkspaceID == workspaceID {
-			if projected, ok := projectWorkspaceCreatedReceipt(receipt); ok {
+			if projected, ok := projectCustomerBillingReceipt(receipt); ok {
 				result["receipt"] = sourceEnvelope("ledger", "available", projected, authoritativeSourceTimestamp(receipt.CreatedAt))
 			}
 		}
@@ -904,7 +904,7 @@ func (app *controlPlaneServer) operatorHealth(ctx context.Context, service *cont
 	}
 	if workspaces, err := app.tables.ListWorkspaces(ctx, ""); err == nil {
 		for _, workspace := range workspaces {
-			receiptID := stringValue(workspace["receiptId"])
+			receiptID := stringValue(workspace["purchaseReceiptId"])
 			if receiptID == "" {
 				continue
 			}

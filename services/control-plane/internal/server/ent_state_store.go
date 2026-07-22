@@ -126,6 +126,9 @@ func newPostgresEntStateStore(databaseURL string) (StateStore, error) {
 		{Version: "202607190002_pilot_announcements", Run: func(ctx context.Context) error {
 			return controlplanemigrations.ApplyPilotAnnouncements(ctx, driver)
 		}},
+		{Version: "202607230001_workspace_purchase_receipt_id", Run: func(ctx context.Context) error {
+			return controlplanemigrations.ApplyWorkspacePurchaseReceiptID(ctx, driver)
+		}},
 	}); err != nil {
 		_ = client.Close()
 		return nil, err
@@ -819,6 +822,7 @@ var (
 		textField("URL", "SetURL", "url"),
 		textField("State", "SetState", "state"),
 		textField("Status", "SetStatus", "status"),
+		textField("PurchaseReceiptID", "SetPurchaseReceiptID", "purchaseReceiptId"),
 		textField("StorageID", "SetStorageID", "storageId"),
 		textField("CurrentComputeAllocationID", "SetCurrentComputeAllocationID", "currentComputeAllocationId"),
 		textField("CurrentAttachmentID", "SetCurrentAttachmentID", "currentAttachmentId"),

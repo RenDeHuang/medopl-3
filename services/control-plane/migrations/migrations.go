@@ -34,6 +34,9 @@ var workspaceAPIKeyID string
 //go:embed 202607190002_pilot_announcements.sql
 var pilotAnnouncements string
 
+//go:embed 202607230001_workspace_purchase_receipt_id.sql
+var workspacePurchaseReceiptID string
+
 func Apply(ctx context.Context, driver dialect.Driver) error {
 	return driver.Exec(ctx, monthlyHardCut, []any{}, nil)
 }
@@ -92,4 +95,8 @@ func ApplyWorkspaceAPIKeyID(ctx context.Context, driver dialect.Driver) error {
 
 func ApplyPilotAnnouncements(ctx context.Context, driver dialect.Driver) error {
 	return driver.Exec(ctx, pilotAnnouncements, []any{}, nil)
+}
+
+func ApplyWorkspacePurchaseReceiptID(ctx context.Context, driver dialect.Driver) error {
+	return driver.Exec(ctx, workspacePurchaseReceiptID, []any{}, nil)
 }

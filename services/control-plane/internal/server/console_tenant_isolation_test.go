@@ -420,8 +420,8 @@ func TestPostgresStoreStartsFromFreshDatabase(t *testing.T) {
 	if err := check.QueryRow(`SELECT count(*) FROM opl_schema_migrations WHERE service = 'control-plane'`).Scan(&migrationCount); err != nil {
 		t.Fatalf("read control-plane migration journal: %v", err)
 	}
-	if migrationCount != 13 {
-		t.Fatalf("control-plane migration count = %d, want 13", migrationCount)
+	if migrationCount != 14 {
+		t.Fatalf("control-plane migration count = %d, want 14", migrationCount)
 	}
 	var autoRenewAuditMigration bool
 	if err := check.QueryRow(`SELECT EXISTS (SELECT 1 FROM opl_schema_migrations WHERE service = 'control-plane' AND version = '202607170003_workspace_auto_renew_audit')`).Scan(&autoRenewAuditMigration); err != nil || !autoRenewAuditMigration {
@@ -434,6 +434,10 @@ func TestPostgresStoreStartsFromFreshDatabase(t *testing.T) {
 	var announcementMigration bool
 	if err := check.QueryRow(`SELECT EXISTS (SELECT 1 FROM opl_schema_migrations WHERE service = 'control-plane' AND version = '202607190002_pilot_announcements')`).Scan(&announcementMigration); err != nil || !announcementMigration {
 		t.Fatalf("Pilot announcement migration missing: applied=%v err=%v", announcementMigration, err)
+	}
+	var workspacePurchaseReceiptMigration bool
+	if err := check.QueryRow(`SELECT EXISTS (SELECT 1 FROM opl_schema_migrations WHERE service = 'control-plane' AND version = '202607230001_workspace_purchase_receipt_id')`).Scan(&workspacePurchaseReceiptMigration); err != nil || !workspacePurchaseReceiptMigration {
+		t.Fatalf("Workspace purchase Receipt migration missing: applied=%v err=%v", workspacePurchaseReceiptMigration, err)
 	}
 	var announcementConstraints int
 	if err := check.QueryRow(`SELECT count(*) FROM pg_constraint WHERE conrelid IN ('control_plane_announcements'::regclass, 'control_plane_announcement_reads'::regclass) AND conname IN ('control_plane_announcements_status_check', 'control_plane_announcements_schedule_check', 'control_plane_announcement_reads_announcement_fk', 'control_plane_announcement_reads_user_unique')`).Scan(&announcementConstraints); err != nil || announcementConstraints != 4 {

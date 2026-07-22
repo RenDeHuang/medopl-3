@@ -37,6 +37,8 @@ type Workspace struct {
 	State string `json:"state,omitempty"`
 	// Status holds the value of the "status" field.
 	Status string `json:"status,omitempty"`
+	// PurchaseReceiptID holds the value of the "purchase_receipt_id" field.
+	PurchaseReceiptID string `json:"purchase_receipt_id,omitempty"`
 	// BillingStateJSON holds the value of the "billing_state_json" field.
 	BillingStateJSON string `json:"billing_state_json,omitempty"`
 	// StorageID holds the value of the "storage_id" field.
@@ -85,7 +87,7 @@ func (*Workspace) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case workspace.FieldWorkspaceAPIKeyID:
 			values[i] = new(sql.NullInt64)
-		case workspace.FieldID, workspace.FieldAccountID, workspace.FieldOwnerAccountID, workspace.FieldOwnerUserID, workspace.FieldUserID, workspace.FieldName, workspace.FieldURL, workspace.FieldState, workspace.FieldStatus, workspace.FieldBillingStateJSON, workspace.FieldStorageID, workspace.FieldCurrentComputeAllocationID, workspace.FieldCurrentAttachmentID, workspace.FieldRuntimeID, workspace.FieldRuntimeServiceName, workspace.FieldRuntimeServiceNameRoot, workspace.FieldServiceName, workspace.FieldAccessTokenStatus, workspace.FieldAccessAccount, workspace.FieldAccessUsername, workspace.FieldCredentialStatus, workspace.FieldCredentialVersion, workspace.FieldCredentialSecretRef, workspace.FieldVerificationSlotID:
+		case workspace.FieldID, workspace.FieldAccountID, workspace.FieldOwnerAccountID, workspace.FieldOwnerUserID, workspace.FieldUserID, workspace.FieldName, workspace.FieldURL, workspace.FieldState, workspace.FieldStatus, workspace.FieldPurchaseReceiptID, workspace.FieldBillingStateJSON, workspace.FieldStorageID, workspace.FieldCurrentComputeAllocationID, workspace.FieldCurrentAttachmentID, workspace.FieldRuntimeID, workspace.FieldRuntimeServiceName, workspace.FieldRuntimeServiceNameRoot, workspace.FieldServiceName, workspace.FieldAccessTokenStatus, workspace.FieldAccessAccount, workspace.FieldAccessUsername, workspace.FieldCredentialStatus, workspace.FieldCredentialVersion, workspace.FieldCredentialSecretRef, workspace.FieldVerificationSlotID:
 			values[i] = new(sql.NullString)
 		case workspace.FieldCreatedAt, workspace.FieldUpdatedAt:
 			values[i] = new(sql.NullTime)
@@ -169,6 +171,12 @@ func (w *Workspace) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field status", values[i])
 			} else if value.Valid {
 				w.Status = value.String
+			}
+		case workspace.FieldPurchaseReceiptID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field purchase_receipt_id", values[i])
+			} else if value.Valid {
+				w.PurchaseReceiptID = value.String
 			}
 		case workspace.FieldBillingStateJSON:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -343,6 +351,9 @@ func (w *Workspace) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("status=")
 	builder.WriteString(w.Status)
+	builder.WriteString(", ")
+	builder.WriteString("purchase_receipt_id=")
+	builder.WriteString(w.PurchaseReceiptID)
 	builder.WriteString(", ")
 	builder.WriteString("billing_state_json=")
 	builder.WriteString(w.BillingStateJSON)

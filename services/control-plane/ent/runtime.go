@@ -1378,76 +1378,80 @@ func init() {
 	workspaceDescStatus := workspaceFields[10].Descriptor()
 	// workspace.DefaultStatus holds the default value on creation for the status field.
 	workspace.DefaultStatus = workspaceDescStatus.Default.(string)
+	// workspaceDescPurchaseReceiptID is the schema descriptor for purchase_receipt_id field.
+	workspaceDescPurchaseReceiptID := workspaceFields[11].Descriptor()
+	// workspace.DefaultPurchaseReceiptID holds the default value on creation for the purchase_receipt_id field.
+	workspace.DefaultPurchaseReceiptID = workspaceDescPurchaseReceiptID.Default.(string)
 	// workspaceDescBillingStateJSON is the schema descriptor for billing_state_json field.
-	workspaceDescBillingStateJSON := workspaceFields[11].Descriptor()
+	workspaceDescBillingStateJSON := workspaceFields[12].Descriptor()
 	// workspace.DefaultBillingStateJSON holds the default value on creation for the billing_state_json field.
 	workspace.DefaultBillingStateJSON = workspaceDescBillingStateJSON.Default.(string)
 	// workspaceDescStorageID is the schema descriptor for storage_id field.
-	workspaceDescStorageID := workspaceFields[12].Descriptor()
+	workspaceDescStorageID := workspaceFields[13].Descriptor()
 	// workspace.DefaultStorageID holds the default value on creation for the storage_id field.
 	workspace.DefaultStorageID = workspaceDescStorageID.Default.(string)
 	// workspaceDescCurrentComputeAllocationID is the schema descriptor for current_compute_allocation_id field.
-	workspaceDescCurrentComputeAllocationID := workspaceFields[13].Descriptor()
+	workspaceDescCurrentComputeAllocationID := workspaceFields[14].Descriptor()
 	// workspace.DefaultCurrentComputeAllocationID holds the default value on creation for the current_compute_allocation_id field.
 	workspace.DefaultCurrentComputeAllocationID = workspaceDescCurrentComputeAllocationID.Default.(string)
 	// workspaceDescCurrentAttachmentID is the schema descriptor for current_attachment_id field.
-	workspaceDescCurrentAttachmentID := workspaceFields[14].Descriptor()
+	workspaceDescCurrentAttachmentID := workspaceFields[15].Descriptor()
 	// workspace.DefaultCurrentAttachmentID holds the default value on creation for the current_attachment_id field.
 	workspace.DefaultCurrentAttachmentID = workspaceDescCurrentAttachmentID.Default.(string)
 	// workspaceDescRuntimeID is the schema descriptor for runtime_id field.
-	workspaceDescRuntimeID := workspaceFields[15].Descriptor()
+	workspaceDescRuntimeID := workspaceFields[16].Descriptor()
 	// workspace.DefaultRuntimeID holds the default value on creation for the runtime_id field.
 	workspace.DefaultRuntimeID = workspaceDescRuntimeID.Default.(string)
 	// workspaceDescRuntimeServiceName is the schema descriptor for runtime_service_name field.
-	workspaceDescRuntimeServiceName := workspaceFields[16].Descriptor()
+	workspaceDescRuntimeServiceName := workspaceFields[17].Descriptor()
 	// workspace.DefaultRuntimeServiceName holds the default value on creation for the runtime_service_name field.
 	workspace.DefaultRuntimeServiceName = workspaceDescRuntimeServiceName.Default.(string)
 	// workspaceDescRuntimeServiceNameRoot is the schema descriptor for runtime_service_name_root field.
-	workspaceDescRuntimeServiceNameRoot := workspaceFields[17].Descriptor()
+	workspaceDescRuntimeServiceNameRoot := workspaceFields[18].Descriptor()
 	// workspace.DefaultRuntimeServiceNameRoot holds the default value on creation for the runtime_service_name_root field.
 	workspace.DefaultRuntimeServiceNameRoot = workspaceDescRuntimeServiceNameRoot.Default.(string)
 	// workspaceDescServiceName is the schema descriptor for service_name field.
-	workspaceDescServiceName := workspaceFields[18].Descriptor()
+	workspaceDescServiceName := workspaceFields[19].Descriptor()
 	// workspace.DefaultServiceName holds the default value on creation for the service_name field.
 	workspace.DefaultServiceName = workspaceDescServiceName.Default.(string)
 	// workspaceDescWorkspaceAPIKeyID is the schema descriptor for workspace_api_key_id field.
-	workspaceDescWorkspaceAPIKeyID := workspaceFields[19].Descriptor()
+	workspaceDescWorkspaceAPIKeyID := workspaceFields[20].Descriptor()
 	// workspace.WorkspaceAPIKeyIDValidator is a validator for the "workspace_api_key_id" field. It is called by the builders before save.
 	workspace.WorkspaceAPIKeyIDValidator = workspaceDescWorkspaceAPIKeyID.Validators[0].(func(int64) error)
 	// workspaceDescAccessTokenStatus is the schema descriptor for access_token_status field.
-	workspaceDescAccessTokenStatus := workspaceFields[20].Descriptor()
+	workspaceDescAccessTokenStatus := workspaceFields[21].Descriptor()
 	// workspace.DefaultAccessTokenStatus holds the default value on creation for the access_token_status field.
 	workspace.DefaultAccessTokenStatus = workspaceDescAccessTokenStatus.Default.(string)
 	// workspaceDescAccessAccount is the schema descriptor for access_account field.
-	workspaceDescAccessAccount := workspaceFields[21].Descriptor()
+	workspaceDescAccessAccount := workspaceFields[22].Descriptor()
 	// workspace.DefaultAccessAccount holds the default value on creation for the access_account field.
 	workspace.DefaultAccessAccount = workspaceDescAccessAccount.Default.(string)
 	// workspaceDescAccessUsername is the schema descriptor for access_username field.
-	workspaceDescAccessUsername := workspaceFields[22].Descriptor()
+	workspaceDescAccessUsername := workspaceFields[23].Descriptor()
 	// workspace.DefaultAccessUsername holds the default value on creation for the access_username field.
 	workspace.DefaultAccessUsername = workspaceDescAccessUsername.Default.(string)
 	// workspaceDescCredentialStatus is the schema descriptor for credential_status field.
-	workspaceDescCredentialStatus := workspaceFields[23].Descriptor()
+	workspaceDescCredentialStatus := workspaceFields[24].Descriptor()
 	// workspace.DefaultCredentialStatus holds the default value on creation for the credential_status field.
 	workspace.DefaultCredentialStatus = workspaceDescCredentialStatus.Default.(string)
 	// workspaceDescCredentialVersion is the schema descriptor for credential_version field.
-	workspaceDescCredentialVersion := workspaceFields[24].Descriptor()
+	workspaceDescCredentialVersion := workspaceFields[25].Descriptor()
 	// workspace.DefaultCredentialVersion holds the default value on creation for the credential_version field.
 	workspace.DefaultCredentialVersion = workspaceDescCredentialVersion.Default.(string)
 	// workspaceDescCredentialSecretRef is the schema descriptor for credential_secret_ref field.
-	workspaceDescCredentialSecretRef := workspaceFields[25].Descriptor()
+	workspaceDescCredentialSecretRef := workspaceFields[26].Descriptor()
 	// workspace.DefaultCredentialSecretRef holds the default value on creation for the credential_secret_ref field.
 	workspace.DefaultCredentialSecretRef = workspaceDescCredentialSecretRef.Default.(string)
 	// workspaceDescAccessRequiresLogin is the schema descriptor for access_requires_login field.
-	workspaceDescAccessRequiresLogin := workspaceFields[26].Descriptor()
+	workspaceDescAccessRequiresLogin := workspaceFields[27].Descriptor()
 	// workspace.DefaultAccessRequiresLogin holds the default value on creation for the access_requires_login field.
 	workspace.DefaultAccessRequiresLogin = workspaceDescAccessRequiresLogin.Default.(bool)
 	// workspaceDescVerificationSlotID is the schema descriptor for verification_slot_id field.
-	workspaceDescVerificationSlotID := workspaceFields[27].Descriptor()
+	workspaceDescVerificationSlotID := workspaceFields[28].Descriptor()
 	// workspace.DefaultVerificationSlotID holds the default value on creation for the verification_slot_id field.
 	workspace.DefaultVerificationSlotID = workspaceDescVerificationSlotID.Default.(string)
 	// workspaceDescCustomerProduct is the schema descriptor for customer_product field.
-	workspaceDescCustomerProduct := workspaceFields[28].Descriptor()
+	workspaceDescCustomerProduct := workspaceFields[29].Descriptor()
 	// workspace.DefaultCustomerProduct holds the default value on creation for the customer_product field.
 	workspace.DefaultCustomerProduct = workspaceDescCustomerProduct.Default.(bool)
 	// workspaceDescID is the schema descriptor for id field.

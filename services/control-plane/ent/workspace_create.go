@@ -160,6 +160,20 @@ func (wc *WorkspaceCreate) SetNillableStatus(s *string) *WorkspaceCreate {
 	return wc
 }
 
+// SetPurchaseReceiptID sets the "purchase_receipt_id" field.
+func (wc *WorkspaceCreate) SetPurchaseReceiptID(s string) *WorkspaceCreate {
+	wc.mutation.SetPurchaseReceiptID(s)
+	return wc
+}
+
+// SetNillablePurchaseReceiptID sets the "purchase_receipt_id" field if the given value is not nil.
+func (wc *WorkspaceCreate) SetNillablePurchaseReceiptID(s *string) *WorkspaceCreate {
+	if s != nil {
+		wc.SetPurchaseReceiptID(*s)
+	}
+	return wc
+}
+
 // SetBillingStateJSON sets the "billing_state_json" field.
 func (wc *WorkspaceCreate) SetBillingStateJSON(s string) *WorkspaceCreate {
 	wc.mutation.SetBillingStateJSON(s)
@@ -493,6 +507,10 @@ func (wc *WorkspaceCreate) defaults() {
 		v := workspace.DefaultStatus
 		wc.mutation.SetStatus(v)
 	}
+	if _, ok := wc.mutation.PurchaseReceiptID(); !ok {
+		v := workspace.DefaultPurchaseReceiptID
+		wc.mutation.SetPurchaseReceiptID(v)
+	}
 	if _, ok := wc.mutation.BillingStateJSON(); !ok {
 		v := workspace.DefaultBillingStateJSON
 		wc.mutation.SetBillingStateJSON(v)
@@ -594,6 +612,9 @@ func (wc *WorkspaceCreate) check() error {
 	}
 	if _, ok := wc.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Workspace.status"`)}
+	}
+	if _, ok := wc.mutation.PurchaseReceiptID(); !ok {
+		return &ValidationError{Name: "purchase_receipt_id", err: errors.New(`ent: missing required field "Workspace.purchase_receipt_id"`)}
 	}
 	if _, ok := wc.mutation.BillingStateJSON(); !ok {
 		return &ValidationError{Name: "billing_state_json", err: errors.New(`ent: missing required field "Workspace.billing_state_json"`)}
@@ -730,6 +751,10 @@ func (wc *WorkspaceCreate) createSpec() (*Workspace, *sqlgraph.CreateSpec) {
 	if value, ok := wc.mutation.Status(); ok {
 		_spec.SetField(workspace.FieldStatus, field.TypeString, value)
 		_node.Status = value
+	}
+	if value, ok := wc.mutation.PurchaseReceiptID(); ok {
+		_spec.SetField(workspace.FieldPurchaseReceiptID, field.TypeString, value)
+		_node.PurchaseReceiptID = value
 	}
 	if value, ok := wc.mutation.BillingStateJSON(); ok {
 		_spec.SetField(workspace.FieldBillingStateJSON, field.TypeString, value)

@@ -36,7 +36,6 @@ func (app *controlPlaneServer) workspaceResponse(row map[string]any) map[string]
 
 func (app *controlPlaneServer) workspaceAccessResponse(row map[string]any, now time.Time) (map[string]any, string) {
 	response := workspaceResponse(row)
-	canonicalPaidThrough := now.UTC()
 	canonicalComputeID, canonicalStorageID := stringValue(row["currentComputeAllocationId"]), stringValue(row["storageId"])
 	if !providerAcceptanceWorkspaceBillingExempt(row) {
 		state, present, err := normalizeWorkspaceBillingStateForWorkspace(row, row)
@@ -48,7 +47,7 @@ func (app *controlPlaneServer) workspaceAccessResponse(row map[string]any, now t
 			response["openable"], response["accessState"] = false, "disabled"
 			return response, "workspace_billing_manual_review"
 		}
-		canonicalPaidThrough, _ = time.Parse(time.RFC3339, state.PaidThrough)
+		canonicalPaidThrough, _ := time.Parse(time.RFC3339, state.PaidThrough)
 		canonicalComputeID, canonicalStorageID = state.ComputeAllocationID, state.StorageID
 		if !now.UTC().Before(canonicalPaidThrough) {
 			response["openable"], response["accessState"] = false, "disabled"
@@ -64,9 +63,8 @@ func (app *controlPlaneServer) workspaceAccessResponse(row map[string]any, now t
 			ok = false
 		}
 	}
-	paidThrough, err := time.Parse(time.RFC3339, stringValue(storage["paidThrough"]))
-	storageActive := ok && app.resourceBelongsToAccount(storage, accountID) && stringValue(storage["workspaceId"]) == workspaceID &&
-		stringValue(storage["billingStatus"]) == "active" && err == nil && now.UTC().Before(paidThrough) && !paidThrough.Before(canonicalPaidThrough)
+	storageActive := ok && stringValue(storage["id"]) == canonicalStorageID &&
+		app.resourceBelongsToAccount(storage, accountID) && stringValue(storage["workspaceId"]) == workspaceID
 	if !storageActive {
 		response["openable"] = false
 		response["accessState"] = "disabled"
@@ -81,10 +79,8 @@ func (app *controlPlaneServer) workspaceAccessResponse(row map[string]any, now t
 			ok = false
 		}
 	}
-	paidThrough, err = time.Parse(time.RFC3339, stringValue(compute["paidThrough"]))
-	computeActive := ok &&
-		app.resourceBelongsToAccount(compute, accountID) && stringValue(compute["workspaceId"]) == workspaceID &&
-		stringValue(compute["billingStatus"]) == "active" && err == nil && now.UTC().Before(paidThrough) && !paidThrough.Before(canonicalPaidThrough)
+	computeActive := ok && stringValue(compute["id"]) == canonicalComputeID &&
+		app.resourceBelongsToAccount(compute, accountID) && stringValue(compute["workspaceId"]) == workspaceID
 	if !computeActive {
 		response["openable"] = false
 		response["accessState"] = "disabled"
