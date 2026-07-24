@@ -68,7 +68,7 @@ test("Workspace and Overview render only server-owned package runtime and billin
   assert.doesNotMatch(overview, /previews|selectedPlanPrice|totalChargeUsdMicros/);
 });
 
-test("Pilot V2 customer general Key path supports create read reveal toggle and delete", async () => {
+test("Customer Console general Key path supports create read reveal toggle and delete", async () => {
   for (const name of ["getGatewayKey", "createGatewayKey", "updateGatewayKey", "deleteGatewayKey", "revealGatewayKey"] as const) {
     assert.equal(typeof readApi[name], "function", `${name} adapter is required`);
   }
@@ -99,7 +99,7 @@ test("API Key kind and Workspace receipt types use customer-facing labels", asyn
   assert.match(keysView, /revealed\?\.id === key\.id[\s\S]+:colspan="columnCount"/);
 });
 
-test("Pilot V2 customer API projects the configured endpoint and uses V2 usage owners", async () => {
+test("Customer Console API projects the configured endpoint and uses V2 usage owners", async () => {
   const [app, keysPanel] = await Promise.all([
     source("apps/console-ui/src/App.vue"),
     source("apps/console-ui/src/components/keys/KeysPanel.vue")
@@ -183,7 +183,7 @@ test("Billing receipt rows open a customer-safe detail view", async () => {
   assert.doesNotMatch(detail, /chargeReference|components|fulfillment|resourceType|resourceId|sourceUpdatedAt|fetchedAt|source-note/);
 });
 
-test("Pilot V2 customer announcements keep actionable states without exposing envelope metadata", async () => {
+test("Customer Console announcements keep actionable states without exposing envelope metadata", async () => {
   assert.equal(typeof readApi.getAnnouncements, "function");
   assert.equal(typeof readApi.markAnnouncementRead, "function");
 
@@ -225,7 +225,7 @@ test("authenticated Overview shows actionable announcements in every source stat
   assert.doesNotMatch(overview, /announcementsSource\?\.(?:source|status|available|fetchedAt|sourceUpdatedAt)/);
 });
 
-test("Pilot V2 customer secrets stay in component memory and expire", async () => {
+test("Customer Console secrets stay in component memory and expire", async () => {
   const [app, authApi, readApiSource, workspaceApiSource] = await Promise.all([
     source("apps/console-ui/src/App.vue"),
     source("apps/console-ui/src/api/auth-api.ts"),
@@ -242,7 +242,7 @@ test("Pilot V2 customer secrets stay in component memory and expire", async () =
   assert.match(app, /onBeforeUnmount\(\(\) => \{\s*clearSecrets\(\)/);
 });
 
-test("Pilot V2 customer does not render the paused Runtime file facts", async () => {
+test("Customer Console does not render the paused Runtime file facts", async () => {
   assert.equal("getWorkspaceFiles" in workspaceApi, false);
   assert.equal("getWorkspaceFilesystemUsage" in workspaceApi, false);
 
@@ -258,7 +258,7 @@ test("Pilot V2 customer does not render the paused Runtime file facts", async ()
   assert.match(dtos, /export interface WorkspaceFilesystemUsageDTO/);
 });
 
-test("Pilot V2 customer source blocks fail independently and remain retryable", async () => {
+test("Customer Console source blocks fail independently and remain retryable", async () => {
   const app = await source("apps/console-ui/src/App.vue");
   for (const [key, sourceName, retry] of [
     ["runtime", "workspaceStatusSource", "loadWorkspaceStatus"],
@@ -276,7 +276,7 @@ test("Pilot V2 customer source blocks fail independently and remain retryable", 
   }
 });
 
-test("Pilot V2 customer auto renewal stays disabled with an owner reason", async () => {
+test("Customer Console auto renewal stays disabled with an owner reason", async () => {
   const app = await source("apps/console-ui/src/App.vue");
   const workspaceView = app.slice(app.indexOf("path.startsWith('/console/workspace')"), app.indexOf("<section v-else-if=\"apiRoute\""));
 

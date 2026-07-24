@@ -512,7 +512,7 @@
       "id": "production_release",
       "business": "A release is ready only from merged code, immutable Cloud and App images, runtime checks, rollback proof, and reusable verification.",
       "owners": ["console", "fabric", "ledger", "gateway"],
-      "currentState": "Security, immutable Ready-Pod imageID checks, ConfigMap-aware Cloud rollback, read-only TKE diagnostics, release tooling, local Console integration, Task 13A gates, and the deployment identity cutover are code-complete locally; immutable publication, successful rollout, deployed browser, Gateway, and safe real verification evidence remain incomplete.",
+      "currentState": "Security, immutable Ready-Pod imageID checks, ConfigMap-aware Cloud rollback, read-only TKE diagnostics, release tooling, local Console integration gates, and the deployment identity cutover are code-complete locally; immutable publication, successful rollout, deployed browser, Gateway, and safe real verification evidence remain incomplete.",
       "requiredDeliverables": ["immutable digests", "production readiness", "ConfigMap-aware Cloud rollback", "read-only smoke", "verification receipt"],
       "completionEvidence": ["CI run", "rollout readback", "rollback and restore", "real QA evidence"]
     }

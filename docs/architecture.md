@@ -189,8 +189,8 @@ then requires the candidate to be contained in that main history before building
 
 Control Plane remains one Pod. Existing load evidence covers request concurrency
 and replay, but its historical per-resource renewal scan is not proof of the
-current Workspace renewal saga. Task 13 must rerun the current gates against an
-isolated PostgreSQL database. Additional replicas remain out of scope unless
+current Workspace renewal saga. The current gates must run against an isolated
+PostgreSQL database. Additional replicas remain out of scope unless
 production measurements justify the ownership and locking changes.
 
 Infrastructure alarms remain in Tencent Cloud Monitor. Business alarms are a

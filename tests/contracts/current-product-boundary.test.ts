@@ -12,7 +12,7 @@ async function json(path: string) {
   return JSON.parse(await text(path));
 }
 
-test("Pilot V2 contracts hard cut Gateway keys and source envelopes", async () => {
+test("Current contracts hard cut Gateway keys and source envelopes", async () => {
   const [freeze, sourceTruth, boundary, dtos] = await Promise.all([
     json("packages/contracts/opl-cloud-launch-freeze-contract.json"),
     json("packages/contracts/opl-cloud-console-source-truth-contract.json"),
@@ -73,7 +73,7 @@ test("Pilot V2 contracts hard cut Gateway keys and source envelopes", async () =
   assert.doesNotMatch(rotationDTO, /\n\s+keyId:\s*string;/);
 });
 
-test("Pilot V2 contracts hard cut Workspace purchase, access, and Runtime facts", async () => {
+test("Current contracts hard cut Workspace purchase, access, and Runtime facts", async () => {
   const [freeze, billing, pricing, business, product, evidence, sourceTruth] = await Promise.all([
     json("packages/contracts/opl-cloud-launch-freeze-contract.json"),
     json("packages/contracts/opl-cloud-billing-ledger-contract.json"),
@@ -185,7 +185,7 @@ test("Pilot V2 contracts hard cut Workspace purchase, access, and Runtime facts"
   });
 });
 
-test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and announcements", async () => {
+test("Current contracts hard cut operator resources, wallet adjustments, and announcements", async () => {
   const [management, sourceTruth, business, boundary, evidence, billing] = await Promise.all([
     json("packages/contracts/opl-cloud-management-contract.json"),
     json("packages/contracts/opl-cloud-console-source-truth-contract.json"),
@@ -390,7 +390,7 @@ test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and an
   assert.equal(announcement.implementation, "code_complete_local_focused_tests");
 });
 
-test("Pilot V2 binds delegated Gateway credentials to process-local Console sessions", async () => {
+test("Current Console binds delegated Gateway credentials to process-local Console sessions", async () => {
   const [management, boundary, deployment] = await Promise.all([
     json("packages/contracts/opl-cloud-management-contract.json"),
     json("packages/contracts/opl-cloud-service-boundary-contract.json"),
@@ -416,7 +416,7 @@ test("Pilot V2 binds delegated Gateway credentials to process-local Console sess
   });
 });
 
-test("Pilot V2 current human truth preserves public entry points and evidence levels", async () => {
+test("Current human truth preserves public entry points and evidence levels", async () => {
   const [invariants, architecture, status, consoleProduct, runbook, readme, devGuide, decisions, project] = await Promise.all([
     text("docs/invariants.md"),
     text("docs/architecture.md"),

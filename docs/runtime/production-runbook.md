@@ -221,8 +221,8 @@ OPL_CAPACITY_TESTS=1 go test ./internal/server \
 The historical gate creates an isolated schema, seeds 1,000 accounts and
 resource rows, sends 100 concurrent Console requests, and replays 20 resource
 commands. Its 1,000-resource renewal scan predates the Workspace-level renewal
-saga and is not current renewal evidence. Task 13 must run the current isolated
-PostgreSQL Workspace renewal suites without SKIP; do not use the historical scan
+saga and is not current renewal evidence. The current isolated PostgreSQL
+Workspace renewal suites must run without SKIP; do not use the historical scan
 to claim Pilot capacity or renewal readiness.
 
 The accepted local baseline used Go 1.22.2, PostgreSQL 16.14, and an i7-8700 host:

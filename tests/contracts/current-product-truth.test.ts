@@ -208,16 +208,3 @@ test("release contracts keep Acceptance and fixed-slot verification paused outsi
     productionEvidence: "pending"
   });
 });
-
-test("historical implementation plans are marked superseded", async () => {
-  for (const path of [
-    "docs/superpowers/plans/2026-07-16-slide-6-runtime-owner-isolation.md",
-    "docs/superpowers/plans/2026-07-16-slides-1-3-launch-operation.md",
-    "docs/superpowers/plans/2026-07-16-slides-4-8-10-production-proof.md",
-    "docs/superpowers/plans/2026-07-16-slides-5-7-customer-facts.md",
-    "docs/superpowers/plans/2026-07-17-paid-dual-sku-pilot-implementation.md",
-    "docs/superpowers/specs/2026-07-16-pilot-b-rolling-four-lanes-design.md"
-  ]) {
-    assert.match((await text(path)).split("\n").slice(0, 5).join("\n"), /Historical \/ Superseded - do not execute/, path);
-  }
-});

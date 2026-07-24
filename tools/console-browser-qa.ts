@@ -44,7 +44,7 @@ function workspace(id = "ws-1") {
       id, ownerAccountId: "acct-1", ownerUserId: "user-customer", state: "running",
       createdAt: "2026-07-15T00:00:00Z", updatedAt: NOW, name: "Second Workspace",
       url: "https://workspace.example.invalid/w/ws-2/", packageId: "pro", storageGb: 100,
-      autoRenew: false, priceVersion: "pilot-v2", currency: "USD", totalUsdMicros: 240_080_000,
+      autoRenew: false, priceVersion: "pilot-usd-2026-07-v1", currency: "USD", totalUsdMicros: 240_080_000,
       periodStart: "2026-07-15T00:00:00Z", paidThrough: "2026-08-15T00:00:00Z",
       renewalStatus: "manual", workspaceApiKeyId: "19"
     };
@@ -53,7 +53,7 @@ function workspace(id = "ws-1") {
     id: "ws-1", ownerAccountId: "acct-1", ownerUserId: "user-customer", state: "running",
     createdAt: "2026-07-01T00:00:00Z", updatedAt: NOW, name: "Pilot Workspace",
     url: "https://workspace.example.invalid/w/ws-1/", packageId: "basic", storageGb: 10,
-    autoRenew: false, priceVersion: "pilot-v2", currency: "USD", totalUsdMicros: 30_000_000,
+    autoRenew: false, priceVersion: "pilot-usd-2026-07-v1", currency: "USD", totalUsdMicros: 52_580_000,
     periodStart: "2026-07-01T00:00:00Z", paidThrough: "2026-08-01T00:00:00Z",
     renewalStatus: "manual", workspaceApiKeyId: "9"
   };
@@ -95,7 +95,7 @@ async function defaultServerFactory() {
   });
   await server.listen();
   const address = server.httpServer?.address();
-  if (!address || typeof address === "string") throw new Error("pilot_v2_browser_server_address_missing");
+  if (!address || typeof address === "string") throw new Error("console_browser_server_address_missing");
   return { origin: `http://127.0.0.1:${address.port}`, close: () => server.close() };
 }
 
@@ -154,15 +154,15 @@ async function apiFixture(route, state) {
     });
   }
   if (path === "/api/pricing/catalog") return fulfillJson(route, {
-    priceVersion: "pilot-v2", billingUnit: "month", displayCurrency: "USD", walletCurrency: "USD", currency: "USD",
+    priceVersion: "pilot-usd-2026-07-v1", billingUnit: "month", displayCurrency: "USD", walletCurrency: "USD", currency: "USD",
     packages: [
-      { id: "basic", name: "Basic", available: true, cpu: 2, memoryGb: 4, diskGb: 10, server: "2c4g", price: { priceVersion: "pilot-v2", currency: "USD", chargeUsdMicros: 30_000_000 } },
-      { id: "pro", name: "Pro", available: true, cpu: 8, memoryGb: 16, diskGb: 100, server: "8c16g", price: { priceVersion: "pilot-v2", currency: "USD", chargeUsdMicros: 240_080_000 } }
+      { id: "basic", name: "Basic", available: true, cpu: 2, memoryGb: 4, diskGb: 10, server: "2c4g", price: { priceVersion: "pilot-usd-2026-07-v1", currency: "USD", chargeUsdMicros: 52_580_000 } },
+      { id: "pro", name: "Pro", available: true, cpu: 8, memoryGb: 16, diskGb: 100, server: "8c16g", price: { priceVersion: "pilot-usd-2026-07-v1", currency: "USD", chargeUsdMicros: 240_080_000 } }
     ]
   });
   if (path === "/api/pricing/preview" && method === "POST") return fulfillJson(route, {
-    resourceType: "workspace", packageId: "basic", priceVersion: "pilot-v2", currency: "USD",
-    displayCurrency: "USD", billingUnit: "month", totalChargeUsdMicros: 30_000_000
+    resourceType: "workspace", packageId: "basic", priceVersion: "pilot-usd-2026-07-v1", currency: "USD",
+    displayCurrency: "USD", billingUnit: "month", totalChargeUsdMicros: 52_580_000
   });
   if (path === "/api/billing/receipts") return fulfillJson(route, source({ receipts: [], nextCursor: "", hasMore: false }, "ledger", "empty"));
   if (path === "/api/announcements") return fulfillJson(route, source(emptyPage, "control-plane", "empty"));
@@ -306,13 +306,13 @@ async function waitForText(page, text) {
         ancestors, body: document.body.innerText.slice(0, 1000), path: location.pathname
       };
     }).catch(() => ({ missing: true }));
-    throw new Error(`pilot_v2_browser_text_hidden:${text}:${JSON.stringify(diagnostic)}`, { cause: error });
+    throw new Error(`console_browser_text_hidden:${text}:${JSON.stringify(diagnostic)}`, { cause: error });
   }
 }
 
 async function assertNoViewportOverflow(page) {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-  if (overflow > 1) throw new Error(`pilot_v2_browser_viewport_overflow:${overflow}`);
+  if (overflow > 1) throw new Error(`console_browser_viewport_overflow:${overflow}`);
 }
 
 async function exerciseGatewayKeyLifecycle(page, state) {
@@ -328,7 +328,7 @@ async function exerciseGatewayKeyLifecycle(page, state) {
 
   const secretRow = page.locator("tr.secret-row");
   await secretRow.getByRole("button", { name: "复制", exact: true }).click();
-  if (await page.evaluate(() => navigator.clipboard.readText()) !== GENERAL_KEY) throw new Error("pilot_v2_browser_created_key_copy_failed");
+  if (await page.evaluate(() => navigator.clipboard.readText()) !== GENERAL_KEY) throw new Error("console_browser_created_key_copy_failed");
 
   let keyRow = page.getByRole("row").filter({ hasText: "Browser retry key" }).first();
   await keyRow.getByRole("button", { name: "使用说明", exact: true }).click();
@@ -339,7 +339,7 @@ async function exerciseGatewayKeyLifecycle(page, state) {
   await useDialog.getByRole("button", { name: "复制配置", exact: true }).click();
   const copiedConfiguration = await page.evaluate(() => navigator.clipboard.readText());
   for (const value of ["https://gflabtoken.cn/v1", GENERAL_KEY, "openai"]) {
-    if (!copiedConfiguration.includes(value)) throw new Error(`pilot_v2_browser_key_configuration_missing:${value}`);
+    if (!copiedConfiguration.includes(value)) throw new Error(`console_browser_key_configuration_missing:${value}`);
   }
   await useDialog.getByRole("button", { name: "关闭", exact: true }).last().click();
 
@@ -367,7 +367,7 @@ async function exerciseGatewayKeyLifecycle(page, state) {
   await waitForText(page, "API Key 已删除");
   await waitForText(page, "暂无数据");
 
-  if (state.keys.length !== 0 || state.emptyGatewayReadbacks < 1) throw new Error("pilot_v2_browser_gateway_empty_readback_failed");
+  if (state.keys.length !== 0 || state.emptyGatewayReadbacks < 1) throw new Error("console_browser_gateway_empty_readback_failed");
 }
 
 async function retryWalletAdjustment(page) {
@@ -382,12 +382,12 @@ async function retryWalletAdjustment(page) {
   await waitForText(page, "钱包调整已提交");
 }
 
-export async function runPilotV2BrowserQa({
+export async function runConsoleBrowserQa({
   network,
   serverFactory = defaultServerFactory,
   browserFactory = defaultBrowserFactory
 } = {}) {
-  if (network !== "fake-only") throw new Error("pilot_v2_browser_fake_only_required");
+  if (network !== "fake-only") throw new Error("console_browser_fake_only_required");
 
   const server = await serverFactory();
   let browser;
@@ -419,7 +419,7 @@ export async function runPilotV2BrowserQa({
       await page.goto(`${server.origin}/`, { waitUntil: "networkidle" });
       await waitForText(page, "邀请制 Workspace 与 API 服务。");
       const logoLoaded = await page.getByAltText("OPL Cloud").evaluate((image) => image.complete && image.naturalWidth > 0);
-      if (!logoLoaded) throw new Error("pilot_v2_browser_logo_missing");
+      if (!logoLoaded) throw new Error("console_browser_logo_missing");
       await page.goto(`${server.origin}/login`, { waitUntil: "networkidle" });
       await waitForText(page, "Console 登录");
 
@@ -429,8 +429,8 @@ export async function runPilotV2BrowserQa({
       await waitForText(page, "Workspace URL");
       await waitForText(page, "opl");
       const workspaceSelect = page.getByLabel("选择 Workspace");
-      if (await workspaceSelect.locator("option").count() !== 2) throw new Error("pilot_v2_browser_workspace_list_missing");
-      if (await workspaceSelect.inputValue() !== "ws-1") throw new Error("pilot_v2_browser_default_workspace_selection_failed");
+      if (await workspaceSelect.locator("option").count() !== 2) throw new Error("console_browser_workspace_list_missing");
+      if (await workspaceSelect.inputValue() !== "ws-1") throw new Error("console_browser_default_workspace_selection_failed");
       await waitForText(page, "https://workspace.example.invalid/w/ws-1/");
       if (name === "desktop") {
         const passwordRow = page.locator("dt", { hasText: "密码" }).locator("..");
@@ -442,12 +442,12 @@ export async function runPilotV2BrowserQa({
         await waitForText(page, WORKSPACE_KEYS["9"]);
         await keyRow.getByRole("button", { name: "复制" }).click();
         await workspaceSelect.selectOption("ws-2");
-        if (await workspaceSelect.inputValue() !== "ws-2") throw new Error("pilot_v2_browser_workspace_selection_failed");
+        if (await workspaceSelect.inputValue() !== "ws-2") throw new Error("console_browser_workspace_selection_failed");
         await waitForText(page, "https://workspace.example.invalid/w/ws-2/");
         await waitForText(page, "PRO");
         await waitForText(page, "2026/08/15");
         if (await page.getByText(WORKSPACE_PASSWORDS["ws-1"], { exact: true }).count() || await page.getByText(WORKSPACE_KEYS["9"], { exact: true }).count()) {
-          throw new Error("pilot_v2_browser_workspace_switch_secret_cleanup_failed");
+          throw new Error("console_browser_workspace_switch_secret_cleanup_failed");
         }
         await passwordRow.getByRole("button", { name: "显示" }).click();
         await waitForText(page, WORKSPACE_PASSWORDS["ws-2"]);
@@ -455,7 +455,7 @@ export async function runPilotV2BrowserQa({
         await waitForText(page, WORKSPACE_KEYS["19"]);
         await page.getByRole("link", { name: "账单", exact: true }).click();
         if (await page.getByText(WORKSPACE_PASSWORDS["ws-2"], { exact: true }).count() || await page.getByText(WORKSPACE_KEYS["19"], { exact: true }).count()) {
-          throw new Error("pilot_v2_browser_secret_cleanup_failed");
+          throw new Error("console_browser_secret_cleanup_failed");
         }
         state.sourceState = "available";
         await page.goto(`${server.origin}/console/api/keys?write=1`, { waitUntil: "networkidle" });
@@ -486,17 +486,17 @@ export async function runPilotV2BrowserQa({
       await context.close();
     }
 
-    if (state.unexpectedApi.length) throw new Error(`pilot_v2_browser_unexpected_api:${state.unexpectedApi.join(",")}`);
-    if (state.pageErrors.length) throw new Error(`pilot_v2_browser_page_error:${state.pageErrors.join(",")}`);
-    if (state.gatewayWrites.size !== 1 || state.walletWrites.size !== 1) throw new Error("pilot_v2_browser_idempotency_failed");
+    if (state.unexpectedApi.length) throw new Error(`console_browser_unexpected_api:${state.unexpectedApi.join(",")}`);
+    if (state.pageErrors.length) throw new Error(`console_browser_page_error:${state.pageErrors.join(",")}`);
+    if (state.gatewayWrites.size !== 1 || state.walletWrites.size !== 1) throw new Error("console_browser_idempotency_failed");
     const expectedGatewayActions = ["edit", "group", "disable", "enable", "quota-reset", "rate-reset", "delete"];
     if (state.gatewayMutationWrites.size !== expectedGatewayActions.length || JSON.stringify(state.gatewayActions) !== JSON.stringify(expectedGatewayActions)) {
-      throw new Error(`pilot_v2_browser_gateway_lifecycle_failed:${JSON.stringify(state.gatewayActions)}`);
+      throw new Error(`console_browser_gateway_lifecycle_failed:${JSON.stringify(state.gatewayActions)}`);
     }
-    if (state.revealCalls.get("12") !== 1) throw new Error(`pilot_v2_browser_created_key_reveal_failed:${state.revealCalls.get("12") || 0}`);
-    if (state.revealCalls.get("9") !== 1 || state.revealCalls.get("19") !== 1) throw new Error(`pilot_v2_browser_workspace_key_scope_failed:${JSON.stringify(Object.fromEntries(state.revealCalls))}`);
-    if (state.workspaceSecretReads.get("ws-1") !== 1 || state.workspaceSecretReads.get("ws-2") !== 1) throw new Error(`pilot_v2_browser_workspace_secret_scope_failed:${JSON.stringify(Object.fromEntries(state.workspaceSecretReads))}`);
-    if (state.externalRequests !== 0) throw new Error(`pilot_v2_browser_external_request:${state.externalRequests}`);
+    if (state.revealCalls.get("12") !== 1) throw new Error(`console_browser_created_key_reveal_failed:${state.revealCalls.get("12") || 0}`);
+    if (state.revealCalls.get("9") !== 1 || state.revealCalls.get("19") !== 1) throw new Error(`console_browser_workspace_key_scope_failed:${JSON.stringify(Object.fromEntries(state.revealCalls))}`);
+    if (state.workspaceSecretReads.get("ws-1") !== 1 || state.workspaceSecretReads.get("ws-2") !== 1) throw new Error(`console_browser_workspace_secret_scope_failed:${JSON.stringify(Object.fromEntries(state.workspaceSecretReads))}`);
+    if (state.externalRequests !== 0) throw new Error(`console_browser_external_request:${state.externalRequests}`);
     return {
       ok: true,
       evidenceLevel: "code-complete",
@@ -523,7 +523,7 @@ function networkArg(argv) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] || "").href) {
-  runPilotV2BrowserQa({ network: networkArg(process.argv.slice(2)) })
+  runConsoleBrowserQa({ network: networkArg(process.argv.slice(2)) })
     .then((result) => process.stdout.write(`${JSON.stringify(result, null, 2)}\n`))
     .catch((error) => {
       process.stderr.write(`${JSON.stringify({ ok: false, error: error.message }, null, 2)}\n`);
