@@ -114,7 +114,8 @@ test("current contracts expose only authoritative Pilot sources and controls", a
   assert.deepEqual(Object.keys(sourceTruth.sources.gateway), [
     "endpoint", "wallet", "groups", "keys", "usage", "usageStats", "accountUsageStats", "balanceHistory"
   ]);
-  assert.equal(product.pilotBoundary.primaryWorkspacePerAccount, 1);
+  assert.equal(product.pilotBoundary.workspaceCardinality, "many_per_account");
+  assert.equal(product.pilotBoundary.unpaidExpiry, "deny_access_zero_fabric_or_tencent_mutation_expire_by_provider");
   assert.equal(product.pilotBoundary.workspaceDataAuthority, "cbs");
   assert.deepEqual(product.pilotBoundary.unsupportedCustomerCapabilities, ["backup", "recovery", "sync", "transfer"]);
   assert.equal(product.pilotBoundary.autoRenewCustomerControl, "hidden_until_real_renewal_evidence");

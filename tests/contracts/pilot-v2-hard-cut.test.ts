@@ -91,16 +91,19 @@ test("Pilot V2 contracts hard cut Workspace purchase, access, and Runtime facts"
   assert.equal(freeze.workspaceLaunch.backgroundProgression, "non_review_and_manual_review_recovery_integrated_local_fake_verified");
   assert.equal(freeze.workspaceLaunch.nextBlockedStage, undefined);
   assert.deepEqual(freeze.workspaceLaunch.fulfillmentResources, ["compute", "storage", "attachment", "gateway_secret", "runtime"]);
-	assert.deepEqual(freeze.gateway.workspaceKeyLifecycle, {
-		launchConvergence: "zero_create_one_active_reuse_other_fail_closed",
-		rotationApi: "POST /api/workspaces/{workspaceId}/workspace-key/rotate",
-		mutationCredential: "session_delegated_user_bearer",
-		workspacePersistence: "workspace_api_key_id_only",
-		operationPersistence: "control_plane_runtime_operations_non_secret_phases",
-		phases: ["replacement_check", "replacement_create", "secret_write", "retire_old", "promote_replacement", "workspace_commit", "runtime_apply", "delete_old", "receipt", "complete"],
-		receiptType: "workspace.gateway_key_rotated.v1",
-		currentImplementation: "code_complete_local_focused_tests_only"
-	});
+  assert.deepEqual(freeze.gateway.workspaceKeyLifecycle, {
+    scopeIdentity: ["workspaceId", "workspaceApiKeyId"],
+    launchConvergence: "one_reserved_key_per_workspace",
+    rotationApi: "POST /api/workspaces/{workspaceId}/workspace-key/rotate",
+    mutationCredential: "session_delegated_user_bearer",
+    workspacePersistence: "workspace_api_key_id_only",
+    operationPersistence: "control_plane_runtime_operations_non_secret_phases",
+    phases: ["replacement_check", "replacement_create", "secret_write", "runtime_bind", "runtime_readback", "workspace_commit", "retire_old", "delete_old", "receipt", "complete"],
+    runtimeCredentialInvariant: "key_rotation_does_not_change_username_password_or_credential_version",
+    oldKeyRetirementGate: "only_after_runtime_authoritative_readback_and_atomic_workspace_commit",
+    receiptType: "workspace.gateway_key_rotated.v1",
+    currentImplementation: "code_complete_local_focused_tests_only"
+  });
   assert.equal(billing.chargePolicy.customerObject, "workspace");
   assert.equal(billing.chargePolicy.debitCardinalityPerPeriod, 1);
   assert.equal(billing.chargePolicy.launchOperationAction, "workspace.launch.v2");
@@ -221,11 +224,14 @@ test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and an
     batchSizeMax: 50
   });
   assert.equal(management.operatorProjection.perAccountUserOrUsageNPlusOne, false);
-  assert.equal(management.operatorProjection.usersPagination, "collect_all_coherent_sub2api_user_pages");
+  assert.equal(management.operatorProjection.usersPagination, "control_plane_order_limit_offset_count_then_current_page_sub2api_reads");
+  assert.equal(management.operatorProjection.remoteReadScope, "current_control_plane_page_only");
+  assert.equal(management.operatorProjection.scaleInvariant, "first_page_request_count_constant_for_100_and_1000_accounts");
   assert.equal(management.operatorProjection.persistence, "none_request_join_only");
   assert.equal(management.operatorProjection.keyCountRead, "selected_control_plane_page_only_bounded_concurrency_max_4");
   assert.equal(management.operatorProjection.readReplica, false);
   assert.equal(management.operatorProjection.partialFailure, "affected_nested_source_unavailable_without_zero_data");
+  assert.equal(management.workspaceOwnership.cardinality, "many_workspaces_per_account");
   assert.equal(management.operatorAuthPolicy.defaultRoute, "/console/overview");
   assert.equal(management.operatorAuthPolicy.consoleRouteBehavior, "owner_console_access");
   assert.equal(management.operatorAuthPolicy.navigation, "customer_routes_then_admin_routes");
@@ -301,7 +307,23 @@ test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and an
     "status", "createdAt", "expiresAt", "lastReadAt", "operationRef", "receiptRef"
   ]);
   assert.equal(resource.fabricAndLedgerPersistenceInControlPlane, false);
-  assert.equal(sourceTruth.sources.identity.operatorAccounts.pagination, "collect_all_coherent_sub2api_user_pages_then_control_plane_page_with_key_counts_only_for_selected_page");
+  assert.equal(sourceTruth.sources.identity.operatorAccounts.pagination, "control_plane_order_limit_offset_count_then_current_page_sub2api_reads");
+  assert.equal(sourceTruth.sources.identity.operatorAccounts.remoteReadScope, "current_control_plane_page_only");
+  assert.equal(sourceTruth.sources.operator.resources.providerAuthority, "live_fabric_batch_readback_only");
+  assert.equal(sourceTruth.sources.operator.resources.controlPlaneProviderSnapshotFallback, false);
+  assert.deepEqual(boundary.services.fabric.providerFactsBatchRead, {
+    endpoint: "POST /fabric/provider-facts/batch",
+    requestDto: { items: ["accountId", "workspaceId", "resourceType", "resourceId"] },
+    responseDto: { items: ["accountId", "workspaceId", "resourceType", "resourceId", "available", "facts", "errorCode"] },
+    batchSizeMax: 50,
+    readOnly: true,
+    computeAndStorageAuthority: "tencent_describe",
+    attachmentAndRuntimeAuthority: "fabric_and_kubernetes_live_readback",
+    independentTimeouts: true,
+    unavailableFallback: "none",
+    tencentMutationCount: 0
+  });
+  assert.deepEqual(boundary.services.fabric.gatewaySecretWrite.requestFields, ["accountId", "workspaceId", "workspaceApiKeyId", "fingerprint", "gatewayApiKey"]);
   assert.equal(sourceTruth.sources.identity.operatorAccounts.failure, "affected_nested_source_unavailable_without_zero_data");
   assert.deepEqual(sourceTruth.sources.operator.routes, {
     overview: "GET /api/operator/overview",

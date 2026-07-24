@@ -352,6 +352,30 @@ test("TKE diagnostics are read only and mutually exclusive with deploy", async (
   assert.doesNotMatch(runs, /\b(?:apply|delete|patch|scale)\b|set image|rollout restart/);
 });
 
+test("ordinary TKE release requires the real read-only rollout verifier", async () => {
+  const [workflow, contract] = await Promise.all([
+    readWorkflow(".github/workflows/deploy-tke-production.yml"),
+    readJson(deploymentContractPath)
+  ]);
+  const verifier = workflowJob(workflow, "verify-rollout-read-only");
+  const releaseGate = workflowJob(workflow, "release-gate");
+  const rollback = workflowJob(workflow, "rollback-live-qa");
+  const verifierRun = serializedRuns(verifier);
+
+  assert.equal(verifier.needs, "deploy");
+  assert.match(String(verifier.if), /!inputs\.bootstrap_mode.*needs\.deploy\.result == 'success'/);
+  assert.match(verifierRun, /api\/healthz/);
+  assert.match(verifierRun, /api\/production\/readiness/);
+  assert.match(verifierRun, /imageID|imageId/);
+  assert.match(verifierRun, /retired|404/);
+  assert.doesNotMatch(verifierRun, /purchase|redeem|model request|provider mutation/i);
+  assert.deepEqual(releaseGate.needs, ["deploy", "bootstrap-readiness", "verify-rollout-read-only"]);
+  assert.match(String(rollback.if), /verify-rollout-read-only/);
+  assert.equal(contract.productionReadOnlyRolloutVerifierJob.job, "verify-rollout-read-only");
+  assert.equal(contract.productionReadOnlyRolloutVerifierJob.readOnly, true);
+  assert.deepEqual(contract.productionReleaseGateJob.needs, ["deploy", "bootstrap-readiness", "verify-rollout-read-only"]);
+});
+
 test("TKE bootstrap deploy is approved, read only, and cannot complete a release", async () => {
   const workflow = await readWorkflow(".github/workflows/deploy-tke-production.yml");
   const input = workflow.on.workflow_dispatch.inputs.bootstrap_mode;

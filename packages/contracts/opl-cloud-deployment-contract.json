@@ -3,7 +3,7 @@
   "owner": "OPL Fabric",
   "purpose": "Deployment workflow, immutable Cloud and Workspace images, TKE handoff, read-only diagnostics, and production-verification safety.",
   "state": "current",
-  "machineBoundary": "GitHub workflow structure, runner isolation, deploy-time env sources, secret handling, immutable image release, ConfigMap-aware Cloud rollback, read-only diagnostics, existing Workspace preservation, Basic rollout readiness, paused standalone verification, and legacy global Secret retirement.",
+  "machineBoundary": "GitHub workflow structure, runner isolation, deploy-time env sources, secret handling, immutable image release, ConfigMap-aware Cloud rollback, real read-only ordinary-rollout verification, read-only diagnostics, existing Workspace preservation, Basic rollout readiness, paused standalone verification, and legacy global Secret retirement.",
   "lifecycle": {
     "type": "long_term_contract",
     "removalCondition": "Replace only with a newer current contract for the same boundary."
@@ -491,9 +491,8 @@
     "runner": [
       "ubuntu-latest"
     ],
-    "inputs": [
-      "bootstrap_mode"
-    ],
+    "inputs": ["bootstrap_mode"],
+    "needs": ["deploy", "bootstrap-readiness", "verify-rollout-read-only"],
     "requiredEnv": [],
     "steps": [
       "Require completed ordinary release"
@@ -506,6 +505,15 @@
       ]
     },
     "forbiddenRunTokens": []
+  },
+  "productionReadOnlyRolloutVerifierJob": {
+    "file": ".github/workflows/deploy-tke-production.yml",
+    "job": "verify-rollout-read-only",
+    "trigger": "ordinary_deploy_success",
+    "readOnly": true,
+    "batchOrMutationCount": 0,
+    "checks": ["cloud_health", "production_readiness", "ready_pod_image_id", "workspace_digest_unchanged", "source_envelopes", "retired_routes_404", "desktop_console", "mobile_console"],
+    "forbidden": ["charge", "model_request", "tencent_mutation"]
   },
   "productionLegacySecretCleanupJob": {
     "file": ".github/workflows/deploy-tke-production.yml",
@@ -559,7 +567,7 @@
   "productionRollbackJob": {
     "file": ".github/workflows/deploy-tke-production.yml",
     "job": "rollback-live-qa",
-    "trigger": "post_snapshot_deploy_or_bootstrap_readiness_not_successful",
+    "trigger": "post_snapshot_deploy_bootstrap_or_read_only_verifier_not_successful",
     "runner": [
       "self-hosted",
       "tencent-cloud",

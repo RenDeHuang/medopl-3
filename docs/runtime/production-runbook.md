@@ -24,10 +24,11 @@ npm run validate:production-manifest -- \
 - Tencent mutation credentials, region, cluster, subnet, and security groups;
 - internal service token and AionUI password seed.
 
-Secrets must be GitHub/Kubernetes secrets. Customer Workspace Gateway Keys are
-account-scoped Kubernetes Secrets written by Fabric, not a global deployment
-environment variable. Never place credentials in the manifest, command
-arguments, logs, or verifier artifacts.
+Secrets must be GitHub/Kubernetes secrets. New customer Workspace Gateway Keys
+use Workspace-scoped Kubernetes Secrets written by Fabric, not a global
+deployment environment variable. Existing account-scoped Secrets are read-only
+compatibility until the target Workspace's first Key rotation. Never place
+credentials in the manifest, command arguments, logs, or verifier artifacts.
 
 Console exposes no Gateway base-address API or card. Never expose
 `OPL_SUB2API_BASE_URL` or link ordinary users to the Sub2API backend. Cloud does
@@ -429,10 +430,12 @@ must stay read-only and never buy a second Workspace package.
   refund identity and verify its readback.
 - debit succeeded with partial or unknown provider result: enter `manual_review`
   without refund, cleanup, or repurchase.
-- one Workspace renewal owns one combined debit and the same CVM/CBS IDs. Resume
+- each Workspace renewal owns one combined debit and the same CVM/CBS IDs. Resume
   from its persisted phase; never run independent customer compute/storage renewal.
 - active entitlement with a missing receipt retries only the Ledger write.
-- unpaid expiry stops compute and denies access; it never deletes CBS.
+- unpaid expiry denies access and records
+  `providerAction=none_expire_by_provider`; it performs zero Fabric/Tencent stop,
+  renew, destroy, or delete mutations.
 - `autoRenew=true` is unavailable to Pilot users until a real approved renewal
   has been proven.
 

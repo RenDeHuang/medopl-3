@@ -52,6 +52,19 @@ func TestNoLegacyWorkspaceBillingConsumer(t *testing.T) {
 	}
 }
 
+func TestWorkspaceLaunchIdentityCreatesDistinctWorkspacesPerIdempotencyIntent(t *testing.T) {
+	first := newWorkspaceLaunchOperation("acct-alpha", "usr-alpha", "Alpha", "basic", 10, false, pilotPriceVersion, 52_580_000, "launch-first")
+	replay := newWorkspaceLaunchOperation("acct-alpha", "usr-alpha", "Alpha", "basic", 10, false, pilotPriceVersion, 52_580_000, "launch-first")
+	second := newWorkspaceLaunchOperation("acct-alpha", "usr-alpha", "Beta", "basic", 10, false, pilotPriceVersion, 52_580_000, "launch-second")
+
+	if first.WorkspaceID == "" || first.WorkspaceID != replay.WorkspaceID {
+		t.Fatalf("same launch intent must keep one Workspace identity: first=%q replay=%q", first.WorkspaceID, replay.WorkspaceID)
+	}
+	if first.WorkspaceID == second.WorkspaceID {
+		t.Fatalf("different launch intents must create distinct Workspaces: first=%q second=%q", first.WorkspaceID, second.WorkspaceID)
+	}
+}
+
 func TestWorkspaceLaunchResponseAllowsOnlyCustomerSafeFields(t *testing.T) {
 	operation := workspaceLaunchOperation{
 		ID: "launch-alpha", Status: "unknown", SchemaVersion: workspaceLaunchSchemaVersion, RequestHash: "hash", Phase: "debit_pending",

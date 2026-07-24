@@ -1103,7 +1103,7 @@ func TestWorkspaceRenewalStorageAbsentAfterComputeRenewedNeedsManualReviewWithou
 	}
 }
 
-func TestWorkspaceRenewalExpiryStopsComputeAndNeverDeletesCBS(t *testing.T) {
+func TestWorkspaceRenewalExpiryDeniesAccessWithoutProviderMutation(t *testing.T) {
 	fixture := newWorkspaceRenewalWorkerFixture(t, nil)
 	workspace, _ := fixture.app.getWorkspace(stringValue(fixture.workspace["id"]))
 	paidThrough := time.Now().UTC().Add(-time.Minute)
@@ -1121,10 +1121,11 @@ func TestWorkspaceRenewalExpiryStopsComputeAndNeverDeletesCBS(t *testing.T) {
 		t.Fatalf("expired Workspace=%#v", expired)
 	}
 	events := strings.Join(*fixture.events, ",")
-	if !strings.Contains(events, "fabric.compute.cleanup") || strings.Contains(events, "fabric.storage.cleanup") || len(fixture.sub2API.charges) != 0 {
+	if strings.Contains(events, "fabric.compute.cleanup") || strings.Contains(events, "fabric.storage.cleanup") || strings.Contains(events, "fabric.compute.sync") || strings.Contains(events, "fabric.storage.sync") || len(fixture.sub2API.charges) != 0 {
 		t.Fatalf("expiry events=%#v charges=%#v", *fixture.events, fixture.sub2API.charges)
 	}
-	if len(fixture.ledger.receipts) != 1 || fixture.ledger.receipts[0].Type != "billing.workspace_expired.v1" || strings.Contains(string(mustJSON(fixture.ledger.receipts[0])), "password") {
+	receiptJSON := string(mustJSON(fixture.ledger.receipts[0]))
+	if len(fixture.ledger.receipts) != 1 || fixture.ledger.receipts[0].Type != "billing.workspace_expired.v1" || !strings.Contains(receiptJSON, `"providerAction":"none_expire_by_provider"`) || strings.Contains(receiptJSON, "password") {
 		t.Fatalf("expiry receipts=%#v", fixture.ledger.receipts)
 	}
 }

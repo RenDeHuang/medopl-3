@@ -623,6 +623,80 @@ func TestOperatorResourceOwnerFields(t *testing.T) {
 	}
 }
 
+func TestOperatorResourceDoesNotLabelControlPlaneSnapshotAsFabric(t *testing.T) {
+	store := newMemoryTableStore()
+	seedOperatorProjectionAccount(t, store, "acct-alpha", "usr-alpha", "alpha@example.com", 41)
+	mustStore(t, store.SaveWorkspace(context.Background(), map[string]any{
+		"id": "ws-alpha", "name": "Alpha", "accountId": "acct-alpha", "ownerAccountId": "acct-alpha", "ownerUserId": "usr-alpha", "state": "active",
+		"createdAt": "2026-07-18T00:00:00Z", "updatedAt": "2026-07-19T00:00:00Z",
+	}))
+	mustStore(t, store.SaveCompute(context.Background(), map[string]any{
+		"id": "compute-alpha", "accountId": "acct-alpha", "workspaceId": "ws-alpha", "instanceType": "S5.MEDIUM4",
+		"providerResourceId": "ins-stale", "zone": "ap-shanghai-2", "providerStatus": "running", "status": "running",
+		"deadline": "2026-08-18T00:00:00Z", "lastProviderSyncAt": "2026-07-19T03:00:00Z",
+	}))
+	server, err := NewPersistentServer(controlplane.NewService(&operatorProjectionLedger{receipts: map[string]clients.Receipt{}}, &operatorProjectionNoOperationsFabric{}, newOperatorProjectionClient(operatorProjectionUser(41, "alpha@example.com", "active", 1_000_000))), store)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response := requestWithSession(t, server, reservedOperatorSessionForTest(t, server), http.MethodGet, "/api/operator/workspaces/ws-alpha", "")
+	if response.Code != http.StatusOK {
+		t.Fatalf("operator workspace detail = %d: %s", response.Code, response.Body.String())
+	}
+	resources := mapField(decodeOperatorEnvelope(t, response), "data")["resources"].([]any)
+	if len(resources) != 1 {
+		t.Fatalf("resources = %#v", resources)
+	}
+	resource := resources[0].(map[string]any)
+	for _, field := range []string{"packageOrSpec", "providerId", "zone", "status", "expiresAt", "lastReadAt"} {
+		envelope := mapField(resource, field)
+		if envelope["source"] == "fabric" && envelope["available"] == true {
+			t.Fatalf("Control Plane snapshot was mislabeled as live Fabric %s: %#v", field, envelope)
+		}
+	}
+}
+
+func TestOperatorAccountFirstPageRemoteReadsStayBoundedAtScale(t *testing.T) {
+	requestCounts := map[int]int{}
+	for _, accountCount := range []int{100, 1000} {
+		store := newMemoryTableStore()
+		client := newOperatorProjectionClient()
+		client.testSub2APIClient.identities = map[string]clients.Sub2APIIdentity{}
+		for i := 1; i <= accountCount; i++ {
+			accountID := fmt.Sprintf("acct-%04d", i)
+			userID := fmt.Sprintf("usr-%04d", i)
+			email := fmt.Sprintf("user-%04d@example.com", i)
+			remoteID := int64(1000 + i)
+			seedOperatorProjectionAccount(t, store, accountID, userID, email, remoteID)
+			identity := clients.Sub2APIIdentity{ID: remoteID, Email: email, Status: "active"}
+			client.testSub2APIClient.identities[email] = identity
+			client.users = append(client.users, operatorProjectionUser(remoteID, email, "active", int64(i)))
+			client.userUsage[remoteID] = clients.Sub2APIBatchUserUsage{UserID: remoteID}
+		}
+		server, err := NewPersistentServer(controlplane.NewService(fakeLedgerClient{}, &fakeFabricClient{}, client), store)
+		if err != nil {
+			t.Fatal(err)
+		}
+		response := requestWithSession(t, server, reservedOperatorSessionForTest(t, server), http.MethodGet, "/api/operator/accounts?page=1&pageSize=20", "")
+		if response.Code != http.StatusOK {
+			t.Fatalf("%d-account first page = %d: %s", accountCount, response.Code, response.Body.String())
+		}
+		data := mapField(decodeOperatorEnvelope(t, response), "data")
+		if data["total"] != float64(accountCount+1) || len(data["items"].([]any)) != 20 {
+			t.Fatalf("%d-account page = %#v", accountCount, data)
+		}
+		for _, ids := range client.requestedUserIDs {
+			if len(ids) > 50 {
+				t.Fatalf("%d-account batch exceeded 50: %d", accountCount, len(ids))
+			}
+		}
+		requestCounts[accountCount] = client.adminUsersCalls + client.batchUsersCalls + client.batchKeysCalls + client.singleUserCalls + len(client.keyListCalls)
+	}
+	if requestCounts[100] != requestCounts[1000] || requestCounts[100] > 50 {
+		t.Fatalf("first-page remote request count must be fixed and bounded: %#v", requestCounts)
+	}
+}
+
 func TestOperatorResourceUnavailableFields(t *testing.T) {
 	store := newMemoryTableStore()
 	seedOperatorProjectionAccount(t, store, "acct-alpha", "usr-alpha", "alpha@example.com", 41)
