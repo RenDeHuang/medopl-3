@@ -98,7 +98,7 @@ test("Pilot V2 contracts hard cut Workspace purchase, access, and Runtime facts"
     mutationCredential: "session_delegated_user_bearer",
     workspacePersistence: "workspace_api_key_id_only",
     operationPersistence: "control_plane_runtime_operations_non_secret_phases",
-    phases: ["replacement_check", "replacement_create", "secret_write", "runtime_bind", "runtime_readback", "workspace_commit", "retire_old", "delete_old", "receipt", "complete"],
+    phases: ["replacement_check", "replacement_create", "secret_write", "runtime_bind", "runtime_readback", "workspace_commit", "retire_old", "promote_new", "delete_old", "receipt", "complete"],
     runtimeCredentialInvariant: "key_rotation_does_not_change_username_password_or_credential_version",
     oldKeyRetirementGate: "only_after_runtime_authoritative_readback_and_atomic_workspace_commit",
     receiptType: "workspace.gateway_key_rotated.v1",
@@ -217,16 +217,21 @@ test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and an
     health: "GET /api/operator/health"
   });
   assert.deepEqual(management.operatorProjection.sub2apiReads, {
-    users: "GET /api/v1/admin/users",
+    currentPageUsers: "GET /api/v1/admin/users/{userId}",
     usersUsage: "POST /api/v1/admin/dashboard/users-usage",
     apiKeysUsage: "POST /api/v1/admin/dashboard/api-keys-usage",
     currentPageKeyCounts: "GET /api/v1/admin/users/{userId}/api-keys",
     batchSizeMax: 50
   });
-  assert.equal(management.operatorProjection.perAccountUserOrUsageNPlusOne, false);
+  assert.equal("perAccountUserOrUsageNPlusOne" in management.operatorProjection, false);
+  assert.equal(management.operatorProjection.pageSizeDefault, 20);
+  assert.equal(management.operatorProjection.userAndBalanceRead, "current_page_exact_id_bounded_concurrency_max_4");
+  assert.equal(management.operatorProjection.userReadConcurrencyMax, 4);
+  assert.equal(management.operatorProjection.usageRead, "current_page_user_ids_batch_required");
+  assert.equal(management.operatorProjection.workspaceCountRead, "single_control_plane_group_by_for_current_page");
   assert.equal(management.operatorProjection.usersPagination, "control_plane_order_limit_offset_count_then_current_page_sub2api_reads");
   assert.equal(management.operatorProjection.remoteReadScope, "current_control_plane_page_only");
-  assert.equal(management.operatorProjection.scaleInvariant, "first_page_request_count_constant_for_100_and_1000_accounts");
+  assert.equal(management.operatorProjection.scaleInvariant, "same_page_size_request_count_equal_for_100_and_1000_accounts");
   assert.equal(management.operatorProjection.persistence, "none_request_join_only");
   assert.equal(management.operatorProjection.keyCountRead, "selected_control_plane_page_only_bounded_concurrency_max_4");
   assert.equal(management.operatorProjection.readReplica, false);
@@ -309,6 +314,9 @@ test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and an
   assert.equal(resource.fabricAndLedgerPersistenceInControlPlane, false);
   assert.equal(sourceTruth.sources.identity.operatorAccounts.pagination, "control_plane_order_limit_offset_count_then_current_page_sub2api_reads");
   assert.equal(sourceTruth.sources.identity.operatorAccounts.remoteReadScope, "current_control_plane_page_only");
+  assert.equal(sourceTruth.sources.identity.operatorAccounts.userAndBalanceRead, "current_page_exact_id_bounded_concurrency_max_4");
+  assert.equal(sourceTruth.sources.identity.operatorAccounts.usageRead, "current_page_user_ids_batch_required");
+  assert.equal(sourceTruth.sources.identity.operatorAccounts.workspaceCountRead, "single_control_plane_group_by_for_current_page");
   assert.equal(sourceTruth.sources.operator.resources.providerAuthority, "live_fabric_batch_readback_only");
   assert.equal(sourceTruth.sources.operator.resources.controlPlaneProviderSnapshotFallback, false);
   assert.deepEqual(boundary.services.fabric.providerFactsBatchRead, {
@@ -334,6 +342,8 @@ test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and an
   });
   assert.equal(boundary.services.controlPlane.operatorProjection.persistence, "none_request_join_only");
   assert.deepEqual(boundary.services.controlPlane.operatorProjection.authorities, ["control_plane", "sub2api", "fabric", "ledger", "runtime"]);
+  assert.equal(boundary.services.controlPlane.operatorProjection.userAndBalanceRead, "current_page_exact_id_bounded_concurrency_max_4");
+  assert.equal(boundary.services.controlPlane.operatorProjection.usageRead, "current_page_user_ids_batch_required");
   assert.deepEqual(boundary.services.controlPlane.accountOwnerAuthorization, {
     authority: "active_account_owner_graph",
     reservedAdminOwnerAccount: "acct-admin",
@@ -374,7 +384,7 @@ test("Pilot V2 contracts hard cut operator resources, wallet adjustments, and an
     recoveryRequestFields: ["accountId", "billingOperationId", "evidenceRef"],
     implementation: "integrated_local_fake_verified"
   });
-  assert.equal(boundary.externalServices.gateway.currentImplementation, "paginated_users_batch_usage_current_page_bounded_key_counts_and_full_delegated_key_parity_code_complete_local_only");
+  assert.equal(boundary.externalServices.gateway.currentImplementation, "exact_id_current_page_users_batch_usage_bounded_key_counts_and_full_delegated_key_parity_code_complete_local_only");
   const announcement = business.objectKinds.find((entry: { kind: string }) => entry.kind === "Announcement");
   assert.equal(Boolean(announcement), true);
   assert.equal(announcement.implementation, "code_complete_local_focused_tests");

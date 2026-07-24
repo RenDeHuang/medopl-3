@@ -346,7 +346,7 @@
       "mutationCredential": "session_delegated_user_bearer",
       "workspacePersistence": "workspace_api_key_id_only",
       "operationPersistence": "control_plane_runtime_operations_non_secret_phases",
-      "phases": ["replacement_check", "replacement_create", "secret_write", "runtime_bind", "runtime_readback", "workspace_commit", "retire_old", "delete_old", "receipt", "complete"],
+      "phases": ["replacement_check", "replacement_create", "secret_write", "runtime_bind", "runtime_readback", "workspace_commit", "retire_old", "promote_new", "delete_old", "receipt", "complete"],
       "runtimeCredentialInvariant": "key_rotation_does_not_change_username_password_or_credential_version",
       "oldKeyRetirementGate": "only_after_runtime_authoritative_readback_and_atomic_workspace_commit",
       "receiptType": "workspace.gateway_key_rotated.v1",

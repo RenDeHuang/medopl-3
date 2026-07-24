@@ -3,8 +3,14 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const NOW = "2026-07-19T12:00:00Z";
-const WORKSPACE_PASSWORD = "fixture-workspace-password";
-const WORKSPACE_KEY = "sk-fixture-workspace-key";
+const WORKSPACE_PASSWORDS = Object.freeze({
+  "ws-1": "fixture-workspace-password",
+  "ws-2": "fixture-second-workspace-password"
+});
+const WORKSPACE_KEYS = Object.freeze({
+  "9": "sk-fixture-workspace-key",
+  "19": "sk-fixture-second-workspace-key"
+});
 const GENERAL_KEY = "sk-fixture-general-key";
 const VIEWPORTS = Object.freeze({
   desktop: Object.freeze({ width: 1440, height: 900 }),
@@ -21,18 +27,28 @@ function unavailable(name) {
 
 function gatewayKey(id = "11", name = "General fixture key", input = {}) {
   return {
-    id, name, kind: id === "9" ? "workspace" : "general", status: "active",
+    id, name, kind: Object.hasOwn(WORKSPACE_KEYS, id) ? "workspace" : "general", status: "active",
     groupId: input.groupId || "101", ipWhitelist: input.ipWhitelist || [], ipBlacklist: input.ipBlacklist || [],
     quotaUsdMicros: input.quotaUsdMicros ?? 10_000_000, quotaUsedUsdMicros: 250_000,
     rateLimit5hUsdMicros: input.rateLimit5hUsdMicros || 0, rateLimit1dUsdMicros: input.rateLimit1dUsdMicros || 0,
     rateLimit7dUsdMicros: input.rateLimit7dUsdMicros || 0,
     usage5hUsdMicros: 0, usage1dUsdMicros: 10_000, usage7dUsdMicros: 25_000, currentConcurrency: 0,
     expiresAt: "2026-08-18T12:00:00Z", lastUsedAt: NOW, lastUsedIp: "127.0.0.1", createdAt: NOW, updatedAt: NOW,
-    manageable: id !== "9", deletable: id !== "9"
+    manageable: !Object.hasOwn(WORKSPACE_KEYS, id), deletable: !Object.hasOwn(WORKSPACE_KEYS, id)
   };
 }
 
-function workspace() {
+function workspace(id = "ws-1") {
+  if (id === "ws-2") {
+    return {
+      id, ownerAccountId: "acct-1", ownerUserId: "user-customer", state: "running",
+      createdAt: "2026-07-15T00:00:00Z", updatedAt: NOW, name: "Second Workspace",
+      url: "https://workspace.example.invalid/w/ws-2/", packageId: "pro", storageGb: 100,
+      autoRenew: false, priceVersion: "pilot-v2", currency: "USD", totalUsdMicros: 240_080_000,
+      periodStart: "2026-07-15T00:00:00Z", paidThrough: "2026-08-15T00:00:00Z",
+      renewalStatus: "manual", workspaceApiKeyId: "19"
+    };
+  }
   return {
     id: "ws-1", ownerAccountId: "acct-1", ownerUserId: "user-customer", state: "running",
     createdAt: "2026-07-01T00:00:00Z", updatedAt: NOW, name: "Pilot Workspace",
@@ -116,20 +132,33 @@ async function apiFixture(route, state) {
     }, "control-plane"), 200, { "x-opl-csrf-token": "csrf-fixture" });
   }
 
-  if (path === "/api/workspaces" && method === "GET") return fulfillJson(route, source({ items: [workspace()], total: 1 }));
+  if (path === "/api/workspaces" && method === "GET") return fulfillJson(route, source({ items: [workspace(), workspace("ws-2")], total: 2 }));
   if (path === "/api/workspace-launches" && method === "GET") return fulfillJson(route, []);
-  if (path === "/api/workspaces/ws-1/runtime-status") return fulfillJson(route, source({
-    workspaceId: "ws-1", status: "running", ready: true, runtimeId: "runtime-1",
-    url: workspace().url, serviceName: "runtime-ws-1", checks: [{ name: "ready_pod_uses_retained_pvc", ok: true }],
+  const runtimeMatch = path.match(/^\/api\/workspaces\/(ws-[12])\/runtime-status$/);
+  if (runtimeMatch) {
+    const workspaceId = runtimeMatch[1];
+    state.runtimeReads.set(workspaceId, (state.runtimeReads.get(workspaceId) || 0) + 1);
+    return fulfillJson(route, source({
+    workspaceId, status: "running", ready: true, runtimeId: `runtime-${workspaceId}`,
+    url: workspace(workspaceId).url, serviceName: `runtime-${workspaceId}`, checks: [{ name: "ready_pod_uses_retained_pvc", ok: true }],
     access: { username: "opl", credentialStatus: "configured", credentialVersion: "1" }
-  }, "fabric"));
-  if (path === "/api/workspaces/ws-1/runtime-credentials/reveal" && method === "POST") return fulfillJson(route, {
-    workspaceId: "ws-1",
-    access: { account: "acct-1", username: "opl", password: WORKSPACE_PASSWORD, credentialStatus: "configured", credentialVersion: "1" }
-  });
+    }, "fabric"));
+  }
+  const credentialMatch = path.match(/^\/api\/workspaces\/(ws-[12])\/runtime-credentials\/reveal$/);
+  if (credentialMatch && method === "POST") {
+    const workspaceId = credentialMatch[1];
+    state.workspaceSecretReads.set(workspaceId, (state.workspaceSecretReads.get(workspaceId) || 0) + 1);
+    return fulfillJson(route, {
+      workspaceId,
+      access: { account: "acct-1", username: "opl", password: WORKSPACE_PASSWORDS[workspaceId], credentialStatus: "configured", credentialVersion: "1" }
+    });
+  }
   if (path === "/api/pricing/catalog") return fulfillJson(route, {
     priceVersion: "pilot-v2", billingUnit: "month", displayCurrency: "USD", walletCurrency: "USD", currency: "USD",
-    packages: [{ id: "basic", name: "Basic", available: true, cpu: 2, memoryGb: 4, diskGb: 10, server: "2c4g", price: { priceVersion: "pilot-v2", currency: "USD", chargeUsdMicros: 30_000_000 } }]
+    packages: [
+      { id: "basic", name: "Basic", available: true, cpu: 2, memoryGb: 4, diskGb: 10, server: "2c4g", price: { priceVersion: "pilot-v2", currency: "USD", chargeUsdMicros: 30_000_000 } },
+      { id: "pro", name: "Pro", available: true, cpu: 8, memoryGb: 16, diskGb: 100, server: "8c16g", price: { priceVersion: "pilot-v2", currency: "USD", chargeUsdMicros: 240_080_000 } }
+    ]
   });
   if (path === "/api/pricing/preview" && method === "POST") return fulfillJson(route, {
     resourceType: "workspace", packageId: "basic", priceVersion: "pilot-v2", currency: "USD",
@@ -204,11 +233,13 @@ async function apiFixture(route, state) {
   }
   const revealMatch = path.match(/^\/api\/gateway\/keys\/(\d+)\/reveal$/);
   if (revealMatch && method === "POST") {
-    const key = revealMatch[1] === "9" ? gatewayKey("9", "Workspace Key") : state.keys.find((item) => item.id === revealMatch[1]);
+    const key = Object.hasOwn(WORKSPACE_KEYS, revealMatch[1])
+      ? gatewayKey(revealMatch[1], "Workspace Key")
+      : state.keys.find((item) => item.id === revealMatch[1]);
     if (!key) return fulfillJson(route, { error: "gateway_key_not_found" }, 404);
     state.revealCalls.set(key.id, (state.revealCalls.get(key.id) || 0) + 1);
     return fulfillJson(route, source({
-      id: key.id, name: key.name, status: key.status, value: key.id === "9" ? WORKSPACE_KEY : GENERAL_KEY
+      id: key.id, name: key.name, status: key.status, value: WORKSPACE_KEYS[key.id] || GENERAL_KEY
     }, "sub2api"), 200, { "cache-control": "private, no-store" });
   }
 
@@ -364,6 +395,7 @@ export async function runPilotV2BrowserQa({
     role: "customer", sourceState: "available", keys: [],
     gatewayWrites: new Set(), walletWrites: new Set(), lostGatewayResponses: new Set(), lostWalletResponses: new Set(),
     gatewayMutationWrites: new Set(), gatewayActions: [], revealCalls: new Map(), emptyGatewayReadbacks: 0,
+    runtimeReads: new Map(), workspaceSecretReads: new Map(),
     unexpectedApi: [], externalRequests: 0, pageErrors: []
   };
   try {
@@ -396,17 +428,33 @@ export async function runPilotV2BrowserQa({
       await page.goto(`${server.origin}/console/workspace?viewport=${name}`, { waitUntil: "networkidle" });
       await waitForText(page, "Workspace URL");
       await waitForText(page, "opl");
+      const workspaceSelect = page.getByLabel("选择 Workspace");
+      if (await workspaceSelect.locator("option").count() !== 2) throw new Error("pilot_v2_browser_workspace_list_missing");
+      if (await workspaceSelect.inputValue() !== "ws-1") throw new Error("pilot_v2_browser_default_workspace_selection_failed");
+      await waitForText(page, "https://workspace.example.invalid/w/ws-1/");
       if (name === "desktop") {
         const passwordRow = page.locator("dt", { hasText: "密码" }).locator("..");
         await passwordRow.getByRole("button", { name: "显示" }).click();
-        await waitForText(page, WORKSPACE_PASSWORD);
+        await waitForText(page, WORKSPACE_PASSWORDS["ws-1"]);
         await passwordRow.getByRole("button", { name: "复制" }).click();
         const keyRow = page.locator("dt", { hasText: "Workspace Key" }).locator("..");
         await keyRow.getByRole("button", { name: "显示" }).click();
-        await waitForText(page, WORKSPACE_KEY);
+        await waitForText(page, WORKSPACE_KEYS["9"]);
         await keyRow.getByRole("button", { name: "复制" }).click();
+        await workspaceSelect.selectOption("ws-2");
+        if (await workspaceSelect.inputValue() !== "ws-2") throw new Error("pilot_v2_browser_workspace_selection_failed");
+        await waitForText(page, "https://workspace.example.invalid/w/ws-2/");
+        await waitForText(page, "PRO");
+        await waitForText(page, "2026/08/15");
+        if (await page.getByText(WORKSPACE_PASSWORDS["ws-1"], { exact: true }).count() || await page.getByText(WORKSPACE_KEYS["9"], { exact: true }).count()) {
+          throw new Error("pilot_v2_browser_workspace_switch_secret_cleanup_failed");
+        }
+        await passwordRow.getByRole("button", { name: "显示" }).click();
+        await waitForText(page, WORKSPACE_PASSWORDS["ws-2"]);
+        await keyRow.getByRole("button", { name: "显示" }).click();
+        await waitForText(page, WORKSPACE_KEYS["19"]);
         await page.getByRole("link", { name: "账单", exact: true }).click();
-        if (await page.getByText(WORKSPACE_PASSWORD, { exact: true }).count() || await page.getByText(WORKSPACE_KEY, { exact: true }).count()) {
+        if (await page.getByText(WORKSPACE_PASSWORDS["ws-2"], { exact: true }).count() || await page.getByText(WORKSPACE_KEYS["19"], { exact: true }).count()) {
           throw new Error("pilot_v2_browser_secret_cleanup_failed");
         }
         state.sourceState = "available";
@@ -446,6 +494,8 @@ export async function runPilotV2BrowserQa({
       throw new Error(`pilot_v2_browser_gateway_lifecycle_failed:${JSON.stringify(state.gatewayActions)}`);
     }
     if (state.revealCalls.get("12") !== 1) throw new Error(`pilot_v2_browser_created_key_reveal_failed:${state.revealCalls.get("12") || 0}`);
+    if (state.revealCalls.get("9") !== 1 || state.revealCalls.get("19") !== 1) throw new Error(`pilot_v2_browser_workspace_key_scope_failed:${JSON.stringify(Object.fromEntries(state.revealCalls))}`);
+    if (state.workspaceSecretReads.get("ws-1") !== 1 || state.workspaceSecretReads.get("ws-2") !== 1) throw new Error(`pilot_v2_browser_workspace_secret_scope_failed:${JSON.stringify(Object.fromEntries(state.workspaceSecretReads))}`);
     if (state.externalRequests !== 0) throw new Error(`pilot_v2_browser_external_request:${state.externalRequests}`);
     return {
       ok: true,
@@ -455,6 +505,8 @@ export async function runPilotV2BrowserQa({
       roles: ["customer", "operator"],
       sourceStates: ["available", "empty", "unavailable", "error"],
       repeatedWrites: { gatewayKey: state.gatewayWrites.size, walletAdjustment: state.walletWrites.size },
+      workspaceSelection: state.runtimeReads.has("ws-1") && state.runtimeReads.has("ws-2"),
+      workspaceSecretReads: Object.fromEntries(state.workspaceSecretReads),
       keyInteractions: state.gatewayActions,
       secretCleanup: true,
       externalRequests: state.externalRequests

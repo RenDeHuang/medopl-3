@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -379,7 +380,7 @@ func (c *workspaceKeyRotationClient) fail(stage string) bool {
 }
 
 func (c *workspaceKeyRotationClient) CreateUserKey(_ context.Context, credential clients.SessionDelegatedCredential, userID int64, input clients.Sub2APICreateKeyInput, idempotencyKey string) (clients.Sub2APIWorkspaceKey, error) {
-	if credential.Bearer != "test-user-delegated-token" || userID != 41 || idempotencyKey == "" || input.Name != workspaceReservedKeyName("ws-alpha") {
+	if credential.Bearer != "test-user-delegated-token" || userID != 41 || idempotencyKey == "" || !strings.HasPrefix(input.Name, "opl-workspace-replacement-") {
 		return clients.Sub2APIWorkspaceKey{}, errors.New("invalid replacement create")
 	}
 	if c.createStarted != nil {
@@ -393,7 +394,14 @@ func (c *workspaceKeyRotationClient) CreateUserKey(_ context.Context, credential
 			return key, nil
 		}
 	}
-	key := clients.Sub2APIWorkspaceKey{ID: 19, UserID: userID, Name: input.Name, Key: "replacement-workspace-key-secret", Status: "active"}
+	keyID := int64(19)
+	for {
+		if _, exists := c.keys[keyID]; !exists {
+			break
+		}
+		keyID++
+	}
+	key := clients.Sub2APIWorkspaceKey{ID: keyID, UserID: userID, Name: input.Name, Key: "replacement-workspace-key-secret", Status: "active"}
 	c.keys[key.ID] = key
 	c.createWrites++
 	if c.fail("create") {
@@ -648,7 +656,7 @@ func assertWorkspaceKeyRotationComplete(t *testing.T, fixture workspaceKeyRotati
 }
 
 func TestWorkspaceKeyRotationEveryPhaseResponseLoss(t *testing.T) {
-	for _, phase := range []string{"create", "secret", "bind", "readback", "retire", "delete", "receipt"} {
+	for _, phase := range []string{"create", "secret", "bind", "readback", "retire", "promote", "delete", "receipt"} {
 		t.Run(phase, func(t *testing.T) {
 			fixture := newWorkspaceKeyRotationFixture(t, phase)
 			first := fixture.rotate(t, "rotate-loss-"+phase)
@@ -661,7 +669,7 @@ func TestWorkspaceKeyRotationEveryPhaseResponseLoss(t *testing.T) {
 }
 
 func TestWorkspaceKeyRotationEveryPhaseRestart(t *testing.T) {
-	for _, phase := range []string{"create", "secret", "bind", "readback", "retire", "delete", "receipt"} {
+	for _, phase := range []string{"create", "secret", "bind", "readback", "retire", "promote", "delete", "receipt"} {
 		t.Run(phase, func(t *testing.T) {
 			fixture := newWorkspaceKeyRotationFixture(t, phase)
 			if response := fixture.rotate(t, "rotate-restart-"+phase); response.Code == http.StatusOK {
@@ -676,7 +684,7 @@ func TestWorkspaceKeyRotationEveryPhaseRestart(t *testing.T) {
 func TestWorkspaceKeyRotationEveryPersistedPhaseResponseLossAndRestart(t *testing.T) {
 	for _, phase := range []string{
 		"replacement_check", "replacement_create", "secret_write", "runtime_bind", "runtime_readback",
-		"workspace_commit", "retire_old", "delete_old", "receipt", "complete",
+		"workspace_commit", "retire_old", "promote_new", "delete_old", "receipt", "complete",
 	} {
 		t.Run(phase, func(t *testing.T) {
 			fixture := newWorkspaceKeyRotationFixture(t, "")
@@ -714,6 +722,56 @@ func TestWorkspaceKeyRotationSameKeyReplay(t *testing.T) {
 		if got[index] != writes[index] {
 			t.Fatalf("same-key replay repeated side effects: before=%#v after=%#v", writes, got)
 		}
+	}
+}
+
+func TestWorkspaceKeyRotationCanRotateCanonicalKeyAgain(t *testing.T) {
+	fixture := newWorkspaceKeyRotationFixture(t, "")
+	assertWorkspaceKeyRotationComplete(t, fixture, fixture.rotate(t, "rotate-canonical-first"))
+	firstWrites := []int{fixture.client.createWrites, fixture.client.updateWrites, fixture.client.deleteWrites, len(fixture.fabric.gatewaySecretInputs), len(fixture.fabric.bindings), len(fixture.ledger.receipts)}
+
+	second := fixture.rotate(t, "rotate-canonical-second")
+	if second.Code != http.StatusOK {
+		t.Fatalf("second canonical rotation status=%d body=%s", second.Code, second.Body.String())
+	}
+	workspaces, _ := fixture.store.ListWorkspaces(context.Background(), "acct-alpha")
+	if len(workspaces) != 1 {
+		t.Fatalf("canonical rotation Workspaces=%#v", workspaces)
+	}
+	newKeyID := int64(numberField(workspaces[0], "workspaceApiKeyId", 0))
+	fixture.client.mu.Lock()
+	keys := fixture.client.keyList(41)
+	fixture.client.mu.Unlock()
+	if newKeyID <= 0 || newKeyID == 19 || len(keys) != 1 || keys[0].ID != newKeyID || keys[0].Name != workspaceReservedKeyName("ws-alpha") || keys[0].Status != "active" {
+		t.Fatalf("second canonical rotation did not converge: keyId=%d keys=%#v Workspaces=%#v", newKeyID, keys, workspaces)
+	}
+	gotWrites := []int{fixture.client.createWrites, fixture.client.updateWrites, fixture.client.deleteWrites, len(fixture.fabric.gatewaySecretInputs), len(fixture.fabric.bindings), len(fixture.ledger.receipts)}
+	for index, before := range firstWrites {
+		if gotWrites[index] != before+1 && index != 1 {
+			t.Fatalf("second canonical rotation side effects before=%#v after=%#v", firstWrites, gotWrites)
+		}
+	}
+	if gotWrites[1] != firstWrites[1]+2 {
+		t.Fatalf("second canonical rotation must retire old and promote replacement: before=%#v after=%#v", firstWrites, gotWrites)
+	}
+}
+
+func TestWorkspaceKeyRotationDoesNotTouchSiblingWorkspaceKey(t *testing.T) {
+	fixture := newWorkspaceKeyRotationFixture(t, "")
+	sibling := clients.Sub2APIWorkspaceKey{ID: 29, UserID: 41, Name: workspaceReservedKeyName("ws-beta"), Key: "sibling-workspace-key-secret", Status: "active"}
+	fixture.client.mu.Lock()
+	fixture.client.keys[sibling.ID] = sibling
+	fixture.client.mu.Unlock()
+
+	response := fixture.rotate(t, "rotate-with-sibling")
+	if response.Code != http.StatusOK {
+		t.Fatalf("rotation with sibling status=%d body=%s", response.Code, response.Body.String())
+	}
+	fixture.client.mu.Lock()
+	readback, ok := fixture.client.keys[sibling.ID]
+	fixture.client.mu.Unlock()
+	if !ok || !reflect.DeepEqual(readback, sibling) {
+		t.Fatalf("sibling Workspace Key changed: before=%#v after=%#v", sibling, readback)
 	}
 }
 

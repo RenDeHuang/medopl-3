@@ -23,17 +23,18 @@ var (
 )
 
 type CreateWorkspaceInput struct {
-	WorkspaceID       string `json:"workspaceId"`
-	AccountID         string `json:"accountId"`
-	Sub2APIUserID     int64  `json:"-"`
-	WorkspaceAPIKeyID int64  `json:"workspaceApiKeyId"`
-	OwnerID           string `json:"ownerId"`
-	Name              string `json:"name"`
-	PackageID         string `json:"packageId"`
-	AttachmentID      string `json:"attachmentId"`
-	ComputeID         string `json:"computeAllocationId"`
-	VolumeID          string `json:"storageId"`
-	GatewaySecretRef  string `json:"-"`
+	WorkspaceID         string `json:"workspaceId"`
+	AccountID           string `json:"accountId"`
+	Sub2APIUserID       int64  `json:"-"`
+	WorkspaceAPIKeyID   int64  `json:"workspaceApiKeyId"`
+	WorkspaceAPIKeyName string `json:"-"`
+	OwnerID             string `json:"ownerId"`
+	Name                string `json:"name"`
+	PackageID           string `json:"packageId"`
+	AttachmentID        string `json:"attachmentId"`
+	ComputeID           string `json:"computeAllocationId"`
+	VolumeID            string `json:"storageId"`
+	GatewaySecretRef    string `json:"-"`
 }
 
 type RotateWorkspaceCredentialInput struct {
@@ -181,6 +182,22 @@ func (s *Service) Sub2APIAdminUsers(ctx context.Context, query clients.Sub2APIUs
 		return clients.Sub2APIUserPage{}, errors.New("sub2api_admin_users_unavailable")
 	}
 	return client.AdminUsers(ctx, query)
+}
+
+func (s *Service) Sub2APIAdminUser(ctx context.Context, userID int64) (clients.Sub2APIUser, error) {
+	client, ok := s.sub2API.(clients.Sub2APIAdminUserClient)
+	if !ok {
+		return clients.Sub2APIUser{}, errors.New("sub2api_admin_user_unavailable")
+	}
+	user, err := client.AdminUser(ctx, userID)
+	if err != nil {
+		return clients.Sub2APIUser{}, err
+	}
+	user.Email = strings.ToLower(strings.TrimSpace(user.Email))
+	if user.ID != userID || user.Email == "" || user.Status != "active" && user.Status != "disabled" || user.CreatedAt.IsZero() || user.UpdatedAt.IsZero() || user.UpdatedAt.Before(user.CreatedAt) {
+		return clients.Sub2APIUser{}, errors.New("sub2api_admin_user_invalid")
+	}
+	return user, nil
 }
 
 func (s *Service) Sub2APIBatchUsersUsage(ctx context.Context, userIDs []int64) (map[int64]clients.Sub2APIBatchUserUsage, error) {
@@ -331,7 +348,7 @@ func (s *Service) PrepareWorkspace(ctx context.Context, input CreateWorkspaceInp
 	if gatewaySecretRef == "" {
 		var err error
 		if input.WorkspaceAPIKeyID > 0 {
-			gatewaySecretRef, err = s.gatewaySecretRefByID(ctx, input.AccountID, workspaceID, input.Sub2APIUserID, input.WorkspaceAPIKeyID, idempotencyKey)
+			gatewaySecretRef, err = s.gatewaySecretRefByID(ctx, input.AccountID, workspaceID, input.Sub2APIUserID, input.WorkspaceAPIKeyID, input.WorkspaceAPIKeyName, idempotencyKey)
 		} else {
 			gatewaySecretRef, err = s.gatewaySecretRef(ctx, input.AccountID, workspaceID, input.Sub2APIUserID, idempotencyKey)
 		}
@@ -410,17 +427,20 @@ func (s *Service) gatewaySecretRef(ctx context.Context, accountID, workspaceID s
 	return secret.SecretRef, err
 }
 
-func (s *Service) gatewaySecretRefByID(ctx context.Context, accountID, workspaceID string, userID, keyID int64, idempotencyKey string) (string, error) {
-	secret, err := s.SyncWorkspaceGatewaySecretByID(ctx, accountID, workspaceID, userID, keyID, idempotencyKey)
+func (s *Service) gatewaySecretRefByID(ctx context.Context, accountID, workspaceID string, userID, keyID int64, keyName, idempotencyKey string) (string, error) {
+	secret, err := s.SyncWorkspaceGatewaySecretByID(ctx, accountID, workspaceID, userID, keyID, keyName, idempotencyKey)
 	return secret.SecretRef, err
 }
 
-func (s *Service) SyncWorkspaceGatewaySecretByID(ctx context.Context, accountID, workspaceID string, userID, keyID int64, idempotencyKey string) (clients.GatewaySecretWriteResult, error) {
+func (s *Service) SyncWorkspaceGatewaySecretByID(ctx context.Context, accountID, workspaceID string, userID, keyID int64, keyName, idempotencyKey string) (clients.GatewaySecretWriteResult, error) {
 	key, err := s.Sub2APIWorkspaceKeyByID(ctx, userID, keyID)
 	if err != nil {
 		return clients.GatewaySecretWriteResult{}, err
 	}
-	return s.writeWorkspaceGatewaySecret(ctx, accountID, workspaceID, userID, key, idempotencyKey)
+	if keyName == "" || key.Name != keyName {
+		return clients.GatewaySecretWriteResult{}, errors.New("invalid_sub2api_workspace_key")
+	}
+	return s.writeGatewaySecretValue(ctx, accountID, workspaceID, userID, key, idempotencyKey)
 }
 
 func (s *Service) SyncWorkspaceGatewayReplacementSecret(ctx context.Context, credential clients.SessionDelegatedCredential, accountID, workspaceID string, userID, keyID int64, replacementName, idempotencyKey string) (clients.GatewaySecretWriteResult, error) {

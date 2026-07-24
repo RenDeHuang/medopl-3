@@ -17,6 +17,8 @@ test("Pilot V2 browser covers customer and operator truth states at desktop and 
   assert.deepEqual(result.roles, ["customer", "operator"]);
   assert.deepEqual(result.sourceStates, ["available", "empty", "unavailable", "error"]);
   assert.deepEqual(result.repeatedWrites, { gatewayKey: 1, walletAdjustment: 1 });
+  assert.equal(result.workspaceSelection, true);
+  assert.deepEqual(result.workspaceSecretReads, { "ws-1": 1, "ws-2": 1 });
   assert.equal(result.secretCleanup, true);
   assert.equal(result.externalRequests, 0);
 });

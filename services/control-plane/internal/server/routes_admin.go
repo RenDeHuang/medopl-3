@@ -305,58 +305,34 @@ func operatorDisableShapeValid(input map[string]any, accountID string) bool {
 }
 
 func (app *controlPlaneServer) operatorAccountPage(ctx context.Context, service *controlplane.Service, page, pageSize int) (map[string]any, string, error) {
-	accounts, err := app.tables.ListAccounts(ctx, "")
+	accountPage, err := app.tables.PageAccounts(ctx, tablePageQuery{Offset: (page - 1) * pageSize, Limit: pageSize})
 	if err != nil {
 		return nil, "", err
 	}
-	users, err := app.tables.ListUsers(ctx, true)
-	if err != nil {
-		return nil, "", err
-	}
-	workspaces, err := app.tables.ListWorkspaces(ctx, "")
-	if err != nil {
-		return nil, "", err
-	}
-	sort.Slice(accounts, func(i, j int) bool { return stringValue(accounts[i]["id"]) < stringValue(accounts[j]["id"]) })
-	local := make([]map[string]any, 0, len(accounts))
-	remoteIDs := make([]int64, 0, len(accounts))
-	for _, account := range accounts {
+	local := make([]map[string]any, 0, len(accountPage.Items))
+	remoteIDs := make([]int64, 0, len(accountPage.Items))
+	accountIDs := make([]string, 0, len(accountPage.Items))
+	for _, account := range accountPage.Items {
 		remoteID, ok := positiveIntegerField(account, "sub2apiUserId")
-		owner := findRecord(users, stringValue(account["ownerUserId"]))
-		if !ok || !ownsAccount(account, owner) {
+		owner, ownerOK, ownerErr := app.tables.GetUser(ctx, stringValue(account["ownerUserId"]))
+		if ownerErr != nil {
+			return nil, "", ownerErr
+		}
+		if !ok || !ownerOK || !ownsAccount(account, owner) {
 			return nil, "", errAccountIdentityConflict
 		}
 		local = append(local, map[string]any{"account": account, "owner": owner, "remoteId": remoteID})
 		remoteIDs = append(remoteIDs, remoteID)
+		accountIDs = append(accountIDs, stringValue(account["id"]))
 	}
 	if len(local) == 0 {
-		return map[string]any{"items": []any{}, "total": 0, "page": page, "pageSize": pageSize}, "empty", nil
+		return map[string]any{"items": []any{}, "total": accountPage.Total, "page": page, "pageSize": pageSize}, "empty", nil
 	}
-	if len(local) > 50 {
-		return nil, "", errors.New("operator account projection exceeds Pilot limit")
+	workspaceCounts, err := app.tables.CountWorkspacesByAccount(ctx, accountIDs)
+	if err != nil {
+		return nil, "", err
 	}
-	remoteByID := make(map[int64]clients.Sub2APIUser)
-	remoteTotal, remotePages := int64(-1), -1
-	for remotePageNumber := 1; remotePageNumber <= remotePages || remotePages == -1; remotePageNumber++ {
-		remotePage, err := service.Sub2APIAdminUsers(ctx, clients.Sub2APIUserPageQuery{Page: remotePageNumber, PageSize: 50, SortBy: "id", SortOrder: "asc"})
-		if err != nil || remotePage.Page != remotePageNumber || remotePage.PageSize != 50 || remotePage.Pages < 1 {
-			return nil, "", errors.New("sub2api user projection unavailable")
-		}
-		if remotePageNumber == 1 {
-			remoteTotal, remotePages = remotePage.Total, remotePage.Pages
-		} else if remotePage.Total != remoteTotal || remotePage.Pages != remotePages {
-			return nil, "", errors.New("sub2api user projection unavailable")
-		}
-		for _, user := range remotePage.Items {
-			if _, duplicate := remoteByID[user.ID]; duplicate {
-				return nil, "", errors.New("sub2api user projection unavailable")
-			}
-			remoteByID[user.ID] = user
-		}
-	}
-	if int64(len(remoteByID)) != remoteTotal {
-		return nil, "", errors.New("sub2api user projection unavailable")
-	}
+	remoteByID := app.operatorCurrentPageUsers(ctx, service, local)
 	usageByID, usageErr := service.Sub2APIBatchUsersUsage(ctx, remoteIDs)
 	items := make([]any, 0, len(local))
 	for _, joined := range local {
@@ -372,13 +348,7 @@ func (app *controlPlaneServer) operatorAccountPage(ctx context.Context, service 
 			"sub2apiUserId": strconv.FormatInt(remoteID, 10), "email": normalizeEmail(stringValue(owner["email"])), "status": ownerStatus,
 			"keyCount": sourceEnvelope("sub2api", "unavailable", nil, ""),
 		}
-		workspaceCount := 0
-		for _, workspace := range workspaces {
-			if firstNonEmpty(stringValue(workspace["ownerAccountId"]), stringValue(workspace["accountId"])) == stringValue(account["id"]) {
-				workspaceCount++
-			}
-		}
-		item["workspaceCount"] = sourceEnvelope("control-plane", "available", workspaceCount, "")
+		item["workspaceCount"] = sourceEnvelope("control-plane", "available", workspaceCounts[stringValue(account["id"])], "")
 		remote, remoteOK := remoteByID[remoteID]
 		remoteOK = remoteOK && remote.ID == remoteID && remote.Email == normalizeEmail(stringValue(owner["email"])) && (remote.Status == "active" || remote.Status == "disabled")
 		if !remoteOK {
@@ -407,23 +377,46 @@ func (app *controlPlaneServer) operatorAccountPage(ctx context.Context, service 
 		}
 		items = append(items, item)
 	}
-	total := len(items)
-	start := (page - 1) * pageSize
-	if start >= total {
-		items = []any{}
-	} else {
-		end := start + pageSize
-		if end > total {
-			end = total
-		}
-		items = items[start:end]
-	}
 	app.populateOperatorKeyCounts(ctx, service, items)
 	status := "available"
 	if len(items) == 0 {
 		status = "empty"
 	}
-	return map[string]any{"items": items, "total": total, "page": page, "pageSize": pageSize}, status, nil
+	return map[string]any{"items": items, "total": accountPage.Total, "page": page, "pageSize": pageSize}, status, nil
+}
+
+func (app *controlPlaneServer) operatorCurrentPageUsers(ctx context.Context, service *controlplane.Service, local []map[string]any) map[int64]clients.Sub2APIUser {
+	type result struct {
+		user clients.Sub2APIUser
+	}
+	results := make(chan result, len(local))
+	gate := make(chan struct{}, 4)
+	var wait sync.WaitGroup
+	for _, joined := range local {
+		remoteID := joined["remoteId"].(int64)
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			select {
+			case gate <- struct{}{}:
+				defer func() { <-gate }()
+			case <-ctx.Done():
+				return
+			}
+			user, err := service.Sub2APIAdminUser(ctx, remoteID)
+			if err != nil {
+				return
+			}
+			results <- result{user: user}
+		}()
+	}
+	wait.Wait()
+	close(results)
+	remoteByID := make(map[int64]clients.Sub2APIUser, len(local))
+	for result := range results {
+		remoteByID[result.user.ID] = result.user
+	}
+	return remoteByID
 }
 
 func (app *controlPlaneServer) populateOperatorKeyCounts(ctx context.Context, service *controlplane.Service, items []any) {
@@ -489,21 +482,11 @@ type operatorWorkspaceFacts struct {
 }
 
 func (app *controlPlaneServer) operatorWorkspacePage(ctx context.Context, service *controlplane.Service, page, pageSize int) (map[string]any, string, error) {
-	workspaces, err := app.tables.ListWorkspaces(ctx, "")
+	workspacePage, err := app.tables.PageWorkspaces(ctx, "", tablePageQuery{Offset: (page - 1) * pageSize, Limit: pageSize})
 	if err != nil {
 		return nil, "", err
 	}
-	sort.Slice(workspaces, func(i, j int) bool { return stringValue(workspaces[i]["id"]) < stringValue(workspaces[j]["id"]) })
-	total := len(workspaces)
-	start := (page - 1) * pageSize
-	selected := []map[string]any{}
-	if start < total {
-		end := start + pageSize
-		if end > total {
-			end = total
-		}
-		selected = workspaces[start:end]
-	}
+	selected := workspacePage.Items
 	facts, err := app.loadOperatorWorkspaceFacts(ctx, service, selected)
 	if err != nil {
 		return nil, "", err
@@ -516,19 +499,18 @@ func (app *controlPlaneServer) operatorWorkspacePage(ctx context.Context, servic
 	if len(items) == 0 {
 		status = "empty"
 	}
-	return map[string]any{"items": items, "total": total, "page": page, "pageSize": pageSize}, status, nil
+	return map[string]any{"items": items, "total": workspacePage.Total, "page": page, "pageSize": pageSize}, status, nil
 }
 
 func (app *controlPlaneServer) operatorWorkspaceDetail(ctx context.Context, service *controlplane.Service, workspaceID string) (map[string]any, bool, error) {
 	if workspaceID == "" {
 		return nil, false, nil
 	}
-	workspaces, err := app.tables.ListWorkspaces(ctx, "")
+	workspace, ok, err := app.tables.GetWorkspace(ctx, workspaceID)
 	if err != nil {
 		return nil, false, err
 	}
-	workspace := findRecord(workspaces, workspaceID)
-	if workspace == nil {
+	if !ok {
 		return nil, false, nil
 	}
 	facts, err := app.loadOperatorWorkspaceFacts(ctx, service, []map[string]any{workspace})
@@ -540,21 +522,38 @@ func (app *controlPlaneServer) operatorWorkspaceDetail(ctx context.Context, serv
 
 func (app *controlPlaneServer) loadOperatorWorkspaceFacts(ctx context.Context, service *controlplane.Service, workspaces []map[string]any) (operatorWorkspaceFacts, error) {
 	var facts operatorWorkspaceFacts
-	var err error
-	if facts.accounts, err = app.tables.ListAccounts(ctx, ""); err != nil {
-		return facts, err
+	seenRecords := map[string]bool{}
+	appendRecord := func(kind, id string, load func(context.Context, string) (map[string]any, bool, error), target *[]map[string]any) error {
+		if id == "" || seenRecords[kind+":"+id] {
+			return nil
+		}
+		seenRecords[kind+":"+id] = true
+		row, ok, err := load(ctx, id)
+		if err != nil {
+			return err
+		}
+		if ok {
+			*target = append(*target, row)
+		}
+		return nil
 	}
-	if facts.users, err = app.tables.ListUsers(ctx, true); err != nil {
-		return facts, err
-	}
-	if facts.computes, err = app.tables.ListComputes(ctx, ""); err != nil {
-		return facts, err
-	}
-	if facts.storages, err = app.tables.ListStorages(ctx, ""); err != nil {
-		return facts, err
-	}
-	if facts.attachments, err = app.tables.ListAttachments(ctx, ""); err != nil {
-		return facts, err
+	for _, workspace := range workspaces {
+		for _, item := range []struct {
+			kind   string
+			id     string
+			load   func(context.Context, string) (map[string]any, bool, error)
+			target *[]map[string]any
+		}{
+			{"account", firstNonEmpty(stringValue(workspace["ownerAccountId"]), stringValue(workspace["accountId"])), app.tables.GetAccount, &facts.accounts},
+			{"user", stringValue(workspace["ownerUserId"]), app.tables.GetUser, &facts.users},
+			{"compute", firstNonEmpty(stringValue(workspace["currentComputeAllocationId"]), stringValue(workspace["computeAllocationId"])), app.tables.GetCompute, &facts.computes},
+			{"storage", stringValue(workspace["storageId"]), app.tables.GetStorage, &facts.storages},
+			{"attachment", firstNonEmpty(stringValue(workspace["currentAttachmentId"]), stringValue(workspace["attachmentId"])), app.tables.GetAttachment, &facts.attachments},
+		} {
+			if err := appendRecord(item.kind, item.id, item.load, item.target); err != nil {
+				return facts, err
+			}
+		}
 	}
 	facts.providerFacts = app.loadOperatorProviderFacts(ctx, service, workspaces, facts)
 	keyIDs := make([]int64, 0, len(workspaces))
@@ -571,6 +570,7 @@ func (app *controlPlaneServer) loadOperatorWorkspaceFacts(ctx context.Context, s
 		keyIDs = append(keyIDs, keyID)
 	}
 	if len(keyIDs) > 0 && len(keyIDs) <= 50 {
+		var err error
 		facts.keyUsage, err = service.Sub2APIBatchKeysUsage(ctx, keyIDs)
 		facts.keyUsageAvailable = err == nil
 	}

@@ -31,6 +31,23 @@ test("Workspace access answers URL username password and corresponding Workspace
   assert.doesNotMatch(app, /keys\.value\.find\(\(item\) => item\.name === "opl-workspace"\)/);
 });
 
+test("Workspace access selects one of many independent Workspace subscriptions", async () => {
+  const app = await source("apps/console-ui/src/App.vue");
+  const workspaceView = app.slice(app.indexOf("path.startsWith('/console/workspace')"), app.indexOf("<section v-else-if=\"apiRoute\""));
+
+  assert.match(app, /const selectedWorkspaceId = ref\(""\)/);
+  assert.match(app, /workspaceSource\.value\.data\.items\.find\(\(item\) => item\.id === selectedWorkspaceId\.value\)/);
+  assert.match(app, /function selectWorkspace\(workspaceId: string\)/);
+  assert.match(app, /selectWorkspace[\s\S]+clearSecrets\(\)[\s\S]+workspaceStatusSource\.value = null[\s\S]+runtimeRotationIntent = null/);
+  assert.match(workspaceView, /aria-label="选择 Workspace"/);
+  assert.match(workspaceView, /v-for="item in workspaceSource\.data\.items"/);
+  assert.match(workspaceView, /@change="changeWorkspaceSelection"/);
+  assert.match(app, /if \(next === "workspace"\) launchForm\.name = ""/);
+  assert.match(workspaceView, /新建 Workspace/);
+  assert.doesNotMatch(app, /items\.length !== 1/);
+  assert.doesNotMatch(app, /账号存在多个 Workspace，暂不可用/);
+});
+
 test("Workspace and Overview render only server-owned package runtime and billing facts", async () => {
   const app = await source("apps/console-ui/src/App.vue");
   const workspaceView = app.slice(app.indexOf("path.startsWith('/console/workspace')"), app.indexOf("<section v-else-if=\"apiRoute\""));
